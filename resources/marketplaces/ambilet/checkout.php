@@ -277,7 +277,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <h3 class="mb-2 text-xl font-bold text-secondary">Coșul tău este gol</h3>
                     <p class="mb-6 text-muted">Adaugă bilete în coș pentru a continua.</p>
-                    <a href="/evenimente" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
+                    <a href="/evenimente" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary bg-primary rounded-xl">
                         Descoperă evenimente
                     </a>
                 </div>
@@ -357,7 +357,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <span id="points-earned" class="font-bold text-accent">0 puncte</span>
                             </div>
 
-                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl" disabled aria-label="Finalizează comanda">
+                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl bg-primary" disabled aria-label="Finalizează comanda">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 <span id="pay-btn-text">Plătește 0.00 lei</span>
                             </button>
@@ -411,7 +411,7 @@ require_once __DIR__ . '/includes/header.php';
                     <label class="block mb-2 text-sm font-medium text-secondary">Parola</label>
                     <input type="password" id="login-password" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="••••••••" required>
                 </div>
-                <button type="submit" id="login-submit-btn" class="flex items-center justify-center w-full gap-2 py-3 font-bold text-white btn-primary rounded-xl">
+                <button type="submit" id="login-submit-btn" class="flex items-center justify-center w-full gap-2 py-3 font-bold text-white btn-primary rounded-xl bg-primary">
                     <span id="login-btn-text">Conectează-te</span>
                 </button>
             </form>

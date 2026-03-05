@@ -91,7 +91,7 @@ const UserOrders = {
             container.innerHTML = `
                 <div class="py-12 text-center bg-white border rounded-xl border-border">
                     <p class="mb-4 text-muted">Nu ai comenzi ${filter ? 'in aceasta categorie' : 'inca'}</p>
-                    <a href="/" class="btn btn-primary inline-flex px-6 py-2.5 text-white font-semibold rounded-xl">Descopera evenimente</a>
+                    <a href="/" class="btn btn-primary inline-flex px-6 py-2.5 bg-primary text-white font-semibold rounded-xl">Descopera evenimente</a>
                 </div>
             `;
             return;

@@ -134,7 +134,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
                 <h3 class="mb-1 font-bold text-secondary">Chat live</h3>
                 <p class="mb-3 text-sm text-muted">Raspuns in sub 5 minute</p>
-                <button onclick="openChat()" class="w-full btn btn-primary py-2.5 text-white font-semibold rounded-xl text-sm">
+                <button onclick="openChat()" class="w-full btn btn-primary bg-primary py-2.5 text-white font-semibold rounded-xl text-sm">
                     Incepe conversatia
                 </button>
             </div>

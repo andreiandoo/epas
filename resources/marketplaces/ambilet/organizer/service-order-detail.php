@@ -10,7 +10,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
+    <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
         <main class="flex-1 p-4 lg:p-8">
             <!-- Loading -->
@@ -26,7 +26,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <!-- Header -->
                 <div class="flex items-center justify-between mb-6">
                     <div>
-                        <nav class="flex items-center gap-2 text-sm text-muted mb-2">
+                        <nav class="flex items-center gap-2 mb-2 text-sm text-muted">
                             <a href="/organizator/servicii" class="hover:text-primary">Servicii Extra</a>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             <span class="text-secondary" id="breadcrumb-number"></span>
@@ -40,12 +40,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Order Info + Status -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <div class="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-3">
                     <!-- Left: Order details -->
-                    <div class="lg:col-span-2 bg-white rounded-2xl border border-border p-6">
+                    <div class="p-6 bg-white border lg:col-span-2 rounded-2xl border-border">
                         <div class="flex items-center justify-between mb-6">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl flex items-center justify-center" id="type-icon-bg">
+                                <div class="flex items-center justify-center w-12 h-12 rounded-xl" id="type-icon-bg">
                                     <span id="type-icon"></span>
                                 </div>
                                 <div>
@@ -58,27 +58,27 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 bg-surface rounded-xl">
-                                <p class="text-xs text-muted mb-1">Eveniment</p>
+                                <p class="mb-1 text-xs text-muted">Eveniment</p>
                                 <p class="font-semibold text-secondary" id="event-name">-</p>
                             </div>
                             <div class="p-4 bg-surface rounded-xl">
-                                <p class="text-xs text-muted mb-1">Detalii</p>
+                                <p class="mb-1 text-xs text-muted">Detalii</p>
                                 <p class="font-semibold text-secondary" id="order-details">-</p>
                             </div>
                             <div class="p-4 bg-surface rounded-xl">
-                                <p class="text-xs text-muted mb-1">Creat la</p>
+                                <p class="mb-1 text-xs text-muted">Creat la</p>
                                 <p class="font-semibold text-secondary" id="created-at">-</p>
                             </div>
                             <div class="p-4 bg-surface rounded-xl">
-                                <p class="text-xs text-muted mb-1">Perioada</p>
+                                <p class="mb-1 text-xs text-muted">Perioada</p>
                                 <p class="font-semibold text-secondary" id="service-period">-</p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Right: Payment -->
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <h3 class="text-sm font-bold text-secondary mb-4">Plata</h3>
+                    <div class="p-6 bg-white border rounded-2xl border-border">
+                        <h3 class="mb-4 text-sm font-bold text-secondary">Plata</h3>
                         <div class="space-y-3">
                             <div class="flex justify-between">
                                 <span class="text-sm text-muted">Subtotal</span>
@@ -88,7 +88,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <span class="text-sm text-muted">TVA</span>
                                 <span class="text-sm font-medium text-secondary" id="tax">-</span>
                             </div>
-                            <div class="border-t border-border pt-3 flex justify-between">
+                            <div class="flex justify-between pt-3 border-t border-border">
                                 <span class="text-sm font-bold text-secondary">Total</span>
                                 <span class="text-lg font-bold text-primary" id="total">-</span>
                             </div>
@@ -112,43 +112,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <!-- Email Campaign Stats (only for email orders) -->
                 <div id="email-stats-section" class="hidden mb-6">
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <h3 class="text-lg font-bold text-secondary mb-6">Statistici Campanie Email</h3>
+                    <div class="p-6 bg-white border rounded-2xl border-border">
+                        <h3 class="mb-6 text-lg font-bold text-secondary">Statistici Campanie Email</h3>
 
                         <!-- Stats Cards -->
-                        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                            <div class="p-4 bg-blue-50 rounded-xl text-center">
+                        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-5">
+                            <div class="p-4 text-center bg-blue-50 rounded-xl">
                                 <p class="text-2xl font-bold text-blue-600" id="stat-sent">0</p>
-                                <p class="text-xs text-blue-600/70 mt-1">Trimise</p>
+                                <p class="mt-1 text-xs text-blue-600/70">Trimise</p>
                             </div>
-                            <div class="p-4 bg-green-50 rounded-xl text-center">
+                            <div class="p-4 text-center bg-green-50 rounded-xl">
                                 <p class="text-2xl font-bold text-green-600" id="stat-opened">0</p>
-                                <p class="text-xs text-green-600/70 mt-1">Deschise</p>
+                                <p class="mt-1 text-xs text-green-600/70">Deschise</p>
                             </div>
-                            <div class="p-4 bg-purple-50 rounded-xl text-center">
+                            <div class="p-4 text-center bg-purple-50 rounded-xl">
                                 <p class="text-2xl font-bold text-purple-600" id="stat-clicked">0</p>
-                                <p class="text-xs text-purple-600/70 mt-1">Click-uri</p>
+                                <p class="mt-1 text-xs text-purple-600/70">Click-uri</p>
                             </div>
-                            <div class="p-4 bg-red-50 rounded-xl text-center">
+                            <div class="p-4 text-center bg-red-50 rounded-xl">
                                 <p class="text-2xl font-bold text-red-600" id="stat-failed">0</p>
-                                <p class="text-xs text-red-600/70 mt-1">Esuate</p>
+                                <p class="mt-1 text-xs text-red-600/70">Esuate</p>
                             </div>
-                            <div class="p-4 bg-amber-50 rounded-xl text-center">
+                            <div class="p-4 text-center bg-amber-50 rounded-xl">
                                 <p class="text-2xl font-bold text-amber-600" id="stat-unsub">0</p>
-                                <p class="text-xs text-amber-600/70 mt-1">Dezabonari</p>
+                                <p class="mt-1 text-xs text-amber-600/70">Dezabonari</p>
                             </div>
                         </div>
 
                         <!-- Rates -->
-                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             <!-- Open Rate -->
                             <div>
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-sm font-medium text-secondary">Rata deschidere</span>
                                     <span class="text-sm font-bold text-green-600" id="open-rate-text">0%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="bg-green-500 h-3 rounded-full transition-all" id="open-rate-bar" style="width: 0%"></div>
+                                <div class="w-full h-3 bg-gray-200 rounded-full">
+                                    <div class="h-3 transition-all bg-green-500 rounded-full" id="open-rate-bar" style="width: 0%"></div>
                                 </div>
                             </div>
                             <!-- Click Rate -->
@@ -157,43 +157,43 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <span class="text-sm font-medium text-secondary">Rata click (din deschise)</span>
                                     <span class="text-sm font-bold text-purple-600" id="click-rate-text">0%</span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-3">
-                                    <div class="bg-purple-500 h-3 rounded-full transition-all" id="click-rate-bar" style="width: 0%"></div>
+                                <div class="w-full h-3 bg-gray-200 rounded-full">
+                                    <div class="h-3 transition-all bg-purple-500 rounded-full" id="click-rate-bar" style="width: 0%"></div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Audience breakdown -->
-                        <div class="mt-6 pt-6 border-t border-border">
-                            <h4 class="text-sm font-bold text-secondary mb-3">Audienta</h4>
-                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="audience-breakdown">
+                        <div class="pt-6 mt-6 border-t border-border">
+                            <h4 class="mb-3 text-sm font-bold text-secondary">Audienta</h4>
+                            <div class="grid grid-cols-2 gap-4 lg:grid-cols-4" id="audience-breakdown">
                                 <div class="p-3 bg-surface rounded-xl">
                                     <p class="text-xs text-muted">Tip audienta</p>
-                                    <p class="font-semibold text-secondary text-sm" id="audience-type-label">-</p>
+                                    <p class="text-sm font-semibold text-secondary" id="audience-type-label">-</p>
                                 </div>
                                 <div class="p-3 bg-surface rounded-xl">
                                     <p class="text-xs text-muted">Perfect match</p>
-                                    <p class="font-semibold text-secondary text-sm" id="perfect-count">-</p>
+                                    <p class="text-sm font-semibold text-secondary" id="perfect-count">-</p>
                                 </div>
                                 <div class="p-3 bg-surface rounded-xl">
                                     <p class="text-xs text-muted">Partial match</p>
-                                    <p class="font-semibold text-secondary text-sm" id="partial-count">-</p>
+                                    <p class="text-sm font-semibold text-secondary" id="partial-count">-</p>
                                 </div>
                                 <div class="p-3 bg-surface rounded-xl">
                                     <p class="text-xs text-muted">Template</p>
-                                    <p class="font-semibold text-secondary text-sm capitalize" id="email-template">-</p>
+                                    <p class="text-sm font-semibold capitalize text-secondary" id="email-template">-</p>
                                 </div>
                             </div>
 
                             <!-- Filters used -->
                             <div id="filters-used" class="hidden mt-4">
-                                <p class="text-xs text-muted mb-2">Filtre aplicate</p>
+                                <p class="mb-2 text-xs text-muted">Filtre aplicate</p>
                                 <div class="flex flex-wrap gap-2" id="filter-tags"></div>
                             </div>
                         </div>
 
                         <!-- Newsletter status -->
-                        <div class="mt-6 pt-6 border-t border-border">
+                        <div class="pt-6 mt-6 border-t border-border">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm text-muted">Status campanie:</span>
@@ -206,21 +206,21 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Config (collapsible) -->
-                <div class="bg-white rounded-2xl border border-border p-6" id="config-section">
+                <div class="p-6 bg-white border rounded-2xl border-border" id="config-section">
                     <button onclick="document.getElementById('config-json').classList.toggle('hidden')" class="flex items-center gap-2 text-sm font-bold text-secondary">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
                         Configuratie Comanda
                     </button>
-                    <pre id="config-json" class="hidden mt-4 p-4 bg-surface rounded-xl text-xs text-muted overflow-x-auto"></pre>
+                    <pre id="config-json" class="hidden p-4 mt-4 overflow-x-auto text-xs bg-surface rounded-xl text-muted"></pre>
                 </div>
             </div>
 
             <!-- Error State -->
-            <div id="error-state" class="hidden text-center py-20">
-                <svg class="w-16 h-16 text-muted mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <h2 class="text-xl font-bold text-secondary mb-2">Comanda nu a fost gasita</h2>
-                <p class="text-muted mb-6">Verifica link-ul sau intoarce-te la lista de servicii.</p>
-                <a href="/organizator/servicii" class="btn btn-primary">Inapoi la Servicii</a>
+            <div id="error-state" class="hidden py-20 text-center">
+                <svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <h2 class="mb-2 text-xl font-bold text-secondary">Comanda nu a fost gasita</h2>
+                <p class="mb-6 text-muted">Verifica link-ul sau intoarce-te la lista de servicii.</p>
+                <a href="/organizator/servicii" class="btn btn-primary bg-primary">Inapoi la Servicii</a>
             </div>
         </main>
     </div>

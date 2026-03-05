@@ -245,8 +245,8 @@ const AmbiletHeader = {
 
                     <div class="p-4 border-t border-border">
                         ${isLoggedIn
-                            ? `<a href="${isOrganizer ? '/organizator/panou' : '/cont/dashboard'}" class="btn btn-primary w-full">${isOrganizer ? 'Panoul meu' : 'Contul meu'}</a>`
-                            : `<a href="/login" class="btn btn-primary w-full">Autentificare</a>`
+                            ? `<a href="${isOrganizer ? '/organizator/panou' : '/cont/dashboard'}" class="btn btn-primary bg-primary w-full">${isOrganizer ? 'Panoul meu' : 'Contul meu'}</a>`
+                            : `<a href="/login" class="btn btn-primary bg-primary w-full">Autentificare</a>`
                         }
                     </div>
                 </div>
@@ -309,7 +309,7 @@ const AmbiletHeader = {
         return `
         <div class="hidden lg:flex items-center gap-3">
             <a href="/login" class="text-sm font-medium text-muted hover:text-primary transition-colors">Autentificare</a>
-            <a href="/register" class="btn btn-primary btn-sm">Înregistrare</a>
+            <a href="/register" class="btn btn-primary bg-primary btn-sm">Înregistrare</a>
         </div>
         `;
     },

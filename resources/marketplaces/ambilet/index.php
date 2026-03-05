@@ -137,7 +137,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="flex-shrink-0 hidden md:block">
                 <div class="flex flex-wrap gap-3">
-                    <a href="/organizator/register" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
+                    <a href="/organizator/register" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary bg-primary rounded-xl">
                         Inregistreaza-te gratuit
                     </a>
                 </div>

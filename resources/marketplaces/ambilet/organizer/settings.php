@@ -9,7 +9,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-h-screen lg:ml-0">
+    <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
                 <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
@@ -32,83 +32,83 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
 
-            <div class="flex flex-wrap gap-2 mb-8 border-b border-border pb-4">
-                <button onclick="showSection('profile')" class="settings-tab active px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white" data-section="profile">Profil</button>
-                <button onclick="showSection('company')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="company">Companie</button>
-                <button onclick="showSection('bank')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="bank">Conturi Bancare</button>
-                <button onclick="showSection('contract')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="contract">Contract</button>
-                <button onclick="showSection('notifications')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="notifications">Notificari</button>
-                <button onclick="showSection('security')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="security">Securitate</button>
-                <button onclick="showSection('sharelinks')" class="settings-tab px-4 py-2 rounded-lg text-sm font-medium text-muted hover:bg-surface" data-section="sharelinks">Link-uri Share</button>
+            <div class="flex flex-wrap gap-2 pb-4 mb-8 border-b border-border">
+                <button onclick="showSection('profile')" class="px-4 py-2 text-sm font-medium text-white rounded-lg settings-tab active bg-primary" data-section="profile">Profil</button>
+                <button onclick="showSection('company')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="company">Companie</button>
+                <button onclick="showSection('bank')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="bank">Conturi Bancare</button>
+                <button onclick="showSection('contract')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="contract">Contract</button>
+                <button onclick="showSection('notifications')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="notifications">Notificari</button>
+                <button onclick="showSection('security')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="security">Securitate</button>
+                <button onclick="showSection('sharelinks')" class="px-4 py-2 text-sm font-medium rounded-lg settings-tab text-muted hover:bg-surface" data-section="sharelinks">Link-uri Share</button>
             </div>
 
             <div id="profile-section" class="settings-section">
-                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
-                    <h2 class="text-lg font-bold text-secondary mb-6">Profil Organizator</h2>
+                <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-6 text-lg font-bold text-secondary">Profil Organizator</h2>
                     <form onsubmit="saveProfile(event)" class="space-y-4">
-                        <div class="grid lg:grid-cols-2 gap-4"><div><label class="label">Nume Organizator *</label><input type="text" id="org-name" class="input w-full" required></div><div><label class="label">Email Contact *</label><input type="email" id="org-email" class="input w-full" required></div></div>
-                        <div class="grid lg:grid-cols-2 gap-4"><div><label class="label">Telefon</label><input type="tel" id="org-phone" class="input w-full"></div><div><label class="label">Website</label><input type="url" id="org-website" class="input w-full"></div></div>
-                        <div><label class="label">Descriere</label><textarea id="org-description" rows="4" class="input w-full"></textarea></div>
-                        <div class="pt-4 flex justify-end"><button type="submit" class="btn btn-primary">Salveaza</button></div>
+                        <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Nume Organizator *</label><input type="text" id="org-name" class="w-full input" required></div><div><label class="label">Email Contact *</label><input type="email" id="org-email" class="w-full input" required></div></div>
+                        <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Telefon</label><input type="tel" id="org-phone" class="w-full input"></div><div><label class="label">Website</label><input type="url" id="org-website" class="w-full input"></div></div>
+                        <div><label class="label">Descriere</label><textarea id="org-description" rows="4" class="w-full input"></textarea></div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza</button></div>
                     </form>
                 </div>
 
                 <!-- Personal / Guarantor Information (read-only) -->
-                <div class="bg-white rounded-2xl border border-border p-6" id="personal-info-section">
-                    <h2 class="text-lg font-bold text-secondary mb-2">Date Personale / Garant</h2>
-                    <p class="text-sm text-muted mb-6">Informatii capturate la inregistrare. Contacteaza suportul pentru modificari.</p>
+                <div class="p-6 bg-white border rounded-2xl border-border" id="personal-info-section">
+                    <h2 class="mb-2 text-lg font-bold text-secondary">Date Personale / Garant</h2>
+                    <p class="mb-6 text-sm text-muted">Informatii capturate la inregistrare. Contacteaza suportul pentru modificari.</p>
                     <div class="space-y-4">
-                        <div class="grid lg:grid-cols-2 gap-4">
-                            <div><label class="label">Prenume</label><input type="text" id="guarantor-first-name" class="input w-full bg-gray-50" readonly></div>
-                            <div><label class="label">Nume</label><input type="text" id="guarantor-last-name" class="input w-full bg-gray-50" readonly></div>
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div><label class="label">Prenume</label><input type="text" id="guarantor-first-name" class="w-full input bg-gray-50" readonly></div>
+                            <div><label class="label">Nume</label><input type="text" id="guarantor-last-name" class="w-full input bg-gray-50" readonly></div>
                         </div>
-                        <div class="grid lg:grid-cols-2 gap-4">
-                            <div><label class="label">CNP</label><input type="text" id="guarantor-cnp" class="input w-full bg-gray-50" readonly></div>
-                            <div><label class="label">Localitate</label><input type="text" id="guarantor-city" class="input w-full bg-gray-50" readonly></div>
+                        <div class="grid gap-4 lg:grid-cols-2">
+                            <div><label class="label">CNP</label><input type="text" id="guarantor-cnp" class="w-full input bg-gray-50" readonly></div>
+                            <div><label class="label">Localitate</label><input type="text" id="guarantor-city" class="w-full input bg-gray-50" readonly></div>
                         </div>
-                        <div><label class="label">Adresa domiciliu</label><input type="text" id="guarantor-address" class="input w-full bg-gray-50" readonly></div>
-                        <div class="grid lg:grid-cols-4 gap-4">
-                            <div><label class="label">Tip act</label><input type="text" id="guarantor-id-type" class="input w-full bg-gray-50" readonly></div>
-                            <div><label class="label">Serie</label><input type="text" id="guarantor-id-series" class="input w-full bg-gray-50" readonly></div>
-                            <div><label class="label">Numar</label><input type="text" id="guarantor-id-number" class="input w-full bg-gray-50" readonly></div>
-                            <div><label class="label">Data eliberarii</label><input type="text" id="guarantor-id-issued-date" class="input w-full bg-gray-50" readonly></div>
+                        <div><label class="label">Adresa domiciliu</label><input type="text" id="guarantor-address" class="w-full input bg-gray-50" readonly></div>
+                        <div class="grid gap-4 lg:grid-cols-4">
+                            <div><label class="label">Tip act</label><input type="text" id="guarantor-id-type" class="w-full input bg-gray-50" readonly></div>
+                            <div><label class="label">Serie</label><input type="text" id="guarantor-id-series" class="w-full input bg-gray-50" readonly></div>
+                            <div><label class="label">Numar</label><input type="text" id="guarantor-id-number" class="w-full input bg-gray-50" readonly></div>
+                            <div><label class="label">Data eliberarii</label><input type="text" id="guarantor-id-issued-date" class="w-full input bg-gray-50" readonly></div>
                         </div>
-                        <div><label class="label">Eliberat de</label><input type="text" id="guarantor-id-issued-by" class="input w-full bg-gray-50" readonly></div>
+                        <div><label class="label">Eliberat de</label><input type="text" id="guarantor-id-issued-by" class="w-full input bg-gray-50" readonly></div>
                     </div>
                 </div>
             </div>
 
-            <div id="company-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <h2 class="text-lg font-bold text-secondary mb-6">Date Companie</h2>
+            <div id="company-section" class="hidden settings-section">
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-6 text-lg font-bold text-secondary">Date Companie</h2>
                     <form onsubmit="saveCompany(event)" class="space-y-4">
-                        <div class="grid lg:grid-cols-2 gap-4"><div><label class="label">Denumire Firma *</label><input type="text" id="company-name" class="input w-full" required></div><div><label class="label">CUI / CIF *</label><div class="flex gap-2"><input type="text" id="company-cui" class="input flex-1" required><button type="button" onclick="verifyCUI()" class="btn btn-secondary">Verifica ANAF</button></div></div></div>
-                        <div class="grid lg:grid-cols-2 gap-4"><div><label class="label">Nr. Reg. Comertului</label><input type="text" id="company-reg" class="input w-full"></div><div><label class="label">Platitor TVA</label><select id="company-vat" class="input w-full"><option value="0">Nu</option><option value="1">Da</option></select></div></div>
-                        <div><label class="label">Adresa Sediu *</label><input type="text" id="company-address" class="input w-full" required></div>
-                        <div class="grid lg:grid-cols-3 gap-4"><div><label class="label">Oras *</label><input type="text" id="company-city" class="input w-full" required></div><div><label class="label">Judet *</label><input type="text" id="company-county" class="input w-full" required></div><div><label class="label">Cod Postal</label><input type="text" id="company-zip" class="input w-full"></div></div>
-                        <div class="pt-4 flex justify-end"><button type="submit" class="btn btn-primary">Salveaza</button></div>
+                        <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Denumire Firma *</label><input type="text" id="company-name" class="w-full input" required></div><div><label class="label">CUI / CIF *</label><div class="flex gap-2"><input type="text" id="company-cui" class="flex-1 input" required><button type="button" onclick="verifyCUI()" class="btn btn-secondary">Verifica ANAF</button></div></div></div>
+                        <div class="grid gap-4 lg:grid-cols-2"><div><label class="label">Nr. Reg. Comertului</label><input type="text" id="company-reg" class="w-full input"></div><div><label class="label">Platitor TVA</label><select id="company-vat" class="w-full input"><option value="0">Nu</option><option value="1">Da</option></select></div></div>
+                        <div><label class="label">Adresa Sediu *</label><input type="text" id="company-address" class="w-full input" required></div>
+                        <div class="grid gap-4 lg:grid-cols-3"><div><label class="label">Oras *</label><input type="text" id="company-city" class="w-full input" required></div><div><label class="label">Judet *</label><input type="text" id="company-county" class="w-full input" required></div><div><label class="label">Cod Postal</label><input type="text" id="company-zip" class="w-full input"></div></div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza</button></div>
                     </form>
                 </div>
             </div>
 
-            <div id="bank-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center justify-between mb-6"><h2 class="text-lg font-bold text-secondary">Conturi Bancare</h2><button onclick="openBankModal()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Adauga Cont</button></div>
+            <div id="bank-section" class="hidden settings-section">
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-between mb-6"><h2 class="text-lg font-bold text-secondary">Conturi Bancare</h2><button onclick="openBankModal()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Adauga Cont</button></div>
                     <div id="bank-accounts-list" class="space-y-4"></div>
                 </div>
             </div>
 
-            <div id="contract-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
+            <div id="contract-section" class="hidden settings-section">
+                <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
                     <div class="flex items-center justify-between mb-6">
                         <h2 class="text-lg font-bold text-secondary">Contract Marketplace</h2>
-                        <button id="download-contract-btn" onclick="downloadContract()" class="btn btn-primary hidden">
+                        <button id="download-contract-btn" onclick="downloadContract()" class="hidden btn btn-primary bg-primary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             Descarca Contract
                         </button>
-                        <span id="no-contract-msg" class="text-sm text-muted hidden">Contract negenearat</span>
+                        <span id="no-contract-msg" class="hidden text-sm text-muted">Contract negenearat</span>
                     </div>
-                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <div class="p-4 mb-6 border border-blue-200 bg-blue-50 rounded-xl">
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <p class="text-sm text-blue-800">Contractul este generat automat pe baza datelor tale de companie si a conditiilor comerciale agreate cu <?= SITE_NAME ?>.</p>
@@ -116,35 +116,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
 
                     <div class="space-y-6">
-                        <div class="grid md:grid-cols-3 gap-6">
-                            <div class="bg-surface rounded-xl p-5">
-                                <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
+                        <div class="grid gap-6 md:grid-cols-3">
+                            <div class="p-5 bg-surface rounded-xl">
+                                <h3 class="flex items-center gap-2 mb-3 font-semibold text-secondary">
                                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                                     Comision
                                 </h3>
-                                <p class="text-3xl font-bold text-primary mb-1" id="contract-commission">-</p>
+                                <p class="mb-1 text-3xl font-bold text-primary" id="contract-commission">-</p>
                                 <p class="text-sm text-muted" id="contract-commission-note">maxim 6% (minim 2.50 lei/bilet)</p>
                             </div>
-                            <div class="bg-surface rounded-xl p-5">
-                                <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
+                            <div class="p-5 bg-surface rounded-xl">
+                                <h3 class="flex items-center gap-2 mb-3 font-semibold text-secondary">
                                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                     Mod de Lucru
                                 </h3>
                                 <p class="text-lg font-semibold text-secondary" id="contract-work-mode">-</p>
-                                <p class="text-sm text-muted mt-1" id="contract-work-mode-desc">-</p>
+                                <p class="mt-1 text-sm text-muted" id="contract-work-mode-desc">-</p>
                             </div>
-                            <div class="bg-surface rounded-xl p-5">
-                                <h3 class="font-semibold text-secondary mb-3 flex items-center gap-2">
+                            <div class="p-5 bg-surface rounded-xl">
+                                <h3 class="flex items-center gap-2 mb-3 font-semibold text-secondary">
                                     <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     Mod Operare Comision
                                 </h3>
                                 <p class="text-lg font-semibold text-secondary" id="contract-mode">-</p>
-                                <p class="text-sm text-muted mt-1" id="contract-mode-desc">-</p>
+                                <p class="mt-1 text-sm text-muted" id="contract-mode-desc">-</p>
                             </div>
                         </div>
 
-                        <div class="border-t border-border pt-6">
-                            <h3 class="font-semibold text-secondary mb-4">Conditii Contractuale</h3>
+                        <div class="pt-6 border-t border-border">
+                            <h3 class="mb-4 font-semibold text-secondary">Conditii Contractuale</h3>
                             <div class="space-y-3" id="contract-terms">
                                 <div class="flex items-start gap-3 text-sm text-muted">
                                     <svg class="w-4 h-4 text-success mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -165,17 +165,17 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                         </div>
 
-                        <div class="border-t border-border pt-6">
-                            <h3 class="font-semibold text-secondary mb-4">Documente Necesare</h3>
-                            <p class="text-sm text-muted mb-4">Pentru activarea contului și procesarea plăților, avem nevoie de următoarele documente:</p>
+                        <div class="pt-6 border-t border-border">
+                            <h3 class="mb-4 font-semibold text-secondary">Documente Necesare</h3>
+                            <p class="mb-4 text-sm text-muted">Pentru activarea contului și procesarea plăților, avem nevoie de următoarele documente:</p>
 
-                            <div class="grid md:grid-cols-2 gap-6">
+                            <div class="grid gap-6 md:grid-cols-2">
                                 <!-- ID Card Upload -->
                                 <div>
-                                    <label class="block text-sm font-medium text-secondary mb-2">
+                                    <label class="block mb-2 text-sm font-medium text-secondary">
                                         Copie BI/CI (reprezentant legal) *
                                     </label>
-                                    <div id="id-card-dropzone" class="dropzone border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                                    <div id="id-card-dropzone" class="p-6 text-center transition-colors border-2 border-dashed cursor-pointer dropzone border-border rounded-xl hover:border-primary hover:bg-primary/5"
                                          ondragover="handleDragOver(event, 'id-card')"
                                          ondragleave="handleDragLeave(event, 'id-card')"
                                          ondrop="handleDrop(event, 'id_card')"
@@ -191,20 +191,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             </div>
                                         </div>
                                         <div id="id-card-placeholder">
-                                            <svg class="w-10 h-10 text-muted mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                            <svg class="w-10 h-10 mx-auto mb-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                                             <p class="text-sm text-muted">Trage fișierul aici sau click pentru a selecta</p>
-                                            <p class="text-xs text-muted mt-1">PDF, JPG sau PNG (max 5MB)</p>
+                                            <p class="mt-1 text-xs text-muted">PDF, JPG sau PNG (max 5MB)</p>
                                         </div>
                                     </div>
-                                    <p id="id-card-status" class="mt-2 text-xs hidden"></p>
+                                    <p id="id-card-status" class="hidden mt-2 text-xs"></p>
                                 </div>
 
                                 <!-- Company Registration Upload -->
                                 <div>
-                                    <label class="block text-sm font-medium text-secondary mb-2">
+                                    <label class="block mb-2 text-sm font-medium text-secondary">
                                         Copie CUI / Certificat Înregistrare *
                                     </label>
-                                    <div id="cui-dropzone" class="dropzone border-2 border-dashed border-border rounded-xl p-6 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors"
+                                    <div id="cui-dropzone" class="p-6 text-center transition-colors border-2 border-dashed cursor-pointer dropzone border-border rounded-xl hover:border-primary hover:bg-primary/5"
                                          ondragover="handleDragOver(event, 'cui')"
                                          ondragleave="handleDragLeave(event, 'cui')"
                                          ondrop="handleDrop(event, 'cui_document')"
@@ -220,12 +220,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                             </div>
                                         </div>
                                         <div id="cui-placeholder">
-                                            <svg class="w-10 h-10 text-muted mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                            <svg class="w-10 h-10 mx-auto mb-2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                                             <p class="text-sm text-muted">Trage fișierul aici sau click pentru a selecta</p>
-                                            <p class="text-xs text-muted mt-1">PDF, JPG sau PNG (max 5MB)</p>
+                                            <p class="mt-1 text-xs text-muted">PDF, JPG sau PNG (max 5MB)</p>
                                         </div>
                                     </div>
-                                    <p id="cui-status" class="mt-2 text-xs hidden"></p>
+                                    <p id="cui-status" class="hidden mt-2 text-xs"></p>
                                 </div>
                             </div>
                         </div>
@@ -233,55 +233,55 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <div id="notifications-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <h2 class="text-lg font-bold text-secondary mb-6">Preferinte Notificari</h2>
+            <div id="notifications-section" class="hidden settings-section">
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-6 text-lg font-bold text-secondary">Preferinte Notificari</h2>
                     <form onsubmit="saveNotifications(event)" class="space-y-4">
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Notificari Vanzari</p><p class="text-sm text-muted">Email la fiecare vanzare</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-sales" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Rapoarte Zilnice</p><p class="text-sm text-muted">Sumar zilnic al vanzarilor</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-daily" class="sr-only peer"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Alerte Stoc</p><p class="text-sm text-muted">Notificare stoc sub 10%</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-stock" class="sr-only peer" checked><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
                         <div class="flex items-center justify-between py-4 border-b border-border"><div><p class="font-medium text-secondary">Sunet Notificari</p><p class="text-sm text-muted">Reda sunet la primirea notificarilor</p></div><label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="notif-sound" class="sr-only peer" checked onchange="toggleNotificationSound(this.checked)"><div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div></label></div>
-                        <div class="pt-4 flex justify-end"><button type="submit" class="btn btn-primary">Salveaza</button></div>
+                        <div class="flex justify-end pt-4"><button type="submit" class="btn btn-primary bg-primary">Salveaza</button></div>
                     </form>
                 </div>
             </div>
 
-            <div id="security-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6 mb-6">
-                    <h2 class="text-lg font-bold text-secondary mb-6">Schimba Parola</h2>
+            <div id="security-section" class="hidden settings-section">
+                <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                    <h2 class="mb-6 text-lg font-bold text-secondary">Schimba Parola</h2>
                     <form onsubmit="changePassword(event)" class="max-w-md space-y-4">
-                        <div><label class="label">Parola Curenta</label><input type="password" id="current-password" class="input w-full" required></div>
-                        <div><label class="label">Parola Noua</label><input type="password" id="new-password" class="input w-full" required minlength="8"></div>
-                        <div><label class="label">Confirma Parola</label><input type="password" id="confirm-password" class="input w-full" required></div>
-                        <button type="submit" class="btn btn-primary">Schimba Parola</button>
+                        <div><label class="label">Parola Curenta</label><input type="password" id="current-password" class="w-full input" required></div>
+                        <div><label class="label">Parola Noua</label><input type="password" id="new-password" class="w-full input" required minlength="8"></div>
+                        <div><label class="label">Confirma Parola</label><input type="password" id="confirm-password" class="w-full input" required></div>
+                        <button type="submit" class="btn btn-primary bg-primary">Schimba Parola</button>
                     </form>
                 </div>
             </div>
-            <div id="sharelinks-section" class="settings-section hidden">
-                <div class="bg-white rounded-2xl border border-border p-6">
+            <div id="sharelinks-section" class="hidden settings-section">
+                <div class="p-6 bg-white border rounded-2xl border-border">
                     <div class="flex items-center justify-between mb-6">
                         <div>
                             <h2 class="text-lg font-bold text-secondary">Link-uri de Monitorizare</h2>
-                            <p class="text-sm text-muted mt-1">Genereaza link-uri unice pentru a permite altora sa vada statisticile evenimentelor tale in timp real.</p>
+                            <p class="mt-1 text-sm text-muted">Genereaza link-uri unice pentru a permite altora sa vada statisticile evenimentelor tale in timp real.</p>
                         </div>
-                        <button onclick="openShareLinkModal()" class="btn btn-primary">
+                        <button onclick="openShareLinkModal()" class="btn btn-primary bg-primary">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                             Link nou
                         </button>
                     </div>
 
-                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <div class="p-4 mb-6 border border-blue-200 bg-blue-50 rounded-xl">
                         <div class="flex items-start gap-3">
                             <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div class="text-sm text-blue-800">
-                                <p class="font-medium mb-1">Cum functioneaza?</p>
+                                <p class="mb-1 font-medium">Cum functioneaza?</p>
                                 <p>Selecteaza unul sau mai multe evenimente si genereaza un link unic. Oricine acceseaza link-ul va putea vedea in timp real: numele evenimentelor, locatia, data/ora, numarul de bilete puse in vanzare si cate s-au vandut.</p>
                             </div>
                         </div>
                     </div>
 
                     <div id="share-links-list">
-                        <div class="text-center py-8 text-muted">Se incarca...</div>
+                        <div class="py-8 text-center text-muted">Se incarca...</div>
                     </div>
                 </div>
             </div>
@@ -289,7 +289,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </div>
 
     <!-- Share Link Create Modal -->
-    <div id="share-link-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+    <div id="share-link-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-secondary">Creeaza Link de Monitorizare</h3>
@@ -300,18 +300,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <form onsubmit="createShareLink(event)" class="space-y-4">
                 <div>
                     <label class="label">Nume link (optional)</label>
-                    <input type="text" id="share-link-name" class="input w-full" placeholder="ex: Link pentru sponsor" maxlength="100">
+                    <input type="text" id="share-link-name" class="w-full input" placeholder="ex: Link pentru sponsor" maxlength="100">
                 </div>
                 <div>
                     <label class="label">Parola de acces (optional)</label>
-                    <input type="text" id="share-link-password" class="input w-full" placeholder="Lasa gol pentru acces liber" maxlength="50">
-                    <p class="text-xs text-muted mt-1">Daca setezi o parola, vizitatorii vor trebui sa o introduca pentru a vedea datele.</p>
+                    <input type="text" id="share-link-password" class="w-full input" placeholder="Lasa gol pentru acces liber" maxlength="50">
+                    <p class="mt-1 text-xs text-muted">Daca setezi o parola, vizitatorii vor trebui sa o introduca pentru a vedea datele.</p>
                 </div>
                 <div>
                     <label class="label">Selecteaza evenimente *</label>
-                    <div id="share-events-loading" class="text-sm text-muted py-2">Se incarca evenimentele...</div>
-                    <div id="share-events-list" class="hidden max-h-60 overflow-y-auto border border-border rounded-xl divide-y divide-border"></div>
-                    <p id="share-events-empty" class="hidden text-sm text-muted py-2">Nu ai evenimente active.</p>
+                    <div id="share-events-loading" class="py-2 text-sm text-muted">Se incarca evenimentele...</div>
+                    <div id="share-events-list" class="hidden overflow-y-auto border divide-y max-h-60 border-border rounded-xl divide-border"></div>
+                    <p id="share-events-empty" class="hidden py-2 text-sm text-muted">Nu ai evenimente active.</p>
                 </div>
                 <div>
                     <label class="flex items-center gap-3 cursor-pointer">
@@ -323,25 +323,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </label>
                 </div>
                 <div class="flex gap-3 pt-2">
-                    <button type="button" onclick="closeShareLinkModal()" class="btn btn-secondary flex-1">Anuleaza</button>
-                    <button type="submit" id="create-share-btn" class="btn btn-primary flex-1" disabled>Genereaza Link</button>
+                    <button type="button" onclick="closeShareLinkModal()" class="flex-1 btn btn-secondary">Anuleaza</button>
+                    <button type="submit" id="create-share-btn" class="flex-1 btn btn-primary bg-primary" disabled>Genereaza Link</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="bank-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6">
+    <div id="bank-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50">
+        <div class="w-full max-w-md p-6 bg-white rounded-2xl">
             <div class="flex items-center justify-between mb-6"><h3 class="text-xl font-bold text-secondary">Adauga Cont Bancar</h3><button onclick="closeBankModal()" aria-label="Închide"><svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
             <form onsubmit="addBankAccount(event)" class="space-y-4">
-                <div><label class="label">Nume Banca *</label><input type="text" id="bank-name" class="input w-full" required></div>
+                <div><label class="label">Nume Banca *</label><input type="text" id="bank-name" class="w-full input" required></div>
                 <div>
                     <label class="label">IBAN *</label>
-                    <input type="text" id="bank-iban" class="input w-full" required maxlength="24" oninput="validateIBAN(this)" placeholder="RO49AAAA1B31007593840000">
-                    <div id="iban-validation" class="mt-1 text-xs hidden"></div>
+                    <input type="text" id="bank-iban" class="w-full input" required maxlength="24" oninput="validateIBAN(this)" placeholder="RO49AAAA1B31007593840000">
+                    <div id="iban-validation" class="hidden mt-1 text-xs"></div>
                 </div>
-                <div><label class="label">Titular Cont *</label><input type="text" id="bank-holder" class="input w-full" required></div>
-                <div class="flex gap-3"><button type="button" onclick="closeBankModal()" class="btn btn-secondary flex-1">Anuleaza</button><button type="submit" class="btn btn-primary flex-1">Adauga</button></div>
+                <div><label class="label">Titular Cont *</label><input type="text" id="bank-holder" class="w-full input" required></div>
+                <div class="flex gap-3"><button type="button" onclick="closeBankModal()" class="flex-1 btn btn-secondary">Anuleaza</button><button type="submit" class="flex-1 btn btn-primary bg-primary">Adauga</button></div>
             </form>
         </div>
     </div>
@@ -432,7 +432,7 @@ function renderBankAccounts(accounts) {
     if (!accounts.length) { document.getElementById('bank-accounts-list').innerHTML = '<div class="p-6 text-center text-muted">Nu ai conturi bancare adaugate</div>'; return; }
     document.getElementById('bank-accounts-list').innerHTML = accounts.map(a => `
         <div class="flex items-center justify-between p-4 bg-surface rounded-xl ${a.is_primary ? 'ring-2 ring-primary' : ''}">
-            <div class="flex items-center gap-4"><div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center border border-border"><svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div><div><div class="flex items-center gap-2"><p class="font-medium text-secondary">${a.bank}</p>${a.is_primary ? '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">Principal</span>' : ''}</div><p class="text-sm text-muted font-mono">${a.iban}</p></div></div>
+            <div class="flex items-center gap-4"><div class="flex items-center justify-center w-12 h-12 bg-white border rounded-xl border-border"><svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg></div><div><div class="flex items-center gap-2"><p class="font-medium text-secondary">${a.bank}</p>${a.is_primary ? '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full">Principal</span>' : ''}</div><p class="font-mono text-sm text-muted">${a.iban}</p></div></div>
             <div class="flex items-center gap-2">${!a.is_primary ? `<button onclick="setPrimaryAccount(${a.id})" class="btn btn-secondary btn-sm">Seteaza Principal</button>` : ''}<button onclick="deleteAccount(${a.id})" class="p-2 text-muted hover:text-error"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button></div>
         </div>
     `).join('');
@@ -720,10 +720,10 @@ async function loadShareLinks() {
             shareLinksData = response.data?.links || [];
             renderShareLinks();
         } else {
-            document.getElementById('share-links-list').innerHTML = '<div class="text-center py-8 text-muted">Eroare la incarcare</div>';
+            document.getElementById('share-links-list').innerHTML = '<div class="py-8 text-center text-muted">Eroare la incarcare</div>';
         }
     } catch (error) {
-        document.getElementById('share-links-list').innerHTML = '<div class="text-center py-8 text-muted">Eroare la incarcare</div>';
+        document.getElementById('share-links-list').innerHTML = '<div class="py-8 text-center text-muted">Eroare la incarcare</div>';
     }
 }
 
@@ -737,10 +737,10 @@ function renderShareLinks() {
     const container = document.getElementById('share-links-list');
     if (!shareLinksData.length) {
         container.innerHTML = `
-            <div class="text-center py-12">
-                <svg class="w-16 h-16 text-muted/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <div class="py-12 text-center">
+                <svg class="w-16 h-16 mx-auto mb-4 text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                 <p class="text-muted">Nu ai creat inca niciun link de monitorizare.</p>
-                <button onclick="openShareLinkModal()" class="btn btn-primary mt-4">Creeaza primul link</button>
+                <button onclick="openShareLinkModal()" class="mt-4 btn btn-primary bg-primary">Creeaza primul link</button>
             </div>
         `;
         return;
@@ -757,36 +757,36 @@ function renderShareLinks() {
             <div class="flex items-start gap-4 p-4 bg-surface rounded-xl mb-3 ${!isActive ? 'opacity-60' : ''}">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                        <h3 class="font-semibold text-secondary truncate">${slEscapeHtml(link.name || 'Link')}</h3>
+                        <h3 class="font-semibold truncate text-secondary">${slEscapeHtml(link.name || 'Link')}</h3>
                         ${link.has_password ? '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full flex-shrink-0 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>Parola</span>' : ''}
                         ${link.show_participants ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full flex-shrink-0">Participanti</span>' : ''}
                         ${!isActive ? '<span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full flex-shrink-0">Inactiv</span>' : '<span class="px-2 py-0.5 bg-green-100 text-green-600 text-xs rounded-full flex-shrink-0">Activ</span>'}
                     </div>
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                    <div class="flex flex-wrap items-center text-xs gap-x-3 gap-y-1 text-muted">
                         <span>${eventCount} eveniment${eventCount !== 1 ? 'e' : ''}</span>
                         <span>&middot;</span>
                         <span>${accessCount} accesari</span>
                         <span>&middot;</span>
                         <span>Creat: ${createdDate}</span>
                     </div>
-                    <div class="mt-2 flex items-center gap-2">
+                    <div class="flex items-center gap-2 mt-2">
                         <code class="text-xs bg-white px-2 py-1 rounded border border-border truncate block max-w-[300px]">${slEscapeHtml(url)}</code>
                     </div>
                 </div>
-                <div class="flex items-center gap-1 flex-shrink-0 pt-1">
-                    <button onclick="copyShareLink('${link.code}')" class="p-2 text-muted hover:text-primary rounded-lg hover:bg-white" title="Copiaza link">
+                <div class="flex items-center flex-shrink-0 gap-1 pt-1">
+                    <button onclick="copyShareLink('${link.code}')" class="p-2 rounded-lg text-muted hover:text-primary hover:bg-white" title="Copiaza link">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
                     </button>
-                    <button onclick="window.open('/view/${link.code}', '_blank')" class="p-2 text-muted hover:text-primary rounded-lg hover:bg-white" title="Deschide link">
+                    <button onclick="window.open('/view/${link.code}', '_blank')" class="p-2 rounded-lg text-muted hover:text-primary hover:bg-white" title="Deschide link">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                     </button>
-                    <button onclick="refreshShareLink('${link.code}')" class="p-2 text-muted hover:text-green-600 rounded-lg hover:bg-white" title="Actualizeaza datele">
+                    <button onclick="refreshShareLink('${link.code}')" class="p-2 rounded-lg text-muted hover:text-green-600 hover:bg-white" title="Actualizeaza datele">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     </button>
-                    <button onclick="toggleShareLink('${link.code}', ${isActive ? 'false' : 'true'})" class="p-2 text-muted hover:text-yellow-600 rounded-lg hover:bg-white" title="${isActive ? 'Dezactiveaza' : 'Activeaza'}">
+                    <button onclick="toggleShareLink('${link.code}', ${isActive ? 'false' : 'true'})" class="p-2 rounded-lg text-muted hover:text-yellow-600 hover:bg-white" title="${isActive ? 'Dezactiveaza' : 'Activeaza'}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${isActive ? 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636' : 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'}"/></svg>
                     </button>
-                    <button onclick="deleteShareLink('${link.code}')" class="p-2 text-muted hover:text-error rounded-lg hover:bg-white" title="Sterge">
+                    <button onclick="deleteShareLink('${link.code}')" class="p-2 rounded-lg text-muted hover:text-error hover:bg-white" title="Sterge">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                 </div>
@@ -836,10 +836,10 @@ function renderEventCheckboxes(events) {
         const evDate = ev.start_date || ev.date || '';
         const evStatus = ev.status || '';
         return `
-            <label class="flex items-center gap-3 p-3 hover:bg-surface cursor-pointer">
-                <input type="checkbox" value="${ev.id}" class="share-event-checkbox rounded border-border text-primary focus:ring-primary" onchange="updateShareBtnState()">
+            <label class="flex items-center gap-3 p-3 cursor-pointer hover:bg-surface">
+                <input type="checkbox" value="${ev.id}" class="rounded share-event-checkbox border-border text-primary focus:ring-primary" onchange="updateShareBtnState()">
                 <div class="flex-1 min-w-0">
-                    <p class="text-sm font-medium text-secondary truncate">${slEscapeHtml(evTitle)}</p>
+                    <p class="text-sm font-medium truncate text-secondary">${slEscapeHtml(evTitle)}</p>
                     <p class="text-xs text-muted">${slEscapeHtml(evDate)}${evStatus ? ' &middot; ' + slEscapeHtml(evStatus) : ''}</p>
                 </div>
             </label>

@@ -8,7 +8,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <!-- Main Container -->
-<div class="px-4 py-6 mx-auto max-w-4xl lg:py-8">
+<div class="max-w-4xl px-4 py-6 mx-auto lg:py-8">
     <!-- Back Link -->
     <a href="/cont/bilete" class="inline-flex items-center gap-2 mb-6 text-sm font-medium text-muted hover:text-primary">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -33,7 +33,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <!-- Ticket Body -->
         <div class="flex flex-col lg:flex-row">
             <!-- Event Details -->
-            <div class="relative flex-1 p-6 border-b lg:border-b-0 lg:border-r border-dashed border-border lg:p-8">
+            <div class="relative flex-1 p-6 border-b border-dashed lg:border-b-0 lg:border-r border-border lg:p-8">
                 <!-- Cutout circles (hidden on mobile) -->
                 <div class="absolute hidden w-7 h-7 bg-surface rounded-full -right-3.5 -top-3.5 lg:block"></div>
                 <div class="absolute hidden w-7 h-7 bg-surface rounded-full -right-3.5 -bottom-3.5 lg:block"></div>
@@ -116,7 +116,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
         </div>
 
         <!-- Ticket Footer -->
-        <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 bg-surface border-t border-border lg:px-8">
+        <div class="flex flex-wrap items-center justify-between gap-4 px-6 py-4 border-t bg-surface border-border lg:px-8">
             <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
                 <span class="flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -136,7 +136,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
     <!-- Action Buttons -->
     <div class="flex flex-col gap-3 mt-6 sm:flex-row">
-        <button onclick="window.print()" class="flex items-center justify-center flex-1 gap-2 btn btn-primary">
+        <button onclick="window.print()" class="flex items-center justify-center flex-1 gap-2 btn btn-primary bg-primary">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
             Printeaza biletul
         </button>
@@ -151,7 +151,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     </div>
 
     <!-- Important Notice -->
-    <div class="flex items-start gap-3 p-4 mt-6 border rounded-xl bg-yellow-50 border-yellow-400">
+    <div class="flex items-start gap-3 p-4 mt-6 border border-yellow-400 rounded-xl bg-yellow-50">
         <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <p class="text-sm text-yellow-800"><strong>Important:</strong> Prezinta acest cod QR la intrare. Biletul poate fi scanat o singura data. Te rugam sa ai la tine un act de identitate valid.</p>
     </div>

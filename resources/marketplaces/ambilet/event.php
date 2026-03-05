@@ -401,7 +401,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <!-- Hidden subtotal for JavaScript calculations -->
                                 <span id="subtotal" class="hidden">0 lei</span>
 
-                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl" aria-label="Cumpără bilete pentru acest eveniment">
+                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl bg-primary" aria-label="Cumpără bilete pentru acest eveniment">
                                     <svg id="checkoutBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                     <span id="checkoutBtnText">Cumpără bilete</span>
                                 </button>
@@ -548,7 +548,7 @@ require_once __DIR__ . '/includes/head.php';
                     <span id="drawerTotalPrice" class="text-primary">0 lei</span>
                 </div>
             </div>
-            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl" aria-label="Cumpără bilete pentru acest eveniment">
+            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl bg-primary" aria-label="Cumpără bilete pentru acest eveniment">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 Cumpără bilete
             </button>

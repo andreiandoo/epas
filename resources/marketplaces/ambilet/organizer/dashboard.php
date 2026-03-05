@@ -120,7 +120,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div id="no-events" class="hidden py-12 text-center">
                                 <svg class="w-12 h-12 mx-auto mb-3 text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 <p class="mb-3 text-muted">Nu ai evenimente inca</p>
-                                <a href="/organizator/events?new=1" class="px-4 py-2 text-sm font-medium text-white btn-primary rounded-xl">Creeaza primul eveniment</a>
+                                <a href="/organizator/events?new=1" class="px-4 py-2 text-sm font-medium text-white btn-primary rounded-xl bg-primary">Creeaza primul eveniment</a>
                             </div>
                         </div>
                     </div>
@@ -392,7 +392,7 @@ const OrgDashboard = {
                 </div>
             </div>
             <div class="flex gap-2">
-                <a href="/organizator/participanti" class="flex-1 btn-primary py-2.5 rounded-xl font-semibold text-white text-sm text-center">Check-in</a>
+                <a href="/organizator/participanti" class="flex-1 btn-primary py-2.5 rounded-xl bg-primary font-semibold text-white text-sm text-center">Check-in</a>
                 <a href="/organizator/events?id=${event.id}" class="flex-1 py-2.5 rounded-xl font-semibold text-secondary text-sm text-center border border-border hover:border-primary transition-colors">Detalii</a>
             </div>
         `;

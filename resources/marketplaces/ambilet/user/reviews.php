@@ -17,28 +17,28 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <!-- Stats Grid -->
             <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
                 <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg bg-yellow-100">
+                    <div class="flex items-center justify-center w-10 h-10 mb-2 bg-yellow-100 rounded-lg">
                         <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
                     </div>
                     <div class="text-2xl font-bold text-secondary" id="stat-total">0</div>
                     <div class="text-xs text-muted">Total recenzii</div>
                 </div>
                 <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg bg-green-100">
+                    <div class="flex items-center justify-center w-10 h-10 mb-2 bg-green-100 rounded-lg">
                         <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <div class="text-2xl font-bold text-secondary" id="stat-published">0</div>
                     <div class="text-xs text-muted">Publicate</div>
                 </div>
                 <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg bg-blue-100">
+                    <div class="flex items-center justify-center w-10 h-10 mb-2 bg-blue-100 rounded-lg">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div class="text-2xl font-bold text-secondary" id="stat-pending">0</div>
                     <div class="text-xs text-muted">In asteptare</div>
                 </div>
                 <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-center w-10 h-10 mb-2 rounded-lg bg-red-100">
+                    <div class="flex items-center justify-center w-10 h-10 mb-2 bg-red-100 rounded-lg">
                         <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
                     </div>
                     <div class="text-2xl font-bold text-secondary" id="stat-avg">0</div>
@@ -47,7 +47,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Pending Reviews Alert -->
-            <div class="hidden items-center gap-4 p-4 mb-6 border rounded-xl bg-yellow-50 border-yellow-400" id="pending-events-alert">
+            <div class="items-center hidden gap-4 p-4 mb-6 border border-yellow-400 rounded-xl bg-yellow-50" id="pending-events-alert">
                 <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-white rounded-lg">
                     <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 </div>
@@ -60,16 +60,16 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
             <!-- Filter Tabs -->
             <div class="flex flex-wrap gap-2 mb-6">
-                <button class="filter-tab active px-4 py-2 text-sm font-medium rounded-full border transition-colors" data-filter="all">
+                <button class="px-4 py-2 text-sm font-medium transition-colors border rounded-full filter-tab active" data-filter="all">
                     Toate <span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20" id="count-all">0</span>
                 </button>
-                <button class="filter-tab px-4 py-2 text-sm font-medium text-muted bg-white border rounded-full border-border hover:border-primary hover:text-primary transition-colors" data-filter="published">
+                <button class="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-full filter-tab text-muted border-border hover:border-primary hover:text-primary" data-filter="published">
                     Publicate <span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-surface" id="count-published">0</span>
                 </button>
-                <button class="filter-tab px-4 py-2 text-sm font-medium text-muted bg-white border rounded-full border-border hover:border-primary hover:text-primary transition-colors" data-filter="pending">
+                <button class="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-full filter-tab text-muted border-border hover:border-primary hover:text-primary" data-filter="pending">
                     In asteptare <span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-surface" id="count-pending">0</span>
                 </button>
-                <button class="filter-tab px-4 py-2 text-sm font-medium text-muted bg-white border rounded-full border-border hover:border-primary hover:text-primary transition-colors" data-filter="rejected">
+                <button class="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-full filter-tab text-muted border-border hover:border-primary hover:text-primary" data-filter="rejected">
                     Respinse <span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-surface" id="count-rejected">0</span>
                 </button>
             </div>
@@ -86,7 +86,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
                 <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai scris inca recenzii</h3>
                 <p class="mb-6 text-muted">Dupa ce participi la un eveniment, poti lasa o recenzie pentru a ajuta alti utilizatori.</p>
-                <a href="/cont/bilete" class="btn btn-primary">Vezi biletele tale</a>
+                <a href="/cont/bilete" class="btn btn-primary bg-primary">Vezi biletele tale</a>
             </div>
 <?php 
 require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
@@ -211,7 +211,7 @@ const ReviewsPage = {
         ).join('');
 
         return `
-            <div class="overflow-hidden bg-white border rounded-xl border-border hover:shadow-md transition-shadow">
+            <div class="overflow-hidden transition-shadow bg-white border rounded-xl border-border hover:shadow-md">
                 <div class="flex flex-col gap-4 p-5 md:flex-row">
                     <div class="flex items-center justify-center flex-shrink-0 w-full h-32 md:w-24 md:h-24 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
                         ${review.event_image ? `<img src="${review.event_image}" alt="${review.event_title}" class="object-cover w-full h-full rounded-xl">` : `
@@ -250,7 +250,7 @@ const ReviewsPage = {
                         ` : ''}
                     </div>
                 </div>
-                <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-3 bg-surface border-t border-border">
+                <div class="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-t bg-surface border-border">
                     <div class="flex flex-wrap items-center gap-4 text-sm text-muted">
                         <span class="flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>

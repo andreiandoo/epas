@@ -83,7 +83,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Tabs -->
-            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl max-w-full scrollbar-hide">
+            <div class="flex max-w-full gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl scrollbar-hide">
                 <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" id="tab-btn-rewards">
                     Recompense
                 </button>
@@ -343,7 +343,7 @@ const RewardsPage = {
     renderRewards() {
         const container = document.getElementById('rewards-container');
         if (!this.rewards || this.rewards.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu sunt recompense disponibile momentan.</p>';
+            container.innerHTML = '<p class="py-8 text-center col-span-full text-muted">Nu sunt recompense disponibile momentan.</p>';
             return;
         }
 
@@ -374,7 +374,7 @@ const RewardsPage = {
 
             let actionBtn = '';
             if (canRedeem) {
-                actionBtn = '<button onclick="RewardsPage.redeemReward(' + reward.id + ')" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Revendica</button>';
+                actionBtn = '<button onclick="RewardsPage.redeemReward(' + reward.id + ')" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary bg-primary">Revendica</button>';
             } else {
                 actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted" disabled>Indisponibil</button>';
             }
@@ -385,7 +385,7 @@ const RewardsPage = {
             const gradient = reward.gradient || 'from-primary/20 to-accent/20';
             const emoji = reward.emoji || reward.icon || '🎁';
 
-            return '<div class="reward-card rounded-xl lg:rounded-2xl p-5 ' + cardClass + '">' +
+            return '<div class="p-5 reward-card rounded-xl lg:rounded-2xl ' + cardClass + '">' +
                 '<div class="flex items-center justify-between mb-4">' +
                     '<div class="w-14 h-14 bg-gradient-to-br ' + gradient + ' rounded-xl flex items-center justify-center">' +
                         '<span class="text-3xl">' + emoji + '</span>' +
@@ -559,7 +559,7 @@ const RewardsPage = {
                 '<p class="mt-1 text-xs text-muted">' + this.xp.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString() + ' XP (Nivel ' + this.level + ')</p>'
                 : '';
 
-            return '<div class="rounded-xl p-4 lg:p-5 ' + cardClass + '">' +
+            return '<div class="p-4 rounded-xl lg:p-5 ' + cardClass + '">' +
                 '<div class="flex items-center gap-4">' +
                     '<div class="w-14 h-14 bg-gradient-to-br ' + gradient + ' rounded-xl flex items-center justify-center ' + (isLocked ? 'opacity-50' : '') + '">' +
                         '<span class="text-2xl">' + emoji + '</span>' +

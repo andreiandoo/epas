@@ -72,7 +72,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                         </div>
                         <div><label class="label">Parolă *</label><input type="password" name="password" required class="input" placeholder="Minim 8 caractere" minlength="8"></div>
                         <div><label class="label">Confirmă parola *</label><input type="password" name="password_confirmation" required class="input" placeholder="Repetă parola"></div>
-                        <button type="submit" class="w-full mt-6 btn btn-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                        <button type="submit" class="w-full mt-6 btn btn-primary bg-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                     </form>
                 </div>
             </div>
@@ -146,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
                         <div class="flex gap-4 mt-6">
                             <button type="button" onclick="goToStep(1)" class="flex-1 btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Înapoi</button>
-                            <button type="submit" class="flex-1 btn btn-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                            <button type="submit" class="flex-1 btn btn-primary bg-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                         </div>
                     </form>
                 </div>
@@ -248,7 +248,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
                         <div class="flex gap-4 mt-6">
                             <button type="button" onclick="goToStep(2)" class="flex-1 btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Înapoi</button>
-                            <button type="submit" class="flex-1 btn btn-primary" id="step3-submit" disabled>Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                            <button type="submit" class="flex-1 btn btn-primary bg-primary" id="step3-submit" disabled>Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                         </div>
                     </form>
                 </div>
@@ -340,7 +340,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
                         <div class="flex gap-4 mt-6">
                             <button type="button" onclick="goToPreviousStep()" class="flex-1 btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Înapoi</button>
-                            <button type="submit" class="flex-1 btn btn-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                            <button type="submit" class="flex-1 btn btn-primary bg-primary">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                         </div>
                     </form>
                 </div>
@@ -381,7 +381,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
                         <div class="flex gap-4 mt-6">
                             <button type="button" onclick="goToStep(4)" class="flex-1 btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Înapoi</button>
-                            <button type="submit" class="flex-1 btn btn-primary" id="step5-submit">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
+                            <button type="submit" class="flex-1 btn btn-primary bg-primary" id="step5-submit">Continuă<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg></button>
                         </div>
                     </form>
                 </div>
@@ -481,7 +481,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 
                     <div class="flex gap-4">
                         <button type="button" onclick="goToStep(5)" class="flex-1 btn btn-secondary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>Înapoi</button>
-                        <button type="button" onclick="submitRegistration()" class="flex-1 btn btn-primary" id="final-submit">
+                        <button type="button" onclick="submitRegistration()" class="flex-1 btn btn-primary bg-primary" id="final-submit">
                             <span id="final-btn-text">Finalizează Înregistrarea</span>
                             <div id="final-btn-spinner" class="hidden spinner"></div>
                         </button>
