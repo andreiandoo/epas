@@ -58,7 +58,10 @@ class EditEvent extends EditRecord
             $title .= ' (' . implode(', ', $parts) . ')';
         }
 
-        return $title ?: 'Edit Event';
+        // Inject CSS for header layout
+        $css = '<style>.fi-header{flex-direction:column;align-items:start;}</style>';
+
+        return new \Illuminate\Support\HtmlString(e($title ?: 'Edit Event') . $css);
     }
 
     public function getBreadcrumbs(): array
