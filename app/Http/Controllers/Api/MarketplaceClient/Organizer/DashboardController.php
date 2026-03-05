@@ -164,7 +164,7 @@ class DashboardController extends BaseController
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->with([
-                'event:id,name',
+                'event:id,title',
                 'marketplaceEvent:id,name',
                 'marketplaceCustomer:id,first_name,last_name,email',
             ])
@@ -200,7 +200,7 @@ class DashboardController extends BaseController
 
         $query = Order::where('marketplace_organizer_id', $organizer->id)
             ->with([
-                'event:id,name',
+                'event:id,title',
                 'marketplaceEvent:id,name',
                 'marketplaceCustomer:id,first_name,last_name,email',
             ]);
