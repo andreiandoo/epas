@@ -241,9 +241,9 @@ class DashboardController extends BaseController
         // Compute aggregate stats from full query (only completed/paid orders)
         $statsQuery = (clone $query)->whereIn('status', ['completed', 'paid']);
         $stats = [
-            'total_revenue' => (float) $statsQuery->sum('total'),
-            'total_tickets' => (int) (clone $statsQuery)->sum(\DB::raw('COALESCE(tickets_count, 0)')),
-            'completed_orders' => (int) $statsQuery->count(),
+            'total_revenue' => (float) (clone $statsQuery)->sum('total'),
+            'total_tickets' => (int) (clone $statsQuery)->withCount('tickets')->get()->sum('tickets_count'),
+            'completed_orders' => (int) (clone $statsQuery)->count(),
         ];
 
         $perPage = min((int) $request->get('per_page', 20), 100);
