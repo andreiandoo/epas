@@ -1616,14 +1616,15 @@ class EventsController extends BaseController
         // Valid order statuses for analytics (only truly paid/completed)
         $validStatuses = ['paid', 'completed'];
 
-        // Base query for orders in the range
+        // Base query for orders in the range (used for chart data & period comparisons)
         $ordersQuery = $event->orders()
             ->whereIn('status', $validStatuses)
             ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
-        // Overview metrics
-        $totalRevenue = (float) $ordersQuery->sum('total');
-        $ticketsSold = (int) $ordersQuery->withCount('tickets')->get()->sum('tickets_count');
+        // Overview metrics — always all-time (not filtered by period)
+        $allTimeQuery = $event->orders()->whereIn('status', $validStatuses);
+        $totalRevenue = (float) (clone $allTimeQuery)->sum('total');
+        $ticketsSold = (int) (clone $allTimeQuery)->withCount('tickets')->get()->sum('tickets_count');
         $pageViews = $event->views_count ?? 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 

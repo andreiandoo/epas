@@ -623,23 +623,25 @@ class Event extends Model
     }
 
     /**
-     * Calculate total revenue for this event
+     * Calculate total revenue for this event (only paid/completed orders)
      */
     public function getTotalRevenueAttribute(): float
     {
         return $this->orders()
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereIn('status', ['paid', 'completed'])
             ->sum('total');
     }
 
     /**
-     * Calculate total tickets sold for this event
+     * Calculate total tickets sold for this event (only from paid/completed orders)
      */
     public function getTotalTicketsSoldAttribute(): int
     {
-        return $this->tickets()
-            ->whereIn('tickets.status', ['valid', 'checked_in'])
-            ->count();
+        return (int) $this->orders()
+            ->whereIn('status', ['paid', 'completed'])
+            ->withCount('tickets')
+            ->get()
+            ->sum('tickets_count');
     }
 
     /**

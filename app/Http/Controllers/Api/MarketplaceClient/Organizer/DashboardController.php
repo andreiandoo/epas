@@ -38,7 +38,9 @@ class DashboardController extends BaseController
         $eventsList = (clone $upcomingEventsQuery)
             ->orderBy('event_date')
             ->limit(10)
-            ->withCount('tickets as tickets_sold')
+            ->withCount(['tickets as tickets_sold' => function ($q) {
+                $q->whereHas('order', fn ($oq) => $oq->whereIn('status', ['paid', 'completed']));
+            }])
             ->with(['marketplaceCity', 'venue'])
             ->get()
             ->map(function ($event) {
