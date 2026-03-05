@@ -118,6 +118,19 @@ class EditEvent extends EditRecord
             ->color('gray')
             ->url(fn () => EventResource::getUrl('import-external-tickets', ['record' => $this->record]));
 
+        // Coupon codes button
+        $params = http_build_query(array_filter([
+            'event_id' => $this->record->id,
+            'organizer_id' => $this->record->marketplace_organizer_id,
+        ]));
+        $couponUrl = \App\Filament\Marketplace\Resources\CouponCodeResource::getUrl('create') . '?' . $params;
+        $actions[] = Actions\Action::make('coupon_codes')
+            ->label('Coduri reducere')
+            ->icon('heroicon-o-tag')
+            ->color('gray')
+            ->url($couponUrl)
+            ->openUrlInNewTab();
+
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();
 
