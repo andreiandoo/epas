@@ -65,7 +65,7 @@ class DashboardController extends BaseController
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
-        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'confirmed', 'completed']);
+        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'completed']);
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
         $grossRevenue = (float) $completedOrders->sum('total');

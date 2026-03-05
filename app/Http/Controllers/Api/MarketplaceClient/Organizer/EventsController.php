@@ -1613,8 +1613,8 @@ class EventsController extends BaseController
             $rangeStart = $eventCreatedAt;
         }
 
-        // Valid order statuses for analytics
-        $validStatuses = ['paid', 'confirmed', 'completed'];
+        // Valid order statuses for analytics (only truly paid/completed)
+        $validStatuses = ['paid', 'completed'];
 
         // Base query for orders in the range
         $ordersQuery = $event->orders()
