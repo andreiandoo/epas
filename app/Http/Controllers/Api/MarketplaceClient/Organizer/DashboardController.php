@@ -20,7 +20,7 @@ class DashboardController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $fromDate = $request->input('from_date', now()->subDays(30)->toDateString());
+        $fromDate = $request->input('from_date', now()->startOfMonth()->toDateString());
         $toDate = $request->input('to_date', now()->toDateString());
 
         // Events stats - use Event model directly
@@ -126,7 +126,7 @@ class DashboardController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $fromDate = $request->input('from_date', now()->subDays(30)->toDateString());
+        $fromDate = $request->input('from_date', now()->startOfMonth()->toDateString());
         $toDate = $request->input('to_date', now()->toDateString());
         $groupBy = $request->input('group_by', 'day');
 
