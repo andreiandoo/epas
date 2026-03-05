@@ -126,7 +126,11 @@ class ImportAmbiletEventsCommand extends Command
 
             $createdAt   = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
             $isPublished = $data['post_status'] === 'publish';
-            $slug        = $this->generateUniqueSlug($this->n($data['name']) ?? '');
+            // Use original WordPress slug if available, otherwise generate from name
+            $wpSlug = $this->n($data['wp_slug'] ?? null);
+            $slug   = $wpSlug
+                ? $this->ensureUniqueSlug($wpSlug)
+                : $this->generateUniqueSlug($this->n($data['name']) ?? '');
 
             // events.title is JSON translatable: {"ro": "Event Name"}
             $name        = $data['name'];
@@ -152,7 +156,8 @@ class ImportAmbiletEventsCommand extends Command
                 'venue_name'                 => $venueName,
                 'city'                       => $venueCity,
                 'address'                    => $location,
-                'poster_url'                 => $this->n($data['image_url']),
+                'hero_image_url'             => $this->n($data['image_url']),
+                'poster_url'                 => null,
                 'status'                     => $isPublished ? 'published' : 'draft',
                 'is_published'               => $isPublished ? 1 : 0,
                 'is_featured'                => 0,
@@ -202,12 +207,11 @@ class ImportAmbiletEventsCommand extends Command
     }
 
     /**
-     * Generate a globally unique slug for the events table.
+     * Ensure an existing slug is unique, appending a suffix if needed.
      */
-    private function generateUniqueSlug(string $name): string
+    private function ensureUniqueSlug(string $slug): string
     {
-        $base = Str::slug($name) ?: 'event';
-        $slug = $base;
+        $base = $slug;
         $i    = 1;
 
         while (DB::table('events')->where('slug', $slug)->exists()) {
@@ -215,6 +219,14 @@ class ImportAmbiletEventsCommand extends Command
         }
 
         return $slug;
+    }
+
+    /**
+     * Generate a globally unique slug for the events table.
+     */
+    private function generateUniqueSlug(string $name): string
+    {
+        return $this->ensureUniqueSlug(Str::slug($name) ?: 'event');
     }
 
     private function saveMap(): void
