@@ -43,6 +43,7 @@ class MarketplaceEmailTemplate extends Model
         'event_reminder' => 'Event Reminder',
         'event_updated' => 'Event Updated',
         'event_cancelled' => 'Event Cancelled',
+        'ticket_delivery' => 'Ticket Delivery to Beneficiary',
         'invitation' => 'Event Invitation',
         'password_reset' => 'Password Reset',
         'organizer_payout' => 'Organizer Payout Notification',
@@ -125,6 +126,19 @@ class MarketplaceEmailTemplate extends Model
                 'refund_amount' => 'Refund amount',
                 'refund_reason' => 'Reason for refund',
                 'rejection_reason' => 'Reason for rejection (if rejected)',
+            ],
+            'welcome' => [
+                'login_url' => 'Login URL',
+            ],
+            'password_reset' => [
+                'reset_url' => 'Password reset URL',
+            ],
+            'ticket_delivery' => [
+                'beneficiary_name' => 'Beneficiary full name',
+                'event_name' => 'Event name',
+                'event_date' => 'Event date and time',
+                'venue_name' => 'Venue name',
+                'ticket_type' => 'Ticket type name',
             ],
             'event_reminder', 'event_updated', 'event_cancelled' => [
                 'event_name' => 'Event name',

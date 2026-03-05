@@ -285,7 +285,10 @@ class SeatingLayoutResource extends Resource
                             Forms\Components\Select::make('venue_id')
                                 ->label('Locație')
                                 ->helperText('Locația trebuie să aparțină acestui marketplace.')
-                                ->relationship('venue', 'name', fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id))
+                                ->relationship('venue', 'name', fn (Builder $query) => $query->where(fn ($q) => $q
+                                    ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+                                    ->orWhereHas('marketplaceClients', fn ($q2) => $q2->where('marketplace_client_id', static::getMarketplaceClient()?->id))
+                                ))
                                 ->getOptionLabelFromRecordUsing(function ($record) {
                                     $locale = app()->getLocale();
                                     $name = $record->getTranslation('name', $locale) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue';

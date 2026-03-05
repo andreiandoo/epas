@@ -203,7 +203,7 @@ class Invitations extends Page
                 'notes' => $data['notes'] ?? '',
             ],
             'status' => 'draft',
-            'created_by' => auth()->id(),
+            'created_by' => null,
         ]);
 
         // Generate empty invitations
