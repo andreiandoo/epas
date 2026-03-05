@@ -46,9 +46,9 @@ require_once __DIR__ . '/includes/header.php';
 <?php // require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Promoted & Recommended Events -->
-<section class="py-10 bg-primary md:py-14">
+<section class="py-10 bg-primary/20 md:py-14">
     <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-4 text-lg font-bold text-center text-white md:text-2xl">Nu rata aceste evenimente</h2>
+        <h2 class="mb-6 text-lg font-bold text-center text-primary md:text-2xl">Nu rata aceste evenimente</h2>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 lg:grid-cols-6 md:gap-5" id="promotedEventsGrid">
             <!-- Promoted events will be loaded dynamically -->
             <?php for ($i = 0; $i < 12; $i++): ?>

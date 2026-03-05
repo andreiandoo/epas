@@ -617,10 +617,22 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             </svg>
         </div>
         <div class="hidden pb-4 mobile-dropdown">
-            <?php foreach (array_slice($navCategories, 0, 5) as $cat): ?>
+            <?php foreach ($navCategories as $cat):
+                $hasSvgPath = !empty($cat['icon']) && (str_contains($cat['icon'], '<path') || str_contains($cat['icon'], '<circle') || str_contains($cat['icon'], '<rect') || str_contains($cat['icon'], '<line') || str_contains($cat['icon'], '<polygon'));
+                $heroiconPath = !empty($cat['icon']) && str_starts_with($cat['icon'], 'heroicon-') ? getHeroiconPath($cat['icon']) : null;
+                $hasEmoji = !empty($cat['icon_emoji']);
+            ?>
             <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 p-3 mb-2 text-gray-900 rounded-lg bg-gray-50">
                 <div class="flex items-center justify-center text-gray-500 bg-white rounded-lg shadow-sm w-9 h-9">
+                    <?php if ($hasSvgPath): ?>
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $cat['icon'] ?></svg>
+                    <?php elseif ($heroiconPath): ?>
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $heroiconPath ?></svg>
+                    <?php elseif ($hasEmoji): ?>
+                    <span class="text-lg"><?= $cat['icon_emoji'] ?></span>
+                    <?php else: ?>
+                    <span class="text-lg">🎫</span>
+                    <?php endif; ?>
                 </div>
                 <span class="text-sm font-semibold"><?= htmlspecialchars($cat['name']) ?></span>
             </a>
