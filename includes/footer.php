@@ -293,6 +293,16 @@ $currentYear = date('Y');
                     Setări cookies
                 </button>
             </div>
+
+            
+            <div class="flex items-center justify-center gap-6 mt-4 mobile:gap-4">
+                <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow">
+                    <img style="width:250px;margin:5px;" src="/assets/images/anpc-sal.png" alt="Solutionarea Alternativa a Litigiilor">
+                </a><br/>
+                <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow">
+                    <img style="width:250px;margin:5px;" src="/assets/images/anpc-sol.png" alt="Solutionarea Online a Litigiilor">
+                </a>
+            </div>
         </div>
     </div>
 </footer>
