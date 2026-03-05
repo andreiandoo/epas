@@ -202,7 +202,7 @@ async function loadOrders() {
             const total = meta.total || ordersData.length;
 
             renderOrders();
-            updateStats(ordersData, total);
+            updateStats(meta);
             updatePagination();
         }
     } catch (error) {
@@ -285,23 +285,11 @@ function getSourceLabel(source) {
     return labels[source] || source || 'Website';
 }
 
-function updateStats(orders, total) {
-    document.getElementById('stat-total-orders').textContent = total.toLocaleString('ro-RO');
-
-    // Calculate from current page data (approximate for now)
-    let totalValue = 0;
-    let totalTickets = 0;
-    let completed = 0;
-
-    orders.forEach(o => {
-        totalValue += parseFloat(o.total) || 0;
-        totalTickets += parseInt(o.tickets_count) || 0;
-        if (o.status === 'completed') completed++;
-    });
-
-    document.getElementById('stat-total-value').textContent = AmbiletUtils.formatCurrency(totalValue);
-    document.getElementById('stat-total-tickets').textContent = totalTickets.toLocaleString('ro-RO');
-    document.getElementById('stat-completed').textContent = completed.toLocaleString('ro-RO');
+function updateStats(meta) {
+    document.getElementById('stat-total-orders').textContent = (meta.total || 0).toLocaleString('ro-RO');
+    document.getElementById('stat-total-value').textContent = AmbiletUtils.formatCurrency(meta.total_revenue || 0);
+    document.getElementById('stat-total-tickets').textContent = (meta.total_tickets || 0).toLocaleString('ro-RO');
+    document.getElementById('stat-completed').textContent = (meta.completed_orders || 0).toLocaleString('ro-RO');
 }
 
 function updatePagination() {

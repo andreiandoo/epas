@@ -616,14 +616,15 @@ const eventIdFromPath = pathMatch ? pathMatch[1] : null;
 const eventIdFromQuery = urlParams.get('id');
 const eventId = eventIdFromPath || eventIdFromQuery;
 
-if (urlParams.get('action') === 'create') {
-    showCreateForm();
-} else if (eventId) {
-    // If we have an event ID (from path or query string), load for editing
-    loadEventForEdit(eventId);
-} else {
-    loadEvents();
-}
+document.addEventListener('DOMContentLoaded', function() {
+    if (urlParams.get('action') === 'create') {
+        showCreateForm();
+    } else if (eventId) {
+        loadEventForEdit(eventId);
+    } else {
+        loadEvents();
+    }
+});
 
 // ==================== EVENTS LIST ====================
 
