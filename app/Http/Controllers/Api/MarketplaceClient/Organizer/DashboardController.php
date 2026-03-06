@@ -77,6 +77,14 @@ class DashboardController extends BaseController
 
         $ticketsSold = (clone $completedOrders)->withCount('tickets')->get()->sum('tickets_count');
 
+        // Weekly sales (last 7 days)
+        $weeklySales = Order::where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('created_at', '>=', now()->subDays(7))
+            ->withCount('tickets')
+            ->get()
+            ->sum('tickets_count');
+
         return $this->success([
             'period' => [
                 'from' => $fromDate,
@@ -115,6 +123,7 @@ class DashboardController extends BaseController
             'active_events' => $upcomingEvents,
             'tickets_sold' => $ticketsSold,
             'revenue_month' => $grossRevenue,
+            'weekly_sales' => $weeklySales,
             'events_list' => $eventsList,
         ]);
     }

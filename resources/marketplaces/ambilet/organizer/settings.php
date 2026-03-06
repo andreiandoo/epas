@@ -811,8 +811,17 @@ async function openShareLinkModal() {
     try {
         const response = await AmbiletAPI.get('/organizer/events', { per_page: 50 });
         if (response.success) {
-            organizerEventsForShare = response.data?.events || response.data || [];
-            if (Array.isArray(organizerEventsForShare) && organizerEventsForShare.length > 0) {
+            const allEvents = response.data?.events || response.data || [];
+            // Filter to only active events (exclude ended, cancelled, postponed)
+            organizerEventsForShare = Array.isArray(allEvents) ? allEvents.filter(ev => {
+                const endDate = ev.ends_at || ev.starts_at || ev.start_date;
+                const isEnded = ev.status === 'ended' || ev.is_past || ev.is_ended ||
+                    (endDate && new Date(endDate) < new Date());
+                const isCancelled = ev.is_cancelled || ev.status === 'cancelled';
+                const isPostponed = ev.is_postponed || ev.status === 'postponed';
+                return !isEnded && !isCancelled && !isPostponed;
+            }) : [];
+            if (organizerEventsForShare.length > 0) {
                 renderEventCheckboxes(organizerEventsForShare);
             } else {
                 document.getElementById('share-events-loading').classList.add('hidden');
