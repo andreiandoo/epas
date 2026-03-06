@@ -252,13 +252,15 @@ class ServiceOrderResource extends Resource
                     ->label('Order #')
                     ->searchable()
                     ->sortable()
-                    ->copyable(),
+                    ->copyable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label('Organizer')
                     ->searchable()
                     ->sortable()
-                    ->limit(25),
+                    ->limit(25)
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('event.name')
                     ->label('Event')
@@ -283,11 +285,13 @@ class ServiceOrderResource extends Resource
                         'tracking' => 'Tracking',
                         'campaign' => 'Campaign',
                         default => ucfirst($state),
-                    }),
+                    })
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total')
                     ->money('RON')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -310,7 +314,8 @@ class ServiceOrderResource extends Resource
                         'cancelled' => 'Cancelled',
                         'refunded' => 'Refunded',
                         default => ucfirst($state),
-                    }),
+                    })
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('payment_status')
                     ->badge()
@@ -337,7 +342,8 @@ class ServiceOrderResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
