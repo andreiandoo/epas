@@ -589,8 +589,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <img src="<?= $city['image'] ?>" alt="<?= htmlspecialchars($city['name']) ?>" class="object-cover w-full h-full">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-2.5">
-                        <div class="text-sm font-bold text-white"><?= htmlspecialchars($city['name']) ?></div>
-                        <div class="text-xs text-white/85 flex items-center gap-1.5">
+                        <div class="text-base font-bold text-white"><?= htmlspecialchars($city['name']) ?></div>
+                        <div class="text-sm text-white/85 flex items-center gap-1.5">
                             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                             <?= $city['count'] ?> evenimente
                         </div>
@@ -634,7 +634,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <span class="text-lg">🎫</span>
                     <?php endif; ?>
                 </div>
-                <span class="text-sm font-semibold"><?= htmlspecialchars($cat['name']) ?></span>
+                <span class="text-base font-semibold"><?= htmlspecialchars($cat['name']) ?></span>
             </a>
             <?php endforeach; ?>
             <a href="/evenimente" class="block py-3 mt-2 text-sm font-semibold text-center text-white rounded-lg bg-primary">Toate evenimentele →</a>
@@ -664,7 +664,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 <div class="flex items-center justify-center text-gray-500 bg-white rounded-lg shadow-sm w-9 h-9">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $type['icon'] ?></svg>
                 </div>
-                <span class="text-sm font-semibold"><?= htmlspecialchars($type['name']) ?></span>
+                <span class="text-base font-semibold"><?= htmlspecialchars($type['name']) ?></span>
             </a>
             <?php endforeach; ?>
             <a href="/locatii" class="block py-3 mt-2 text-sm font-semibold text-center text-white rounded-lg bg-primary">Toate locațiile →</a>
