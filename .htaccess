@@ -24,7 +24,7 @@ RewriteRule ^event/([a-z0-9-]+)/?$ /bilete/$1 [R=301,L]
 # Handle category pages - /concerte, /festivaluri, /teatru, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
+RewriteRule ^(bilete-concerte|festivaluri|teatru|stand-up|evenimente-copii|festival-moto|sport|comedy|spectacole|alte-evenimente|muzica|dans|expozitii|conferinte|workshop)/?$ category.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /category/slug to /slug
 RewriteRule ^category/([a-z0-9-]+)/?$ /$1 [R=301,L]
@@ -106,10 +106,62 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/landing/?$ organizer/landing.php [L]
 
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/facturare/?$ organizer/billing.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/echipa/?$ organizer/team.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/apidoc/?$ organizer/api-docs.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/setari/?$ organizer/settings.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/servicii/?$ organizer/services.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/servicii/comenzi/?$ organizer/service-orders.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/services/([a-f0-9-]+)/?$ organizer/service-order-detail.php?uuid=$1 [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/documente/?$ organizer/documents.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/sold/?$ organizer/finance.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/participanti/?$ organizer/participants.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/notificari/?$ organizer/notifications.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/vanzari/?$ organizer/sales.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/panou/?$ organizer/dashboard.php [L]
+
 # Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/organizator/(login|register|dashboard|events|settings|analytics|tickets|orders|payouts|team|support|landing|finance|help|participants|documents|promo|sales)/?$
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|events|analytics|tickets|orders|payouts|team|support|landing|help|promo|notificari|notifications|participanti|documente|servicii|setari|facturare|echipa|sold|panou|vanzari)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug
@@ -196,43 +248,28 @@ RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
 # ORGANIZER DASHBOARD ROUTES - /organizator/*
 # ============================================
 
-# Handle organizer services routes (must come before generic dashboard route)
+# Handle organizer event detail/edit - /organizator/event/{id}
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/?$ organizer/services.php [L]
+RewriteRule ^organizator/event/([0-9]+)/?$ organizer/events.php?id=$1 [L,QSA]
 
+# Handle organizer analytics for specific event - /organizator/analytics/{id}
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/orders/?$ organizer/services/orders.php [L]
+RewriteRule ^organizator/analytics/([0-9]+)/?$ organizer/analytics.php?event=$1 [L,QSA]
 
+# Handle organizer report for specific event - /organizator/report/{id}
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/email-send/?$ organizer/services/email-send.php [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/email-preview/?$ organizer/services/email-preview.php [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/success/?$ organizer/services/success.php [L,QSA]
-
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/campaign-confirmed/?$ organizer/services/campaign-confirmed.php [L,QSA]
-
-# Handle organizer service order detail page (must come after specific routes)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/services/([a-zA-Z0-9-]+)/?$ organizer/services/order.php?id=$1 [L,QSA]
+RewriteRule ^organizator/report/([0-9]+)/?$ organizer/report.php?event=$1 [L,QSA]
 
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents)/?$ organizer/$1.php [L]
+RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ organizer/$1.php [L]
 
 # Legacy: redirect /organizer/* dashboard routes to /organizator/*
-RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents)/?$ /organizator/$1 [R=301,L]
+RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L]
 
 # ============================================
 # AUTH ROUTES
@@ -247,6 +284,11 @@ RewriteRule ^autentificare/?$ login.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^inregistrare/?$ register.php [L]
+
+# /verify-email -> verify-email.php (handles token verification + pending state)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^verify-email/?$ verify-email.php [L,QSA]
 
 # /parola-uitata -> forgot-password.php
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -272,6 +314,11 @@ RewriteRule ^finalizare/?$ checkout.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^multumim/?$ thank-you.php [L]
+
+# /thank-you -> thank-you.php (for payment processor redirects)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^thank-you/?$ thank-you.php [L]
 
 # /email-confirmat -> email-confirmed.php
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -313,7 +360,26 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^pentru-organizatori/?$ organizer/landing.php [L]
 
-# /ajutor -> help-center.php
+# ============================================
+# HELP CENTER / KNOWLEDGE BASE ROUTES - /ajutor/*
+# ============================================
+
+# /ajutor/cautare -> ajutor-cautare.php (search page)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/cautare/?$ ajutor-cautare.php [L,QSA]
+
+# /ajutor/articol/{slug} -> ajutor-articol.php (single article)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/articol/([a-z0-9-]+)/?$ ajutor-articol.php?slug=$1 [L,QSA]
+
+# /ajutor/{category-slug} -> ajutor-categorie.php (category page)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ajutor/([a-z0-9-]+)/?$ ajutor-categorie.php?slug=$1 [L,QSA]
+
+# /ajutor -> help-center.php (main help center)
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ajutor/?$ help-center.php [L]
@@ -336,7 +402,7 @@ RewriteRule ^contact/?$ contact.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^despre-noi/?$ about.php [L]
+RewriteRule ^despre/?$ about.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -351,6 +417,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^accesabilitate/?$ accesibility.php [L]
 
+# /ghid-organizator -> organizer-guide.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ghid-organizator/?$ organizer-guide.php [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
@@ -362,6 +433,28 @@ RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^blog/?$ blog.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^press-kit/?$ press-kit.php [L]
+
+# /cauta -> cauta.php (search results page)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cauta/?$ cauta.php [L,QSA]
+
+# ============================================
+# SHARE LINK VIEW - /view/{code}
+# ============================================
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^view/([A-Za-z0-9]{6,20})/?$ view.php?code=$1 [L,QSA]
+
+# ============================================
+# API PASSTHROUGH - Exclude API folder from rewrites
+# ============================================
+RewriteCond %{REQUEST_URI} ^/api/ [NC]
+RewriteRule ^ - [L]
 
 # ============================================
 # DYNAMIC CITY PAGES - Catch-all for city slugs

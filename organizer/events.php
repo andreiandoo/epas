@@ -6,6 +6,7 @@ $currentPage = 'events';
 $headExtra = <<<'HTML'
 <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.5/tinymce.min.js"></script>
 HTML;
+$cssBundle = 'organizer';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 ?>
@@ -13,7 +14,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     <!-- Main Content -->
     <div class="flex flex-col flex-1 min-h-screen lg:ml-0">
         <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
-                <!-- Page Content -->
+        <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
             <!-- ============================================================ -->
             <!-- EVENTS LIST VIEW -->
@@ -25,14 +26,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <h1 class="text-2xl font-bold text-secondary">Evenimentele mele</h1>
                         <p class="text-sm text-muted">Gestioneaza si monitorizeaza evenimentele tale</p>
                     </div>
-                    <button onclick="showCreateForm()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
+                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 mb-6">
                     <div class="flex-1 min-w-[200px]"><input type="text" placeholder="Cauta evenimente..." class="w-full input" id="search-input"></div>
-                    <select class="w-auto input" id="status-filter"><option value="">Toate statusurile</option><option value="published">Publicate</option><option value="draft">Ciorne</option><option value="ended">Incheiate</option></select>
-                    <select class="w-auto input" id="sort-filter"><option value="date_desc">Cele mai recente</option><option value="date_asc">Cele mai vechi</option><option value="sales_desc">Cele mai vandute</option></select>
+                    <div class="flex flex-wrap gap-2" id="status-pills">
+                        <button type="button" class="status-pill active" data-status="ongoing">În derulare</button>
+                        <button type="button" class="status-pill" data-status="draft">Ciorne</button>
+                        <button type="button" class="status-pill" data-status="ended">Încheiate</button>
+                        <button type="button" class="status-pill" data-status="">Toate</button>
+                    </div>
                 </div>
+                <style>
+                    .status-pill { padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; transition: all .15s; }
+                    .status-pill:hover { border-color: #94a3b8; color: #334155; }
+                    .status-pill.active { background: #10b981; color: white; border-color: #10b981; }
+                </style>
 
                 <div id="events-list" class="space-y-4"><div class="p-6 bg-white border animate-pulse rounded-2xl border-border"><div class="flex gap-6"><div class="w-32 h-24 rounded-lg bg-surface"></div><div class="flex-1 space-y-3"><div class="w-1/3 h-5 rounded bg-surface"></div><div class="w-1/4 h-4 rounded bg-surface"></div></div></div></div></div>
 
@@ -40,7 +50,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10"><svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>
                     <h2 class="mb-2 text-xl font-bold text-secondary">Nu ai evenimente inca</h2>
                     <p class="mb-6 text-muted">Creeaza primul tau eveniment si incepe sa vinzi bilete!</p>
-                    <button onclick="showCreateForm()" class="btn btn-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Creeaza eveniment</button>
+                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Creeaza eveniment</button>
                 </div>
             </div>
 
@@ -61,7 +71,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                     <div class="flex items-center gap-3">
                         <span id="save-status" class="hidden text-sm text-muted"></span>
-                        <button onclick="saveEventDraft()" class="btn btn-primary" id="save-draft-btn">
+                        <button onclick="saveEventDraft()" class="btn btn-primary bg-primary" id="save-draft-btn">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             <span id="save-btn-text">Salveaza ciorna</span>
                             <div id="save-btn-spinner" class="hidden spinner"></div>
@@ -75,6 +85,31 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="hidden" id="saved-event-id" value="">
                     <input type="hidden" id="selected-event-type-ids" value="">
                     <input type="hidden" id="selected-venue-id" value="">
+
+                    <!-- ============ EVENT STATUS ACTIONS (Edit mode only) ============ -->
+                    <div id="event-status-actions" class="hidden p-5 bg-white border rounded-2xl border-border">
+                        <h3 class="mb-4 font-semibold text-secondary">Acțiuni eveniment</h3>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <button type="button" onclick="toggleSoldOut()" id="btn-sold-out" class="btn btn-sm btn-secondary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Sold Out</span>
+                            </button>
+                            <button type="button" onclick="toggleDoorSales()" id="btn-door-sales" class="btn btn-sm btn-secondary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+                                <span>Door Sales Only</span>
+                            </button>
+                            <button type="button" onclick="showPostponedModal()" id="btn-postponed" class="btn btn-sm btn-warning">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Amânat</span>
+                            </button>
+                            <button type="button" onclick="showCancelledModal()" id="btn-cancelled" class="btn btn-sm btn-error">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Anulat</span>
+                            </button>
+                        </div>
+                        <!-- Status indicators -->
+                        <div id="status-indicators" class="flex flex-wrap gap-2 mt-3"></div>
+                    </div>
 
                     <!-- ============ STEP 1: Detalii Eveniment ============ -->
                     <div class="overflow-hidden bg-white border accordion-section rounded-2xl border-border" data-step="1">
@@ -468,7 +503,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             Inapoi la evenimente
                         </button>
                         <div class="flex items-center gap-3">
-                            <button type="button" onclick="saveEventDraft()" class="btn btn-primary">
+                            <button type="button" onclick="saveEventDraft()" class="btn btn-primary bg-primary">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 Salveaza ciorna
                             </button>
@@ -481,6 +516,61 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </form>
             </div>
         </main>
+    </div>
+
+    <!-- Postponed Modal -->
+    <div id="postponed-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/50">
+        <div class="w-full max-w-md p-6 mx-4 bg-white rounded-2xl">
+            <h3 class="mb-4 text-lg font-bold text-secondary">Amână evenimentul</h3>
+            <form id="postponed-form" onsubmit="savePostponed(event)" class="space-y-4">
+                <div>
+                    <label class="label">Noua dată a evenimentului</label>
+                    <input type="date" name="postponed_date" class="input" required>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="label">Ora start</label>
+                        <input type="time" name="postponed_start_time" class="input">
+                    </div>
+                    <div>
+                        <label class="label">Ora deschidere</label>
+                        <input type="time" name="postponed_door_time" class="input">
+                    </div>
+                    <div>
+                        <label class="label">Ora sfârșit</label>
+                        <input type="time" name="postponed_end_time" class="input">
+                    </div>
+                </div>
+                <div>
+                    <label class="label">Motivul amânării</label>
+                    <textarea name="postponed_reason" class="input" rows="3" placeholder="Ex: Din motive tehnice, evenimentul a fost amânat..."></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closePostponedModal()" class="btn btn-secondary">Anulează</button>
+                    <button type="submit" class="btn btn-warning">Marchează ca amânat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cancelled Modal -->
+    <div id="cancelled-modal" class="fixed inset-0 z-50 items-center justify-center hidden bg-black/50">
+        <div class="w-full max-w-md p-6 mx-4 bg-white rounded-2xl">
+            <h3 class="mb-4 text-lg font-bold text-secondary">Anulează evenimentul</h3>
+            <div class="p-4 mb-4 text-sm text-red-700 bg-red-50 rounded-xl">
+                <strong>Atenție!</strong> Anularea evenimentului va notifica toți participanții și nu poate fi anulată.
+            </div>
+            <form id="cancelled-form" onsubmit="saveCancelled(event)" class="space-y-4">
+                <div>
+                    <label class="label">Motivul anulării <span class="text-red-500">*</span></label>
+                    <textarea name="cancel_reason" class="input" rows="3" placeholder="Ex: Din cauza condițiilor meteo, evenimentul a fost anulat..." required></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeCancelledModal()" class="btn btn-secondary">Înapoi</button>
+                    <button type="submit" class="btn btn-error">Confirmă anularea</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <style>
@@ -512,9 +602,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </style>
 
 <?php
-$scriptsExtra = <<<'JS'
+$scriptsExtra = '<script>const MARKETPLACE_NAME = ' . json_encode(SITE_NAME) . ';</script>';
+$scriptsExtra .= <<<'JS'
 <script>
-AmbiletAuth.requireOrganizerAuth();
+document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
 
 let ticketTypeCount = 1;
 let descriptionEditor = null;
@@ -528,57 +619,232 @@ let availableGenres = []; // full list from API
 
 // Check if we should show create form or edit on load
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('action') === 'create') {
-    showCreateForm();
-} else if (urlParams.get('id')) {
-    loadEventForEdit(urlParams.get('id'));
-} else {
-    loadEvents();
-}
+// Extract event ID from path (e.g., /organizator/event/4) or query string
+const pathMatch = window.location.pathname.match(/\/organizator\/event\/(\d+)/);
+const eventIdFromPath = pathMatch ? pathMatch[1] : null;
+const eventIdFromQuery = urlParams.get('id');
+const eventId = eventIdFromPath || eventIdFromQuery;
+
+document.addEventListener('DOMContentLoaded', function() {
+    if (urlParams.get('action') === 'create') {
+        showCreateForm();
+    } else if (eventId) {
+        loadEventForEdit(eventId);
+    } else {
+        loadEvents();
+    }
+});
 
 // ==================== EVENTS LIST ====================
 
+let allEventsCache = []; // Cache for instant search
+
 async function loadEvents() {
     try {
-        const response = await AmbiletAPI.organizer.getEvents();
-        const events = response.data || response || [];
-        if (events.length === 0) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
-        else { renderEvents(events); }
-    } catch (error) { document.getElementById('events-list').classList.add('hidden'); document.getElementById('no-events').classList.remove('hidden'); }
+        // Fetch all events (API defaults to 20 per_page)
+        let allEvents = [];
+        let page = 1;
+        while (true) {
+            const response = await AmbiletAPI.organizer.getEvents({ per_page: 50, page });
+            const events = response.data || response || [];
+            allEvents = allEvents.concat(events);
+            if (events.length < 50) break;
+            page++;
+        }
+        const events = allEvents;
+        allEventsCache = events; // Cache for instant filtering
+
+        // Update sidebar events count
+        const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
+        const navCount = document.getElementById('nav-events-count');
+        if (navCount) navCount.textContent = activeEvents || events.length;
+
+        // Apply current filters (status + search)
+        applyFilters();
+    } catch (error) {
+        document.getElementById('events-list').classList.add('hidden');
+        document.getElementById('no-events').classList.remove('hidden');
+    }
 }
+
+let currentStatusFilter = 'ongoing'; // Default: show ongoing events
+
+function getEventDisplayStatus(event) {
+    const eventEndDate = event.ends_at || event.starts_at;
+    const isEnded = event.status === 'ended' || event.is_past || event.is_ended ||
+        (eventEndDate && new Date(eventEndDate) < new Date());
+    if (event.is_cancelled || event.status === 'cancelled') return 'cancelled';
+    if (event.is_postponed || event.status === 'postponed') return 'postponed';
+    if (event.status === 'draft' || event.status === 'pending_review') return 'draft';
+    if (isEnded) return 'ended';
+    return 'ongoing';
+}
+
+function filterEvents(events, query) {
+    let filtered = events;
+
+    // Status filter
+    if (currentStatusFilter === 'ongoing') {
+        filtered = filtered.filter(e => getEventDisplayStatus(e) === 'ongoing');
+    } else if (currentStatusFilter === 'draft') {
+        filtered = filtered.filter(e => getEventDisplayStatus(e) === 'draft');
+    } else if (currentStatusFilter === 'ended') {
+        filtered = filtered.filter(e => ['ended', 'cancelled', 'postponed'].includes(getEventDisplayStatus(e)));
+    }
+    // '' = all, no status filter
+
+    // Text search
+    if (query) {
+        filtered = filtered.filter(event => {
+            const name = (event.name || event.title || '').toLowerCase();
+            const venue = (event.venue_name || '').toLowerCase();
+            const city = (event.venue_city || '').toLowerCase();
+            return name.includes(query) || venue.includes(query) || city.includes(query);
+        });
+    }
+
+    return filtered;
+}
+
+function applyFilters() {
+    const query = document.getElementById('search-input')?.value?.toLowerCase() || '';
+    const filteredEvents = filterEvents(allEventsCache, query);
+
+    if (filteredEvents.length === 0) {
+        document.getElementById('events-list').classList.add('hidden');
+        document.getElementById('no-events').classList.remove('hidden');
+    } else {
+        document.getElementById('events-list').classList.remove('hidden');
+        document.getElementById('no-events').classList.add('hidden');
+        renderEvents(filteredEvents);
+    }
+}
+
+// Initialize filters
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(applyFilters, 150));
+
+    // Status pill clicks
+    document.querySelectorAll('.status-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            currentStatusFilter = this.dataset.status;
+            applyFilters();
+        });
+    });
+});
 
 function renderEvents(events) {
     const container = document.getElementById('events-list');
-    const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info' };
-    const statusLabels = { published: 'Publicat', draft: 'Ciorna', ended: 'Incheiat', pending_review: 'In asteptare' };
-    container.innerHTML = events.map(event => `
-        <div class="p-6 transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
-            <div class="flex flex-col gap-6 md:flex-row">
-                <img src="${event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}" alt="${event.name || event.title}" class="object-cover w-full md:w-40 h-28 rounded-xl">
-                <div class="flex-1">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 class="mb-1 text-lg font-bold text-secondary">${event.name || event.title}</h3>
-                            <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
-                                <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : (event.start_date ? AmbiletUtils.formatDate(event.start_date) : '')}</span>
-                                <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${event.venue_city || event.venue?.city || event.city || ''}</span>
+    const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning', sold_out: 'info' };
+    const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
+
+    container.innerHTML = events.map(event => {
+        // Determine if event has ended
+        const eventEndDate = event.ends_at || event.starts_at;
+        const isEnded = event.status === 'ended' || event.is_past || event.is_ended ||
+            (eventEndDate && new Date(eventEndDate) < new Date());
+
+        // Determine if event is ongoing (published and not ended)
+        const isOngoing = event.status === 'published' && !isEnded && !event.is_cancelled && !event.is_postponed;
+
+        // Determine display status
+        let displayStatus = event.status;
+        let saleStatus = '';
+        if (event.is_cancelled || event.status === 'cancelled') displayStatus = 'cancelled';
+        else if (event.is_postponed || event.status === 'postponed') displayStatus = 'postponed';
+        else if (event.is_sold_out) { displayStatus = 'published'; saleStatus = 'Sold Out'; }
+        else if (event.is_door_sales_only) { displayStatus = 'published'; saleStatus = 'Door Sales'; }
+        else if (isEnded) displayStatus = 'ended';
+        else if (isOngoing) saleStatus = 'În vânzare';
+
+        // Days until event
+        const daysUntil = event.days_until;
+        let daysText = '';
+        if (daysUntil !== null && daysUntil !== undefined && !isEnded) {
+            if (daysUntil === 0) daysText = 'Azi';
+            else if (daysUntil === 1) daysText = 'Mâine';
+            else if (daysUntil > 0) daysText = `${daysUntil} zile`;
+        }
+
+        // Generate Analytics/Report button
+        const analyticsButton = isEnded
+            ? `<a href="/organizator/report/${event.id}" class="btn btn-sm btn-secondary" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`
+            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>`;
+
+        // Promote button (only for ongoing events)
+        const promoteButton = isOngoing
+            ? `<a href="/organizator/servicii?event=${event.id}" class="btn btn-sm btn-primary bg-primary" title="Promovează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>Promovează</a>`
+            : '';
+
+        // Documents button
+        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
+
+        // Finance button
+        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm btn-secondary" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></a>`;
+
+        // View/Preview button - use /bilete/{slug} for published, add ?preview=1 for drafts
+        const isPublishedEvent = event.status === 'published' || event.is_public;
+        const viewUrl = isPublishedEvent ? `/bilete/${event.slug}` : `/bilete/${event.slug}?preview=1`;
+        const viewButton = `<a href="${viewUrl}" target="_blank" class="btn btn-sm btn-secondary" title="${isPublishedEvent ? 'Vizualizează' : 'Previzualizare'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>`;
+
+        return `
+        <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
+            <div class="flex flex-col md:items-center md:flex-row">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-28 rounded-xl" loading="lazy">
+                <div class="flex-1 py-2">
+                    <div class="flex items-center justify-between gap-4 pr-4">
+                        <div class="flex items-center gap-4 pl-6">
+                            <div class="flex flex-col items-start">
+                                <h3 class="mb-1 text-lg font-bold text-secondary">${event.name || event.title}</h3>
+                                <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : (event.start_date ? AmbiletUtils.formatDate(event.start_date) : '')}</span>
+                                    <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${[event.venue_name, event.venue_city].filter(Boolean).join(', ') || ''}</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
+                                ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
                             </div>
                         </div>
-                        <span class="badge badge-${statusColors[event.status] || 'secondary'}">${statusLabels[event.status] || event.status}</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-4 pt-4 mt-4 border-t border-border">
-                        <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vandute</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Vanzari</p></div>
-                        <div class="flex items-center justify-end gap-2">
-                            <a href="/organizator/events?id=${event.id}" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>Editeaza</a>
-                            <a href="/event.php?slug=${event.slug}" target="_blank" class="btn btn-sm btn-secondary"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg></a>
-                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Sterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+                        <div class="flex flex-wrap items-center justify-end gap-2 pr-4">
+                            ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>` : ''}
+                            ${documentsButton}
+                            ${financeButton}
+                            ${analyticsButton}
+                            ${promoteButton}
+                            ${viewButton}
+                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-4 pt-4 pl-6 mt-4 border-t border-border">
+                        <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
+                        <div class="relative group">
+                            <div class="flex items-center gap-1">
+                                <p class="text-2xl font-bold text-secondary">${event.effective_commission_rate || 5}%</p>
+                                ${event.commission_mode === 'added_on_top'
+                                    ? '<span class="inline-flex items-center justify-center w-5 h-5 text-amber-500" title="Adăugat la preț"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg></span>'
+                                    : '<span class="inline-flex items-center justify-center w-5 h-5 text-green-500" title="Inclus în preț"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></span>'
+                                }
+                                <span class="cursor-help">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </span>
+                            </div>
+                            <p class="text-xs text-muted">${event.use_fixed_commission ? 'Comision fix' : 'Comision'} ${event.commission_mode === 'added_on_top' ? '(peste)' : '(inclus)'}</p>
+                            <div class="absolute left-0 z-10 hidden px-3 py-2 mb-2 text-xs text-white bg-gray-800 rounded-lg group-hover:block bottom-full whitespace-nowrap">
+                                Setat de ${MARKETPLACE_NAME} pentru acest eveniment
+                                <div class="absolute w-0 h-0 border-t-4 border-l-4 border-r-4 border-transparent top-full left-4 border-t-gray-800"></div>
+                            </div>
+                        </div>
+                        <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                        <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                     </div>
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 
 async function deleteEvent(eventId, eventName) {
@@ -616,26 +882,114 @@ function showCreateForm() {
     initGenreSearch();
     initDragDrop();
     initShortDescWordCount();
+
+    // Reset form state for new event
+    resetFormState();
+}
+
+function resetFormState() {
+    // Reset genres and artists
+    selectedGenres = [];
+    selectedArtists = [];
+    renderGenreTags();
+    renderArtistTags();
+
+    // Reset image previews
+    const posterPreview = document.getElementById('poster-preview');
+    const posterUploadArea = document.getElementById('poster-upload-area');
+    const coverPreview = document.getElementById('cover-preview');
+    const coverUploadArea = document.getElementById('cover-upload-area');
+
+    if (posterPreview) posterPreview.classList.add('hidden');
+    if (posterUploadArea) posterUploadArea.classList.remove('hidden');
+    if (coverPreview) coverPreview.classList.add('hidden');
+    if (coverUploadArea) coverUploadArea.classList.remove('hidden');
+
+    // Clear file inputs
+    const posterInput = document.querySelector('[name="poster"]');
+    const coverInput = document.querySelector('[name="cover_image"]');
+    if (posterInput) posterInput.value = '';
+    if (coverInput) coverInput.value = '';
+
+    // Reset form
+    const form = document.getElementById('create-event-form');
+    if (form) form.reset();
+
+    // Reset saved event ID
+    const savedIdEl = document.getElementById('saved-event-id');
+    if (savedIdEl) savedIdEl.value = '';
 }
 
 async function loadEventForEdit(eventId) {
-    // Show the form first
-    showCreateForm();
-
-    // Update page title for edit mode
-    const titleEl = document.querySelector('#create-event-view h1');
-    if (titleEl) titleEl.textContent = 'Editare eveniment';
-
-    // Set the event ID so subsequent saves update instead of create
-    document.getElementById('saved-event-id').value = eventId;
-
+    // First, fetch the event to check if it's editable BEFORE showing the form
     try {
         const response = await AmbiletAPI.organizer.getEvent(eventId);
         const event = response.data?.event || response.event || response.data || response;
 
         if (!event || !event.id) {
             AmbiletNotifications.error('Evenimentul nu a fost gasit.');
+            window.location.href = '/organizator/events';
             return;
+        }
+
+        // Check if event is editable (not past/ended) - redirect BEFORE showing form
+        if (event.is_editable === false || event.is_past === true) {
+            AmbiletNotifications.error('Acest eveniment este încheiat și nu mai poate fi editat.');
+            window.location.href = '/organizator/events';
+            return;
+        }
+
+        // Event is editable - now show the form
+        showCreateForm();
+
+        // Fix URL for edit mode (showCreateForm sets it to action=create)
+        history.replaceState({}, '', `/organizator/event/${eventId}?action=edit`);
+
+        // Update page title for edit mode
+        const titleEl = document.querySelector('#create-event-view h1');
+        if (titleEl) titleEl.textContent = 'Editare eveniment';
+
+        // Set the event ID so subsequent saves update instead of create
+        document.getElementById('saved-event-id').value = eventId;
+
+        // Show status actions section (only in edit mode)
+        const statusActions = document.getElementById('event-status-actions');
+        if (statusActions) statusActions.classList.remove('hidden');
+
+        // Load current status flags
+        currentEventStatus = {
+            is_sold_out: event.is_sold_out || false,
+            door_sales_only: event.door_sales_only || false,
+            is_postponed: event.is_postponed || false,
+            is_cancelled: event.is_cancelled || false,
+            is_published: event.is_public || event.status === 'published',
+            slug: event.slug
+        };
+        updateStatusIndicators();
+
+        // Handle published event - hide draft buttons, update submit button
+        const isPublished = currentEventStatus.is_published;
+        const saveDraftBtn = document.getElementById('save-draft-btn');
+        const bottomDraftBtns = document.querySelectorAll('button[onclick="saveEventDraft()"]');
+        const submitReviewBtn = document.getElementById('submit-review-btn');
+
+        if (isPublished) {
+            // Hide "Salveaza ciorna" buttons for published events
+            if (saveDraftBtn) saveDraftBtn.style.display = 'none';
+            bottomDraftBtns.forEach(btn => {
+                if (btn !== saveDraftBtn) btn.style.display = 'none';
+            });
+            // Change submit button text to "Salvează modificările"
+            if (submitReviewBtn) {
+                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Salvează modificările';
+            }
+        } else {
+            // Show buttons for draft events
+            if (saveDraftBtn) saveDraftBtn.style.display = '';
+            bottomDraftBtns.forEach(btn => btn.style.display = '');
+            if (submitReviewBtn) {
+                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Salveaza si trimite spre aprobare';
+            }
         }
 
         const form = document.getElementById('create-event-form');
@@ -730,6 +1084,8 @@ async function loadEventForEdit(eventId) {
             if (event.ticket_terms && ticketTermsEditor) {
                 ticketTermsEditor.setContent(event.ticket_terms);
             }
+            // Update summaries after setting editor content
+            updateSummaries();
         }, 1000);
 
         // Step 6: Ticket types
@@ -795,11 +1151,53 @@ async function loadEventForEdit(eventId) {
             form.querySelector('[name="sales_end_at"]').value = dt.toISOString().slice(0, 16);
         }
 
+        // Genres - populate after category is loaded
+        if (event.genres && event.genres.length > 0) {
+            setTimeout(() => {
+                selectedGenres = event.genres.map(g => ({ id: g.id, name: g.name }));
+                renderGenreTags();
+                // Show genres container if hidden
+                const genresContainer = document.getElementById('genres-container');
+                if (genresContainer) genresContainer.classList.remove('hidden');
+            }, 600); // Wait for category change to complete
+        }
+
+        // Artists - populate selected artists
+        if (event.artists && event.artists.length > 0) {
+            selectedArtists = event.artists.map(a => ({ id: a.id, name: a.name }));
+            renderArtistTags();
+        }
+
+        // Poster image - show preview if exists
+        if (event.image) {
+            const posterPreview = document.getElementById('poster-preview');
+            const posterImg = document.getElementById('poster-img');
+            const posterUploadArea = document.getElementById('poster-upload-area');
+            if (posterPreview && posterImg) {
+                posterImg.src = getStorageUrl(event.image);
+                posterPreview.classList.remove('hidden');
+                if (posterUploadArea) posterUploadArea.classList.add('hidden');
+            }
+        }
+
+        // Cover image - show preview if exists
+        if (event.cover_image) {
+            const coverPreview = document.getElementById('cover-preview');
+            const coverImg = document.getElementById('cover-img');
+            const coverUploadArea = document.getElementById('cover-upload-area');
+            if (coverPreview && coverImg) {
+                coverImg.src = getStorageUrl(event.cover_image);
+                coverPreview.classList.remove('hidden');
+                if (coverUploadArea) coverUploadArea.classList.add('hidden');
+            }
+        }
+
         // Update summaries
         updateSummaries();
 
     } catch (error) {
         AmbiletNotifications.error('Eroare la incarcarea evenimentului: ' + (error.message || 'Incearca din nou.'));
+        window.location.href = '/organizator/events';
     }
 }
 
@@ -1233,7 +1631,7 @@ function updateSummaries() {
     }
 
     // Step 4 summary
-    const desc = form.querySelector('[name="description"]').value;
+    const desc = descriptionEditor ? descriptionEditor.getContent() : form.querySelector('[name="description"]').value;
     if (desc) {
         const plainText = desc.replace(/<[^>]*>/g, '').trim();
         document.getElementById('summary-4').textContent = plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
@@ -1280,7 +1678,8 @@ function updateStepIndicators() {
     const step3Done = !!form.querySelector('[name="venue_name"]').value && !!form.querySelector('[name="venue_city"]').value;
     setStepComplete(3, step3Done);
 
-    const step4Done = !!form.querySelector('[name="description"]').value;
+    const descriptionContent = descriptionEditor ? descriptionEditor.getContent() : form.querySelector('[name="description"]').value;
+    const step4Done = !!descriptionContent && descriptionContent.trim().length > 0;
     setStepComplete(4, step4Done);
 
     const posterInput = form.querySelector('[name="poster"]');
@@ -1743,6 +2142,200 @@ function debounce(fn, ms) {
         clearTimeout(timer);
         timer = setTimeout(() => fn.apply(this, args), ms);
     };
+}
+
+// ============ EVENT STATUS ACTIONS ============
+
+// Current event status flags
+let currentEventStatus = {
+    is_sold_out: false,
+    door_sales_only: false,
+    is_postponed: false,
+    is_cancelled: false
+};
+
+function updateStatusIndicators() {
+    const container = document.getElementById('status-indicators');
+    if (!container) return;
+
+    let html = '';
+    if (currentEventStatus.is_sold_out) {
+        html += '<span class="badge badge-info">Sold Out</span>';
+    }
+    if (currentEventStatus.door_sales_only) {
+        html += '<span class="badge badge-warning">Door Sales Only</span>';
+    }
+    if (currentEventStatus.is_postponed) {
+        html += '<span class="badge badge-warning">Amânat</span>';
+    }
+    if (currentEventStatus.is_cancelled) {
+        html += '<span class="badge badge-error">Anulat</span>';
+    }
+    container.innerHTML = html;
+
+    // Update button states
+    const btnSoldOut = document.getElementById('btn-sold-out');
+    const btnDoorSales = document.getElementById('btn-door-sales');
+    const btnPostponed = document.getElementById('btn-postponed');
+    const btnCancelled = document.getElementById('btn-cancelled');
+
+    if (btnSoldOut) {
+        btnSoldOut.classList.toggle('btn-success', currentEventStatus.is_sold_out);
+        btnSoldOut.classList.toggle('btn-secondary', !currentEventStatus.is_sold_out);
+        btnSoldOut.querySelector('span').textContent = currentEventStatus.is_sold_out ? 'Anulează Sold Out' : 'Sold Out';
+    }
+    if (btnDoorSales) {
+        btnDoorSales.classList.toggle('btn-success', currentEventStatus.door_sales_only);
+        btnDoorSales.classList.toggle('btn-secondary', !currentEventStatus.door_sales_only);
+        btnDoorSales.querySelector('span').textContent = currentEventStatus.door_sales_only ? 'Anulează Door Sales' : 'Door Sales Only';
+    }
+    if (btnPostponed) {
+        btnPostponed.classList.toggle('btn-success', currentEventStatus.is_postponed);
+        btnPostponed.classList.toggle('btn-warning', !currentEventStatus.is_postponed);
+        btnPostponed.querySelector('span').textContent = currentEventStatus.is_postponed ? 'Anulează Amânare' : 'Amânat';
+    }
+    if (btnCancelled) {
+        btnCancelled.classList.toggle('btn-success', currentEventStatus.is_cancelled);
+        btnCancelled.classList.toggle('btn-error', !currentEventStatus.is_cancelled);
+        btnCancelled.querySelector('span').textContent = currentEventStatus.is_cancelled ? 'Anulează Anulare' : 'Anulat';
+    }
+}
+
+async function toggleSoldOut() {
+    const eventId = document.getElementById('saved-event-id').value;
+    if (!eventId) return;
+
+    const newValue = !currentEventStatus.is_sold_out;
+
+    try {
+        AmbiletNotifications.info(newValue ? 'Se marchează ca Sold Out...' : 'Se anulează Sold Out...');
+        const response = await AmbiletAPI.patch(`/organizer/events/${eventId}/status`, { is_sold_out: newValue });
+        if (response.success) {
+            currentEventStatus.is_sold_out = newValue;
+            updateStatusIndicators();
+            AmbiletNotifications.success(newValue ? 'Evenimentul a fost marcat ca Sold Out' : 'Sold Out a fost anulat');
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la actualizare');
+        }
+    } catch (error) {
+        AmbiletNotifications.error('Eroare la actualizare');
+    }
+}
+
+async function toggleDoorSales() {
+    const eventId = document.getElementById('saved-event-id').value;
+    if (!eventId) return;
+
+    const newValue = !currentEventStatus.door_sales_only;
+
+    try {
+        AmbiletNotifications.info(newValue ? 'Se activează Door Sales Only...' : 'Se dezactivează Door Sales Only...');
+        const response = await AmbiletAPI.patch(`/organizer/events/${eventId}/status`, { door_sales_only: newValue });
+        if (response.success) {
+            currentEventStatus.door_sales_only = newValue;
+            updateStatusIndicators();
+            AmbiletNotifications.success(newValue ? 'Door Sales Only a fost activat' : 'Door Sales Only a fost dezactivat');
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la actualizare');
+        }
+    } catch (error) {
+        AmbiletNotifications.error('Eroare la actualizare');
+    }
+}
+
+function showPostponedModal() {
+    const modal = document.getElementById('postponed-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closePostponedModal() {
+    const modal = document.getElementById('postponed-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    document.getElementById('postponed-form').reset();
+}
+
+async function savePostponed(e) {
+    e.preventDefault();
+    const eventId = document.getElementById('saved-event-id').value;
+    if (!eventId) return;
+
+    const form = e.target;
+    const data = {
+        is_postponed: true,
+        postponed_date: form.postponed_date.value,
+        postponed_start_time: form.postponed_start_time.value || null,
+        postponed_door_time: form.postponed_door_time.value || null,
+        postponed_end_time: form.postponed_end_time.value || null,
+        postponed_reason: form.postponed_reason.value || null
+    };
+
+    try {
+        AmbiletNotifications.info('Se salvează amânarea...');
+        const response = await AmbiletAPI.patch(`/organizer/events/${eventId}/status`, data);
+        if (response.success) {
+            currentEventStatus.is_postponed = true;
+            updateStatusIndicators();
+            closePostponedModal();
+            AmbiletNotifications.success('Evenimentul a fost marcat ca amânat');
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la salvarea amânării');
+        }
+    } catch (error) {
+        AmbiletNotifications.error('Eroare la salvarea amânării');
+    }
+}
+
+function showCancelledModal() {
+    const modal = document.getElementById('cancelled-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+}
+
+function closeCancelledModal() {
+    const modal = document.getElementById('cancelled-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    document.getElementById('cancelled-form').reset();
+}
+
+async function saveCancelled(e) {
+    e.preventDefault();
+    const eventId = document.getElementById('saved-event-id').value;
+    if (!eventId) return;
+
+    if (!confirm('Ești sigur că vrei să anulezi evenimentul? Această acțiune nu poate fi anulată și toate comenzile vor fi rambursate.')) {
+        return;
+    }
+
+    const form = e.target;
+    const data = {
+        reason: form.cancel_reason.value
+    };
+
+    try {
+        AmbiletNotifications.info('Se anulează evenimentul...');
+        const response = await AmbiletAPI.post(`/organizer/events/${eventId}/cancel`, data);
+        if (response.success) {
+            currentEventStatus.is_cancelled = true;
+            updateStatusIndicators();
+            closeCancelledModal();
+            AmbiletNotifications.success('Evenimentul a fost anulat. ' + (response.data?.orders_refunded > 0 ? `${response.data.orders_refunded} comenzi au fost rambursate.` : ''));
+        } else {
+            AmbiletNotifications.error(response.message || 'Eroare la anularea evenimentului');
+        }
+    } catch (error) {
+        AmbiletNotifications.error('Eroare la anularea evenimentului');
+    }
 }
 </script>
 JS;
