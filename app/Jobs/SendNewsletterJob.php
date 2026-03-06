@@ -6,6 +6,7 @@ use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceNewsletterRecipient;
 use App\Models\MarketplaceEmailLog;
 use App\Models\ServiceOrder;
+use App\Services\NewsletterRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -116,7 +117,15 @@ class SendNewsletterJob implements ShouldQueue
         ];
 
         $subject = $this->replaceVariables($newsletter->subject, $variables);
-        $bodyHtml = $this->replaceVariables($newsletter->body_html, $variables);
+
+        // Use section renderer if body_sections is set, otherwise fall back to body_html
+        if (!empty($newsletter->body_sections)) {
+            $renderer = new NewsletterRenderer();
+            $bodyHtml = $renderer->render($newsletter, $customer);
+            $bodyHtml = $this->replaceVariables($bodyHtml, $variables);
+        } else {
+            $bodyHtml = $this->replaceVariables($newsletter->body_html, $variables);
+        }
 
         // Wrap all links with click tracking (before adding tracking pixel)
         $bodyHtml = $this->wrapLinksWithTracking($bodyHtml, $recipient);

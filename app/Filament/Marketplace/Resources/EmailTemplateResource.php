@@ -54,7 +54,10 @@ class EmailTemplateResource extends Resource
                                         ->required()
                                         ->rows(25)
                                         ->columnSpanFull()
+                                        ->extraAttributes(['id' => 'body-html-editor'])
                                         ->helperText('Cod HTML complet al emailului. Folosește {{variable}} pentru conținut dinamic.'),
+                                    SC\View::make('filament.marketplace.components.html-live-preview')
+                                        ->columnSpanFull(),
                                     Forms\Components\Textarea::make('body_text')
                                         ->label('Plain Text Body')
                                         ->rows(5)

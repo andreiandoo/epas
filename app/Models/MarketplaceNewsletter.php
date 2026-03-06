@@ -20,6 +20,7 @@ class MarketplaceNewsletter extends Model
         'from_email',
         'reply_to',
         'body_html',
+        'body_sections',
         'body_text',
         'target_lists',
         'target_tags',
@@ -37,6 +38,7 @@ class MarketplaceNewsletter extends Model
     ];
 
     protected $casts = [
+        'body_sections' => 'array',
         'target_lists' => 'array',
         'target_tags' => 'array',
         'scheduled_at' => 'datetime',

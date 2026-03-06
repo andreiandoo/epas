@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
+use App\Models\MarketplaceEvent;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -14,6 +15,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -118,18 +120,167 @@ class NewsletterResource extends Resource
                             ->maxLength(255)
                             ->helperText('Preview text shown in email client (optional)')
                             ->columnSpanFull(),
-                        Forms\Components\RichEditor::make('body_html')
-                            ->label('Email Body')
-                            ->required()
-                            ->columnSpanFull()
-                            ->fileAttachmentsDisk('public')
-                            ->fileAttachmentsDirectory('newsletter-attachments'),
+
+                        Forms\Components\Repeater::make('body_sections')
+                            ->label('Secțiuni Email')
+                            ->schema([
+                                Forms\Components\Select::make('type')
+                                    ->label('Tip secțiune')
+                                    ->options([
+                                        'text' => 'Text / Rich Content',
+                                        'html' => 'HTML personalizat',
+                                        'recommended_events' => 'Evenimente recomandate',
+                                        'hand_picked_events' => 'Evenimente alese',
+                                        'events_next_week' => 'Evenimente săptămâna viitoare',
+                                        'events_next_month' => 'Evenimente luna viitoare',
+                                        'button' => 'Buton CTA',
+                                        'spacer' => 'Spațiu / Separator',
+                                        'image' => 'Imagine',
+                                    ])
+                                    ->required()
+                                    ->live()
+                                    ->columnSpanFull(),
+
+                                // Text section
+                                Forms\Components\RichEditor::make('content')
+                                    ->label('Conținut')
+                                    ->visible(fn ($get) => $get('type') === 'text')
+                                    ->columnSpanFull()
+                                    ->helperText('Suportă variabile: {{customer_name}}, {{customer_email}}, {{event:ID:name}}, etc.'),
+
+                                // HTML section
+                                Forms\Components\Textarea::make('html_content')
+                                    ->label('Cod HTML')
+                                    ->visible(fn ($get) => $get('type') === 'html')
+                                    ->rows(10)
+                                    ->columnSpanFull()
+                                    ->helperText('HTML personalizat. Poți importa template-uri externe sau scrie cod HTML direct.'),
+
+                                // Hand-picked events
+                                Forms\Components\Select::make('event_ids')
+                                    ->label('Selectează evenimente')
+                                    ->multiple()
+                                    ->searchable()
+                                    ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                                        return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('status', 'approved')
+                                            ->where('is_public', true)
+                                            ->where('name', 'like', "%{$search}%")
+                                            ->limit(20)
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->getOptionLabelsUsing(function (array $values) {
+                                        return MarketplaceEvent::whereIn('id', $values)->pluck('name', 'id');
+                                    })
+                                    ->visible(fn ($get) => $get('type') === 'hand_picked_events')
+                                    ->columnSpanFull()
+                                    ->helperText('Caută și selectează evenimentele pe care vrei să le incluzi'),
+
+                                // Event limit (for auto-populated sections)
+                                Forms\Components\TextInput::make('limit')
+                                    ->label('Număr maxim de evenimente')
+                                    ->numeric()
+                                    ->default(4)
+                                    ->minValue(1)
+                                    ->maxValue(20)
+                                    ->visible(fn ($get) => in_array($get('type'), ['recommended_events', 'events_next_week', 'events_next_month']))
+                                    ->maxWidth('xs'),
+
+                                // Button fields
+                                Forms\Components\TextInput::make('button_text')
+                                    ->label('Text buton')
+                                    ->default('Click aici')
+                                    ->visible(fn ($get) => $get('type') === 'button'),
+                                Forms\Components\TextInput::make('button_url')
+                                    ->label('URL buton')
+                                    ->url()
+                                    ->visible(fn ($get) => $get('type') === 'button'),
+                                Forms\Components\ColorPicker::make('button_color')
+                                    ->label('Culoare')
+                                    ->default('#A51C30')
+                                    ->visible(fn ($get) => $get('type') === 'button'),
+
+                                // Image fields
+                                Forms\Components\TextInput::make('image_url')
+                                    ->label('URL imagine')
+                                    ->url()
+                                    ->visible(fn ($get) => $get('type') === 'image')
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('image_link')
+                                    ->label('Link la click (opțional)')
+                                    ->url()
+                                    ->visible(fn ($get) => $get('type') === 'image')
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('alt_text')
+                                    ->label('Text alternativ')
+                                    ->visible(fn ($get) => $get('type') === 'image')
+                                    ->columnSpanFull(),
+
+                                // Spacer height
+                                Forms\Components\TextInput::make('height')
+                                    ->label('Înălțime (px)')
+                                    ->numeric()
+                                    ->default(20)
+                                    ->visible(fn ($get) => $get('type') === 'spacer')
+                                    ->maxWidth('xs'),
+                            ])
+                            ->reorderable()
+                            ->collapsible()
+                            ->cloneable()
+                            ->itemLabel(fn (array $state): ?string => match ($state['type'] ?? null) {
+                                'text' => 'Text / Rich Content',
+                                'html' => 'HTML personalizat',
+                                'recommended_events' => 'Evenimente recomandate',
+                                'hand_picked_events' => 'Evenimente alese (' . count($state['event_ids'] ?? []) . ')',
+                                'events_next_week' => 'Evenimente săptămâna viitoare',
+                                'events_next_month' => 'Evenimente luna viitoare',
+                                'button' => 'Buton: ' . ($state['button_text'] ?? 'CTA'),
+                                'spacer' => 'Spațiu / Separator',
+                                'image' => 'Imagine',
+                                default => 'Secțiune nouă',
+                            })
+                            ->defaultItems(0)
+                            ->addActionLabel('Adaugă secțiune')
+                            ->columnSpanFull(),
+
                         Forms\Components\Textarea::make('body_text')
                             ->label('Plain Text Version')
                             ->rows(5)
                             ->columnSpanFull()
-                            ->helperText('Optional plain text version for email clients that don\'t support HTML'),
+                            ->helperText('Versiune text simplu (opțional). Se generează automat dacă lipsește.'),
                     ]),
+
+                SC\Section::make('Variabile disponibile')
+                    ->schema([
+                        Forms\Components\Placeholder::make('variables_info')
+                            ->label('')
+                            ->content(new HtmlString(
+                                '<div class="text-sm space-y-3">' .
+                                '<div>' .
+                                    '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Variabile client (se completează per destinatar):</p>' .
+                                    '<div class="flex flex-wrap gap-1.5">' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{customer_name}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{customer_email}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{marketplace_name}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{unsubscribe_url}}</code>' .
+                                    '</div>' .
+                                '</div>' .
+                                '<div>' .
+                                    '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Variabile eveniment (înlocuiește ID cu id-ul evenimentului):</p>' .
+                                    '<div class="flex flex-wrap gap-1.5">' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:name}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:date}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:venue}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:image}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:url}}</code>' .
+                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:price}}</code>' .
+                                    '</div>' .
+                                    '<p class="text-xs text-gray-500 mt-1">Exemplu: {{event:42:name}} va fi înlocuit cu numele evenimentului cu ID 42.</p>' .
+                                '</div>' .
+                                '</div>'
+                            )),
+                    ])
+                    ->collapsed(),
 
                 SC\Section::make('Scheduling')
                     ->schema([
