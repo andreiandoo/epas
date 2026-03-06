@@ -31,9 +31,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
                 <div class="flex flex-wrap items-center gap-4 mb-6">
                     <div class="flex-1 min-w-[200px]"><input type="text" placeholder="Cauta evenimente..." class="w-full input" id="search-input"></div>
-                    <select class="w-auto input" id="status-filter"><option value="">Toate statusurile</option><option value="published">Publicate</option><option value="draft">Ciorne</option><option value="ended">Incheiate</option></select>
-                    <select class="w-auto input" id="sort-filter"><option value="date_desc">Cele mai recente</option><option value="date_asc">Cele mai vechi</option><option value="sales_desc">Cele mai vandute</option></select>
+                    <div class="flex flex-wrap gap-2" id="status-pills">
+                        <button type="button" class="status-pill active" data-status="ongoing">În derulare</button>
+                        <button type="button" class="status-pill" data-status="draft">Ciorne</button>
+                        <button type="button" class="status-pill" data-status="ended">Încheiate</button>
+                        <button type="button" class="status-pill" data-status="">Toate</button>
+                    </div>
                 </div>
+                <style>
+                    .status-pill { padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; transition: all .15s; }
+                    .status-pill:hover { border-color: #94a3b8; color: #334155; }
+                    .status-pill.active { background: #10b981; color: white; border-color: #10b981; }
+                </style>
 
                 <div id="events-list" class="space-y-4"><div class="p-6 bg-white border animate-pulse rounded-2xl border-border"><div class="flex gap-6"><div class="w-32 h-24 rounded-lg bg-surface"></div><div class="flex-1 space-y-3"><div class="w-1/3 h-5 rounded bg-surface"></div><div class="w-1/4 h-4 rounded bg-surface"></div></div></div></div></div>
 
@@ -632,8 +641,17 @@ let allEventsCache = []; // Cache for instant search
 
 async function loadEvents() {
     try {
-        const response = await AmbiletAPI.organizer.getEvents();
-        const events = response.data || response || [];
+        // Fetch all events (API defaults to 20 per_page)
+        let allEvents = [];
+        let page = 1;
+        while (true) {
+            const response = await AmbiletAPI.organizer.getEvents({ per_page: 50, page });
+            const events = response.data || response || [];
+            allEvents = allEvents.concat(events);
+            if (events.length < 50) break;
+            page++;
+        }
+        const events = allEvents;
         allEventsCache = events; // Cache for instant filtering
 
         // Update sidebar events count
@@ -641,35 +659,54 @@ async function loadEvents() {
         const navCount = document.getElementById('nav-events-count');
         if (navCount) navCount.textContent = activeEvents || events.length;
 
-        // Apply current search filter if any
-        const searchQuery = document.getElementById('search-input')?.value?.toLowerCase() || '';
-        const filteredEvents = filterEvents(events, searchQuery);
-
-        if (filteredEvents.length === 0) {
-            document.getElementById('events-list').classList.add('hidden');
-            document.getElementById('no-events').classList.remove('hidden');
-        } else {
-            document.getElementById('events-list').classList.remove('hidden');
-            document.getElementById('no-events').classList.add('hidden');
-            renderEvents(filteredEvents);
-        }
+        // Apply current filters (status + search)
+        applyFilters();
     } catch (error) {
         document.getElementById('events-list').classList.add('hidden');
         document.getElementById('no-events').classList.remove('hidden');
     }
 }
 
-function filterEvents(events, query) {
-    if (!query) return events;
-    return events.filter(event => {
-        const name = (event.name || event.title || '').toLowerCase();
-        const venue = (event.venue_name || '').toLowerCase();
-        const city = (event.venue_city || '').toLowerCase();
-        return name.includes(query) || venue.includes(query) || city.includes(query);
-    });
+let currentStatusFilter = 'ongoing'; // Default: show ongoing events
+
+function getEventDisplayStatus(event) {
+    const eventEndDate = event.ends_at || event.starts_at;
+    const isEnded = event.status === 'ended' || event.is_past || event.is_ended ||
+        (eventEndDate && new Date(eventEndDate) < new Date());
+    if (event.is_cancelled || event.status === 'cancelled') return 'cancelled';
+    if (event.is_postponed || event.status === 'postponed') return 'postponed';
+    if (event.status === 'draft' || event.status === 'pending_review') return 'draft';
+    if (isEnded) return 'ended';
+    return 'ongoing';
 }
 
-function instantSearchEvents() {
+function filterEvents(events, query) {
+    let filtered = events;
+
+    // Status filter
+    if (currentStatusFilter === 'ongoing') {
+        filtered = filtered.filter(e => getEventDisplayStatus(e) === 'ongoing');
+    } else if (currentStatusFilter === 'draft') {
+        filtered = filtered.filter(e => getEventDisplayStatus(e) === 'draft');
+    } else if (currentStatusFilter === 'ended') {
+        filtered = filtered.filter(e => ['ended', 'cancelled', 'postponed'].includes(getEventDisplayStatus(e)));
+    }
+    // '' = all, no status filter
+
+    // Text search
+    if (query) {
+        filtered = filtered.filter(event => {
+            const name = (event.name || event.title || '').toLowerCase();
+            const venue = (event.venue_name || '').toLowerCase();
+            const city = (event.venue_city || '').toLowerCase();
+            return name.includes(query) || venue.includes(query) || city.includes(query);
+        });
+    }
+
+    return filtered;
+}
+
+function applyFilters() {
     const query = document.getElementById('search-input')?.value?.toLowerCase() || '';
     const filteredEvents = filterEvents(allEventsCache, query);
 
@@ -683,9 +720,19 @@ function instantSearchEvents() {
     }
 }
 
-// Initialize instant search
+// Initialize filters
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(instantSearchEvents, 150));
+    document.getElementById('search-input')?.addEventListener('input', AmbiletUtils.debounce(applyFilters, 150));
+
+    // Status pill clicks
+    document.querySelectorAll('.status-pill').forEach(pill => {
+        pill.addEventListener('click', function() {
+            document.querySelectorAll('.status-pill').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            currentStatusFilter = this.dataset.status;
+            applyFilters();
+        });
+    });
 });
 
 function renderEvents(events) {

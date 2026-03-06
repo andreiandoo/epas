@@ -66,39 +66,27 @@ $eventId = $_GET['event'] ?? null;
     </div>
 
     <main class="flex-1 p-4 lg:p-6">
-        <!-- Report Header -->
-        <div class="p-6 mb-6 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl text-white report-section">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-                <div class="flex items-center gap-4">
-                    <div id="event-image" class="w-20 h-20 rounded-xl bg-white/20 overflow-hidden"></div>
-                    <div>
-                        <h2 id="report-event-title" class="text-2xl font-bold">Raport Final</h2>
-                        <p id="report-event-date" class="text-white/80 text-sm mt-1"></p>
-                        <p id="report-event-venue" class="text-white/90 text-sm"></p>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div class="p-4 bg-white/10 rounded-xl text-center">
-                        <div id="summary-revenue" class="text-2xl font-bold">0 lei</div>
-                        <div class="text-xs text-white/90">Venituri totale</div>
-                    </div>
-                    <div class="p-4 bg-white/10 rounded-xl text-center">
-                        <div id="summary-tickets" class="text-2xl font-bold">0</div>
-                        <div class="text-xs text-white/90">Bilete vândute</div>
-                    </div>
-                    <div class="p-4 bg-white/10 rounded-xl text-center">
-                        <div id="summary-commission" class="text-2xl font-bold">0%</div>
-                        <div id="summary-commission-label" class="text-xs text-white/90">Comision</div>
-                    </div>
-                    <div class="p-4 bg-white/10 rounded-xl text-center">
-                        <div id="summary-views" class="text-2xl font-bold">0</div>
-                        <div class="text-xs text-white/90">Vizualizări</div>
-                    </div>
-                    <div class="p-4 bg-white/10 rounded-xl text-center">
-                        <div id="summary-conversion" class="text-2xl font-bold">0%</div>
-                        <div class="text-xs text-white/90">Rată conversie</div>
-                    </div>
-                </div>
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+                <div id="summary-revenue" class="text-2xl font-bold text-gray-900">0 lei</div>
+                <div class="text-xs text-gray-500">Venituri totale</div>
+            </div>
+            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+                <div id="summary-tickets" class="text-2xl font-bold text-gray-900">0</div>
+                <div class="text-xs text-gray-500">Bilete vândute</div>
+            </div>
+            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+                <div id="summary-commission" class="text-2xl font-bold text-gray-900">0%</div>
+                <div id="summary-commission-label" class="text-xs text-gray-500">Comision</div>
+            </div>
+            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+                <div id="summary-views" class="text-2xl font-bold text-gray-900">0</div>
+                <div class="text-xs text-gray-500">Vizualizări</div>
+            </div>
+            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+                <div id="summary-conversion" class="text-2xl font-bold text-gray-900">0%</div>
+                <div class="text-xs text-gray-500">Rată conversie</div>
             </div>
         </div>
 
@@ -229,8 +217,22 @@ async function loadReport() {
         // Load analytics data
         const response = await AmbiletAPI.get(`/organizer/events/${eventId}/analytics?period=all`);
         if (response.success) {
-            reportData = response.data;
-            updateReport(response.data);
+            const data = response.data || {};
+            // Event info may be at top level or inside data
+            if (response.event && !data.event) data.event = response.event;
+            // Transform chart_data array of objects → flat arrays for chart
+            if (data.chart_data && !data.chart) {
+                const cd = data.chart_data;
+                data.chart = {
+                    labels: cd.map(d => d.date),
+                    raw_dates: cd.map(d => d.raw_date),
+                    revenue: cd.map(d => d.revenue || 0),
+                    tickets: cd.map(d => d.tickets || 0),
+                    visits: cd.map(d => d.visits || 0),
+                };
+            }
+            reportData = data;
+            updateReport(data);
         }
 
         // Load goals
@@ -254,13 +256,11 @@ async function loadReport() {
 }
 
 function updateReport(data) {
-    // Event header
+    // Top bar event info
     if (data.event) {
         const e = data.event;
         document.getElementById('event-title').textContent = e.title || 'Eveniment';
-        document.getElementById('report-event-title').textContent = e.title || 'Eveniment';
 
-        // Format date
         let dateStr = '';
         if (e.starts_at) {
             const d = new Date(e.starts_at);
@@ -268,20 +268,11 @@ function updateReport(data) {
         } else if (e.date) {
             dateStr = e.date;
         }
-        document.getElementById('event-info').textContent = dateStr;
-        document.getElementById('report-event-date').textContent = dateStr;
-
-        // Venue
         let venueStr = '';
         if (e.venue) {
             venueStr = typeof e.venue === 'object' ? (e.venue.name || '') : e.venue;
         }
-        document.getElementById('report-event-venue').textContent = venueStr;
-
-        // Image
-        if (e.image) {
-            document.getElementById('event-image').innerHTML = `<img src="${e.image}" class="w-full h-full object-cover">`;
-        }
+        document.getElementById('event-info').textContent = [dateStr, venueStr].filter(Boolean).join(' · ');
     }
 
     // Summary stats
@@ -331,7 +322,7 @@ function updateReport(data) {
 
     // Charts
     if (data.chart) {
-        renderSalesChart(data.chart);
+        renderSalesChart(data.chart, data.event);
     }
 
     // Ticket types
@@ -356,11 +347,39 @@ function updateReport(data) {
     }
 }
 
-function renderSalesChart(chartData) {
+function renderSalesChart(chartData, eventData) {
+    let labels = chartData.labels || [];
+    let rawDates = chartData.raw_dates || [];
+    let revenue = chartData.revenue || [];
+    let tickets = chartData.tickets || [];
+
+    // Trim chart to event end date (not today) for past events
+    if (eventData) {
+        const endDate = eventData.ends_at || eventData.starts_at;
+        if (endDate && rawDates.length > 0) {
+            const eventEnd = new Date(endDate);
+            eventEnd.setHours(23, 59, 59);
+            const cutoffIdx = rawDates.findIndex(d => new Date(d) > eventEnd);
+            if (cutoffIdx > 0) {
+                labels = labels.slice(0, cutoffIdx);
+                rawDates = rawDates.slice(0, cutoffIdx);
+                revenue = revenue.slice(0, cutoffIdx);
+                tickets = tickets.slice(0, cutoffIdx);
+            }
+        }
+    }
+
+    // Build labels with year for tooltip
+    const tooltipLabels = rawDates.map(d => {
+        if (!d) return '';
+        const dt = new Date(d);
+        return dt.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+    });
+
     const options = {
         series: [
-            { name: 'Venituri', data: chartData.revenue || [] },
-            { name: 'Bilete', data: chartData.tickets || [] }
+            { name: 'Venituri', data: revenue },
+            { name: 'Bilete', data: tickets }
         ],
         chart: {
             type: 'area',
@@ -372,7 +391,7 @@ function renderSalesChart(chartData) {
         stroke: { curve: 'smooth', width: 2 },
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.1 } },
         xaxis: {
-            categories: chartData.labels || [],
+            categories: labels,
             labels: { style: { colors: '#94a3b8', fontSize: '10px' } }
         },
         yaxis: [
@@ -381,6 +400,9 @@ function renderSalesChart(chartData) {
         ],
         tooltip: {
             shared: true,
+            x: {
+                formatter: (val, { dataPointIndex }) => tooltipLabels[dataPointIndex] || val
+            },
             y: { formatter: (val, { seriesIndex }) => seriesIndex === 0 ? formatCurrency(val) : formatNumber(val) + ' bilete' }
         },
         colors: ['#10b981', '#3b82f6'],
@@ -414,6 +436,9 @@ function renderTicketTypes(tickets) {
         tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-sm text-center text-gray-400">Nu există tipuri de bilete</td></tr>';
         return;
     }
+
+    // Sort by tickets sold (descending)
+    tickets = [...tickets].sort((a, b) => (b.sold || 0) - (a.sold || 0));
 
     const totalRevenue = tickets.reduce((sum, t) => sum + (t.revenue || t.price * (t.sold || 0)), 0);
     const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
