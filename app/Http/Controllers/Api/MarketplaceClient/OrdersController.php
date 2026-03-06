@@ -851,18 +851,26 @@ class OrdersController extends BaseController
             ? ($rawVenueName['ro'] ?? $rawVenueName['en'] ?? reset($rawVenueName) ?: null)
             : $rawVenueName;
 
-        $claim = PosTicketClaim::create([
-            'tenant_id' => $client->tenant_id,
-            'order_id' => $order->id,
-            'event_name' => $eventName,
-            'event_date' => $eventDate,
-            'venue_name' => $venueName,
-        ]);
+        try {
+            $claim = PosTicketClaim::create([
+                'tenant_id' => $order->tenant_id,
+                'order_id' => $order->id,
+                'event_name' => $eventName,
+                'event_date' => $eventDate,
+                'venue_name' => $venueName,
+            ]);
 
-        return $this->success([
-            'claim_url' => $claim->getClaimUrl(),
-            'token' => $claim->token,
-            'expires_at' => $claim->expires_at->toIso8601String(),
-        ], 'Claim URL generated');
+            return $this->success([
+                'claim_url' => $claim->getClaimUrl(),
+                'token' => $claim->token,
+                'expires_at' => $claim->expires_at->toIso8601String(),
+            ], 'Claim URL generated');
+        } catch (\Throwable $e) {
+            Log::error('Failed to generate claim URL', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->error('Failed to generate claim URL: ' . $e->getMessage(), 500);
+        }
     }
 }
