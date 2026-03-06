@@ -156,6 +156,7 @@ class OrdersController extends BaseController
                 'currency' => 'RON',
                 'source' => $request->input('source', 'marketplace'),
                 'marketplace_client_id' => $client->id,
+                'marketplace_organizer_id' => $event->marketplace_organizer_id,
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,

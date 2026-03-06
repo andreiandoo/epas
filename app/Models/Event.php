@@ -627,11 +627,7 @@ class Event extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        $query = $this->orders()->whereIn('status', ['paid', 'confirmed', 'completed']);
-        if ($this->marketplace_organizer_id) {
-            $query->where('marketplace_organizer_id', $this->marketplace_organizer_id);
-        }
-        return $query->sum('total');
+        return $this->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])->sum('total');
     }
 
     /**
@@ -639,11 +635,11 @@ class Event extends Model
      */
     public function getTotalTicketsSoldAttribute(): int
     {
-        $query = $this->orders()->whereIn('status', ['paid', 'confirmed', 'completed']);
-        if ($this->marketplace_organizer_id) {
-            $query->where('marketplace_organizer_id', $this->marketplace_organizer_id);
-        }
-        return (int) $query->withCount('tickets')->get()->sum('tickets_count');
+        return (int) $this->orders()
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->withCount('tickets')
+            ->get()
+            ->sum('tickets_count');
     }
 
     /**
