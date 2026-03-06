@@ -632,14 +632,17 @@ class ArtistResource extends Resource
                 Tables\Columns\ImageColumn::make('main_image_url')
                     ->label('Imagine')
                     ->circular()
-                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=A&color=7F9CF5&background=EBF4FF'),
+                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=A&color=7F9CF5&background=EBF4FF')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('artistTypes')
                     ->label('Tip')
                     ->badge()
