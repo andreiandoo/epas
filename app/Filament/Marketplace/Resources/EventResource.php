@@ -2787,7 +2787,8 @@ class EventResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('seating_layout_id')
                     ->label('Seating')
                     ->boolean()
@@ -2796,19 +2797,23 @@ class EventResource extends Resource
                     ->trueColor('success')
                     ->falseColor('gray')
                     ->getStateUsing(fn ($record) => !empty($record->seating_layout_id))
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('venue_id')
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplace_city_id')
                     ->label('Oraș')
                     ->formatStateUsing(fn ($state, $record) => $record->marketplaceCity?->getTranslation('name', app()->getLocale()) ?? '-')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
                     ->formatStateUsing(function ($state, $record) {
@@ -2855,20 +2860,24 @@ class EventResource extends Resource
                         // Default: single day - try event_date, then range_start_date as fallback
                         return $state?->format('d M Y') ?? $record->range_start_date?->format('d M Y') ?? '-';
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
                     ->label('Publicat')
                     ->trueIcon('heroicon-o-eye')
                     ->falseIcon('heroicon-o-eye-slash')
                     ->trueColor('success')
-                    ->falseColor('danger'),
+                    ->falseColor('danger')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_cancelled')
                     ->boolean()
-                    ->label('Cancelled'),
+                    ->label('Cancelled')
+                    ->toggleable(),
                 Tables\Columns\IconColumn::make('is_sold_out')
                     ->boolean()
-                    ->label('Sold Out'),
+                    ->label('Sold Out')
+                    ->toggleable(),
                 Tables\Columns\BadgeColumn::make('status_display')
                     ->label('Status')
                     ->getStateUsing(function ($record) {
@@ -2899,7 +2908,8 @@ class EventResource extends Resource
                     ->colors([
                         'success' => 'active',
                         'gray' => 'ended',
-                    ]),
+                    ])
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

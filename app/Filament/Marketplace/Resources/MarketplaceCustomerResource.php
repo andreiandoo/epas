@@ -28,7 +28,7 @@ class MarketplaceCustomerResource extends Resource
 
     protected static ?string $model = MarketplaceCustomer::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
-    protected static \UnitEnum|string|null $navigationGroup = 'Customers';
+    protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Clienți';
     protected static ?string $modelLabel = 'User';
@@ -371,11 +371,13 @@ class MarketplaceCustomerResource extends Resource
                 Tables\Columns\TextColumn::make('full_name')
                     ->label('Name')
                     ->searchable(['first_name', 'last_name'])
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('phone')
                     ->searchable()
@@ -386,7 +388,8 @@ class MarketplaceCustomerResource extends Resource
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
                     ->falseIcon('heroicon-o-x-circle')
-                    ->getStateUsing(fn ($record) => $record->email_verified_at !== null),
+                    ->getStateUsing(fn ($record) => $record->email_verified_at !== null)
+                    ->toggleable(),
 
                 Tables\Columns\IconColumn::make('is_guest')
                     ->label('Type')
@@ -396,7 +399,8 @@ class MarketplaceCustomerResource extends Resource
                     ->trueColor('gray')
                     ->falseColor('success')
                     ->getStateUsing(fn ($record) => $record->isGuest())
-                    ->tooltip(fn ($record) => $record->isGuest() ? 'Guest (no password)' : 'Registered'),
+                    ->tooltip(fn ($record) => $record->isGuest() ? 'Guest (no password)' : 'Registered')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -404,17 +408,20 @@ class MarketplaceCustomerResource extends Resource
                         'active' => 'success',
                         'suspended' => 'danger',
                         default => 'gray',
-                    }),
+                    })
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_orders')
                     ->label('Orders')
                     ->sortable()
-                    ->alignCenter(),
+                    ->alignCenter()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_spent')
                     ->label('Spent')
                     ->money('RON')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('last_login_at')
                     ->label('Last Login')
