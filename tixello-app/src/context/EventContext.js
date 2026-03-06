@@ -27,12 +27,13 @@ export function EventProvider({ children }) {
         }));
         setEvents(enriched);
 
-        // Auto-select: live > today > past > first
+        // Auto-select: live > today > future > past > first
         if (!selectedEvent) {
           const live = enriched.find(e => e.timeCategory === 'live');
           const today = enriched.find(e => e.timeCategory === 'today');
+          const future = enriched.find(e => e.timeCategory === 'future');
           const past = enriched.find(e => e.timeCategory === 'past');
-          selectEvent(live || today || past || enriched[0]);
+          selectEvent(live || today || future || past || enriched[0]);
         }
       }
     } catch (e) {

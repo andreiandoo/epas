@@ -256,7 +256,7 @@ function ReportsOnlyPlaceholder({ onViewReports }) {
 
 // ─── Ticket Type Card ─────────────────────────────────────────────────────────
 
-function TicketTypeCard({ ticket, onAdd }) {
+function TicketTypeCard({ ticket, onAdd, isInvitation }) {
   const isSoldOut = ticket.available <= 0;
 
   return (
@@ -265,7 +265,7 @@ function TicketTypeCard({ ticket, onAdd }) {
       onPress={() => !isSoldOut && onAdd(ticket)}
       activeOpacity={isSoldOut ? 1 : 0.7}
     >
-      <View style={[styles.ticketColorBar, { backgroundColor: ticket.color }]} />
+      <View style={[styles.ticketColorBar, { backgroundColor: isInvitation ? colors.amber : ticket.color }]} />
       <View style={styles.ticketCardContent}>
         <Text
           style={[styles.ticketName, isSoldOut && styles.ticketNameDisabled]}
@@ -273,7 +273,7 @@ function TicketTypeCard({ ticket, onAdd }) {
         >
           {ticket.name}
         </Text>
-        <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
+        <Text style={styles.ticketPrice}>{isInvitation ? '0,00 RON' : formatCurrency(ticket.price)}</Text>
         {isSoldOut ? (
           <Text style={styles.soldOutText}>Epuizat</Text>
         ) : (
@@ -371,6 +371,7 @@ export default function SalesScreen({ navigation }) {
   const [lastOrderData, setLastOrderData] = useState(null);
   const [claimUrl, setClaimUrl] = useState(null);
   const [claimToken, setClaimToken] = useState(null);
+  const [isInvitationMode, setIsInvitationMode] = useState(false);
 
   // Auto-close QR overlay: 30s timeout + poll claim status every 5s
   useEffect(() => {
@@ -479,9 +480,6 @@ export default function SalesScreen({ navigation }) {
     setPaymentMethod(method);
     setIsProcessing(true);
 
-    const isInvitation = method === 'invitation';
-    const apiMethod = isInvitation ? 'cash' : method;
-
     try {
       // Create order via API
       const orderPayload = {
@@ -493,12 +491,12 @@ export default function SalesScreen({ navigation }) {
         customer: {
           email: 'pos@ambilet.ro',
           first_name: 'POS',
-          last_name: isInvitation ? 'Invitație' : (method === 'cash' ? 'Numerar' : 'Card'),
+          last_name: isInvitationMode ? 'Invitație' : (method === 'cash' ? 'Numerar' : 'Card'),
         },
-        payment_method: apiMethod,
+        payment_method: method,
         source: 'pos_app',
         sold_by: user?.name || 'POS',
-        ...(isInvitation && { is_invitation: true }),
+        ...(isInvitationMode && { is_invitation: true }),
       };
 
       const response = await apiPost('/orders', orderPayload);
@@ -519,7 +517,7 @@ export default function SalesScreen({ navigation }) {
         setLastOrderData(orderData);
 
         // Generate QR claim URL for cash orders and invitations
-        if ((method === 'cash' || method === 'invitation') && orderData?.id) {
+        if (method === 'cash' && orderData?.id) {
           try {
             const claimResponse = await apiPost(`/orders/${orderData.id}/generate-claim-url`);
             if (claimResponse.success && claimResponse.data?.claim_url) {
@@ -537,9 +535,9 @@ export default function SalesScreen({ navigation }) {
           .join(', ');
 
         addSale({
-          method: isInvitation ? 'invitation' : method,
-          total: isInvitation ? 0 : cartTotal,
-          description: (isInvitation ? '[Invitație] ' : '') + saleDescription,
+          method: isInvitationMode ? 'invitation' : method,
+          total: isInvitationMode ? 0 : cartTotal,
+          description: (isInvitationMode ? '[Invitație] ' : '') + saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -559,7 +557,7 @@ export default function SalesScreen({ navigation }) {
 
   const finishPayment = async (skipEmail = false) => {
     // Auto check-in tickets when skipping email on cash POS orders / invitations
-    if (skipEmail && lastOrderData?.id && (paymentMethod === 'cash' || paymentMethod === 'invitation')) {
+    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash') {
       try {
         await apiPost(`/orders/${lastOrderData.id}/pos-complete`, {
           auto_checkin: true,
@@ -577,6 +575,7 @@ export default function SalesScreen({ navigation }) {
     setPaymentMethod(null);
     setBuyerEmail('');
     setLastOrderData(null);
+    setIsInvitationMode(false);
     setActiveView('tickets');
   };
 
@@ -646,7 +645,7 @@ export default function SalesScreen({ navigation }) {
           >
             <ArrowLeftIcon size={22} color={colors.white} />
           </TouchableOpacity>
-          <Text style={styles.cartTitle}>Coș</Text>
+          <Text style={styles.cartTitle}>{isInvitationMode ? 'Invitație' : 'Coș'}</Text>
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountBadgeText}>{cartCount}</Text>
           </View>
@@ -672,9 +671,9 @@ export default function SalesScreen({ navigation }) {
           <View style={styles.summarySection}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
+              <Text style={styles.summaryValue}>{isInvitationMode ? '0,00 RON' : formatCurrency(subtotal)}</Text>
             </View>
-            {commissionRate > 0 && commissionMode === 'added_on_top' && (
+            {!isInvitationMode && commissionRate > 0 && commissionMode === 'added_on_top' && (
               <>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Comision {commissionRate}%</Text>
@@ -682,7 +681,7 @@ export default function SalesScreen({ navigation }) {
                 </View>
               </>
             )}
-            {commissionRate > 0 && commissionMode === 'included' && (
+            {!isInvitationMode && commissionRate > 0 && commissionMode === 'included' && (
               <Text style={[styles.summaryLabel, { fontSize: 11, marginTop: 4 }]}>
                 Include comision {commissionRate}%
               </Text>
@@ -691,17 +690,19 @@ export default function SalesScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryTotalLabel}>Total</Text>
               <Text style={styles.summaryTotalValue}>
-                {formatCurrency(total)}
+                {isInvitationMode ? '0,00 RON' : formatCurrency(total)}
               </Text>
             </View>
           </View>
 
           {/* Payment Methods */}
           <View style={styles.paymentSection}>
-            <Text style={styles.paymentSectionTitle}>Metodă de Plată</Text>
+            <Text style={styles.paymentSectionTitle}>
+              {isInvitationMode ? 'Emite Invitație' : 'Metodă de Plată'}
+            </Text>
 
-            {/* Plată Card */}
-            <TouchableOpacity
+            {/* Plată Card - hidden in invitation mode */}
+            {!isInvitationMode && <TouchableOpacity
               style={[
                 styles.paymentButton,
                 paymentMethod === 'tap' && styles.paymentButtonActive,
@@ -737,7 +738,7 @@ export default function SalesScreen({ navigation }) {
                   </View>
                 </View>
               )}
-            </TouchableOpacity>
+            </TouchableOpacity>}
 
             {/* Cash */}
             <TouchableOpacity
@@ -753,10 +754,17 @@ export default function SalesScreen({ navigation }) {
                 <ActivityIndicator size="small" color={colors.purple} />
               ) : (
                 <View style={styles.paymentButtonContent}>
-                  <CashIcon
-                    size={22}
-                    color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
-                  />
+                  {isInvitationMode ? (
+                    <GiftIcon
+                      size={22}
+                      color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
+                    />
+                  ) : (
+                    <CashIcon
+                      size={22}
+                      color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
+                    />
+                  )}
                   <View style={styles.paymentButtonText}>
                     <Text
                       style={[
@@ -764,45 +772,16 @@ export default function SalesScreen({ navigation }) {
                         paymentMethod === 'cash' && styles.paymentMethodNameActive,
                       ]}
                     >
-                      Numerar
+                      {isInvitationMode ? 'Emite Invitație' : 'Numerar'}
                     </Text>
+                    {isInvitationMode && (
+                      <Text style={styles.paymentPoweredBy}>Valoare 0 RON</Text>
+                    )}
                   </View>
                 </View>
               )}
             </TouchableOpacity>
 
-            {/* Invitație */}
-            <TouchableOpacity
-              style={[
-                styles.paymentButton,
-                paymentMethod === 'invitation' && styles.paymentButtonActive,
-              ]}
-              onPress={() => !isProcessing && processPayment('invitation')}
-              activeOpacity={0.7}
-              disabled={isProcessing}
-            >
-              {isProcessing && paymentMethod === 'invitation' ? (
-                <ActivityIndicator size="small" color={colors.purple} />
-              ) : (
-                <View style={styles.paymentButtonContent}>
-                  <GiftIcon
-                    size={22}
-                    color={paymentMethod === 'invitation' ? colors.purple : colors.textSecondary}
-                  />
-                  <View style={styles.paymentButtonText}>
-                    <Text
-                      style={[
-                        styles.paymentMethodName,
-                        paymentMethod === 'invitation' && styles.paymentMethodNameActive,
-                      ]}
-                    >
-                      Invitație
-                    </Text>
-                    <Text style={styles.paymentPoweredBy}>Valoare 0 RON</Text>
-                  </View>
-                </View>
-              )}
-            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -823,7 +802,7 @@ export default function SalesScreen({ navigation }) {
                     </View>
                   </View>
                   <Text style={styles.successTitle}>
-                    {paymentMethod === 'invitation' ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                    {isInvitationMode ? 'Invitație Emisă!' : 'Plată Reușită!'}
                   </Text>
                   <Text style={styles.qrCodeDescription}>
                     Clientul scanează codul QR pentru a primi biletele pe email.
@@ -835,7 +814,7 @@ export default function SalesScreen({ navigation }) {
                     <CheckIcon size={64} color={colors.green} />
                   </View>
                   <Text style={styles.successTitle}>
-                    {paymentMethod === 'invitation' ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                    {isInvitationMode ? 'Invitație Emisă!' : 'Plată Reușită!'}
                   </Text>
                   <Text style={styles.successAmount}>
                     {formatCurrency(lastPaymentAmount)}
@@ -958,8 +937,34 @@ export default function SalesScreen({ navigation }) {
           </Svg>
         </TouchableOpacity>
 
+        {/* Mode Toggle: Vânzare / Invitații */}
+        <View style={styles.modeToggleRow}>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, !isInvitationMode && styles.modeToggleBtnActive]}
+            onPress={() => { setIsInvitationMode(false); setCartItems([]); }}
+            activeOpacity={0.7}
+          >
+            <CashIcon size={16} color={!isInvitationMode ? colors.purple : colors.textTertiary} />
+            <Text style={[styles.modeToggleText, !isInvitationMode && styles.modeToggleTextActive]}>
+              Vânzare
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeToggleBtn, isInvitationMode && styles.modeToggleBtnActive]}
+            onPress={() => { setIsInvitationMode(true); setCartItems([]); }}
+            activeOpacity={0.7}
+          >
+            <GiftIcon size={16} color={isInvitationMode ? colors.purple : colors.textTertiary} />
+            <Text style={[styles.modeToggleText, isInvitationMode && styles.modeToggleTextActive]}>
+              Invitații
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Select Tickets Heading */}
-        <Text style={styles.sectionHeading}>Selectează Bilete</Text>
+        <Text style={styles.sectionHeading}>
+          {isInvitationMode ? 'Selectează Bilete pentru Invitație' : 'Selectează Bilete'}
+        </Text>
 
         {/* Ticket Types Grid */}
         <View style={styles.ticketGrid}>
@@ -968,6 +973,7 @@ export default function SalesScreen({ navigation }) {
               key={ticket.id}
               ticket={ticket}
               onAdd={addToCart}
+              isInvitation={isInvitationMode}
             />
           ))}
           {ticketTypes.length === 0 && (
@@ -1124,6 +1130,37 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
+    color: colors.purple,
+  },
+
+  // ── Mode Toggle (Vânzare / Invitații) ────────────────────────────────────
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  modeToggleBtnActive: {
+    borderColor: colors.purpleBorder,
+    backgroundColor: colors.purpleBg,
+  },
+  modeToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  modeToggleTextActive: {
     color: colors.purple,
   },
 

@@ -19,6 +19,7 @@ import { useApp } from '../context/AppContext';
 import { checkinByCode } from '../api/participants';
 import { publicApiGet } from '../api/client';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Audio } from 'expo-av';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCANNER_SIZE = 280;
@@ -224,6 +225,7 @@ export default function CheckInScreen({ navigation }) {
     isShiftPaused,
     setIsShiftPaused,
     vibrationFeedback,
+    soundEffects,
     autoConfirmValid,
     addScan,
     recentScans,
@@ -255,6 +257,45 @@ export default function CheckInScreen({ navigation }) {
   const resultTimeout = useRef(null);
   const scanTimestamps = useRef([]);
   const scannedCodes = useRef(new Map());
+
+  // ── Sound effects ──
+  const successSound = useRef(null);
+  const warningSound = useRef(null);
+  const errorSound = useRef(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadSounds() {
+      try {
+        const { sound: s1 } = await Audio.Sound.createAsync(require('../../assets/sounds/success.mp3'));
+        const { sound: s2 } = await Audio.Sound.createAsync(require('../../assets/sounds/warning.mp3'));
+        const { sound: s3 } = await Audio.Sound.createAsync(require('../../assets/sounds/error.mp3'));
+        if (mounted) {
+          successSound.current = s1;
+          warningSound.current = s2;
+          errorSound.current = s3;
+        }
+      } catch (e) {
+        console.warn('Failed to load sounds:', e);
+      }
+    }
+    loadSounds();
+    return () => {
+      mounted = false;
+      successSound.current?.unloadAsync();
+      warningSound.current?.unloadAsync();
+      errorSound.current?.unloadAsync();
+    };
+  }, []);
+
+  const playSound = useCallback(async (soundRef) => {
+    if (!soundEffects || !soundRef.current) return;
+    try {
+      await soundRef.current.replayAsync();
+    } catch (e) {
+      // ignore playback errors
+    }
+  }, [soundEffects]);
 
   // ── Scan line animation ──
 
@@ -372,6 +413,7 @@ export default function CheckInScreen({ navigation }) {
       if (vibrationFeedback) {
         Vibration.vibrate([0, 100, 100, 100]);
       }
+      playSound(warningSound);
 
       addScan({
         id: Date.now(),
@@ -437,6 +479,7 @@ export default function CheckInScreen({ navigation }) {
         if (vibrationFeedback) {
           Vibration.vibrate(200);
         }
+        playSound(successSound);
 
         scanTimestamps.current.push(Date.now());
 
@@ -509,6 +552,7 @@ export default function CheckInScreen({ navigation }) {
         if (vibrationFeedback) {
           Vibration.vibrate([0, 100, 100, 100]);
         }
+        playSound(warningSound);
 
         addScan({
           id: Date.now(),
@@ -537,6 +581,7 @@ export default function CheckInScreen({ navigation }) {
         if (vibrationFeedback) {
           Vibration.vibrate([0, 200, 100, 200, 100, 200]);
         }
+        playSound(errorSound);
 
         addScan({
           id: Date.now(),
