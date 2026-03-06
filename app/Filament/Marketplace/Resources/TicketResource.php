@@ -47,15 +47,18 @@ class TicketResource extends Resource
                     ->label('Cod Bilet')
                     ->searchable()
                     ->sortable()
-                    ->copyable(),
+                    ->copyable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('ticketType.event.title')
                     ->label('Eveniment')
                     ->searchable()
                     ->sortable()
-                    ->limit(30),
+                    ->limit(30)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('ticketType.name')
                     ->label('Tip Bilet')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('order.id')
                     ->label('Nr. Comandă')
                     ->formatStateUsing(fn ($state, $record) =>
@@ -70,7 +73,8 @@ class TicketResource extends Resource
                               ->orWhere('order_number', 'like', "%{$search}%");
                         });
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Beneficiar')
                     ->getStateUsing(function ($record) {
@@ -91,7 +95,8 @@ class TicketResource extends Resource
                         $query->whereHas('order', function ($q) use ($search) {
                             $q->where('meta->customer_name', 'like', "%{$search}%");
                         });
-                    }),
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('beneficiary_email')
                     ->label('Email')
                     ->getStateUsing(function ($record) {
@@ -126,7 +131,8 @@ class TicketResource extends Resource
                         'cancelled' => 'Anulat',
                         'refunded' => 'Rambursat',
                         default => ucfirst($state),
-                    }),
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('seat_label')
                     ->label('Loc')
                     ->toggleable(),
