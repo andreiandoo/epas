@@ -565,33 +565,6 @@ const AmbiletAuth = {
      * Initialize auth state (call on page load)
      */
     init() {
-        // Handle admin impersonation token from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const adminToken = urlParams.get('_admin_token');
-        if (adminToken) {
-            localStorage.setItem(this.KEYS.ORGANIZER_TOKEN, adminToken);
-            localStorage.setItem(this.KEYS.USER_TYPE, 'organizer');
-            localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
-            localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
-
-            // Clean token from URL
-            urlParams.delete('_admin_token');
-            const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
-            history.replaceState(null, '', cleanUrl);
-
-            // Fetch organizer data in background
-            if (typeof AmbiletAPI !== 'undefined') {
-                AmbiletAPI.get('/organizer/me').then(response => {
-                    if (response.success && response.data) {
-                        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(response.data));
-                        window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
-                            detail: { type: 'organizer', user: response.data }
-                        }));
-                    }
-                }).catch(() => {});
-            }
-        }
-
         // Check if token is still valid on page load
         if (this.isLoggedIn()) {
             // Optionally verify token validity
@@ -616,6 +589,38 @@ const AmbiletAuth = {
         }));
     }
 };
+
+// Handle admin impersonation token IMMEDIATELY (before DOMContentLoaded)
+// so organizer pages don't redirect to login before the token is stored
+(function () {
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminToken = urlParams.get('_admin_token');
+    if (!adminToken) return;
+
+    localStorage.setItem('ambilet_organizer_token', adminToken);
+    localStorage.setItem('ambilet_user_type', 'organizer');
+    localStorage.removeItem('ambilet_customer_token');
+    localStorage.removeItem('ambilet_customer_data');
+
+    // Clean token from URL
+    urlParams.delete('_admin_token');
+    const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+    history.replaceState(null, '', cleanUrl);
+
+    // Fetch organizer data after API is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof AmbiletAPI !== 'undefined') {
+            AmbiletAPI.get('/organizer/me').then(response => {
+                if (response.success && response.data) {
+                    localStorage.setItem('ambilet_organizer_data', JSON.stringify(response.data));
+                    window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
+                        detail: { type: 'organizer', user: response.data }
+                    }));
+                }
+            }).catch(() => {});
+        }
+    });
+})();
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {

@@ -76,7 +76,8 @@ class MarketplacePanelProvider extends PanelProvider
                     // Revoke old impersonation tokens and create a fresh one
                     $organizer->tokens()->where('name', 'admin-impersonation')->delete();
                     $token = $organizer->createToken('admin-impersonation')->plainTextToken;
-                    $url = 'https://' . $marketplace->domain . '/organizator/panou?_admin_token=' . urlencode($token);
+                    $domain = preg_replace('#^https?://#', '', rtrim($marketplace->domain, '/'));
+                    $url = 'https://' . $domain . '/organizator/panou?_admin_token=' . urlencode($token);
                     return redirect($url);
                 })->name('filament.marketplace.organizer.login-as');
             })
