@@ -97,7 +97,7 @@ class MarketplaceNewsletter extends Model
         if (!empty($this->target_lists)) {
             $query->whereHas('contactLists', function ($q) {
                 $q->whereIn('marketplace_contact_lists.id', $this->target_lists)
-                    ->wherePivot('status', 'subscribed');
+                    ->where('marketplace_contact_list_members.status', 'subscribed');
             });
         }
 

@@ -547,9 +547,9 @@ class MarketplaceEventsController extends BaseController
                         ?? $event->getTranslation('ticket_terms', 'en')
                         ?? null;
                     $venueConditions = $venue?->venue_conditions;
-                    if ($venueConditions) {
+                    if ($venueConditions && trim(strip_tags($venueConditions))) {
                         $venueName = is_array($venue->name) ? ($venue->name[$language] ?? $venue->name['ro'] ?? reset($venue->name) ?? '') : ($venue->name ?? '');
-                        $conditionsBlock = '<hr><strong>Condiții locație – ' . e($venueName) . '</strong>' . $venueConditions;
+                        $conditionsBlock = '<div class="mt-2 py-2"><strong>Condiții ' . e($venueName) . '</strong>' . $venueConditions . '</div>';
                         $terms = $terms ? $terms . $conditionsBlock : $conditionsBlock;
                     }
                     return $terms;

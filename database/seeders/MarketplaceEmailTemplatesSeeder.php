@@ -25,536 +25,457 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
     protected function seedForMarketplace(MarketplaceClient $marketplace): void
     {
         $name = $marketplace->public_name ?? $marketplace->name ?? 'Marketplace';
+        $domain = $marketplace->domain ?? 'ambilet.ro';
+        $logoUrl = "https://{$domain}/assets/images/ambilet_logo.webp";
+        $primaryColor = '#A51C30';
+        $primaryDark = '#8B1728';
 
         $templates = [
-            // 1. Order / Ticket Purchase Confirmation
+            // ============================================================
+            // CUSTOMER TRANSACTIONAL TEMPLATES
+            // ============================================================
             [
                 'slug' => 'ticket_purchase',
                 'name' => 'Confirmare comandă',
                 'subject' => 'Confirmare comandă #{{order_number}} — {{event_name}}',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Mulțumim pentru comanda ta!</h2>
-<p>Salut {{customer_name}},</p>
-<p>Comanda ta <strong>#{{order_number}}</strong> a fost confirmată cu succes.</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Mulțumim pentru comanda ta!</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Comanda ta <strong>#{{order_number}}</strong> a fost procesată cu succes. Mai jos găsești detaliile evenimentului.</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Eveniment</td>
-<td style="padding:8px;">{{event_name}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border-radius:8px;overflow:hidden;">
+<tr style="background:{$primaryColor};color:#fff;">
+<td colspan="2" style="padding:12px 16px;font-weight:bold;font-size:14px;">Detalii eveniment</td>
+</tr>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:140px;">Eveniment</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;font-weight:600;">{{event_name}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{event_date}}</td>
 </tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{event_venue}}</td>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{event_venue}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Bilete</td>
-<td style="padding:8px;">{{tickets_count}} bilet(e)</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Bilete</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{tickets_count}} bilet(e)</td>
 </tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Total</td>
-<td style="padding:8px;"><strong>{{total_amount}}</strong></td>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Total achitat</td>
+<td style="padding:10px 16px;font-size:16px;color:{$primaryColor};font-weight:bold;">{{total_amount}}</td>
 </tr>
 </table>
 
-<p>Biletele tale au fost trimise și pe adresa de email asociată contului. Prezintă codul QR de pe bilet la intrarea în eveniment.</p>
-
-<p>Dacă ai întrebări, nu ezita să ne contactezi.</p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 8px;">Biletele au fost trimise pe adresa de email asociată contului tău. Prezintă codul QR de pe bilet la intrarea în eveniment.</p>
+<p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 20px;">Dacă ai întrebări despre comandă sau eveniment, nu ezita să ne contactezi la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+CONTENT),
             ],
 
-            // 2. Order Confirmation (generic, without ticket details)
             [
                 'slug' => 'order_confirmation',
                 'name' => 'Confirmare comandă (generic)',
                 'subject' => 'Comanda ta #{{order_number}} a fost confirmată',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Comandă confirmată</h2>
-<p>Salut {{customer_name}},</p>
-<p>Comanda ta <strong>#{{order_number}}</strong> pentru <strong>{{event_name}}</strong> a fost procesată cu succes.</p>
-<p><strong>Total:</strong> {{total_amount}}</p>
-<p>Vei primi biletele pe email în scurt timp.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Comandă confirmată</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Comanda <strong>#{{order_number}}</strong> pentru <strong>{{event_name}}</strong> a fost procesată cu succes.</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;"><strong>Total achitat:</strong> {{total_amount}}</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0;">Biletele vor fi livrate pe email în câteva momente.</p>
+CONTENT),
             ],
 
-            // 3. Welcome / Registration
             [
                 'slug' => 'welcome',
                 'name' => 'Înregistrare cont',
-                'subject' => 'Bine ai venit pe ' . $name . '!',
+                'subject' => "Bine ai venit pe {$name}!",
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Bine ai venit!</h2>
-<p>Salut {{customer_name}},</p>
-<p>Contul tău pe <strong>{$name}</strong> a fost creat cu succes.</p>
-<p>De acum poți:</p>
-<ul>
-<li>Cumpăra bilete rapid și simplu</li>
-<li>Vedea istoricul comenzilor tale</li>
-<li>Primi notificări despre evenimentele care te interesează</li>
-</ul>
-<p><a href="{{login_url}}" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Accesează contul tău</a></p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Bine ai venit!</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Contul tău pe <strong>{$name}</strong> a fost creat cu succes. De acum poți descoperi și cumpăra bilete la cele mai tari evenimente!</p>
+
+<table style="width:100%;margin:0 0 24px;"><tr>
+<td style="padding:8px 0;"><span style="display:inline-block;width:24px;text-align:center;margin-right:8px;">🎫</span><span style="color:#4a4a4a;font-size:14px;">Cumpără bilete rapid și simplu</span></td>
+</tr><tr>
+<td style="padding:8px 0;"><span style="display:inline-block;width:24px;text-align:center;margin-right:8px;">📋</span><span style="color:#4a4a4a;font-size:14px;">Consultă istoricul comenzilor tale</span></td>
+</tr><tr>
+<td style="padding:8px 0;"><span style="display:inline-block;width:24px;text-align:center;margin-right:8px;">🔔</span><span style="color:#4a4a4a;font-size:14px;">Primește notificări despre evenimentele preferate</span></td>
+</tr></table>
+
+<p style="text-align:center;margin:0 0 20px;">
+<a href="{{login_url}}" style="display:inline-block;padding:12px 32px;background:{$primaryColor};color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;">Accesează contul tău</a>
+</p>
+CONTENT),
             ],
 
-            // 4. Password Reset
             [
                 'slug' => 'password_reset',
                 'name' => 'Resetare parolă',
-                'subject' => 'Resetare parolă — ' . $name,
+                'subject' => "Resetare parolă — {$name}",
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Resetare parolă</h2>
-<p>Salut {{customer_name}},</p>
-<p>Am primit o cerere de resetare a parolei pentru contul tău pe <strong>{$name}</strong>.</p>
-<p>Apasă butonul de mai jos pentru a-ți seta o parolă nouă:</p>
-<p><a href="{{reset_url}}" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Resetează parola</a></p>
-<p>Link-ul este valabil 60 de minute. Dacă nu ai solicitat resetarea parolei, poți ignora acest email.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Resetare parolă</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Am primit o cerere de resetare a parolei pentru contul tău pe <strong>{$name}</strong>. Apasă butonul de mai jos pentru a seta o parolă nouă:</p>
+
+<p style="text-align:center;margin:0 0 24px;">
+<a href="{{reset_url}}" style="display:inline-block;padding:12px 32px;background:{$primaryColor};color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:15px;">Resetează parola</a>
+</p>
+
+<p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 8px;">Link-ul este valabil 60 de minute.</p>
+<p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0;">Dacă nu ai solicitat resetarea parolei, poți ignora acest email în siguranță.</p>
+CONTENT),
             ],
 
-            // 5. Ticket Delivery to Beneficiary
             [
                 'slug' => 'ticket_delivery',
                 'name' => 'Livrare bilete către beneficiar',
                 'subject' => 'Biletul tău pentru {{event_name}}',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Ai primit un bilet!</h2>
-<p>Salut {{beneficiary_name}},</p>
-<p><strong>{{customer_name}}</strong> ți-a cumpărat un bilet pentru:</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Ai primit un bilet! 🎉</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{beneficiary_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;"><strong>{{customer_name}}</strong> ți-a cumpărat un bilet pentru următorul eveniment:</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Eveniment</td>
-<td style="padding:8px;">{{event_name}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border-radius:8px;overflow:hidden;">
+<tr style="background:{$primaryColor};color:#fff;">
+<td colspan="2" style="padding:12px 16px;font-weight:bold;font-size:14px;">Detalii bilet</td>
+</tr>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:120px;">Eveniment</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;font-weight:600;">{{event_name}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{event_date}}</td>
 </tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}</td>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{venue_name}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Tip bilet</td>
-<td style="padding:8px;">{{ticket_type}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Tip bilet</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{ticket_type}}</td>
 </tr>
 </table>
 
-<p>Prezintă codul QR atașat la intrarea în eveniment.</p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0;">Prezintă codul QR atașat la intrarea în eveniment. Ne vedem acolo!</p>
+CONTENT),
             ],
 
-            // 6. Event Reminder
             [
                 'slug' => 'event_reminder',
                 'name' => 'Reminder eveniment',
-                'subject' => 'Mâine: {{event_name}}',
+                'subject' => 'Mâine: {{event_name}} 🎶',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2>Nu uita de eveniment!</h2>
-<p>Salut {{customer_name}},</p>
-<p>Evenimentul <strong>{{event_name}}</strong> are loc mâine!</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, true, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Nu uita de eveniment! 🎉</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Evenimentul <strong>{{event_name}}</strong> are loc mâine! Pregătește-ți biletele și ne vedem acolo.</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:1px solid #e5e7eb;border-radius:8px;">
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:100px;">📅 Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{event_date}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}, {{venue_address}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">📍 Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{venue_name}}, {{venue_address}}</td>
 </tr>
 </table>
-
-<p>Pregătește-ți biletele și ne vedem acolo!</p>
-<p>Echipa {$name}</p>
-HTML,
+CONTENT),
             ],
 
-            // 7. Event Cancelled
             [
                 'slug' => 'event_cancelled',
                 'name' => 'Eveniment anulat',
                 'subject' => 'Evenimentul {{event_name}} a fost anulat',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Eveniment anulat</h2>
-<p>Salut {{customer_name}},</p>
-<p>Din păcate, evenimentul <strong>{{event_name}}</strong> programat pe <strong>{{event_date}}</strong> la <strong>{{venue_name}}</strong> a fost anulat.</p>
-<p>Vei primi un refund automat în contul din care ai efectuat plata. Procesarea poate dura 5-10 zile lucrătoare.</p>
-<p>Ne cerem scuze pentru inconvenient.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#dc2626;font-size:22px;margin:0 0 16px;">Eveniment anulat</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Din păcate, evenimentul <strong>{{event_name}}</strong> programat pe <strong>{{event_date}}</strong> la <strong>{{venue_name}}</strong> a fost anulat.</p>
+
+<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:0 0 20px;">
+<p style="color:#991b1b;font-size:14px;margin:0 0 8px;font-weight:bold;">Ce se întâmplă cu biletele?</p>
+<p style="color:#991b1b;font-size:14px;margin:0;">Vei primi un refund automat în contul din care ai efectuat plata. Procesarea poate dura 5-10 zile lucrătoare.</p>
+</div>
+
+<p style="color:#6b7280;font-size:13px;margin:0;">Ne cerem scuze pentru inconvenient. Pentru întrebări, contactează-ne la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+CONTENT),
             ],
 
-            // 8. Event Updated
             [
                 'slug' => 'event_updated',
                 'name' => 'Eveniment actualizat',
                 'subject' => 'Actualizare: {{event_name}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2>Actualizare eveniment</h2>
-<p>Salut {{customer_name}},</p>
-<p>Au apărut modificări pentru evenimentul <strong>{{event_name}}</strong>:</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, true, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Actualizare eveniment</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Au apărut modificări pentru evenimentul <strong>{{event_name}}</strong>. Verifică detaliile actualizate:</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:1px solid #e5e7eb;border-radius:8px;">
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:100px;">📅 Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{event_date}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}, {{venue_address}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">📍 Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{venue_name}}, {{venue_address}}</td>
 </tr>
 </table>
-
-<p>Biletele tale rămân valabile. Verifică detaliile actualizate pe site.</p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="color:#4a4a4a;font-size:14px;margin:0;">Biletele tale rămân valabile.</p>
+CONTENT),
             ],
 
-            // 9. Refund Approved
             [
                 'slug' => 'refund_approved',
                 'name' => 'Refund aprobat',
                 'subject' => 'Refund aprobat — Comanda #{{order_number}}',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Refund aprobat</h2>
-<p>Salut {{customer_name}},</p>
-<p>Cererea ta de refund pentru comanda <strong>#{{order_number}}</strong> a fost aprobată.</p>
-<p><strong>Sumă returnată:</strong> {{refund_amount}}</p>
-<p>Banii vor fi returnați în contul din care ai efectuat plata. Procesarea poate dura 5-10 zile lucrătoare.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#059669;font-size:22px;margin:0 0 16px;">Refund aprobat ✓</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Cererea ta de refund pentru comanda <strong>#{{order_number}}</strong> a fost aprobată.</p>
+
+<div style="padding:16px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;margin:0 0 20px;text-align:center;">
+<p style="color:#065f46;font-size:14px;margin:0 0 4px;">Sumă returnată</p>
+<p style="color:#065f46;font-size:24px;font-weight:bold;margin:0;">{{refund_amount}}</p>
+</div>
+
+<p style="color:#4a4a4a;font-size:14px;line-height:1.6;margin:0;">Banii vor fi returnați în contul din care ai efectuat plata. Procesarea poate dura 5-10 zile lucrătoare.</p>
+CONTENT),
             ],
 
-            // 10. Refund Rejected
             [
                 'slug' => 'refund_rejected',
                 'name' => 'Refund respins',
                 'subject' => 'Actualizare cerere refund — Comanda #{{order_number}}',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Cerere de refund respinsă</h2>
-<p>Salut {{customer_name}},</p>
-<p>Din păcate, cererea ta de refund pentru comanda <strong>#{{order_number}}</strong> nu a putut fi aprobată.</p>
-<p><strong>Motiv:</strong> {{rejection_reason}}</p>
-<p>Dacă ai întrebări, te rugăm să ne contactezi.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Cerere de refund respinsă</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Din păcate, cererea ta de refund pentru comanda <strong>#{{order_number}}</strong> nu a putut fi aprobată.</p>
+
+<div style="padding:16px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;margin:0 0 20px;">
+<p style="color:#92400e;font-size:14px;margin:0 0 4px;font-weight:bold;">Motiv:</p>
+<p style="color:#92400e;font-size:14px;margin:0;">{{rejection_reason}}</p>
+</div>
+
+<p style="color:#6b7280;font-size:13px;margin:0;">Dacă ai întrebări, contactează-ne la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+CONTENT),
             ],
 
-            // 11. Invitation
             [
                 'slug' => 'invitation',
                 'name' => 'Invitație eveniment',
-                'subject' => 'Invitație: {{event_name}}',
+                'subject' => 'Invitație: {{event_name}} 🎟️',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Ai primit o invitație!</h2>
-<p>Salut {{customer_name}},</p>
-<p>Ești invitat(ă) la evenimentul <strong>{{event_name}}</strong>!</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Ai primit o invitație! 🎟️</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Ești invitat(ă) la evenimentul <strong>{{event_name}}</strong>!</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:1px solid #e5e7eb;border-radius:8px;">
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:100px;">📅 Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{event_date}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">📍 Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{venue_name}}</td>
 </tr>
 </table>
-
-<p>Prezintă acest email sau codul QR atașat la intrarea în eveniment.</p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="color:#4a4a4a;font-size:15px;margin:0;">Prezintă acest email sau codul QR atașat la intrarea în eveniment.</p>
+CONTENT),
             ],
 
-            // 12. Ticket Cancelled
             [
                 'slug' => 'ticket_cancelled',
                 'name' => 'Bilet anulat',
                 'subject' => 'Biletul tău pentru {{event_name}} a fost anulat',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Bilet anulat</h2>
-<p>Salut {{customer_name}},</p>
-<p>Biletul tău pentru evenimentul <strong>{{event_name}}</strong> din data de <strong>{{event_date}}</strong> a fost anulat.</p>
-<p>Dacă ai dreptul la un refund, acesta va fi procesat automat.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Bilet anulat</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Biletul tău pentru evenimentul <strong>{{event_name}}</strong> din data de <strong>{{event_date}}</strong> a fost anulat.</p>
+<p style="color:#4a4a4a;font-size:14px;margin:0;">Dacă ai dreptul la un refund, acesta va fi procesat automat.</p>
+CONTENT),
             ],
 
             // ============================================================
             // ORGANIZER TEMPLATES
             // ============================================================
-
-            // 13. Organizer Payout
             [
                 'slug' => 'organizer_payout',
                 'name' => 'Notificare plată organizator',
                 'subject' => 'Plată procesată — {{payout_reference}}',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Plată procesată</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Plata pentru perioada <strong>{{period}}</strong> a fost procesată cu succes.</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#059669;font-size:22px;margin:0 0 16px;">Plată procesată ✓</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Salut <strong>{{organizer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Plata pentru perioada <strong>{{period}}</strong> a fost procesată cu succes.</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Referință</td>
-<td style="padding:8px;">{{payout_reference}}</td>
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:1px solid #e5e7eb;border-radius:8px;">
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:120px;">Referință</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{payout_reference}}</td>
 </tr>
 <tr>
-<td style="padding:8px;font-weight:bold;">Sumă</td>
-<td style="padding:8px;"><strong>{{payout_amount}}</strong></td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Sumă</td>
+<td style="padding:10px 16px;font-size:18px;color:#059669;font-weight:bold;border-top:1px solid #f3f4f6;">{{payout_amount}}</td>
 </tr>
 </table>
-
-<p>Banii vor fi virați în contul bancar asociat în 1-3 zile lucrătoare.</p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="color:#6b7280;font-size:13px;margin:0;">Banii vor fi virați în contul bancar asociat în 1-3 zile lucrătoare.</p>
+CONTENT),
             ],
 
-            // 14. Organizer Event Approved
             [
                 'slug' => 'organizer_event_approved',
                 'name' => 'Eveniment aprobat',
-                'subject' => 'Evenimentul tău "{{event_name}}" a fost aprobat',
+                'subject' => 'Evenimentul tău "{{event_name}}" a fost aprobat ✓',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Eveniment aprobat!</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Evenimentul tău <strong>{{event_name}}</strong> din data de <strong>{{event_date}}</strong> a fost aprobat și este acum vizibil pe platformă.</p>
-<p>Biletele pot fi achiziționate de către public de îndată ce sunt configurate și activate.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#059669;font-size:22px;margin:0 0 16px;">Eveniment aprobat! ✓</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{organizer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Evenimentul tău <strong>{{event_name}}</strong> din data de <strong>{{event_date}}</strong> a fost aprobat și este acum vizibil pe platformă.</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0;">Biletele pot fi achiziționate de către public de îndată ce sunt configurate și activate.</p>
+CONTENT),
             ],
 
-            // 15. Organizer Event Rejected
             [
                 'slug' => 'organizer_event_rejected',
                 'name' => 'Eveniment respins',
                 'subject' => 'Evenimentul tău "{{event_name}}" necesită modificări',
                 'category' => 'transactional',
-                'body_html' => <<<HTML
-<h2>Eveniment respins</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Din păcate, evenimentul <strong>{{event_name}}</strong> nu a putut fi aprobat în forma actuală.</p>
-<p><strong>Motiv:</strong> {{rejection_reason}}</p>
-<p>Te rugăm să faci modificările necesare și să retrimiti evenimentul spre aprobare.</p>
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#dc2626;font-size:22px;margin:0 0 16px;">Eveniment respins</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{organizer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Din păcate, evenimentul <strong>{{event_name}}</strong> nu a putut fi aprobat în forma actuală.</p>
+<div style="padding:16px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin:0 0 20px;">
+<p style="color:#991b1b;font-size:14px;margin:0 0 4px;font-weight:bold;">Motiv:</p>
+<p style="color:#991b1b;font-size:14px;margin:0;">{{rejection_reason}}</p>
+</div>
+<p style="color:#4a4a4a;font-size:14px;margin:0;">Te rugăm să faci modificările necesare și să retrimiti evenimentul spre aprobare.</p>
+CONTENT),
             ],
 
-            // 16. Organizer Daily Report
             [
                 'slug' => 'organizer_daily_report',
                 'name' => 'Raport zilnic organizator',
                 'subject' => 'Raport zilnic vânzări — {{period}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2>Raport zilnic</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Iată rezumatul vânzărilor pentru <strong>{{period}}</strong>:</p>
-
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Comenzi</td>
-<td style="padding:8px;">{{orders_count}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Bilete vândute</td>
-<td style="padding:8px;">{{tickets_count}}</td>
-</tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Vânzări totale</td>
-<td style="padding:8px;">{{total_sales}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Comision</td>
-<td style="padding:8px;">{{commission}}</td>
-</tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Sumă netă</td>
-<td style="padding:8px;"><strong>{{net_amount}}</strong></td>
-</tr>
-</table>
-
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, true, $this->reportContent('zilnic', $primaryColor)),
             ],
 
-            // 17. Organizer Weekly Report
             [
                 'slug' => 'organizer_weekly_report',
                 'name' => 'Raport săptămânal organizator',
                 'subject' => 'Raport săptămânal vânzări — {{period}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2>Raport săptămânal</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Iată rezumatul vânzărilor pentru săptămâna <strong>{{period}}</strong>:</p>
-
-<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Comenzi</td>
-<td style="padding:8px;">{{orders_count}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Bilete vândute</td>
-<td style="padding:8px;">{{tickets_count}}</td>
-</tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Vânzări totale</td>
-<td style="padding:8px;">{{total_sales}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Comision</td>
-<td style="padding:8px;">{{commission}}</td>
-</tr>
-<tr style="background:#f3f4f6;">
-<td style="padding:8px;font-weight:bold;">Sumă netă</td>
-<td style="padding:8px;"><strong>{{net_amount}}</strong></td>
-</tr>
-</table>
-
-<p>Echipa {$name}</p>
-HTML,
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, true, $this->reportContent('săptămânal', $primaryColor)),
             ],
 
             // ============================================================
             // ADMIN NOTIFICATION TEMPLATES
             // ============================================================
-
-            // 18. Admin: Event Cancelled by Organizer
             [
                 'slug' => 'admin_event_cancelled',
                 'name' => 'Admin: Eveniment anulat de organizator',
                 'subject' => '⚠ Eveniment ANULAT: {{event_name}} — {{organizer_name}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2 style="color:#dc2626;">Eveniment anulat de organizator</h2>
-<p>Organizatorul <strong>{{organizer_name}}</strong> a marcat ca <strong>ANULAT</strong> următorul eveniment:</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#dc2626;font-size:22px;margin:0 0 16px;">⚠ Eveniment anulat de organizator</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Organizatorul <strong>{{organizer_name}}</strong> a marcat ca <strong style="color:#dc2626;">ANULAT</strong> următorul eveniment:</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;border:1px solid #fca5a5;">
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:2px solid #fca5a5;border-radius:8px;">
 <tr style="background:#fef2f2;">
-<td style="padding:8px;font-weight:bold;">Eveniment</td>
-<td style="padding:8px;">{{event_name}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:120px;">Eveniment</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;font-weight:600;">{{event_name}}</td>
 </tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Data</td>
-<td style="padding:8px;">{{event_date}}</td>
-</tr>
+<tr><td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #fecaca;">Data</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #fecaca;">{{event_date}}</td></tr>
 <tr style="background:#fef2f2;">
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Organizator</td>
-<td style="padding:8px;">{{organizer_name}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{venue_name}}</td>
 </tr>
 </table>
 
-<p><strong>Acțiuni necesare:</strong></p>
-<ul>
+<p style="color:#4a4a4a;font-size:14px;font-weight:bold;margin:0 0 8px;">Acțiuni necesare:</p>
+<ul style="color:#4a4a4a;font-size:14px;line-height:1.8;margin:0 0 20px;padding-left:20px;">
 <li>Verifică dacă există bilete vândute care necesită refund</li>
 <li>Contactează organizatorul pentru detalii</li>
 <li>Actualizează comunicarea pe site</li>
 </ul>
-
-<p><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Vezi evenimentul</a></p>
-HTML,
+<p style="text-align:center;"><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Vezi evenimentul</a></p>
+CONTENT),
             ],
 
-            // 19. Admin: Event Postponed by Organizer
             [
                 'slug' => 'admin_event_postponed',
                 'name' => 'Admin: Eveniment amânat de organizator',
                 'subject' => '⚠ Eveniment AMÂNAT: {{event_name}} — {{organizer_name}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2 style="color:#d97706;">Eveniment amânat de organizator</h2>
-<p>Organizatorul <strong>{{organizer_name}}</strong> a marcat ca <strong>AMÂNAT</strong> următorul eveniment:</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#d97706;font-size:22px;margin:0 0 16px;">⚠ Eveniment amânat de organizator</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Organizatorul <strong>{{organizer_name}}</strong> a marcat ca <strong style="color:#d97706;">AMÂNAT</strong> următorul eveniment:</p>
 
-<table style="width:100%;border-collapse:collapse;margin:16px 0;border:1px solid #fde68a;">
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border:2px solid #fde68a;border-radius:8px;">
 <tr style="background:#fffbeb;">
-<td style="padding:8px;font-weight:bold;">Eveniment</td>
-<td style="padding:8px;">{{event_name}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:120px;">Eveniment</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;font-weight:600;">{{event_name}}</td>
 </tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Data inițială</td>
-<td style="padding:8px;">{{event_date}}</td>
-</tr>
+<tr><td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #fde68a;">Data inițială</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #fde68a;">{{event_date}}</td></tr>
 <tr style="background:#fffbeb;">
-<td style="padding:8px;font-weight:bold;">Locație</td>
-<td style="padding:8px;">{{venue_name}}</td>
-</tr>
-<tr>
-<td style="padding:8px;font-weight:bold;">Organizator</td>
-<td style="padding:8px;">{{organizer_name}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Locație</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{venue_name}}</td>
 </tr>
 </table>
 
-<p><strong>Acțiuni necesare:</strong></p>
-<ul>
+<p style="color:#4a4a4a;font-size:14px;font-weight:bold;margin:0 0 8px;">Acțiuni necesare:</p>
+<ul style="color:#4a4a4a;font-size:14px;line-height:1.8;margin:0 0 20px;padding-left:20px;">
 <li>Solicită organizatorului noua dată</li>
 <li>Verifică biletele vândute și comunică clienților</li>
 <li>Actualizează informațiile pe site</li>
 </ul>
-
-<p><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#d97706;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Vezi evenimentul</a></p>
-HTML,
+<p style="text-align:center;"><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#d97706;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Vezi evenimentul</a></p>
+CONTENT),
             ],
 
             // ============================================================
-            // STOCK ALERT TEMPLATES
+            // STOCK ALERT
             // ============================================================
-
-            // 20. Low Stock Alert (sent to organizer)
             [
                 'slug' => 'stock_low_alert',
                 'name' => 'Alertă stoc redus',
                 'subject' => '⚠ Stoc redus: {{ticket_type}} — {{event_name}}',
                 'category' => 'notification',
-                'body_html' => <<<HTML
-<h2 style="color:#d97706;">Stoc redus de bilete</h2>
-<p>Salut {{organizer_name}},</p>
-<p>Tipul de bilet <strong>{{ticket_type}}</strong> pentru evenimentul <strong>{{event_name}}</strong> a ajuns la un stoc de doar <strong>{{remaining_stock}} bilete</strong>.</p>
+                'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
+<h2 style="color:#d97706;font-size:22px;margin:0 0 16px;">⚠ Stoc redus de bilete</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{organizer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Tipul de bilet <strong>{{ticket_type}}</strong> pentru evenimentul <strong>{{event_name}}</strong> a ajuns la un stoc de doar:</p>
 
-<div style="padding:12px 16px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin:16px 0;">
-<strong>Ce poți face:</strong>
-<ul style="margin:8px 0 0 0;">
+<div style="text-align:center;margin:0 0 24px;">
+<span style="display:inline-block;padding:16px 32px;background:#fffbeb;border:2px solid #fde68a;border-radius:12px;font-size:28px;font-weight:bold;color:#92400e;">{{remaining_stock}} bilete rămase</span>
+</div>
+
+<p style="color:#4a4a4a;font-size:14px;font-weight:bold;margin:0 0 8px;">Ce poți face:</p>
+<ul style="color:#4a4a4a;font-size:14px;line-height:1.8;margin:0 0 20px;padding-left:20px;">
 <li>Mărește stocul dacă mai sunt locuri disponibile</li>
 <li>Adaugă un nou tip de bilet</li>
 <li>Lasă să se vândă și ultimele bilete</li>
 </ul>
-</div>
-
-<p><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#d97706;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;">Administrează biletele</a></p>
-<p>Echipa {$name}</p>
-HTML,
+<p style="text-align:center;"><a href="{{admin_url}}" style="display:inline-block;padding:10px 24px;background:#d97706;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Administrează biletele</a></p>
+CONTENT),
             ],
         ];
-
-        // Add ticket_delivery slug to TEMPLATE_SLUGS if not already there
-        // (it's used in the seeder but may not be in the const yet)
 
         foreach ($templates as $template) {
             MarketplaceEmailTemplate::updateOrCreate(
@@ -572,5 +493,95 @@ HTML,
                 ]
             );
         }
+    }
+
+    /**
+     * Wrap content in a branded email template
+     */
+    protected function wrap(string $name, string $domain, string $logoUrl, string $primary, string $primaryDark, bool $showUnsubscribe, string $content): string
+    {
+        $unsubscribeBlock = $showUnsubscribe ? <<<UNSUB
+<p style="margin:8px 0 0;font-size:12px;">
+<a href="https://{$domain}/newsletter-unsubscribe?email={{customer_email}}" style="color:#9ca3af;text-decoration:underline;">Dezabonare</a> de la notificările prin email
+</p>
+UNSUB : '';
+
+        return <<<HTML
+<!DOCTYPE html>
+<html lang="ro">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<table style="width:100%;background:#f3f4f6;padding:32px 16px;" cellpadding="0" cellspacing="0">
+<tr><td align="center">
+<table style="width:100%;max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);" cellpadding="0" cellspacing="0">
+
+<!-- HEADER -->
+<tr>
+<td style="background:linear-gradient(135deg,{$primary},{$primaryDark});padding:24px 32px;text-align:center;">
+<img src="{$logoUrl}" alt="{$name}" style="height:36px;width:auto;filter:brightness(0) invert(1);" />
+</td>
+</tr>
+
+<!-- CONTENT -->
+<tr>
+<td style="padding:32px;">
+{$content}
+</td>
+</tr>
+
+<!-- FOOTER -->
+<tr>
+<td style="background:#f9fafb;padding:24px 32px;border-top:1px solid #e5e7eb;">
+<p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;">
+© {$name} · <a href="https://{$domain}" style="color:#9ca3af;text-decoration:none;">{$domain}</a>
+</p>
+{$unsubscribeBlock}
+</td>
+</tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Generate report content (daily/weekly)
+     */
+    protected function reportContent(string $period, string $primary): string
+    {
+        return <<<CONTENT
+<h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Raport {$period} 📊</h2>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{organizer_name}}</strong>,</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Iată rezumatul vânzărilor pentru perioada <strong>{{period}}</strong>:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:0 0 24px;border-radius:8px;overflow:hidden;">
+<tr style="background:{$primary};color:#fff;">
+<td colspan="2" style="padding:12px 16px;font-weight:bold;font-size:14px;">Sumar vânzări</td>
+</tr>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;width:160px;">Comenzi</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;font-weight:600;">{{orders_count}}</td>
+</tr>
+<tr>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Bilete vândute</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{tickets_count}}</td>
+</tr>
+<tr style="background:#f9fafb;">
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;">Vânzări totale</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{total_sales}}</td>
+</tr>
+<tr>
+<td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Comision</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{commission}}</td>
+</tr>
+<tr style="background:#ecfdf5;">
+<td style="padding:12px 16px;font-size:14px;color:#065f46;font-weight:bold;">Sumă netă</td>
+<td style="padding:12px 16px;font-size:18px;color:#059669;font-weight:bold;">{{net_amount}}</td>
+</tr>
+</table>
+CONTENT;
     }
 }

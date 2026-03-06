@@ -43,8 +43,18 @@ function syncDrawerContent() {
 
 function syncDrawerSummary() {
     setTimeout(() => {
+        // Re-clone ticket cards from desktop (which has already re-rendered with +/- buttons)
+        const mainContent = document.getElementById('ticket-types');
+        const drawerContent = document.getElementById('drawerTicketTypes');
+        if (mainContent && drawerContent) {
+            drawerContent.innerHTML = mainContent.innerHTML;
+            drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
+                const originalOnclick = btn.getAttribute('onclick');
+                btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');
+            });
+        }
+
         const mainSummary = document.getElementById('cartSummary');
-        const mainEmpty = document.getElementById('emptyCart');
         const drawerSummary = document.getElementById('drawerCartSummary');
         const drawerEmpty = document.getElementById('drawerEmptyCart');
         const mainTotal = document.getElementById('totalPrice');
@@ -63,18 +73,14 @@ function syncDrawerSummary() {
             if (mainTotal && drawerTotal) {
                 drawerTotal.textContent = mainTotal.textContent;
             }
-            // Sync subtotal
             if (mainSubtotal && drawerSubtotal) {
                 drawerSubtotal.textContent = mainSubtotal.textContent;
             }
-            // Sync taxes
             if (mainTaxes && drawerTaxes) {
                 drawerTaxes.innerHTML = mainTaxes.innerHTML;
             }
-            // Sync points
             if (mainPoints && drawerPoints) {
                 drawerPoints.textContent = mainPoints.textContent;
-                // Show points row if there are points
                 const pointsValue = parseInt(mainPoints.textContent) || 0;
                 if (drawerPointsRow) {
                     drawerPointsRow.style.display = pointsValue > 0 ? 'flex' : 'none';
@@ -84,27 +90,6 @@ function syncDrawerSummary() {
             drawerSummary.style.display = 'none';
             drawerEmpty.style.display = 'block';
         }
-
-        // Also sync qty values from main to drawer
-        document.querySelectorAll('#ticket-types [id^="qty-"]').forEach(qtyEl => {
-            const drawerQty = document.querySelector('#drawerTicketTypes [id="' + qtyEl.id + '"]');
-            if (drawerQty) {
-                drawerQty.textContent = qtyEl.textContent;
-            }
-        });
-
-        // Sync selected state
-        document.querySelectorAll('#ticket-types .ticket-card').forEach(card => {
-            const ticketId = card.dataset.ticket;
-            const drawerCard = document.querySelector('#drawerTicketTypes [data-ticket="' + ticketId + '"]');
-            if (drawerCard) {
-                if (card.classList.contains('selected')) {
-                    drawerCard.classList.add('selected');
-                } else {
-                    drawerCard.classList.remove('selected');
-                }
-            }
-        });
     }, 50);
 }
 

@@ -1383,6 +1383,9 @@ select.pr-10 {
 .text-white\/85 {
     color: rgba(255, 255, 255, 0.85);
 }
+.bg-primary\/20 {
+    background: rgba(165, 28, 48, 0.2);
+}
 .bg-white\/15 {
     background: rgba(255, 255, 255, 0.15);
 }

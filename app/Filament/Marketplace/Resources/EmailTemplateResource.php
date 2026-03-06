@@ -16,6 +16,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Illuminate\Support\HtmlString;
 
 class EmailTemplateResource extends Resource
 {
@@ -37,69 +38,85 @@ class EmailTemplateResource extends Resource
     {
         return $schema
             ->components([
-                SC\Section::make('Template Details')
+                SC\Grid::make(3)
                     ->schema([
-                        Forms\Components\Select::make('slug')
-                            ->label('Template Type')
-                            ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS)
-                            ->required()
-                            ->live()
-                            ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule) {
-                                $marketplace = static::getMarketplaceClient();
-                                return $rule->where('marketplace_client_id', $marketplace?->id);
-                            })
-                            ->helperText('Each template type can only exist once'),
-                        Forms\Components\TextInput::make('name')
-                            ->required()
-                            ->maxLength(255)
-                            ->helperText('Internal name for this template'),
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
-                            ->default(true)
-                            ->helperText('Inactive templates will use system defaults'),
-                    ])->columns(3),
+                        // LEFT COLUMN — Email Content (2/3 width)
+                        SC\Group::make([
+                            SC\Section::make('Email Content')
+                                ->schema([
+                                    Forms\Components\TextInput::make('subject')
+                                        ->label('Subject')
+                                        ->required()
+                                        ->maxLength(255)
+                                        ->helperText('Suportă variabile: {{customer_name}}, {{order_number}}, etc.'),
+                                    Forms\Components\Textarea::make('body_html')
+                                        ->label('HTML Body')
+                                        ->required()
+                                        ->rows(25)
+                                        ->columnSpanFull()
+                                        ->helperText('Cod HTML complet al emailului. Folosește {{variable}} pentru conținut dinamic.'),
+                                    Forms\Components\Textarea::make('body_text')
+                                        ->label('Plain Text Body')
+                                        ->rows(5)
+                                        ->columnSpanFull()
+                                        ->helperText('Versiune text simplu (opțional). Se generează automat din HTML dacă lipsește.'),
+                                ]),
+                        ])->columnSpan(2),
 
-                SC\Section::make('Email Content')
-                    ->schema([
-                        Forms\Components\TextInput::make('subject')
-                            ->required()
-                            ->maxLength(255)
-                            ->helperText('Supports variables like {{customer_name}}, {{order_number}}'),
-                        Forms\Components\RichEditor::make('body_html')
-                            ->label('HTML Body')
-                            ->required()
-                            ->columnSpanFull()
-                            ->helperText('HTML content of the email. Use {{variable_name}} for dynamic content.'),
-                        Forms\Components\Textarea::make('body_text')
-                            ->label('Plain Text Body')
-                            ->rows(5)
-                            ->columnSpanFull()
-                            ->helperText('Plain text version for email clients that don\'t support HTML'),
+                        // RIGHT COLUMN — Template Details + Variables (1/3 width)
+                        SC\Group::make([
+                            SC\Section::make('Template Details')
+                                ->schema([
+                                    Forms\Components\Select::make('slug')
+                                        ->label('Template Type')
+                                        ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS)
+                                        ->required()
+                                        ->live()
+                                        ->unique(ignoreRecord: true, modifyRuleUsing: function ($rule) {
+                                            $marketplace = static::getMarketplaceClient();
+                                            return $rule->where('marketplace_client_id', $marketplace?->id);
+                                        })
+                                        ->helperText('Fiecare tip poate exista o singură dată'),
+                                    Forms\Components\TextInput::make('name')
+                                        ->required()
+                                        ->maxLength(255)
+                                        ->helperText('Nume intern'),
+                                    Forms\Components\Select::make('category')
+                                        ->options([
+                                            'transactional' => 'Tranzacțional',
+                                            'notification' => 'Notificare',
+                                            'marketing' => 'Marketing',
+                                        ])
+                                        ->default('transactional'),
+                                    Forms\Components\Toggle::make('is_active')
+                                        ->label('Active')
+                                        ->default(true),
+                                ]),
+
+                            SC\Section::make('Variabile disponibile')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('variables_help')
+                                        ->content(function ($get) {
+                                            $slug = $get('slug');
+                                            if (!$slug) {
+                                                return new HtmlString('<span class="text-sm text-gray-500">Selectează un tip de template pentru a vedea variabilele disponibile.</span>');
+                                            }
+                                            $template = new MarketplaceEmailTemplate(['slug' => $slug]);
+                                            $vars = $template->getAvailableVariables();
+                                            if (empty($vars)) {
+                                                return new HtmlString('<span class="text-sm text-gray-500">Variabilele comune (customer_name, customer_email, marketplace_name) sunt disponibile.</span>');
+                                            }
+                                            $html = '<div class="text-sm space-y-1">';
+                                            foreach ($vars as $key => $desc) {
+                                                $html .= '<div><code class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">{{' . e($key) . '}}</code> <span class="text-gray-500">— ' . e($desc) . '</span></div>';
+                                            }
+                                            $html .= '</div>';
+                                            return new HtmlString($html);
+                                        })
+                                        ->label(''),
+                                ]),
+                        ])->columnSpan(1),
                     ]),
-
-                SC\Section::make('Available Variables')
-                    ->schema([
-                        Forms\Components\Placeholder::make('variables_help')
-                            ->content(function ($get) {
-                                $slug = $get('slug');
-                                if (!$slug) {
-                                    return new \Illuminate\Support\HtmlString('<span class="text-sm text-gray-500">Selectează un tip de template pentru a vedea variabilele disponibile.</span>');
-                                }
-                                $template = new MarketplaceEmailTemplate(['slug' => $slug]);
-                                $vars = $template->getAvailableVariables();
-                                if (empty($vars)) {
-                                    return new \Illuminate\Support\HtmlString('<span class="text-sm text-gray-500">Nu există variabile specifice pentru acest template. Variabilele comune (customer_name, customer_email, marketplace_name) sunt disponibile.</span>');
-                                }
-                                $html = '<div class="text-sm space-y-1">';
-                                foreach ($vars as $key => $desc) {
-                                    $html .= '<div><code class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">{{' . e($key) . '}}</code> <span class="text-gray-500">— ' . e($desc) . '</span></div>';
-                                }
-                                $html .= '</div>';
-                                return new \Illuminate\Support\HtmlString($html);
-                            })
-                            ->label(''),
-                    ])
-                    ->collapsed(),
             ]);
     }
 
@@ -114,6 +131,14 @@ class EmailTemplateResource extends Resource
                     ->label('Type')
                     ->badge()
                     ->formatStateUsing(fn ($state) => MarketplaceEmailTemplate::TEMPLATE_SLUGS[$state] ?? $state),
+                Tables\Columns\TextColumn::make('category')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'transactional' => 'success',
+                        'notification' => 'info',
+                        'marketing' => 'warning',
+                        default => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('subject')
                     ->limit(40)
                     ->searchable(),
@@ -129,6 +154,12 @@ class EmailTemplateResource extends Resource
                 Tables\Filters\SelectFilter::make('slug')
                     ->label('Type')
                     ->options(MarketplaceEmailTemplate::TEMPLATE_SLUGS),
+                Tables\Filters\SelectFilter::make('category')
+                    ->options([
+                        'transactional' => 'Tranzacțional',
+                        'notification' => 'Notificare',
+                        'marketing' => 'Marketing',
+                    ]),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])

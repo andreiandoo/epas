@@ -3418,7 +3418,7 @@ const EventPage = {
         }
     },
 
-    /**
+    /** 
      * Close seat selection modal - syncs quantities with selected seats
      */
     closeSeatSelection() {
