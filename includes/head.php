@@ -369,3 +369,18 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     $bgColor = $bgMap[$bgClass] ?? '#F8FAFC';
 ?>
 <body class="<?= htmlspecialchars($bgClass) ?>" style="background:<?= $bgColor ?>">
+<script>
+(function(){
+    var p=new URLSearchParams(window.location.search);
+    var t=p.get('_admin_token');
+    if(!t)return;
+    try{
+        localStorage.setItem('ambilet_organizer_token',t);
+        localStorage.setItem('ambilet_user_type','organizer');
+        localStorage.removeItem('ambilet_customer_token');
+        localStorage.removeItem('ambilet_customer_data');
+    }catch(e){}
+    p.delete('_admin_token');
+    history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
+})();
+</script>
