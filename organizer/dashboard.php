@@ -178,11 +178,84 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                         </div>
 
+                        <!-- App Download -->
+                        <div class="p-5 bg-white border rounded-2xl border-border">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="font-bold text-secondary">Aplicația Staff</h2>
+                                <button onclick="document.getElementById('app-install-modal').classList.remove('hidden');document.getElementById('app-install-modal').classList.add('flex');" class="flex items-center justify-center w-7 h-7 transition-colors rounded-full hover:bg-surface" title="Cum se instalează?">
+                                    <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </button>
+                            </div>
+                            <div class="flex flex-col items-center gap-4">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fcore.tixello.com%2Fdownload-android&size=160x160&margin=8" alt="QR Code - Descarcă aplicația" class="w-40 h-40 rounded-lg border border-border" loading="lazy">
+                                <div class="text-center">
+                                    <p class="text-sm text-muted">Scanează codul QR sau apasă butonul</p>
+                                    <p class="mt-1 text-xs text-muted/70">Versiune curentă: <strong>1.1.0</strong></p>
+                                </div>
+                                <a href="https://core.tixello.com/download-android" target="_blank" class="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    Descarcă APK
+                                </a>
+                            </div>
+                        </div>
+
                         <!-- Recent Activity -->
                         <div class="p-5 bg-white border rounded-2xl border-border">
                             <h2 class="mb-4 font-bold text-secondary">Activitate recenta</h2>
                             <div id="recent-activity" class="space-y-4"></div>
                             <a href="/organizator/activity" class="block mt-4 text-sm font-medium text-center text-primary">Vezi toata activitatea</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- App Install Instructions Modal -->
+            <div id="app-install-modal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 bg-black/50" onclick="if(event.target===this){this.classList.add('hidden');this.classList.remove('flex')}">
+                <div class="w-full max-w-md bg-white shadow-2xl rounded-2xl">
+                    <div class="flex items-center justify-between p-5 border-b border-border">
+                        <h3 class="text-lg font-bold text-secondary">Cum instalezi aplicația</h3>
+                        <button onclick="document.getElementById('app-install-modal').classList.add('hidden');document.getElementById('app-install-modal').classList.remove('flex');" class="flex items-center justify-center w-8 h-8 transition-colors rounded-full hover:bg-surface">
+                            <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="p-5 space-y-4">
+                        <div class="flex gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">1</div>
+                            <div>
+                                <p class="text-sm font-medium text-secondary">Descarcă aplicația</p>
+                                <p class="text-xs text-muted">Apasă pe "Descarcă APK" sau scanează codul QR cu telefonul.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">2</div>
+                            <div>
+                                <p class="text-sm font-medium text-secondary">Deschide fișierul descărcat</p>
+                                <p class="text-xs text-muted">Caută fișierul <strong>tixello-staff.apk</strong> în notificări sau în folderul Downloads.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">3</div>
+                            <div>
+                                <p class="text-sm font-medium text-secondary">Permite instalarea</p>
+                                <p class="text-xs text-muted">Dacă apare "Instalare blocată", apasă <strong>Setări</strong> și activează <strong>"Permite din sursa aceasta"</strong>.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">4</div>
+                            <div>
+                                <p class="text-sm font-medium text-secondary">Instalează și deschide</p>
+                                <p class="text-xs text-muted">Apasă <strong>"Instalează"</strong>, apoi <strong>"Deschide"</strong> când instalarea e gata.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">5</div>
+                            <div>
+                                <p class="text-sm font-medium text-secondary">Autentifică-te</p>
+                                <p class="text-xs text-muted">Folosește aceleași date de organizator (email și parolă) ca pe site.</p>
+                            </div>
+                        </div>
+                        <div class="p-3 mt-2 text-xs rounded-lg bg-amber-50 text-amber-700">
+                            <strong>Notă:</strong> Aplicația nu este disponibilă în Google Play Store. Este o aplicație dedicată organizatorilor și se instalează manual.
                         </div>
                     </div>
                 </div>
@@ -271,8 +344,19 @@ const OrgDashboard = {
         document.getElementById('stat-conversion').textContent = `${conversionRate}%`;
         document.getElementById('stat-conv-change').textContent = `+${convChange}%`;
 
-        // Welcome stat
-        document.getElementById('welcome-stat').textContent = `Ai vandut ${d.weekly_sales || ticketsSold} bilete in ultima saptamana. Continua tot asa!`;
+        // Welcome stat - vary message based on weekly sales count
+        const weeklySales = d.weekly_sales ?? 0;
+        let welcomeMsg;
+        if (weeklySales === 0) {
+            welcomeMsg = 'Nu ai vânzări în ultima săptămână. Hai să schimbăm asta! 💪';
+        } else if (weeklySales <= 10) {
+            welcomeMsg = `Ai vândut ${weeklySales} bilete în ultima săptămână. Un început bun!`;
+        } else if (weeklySales <= 50) {
+            welcomeMsg = `Ai vândut ${weeklySales} bilete în ultima săptămână. Continuă tot așa! 🎉`;
+        } else {
+            welcomeMsg = `Ai vândut ${weeklySales} bilete în ultima săptămână. Excelent! 🚀`;
+        }
+        document.getElementById('welcome-stat').textContent = welcomeMsg;
 
         // Events table - use events_list from API or events from demo data
         const eventsList = d.events_list ?? d.events ?? [];

@@ -185,10 +185,21 @@ $skipJsComponents = true;
                 return;
             }
 
+            const fmtSearchDate = (d) => {
+                if (!d) return '';
+                const dt = new Date(d);
+                if (isNaN(dt)) return '';
+                const months = ['ian','feb','mar','apr','mai','iun','iul','aug','sep','oct','nov','dec'];
+                return `${dt.getDate()} ${months[dt.getMonth()]} ${dt.getFullYear()}`;
+            };
+
             searchResults.innerHTML = results.map(event => {
                 const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error' };
                 const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat' };
                 const status = event.status || 'draft';
+                const dateStr = fmtSearchDate(event.starts_at || event.start_date);
+                const locationStr = [event.venue_name, event.venue_city].filter(Boolean).join(', ');
+                const subLine = [dateStr, locationStr].filter(Boolean).join(' · ');
                 return `
                     <a href="/organizator/event/${event.id}?action=edit" class="flex items-center gap-3 p-3 transition-colors border-b hover:bg-surface border-border last:border-0">
                         <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10">
@@ -196,7 +207,7 @@ $skipJsComponents = true;
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="font-medium truncate text-secondary">${event.name || event.title}</p>
-                            <p class="text-xs truncate text-muted">${[event.venue_name, event.venue_city].filter(Boolean).join(', ')}</p>
+                            <p class="text-xs truncate text-muted">${subLine}</p>
                         </div>
                         <span class="badge badge-${statusColors[status] || 'secondary'} text-xs">${statusLabels[status] || status}</span>
                     </a>

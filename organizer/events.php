@@ -42,6 +42,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     .status-pill { padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 500; border: 1px solid #e2e8f0; background: white; color: #64748b; cursor: pointer; transition: all .15s; }
                     .status-pill:hover { border-color: #94a3b8; color: #334155; }
                     .status-pill.active { background: #10b981; color: white; border-color: #10b981; }
+                    .pill-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 9999px; font-size: 11px; font-weight: 600; background: #e2e8f0; color: #64748b; }
+                    .status-pill.active .pill-count { background: rgba(255,255,255,0.25); color: white; }
                 </style>
 
                 <div id="events-list" class="space-y-4"><div class="p-6 bg-white border animate-pulse rounded-2xl border-border"><div class="flex gap-6"><div class="w-32 h-24 rounded-lg bg-surface"></div><div class="flex-1 space-y-3"><div class="w-1/3 h-5 rounded bg-surface"></div><div class="w-1/4 h-4 rounded bg-surface"></div></div></div></div></div>
@@ -653,6 +655,7 @@ async function loadEvents() {
         }
         const events = allEvents;
         allEventsCache = events; // Cache for instant filtering
+        updatePillCounts(events);
 
         // Update sidebar events count
         const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
@@ -668,6 +671,22 @@ async function loadEvents() {
 }
 
 let currentStatusFilter = 'ongoing'; // Default: show ongoing events
+
+function updatePillCounts(events) {
+    const counts = { ongoing: 0, draft: 0, ended: 0 };
+    events.forEach(e => {
+        const s = getEventDisplayStatus(e);
+        if (s === 'ongoing') counts.ongoing++;
+        else if (s === 'draft') counts.draft++;
+        else counts.ended++; // ended, cancelled, postponed
+    });
+    const labels = { ongoing: 'În derulare', draft: 'Ciorne', ended: 'Încheiate', '': 'Toate' };
+    document.querySelectorAll('.status-pill').forEach(pill => {
+        const status = pill.dataset.status;
+        const count = status === '' ? events.length : (counts[status] || 0);
+        pill.innerHTML = `${labels[status]} <span class="pill-count">${count}</span>`;
+    });
+}
 
 function getEventDisplayStatus(event) {
     const eventEndDate = event.ends_at || event.starts_at;
