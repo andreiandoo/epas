@@ -248,14 +248,17 @@ class OrderResource extends Resource
                               ->orWhere('order_number', 'like', "%{$search}%");
                         });
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('customer_email')
                     ->label('Client')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('customer_name')
                     ->label('Nume')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('event_names')
                     ->label('Eveniment')
                     ->getStateUsing(function ($record) {
@@ -301,16 +304,19 @@ class OrderResource extends Resource
                         return $events ?: '-';
                     })
                     ->wrap()
-                    ->limit(40),
+                    ->limit(40)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('tickets_count')
                     ->label('Bilete')
                     ->getStateUsing(fn ($record) => $record->tickets->count())
                     ->badge()
-                    ->color('info'),
+                    ->color('info')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total')
                     ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('promo_code')
                     ->label('Cod discount')
                     ->placeholder('-')
@@ -335,11 +341,13 @@ class OrderResource extends Resource
                         'failed' => 'Eșuată',
                         'expired' => 'Expirată',
                         default => ucfirst($state),
-                    }),
+                    })
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
                     ->dateTime('d M Y H:i')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
