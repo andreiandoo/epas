@@ -691,7 +691,8 @@ class VenueResource extends Resource
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Imagine')
                     ->circular()
-                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
+                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label('Nume')
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
@@ -703,14 +704,17 @@ class VenueResource extends Resource
                             ['%' . mb_strtolower($search) . '%']
                         );
                     })
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('capacity_total')
                     ->label('Capacitate')
                     ->sortable()
-                    ->numeric(),
+                    ->numeric()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('venueCategories.name')
                     ->label('Categorii')
                     ->badge()
