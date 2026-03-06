@@ -144,7 +144,7 @@ function EventItem({ event, category, onPress }) {
 }
 
 export default function EventsModal({ visible, onClose, events, onSelectEvent }) {
-  const categories = ['live', 'today', 'future', 'past'];
+  const categories = ['live', 'today', 'future'];
 
   const handleSelectEvent = (event) => {
     if (onSelectEvent) {

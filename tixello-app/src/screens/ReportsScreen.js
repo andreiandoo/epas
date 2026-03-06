@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import Svg, { Polyline, Rect, Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
@@ -184,8 +185,220 @@ function HourlyChart({ data }) {
   );
 }
 
+function PastEventSelector({ pastEvents, selectedEvent, onSelect }) {
+  const [showModal, setShowModal] = useState(false);
+
+  if (!pastEvents || pastEvents.length === 0) return null;
+
+  const handleSelect = (event) => {
+    onSelect(event);
+    setShowModal(false);
+  };
+
+  return (
+    <>
+      <TouchableOpacity
+        style={pastEventStyles.selector}
+        onPress={() => setShowModal(true)}
+        activeOpacity={0.7}
+      >
+        <View style={pastEventStyles.selectorLeft}>
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M12 8v4l3 3M3 12a9 9 0 1018 0 9 9 0 00-18 0z"
+              stroke={colors.textSecondary}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+          <Text style={pastEventStyles.selectorLabel}>Eveniment trecut</Text>
+        </View>
+        <View style={pastEventStyles.selectorRight}>
+          <Text style={pastEventStyles.selectorValue} numberOfLines={1}>
+            {selectedEvent?.title || selectedEvent?.name || 'Selectează'}
+          </Text>
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Path
+              d="M6 9l6 6 6-6"
+              stroke={colors.textTertiary}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+        </View>
+      </TouchableOpacity>
+
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowModal(false)}
+      >
+        <View style={pastEventStyles.overlay}>
+          <TouchableOpacity
+            style={pastEventStyles.overlayBg}
+            onPress={() => setShowModal(false)}
+            activeOpacity={1}
+          />
+          <View style={pastEventStyles.sheet}>
+            <View style={pastEventStyles.sheetHeader}>
+              <View style={pastEventStyles.handle} />
+              <Text style={pastEventStyles.sheetTitle}>Evenimente Trecute</Text>
+            </View>
+            <ScrollView style={pastEventStyles.sheetScroll} showsVerticalScrollIndicator={false}>
+              {pastEvents.map((event, index) => {
+                const isSelected = selectedEvent?.id === event.id;
+                let formattedDate = '';
+                const eventDate = event.event_date || event.date || event.start_date || '';
+                if (eventDate) {
+                  try {
+                    const d = new Date(eventDate);
+                    formattedDate = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+                  } catch { formattedDate = eventDate; }
+                }
+                return (
+                  <TouchableOpacity
+                    key={event.id || index}
+                    style={[pastEventStyles.eventItem, isSelected && pastEventStyles.eventItemSelected]}
+                    onPress={() => handleSelect(event)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={pastEventStyles.eventItemLeft}>
+                      <Text style={[pastEventStyles.eventName, isSelected && pastEventStyles.eventNameSelected]} numberOfLines={1}>
+                        {event.name || event.title}
+                      </Text>
+                      <Text style={pastEventStyles.eventMeta}>
+                        {[event.venue_name, formattedDate].filter(Boolean).join(' \u2022 ')}
+                      </Text>
+                    </View>
+                    {isSelected && (
+                      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                        <Path d="M20 6L9 17l-5-5" stroke={colors.purple} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const pastEventStyles = StyleSheet.create({
+  selector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  selectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  selectorLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  selectorRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  selectorValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.purple,
+    maxWidth: 160,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  overlayBg: {
+    flex: 1,
+  },
+  sheet: {
+    backgroundColor: '#15151F',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: Dimensions.get('window').height * 0.6,
+    paddingBottom: 34,
+  },
+  sheetHeader: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  sheetScroll: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  eventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    marginBottom: 8,
+  },
+  eventItemSelected: {
+    borderColor: colors.purple,
+    backgroundColor: colors.purpleBg || 'rgba(139,92,246,0.08)',
+  },
+  eventItemLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  eventName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  eventNameSelected: {
+    color: colors.purple,
+  },
+  eventMeta: {
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+});
+
 export default function ReportsScreen() {
-  const { eventStats, ticketTypes, selectedEvent } = useEvent();
+  const { eventStats, ticketTypes, selectedEvent, groupedEvents, selectEvent } = useEvent();
   const [dashboardData, setDashboardData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -259,12 +472,19 @@ export default function ReportsScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Rapoarte Live</Text>
+        <Text style={styles.headerTitle}>Rapoarte</Text>
         <View style={styles.headerSubRow}>
           <PulsingDot />
-          <Text style={styles.headerSubText}>Live - Actualizat acum</Text>
+          <Text style={styles.headerSubText}>Actualizat acum</Text>
         </View>
       </View>
+
+      {/* Past Event Selector */}
+      <PastEventSelector
+        pastEvents={groupedEvents?.past || []}
+        selectedEvent={selectedEvent}
+        onSelect={selectEvent}
+      />
 
       {/* Metrics Grid */}
       <View style={styles.metricsGrid}>

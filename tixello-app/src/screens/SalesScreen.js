@@ -14,11 +14,12 @@ import {
   Alert,
 } from 'react-native';
 import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import QRCode from 'react-native-qrcode-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { apiPost } from '../api/client';
+import { apiPost, apiGet, publicApiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
 import TicketListScreen from './TicketListScreen';
 
@@ -173,6 +174,20 @@ function MailIcon({ size = 24, color = colors.white }) {
   );
 }
 
+function GiftIcon({ size = 22, color = colors.white }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
 function ChartIcon({ size = 24, color = colors.purple }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -197,6 +212,20 @@ function ListIcon({ size = 18, color = colors.purple }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </Svg>
+  );
+}
+
+function QrIcon({ size = 22, color = colors.white }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Rect x="3" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth={1.8} />
+      <Rect x="14" y="3" width="7" height="7" rx="1" stroke={color} strokeWidth={1.8} />
+      <Rect x="3" y="14" width="7" height="7" rx="1" stroke={color} strokeWidth={1.8} />
+      <Rect x="14" y="14" width="3" height="3" stroke={color} strokeWidth={1.8} />
+      <Rect x="18" y="18" width="3" height="3" stroke={color} strokeWidth={1.8} />
+      <Rect x="14" y="18" width="3" height="3" stroke={color} strokeWidth={1.8} />
+      <Rect x="18" y="14" width="3" height="3" stroke={color} strokeWidth={1.8} />
     </Svg>
   );
 }
@@ -340,6 +369,40 @@ export default function SalesScreen({ navigation }) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [lastPaymentAmount, setLastPaymentAmount] = useState(0);
   const [lastOrderData, setLastOrderData] = useState(null);
+  const [claimUrl, setClaimUrl] = useState(null);
+  const [claimToken, setClaimToken] = useState(null);
+
+  // Auto-close QR overlay: 30s timeout + poll claim status every 5s
+  useEffect(() => {
+    if (!showPaymentSuccess || !claimToken) return;
+
+    // Auto-close after 30s
+    const timeout = setTimeout(() => {
+      finishPayment(true);
+    }, 30000);
+
+    // Poll claim status every 5s
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`https://core.tixello.com/claim/${claimToken}/status`);
+        const data = await res.json();
+        if (data.success && data.data?.has_email) {
+          // Customer completed step 1 — refresh stats and close
+          refreshStats();
+          refreshTicketTypes();
+          clearTimeout(timeout);
+          finishPayment(false);
+        }
+      } catch (e) {
+        // Ignore polling errors
+      }
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeout);
+      clearInterval(interval);
+    };
+  }, [showPaymentSuccess, claimToken]);
 
   // FAB animation
   const fabScale = useRef(new Animated.Value(0)).current;
@@ -416,6 +479,9 @@ export default function SalesScreen({ navigation }) {
     setPaymentMethod(method);
     setIsProcessing(true);
 
+    const isInvitation = method === 'invitation';
+    const apiMethod = isInvitation ? 'cash' : method;
+
     try {
       // Create order via API
       const orderPayload = {
@@ -427,11 +493,12 @@ export default function SalesScreen({ navigation }) {
         customer: {
           email: 'pos@ambilet.ro',
           first_name: 'POS',
-          last_name: method === 'cash' ? 'Numerar' : 'Card',
+          last_name: isInvitation ? 'Invitație' : (method === 'cash' ? 'Numerar' : 'Card'),
         },
-        payment_method: method,
+        payment_method: apiMethod,
         source: 'pos_app',
         sold_by: user?.name || 'POS',
+        ...(isInvitation && { is_invitation: true }),
       };
 
       const response = await apiPost('/orders', orderPayload);
@@ -451,15 +518,28 @@ export default function SalesScreen({ navigation }) {
         setShowPaymentSuccess(true);
         setLastOrderData(orderData);
 
+        // Generate QR claim URL for cash orders and invitations
+        if ((method === 'cash' || method === 'invitation') && orderData?.id) {
+          try {
+            const claimResponse = await apiPost(`/orders/${orderData.id}/generate-claim-url`);
+            if (claimResponse.success && claimResponse.data?.claim_url) {
+              setClaimUrl(claimResponse.data.claim_url);
+              setClaimToken(claimResponse.data.token);
+            }
+          } catch (e) {
+            console.warn('Failed to generate claim URL:', e);
+          }
+        }
+
         // Record the sale locally
         const saleDescription = cartItems
           .map((item) => `${item.quantity}x ${item.name}`)
           .join(', ');
 
         addSale({
-          method,
-          total: cartTotal,
-          description: saleDescription,
+          method: isInvitation ? 'invitation' : method,
+          total: isInvitation ? 0 : cartTotal,
+          description: (isInvitation ? '[Invitație] ' : '') + saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -478,8 +558,8 @@ export default function SalesScreen({ navigation }) {
   };
 
   const finishPayment = async (skipEmail = false) => {
-    // Auto check-in tickets when skipping email on cash POS orders
-    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash') {
+    // Auto check-in tickets when skipping email on cash POS orders / invitations
+    if (skipEmail && lastOrderData?.id && (paymentMethod === 'cash' || paymentMethod === 'invitation')) {
       try {
         await apiPost(`/orders/${lastOrderData.id}/pos-complete`, {
           auto_checkin: true,
@@ -491,6 +571,8 @@ export default function SalesScreen({ navigation }) {
     }
     setShowPaymentSuccess(false);
     setShowEmailCapture(false);
+    setClaimUrl(null);
+    setClaimToken(null);
     setCartItems([]);
     setPaymentMethod(null);
     setBuyerEmail('');
@@ -688,6 +770,39 @@ export default function SalesScreen({ navigation }) {
                 </View>
               )}
             </TouchableOpacity>
+
+            {/* Invitație */}
+            <TouchableOpacity
+              style={[
+                styles.paymentButton,
+                paymentMethod === 'invitation' && styles.paymentButtonActive,
+              ]}
+              onPress={() => !isProcessing && processPayment('invitation')}
+              activeOpacity={0.7}
+              disabled={isProcessing}
+            >
+              {isProcessing && paymentMethod === 'invitation' ? (
+                <ActivityIndicator size="small" color={colors.purple} />
+              ) : (
+                <View style={styles.paymentButtonContent}>
+                  <GiftIcon
+                    size={22}
+                    color={paymentMethod === 'invitation' ? colors.purple : colors.textSecondary}
+                  />
+                  <View style={styles.paymentButtonText}>
+                    <Text
+                      style={[
+                        styles.paymentMethodName,
+                        paymentMethod === 'invitation' && styles.paymentMethodNameActive,
+                      ]}
+                    >
+                      Invitație
+                    </Text>
+                    <Text style={styles.paymentPoweredBy}>Valoare 0 RON</Text>
+                  </View>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </ScrollView>
 
@@ -695,13 +810,38 @@ export default function SalesScreen({ navigation }) {
         {showPaymentSuccess && (
           <View style={styles.successOverlay}>
             <View style={styles.successContent}>
-              <View style={styles.successIconWrap}>
-                <CheckIcon size={64} color={colors.green} />
-              </View>
-              <Text style={styles.successTitle}>Plată Reușită!</Text>
-              <Text style={styles.successAmount}>
-                {formatCurrency(lastPaymentAmount)}
-              </Text>
+              {claimUrl ? (
+                <>
+                  <View style={styles.qrCodeContainer}>
+                    <View style={styles.qrCodeWhiteBg}>
+                      <QRCode
+                        value={claimUrl}
+                        size={200}
+                        backgroundColor="#FFFFFF"
+                        color="#000000"
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.successTitle}>
+                    {paymentMethod === 'invitation' ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                  </Text>
+                  <Text style={styles.qrCodeDescription}>
+                    Clientul scanează codul QR pentru a primi biletele pe email.
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <View style={styles.successIconWrap}>
+                    <CheckIcon size={64} color={colors.green} />
+                  </View>
+                  <Text style={styles.successTitle}>
+                    {paymentMethod === 'invitation' ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                  </Text>
+                  <Text style={styles.successAmount}>
+                    {formatCurrency(lastPaymentAmount)}
+                  </Text>
+                </>
+              )}
 
               <TouchableOpacity
                 style={styles.sendEmailButton}
@@ -722,7 +862,7 @@ export default function SalesScreen({ navigation }) {
                 onPress={() => finishPayment(true)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.skipButtonText}>Omite & Finalizează</Text>
+                <Text style={styles.skipButtonText}>Finalizează</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1434,6 +1574,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textSecondary,
     fontWeight: '500',
+  },
+
+  // ── QR Code ────────────────────────────────────────────────────────────────
+  qrCodeContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  qrCodeWhiteBg: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+  },
+  qrCodeDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 28,
+    lineHeight: 20,
+    paddingHorizontal: 8,
   },
 
   // ── Email Capture Modal ───────────────────────────────────────────────────

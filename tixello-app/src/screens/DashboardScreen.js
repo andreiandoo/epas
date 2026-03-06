@@ -8,6 +8,7 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import Svg, { Path, Circle, Line, Rect, Polyline } from 'react-native-svg';
 import { useAuth } from '../context/AuthContext';
@@ -802,7 +803,7 @@ function SalesBreakdownModal({ visible, onClose, eventId }) {
 
 export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
   const { userRole } = useAuth();
-  const { selectedEvent, eventStats, isReportsOnlyMode } = useEvent();
+  const { selectedEvent, eventStats, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
   const {
     shiftStartTime,
     cashTurnover,
@@ -836,6 +837,14 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
       <ScrollView
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoadingStats}
+            onRefresh={() => { refreshStats(); refreshTicketTypes(); }}
+            tintColor={colors.purple}
+            colors={[colors.purple]}
+          />
+        }
       >
         {/* Event header */}
         <View style={styles.eventHeader}>
