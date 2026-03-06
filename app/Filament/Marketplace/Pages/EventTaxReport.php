@@ -51,7 +51,7 @@ class EventTaxReport extends Page
     public function getBreadcrumbs(): array
     {
         return [
-            route('filament.marketplace.pages.tax-reports') => 'Tax Reports',
+            url('/marketplace/tax-reports') => 'Tax Reports',
             '#' => $this->getTitle(),
         ];
     }

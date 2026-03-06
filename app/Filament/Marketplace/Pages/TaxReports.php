@@ -14,7 +14,7 @@ class TaxReports extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Tax Reports';
-    protected static \UnitEnum|string|null $navigationGroup = 'Reports';
+    protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.marketplace.pages.tax-reports';
 

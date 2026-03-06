@@ -28,7 +28,7 @@ class KbCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'KB Categories';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Knowledge Base';
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
 
     protected static ?int $navigationSort = 2;
 

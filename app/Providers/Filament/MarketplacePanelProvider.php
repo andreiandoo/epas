@@ -67,6 +67,18 @@ class MarketplacePanelProvider extends PanelProvider
                     ->name('filament.marketplace.pages.organizer-balance');
                 Route::get('/event-tax-report/{event}', \App\Filament\Marketplace\Pages\EventTaxReport::class)
                     ->name('filament.marketplace.pages.event-tax-report');
+                Route::get('/organizers/{id}/login-as', function (int $id) {
+                    $organizer = \App\Models\MarketplaceOrganizer::findOrFail($id);
+                    $marketplace = \App\Models\MarketplaceClient::find($organizer->marketplace_client_id);
+                    if (!$marketplace || !$marketplace->domain) {
+                        abort(404, 'Marketplace domain not configured');
+                    }
+                    // Revoke old impersonation tokens and create a fresh one
+                    $organizer->tokens()->where('name', 'admin-impersonation')->delete();
+                    $token = $organizer->createToken('admin-impersonation')->plainTextToken;
+                    $url = 'https://' . $marketplace->domain . '/organizator/panou?_admin_token=' . urlencode($token);
+                    return redirect($url);
+                })->name('filament.marketplace.organizer.login-as');
             })
 
             // Define navigation group order

@@ -21,7 +21,7 @@ class Incomes extends Page
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationLabel = 'Venituri';
     protected static ?string $title = 'Venituri';
-    protected static string|\UnitEnum|null $navigationGroup = 'Reports';
+    protected static string|\UnitEnum|null $navigationGroup = 'Organizers';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.incomes';
 

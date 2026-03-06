@@ -111,7 +111,54 @@ class OrganizeContactListsCommand extends Command
         $this->info("  → Clienți și Abonați: {$counters['clienti_abonati']}");
         $this->info("  → Abonați: {$counters['abonati']}");
         $this->info("  → Clienți: {$counters['clienti']}");
-        $this->info("  → Organizatori: {$counters['organizatori']}");
+        $this->info("  → Organizatori (from customers): {$counters['organizatori']}");
+
+        // 4b. Ensure ALL organizers are in the Organizatori list
+        // Create customer records for organizers whose email doesn't exist in customers table
+        $this->info("  Syncing remaining organizers...");
+        $orgListId = $lists['organizatori']->id;
+        $addedOrganizers = 0;
+
+        MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->select(['id', 'email', 'name', 'company_name'])
+            ->chunkById(500, function ($organizers) use ($marketplaceId, $orgListId, &$addedOrganizers) {
+                $now = now()->toDateTimeString();
+
+                foreach ($organizers as $organizer) {
+                    $email = strtolower(trim($organizer->email));
+                    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+
+                    $customer = MarketplaceCustomer::firstOrCreate(
+                        [
+                            'marketplace_client_id' => $marketplaceId,
+                            'email' => $email,
+                        ],
+                        [
+                            'first_name' => $organizer->name ?: ($organizer->company_name ?: 'Organizator'),
+                            'last_name' => '',
+                            'accepts_marketing' => false,
+                            'status' => 'active',
+                        ]
+                    );
+
+                    $inserted = DB::table('marketplace_contact_list_members')->insertOrIgnore([
+                        'list_id' => $orgListId,
+                        'marketplace_customer_id' => $customer->id,
+                        'status' => 'subscribed',
+                        'subscribed_at' => $now,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+
+                    if ($inserted) {
+                        $addedOrganizers++;
+                    }
+                }
+            });
+
+        $this->info("  → Organizatori (created/synced): {$addedOrganizers}");
 
         // 5. Create venue contacts
         $venueCount = $this->createVenueContacts($marketplaceId, $lists['locatii']);

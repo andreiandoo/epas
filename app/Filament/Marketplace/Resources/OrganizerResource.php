@@ -442,6 +442,11 @@ class OrganizerResource extends Resource
                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                         ->schema([
                             SC\Actions::make([
+                                Action::make('login_as')
+                                    ->label('Login as Organizer')
+                                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                                    ->color('warning')
+                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
                                 Action::make('view_events')
                                     ->label('View Events')
                                     ->icon('heroicon-o-calendar')
@@ -634,6 +639,12 @@ class OrganizerResource extends Resource
                     ->action(function (MarketplaceOrganizer $record): void {
                         $record->update(['status' => 'active']);
                     }),
+
+                Action::make('login_as')
+                    ->label('Login as')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('warning')
+                    ->url(fn (MarketplaceOrganizer $record) => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
 
                 ViewAction::make(),
                 EditAction::make(),

@@ -69,7 +69,7 @@
                             <div class="p-6">
                                 <div class="flex justify-between items-start mb-4">
                                     <div>
-                                        <a href="{{ route('filament.marketplace.pages.event-tax-report', ['event' => $event['event']['id']]) }}"
+                                        <a href="{{ url('/marketplace/event-tax-report/' . $event['event']['id']) }}"
                                            class="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 hover:underline">
                                             {{ $event['event']['title'] }}
                                         </a>

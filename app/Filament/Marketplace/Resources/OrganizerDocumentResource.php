@@ -23,7 +23,7 @@ class OrganizerDocumentResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-document-duplicate';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Reports';
+    protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
 
     protected static ?int $navigationSort = 3;
 
