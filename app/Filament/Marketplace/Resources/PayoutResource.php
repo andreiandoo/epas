@@ -312,12 +312,14 @@ class PayoutResource extends Resource
                 Tables\Columns\TextColumn::make('reference')
                     ->searchable()
                     ->sortable()
-                    ->copyable(),
+                    ->copyable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label('Organizer')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('event.title')
                     ->label('Event')
@@ -326,11 +328,13 @@ class PayoutResource extends Resource
                         ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
                         : $state)
                     ->limit(25)
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('amount')
                     ->money('RON')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -342,7 +346,8 @@ class PayoutResource extends Resource
                         'rejected' => 'danger',
                         'cancelled' => 'gray',
                         default => 'gray',
-                    }),
+                    })
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('period_start')
                     ->date()
@@ -356,7 +361,8 @@ class PayoutResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('completed_at')
                     ->dateTime()
