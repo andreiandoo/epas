@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Customer;
+use App\Models\PosTicketClaim;
 use App\Models\MarketplaceTransaction;
 use App\Notifications\MarketplaceOrderNotification;
 use App\Services\MarketplaceWebhookService;
@@ -813,5 +814,55 @@ class OrdersController extends BaseController
                 ])->values(),
             ],
         ]);
+    }
+
+    /**
+     * Generate a QR claim URL for a POS cash order
+     * Customer scans QR to enter their details and receive tickets by email
+     */
+    public function generateClaimUrl(Request $request, int $orderId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $order = Order::with(['event.venue', 'tickets'])
+            ->where('id', $orderId)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+
+        // Resolve event name from translatable title
+        $event = $order->event;
+        $rawTitle = $event?->title;
+        $eventName = is_array($rawTitle)
+            ? ($rawTitle['ro'] ?? $rawTitle['en'] ?? reset($rawTitle) ?: 'Eveniment')
+            : ($rawTitle ?? 'Eveniment');
+
+        // Resolve event date
+        $eventDate = $event?->start_date
+            ? (is_string($event->start_date) ? $event->start_date : $event->start_date->format('d.m.Y'))
+            : null;
+
+        // Resolve venue name
+        $rawVenueName = $event?->venue?->name;
+        $venueName = is_array($rawVenueName)
+            ? ($rawVenueName['ro'] ?? $rawVenueName['en'] ?? reset($rawVenueName) ?: null)
+            : $rawVenueName;
+
+        $claim = PosTicketClaim::create([
+            'tenant_id' => $client->tenant_id,
+            'order_id' => $order->id,
+            'event_name' => $eventName,
+            'event_date' => $eventDate,
+            'venue_name' => $venueName,
+        ]);
+
+        return $this->success([
+            'claim_url' => $claim->getClaimUrl(),
+            'token' => $claim->token,
+            'expires_at' => $claim->expires_at->toIso8601String(),
+        ], 'Claim URL generated');
     }
 }

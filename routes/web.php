@@ -273,6 +273,16 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
 Route::get('/t/{code}', [\App\Http\Controllers\Public\TicketVerificationController::class, 'show'])
     ->name('ticket.verify');
 
+// POS Ticket Claim (QR code self-service)
+Route::get('/claim/{token}', [\App\Http\Controllers\PosTicketClaimController::class, 'show'])
+    ->name('pos-claim.show');
+Route::post('/claim/{token}/step1', [\App\Http\Controllers\PosTicketClaimController::class, 'submitRequired'])
+    ->name('pos-claim.step1');
+Route::post('/claim/{token}/step2', [\App\Http\Controllers\PosTicketClaimController::class, 'submitOptional'])
+    ->name('pos-claim.step2');
+Route::post('/claim/{token}/skip', [\App\Http\Controllers\PosTicketClaimController::class, 'skipOptional'])
+    ->name('pos-claim.skip');
+
 // Gate Scanner (organizer check-in interface)
 Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])
     ->name('gate.scanner');

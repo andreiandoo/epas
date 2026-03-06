@@ -1429,6 +1429,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.orders.send-tickets');
     Route::post('/orders/{order}/pos-complete', [MarketplaceOrdersController::class, 'posComplete'])
         ->name('api.marketplace-client.orders.pos-complete');
+    Route::post('/orders/{order}/generate-claim-url', [MarketplaceOrdersController::class, 'generateClaimUrl'])
+        ->name('api.marketplace-client.orders.generate-claim-url');
     Route::get('/events/{event}/sales-breakdown', [MarketplaceOrdersController::class, 'salesBreakdown'])
         ->name('api.marketplace-client.events.sales-breakdown');
 
