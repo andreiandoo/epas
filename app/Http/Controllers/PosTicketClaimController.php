@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PosTicketClaim;
-use App\Models\Customer;
+use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +50,29 @@ class PosTicketClaimController extends Controller
     }
 
     /**
+     * Check claim status (for mobile app polling)
+     */
+    public function status(string $token)
+    {
+        $claim = PosTicketClaim::where('token', $token)->first();
+
+        if (!$claim) {
+            return response()->json(['success' => false, 'message' => 'Not found'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status' => $claim->isExpired() ? 'expired' : $claim->status,
+                'has_email' => !empty($claim->email),
+                'is_claimed' => $claim->isClaimed(),
+                'customer_name' => $claim->first_name ? ($claim->first_name . ' ' . $claim->last_name) : null,
+                'customer_email' => $claim->email,
+            ],
+        ]);
+    }
+
+    /**
      * Step 1: Submit required fields (first_name, last_name, email)
      */
     public function submitRequired(Request $request, string $token)
@@ -78,35 +101,42 @@ class PosTicketClaimController extends Controller
             ], 404);
         }
 
-        // Find or create customer
-        $customer = Customer::where('email', $validated['email'])
-            ->where('tenant_id', $claim->tenant_id)
-            ->first();
+        $client = $order->marketplaceClient;
 
-        if (!$customer) {
-            $customer = Customer::create([
-                'tenant_id' => $claim->tenant_id,
-                'primary_tenant_id' => $claim->tenant_id,
-                'email' => $validated['email'],
-                'first_name' => $validated['first_name'],
-                'last_name' => $validated['last_name'],
-            ]);
-        } else {
-            // Update name if not set
-            if (empty($customer->first_name)) {
-                $customer->update([
+        // Find or create MarketplaceCustomer
+        $customer = null;
+        if ($client) {
+            $customer = MarketplaceCustomer::where('email', $validated['email'])
+                ->where('marketplace_client_id', $client->id)
+                ->first();
+
+            if (!$customer) {
+                $customer = MarketplaceCustomer::create([
+                    'marketplace_client_id' => $client->id,
+                    'email' => $validated['email'],
                     'first_name' => $validated['first_name'],
                     'last_name' => $validated['last_name'],
+                    'status' => 'active',
                 ]);
+            } else {
+                if (empty($customer->first_name)) {
+                    $customer->update([
+                        'first_name' => $validated['first_name'],
+                        'last_name' => $validated['last_name'],
+                    ]);
+                }
             }
         }
 
         // Update order with customer info
-        $order->update([
-            'customer_id' => $customer->id,
+        $updateData = [
             'customer_email' => $validated['email'],
             'customer_name' => $validated['first_name'] . ' ' . $validated['last_name'],
-        ]);
+        ];
+        if ($customer) {
+            $updateData['marketplace_customer_id'] = $customer->id;
+        }
+        $order->update($updateData);
 
         // Update all tickets on this order with attendee info
         $fullName = $validated['first_name'] . ' ' . $validated['last_name'];
@@ -167,25 +197,33 @@ class PosTicketClaimController extends Controller
         // Update claim record
         $claim->update(array_filter($validated, fn($v) => $v !== null));
 
-        // Update customer if exists
+        // Update MarketplaceCustomer if exists
         if ($claim->email) {
-            $customer = Customer::where('email', $claim->email)
-                ->where('tenant_id', $claim->tenant_id)
-                ->first();
+            $order = $claim->order()->with('marketplaceClient')->first();
+            $client = $order?->marketplaceClient;
 
-            if ($customer) {
-                $updates = [];
-                if (!empty($validated['phone']) && empty($customer->phone)) {
-                    $updates['phone'] = $validated['phone'];
-                }
-                if (!empty($validated['city']) && empty($customer->city)) {
-                    $updates['city'] = $validated['city'];
-                }
-                if (!empty($validated['date_of_birth']) && empty($customer->date_of_birth)) {
-                    $updates['date_of_birth'] = $validated['date_of_birth'];
-                }
-                if (!empty($updates)) {
-                    $customer->update($updates);
+            if ($client) {
+                $customer = MarketplaceCustomer::where('email', $claim->email)
+                    ->where('marketplace_client_id', $client->id)
+                    ->first();
+
+                if ($customer) {
+                    $updates = [];
+                    if (!empty($validated['phone']) && empty($customer->phone)) {
+                        $updates['phone'] = $validated['phone'];
+                    }
+                    if (!empty($validated['city']) && empty($customer->city)) {
+                        $updates['city'] = $validated['city'];
+                    }
+                    if (!empty($validated['gender']) && empty($customer->gender)) {
+                        $updates['gender'] = $validated['gender'];
+                    }
+                    if (!empty($validated['date_of_birth']) && empty($customer->birth_date)) {
+                        $updates['birth_date'] = $validated['date_of_birth'];
+                    }
+                    if (!empty($updates)) {
+                        $customer->update($updates);
+                    }
                 }
             }
         }

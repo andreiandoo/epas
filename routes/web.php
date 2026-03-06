@@ -282,6 +282,8 @@ Route::post('/claim/{token}/step2', [\App\Http\Controllers\PosTicketClaimControl
     ->name('pos-claim.step2');
 Route::post('/claim/{token}/skip', [\App\Http\Controllers\PosTicketClaimController::class, 'skipOptional'])
     ->name('pos-claim.skip');
+Route::get('/claim/{token}/status', [\App\Http\Controllers\PosTicketClaimController::class, 'status'])
+    ->name('pos-claim.status');
 
 // Gate Scanner (organizer check-in interface)
 Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])

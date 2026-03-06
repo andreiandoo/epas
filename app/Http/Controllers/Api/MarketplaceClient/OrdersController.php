@@ -115,7 +115,8 @@ class OrdersController extends BaseController
                 }
 
                 // Use display_price which falls back to price_cents when sale_price_cents is null
-                $unitPrice = $ticketType->display_price ?? ($ticketType->price_cents / 100) ?? 0;
+                $isInvitation = (bool) $request->input('is_invitation', false);
+                $unitPrice = $isInvitation ? 0 : ($ticketType->display_price ?? ($ticketType->price_cents / 100) ?? 0);
                 $itemTotal = $unitPrice * $quantity;
                 $subtotal += $itemTotal;
 
@@ -193,14 +194,16 @@ class OrdersController extends BaseController
                 }
             }
 
-            // Auto-confirm POS cash orders immediately
+            // Auto-confirm POS cash orders and invitations immediately
             $paymentMethod = $request->input('payment_method');
             $source = $request->input('source', 'marketplace');
-            if ($paymentMethod === 'cash' && $source === 'pos_app') {
+            $isInvitation = (bool) $request->input('is_invitation', false);
+            if (($paymentMethod === 'cash' || $isInvitation) && $source === 'pos_app') {
                 $order->update([
                     'status' => 'confirmed',
-                    'payment_status' => 'paid',
+                    'payment_status' => $isInvitation ? 'free' : 'paid',
                     'paid_at' => now(),
+                    'meta' => array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : []),
                 ]);
                 // Mark tickets as valid
                 $order->tickets()->update(['status' => 'valid']);

@@ -657,8 +657,8 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Only count tickets from truly paid/completed orders
-        $validOrderStatuses = ['paid', 'completed'];
+        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
         $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
                 $q->where('event_id', $event->id)
@@ -761,8 +761,8 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id');
 
-        // Only count tickets from truly paid/completed orders
-        $validOrderStatuses = ['paid', 'completed'];
+        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
         $query = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
                 $q->whereIn('event_id', $eventIds)
@@ -886,8 +886,8 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id');
 
-        // Only count tickets from truly paid/completed orders
-        $validOrderStatuses = ['paid', 'completed'];
+        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
         // Search by barcode (full code) or code (control code)
         $ticket = \App\Models\Ticket::where(function ($q) use ($barcode) {
@@ -988,8 +988,8 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Only count tickets from truly paid/completed orders
-        $validOrderStatuses = ['paid', 'completed'];
+        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
+        $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
         $ticket = \App\Models\Ticket::where('barcode', $barcode)
             ->whereHas('order', function ($q) use ($event, $validOrderStatuses) {

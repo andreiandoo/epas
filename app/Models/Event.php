@@ -623,11 +623,11 @@ class Event extends Model
     }
 
     /**
-     * Calculate total revenue for this event (only paid/completed orders)
+     * Calculate total revenue for this event (paid/confirmed/completed orders)
      */
     public function getTotalRevenueAttribute(): float
     {
-        $query = $this->orders()->whereIn('status', ['paid', 'completed']);
+        $query = $this->orders()->whereIn('status', ['paid', 'confirmed', 'completed']);
         if ($this->marketplace_organizer_id) {
             $query->where('marketplace_organizer_id', $this->marketplace_organizer_id);
         }
@@ -635,11 +635,11 @@ class Event extends Model
     }
 
     /**
-     * Calculate total tickets sold for this event (only from paid/completed orders)
+     * Calculate total tickets sold for this event (from paid/confirmed/completed orders)
      */
     public function getTotalTicketsSoldAttribute(): int
     {
-        $query = $this->orders()->whereIn('status', ['paid', 'completed']);
+        $query = $this->orders()->whereIn('status', ['paid', 'confirmed', 'completed']);
         if ($this->marketplace_organizer_id) {
             $query->where('marketplace_organizer_id', $this->marketplace_organizer_id);
         }
