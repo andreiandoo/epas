@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources\TaxTemplateResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\TaxTemplateResource;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Schemas;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
@@ -29,7 +30,7 @@ class ListTaxTemplates extends ListRecords
                     Schemas\Components\Section::make('Contract Numbering')
                         ->description('Set the next contract number. Each generated organizer contract will use this number and auto-increment it.')
                         ->schema([
-                            Schemas\Components\TextInput::make('next_contract_number')
+                            Forms\Components\TextInput::make('next_contract_number')
                                 ->label('Next Contract Number')
                                 ->numeric()
                                 ->minValue(1)
@@ -39,7 +40,7 @@ class ListTaxTemplates extends ListRecords
                     Schemas\Components\Section::make('Signature Image')
                         ->description('Upload a signature image to use in contracts via the {{marketplace_signature_image}} variable.')
                         ->schema([
-                            Schemas\Components\FileUpload::make('signature_image')
+                            Forms\Components\FileUpload::make('signature_image')
                                 ->label('Signature Image')
                                 ->image()
                                 ->disk('public')
