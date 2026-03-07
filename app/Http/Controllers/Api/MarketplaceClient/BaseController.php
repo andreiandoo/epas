@@ -81,6 +81,15 @@ abstract class BaseController extends Controller
      */
     protected function sendMarketplaceEmail(MarketplaceClient $client, string $toEmail, string $toName, string $subject, string $html, array $logExtra = []): void
     {
+        static::sendViaMarketplace($client, $toEmail, $toName, $subject, $html, $logExtra);
+    }
+
+    /**
+     * Static helper to send email via marketplace transport.
+     * Can be called from closures, jobs, and other contexts outside controller instances.
+     */
+    public static function sendViaMarketplace(MarketplaceClient $client, string $toEmail, string $toName, string $subject, string $html, array $logExtra = []): void
+    {
         $fromAddress = $client->getEmailFromAddress();
         $fromName = $client->getEmailFromName();
 
@@ -96,27 +105,39 @@ abstract class BaseController extends Controller
             'status' => 'pending',
         ], $logExtra));
 
-        // Try marketplace-specific mail config first
-        if ($client->hasMailConfigured()) {
-            $transport = $client->getMailTransport();
-            if ($transport) {
-                $email = (new \Symfony\Component\Mime\Email())
-                    ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
-                    ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
-                    ->subject($subject)
-                    ->html($html);
+        try {
+            // Try marketplace-specific mail config first
+            if ($client->hasMailConfigured()) {
+                $transport = $client->getMailTransport();
+                if ($transport) {
+                    $email = (new \Symfony\Component\Mime\Email())
+                        ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                        ->to(new \Symfony\Component\Mime\Address($toEmail, $toName))
+                        ->subject($subject)
+                        ->html($html);
 
-                $transport->send($email);
-                $log->markSent();
-                return;
+                    $transport->send($email);
+                    $log->markSent();
+                    return;
+                }
             }
-        }
 
-        // Fallback to Laravel default mailer
-        Mail::html($html, function ($message) use ($toEmail, $toName, $subject) {
-            $message->to($toEmail, $toName)->subject($subject);
-        });
-        $log->markSent();
+            // Fallback to Laravel default mailer
+            Mail::html($html, function ($message) use ($toEmail, $toName, $subject) {
+                $message->to($toEmail, $toName)->subject($subject);
+            });
+            $log->markSent();
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->error('Failed to send marketplace email', [
+                'marketplace_client_id' => $client->id,
+                'to' => $toEmail,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            $log->markFailed($e->getMessage());
+            throw $e;
+        }
     }
 
     /**

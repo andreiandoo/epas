@@ -364,6 +364,16 @@ class PaymentController extends BaseController
                             'file' => $e->getFile() . ':' . $e->getLine(),
                         ]);
                     }
+
+                    // Send individual ticket emails to beneficiaries (attendees with different email)
+                    try {
+                        $this->sendBeneficiaryEmails($order);
+                    } catch (\Throwable $e) {
+                        Log::channel('marketplace')->error('Failed to send beneficiary emails', [
+                            'order_id' => $order->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
 
                 // Award XP for ticket purchase (gamification)
@@ -676,6 +686,119 @@ class PaymentController extends BaseController
         } catch (\Exception $e) {
             $log->markFailed($e->getMessage());
             throw $e;
+        }
+    }
+
+    /**
+     * Send individual ticket emails to beneficiaries (attendees with a different email from the order customer)
+     */
+    protected function sendBeneficiaryEmails(Order $order): void
+    {
+        $marketplace = $order->marketplaceClient;
+        if (!$marketplace) {
+            return;
+        }
+
+        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType']);
+        $customerEmail = strtolower(trim($order->customer_email ?? ''));
+        $marketplaceName = $marketplace->name;
+        $sentEmails = []; // Track already-sent emails to avoid duplicates
+
+        foreach ($order->tickets as $ticket) {
+            $attendeeEmail = strtolower(trim($ticket->attendee_email ?? ''));
+
+            // Skip tickets without attendee email or where attendee = customer
+            if (!$attendeeEmail || $attendeeEmail === $customerEmail || isset($sentEmails[$attendeeEmail])) {
+                continue;
+            }
+
+            $event = $ticket->marketplaceEvent;
+            $eventName = $event->name ?? 'Eveniment';
+            $eventDate = $event?->starts_at?->format('d.m.Y') ?? '';
+            $eventStartTime = $event?->starts_at?->format('H:i') ?? '';
+            $venueName = $event->venue_name ?? '';
+            $venueCity = $event->venue_city ?? '';
+            $attendeeName = $ticket->attendee_name ?? 'Participant';
+            $ticketTypeName = $ticket->marketplaceTicketType?->name ?? 'Bilet';
+            $ticketCode = $ticket->code ?? $ticket->barcode ?? '';
+            $seatDetails = $ticket->getSeatDetails();
+
+            $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+                'size' => '180x180',
+                'data' => $ticket->getVerifyUrl(),
+                'color' => '1a1a2e',
+                'margin' => '0',
+                'format' => 'png',
+            ]);
+
+            $locationLine = '';
+            $locationParts = array_filter([$venueName, $venueCity]);
+            if ($locationParts) {
+                $locationLine = '<p style="margin:0 0 4px;font-size:14px;color:#b0b0cc;">' . e(implode(', ', $locationParts)) . '</p>';
+            }
+
+            $dateLine = '';
+            $dateParts = [];
+            if ($eventDate) $dateParts[] = $eventDate;
+            if ($eventStartTime) $dateParts[] = 'Ora: ' . $eventStartTime;
+            if ($dateParts) {
+                $dateLine = '<p style="margin:0;font-size:14px;color:#b0b0cc;">' . e(implode(' | ', $dateParts)) . '</p>';
+            }
+
+            $seatLine = '';
+            if ($seatDetails) {
+                $sp = [];
+                if (!empty($seatDetails['section_name'])) $sp[] = $seatDetails['section_name'];
+                if (!empty($seatDetails['row_label'])) $sp[] = 'Rând ' . $seatDetails['row_label'];
+                if (!empty($seatDetails['seat_number'])) $sp[] = 'Loc ' . $seatDetails['seat_number'];
+                if ($sp) {
+                    $seatLine = '<tr><td style="padding:3px 12px 3px 0;color:#888;">Loc:</td><td style="padding:3px 0;font-weight:600;">' . e(implode(' / ', $sp)) . '</td></tr>';
+                }
+            }
+
+            $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+                . '<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">'
+                . '<div style="max-width:640px;margin:0 auto;padding:24px 16px;">'
+                . '<div style="text-align:center;padding:20px 0;"><h1 style="margin:0;font-size:24px;color:#1a1a2e;">' . e($marketplaceName) . '</h1></div>'
+                . '<div style="background:#ffffff;border-radius:12px;padding:24px;margin-bottom:20px;">'
+                . '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($attendeeName) . '</strong>!</p>'
+                . '<p style="margin:0 0 16px;font-size:15px;color:#555;">Ai primit un bilet pentru evenimentul de mai jos. Prezintă codul QR la intrare.</p>'
+                . '</div>'
+                . '<div style="margin-bottom:20px;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;">'
+                . '<div style="background:#1a1a2e;color:#ffffff;padding:20px 24px;">'
+                . '<h2 style="margin:0 0 8px;font-size:20px;font-weight:700;">' . e($eventName) . '</h2>'
+                . $locationLine . $dateLine
+                . '</div>'
+                . '<table style="width:100%;" cellpadding="0" cellspacing="0"><tr>'
+                . '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">'
+                . '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />'
+                . '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>'
+                . '</td>'
+                . '<td style="padding:20px 24px 20px 0;vertical-align:top;">'
+                . '<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1a1a2e;">' . e($ticketTypeName) . '</p>'
+                . '<table style="border-collapse:collapse;font-size:14px;color:#333;" cellpadding="0" cellspacing="0">'
+                . '<tr><td style="padding:3px 12px 3px 0;color:#888;">Beneficiar:</td><td style="padding:3px 0;font-weight:600;">' . e($attendeeName) . '</td></tr>'
+                . $seatLine
+                . '</table>'
+                . '</td>'
+                . '</tr></table>'
+                . '</div>'
+                . '<div style="text-align:center;padding:16px 0;font-size:12px;color:#999;"><p style="margin:0;">Acest email a fost trimis de ' . e($marketplaceName) . '</p></div>'
+                . '</div></body></html>';
+
+            try {
+                $this->sendMarketplaceEmail($marketplace, $attendeeEmail, $attendeeName, "Biletul tău pentru {$eventName}", $html, [
+                    'order_id' => $order->id,
+                    'template_slug' => 'beneficiary_ticket',
+                ]);
+                $sentEmails[$attendeeEmail] = true;
+            } catch (\Throwable $e) {
+                Log::channel('marketplace')->error('Failed to send beneficiary email', [
+                    'order_id' => $order->id,
+                    'attendee_email' => $attendeeEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 

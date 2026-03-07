@@ -10,11 +10,9 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\TicketType;
 use App\Models\MarketplaceTransaction;
 use App\Models\Order;
-use App\Notifications\MarketplaceOrderNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -469,12 +467,46 @@ class EventsController extends BaseController
                     );
                 }
 
-                // Send email notification to customer
-                if ($order->customer_email) {
-                    dispatch(function () use ($order) {
-                        Notification::route('mail', $order->customer_email)
-                            ->notify(new MarketplaceOrderNotification($order->fresh(), 'event_cancelled'));
-                    })->afterResponse();
+                // Send email notification to customer via marketplace transport
+                if ($order->customer_email && $order->marketplace_client_id) {
+                    $cancelClient = \App\Models\MarketplaceClient::find($order->marketplace_client_id);
+                    if ($cancelClient) {
+                        $cancelOrder = $order;
+                        $cancelEventName = 'Eveniment';
+                        $rawCancelTitle = $event->title ?? $event->name ?? null;
+                        if ($rawCancelTitle) {
+                            $cancelEventName = is_array($rawCancelTitle) ? ($rawCancelTitle['ro'] ?? $rawCancelTitle['en'] ?? reset($rawCancelTitle) ?: 'Eveniment') : ($rawCancelTitle ?: 'Eveniment');
+                        }
+                        $cancelMarketplaceName = $cancelClient->name;
+                        $cancelTotal = number_format($cancelOrder->total, 2, ',', '.') . ' ' . ($cancelOrder->currency ?? 'RON');
+
+                        dispatch(function () use ($cancelClient, $cancelOrder, $cancelEventName, $cancelMarketplaceName, $cancelTotal) {
+                            try {
+                                $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">'
+                                    . '<div style="max-width:600px;margin:0 auto;padding:24px 16px;">'
+                                    . '<div style="text-align:center;padding:20px 0;"><h1 style="margin:0;font-size:24px;color:#1a1a2e;">' . e($cancelMarketplaceName) . '</h1></div>'
+                                    . '<div style="background:#ffffff;border-radius:12px;padding:24px;margin-bottom:20px;">'
+                                    . '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($cancelOrder->customer_name ?? 'Client') . '</strong>,</p>'
+                                    . '<p style="margin:0 0 12px;font-size:15px;color:#555;">Din păcate, evenimentul <strong>' . e($cancelEventName) . '</strong> a fost anulat.</p>'
+                                    . '<p style="margin:0 0 12px;font-size:15px;color:#555;">Comanda ta <strong>#' . e($cancelOrder->order_number) . '</strong> a fost rambursată automat cu suma de <strong>' . $cancelTotal . '</strong>.</p>'
+                                    . '<p style="margin:0 0 12px;font-size:14px;color:#666;">Rambursarea va fi procesată în contul tău în 5-10 zile lucrătoare.</p>'
+                                    . '<p style="margin:16px 0 0;font-size:14px;color:#666;">Ne cerem scuze pentru neplăcerile create.</p>'
+                                    . '</div>'
+                                    . '<div style="text-align:center;padding:16px 0;font-size:12px;color:#999;"><p style="margin:0;">Acest email a fost trimis de ' . e($cancelMarketplaceName) . '</p></div>'
+                                    . '</div></body></html>';
+
+                                BaseController::sendViaMarketplace($cancelClient, $cancelOrder->customer_email, $cancelOrder->customer_name ?? 'Client', "Eveniment anulat — rambursare automată", $html, [
+                                    'order_id' => $cancelOrder->id,
+                                    'template_slug' => 'event_cancelled',
+                                ]);
+                            } catch (\Throwable $e) {
+                                \Log::channel('marketplace')->error('Failed to send event cancelled email', [
+                                    'order_id' => $cancelOrder->id,
+                                    'error' => $e->getMessage(),
+                                ]);
+                            }
+                        })->afterResponse();
+                    }
                 }
 
                 $refundedCount++;

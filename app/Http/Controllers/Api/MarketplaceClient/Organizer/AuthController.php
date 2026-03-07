@@ -8,8 +8,6 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerBankAccount;
 use App\Models\OrganizerDocument;
 use Illuminate\Support\Facades\Storage;
-use App\Notifications\MarketplacePasswordResetNotification;
-use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -151,13 +149,16 @@ class AuthController extends BaseController
             ]);
         }
 
-        // Send verification email
+        // Send verification email via marketplace transport
         $verificationToken = $organizer->generateEmailVerificationToken();
-        $organizer->notify(new MarketplaceEmailVerificationNotification(
-            $verificationToken,
-            'organizer',
-            $client->domain
-        ));
+        try {
+            $this->sendOrganizerVerificationEmail($client, $organizer, $verificationToken);
+        } catch (\Throwable $e) {
+            \Log::channel('marketplace')->warning('Failed to send organizer verification email', [
+                'organizer_id' => $organizer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Send welcome/confirmation email immediately
         SendMarketplaceOrganizerEmailJob::dispatch(
@@ -368,12 +369,8 @@ class AuthController extends BaseController
             'created_at' => now(),
         ]);
 
-        // Send notification
-        $organizer->notify(new MarketplacePasswordResetNotification(
-            $token,
-            'organizer',
-            $client->domain
-        ));
+        // Send password reset email via marketplace transport
+        $this->sendOrganizerPasswordResetEmail($client, $organizer, $token);
 
         return $this->success(null, 'If an account exists with this email, you will receive a password reset link.');
     }
@@ -500,11 +497,14 @@ class AuthController extends BaseController
         }
 
         $verificationToken = $organizer->generateEmailVerificationToken();
-        $organizer->notify(new MarketplaceEmailVerificationNotification(
-            $verificationToken,
-            'organizer',
-            $client->domain
-        ));
+        try {
+            $this->sendOrganizerVerificationEmail($client, $organizer, $verificationToken);
+        } catch (\Throwable $e) {
+            \Log::channel('marketplace')->warning('Failed to resend organizer verification email', [
+                'organizer_id' => $organizer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->success(null, 'Verification email sent');
     }
@@ -1063,5 +1063,87 @@ HTML;
 </body>
 </html>
 HTML;
+    }
+
+    /**
+     * Send organizer verification email via marketplace transport.
+     */
+    protected function sendOrganizerVerificationEmail($client, MarketplaceOrganizer $organizer, string $token): void
+    {
+        $domain = rtrim($client->domain, '/');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+
+        $verifyUrl = sprintf('%s/verify-email?token=%s&email=%s&type=organizer', $domain, $token, urlencode($organizer->email));
+        $organizerName = $organizer->name ?: 'Organizator';
+        $siteName = $client->name ?? 'bilete.online';
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Verifică adresa de email</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut, ' . htmlspecialchars($organizerName) . '!</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Mulțumim pentru înregistrare! Te rugăm să-ți verifici adresa de email pentru a finaliza configurarea contului de organizator.</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($verifyUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Verifică adresa de email</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul de verificare expiră în 24 de ore.</p>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai creat un cont, poți ignora acest email.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $organizer->email, $organizerName, 'Verifică adresa de email', $html, [
+            'template_slug' => 'organizer_email_verification',
+        ]);
+    }
+
+    /**
+     * Send organizer password reset email via marketplace transport.
+     */
+    protected function sendOrganizerPasswordResetEmail($client, MarketplaceOrganizer $organizer, string $token): void
+    {
+        $domain = $client->domain ? rtrim($client->domain, '/') : config('app.url');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+
+        $resetUrl = $domain . '/organizer/reset-password?' . http_build_query([
+            'token' => $token,
+            'email' => $organizer->email,
+        ]);
+        $organizerName = $organizer->name ?: 'Organizator';
+        $siteName = $client->name ?? 'bilete.online';
+        $expireMinutes = config('auth.passwords.marketplace.expire', 60);
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Resetare parolă</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut ' . htmlspecialchars($organizerName) . ',</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ai primit acest email deoarece am primit o cerere de resetare a parolei pentru contul tău de organizator.</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Resetează parola</a>'
+            . '</div>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în ' . $expireMinutes . ' de minute.</p>'
+            . '<p style="font-size:13px;color:#94a3b8;margin:8px 0 0;text-align:center">Dacă nu ai solicitat resetarea parolei, nu este necesară nicio acțiune.</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $organizer->email, $organizerName, 'Resetare parolă', $html, [
+            'template_slug' => 'organizer_password_reset',
+        ]);
     }
 }

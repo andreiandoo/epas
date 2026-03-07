@@ -805,12 +805,16 @@ class AuthController extends BaseController
 
             $existing->update($updateData);
 
-            // Send welcome email if first time subscribing
+            // Send welcome email if first time subscribing via marketplace transport
             if (!$existing->getOriginal('accepts_marketing')) {
-                $existing->notify(new \App\Notifications\MarketplaceNewsletterWelcomeNotification(
-                    $client->domain,
-                    $client->name
-                ));
+                try {
+                    $this->sendNewsletterWelcomeEmail($client, $existing);
+                } catch (\Throwable $e) {
+                    \Log::channel('marketplace')->warning('Failed to send newsletter welcome email', [
+                        'customer_id' => $existing->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return $this->success([
@@ -847,11 +851,15 @@ class AuthController extends BaseController
 
         $customer = MarketplaceCustomer::create($createData);
 
-        // Send welcome email
-        $customer->notify(new \App\Notifications\MarketplaceNewsletterWelcomeNotification(
-            $client->domain,
-            $client->name
-        ));
+        // Send welcome email via marketplace transport
+        try {
+            $this->sendNewsletterWelcomeEmail($client, $customer);
+        } catch (\Throwable $e) {
+            \Log::channel('marketplace')->warning('Failed to send newsletter welcome email', [
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->success([
             'subscribed' => true,
@@ -967,6 +975,51 @@ class AuthController extends BaseController
         $this->sendMarketplaceEmail($client, $customer->email, $firstName, 'Resetare parolă', $html, [
             'marketplace_customer_id' => $customer->id,
             'template_slug' => 'password_reset',
+        ]);
+    }
+
+    /**
+     * Send newsletter welcome email via marketplace transport.
+     */
+    protected function sendNewsletterWelcomeEmail($client, MarketplaceCustomer $customer): void
+    {
+        $firstName = $customer->first_name ?: 'Abonat';
+        $siteName = $client->name ?? 'bilete.online';
+        $domain = rtrim($client->domain, '/');
+        if ($domain && !str_starts_with($domain, 'http')) {
+            $domain = 'https://' . $domain;
+        }
+        $registerUrl = $domain . '/register';
+
+        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+            . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+            . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+            . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+            . '<h1 style="color:white;margin:0;font-size:24px">Bine ai venit în comunitatea ' . htmlspecialchars($siteName) . '!</h1>'
+            . '</div>'
+            . '<div style="padding:32px">'
+            . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut, ' . htmlspecialchars($firstName) . '!</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 20px">Mulțumim că te-ai abonat la newsletter-ul <strong>' . htmlspecialchars($siteName) . '</strong>! Ești acum parte dintr-o comunitate pasionată de evenimente.</p>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 8px"><strong>Ce vei primi de la noi:</strong></p>'
+            . '<ul style="font-size:14px;color:#475569;margin:0 0 20px;padding-left:20px;line-height:1.8">'
+            . '<li>Evenimente noi — Fii primul care află despre concerte, festivaluri și spectacole</li>'
+            . '<li>Oferte exclusive — Acces la reduceri și promoții speciale doar pentru abonați</li>'
+            . '<li>Recomandări personalizate — Evenimente din orașul tău și pe gusturile tale</li>'
+            . '</ul>'
+            . '<p style="font-size:15px;color:#475569;margin:0 0 16px"><strong>Vrei și mai mult?</strong> Creează-ți un cont gratuit și deblochează funcționalități exclusive:</p>'
+            . '<div style="text-align:center;margin:24px 0">'
+            . '<a href="' . htmlspecialchars($registerUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Creează-ți cont gratuit</a>'
+            . '</div>'
+            . '<p style="font-size:14px;color:#94a3b8;margin:16px 0 0;text-align:center">Ne bucurăm că ești alături de noi!</p>'
+            . '</div>'
+            . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+            . '<p style="font-size:13px;color:#94a3b8;margin:0">Cu drag, Echipa ' . htmlspecialchars($siteName) . '</p>'
+            . '</div>'
+            . '</div></div></body></html>';
+
+        $this->sendMarketplaceEmail($client, $customer->email, $firstName, "Bine ai venit în comunitatea {$siteName}!", $html, [
+            'marketplace_customer_id' => $customer->id,
+            'template_slug' => 'newsletter_welcome',
         ]);
     }
 }

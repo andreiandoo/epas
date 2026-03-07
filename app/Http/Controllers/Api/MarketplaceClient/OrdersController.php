@@ -9,13 +9,11 @@ use App\Models\Ticket;
 use App\Models\Customer;
 use App\Models\PosTicketClaim;
 use App\Models\MarketplaceTransaction;
-use App\Notifications\MarketplaceOrderNotification;
 use App\Services\MarketplaceWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class OrdersController extends BaseController
@@ -610,11 +608,47 @@ class OrdersController extends BaseController
                 ]);
             })->afterResponse();
 
-            // Send refund notification email to customer
-            if ($order->customer_email) {
-                dispatch(function () use ($order) {
-                    Notification::route('mail', $order->customer_email)
-                        ->notify(new MarketplaceOrderNotification($order->fresh(), 'refunded'));
+            // Send refund notification email to customer via marketplace transport
+            if ($order->customer_email && $order->marketplaceClient) {
+                $refundClient = $order->marketplaceClient;
+                $refundOrder = $order;
+                dispatch(function () use ($refundClient, $refundOrder) {
+                    try {
+                        $event = $refundOrder->event ?? $refundOrder->marketplaceEvent;
+                        $eventName = 'Eveniment';
+                        if ($event) {
+                            $title = $event->title ?? $event->name ?? null;
+                            $eventName = is_array($title) ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: 'Eveniment') : ($title ?: 'Eveniment');
+                        }
+                        $marketplaceName = $refundClient->name;
+                        $refundAmount = number_format($refundOrder->refund_amount, 2, ',', '.') . ' ' . ($refundOrder->currency ?? 'RON');
+
+                        $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">'
+                            . '<div style="max-width:600px;margin:0 auto;padding:24px 16px;">'
+                            . '<div style="text-align:center;padding:20px 0;"><h1 style="margin:0;font-size:24px;color:#1a1a2e;">' . e($marketplaceName) . '</h1></div>'
+                            . '<div style="background:#ffffff;border-radius:12px;padding:24px;margin-bottom:20px;">'
+                            . '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($refundOrder->customer_name ?? 'Client') . '</strong>,</p>'
+                            . '<p style="margin:0 0 12px;font-size:15px;color:#555;">Comanda ta <strong>#' . e($refundOrder->order_number) . '</strong> a fost rambursată.</p>'
+                            . '<table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;" cellpadding="0" cellspacing="0">'
+                            . '<tr><td style="padding:6px 0;color:#888;">Eveniment:</td><td style="padding:6px 0;text-align:right;">' . e($eventName) . '</td></tr>'
+                            . '<tr><td style="padding:6px 0;color:#888;">Sumă rambursată:</td><td style="padding:6px 0;text-align:right;font-weight:700;">' . $refundAmount . '</td></tr>'
+                            . ($refundOrder->refund_reason ? '<tr><td style="padding:6px 0;color:#888;">Motiv:</td><td style="padding:6px 0;text-align:right;">' . e($refundOrder->refund_reason) . '</td></tr>' : '')
+                            . '</table>'
+                            . '<p style="margin:16px 0 0;font-size:14px;color:#666;">Rambursarea va fi procesată în contul tău în 5-10 zile lucrătoare.</p>'
+                            . '</div>'
+                            . '<div style="text-align:center;padding:16px 0;font-size:12px;color:#999;"><p style="margin:0;">Acest email a fost trimis de ' . e($marketplaceName) . '</p></div>'
+                            . '</div></body></html>';
+
+                        BaseController::sendViaMarketplace($refundClient, $refundOrder->customer_email, $refundOrder->customer_name ?? 'Client', "Rambursare comandă #{$refundOrder->order_number}", $html, [
+                            'order_id' => $refundOrder->id,
+                            'template_slug' => 'order_refunded',
+                        ]);
+                    } catch (\Throwable $e) {
+                        \Log::channel('marketplace')->error('Failed to send refund email', [
+                            'order_id' => $refundOrder->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 })->afterResponse();
             }
 
@@ -729,7 +763,7 @@ class OrdersController extends BaseController
     }
 
     /**
-     * Send a simple ticket email for POS orders
+     * Send a simple ticket email for POS orders via marketplace transport
      */
     private function sendPosTicketEmail(Order $order, string $email, $client): void
     {
@@ -745,7 +779,6 @@ class OrdersController extends BaseController
         foreach ($order->tickets as $ticket) {
             $typeName = $ticket->ticketType?->name ?? 'Bilet';
             $code = $ticket->code;
-            $barcode = $ticket->barcode;
             $ticketRows .= "<tr><td style='padding:8px;border-bottom:1px solid #eee;'>{$typeName}</td><td style='padding:8px;border-bottom:1px solid #eee;font-family:monospace;'>{$code}</td></tr>";
         }
 
@@ -754,7 +787,7 @@ class OrdersController extends BaseController
 
         $html = "
         <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;'>
-            <h2 style='color:#333;'>Biletele tale pentru {$eventName}</h2>
+            <h2 style='color:#333;'>Biletele tale pentru " . e($eventName) . "</h2>
             <p>Comanda: <strong>{$order->order_number}</strong></p>
             <p>Total: <strong>{$totalFormatted}</strong></p>
             <table style='width:100%;border-collapse:collapse;margin:20px 0;'>
@@ -765,17 +798,13 @@ class OrdersController extends BaseController
                 {$ticketRows}
             </table>
             <p style='color:#666;font-size:13px;'>Prezintă acest email sau codurile la intrare.</p>
-            <p style='color:#999;font-size:12px;margin-top:30px;'>Trimis de {$marketplaceName}</p>
+            <p style='color:#999;font-size:12px;margin-top:30px;'>Trimis de " . e($marketplaceName) . "</p>
         </div>";
 
-        $fromEmail = $client->getEmailFromAddress() ?? 'noreply@ambilet.ro';
-        $fromName = $client->getEmailFromName() ?? $marketplaceName;
-
-        \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($email, $fromEmail, $fromName, $eventName) {
-            $message->to($email)
-                ->from($fromEmail, $fromName)
-                ->subject("Biletele tale - {$eventName}");
-        });
+        $this->sendMarketplaceEmail($client, $email, $order->customer_name ?? 'Client', "Biletele tale - {$eventName}", $html, [
+            'order_id' => $order->id,
+            'template_slug' => 'pos_tickets',
+        ]);
     }
 
     /**

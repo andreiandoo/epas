@@ -235,7 +235,7 @@ class MarketplaceEmailService
         }
 
         // Check SMTP
-        if (!$this->marketplace->hasSmtpConfigured()) {
+        if (!$this->marketplace->hasMailConfigured()) {
             Log::warning("SMTP not configured for marketplace {$this->marketplace->id}");
             return false;
         }
@@ -262,7 +262,7 @@ class MarketplaceEmailService
         ]);
 
         try {
-            $transport = $this->marketplace->getSmtpTransport();
+            $transport = $this->marketplace->getMailTransport();
 
             if (!$transport) {
                 $log->markFailed('Could not create SMTP transport');
@@ -302,7 +302,7 @@ class MarketplaceEmailService
         ?string $bodyText = null,
         ?int $customerId = null
     ): bool {
-        if (!$this->marketplace->hasSmtpConfigured()) {
+        if (!$this->marketplace->hasMailConfigured()) {
             return false;
         }
 
@@ -321,7 +321,7 @@ class MarketplaceEmailService
         ]);
 
         try {
-            $transport = $this->marketplace->getSmtpTransport();
+            $transport = $this->marketplace->getMailTransport();
 
             if (!$transport) {
                 $log->markFailed('Could not create SMTP transport');
