@@ -430,9 +430,10 @@ const AmbiletAuth = {
             if (typeof AmbiletAPI !== 'undefined') {
                 AmbiletAPI.get('/organizer/me').then(response => {
                     if (response.success && response.data) {
-                        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(response.data));
+                        const orgData = response.data.organizer || response.data;
+                        localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(orgData));
                         window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
-                            detail: { type: 'organizer', user: response.data }
+                            detail: { type: 'organizer', user: orgData }
                         }));
                     }
                 }).catch(() => {});
@@ -653,9 +654,10 @@ const AmbiletAuth = {
         if (typeof AmbiletAPI !== 'undefined') {
             AmbiletAPI.get('/organizer/me').then(response => {
                 if (response.success && response.data) {
-                    localStorage.setItem('ambilet_organizer_data', JSON.stringify(response.data));
+                    const orgData = response.data.organizer || response.data;
+                    localStorage.setItem('ambilet_organizer_data', JSON.stringify(orgData));
                     window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
-                        detail: { type: 'organizer', user: response.data }
+                        detail: { type: 'organizer', user: orgData }
                     }));
                 }
             }).catch(() => {});
