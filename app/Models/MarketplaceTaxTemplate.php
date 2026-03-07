@@ -286,7 +286,7 @@ class MarketplaceTaxTemplate extends Model
             // Signature image
             if ($marketplace->signature_image) {
                 $signatureUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image);
-                $variables['marketplace_signature_image'] = '<img src="' . htmlspecialchars($signatureUrl) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />';
+                $variables['marketplace_signature_image'] = '<img src="' . htmlspecialchars($signatureUrl) . '" alt="Signature" style="display:block;" />';
             } else {
                 $variables['marketplace_signature_image'] = '';
             }
