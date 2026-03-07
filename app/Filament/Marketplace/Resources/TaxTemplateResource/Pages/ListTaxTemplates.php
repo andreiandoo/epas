@@ -5,7 +5,7 @@ namespace App\Filament\Marketplace\Resources\TaxTemplateResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\TaxTemplateResource;
 use Filament\Actions;
-use Filament\Schema;
+use Filament\Schemas;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 
@@ -26,20 +26,20 @@ class ListTaxTemplates extends ListRecords
                 ->modalDescription('Configure contract numbering and upload your signature image.')
                 ->modalWidth('lg')
                 ->form([
-                    Schema\Components\Section::make('Contract Numbering')
+                    Schemas\Components\Section::make('Contract Numbering')
                         ->description('Set the next contract number. Each generated organizer contract will use this number and auto-increment it.')
                         ->schema([
-                            Schema\Components\TextInput::make('next_contract_number')
+                            Schemas\Components\TextInput::make('next_contract_number')
                                 ->label('Next Contract Number')
                                 ->numeric()
                                 ->minValue(1)
                                 ->required()
                                 ->helperText('This number will be used for the next generated contract, then auto-incremented.'),
                         ]),
-                    Schema\Components\Section::make('Signature Image')
+                    Schemas\Components\Section::make('Signature Image')
                         ->description('Upload a signature image to use in contracts via the {{marketplace_signature_image}} variable.')
                         ->schema([
-                            Schema\Components\FileUpload::make('signature_image')
+                            Schemas\Components\FileUpload::make('signature_image')
                                 ->label('Signature Image')
                                 ->image()
                                 ->disk('public')
