@@ -9,6 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('acc_connectors') && !Schema::hasColumn('acc_connectors', 'marketplace_client_id')) {
+            // Add marketplace_client_id column
             Schema::table('acc_connectors', function (Blueprint $table) {
                 $table->unsignedBigInteger('marketplace_client_id')->nullable()->after('tenant_id');
                 $table->foreign('marketplace_client_id')
@@ -17,8 +18,18 @@ return new class extends Migration
                     ->nullOnDelete();
             });
 
-            // Make tenant_id nullable (for marketplace-only connectors)
+            // Make tenant_id nullable: drop FK first, modify column, re-add FK
             if (Schema::hasColumn('acc_connectors', 'tenant_id')) {
+                // Drop the existing foreign key on tenant_id if it exists
+                try {
+                    Schema::table('acc_connectors', function (Blueprint $table) {
+                        $table->dropForeign(['tenant_id']);
+                    });
+                } catch (\Exception $e) {
+                    // FK may not exist, that's OK
+                }
+
+                // Now make tenant_id nullable
                 Schema::table('acc_connectors', function (Blueprint $table) {
                     $table->string('tenant_id')->nullable()->change();
                 });
