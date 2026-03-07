@@ -191,12 +191,15 @@ class DocumentController extends BaseController
             ->where('is_active', true)
             ->first();
 
-        // Get template variables
+        // Get template variables — increment contract number for organizer_contract type
+        $isContract = $validated['document_type'] === 'organizer_contract';
         $variables = MarketplaceTaxTemplate::getVariablesForContext(
             $taxRegistry,
             $marketplace,
             $organizer,
-            $event
+            $event,
+            null, // No order
+            incrementContractNumber: $isContract
         );
 
         // Process template
@@ -284,6 +287,7 @@ class DocumentController extends BaseController
                 'event_date' => $event->starts_at?->format('Y-m-d H:i'),
                 'organizer_name' => $organizer->company_name ?? $organizer->name,
                 'template_name' => $template->name,
+                'contract_number' => $variables['marketplace_contract_number'] ?? null,
                 'variables' => $variables,
             ],
             'issued_at' => now(),
@@ -477,13 +481,21 @@ class DocumentController extends BaseController
             ->where('is_active', true)
             ->first();
 
-        // Get template variables
+        // Get template variables (do NOT increment contract number for regeneration)
         $variables = MarketplaceTaxTemplate::getVariablesForContext(
             $taxRegistry,
             $marketplace,
             $organizer,
-            $event
+            $event,
+            null,
+            incrementContractNumber: false
         );
+
+        // Use stored contract number from original document if available
+        $docData = $existingDoc->document_data ?? [];
+        if (!empty($docData['contract_number'])) {
+            $variables['marketplace_contract_number'] = $docData['contract_number'];
+        }
 
         // Process template
         $htmlContent = $template->processTemplate($variables);
@@ -564,6 +576,7 @@ class DocumentController extends BaseController
                 'event_date' => $event->starts_at?->format('Y-m-d H:i'),
                 'organizer_name' => $organizer->company_name ?? $organizer->name,
                 'template_name' => $template->name,
+                'contract_number' => $variables['marketplace_contract_number'] ?? null,
                 'variables' => $variables,
             ],
             'issued_at' => now(),

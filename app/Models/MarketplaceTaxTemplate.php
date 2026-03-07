@@ -95,6 +95,7 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_phone}}' => 'Contact Phone',
             '{{marketplace_website}}' => 'Website',
             '{{marketplace_contract_number}}' => 'Contract Number (incremental)',
+            '{{marketplace_signature_image}}' => 'Signature Image',
         ],
         'Organizer' => [
             '{{organizer_name}}' => 'Name',
@@ -257,7 +258,8 @@ class MarketplaceTaxTemplate extends Model
         ?MarketplaceClient $marketplace = null,
         ?MarketplaceOrganizer $organizer = null,
         MarketplaceEvent|Event|null $event = null,
-        ?Order $order = null
+        ?Order $order = null,
+        bool $incrementContractNumber = false
     ): array {
         $variables = [];
 
@@ -277,7 +279,17 @@ class MarketplaceTaxTemplate extends Model
             $variables['marketplace_email'] = $marketplace->contact_email ?? '';
             $variables['marketplace_phone'] = $marketplace->contact_phone ?? '';
             $variables['marketplace_website'] = $marketplace->website ?? $marketplace->domain ?? '';
-            $variables['marketplace_contract_number'] = $marketplace->getCurrentContractNumber();
+            $variables['marketplace_contract_number'] = $incrementContractNumber
+                ? $marketplace->getNextContractNumber()
+                : $marketplace->getCurrentContractNumber();
+
+            // Signature image
+            if ($marketplace->signature_image) {
+                $signatureUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image);
+                $variables['marketplace_signature_image'] = '<img src="' . htmlspecialchars($signatureUrl) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />';
+            } else {
+                $variables['marketplace_signature_image'] = '';
+            }
         }
 
         // Organizer variables

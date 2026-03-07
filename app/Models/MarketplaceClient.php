@@ -56,6 +56,7 @@ class MarketplaceClient extends Model
         'smtp_settings',
         'email_settings',
         'next_contract_number',
+        'signature_image',
     ];
 
     protected $casts = [

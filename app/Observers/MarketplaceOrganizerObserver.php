@@ -94,12 +94,14 @@ class MarketplaceOrganizerObserver
                 ->where('is_active', true)
                 ->first();
 
-            // Get template variables (without event)
+            // Get template variables (without event), increment contract number
             $variables = MarketplaceTaxTemplate::getVariablesForContext(
                 $taxRegistry,
                 $marketplace,
                 $organizer,
-                null // No event for organizer contract
+                null, // No event for organizer contract
+                null, // No order
+                incrementContractNumber: true
             );
 
             // Process template
@@ -178,6 +180,7 @@ class MarketplaceOrganizerObserver
                 'document_data' => [
                     'organizer_name' => $organizer->company_name ?? $organizer->name,
                     'template_name' => $template->name,
+                    'contract_number' => $variables['marketplace_contract_number'] ?? null,
                     'variables' => $variables,
                     'generated_on_verification' => true,
                 ],
