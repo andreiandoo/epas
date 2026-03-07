@@ -21,17 +21,17 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero -->
-<section class="relative h-[300px] sm:h-[400px] lg:h-[550px] overflow-hidden" id="venueHero">
+<section class="relative h-[300px] sm:h-[400px] mobile:mt-18 lg:h-[550px] overflow-hidden mobile:h-[400px] mobile:bg-slate-800" id="venueHero">
     <!-- Skeleton -->
     <div class="absolute inset-0 bg-gray-200 skeleton-hero animate-pulse"></div>
 
     <!-- Content loaded by JS -->
-    <img id="heroImage" src="" alt="" class="absolute inset-0 hidden object-cover object-center w-full h-full">
+    <img id="heroImage" src="" alt="" class="absolute inset-0 hidden object-cover object-center w-full h-full mobile:object-contain mobile:object-top">
     <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70"></div>
 
-    <div class="relative z-10 flex flex-col justify-end h-full max-w-6xl px-6 pb-24 mx-auto">
+    <div class="relative z-10 flex flex-col justify-end h-full max-w-6xl px-6 pb-24 mx-auto mobile:items-center">
         <!-- Venue Type Badge -->
-        <div id="venueTypeBadge" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/15 backdrop-blur-md rounded-full mb-4 w-fit text-sm font-semibold text-white">
+        <div id="venueTypeBadge" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/15 backdrop-blur-md rounded-full mb-4 w-fit text-sm font-semibold text-white mobile:hidden">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 21h18"/>
                 <path d="M5 21V7l8-4v18"/>
@@ -40,7 +40,7 @@ include __DIR__ . '/includes/header.php';
             <span id="venueType">Sală de concerte</span>
         </div>
 
-        <h1 id="venueName" class="mb-3 text-5xl font-extrabold leading-tight text-white"></h1>
+        <h1 id="venueName" class="mb-3 text-5xl font-extrabold leading-tight text-white mobile:text-2xl"></h1>
 
         <div class="flex items-center gap-2 text-lg text-white/90">
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -51,7 +51,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Follow Button -->
-        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 absolute right-4 bottom-28" aria-label="Urmărește locația">
+        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="mobile:hidden flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 absolute right-4 bottom-28" aria-label="Urmărește locația">
             <svg id="follow-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
@@ -111,8 +111,17 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <!-- Follow Button -->
+    <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="hidden mobile:flex items-center justify-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 relative my-8" aria-label="Urmărește locația">
+        <svg id="follow-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span id="follow-text">Urmărește locația</span>
+    </button>
+
     <!-- Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 mobile:gap-0">
         <!-- Main Content -->
         <div>
             <!-- Upcoming Events -->
@@ -266,8 +275,8 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Contact CTA -->
-            <div class="p-6 bg-gradient-to-br from-secondary to-slate-600 rounded-2xl">
-                <h3 class="mb-4 text-base font-bold text-white">Organizezi un eveniment?</h3>
+            <div class="p-6 mb-6 bg-gradient-to-br from-secondary to-slate-600 rounded-2xl">
+                <h3 class="mb-4 text-base font-bold text-white mobile:text-center">Organizezi un eveniment?</h3>
                 <button onclick="VenuePage.openContactModal()" class="flex items-center justify-center gap-2 w-full py-3.5 bg-primary hover:bg-primary-dark rounded-xl text-white text-sm font-semibold transition-all mb-3" aria-label="Contactează locația">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>

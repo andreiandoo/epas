@@ -507,15 +507,19 @@ const BillingManager = {
             <div class="grid gap-6 sm:grid-cols-2">
                 <div>
                     <h4 class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Emitent</h4>
-                    <p class="text-sm font-semibold text-secondary">${SITE_NAME}</p>
-                    <p class="text-sm text-muted">${invoice.issuer?.address || ''}</p>
-                    <p class="text-sm text-muted">CUI: ${invoice.issuer?.cui || ''}</p>
+                    <p class="text-sm font-semibold text-secondary">${this.escapeHtml(invoice.issuer?.name || SITE_NAME)}</p>
+                    ${invoice.issuer?.cui ? `<p class="text-sm text-muted">CUI: ${this.escapeHtml(invoice.issuer.cui)}</p>` : ''}
+                    ${invoice.issuer?.reg_com ? `<p class="text-sm text-muted">Reg. Com.: ${this.escapeHtml(invoice.issuer.reg_com)}</p>` : ''}
+                    ${invoice.issuer?.address ? `<p class="text-sm text-muted">${this.escapeHtml(invoice.issuer.address)}</p>` : ''}
+                    ${invoice.issuer?.bank_name && invoice.issuer?.iban ? `<p class="text-sm text-muted">${this.escapeHtml(invoice.issuer.bank_name)}: ${this.escapeHtml(invoice.issuer.iban)}</p>` : ''}
+                    ${invoice.issuer?.email ? `<p class="text-sm text-muted">${this.escapeHtml(invoice.issuer.email)}</p>` : ''}
+                    ${invoice.issuer?.phone ? `<p class="text-sm text-muted">${this.escapeHtml(invoice.issuer.phone)}</p>` : ''}
                 </div>
                 <div>
                     <h4 class="mb-2 text-xs font-semibold tracking-wider uppercase text-muted">Client</h4>
                     <p class="text-sm font-semibold text-secondary">${this.escapeHtml(invoice.client?.name || '')}</p>
                     <p class="text-sm text-muted">${this.escapeHtml(invoice.client?.address || '')}</p>
-                    <p class="text-sm text-muted">CUI: ${invoice.client?.cui || ''}</p>
+                    ${invoice.client?.cui ? `<p class="text-sm text-muted">CUI: ${this.escapeHtml(invoice.client.cui)}</p>` : ''}
                 </div>
             </div>
 
