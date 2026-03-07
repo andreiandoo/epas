@@ -5,6 +5,8 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\OrganizerInvoiceResource\Pages;
 use App\Models\Invoice;
 use App\Models\MarketplaceOrganizer;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -24,7 +26,7 @@ class OrganizerInvoiceResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 6;
 
     public static function getEloquentQuery(): Builder
     {
@@ -97,7 +99,7 @@ class OrganizerInvoiceResource extends Resource
                             ->numeric()
                             ->required()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $vatRate = (float) ($get('vat_rate') ?? 0);
                                 $subtotal = (float) ($state ?? 0);
                                 $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
@@ -110,7 +112,7 @@ class OrganizerInvoiceResource extends Resource
                             ->numeric()
                             ->required()
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $subtotal = (float) ($get('subtotal') ?? 0);
                                 $vatRate = (float) ($state ?? 0);
                                 $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
@@ -230,8 +232,8 @@ class OrganizerInvoiceResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('preview')
+                EditAction::make(),
+                Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn (Invoice $record) => "Factură #{$record->number}")
@@ -240,7 +242,8 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide'),
-            ]);
+            ])
+            ->toolbarActions([]);
     }
 
     /**
