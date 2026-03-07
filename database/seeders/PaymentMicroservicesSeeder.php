@@ -144,6 +144,74 @@ class PaymentMicroservicesSeeder extends Seeder
                 ],
             ],
             [
+                'name' => ['en' => 'PayU', 'ro' => 'PayU'],
+                'slug' => 'payment-payu',
+                'description' => [
+                    'en' => 'Accept payments via PayU. International payment gateway popular in Eastern Europe.',
+                    'ro' => 'Acceptă plăți prin PayU. Procesor de plăți internațional popular în Europa de Est.',
+                ],
+                'short_description' => [
+                    'en' => 'PayU payments',
+                    'ro' => 'Plăți prin PayU',
+                ],
+                'icon' => 'banknotes',
+                'category' => 'payment',
+                'is_active' => true,
+                'sort_order' => 6,
+                'metadata' => [
+                    'type' => 'payment_gateway',
+                    'supported_currencies' => ['RON', 'EUR', 'USD', 'PLN', 'HUF'],
+                    'settings_schema' => [
+                        ['key' => 'test_mode', 'label' => 'Enable Sandbox Mode', 'type' => 'boolean', 'default' => true, 'section' => 'mode'],
+
+                        ['key' => 'test_merchant_id', 'label' => 'Sandbox Merchant ID', 'type' => 'text', 'required' => false, 'section' => 'test'],
+                        ['key' => 'test_secret_key', 'label' => 'Sandbox Secret Key', 'type' => 'password', 'required' => false, 'section' => 'test'],
+
+                        ['key' => 'live_merchant_id', 'label' => 'Live Merchant ID', 'type' => 'text', 'required' => false, 'section' => 'live'],
+                        ['key' => 'live_secret_key', 'label' => 'Live Secret Key', 'type' => 'password', 'required' => false, 'section' => 'live'],
+                    ],
+                    'settings_sections' => [
+                        'mode' => ['label' => 'Environment', 'description' => 'Select which environment to use'],
+                        'test' => ['label' => 'Sandbox Credentials', 'description' => 'Use these credentials for testing in sandbox mode'],
+                        'live' => ['label' => 'Live/Production Credentials', 'description' => 'Use these credentials for real transactions'],
+                    ],
+                ],
+            ],
+            [
+                'name' => ['en' => 'EuPlatesc', 'ro' => 'EuPlatesc'],
+                'slug' => 'payment-euplatesc',
+                'description' => [
+                    'en' => 'Accept payments via EuPlatesc. Romanian payment processor with competitive rates.',
+                    'ro' => 'Acceptă plăți prin EuPlatesc. Procesor de plăți românesc cu rate competitive.',
+                ],
+                'short_description' => [
+                    'en' => 'EuPlatesc payments',
+                    'ro' => 'Plăți prin EuPlatesc',
+                ],
+                'icon' => 'banknotes',
+                'category' => 'payment',
+                'is_active' => true,
+                'sort_order' => 7,
+                'metadata' => [
+                    'type' => 'payment_gateway',
+                    'supported_currencies' => ['RON', 'EUR'],
+                    'settings_schema' => [
+                        ['key' => 'test_mode', 'label' => 'Enable Sandbox Mode', 'type' => 'boolean', 'default' => true, 'section' => 'mode'],
+
+                        ['key' => 'test_merchant_id', 'label' => 'Sandbox Merchant ID', 'type' => 'text', 'required' => false, 'section' => 'test'],
+                        ['key' => 'test_secret_key', 'label' => 'Sandbox Secret Key', 'type' => 'password', 'required' => false, 'section' => 'test'],
+
+                        ['key' => 'live_merchant_id', 'label' => 'Live Merchant ID', 'type' => 'text', 'required' => false, 'section' => 'live'],
+                        ['key' => 'live_secret_key', 'label' => 'Live Secret Key', 'type' => 'password', 'required' => false, 'section' => 'live'],
+                    ],
+                    'settings_sections' => [
+                        'mode' => ['label' => 'Environment', 'description' => 'Select which environment to use'],
+                        'test' => ['label' => 'Sandbox Credentials', 'description' => 'Use these credentials for testing in sandbox mode'],
+                        'live' => ['label' => 'Live/Production Credentials', 'description' => 'Use these credentials for real transactions'],
+                    ],
+                ],
+            ],
+            [
                 'name' => ['en' => 'Cash on Delivery', 'ro' => 'Plata la Livrare'],
                 'slug' => 'payment-cod',
                 'description' => [

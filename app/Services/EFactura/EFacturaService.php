@@ -3,6 +3,7 @@
 namespace App\Services\EFactura;
 
 use App\Models\AnafQueue;
+use App\Models\MarketplaceClientMicroservice;
 use App\Services\EFactura\Adapters\AnafAdapterInterface;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -39,19 +40,28 @@ class EFacturaService
 
     /**
      * Get adapter for tenant (with authentication)
+     *
+     * Selects real ANAF adapter when environment=production and credentials are available,
+     * otherwise falls back to mock adapter.
      */
-    protected function getAdapter(string $tenantId): AnafAdapterInterface
+    protected function getAdapter(string $tenantId, ?array $credentialsOverride = null): AnafAdapterInterface
     {
-        // For now, use default adapter
-        // In production, you would load tenant-specific credentials and adapter type
-        $adapter = $this->defaultAdapter ?? $this->adapters['mock'] ?? null;
+        // Load credentials
+        $credentials = $credentialsOverride ?? $this->getTenantCredentials($tenantId);
+
+        // Select adapter based on environment setting
+        $environment = $credentials['environment'] ?? 'test';
+        if ($environment === 'production' && $credentials && isset($this->adapters['anaf'])) {
+            $adapter = $this->adapters['anaf'];
+        } else {
+            $adapter = $this->adapters['mock'] ?? $this->defaultAdapter;
+        }
 
         if (!$adapter) {
             throw new \Exception('No ANAF adapter configured');
         }
 
-        // Load and decrypt tenant credentials
-        $credentials = $this->getTenantCredentials($tenantId);
+        // Authenticate with credentials
         if ($credentials) {
             $adapter->authenticate($credentials);
         }
@@ -61,9 +71,17 @@ class EFacturaService
 
     /**
      * Get tenant ANAF credentials from secure storage
+     *
+     * Supports both regular tenants (from tenant_configs) and marketplace clients
+     * (from marketplace_client_microservices.settings where tenant_id starts with "marketplace_")
      */
     protected function getTenantCredentials(string $tenantId): ?array
     {
+        // Marketplace context: tenant_id = "marketplace_{id}"
+        if (str_starts_with($tenantId, 'marketplace_')) {
+            return $this->getMarketplaceCredentials($tenantId);
+        }
+
         $config = DB::table('tenant_configs')
             ->where('tenant_id', $tenantId)
             ->where('key', 'efactura_credentials')
@@ -82,6 +100,47 @@ class EFacturaService
             ]);
             return null;
         }
+    }
+
+    /**
+     * Get eFactura credentials from marketplace_client_microservices
+     */
+    protected function getMarketplaceCredentials(string $tenantId): ?array
+    {
+        $marketplaceClientId = (int) str_replace('marketplace_', '', $tenantId);
+
+        $mcm = MarketplaceClientMicroservice::whereHas('microservice', function ($q) {
+            $q->where('slug', 'efactura-ro');
+        })
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$mcm) {
+            return null;
+        }
+
+        $settings = $mcm->settings ?? [];
+
+        // Map microservice settings to credentials format expected by adapters
+        return [
+            'environment' => $settings['environment'] ?? 'test',
+            'api_token' => $settings['anaf_api_token'] ?? null,
+            'certificate' => $settings['anaf_certificate'] ?? null,
+            'private_key' => $settings['anaf_private_key'] ?? null,
+            'cui' => $settings['anaf_cui'] ?? null,
+        ];
+    }
+
+    /**
+     * Queue a marketplace invoice for eFactura submission
+     *
+     * Convenience method that uses marketplace_ prefix for tenant_id
+     */
+    public function queueMarketplaceInvoice(int $marketplaceClientId, int $invoiceId, array $invoiceData): array
+    {
+        $tenantId = "marketplace_{$marketplaceClientId}";
+        return $this->queueInvoice($tenantId, $invoiceId, $invoiceData);
     }
 
     /**
@@ -444,9 +503,23 @@ class EFacturaService
 
     /**
      * Get signing configuration for tenant
+     *
+     * For marketplace context, signing config comes from the same microservice settings
      */
     protected function getSigningConfig(string $tenantId): array
     {
+        // Marketplace context: use credentials (certificate + private_key) as signing config
+        if (str_starts_with($tenantId, 'marketplace_')) {
+            $credentials = $this->getMarketplaceCredentials($tenantId);
+            if ($credentials) {
+                return [
+                    'certificate' => $credentials['certificate'] ?? null,
+                    'private_key' => $credentials['private_key'] ?? null,
+                ];
+            }
+            return [];
+        }
+
         $config = DB::table('tenant_configs')
             ->where('tenant_id', $tenantId)
             ->where('key', 'efactura_signing')

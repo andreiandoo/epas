@@ -37,6 +37,91 @@ class AccountingService
     }
 
     /**
+     * Get adapter by provider key (public access for test connection)
+     */
+    public function getAdapterPublic(string $provider): AccountingAdapterInterface
+    {
+        return $this->getAdapter($provider);
+    }
+
+    /**
+     * Check if a marketplace has an active accounting connector
+     */
+    public function hasMarketplaceConnector(int $marketplaceClientId): bool
+    {
+        return DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->exists();
+    }
+
+    /**
+     * Issue invoice for marketplace context
+     */
+    public function issueMarketplaceInvoice(int $marketplaceClientId, string $orderRef, array $invoiceData): array
+    {
+        $tenantId = "marketplace_{$marketplaceClientId}";
+
+        // Try marketplace-specific connector first
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+
+        if (!$connector) {
+            // Fall back to tenant_id-based lookup
+            return $this->issueInvoice($tenantId, $orderRef, $invoiceData);
+        }
+
+        $auth = json_decode(Crypt::decryptString($connector->auth), true);
+        $adapter = $this->getAdapter($connector->provider, $auth);
+
+        // Create job
+        $jobId = DB::table('acc_jobs')->insertGetId([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'tenant_id' => $tenantId,
+            'type' => 'create_invoice',
+            'payload' => json_encode($invoiceData),
+            'status' => 'processing',
+            'attempts' => 0,
+            'max_attempts' => 3,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        try {
+            $customerResult = $adapter->ensureCustomer($invoiceData['customer']);
+            $productResults = $adapter->ensureProducts($invoiceData['lines']);
+            $invoiceResult = $adapter->createInvoice($invoiceData);
+
+            DB::table('acc_jobs')->where('id', $jobId)->update([
+                'status' => 'completed',
+                'result' => json_encode($invoiceResult),
+                'completed_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return [
+                'success' => true,
+                'job_id' => $jobId,
+                'external_ref' => $invoiceResult['external_ref'],
+                'invoice_number' => $invoiceResult['invoice_number'],
+            ];
+
+        } catch (\Exception $e) {
+            DB::table('acc_jobs')->where('id', $jobId)->update([
+                'status' => 'failed',
+                'last_error' => $e->getMessage(),
+                'attempts' => DB::raw('attempts + 1'),
+                'next_retry_at' => now()->addMinutes(5),
+                'updated_at' => now(),
+            ]);
+
+            throw $e;
+        }
+    }
+
+    /**
      * Connect to accounting provider
      */
     public function connect(string $tenantId, string $provider, array $credentials, array $settings = []): array

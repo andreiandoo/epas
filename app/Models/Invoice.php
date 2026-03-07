@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Invoice extends Model
 {
@@ -58,6 +59,11 @@ class Invoice extends Model
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    public function anafQueue(): HasOne
+    {
+        return $this->hasOne(AnafQueue::class, 'invoice_id');
     }
 
     /**

@@ -6,17 +6,51 @@ use App\Models\TenantPaymentConfig;
 
 class PayUProcessor implements PaymentProcessorInterface
 {
-    protected TenantPaymentConfig $config;
+    protected ?TenantPaymentConfig $config = null;
     protected array $keys;
     protected string $baseUrl;
+    protected string $mode;
 
-    public function __construct(TenantPaymentConfig $config)
+    /**
+     * Create processor from TenantPaymentConfig or array config
+     *
+     * @param TenantPaymentConfig|null $config For tenant-based payments
+     * @param array|null $arrayConfig For marketplace-based payments
+     */
+    public function __construct(?TenantPaymentConfig $config = null, ?array $arrayConfig = null)
     {
-        $this->config = $config;
-        $this->keys = $config->getActiveKeys();
+        if ($config) {
+            $this->config = $config;
+            $this->keys = $config->getActiveKeys();
+            $this->mode = $config->mode ?? 'test';
+        } elseif ($arrayConfig) {
+            // Determine mode from test_mode flag or mode string
+            $testMode = $arrayConfig['test_mode'] ?? null;
+            if ($testMode !== null) {
+                $this->mode = filter_var($testMode, FILTER_VALIDATE_BOOLEAN) ? 'test' : 'live';
+            } else {
+                $this->mode = $arrayConfig['mode'] ?? 'test';
+            }
+
+            $isLive = ($this->mode === 'live');
+            $this->keys = [
+                'merchant_id' => $arrayConfig['payu_merchant_id']
+                    ?? ($isLive
+                        ? ($arrayConfig['live_merchant_id'] ?? $arrayConfig['test_merchant_id'] ?? null)
+                        : ($arrayConfig['test_merchant_id'] ?? $arrayConfig['live_merchant_id'] ?? null))
+                    ?? $arrayConfig['merchant_id'] ?? null,
+                'secret_key' => $arrayConfig['payu_secret_key']
+                    ?? ($isLive
+                        ? ($arrayConfig['live_secret_key'] ?? $arrayConfig['test_secret_key'] ?? null)
+                        : ($arrayConfig['test_secret_key'] ?? $arrayConfig['live_secret_key'] ?? null))
+                    ?? $arrayConfig['secret_key'] ?? null,
+            ];
+        } else {
+            throw new \Exception('Either config or arrayConfig must be provided');
+        }
 
         // Set base URL based on mode
-        $this->baseUrl = $config->mode === 'live'
+        $this->baseUrl = $this->mode === 'live'
             ? 'https://secure.payu.ro/order'
             : 'https://sandbox.payu.ro/order';
     }
@@ -192,7 +226,7 @@ class PayUProcessor implements PaymentProcessorInterface
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($requestData));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->config->mode === 'live');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->mode === 'live');
             $response = curl_exec($ch);
             curl_close($ch);
 
@@ -267,7 +301,7 @@ class PayUProcessor implements PaymentProcessorInterface
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($requestData));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->config->mode === 'live');
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $this->mode === 'live');
             $response = curl_exec($ch);
             curl_close($ch);
 

@@ -208,6 +208,26 @@ class OrganizerInvoiceResource extends Resource
                         'outstanding' => 'Neachitată',
                         default => $state,
                     }),
+
+                Tables\Columns\TextColumn::make('anafQueue.status')
+                    ->label('eFactura')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'accepted' => 'success',
+                        'submitted' => 'warning',
+                        'queued' => 'info',
+                        'rejected', 'error' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'queued' => 'În coadă',
+                        'submitted' => 'Trimisă',
+                        'accepted' => 'Acceptată',
+                        'rejected' => 'Respinsă',
+                        'error' => 'Eroare',
+                        default => '-',
+                    })
+                    ->placeholder('-'),
             ])
             ->defaultSort('issue_date', 'desc')
             ->filters([
