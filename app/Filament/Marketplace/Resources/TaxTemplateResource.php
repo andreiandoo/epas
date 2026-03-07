@@ -129,6 +129,13 @@ class TaxTemplateResource extends Resource
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                if ($state) {
+                                    $set('html_content_source', $get('html_content'));
+                                } else {
+                                    $set('html_content', $get('html_content_source'));
+                                }
+                            })
                             ->helperText('Switch to edit raw HTML code directly'),
 
                         Forms\Components\RichEditor::make('html_content')
@@ -157,13 +164,16 @@ class TaxTemplateResource extends Resource
                             ->helperText('Use the variables above in your HTML. You can also upload images using the attach button.')
                             ->visible(fn ($get) => !$get('page1_source_mode')),
 
-                        Forms\Components\Textarea::make('html_content')
+                        Forms\Components\Textarea::make('html_content_source')
                             ->label('Page 1 HTML Template (Source Code)')
                             ->required()
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->formatStateUsing(fn ($record) => $record?->html_content)
+                            ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content', $state))
+                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
                     ]),
 
@@ -180,6 +190,13 @@ class TaxTemplateResource extends Resource
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
+                                if ($state) {
+                                    $set('html_content_page_2_source', $get('html_content_page_2'));
+                                } else {
+                                    $set('html_content_page_2', $get('html_content_page_2_source'));
+                                }
+                            })
                             ->helperText('Switch to edit raw HTML code directly'),
 
                         Forms\Components\RichEditor::make('html_content_page_2')
@@ -207,12 +224,15 @@ class TaxTemplateResource extends Resource
                             ->helperText('Leave empty if you only need one page. You can also upload images using the attach button.')
                             ->visible(fn ($get) => !$get('page2_source_mode')),
 
-                        Forms\Components\Textarea::make('html_content_page_2')
+                        Forms\Components\Textarea::make('html_content_page_2_source')
                             ->label('Page 2 HTML Template (Source Code)')
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
+                            ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content_page_2', $state))
+                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),
                     ])
                     ->collapsible()
