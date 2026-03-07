@@ -72,6 +72,12 @@ class Settings extends Page
                 'secondary_color' => $settings['theme']['secondary_color'] ?? '#1E40AF',
                 'site_template' => $settings['site_template'] ?? 'default',
 
+                // Document Series
+                'order_prefix' => $settings['order_prefix'] ?? 'CMD',
+                'order_next_number' => $settings['order_next_number'] ?? 1,
+                'invoice_prefix' => $settings['invoice_prefix'] ?? 'FACT',
+                'invoice_next_number' => $settings['invoice_next_number'] ?? 1,
+
                 // Legal Pages
                 'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
                 'terms_content' => $settings['legal']['terms'] ?? '',
@@ -301,6 +307,34 @@ class Settings extends Page
                                             ])
                                             ->default('default'),
                                     ])->columns(3),
+
+                                SC\Section::make('Serii documente')
+                                    ->description('Configurează prefixele și numerotarea pentru comenzi și facturi')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('order_prefix')
+                                            ->label('Prefix serie comenzi')
+                                            ->default('CMD')
+                                            ->maxLength(10)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: CMD → CMD0001, CMD0002...'),
+
+                                        Forms\Components\TextInput::make('order_next_number')
+                                            ->label('Număr curent comenzi')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1),
+
+                                        Forms\Components\TextInput::make('invoice_prefix')
+                                            ->label('Prefix serie facturi')
+                                            ->default('FACT')
+                                            ->maxLength(10)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: FACT → FACT0001, FACT0002...'),
+
+                                        Forms\Components\TextInput::make('invoice_next_number')
+                                            ->label('Număr curent facturi')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1),
+                                    ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Legal Pages')
@@ -571,6 +605,13 @@ class Settings extends Page
             'secondary_color' => $data['secondary_color'],
         ];
         $settings['site_template'] = $data['site_template'];
+
+        // Document Series
+        $settings['order_prefix'] = $data['order_prefix'] ?? 'CMD';
+        $settings['order_next_number'] = (int) ($data['order_next_number'] ?? 1);
+        $settings['invoice_prefix'] = $data['invoice_prefix'] ?? 'FACT';
+        $settings['invoice_next_number'] = (int) ($data['invoice_next_number'] ?? 1);
+
         $settings['legal'] = [
             'terms_title' => $data['terms_title'] ?? 'Terms & Conditions',
             'terms' => $data['terms_content'],

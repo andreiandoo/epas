@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Invoice;
 use App\Models\MarketplaceOrganizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -113,18 +114,46 @@ class BillingController extends BaseController
     }
 
     /**
-     * Get organizer invoices based on order history
+     * Get organizer invoices — reads from DB if available, falls back to on-the-fly generation.
      */
     protected function getOrganizerInvoices(MarketplaceOrganizer $organizer, ?string $status, int $perPage, int $page): array
     {
-        // Get completed orders grouped by month for invoices
-        $query = $organizer->orders()
+        // Try DB-persisted invoices first
+        $dbQuery = Invoice::where('marketplace_organizer_id', $organizer->id)
+            ->orderByDesc('issue_date');
+
+        if ($status && $status !== 'all') {
+            $mappedStatus = $status === 'pending' ? 'outstanding' : $status;
+            $dbQuery->where('status', $mappedStatus);
+        }
+
+        $dbCount = $dbQuery->count();
+
+        if ($dbCount > 0) {
+            $dbInvoices = $dbQuery
+                ->skip(($page - 1) * $perPage)
+                ->take($perPage)
+                ->get()
+                ->map(fn (Invoice $inv) => [
+                    'id' => $inv->id,
+                    'number' => $inv->number,
+                    'date' => $inv->issue_date?->format('Y-m-d'),
+                    'description' => $inv->description,
+                    'amount' => (float) $inv->amount,
+                    'status' => $inv->status === 'outstanding' ? 'pending' : $inv->status,
+                ])
+                ->values()
+                ->toArray();
+
+            return ['data' => $dbInvoices, 'total' => $dbCount];
+        }
+
+        // Fallback: generate from order history
+        $allOrders = $organizer->orders()
             ->where('status', 'completed')
-            ->orderByDesc('created_at');
+            ->orderByDesc('created_at')
+            ->get();
 
-        $allOrders = $query->get();
-
-        // Group orders by month to create invoice entries
         $invoices = [];
         $grouped = $allOrders->groupBy(function ($order) {
             return $order->paid_at ? $order->paid_at->format('Y-m') : $order->created_at->format('Y-m');
@@ -136,12 +165,10 @@ class BillingController extends BaseController
             $commissionRate = $organizer->getEffectiveCommissionRate();
             $commissionAmount = round($totalAmount * $commissionRate / 100, 2);
 
-            // Determine invoice status based on whether payout has been processed
             $monthDate = Carbon::parse($month . '-01');
             $isPaid = $monthDate->endOfMonth()->lt(Carbon::now()->subMonth());
             $invoiceStatus = $isPaid ? 'paid' : 'pending';
 
-            // Filter by status if requested
             if ($status && $status !== 'all' && $invoiceStatus !== $status) {
                 continue;
             }
@@ -157,13 +184,11 @@ class BillingController extends BaseController
             $invoiceId++;
         }
 
-        // Paginate manually
         $total = count($invoices);
         $offset = ($page - 1) * $perPage;
-        $paginatedInvoices = array_slice($invoices, $offset, $perPage);
 
         return [
-            'data' => $paginatedInvoices,
+            'data' => array_slice($invoices, $offset, $perPage),
             'total' => $total,
         ];
     }
@@ -194,16 +219,44 @@ class BillingController extends BaseController
     }
 
     /**
-     * Get single invoice detail
+     * Get single invoice detail — reads from DB if available, falls back to on-the-fly generation.
      */
     protected function getInvoiceDetail(MarketplaceOrganizer $organizer, int $invoiceId): ?array
     {
-        // Parse invoice ID to get month
+        $marketplace = $organizer->marketplaceClient;
+
+        // Try DB first
+        $dbInvoice = Invoice::where('marketplace_organizer_id', $organizer->id)
+            ->where('id', $invoiceId)
+            ->first();
+
+        if ($dbInvoice) {
+            $meta = $dbInvoice->meta ?? [];
+            return [
+                'id' => $dbInvoice->id,
+                'number' => $dbInvoice->number,
+                'date' => $dbInvoice->issue_date?->format('Y-m-d'),
+                'due_date' => $dbInvoice->due_date?->format('Y-m-d'),
+                'status' => $dbInvoice->status === 'outstanding' ? 'pending' : $dbInvoice->status,
+                'issuer' => $meta['issuer'] ?? $this->buildIssuerData($marketplace),
+                'client' => $meta['client'] ?? [
+                    'name' => $organizer->company_name ?? $organizer->name,
+                    'address' => $this->formatAddress($organizer),
+                    'cui' => $organizer->company_tax_id ?? '',
+                ],
+                'items' => $meta['items'] ?? [],
+                'subtotal' => (float) $dbInvoice->subtotal,
+                'vat_rate' => (float) $dbInvoice->vat_rate,
+                'vat' => (float) $dbInvoice->vat_amount,
+                'total' => (float) $dbInvoice->amount,
+            ];
+        }
+
+        // Fallback: generate from order history
         $invoices = $this->getOrganizerInvoices($organizer, null, 100, 1);
 
         foreach ($invoices['data'] as $invoice) {
             if ($invoice['id'] === $invoiceId) {
-                // Get orders for this month
                 $monthStr = substr($invoice['number'], -6);
                 $year = substr($monthStr, 0, 4);
                 $month = substr($monthStr, 4, 2);
@@ -218,7 +271,7 @@ class BillingController extends BaseController
                 $totalAmount = $orders->sum('total');
                 $commissionRate = $organizer->getEffectiveCommissionRate();
                 $commissionAmount = round($totalAmount * $commissionRate / 100, 2);
-                $vatRate = $organizer->vat_payer ? 19 : 0;
+                $vatRate = $marketplace->vat_payer ? 19 : 0;
                 $vatAmount = $vatRate > 0 ? round($commissionAmount * $vatRate / 100, 2) : 0;
 
                 return [
@@ -227,15 +280,11 @@ class BillingController extends BaseController
                     'date' => $invoice['date'],
                     'due_date' => Carbon::parse($invoice['date'])->endOfMonth()->format('Y-m-d'),
                     'status' => $invoice['status'],
-                    'issuer' => [
-                        'name' => config('app.name', 'Bilete Online'),
-                        'address' => 'Romania',
-                        'cui' => 'RO00000000',
-                    ],
+                    'issuer' => $this->buildIssuerData($marketplace),
                     'client' => [
                         'name' => $organizer->company_name ?? $organizer->name,
                         'address' => $this->formatAddress($organizer),
-                        'cui' => $organizer->cui,
+                        'cui' => $organizer->company_tax_id ?? '',
                     ],
                     'items' => [
                         [
@@ -254,6 +303,29 @@ class BillingController extends BaseController
         }
 
         return null;
+    }
+
+    /**
+     * Build issuer data from marketplace business details.
+     */
+    protected function buildIssuerData($marketplace): array
+    {
+        return [
+            'name' => $marketplace->company_name ?? $marketplace->name,
+            'cui' => $marketplace->cui ?? '',
+            'reg_com' => $marketplace->reg_com ?? '',
+            'vat_payer' => (bool) $marketplace->vat_payer,
+            'bank_name' => $marketplace->bank_name ?? '',
+            'iban' => $marketplace->bank_account ?? '',
+            'address' => implode(', ', array_filter([
+                $marketplace->address,
+                $marketplace->city,
+                $marketplace->state,
+            ])),
+            'email' => $marketplace->contact_email ?? '',
+            'phone' => $marketplace->contact_phone ?? '',
+            'website' => $marketplace->website ?? '',
+        ];
     }
 
     /**

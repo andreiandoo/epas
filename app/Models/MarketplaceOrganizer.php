@@ -166,6 +166,11 @@ class MarketplaceOrganizer extends Authenticatable
         return $this->hasMany(MarketplaceOrganizerPromoCode::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class, 'marketplace_organizer_id');
+    }
+
     public function bankAccounts(): HasMany
     {
         return $this->hasMany(MarketplaceOrganizerBankAccount::class);

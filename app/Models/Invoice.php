@@ -10,6 +10,7 @@ class Invoice extends Model
     protected $fillable = [
         'tenant_id',
         'marketplace_client_id',
+        'marketplace_organizer_id',
         'number',
         'type',
         'description',
@@ -52,6 +53,11 @@ class Invoice extends Model
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
     }
 
     /**
