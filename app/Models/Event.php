@@ -40,8 +40,10 @@ class Event extends Model
         'is_template',
         'occurrence_number',
 
-        // Tour
+        // Tour & Theater
         'tour_id',
+        'season_id',
+        'repertoire_id',
 
         // flags
         'is_sold_out', 'is_cancelled', 'cancel_reason',
@@ -166,6 +168,36 @@ class Event extends Model
     public function tour(): BelongsTo
     {
         return $this->belongsTo(Tour::class);
+    }
+
+    /* Season & Repertoire (Theater) */
+    public function season(): BelongsTo
+    {
+        return $this->belongsTo(Season::class);
+    }
+
+    public function repertoire(): BelongsTo
+    {
+        return $this->belongsTo(Repertoire::class);
+    }
+
+    /**
+     * Tenant artists performing in this event (cast/distribution).
+     */
+    public function tenantArtists(): BelongsToMany
+    {
+        return $this->belongsToMany(TenantArtist::class, 'event_tenant_artist')
+            ->withPivot(['role_in_event', 'sort_order'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
+
+    /**
+     * Performances (multiple representations of the same event).
+     */
+    public function performances(): HasMany
+    {
+        return $this->hasMany(Performance::class)->orderBy('starts_at');
     }
 
     /* Parent/Child Event Relations */

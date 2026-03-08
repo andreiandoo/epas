@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\TenantType;
+use App\Enums\TheaterSubtype;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,7 +19,10 @@ class Tenant extends Model
         'domain',
         'status',
         'plan',
+        'size',
         'type',
+        'theater_subtype',
+        'type_settings',
         'due_at',
         'commission_mode',
         'commission_rate',
@@ -77,6 +82,9 @@ class Tenant extends Model
     ];
 
     protected $casts = [
+        'type' => TenantType::class,
+        'theater_subtype' => TheaterSubtype::class,
+        'type_settings' => 'array',
         'settings' => 'array',
         'payment_credentials' => 'array',
         'features' => 'array',
@@ -449,5 +457,100 @@ class Tenant extends Model
             ->first();
 
         return $microservice?->pivot?->configuration;
+    }
+
+    // ──────────────────────────────────────────────
+    // Tenant Type helpers
+    // ──────────────────────────────────────────────
+
+    public function isTenantArtist(): bool
+    {
+        return $this->type === TenantType::TenantArtist;
+    }
+
+    public function isAgency(): bool
+    {
+        return $this->type === TenantType::Agency;
+    }
+
+    public function isTheater(): bool
+    {
+        return $this->type === TenantType::Theater;
+    }
+
+    public function isOpera(): bool
+    {
+        return $this->isTheater() && $this->theater_subtype === TheaterSubtype::Opera;
+    }
+
+    public function isPhilharmonic(): bool
+    {
+        return $this->isTheater() && $this->theater_subtype === TheaterSubtype::Philharmonic;
+    }
+
+    // ──────────────────────────────────────────────
+    // Theater relations
+    // ──────────────────────────────────────────────
+
+    public function seasons(): HasMany
+    {
+        return $this->hasMany(Season::class);
+    }
+
+    public function activeSeasons(): HasMany
+    {
+        return $this->seasons()->where('status', 'active');
+    }
+
+    public function repertoire(): HasMany
+    {
+        return $this->hasMany(Repertoire::class);
+    }
+
+    public function seasonSubscriptions(): HasMany
+    {
+        return $this->hasMany(SeasonSubscription::class);
+    }
+
+    // ──────────────────────────────────────────────
+    // Tenant artist relations (theater resident artists + tenant-artist profile)
+    // ──────────────────────────────────────────────
+
+    public function tenantArtists(): HasMany
+    {
+        return $this->hasMany(TenantArtist::class);
+    }
+
+    public function residentArtists(): HasMany
+    {
+        return $this->tenantArtists()->where('is_resident', true)->where('status', 'active');
+    }
+
+    // ──────────────────────────────────────────────
+    // Agency relations
+    // ──────────────────────────────────────────────
+
+    public function agencyArtists(): HasMany
+    {
+        return $this->hasMany(AgencyArtist::class);
+    }
+
+    public function activeAgencyArtists(): HasMany
+    {
+        return $this->agencyArtists()->where('status', 'active');
+    }
+
+    // ──────────────────────────────────────────────
+    // Merch relations (tenant-artist)
+    // ──────────────────────────────────────────────
+
+    public function merchProducts(): HasMany
+    {
+        return $this->hasMany(MerchProduct::class);
+    }
+
+    public function activeMerchProducts(): HasMany
+    {
+        return $this->merchProducts()->where('is_active', true);
     }
 }
