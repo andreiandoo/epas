@@ -541,6 +541,48 @@ class Tenant extends Model
         return $this->hasMany(FlexPass::class);
     }
 
+    public function festivalPassPurchases(): HasMany
+    {
+        return $this->hasMany(FestivalPassPurchase::class);
+    }
+
+    public function festivalAddonPurchases(): HasMany
+    {
+        return $this->hasMany(FestivalAddonPurchase::class);
+    }
+
+    public function wristbands(): HasMany
+    {
+        return $this->hasMany(Wristband::class);
+    }
+
+    public function festivalSponsors(): HasMany
+    {
+        return $this->hasMany(FestivalSponsor::class);
+    }
+
+    public function waitlists(): HasMany
+    {
+        return $this->hasMany(Waitlist::class);
+    }
+
+    public function festivalMaps(): HasMany
+    {
+        return $this->hasMany(FestivalMap::class);
+    }
+
+    public function festivalAlerts(): HasMany
+    {
+        return $this->hasMany(FestivalAlert::class);
+    }
+
+    public function activeFestivalAlerts(): HasMany
+    {
+        return $this->festivalAlerts()
+            ->where('status', 'active')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()));
+    }
+
     // ──────────────────────────────────────────────
     // Theater relations
     // ──────────────────────────────────────────────
