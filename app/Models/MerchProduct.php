@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MerchProduct extends Model
@@ -61,6 +62,17 @@ class MerchProduct extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(MerchOrderItem::class);
+    }
+
+    /**
+     * Events this product is linked to (event-specific merch).
+     */
+    public function events(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'merch_product_event')
+            ->withPivot(['price_override_cents', 'stock_override', 'is_bundle_only', 'sort_order'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
     }
 
     /**

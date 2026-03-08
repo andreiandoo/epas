@@ -193,6 +193,17 @@ class Event extends Model
     }
 
     /**
+     * Merch products linked to this event.
+     */
+    public function merchProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(MerchProduct::class, 'merch_product_event')
+            ->withPivot(['price_override_cents', 'stock_override', 'is_bundle_only', 'sort_order'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
+
+    /**
      * Performances (multiple representations of the same event).
      */
     public function performances(): HasMany

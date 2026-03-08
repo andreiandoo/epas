@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Repertoire extends Model
@@ -65,6 +66,25 @@ class Repertoire extends Model
     public function events(): HasMany
     {
         return $this->hasMany(Event::class, 'repertoire_id');
+    }
+
+    /**
+     * Permanent cast / distribution for this repertoire piece.
+     */
+    public function cast(): BelongsToMany
+    {
+        return $this->belongsToMany(TenantArtist::class, 'repertoire_tenant_artist')
+            ->withPivot(['role_name', 'role_type', 'sort_order'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
+    }
+
+    /**
+     * Get lead cast members.
+     */
+    public function leadCast(): BelongsToMany
+    {
+        return $this->cast()->wherePivot('role_type', 'lead');
     }
 
     /**

@@ -63,6 +63,16 @@ class TenantArtist extends Model
     }
 
     /**
+     * Repertoire pieces this artist performs in (permanent cast).
+     */
+    public function repertoire(): BelongsToMany
+    {
+        return $this->belongsToMany(Repertoire::class, 'repertoire_tenant_artist')
+            ->withPivot(['role_name', 'role_type', 'sort_order'])
+            ->withTimestamps();
+    }
+
+    /**
      * Check if the artist's contract is currently active.
      */
     public function hasActiveContract(): bool

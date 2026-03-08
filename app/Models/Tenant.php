@@ -23,6 +23,8 @@ class Tenant extends Model
         'type',
         'theater_subtype',
         'type_settings',
+        'donations_enabled',
+        'donation_settings',
         'due_at',
         'commission_mode',
         'commission_rate',
@@ -85,6 +87,8 @@ class Tenant extends Model
         'type' => TenantType::class,
         'theater_subtype' => TheaterSubtype::class,
         'type_settings' => 'array',
+        'donations_enabled' => 'boolean',
+        'donation_settings' => 'array',
         'settings' => 'array',
         'payment_credentials' => 'array',
         'features' => 'array',
@@ -552,5 +556,40 @@ class Tenant extends Model
     public function activeMerchProducts(): HasMany
     {
         return $this->merchProducts()->where('is_active', true);
+    }
+
+    // ──────────────────────────────────────────────
+    // Donation helpers
+    // ──────────────────────────────────────────────
+
+    /**
+     * Check if donations are enabled and configured.
+     */
+    public function hasDonationsEnabled(): bool
+    {
+        return $this->donations_enabled && !empty($this->donation_settings);
+    }
+
+    /**
+     * Get donation config for checkout API.
+     */
+    public function getDonationConfig(): ?array
+    {
+        if (!$this->hasDonationsEnabled()) {
+            return null;
+        }
+
+        $settings = $this->donation_settings;
+
+        return [
+            'enabled' => true,
+            'suggested_amounts' => $settings['suggested_amounts'] ?? [5, 10, 20],
+            'custom_amount' => $settings['custom_amount'] ?? true,
+            'min_amount' => $settings['min_amount'] ?? 1,
+            'max_amount' => $settings['max_amount'] ?? 500,
+            'label' => $settings['label'] ?? null,
+            'description' => $settings['description'] ?? null,
+            'currency' => $this->currency ?? 'RON',
+        ];
     }
 }

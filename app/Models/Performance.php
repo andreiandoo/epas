@@ -9,14 +9,27 @@ class Performance extends Model
 {
     protected $fillable = [
         'event_id',
+        'season_id',
         'starts_at',
         'ends_at',
+        'door_time',
         'status',
+        'label',
+        'is_premiere',
+        'special_guests',
+        'notes',
+        'ticket_overrides',
+        'capacity_override',
     ];
 
     protected $casts = [
-        'starts_at' => 'datetime',
-        'ends_at'   => 'datetime',
+        'starts_at'        => 'datetime',
+        'ends_at'          => 'datetime',
+        'is_premiere'      => 'boolean',
+        'special_guests'   => 'array',
+        'notes'            => 'array',
+        'ticket_overrides' => 'array',
+        'capacity_override' => 'integer',
     ];
 
     public function event(): BelongsTo
@@ -24,12 +37,9 @@ class Performance extends Model
         return $this->belongsTo(Event::class);
     }
 
-    /**
-     * Get the tenant through the event.
-     */
-    public function tenant(): BelongsTo
+    public function season(): BelongsTo
     {
-        return $this->event->tenant();
+        return $this->belongsTo(Season::class);
     }
 
     /**
@@ -49,11 +59,27 @@ class Performance extends Model
     }
 
     /**
+     * Get effective capacity (performance override or event default).
+     */
+    public function getEffectiveCapacity(): ?int
+    {
+        return $this->capacity_override ?? $this->event?->total_capacity;
+    }
+
+    /**
      * Scope for upcoming performances.
      */
     public function scopeUpcoming($query)
     {
         return $query->where('starts_at', '>=', now())
             ->where(fn ($q) => $q->where('status', '!=', 'cancelled')->orWhereNull('status'));
+    }
+
+    /**
+     * Scope for premieres.
+     */
+    public function scopePremieres($query)
+    {
+        return $query->where('is_premiere', true);
     }
 }
