@@ -211,6 +211,22 @@ class Event extends Model
         return $this->hasMany(Performance::class)->orderBy('starts_at');
     }
 
+    /**
+     * Comp tickets for this event.
+     */
+    public function compTickets(): HasMany
+    {
+        return $this->hasMany(CompTicket::class);
+    }
+
+    /**
+     * Digital program (caiet de sală) for this event.
+     */
+    public function digitalProgram()
+    {
+        return $this->hasOne(DigitalProgram::class);
+    }
+
     /* Parent/Child Event Relations */
     public function parent(): BelongsTo
     {

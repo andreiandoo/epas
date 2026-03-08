@@ -559,6 +559,47 @@ class Tenant extends Model
     }
 
     // ──────────────────────────────────────────────
+    // Comp tickets (courtesy / protocol)
+    // ──────────────────────────────────────────────
+
+    public function compTickets(): HasMany
+    {
+        return $this->hasMany(CompTicket::class);
+    }
+
+    // ──────────────────────────────────────────────
+    // Digital programs (caiet de sală)
+    // ──────────────────────────────────────────────
+
+    public function digitalPrograms(): HasMany
+    {
+        return $this->hasMany(DigitalProgram::class);
+    }
+
+    // ──────────────────────────────────────────────
+    // Booking requests (agency workflow)
+    // ──────────────────────────────────────────────
+
+    public function bookingRequests(): HasMany
+    {
+        return $this->hasMany(BookingRequest::class);
+    }
+
+    public function pendingBookingRequests(): HasMany
+    {
+        return $this->bookingRequests()->whereIn('status', ['new', 'reviewing', 'offer_sent', 'negotiating']);
+    }
+
+    // ──────────────────────────────────────────────
+    // Artist riders
+    // ──────────────────────────────────────────────
+
+    public function artistRiders(): HasMany
+    {
+        return $this->hasMany(ArtistRider::class);
+    }
+
+    // ──────────────────────────────────────────────
     // Donation helpers
     // ──────────────────────────────────────────────
 
