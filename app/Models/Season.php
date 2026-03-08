@@ -45,6 +45,11 @@ class Season extends Model
         return $this->hasMany(Event::class);
     }
 
+    public function performances(): HasMany
+    {
+        return $this->hasMany(Performance::class)->orderBy('starts_at');
+    }
+
     public function subscriptions(): HasMany
     {
         return $this->hasMany(SeasonSubscription::class);

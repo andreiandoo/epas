@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AgencyArtist extends Model
 {
@@ -74,6 +75,22 @@ class AgencyArtist extends Model
         }
 
         return in_array(strtoupper($countryCode), array_map('strtoupper', $this->territory));
+    }
+
+    /**
+     * Booking requests for this agency-artist.
+     */
+    public function bookingRequests(): HasMany
+    {
+        return $this->hasMany(BookingRequest::class);
+    }
+
+    /**
+     * Riders (technical/hospitality) for this agency-artist.
+     */
+    public function riders(): HasMany
+    {
+        return $this->hasMany(ArtistRider::class);
     }
 
     public function scopeActive($query)

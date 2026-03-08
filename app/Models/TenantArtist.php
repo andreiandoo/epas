@@ -6,6 +6,7 @@ use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TenantArtist extends Model
 {
@@ -70,6 +71,14 @@ class TenantArtist extends Model
         return $this->belongsToMany(Repertoire::class, 'repertoire_tenant_artist')
             ->withPivot(['role_name', 'role_type', 'sort_order'])
             ->withTimestamps();
+    }
+
+    /**
+     * Riders (technical/hospitality) for this tenant artist.
+     */
+    public function riders(): HasMany
+    {
+        return $this->hasMany(ArtistRider::class);
     }
 
     /**
