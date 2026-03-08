@@ -492,6 +492,55 @@ class Tenant extends Model
         return $this->isTheater() && $this->theater_subtype === TheaterSubtype::Philharmonic;
     }
 
+    public function isFestival(): bool
+    {
+        return $this->type === TenantType::Festival;
+    }
+
+    // ──────────────────────────────────────────────
+    // Festival relations
+    // ──────────────────────────────────────────────
+
+    public function stages(): HasMany
+    {
+        return $this->hasMany(Stage::class);
+    }
+
+    public function festivalDays(): HasMany
+    {
+        return $this->hasMany(FestivalDay::class);
+    }
+
+    public function festivalLineupSlots(): HasMany
+    {
+        return $this->hasMany(FestivalLineupSlot::class);
+    }
+
+    public function festivalPasses(): HasMany
+    {
+        return $this->hasMany(FestivalPass::class);
+    }
+
+    public function festivalAddons(): HasMany
+    {
+        return $this->hasMany(FestivalAddon::class);
+    }
+
+    public function festivalBundles(): HasMany
+    {
+        return $this->hasMany(FestivalBundle::class);
+    }
+
+    public function festivalIncrementalOffers(): HasMany
+    {
+        return $this->hasMany(FestivalIncrementalOffer::class);
+    }
+
+    public function flexPasses(): HasMany
+    {
+        return $this->hasMany(FlexPass::class);
+    }
+
     // ──────────────────────────────────────────────
     // Theater relations
     // ──────────────────────────────────────────────

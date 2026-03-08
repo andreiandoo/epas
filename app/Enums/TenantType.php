@@ -7,6 +7,7 @@ enum TenantType: string
     case TenantArtist = 'tenant-artist';
     case Agency = 'agency';
     case Theater = 'theater';
+    case Festival = 'festival';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum TenantType: string
             self::TenantArtist => 'Artist / Band',
             self::Agency => 'Agency',
             self::Theater => 'Theater / Opera / Philharmonic',
+            self::Festival => 'Festival',
         };
     }
 
@@ -40,6 +42,14 @@ enum TenantType: string
                 'crm',
                 'door-sales',
                 'ticket-customizer',
+                'efactura',
+            ],
+            self::Festival => [
+                'analytics',
+                'crm',
+                'shop',
+                'door-sales',
+                'affiliate-tracking',
                 'efactura',
             ],
         };

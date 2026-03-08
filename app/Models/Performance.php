@@ -20,16 +20,34 @@ class Performance extends Model
         'notes',
         'ticket_overrides',
         'capacity_override',
+        // Accessibility
+        'has_audio_description',
+        'has_sign_language',
+        'has_closed_captions',
+        'is_sensory_friendly',
+        'has_wheelchair_access',
+        'has_hearing_loop',
+        'has_braille_program',
+        'has_tactile_tour',
+        'accessibility_notes',
     ];
 
     protected $casts = [
-        'starts_at'        => 'datetime',
-        'ends_at'          => 'datetime',
-        'is_premiere'      => 'boolean',
-        'special_guests'   => 'array',
-        'notes'            => 'array',
-        'ticket_overrides' => 'array',
-        'capacity_override' => 'integer',
+        'starts_at'             => 'datetime',
+        'ends_at'               => 'datetime',
+        'is_premiere'           => 'boolean',
+        'special_guests'        => 'array',
+        'notes'                 => 'array',
+        'ticket_overrides'      => 'array',
+        'capacity_override'     => 'integer',
+        'has_audio_description' => 'boolean',
+        'has_sign_language'     => 'boolean',
+        'has_closed_captions'   => 'boolean',
+        'is_sensory_friendly'   => 'boolean',
+        'has_wheelchair_access' => 'boolean',
+        'has_hearing_loop'      => 'boolean',
+        'has_braille_program'   => 'boolean',
+        'has_tactile_tour'      => 'boolean',
     ];
 
     public function event(): BelongsTo
@@ -81,5 +99,41 @@ class Performance extends Model
     public function scopePremieres($query)
     {
         return $query->where('is_premiere', true);
+    }
+
+    /**
+     * Scope for performances with any accessibility feature.
+     */
+    public function scopeAccessible($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('has_audio_description', true)
+              ->orWhere('has_sign_language', true)
+              ->orWhere('has_closed_captions', true)
+              ->orWhere('is_sensory_friendly', true)
+              ->orWhere('has_wheelchair_access', true)
+              ->orWhere('has_hearing_loop', true)
+              ->orWhere('has_braille_program', true)
+              ->orWhere('has_tactile_tour', true);
+        });
+    }
+
+    /**
+     * Get list of active accessibility features for display.
+     */
+    public function getAccessibilityFeaturesAttribute(): array
+    {
+        $features = [];
+
+        if ($this->has_audio_description) $features[] = 'audio_description';
+        if ($this->has_sign_language) $features[] = 'sign_language';
+        if ($this->has_closed_captions) $features[] = 'closed_captions';
+        if ($this->is_sensory_friendly) $features[] = 'sensory_friendly';
+        if ($this->has_wheelchair_access) $features[] = 'wheelchair_access';
+        if ($this->has_hearing_loop) $features[] = 'hearing_loop';
+        if ($this->has_braille_program) $features[] = 'braille_program';
+        if ($this->has_tactile_tour) $features[] = 'tactile_tour';
+
+        return $features;
     }
 }
