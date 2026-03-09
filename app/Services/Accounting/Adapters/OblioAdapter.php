@@ -222,7 +222,7 @@ class OblioAdapter implements AccountingAdapterInterface
             $isDraft = $invoice['is_draft'] ?? false;
 
             $payload = [
-                'cif' => $invoice['seller_vat'] ?? $this->cif,
+                'cif' => $this->cif ?: ($invoice['seller_vat'] ?? ''),
                 'seriesName' => $invoice['series'] ?? $this->seriesName,
                 'issueDate' => $invoice['issue_date'] ?? date('Y-m-d'),
                 'dueDate' => $invoice['due_date'] ?? date('Y-m-d', strtotime('+30 days')),
