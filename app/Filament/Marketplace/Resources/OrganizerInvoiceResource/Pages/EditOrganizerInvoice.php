@@ -148,6 +148,48 @@ class EditOrganizerInvoice extends EditRecord
                     $this->sendToAccounting($this->record);
                 }),
 
+            Actions\Action::make('viewAccountingPdf')
+                ->label('Vizualizează PDF Contabilitate')
+                ->icon('heroicon-o-document-text')
+                ->color('gray')
+                ->url(function () {
+                    $meta = $this->record->meta ?? [];
+                    return $meta['accounting']['pdf_url'] ?? null;
+                })
+                ->openUrlInNewTab()
+                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url'])),
+
+            Actions\Action::make('refreshAccountingPdf')
+                ->label('Actualizează PDF')
+                ->icon('heroicon-o-arrow-path')
+                ->color('gray')
+                ->visible(function () {
+                    $meta = $this->record->meta ?? [];
+                    // Show if sent to accounting but no PDF yet, or to refresh
+                    return !empty($meta['accounting']['external_ref']);
+                })
+                ->action(function () {
+                    $this->fetchAccountingPdf($this->record);
+                }),
+
+            Actions\Action::make('emailAccountingPdf')
+                ->label('Trimite PDF pe Email')
+                ->icon('heroicon-o-envelope')
+                ->color('info')
+                ->requiresConfirmation()
+                ->modalHeading('Trimite PDF-ul din contabilitate pe email')
+                ->modalDescription(function () {
+                    $organizer = $this->record->organizer;
+                    $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
+                    $meta = $this->record->meta ?? [];
+                    $provider = $meta['accounting']['provider'] ?? 'contabilitate';
+                    return "PDF-ul facturii #{$this->record->number} din {$provider} va fi trimis la: {$email}";
+                })
+                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url']))
+                ->action(function () {
+                    $this->sendAccountingPdfEmail($this->record);
+                }),
+
             Actions\Action::make('markPaid')
                 ->label('Marchează Achitată')
                 ->icon('heroicon-o-check-circle')
@@ -307,19 +349,156 @@ class EditOrganizerInvoice extends EditRecord
                 $meta['accounting'] = [
                     'external_ref' => $result['external_ref'],
                     'invoice_number' => $result['invoice_number'],
+                    'provider' => $connector->provider ?? 'unknown',
                     'sent_at' => now()->toIso8601String(),
                 ];
+
+                // Try to fetch PDF link immediately
+                try {
+                    $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $result['external_ref']);
+                    if (!empty($pdfResult['pdf_url'])) {
+                        $meta['accounting']['pdf_url'] = $pdfResult['pdf_url'];
+                    }
+                } catch (\Throwable $e) {
+                    // PDF might not be immediately available, that's OK
+                    \Log::info("PDF not yet available for {$result['external_ref']}: {$e->getMessage()}");
+                }
+
                 $invoice->update(['meta' => $meta]);
+
+                $msg = "Nr. extern: {$result['invoice_number']}";
+                if (!empty($meta['accounting']['pdf_url'])) {
+                    $msg .= ' — PDF disponibil.';
+                }
 
                 Notification::make()->success()
                     ->title('Factură trimisă în contabilitate')
-                    ->body("Nr. extern: {$result['invoice_number']}")
+                    ->body($msg)
                     ->send();
             }
         } catch (\Throwable $e) {
             \Log::error("Accounting submission failed: {$e->getMessage()}");
             Notification::make()->danger()
                 ->title('Eroare la trimiterea în contabilitate')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    protected function fetchAccountingPdf(Invoice $invoice): void
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
+            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            return;
+        }
+
+        $meta = $invoice->meta ?? [];
+        $externalRef = $meta['accounting']['external_ref'] ?? null;
+
+        if (!$externalRef) {
+            Notification::make()->danger()->title('Factura nu a fost trimisă în contabilitate.')->send();
+            return;
+        }
+
+        try {
+            $service = app(AccountingService::class);
+            $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $externalRef);
+
+            if (!empty($pdfResult['pdf_url'])) {
+                $meta['accounting']['pdf_url'] = $pdfResult['pdf_url'];
+                $meta['accounting']['pdf_fetched_at'] = now()->toIso8601String();
+                $invoice->update(['meta' => $meta]);
+
+                Notification::make()->success()
+                    ->title('PDF actualizat')
+                    ->body('Link-ul PDF a fost preluat cu succes.')
+                    ->send();
+            } else {
+                Notification::make()->warning()
+                    ->title('PDF indisponibil')
+                    ->body('PDF-ul nu este încă disponibil. Încercați din nou mai târziu.')
+                    ->send();
+            }
+        } catch (\Throwable $e) {
+            \Log::error("Fetch accounting PDF failed: {$e->getMessage()}");
+            Notification::make()->danger()
+                ->title('Eroare la preluarea PDF')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    protected function sendAccountingPdfEmail(Invoice $invoice): void
+    {
+        $organizer = $invoice->organizer;
+        if (!$organizer) {
+            Notification::make()->danger()->title('Organizator negăsit.')->send();
+            return;
+        }
+
+        $email = $organizer->billing_email ?? $organizer->email;
+        if (!$email) {
+            Notification::make()->danger()->title('Organizatorul nu are adresă de email.')->send();
+            return;
+        }
+
+        $meta = $invoice->meta ?? [];
+        $pdfUrl = $meta['accounting']['pdf_url'] ?? null;
+
+        if (!$pdfUrl) {
+            Notification::make()->danger()->title('PDF-ul nu este disponibil.')->send();
+            return;
+        }
+
+        $marketplace = static::getMarketplaceClient();
+        $transport = $marketplace?->getSmtpTransport();
+
+        if (!$transport) {
+            Notification::make()->danger()->title('SMTP nu este configurat.')->send();
+            return;
+        }
+
+        try {
+            $provider = ucfirst($meta['accounting']['provider'] ?? 'contabilitate');
+            $accNumber = $meta['accounting']['invoice_number'] ?? $invoice->number;
+
+            $html = <<<HTML
+            <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                <h2 style="color:#1f2937;">Factură #{$invoice->number}</h2>
+                <p>Bună ziua,</p>
+                <p>Vă transmitem factura <strong>#{$invoice->number}</strong> emisă prin {$provider} (nr. extern: {$accNumber}).</p>
+                <p>Puteți vizualiza și descărca factura accesând link-ul de mai jos:</p>
+                <p style="margin:24px 0;">
+                    <a href="{$pdfUrl}" style="background:#2563eb;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block;">
+                        Vizualizează / Descarcă PDF
+                    </a>
+                </p>
+                <p style="color:#6b7280;font-size:13px;">Dacă butonul nu funcționează, copiați acest link în browser:<br>{$pdfUrl}</p>
+            </div>
+            HTML;
+
+            $wrappedHtml = $this->wrapInEmailTemplate($html, $marketplace);
+
+            $emailMessage = (new \Symfony\Component\Mime\Email())
+                ->from(new \Symfony\Component\Mime\Address(
+                    $marketplace->getEmailFromAddress(),
+                    $marketplace->getEmailFromName()
+                ))
+                ->to($email)
+                ->subject("Factură #{$invoice->number} — PDF {$provider}")
+                ->html($wrappedHtml);
+
+            $transport->send($emailMessage);
+
+            Notification::make()->success()
+                ->title('Email trimis')
+                ->body("PDF-ul facturii a fost trimis la {$email}")
+                ->send();
+        } catch (\Throwable $e) {
+            \Log::error("Failed to send accounting PDF email: {$e->getMessage()}");
+            Notification::make()->danger()
+                ->title('Eroare la trimitere')
                 ->body($e->getMessage())
                 ->send();
         }

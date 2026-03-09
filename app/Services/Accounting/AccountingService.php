@@ -248,6 +248,28 @@ class AccountingService
     }
 
     /**
+     * Get invoice PDF for marketplace context
+     */
+    public function getMarketplaceInvoicePdf(int $marketplaceClientId, string $externalRef): array
+    {
+        $connector = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+
+        if (!$connector) {
+            // Fall back to tenant_id-based lookup
+            $tenantId = "marketplace_{$marketplaceClientId}";
+            return $this->getInvoicePdf($tenantId, $externalRef);
+        }
+
+        $auth = json_decode(Crypt::decryptString($connector->auth), true);
+        $adapter = $this->getAdapter($connector->provider, $auth);
+
+        return $adapter->getInvoicePdf($externalRef);
+    }
+
+    /**
      * Get invoice PDF
      */
     public function getInvoicePdf(string $tenantId, string $externalRef): array
