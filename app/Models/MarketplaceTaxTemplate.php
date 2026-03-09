@@ -26,6 +26,10 @@ class MarketplaceTaxTemplate extends Model
         'is_active',
     ];
 
+    protected $attributes = [
+        'html_content' => '',
+    ];
+
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
