@@ -138,140 +138,142 @@ class OrganizerInvoiceResource extends Resource
                             ->maxLength(3),
                     ])->columns(5),
 
-                // Organizer data section
-                Section::make('Date organizator (client facturat)')
+                // Organizer & items data section (single column)
+                Section::make('Date emitent / client / articole')
                     ->schema([
-                        Forms\Components\Placeholder::make('org_info')
+                        Forms\Components\Placeholder::make('invoice_details_view')
                             ->label('')
                             ->content(function ($record) {
                                 if (!$record) return '-';
                                 $org = $record->organizer;
-                                if (!$org) return 'Organizator negăsit.';
-
                                 $meta = $record->meta ?? [];
-                                $client = $meta['client'] ?? [];
                                 $issuer = $meta['issuer'] ?? [];
-
-                                $warn = fn ($val, $label) => empty($val)
-                                    ? "<span style='color:#dc2626;font-weight:600;'>⚠ {$label} LIPSEȘTE</span>"
-                                    : e($val);
-
-                                $html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;font-size:14px;">';
-
-                                // Issuer (emitent) - from invoice meta
-                                $html .= '<div style="background:#f0fdf4;padding:16px;border-radius:8px;border:1px solid #bbf7d0;">';
-                                $html .= '<h4 style="font-weight:700;color:#166534;margin:0 0 12px;font-size:13px;text-transform:uppercase;">Emitent (din factură)</h4>';
-                                $html .= '<p><strong>Nume:</strong> ' . $warn($issuer['name'] ?? '', 'Nume') . '</p>';
-                                $html .= '<p><strong>CUI:</strong> ' . $warn($issuer['cui'] ?? '', 'CUI') . '</p>';
-                                $html .= '<p><strong>Reg. Com.:</strong> ' . e($issuer['reg_com'] ?? '-') . '</p>';
-                                $html .= '<p><strong>Adresă:</strong> ' . e($issuer['address'] ?? '-') . '</p>';
-                                $html .= '<p><strong>Bancă:</strong> ' . e($issuer['bank_name'] ?? '-') . '</p>';
-                                $html .= '<p><strong>IBAN:</strong> ' . e($issuer['iban'] ?? '-') . '</p>';
-                                $html .= '<p><strong>Plătitor TVA:</strong> ' . (($issuer['vat_payer'] ?? false) ? 'Da' : 'Nu') . '</p>';
-                                $html .= '</div>';
-
-                                // Client (organizer) - from invoice meta + live organizer data
-                                $html .= '<div style="background:#eff6ff;padding:16px;border-radius:8px;border:1px solid #bfdbfe;">';
-                                $html .= '<h4 style="font-weight:700;color:#1e40af;margin:0 0 12px;font-size:13px;text-transform:uppercase;">Client (organizator)</h4>';
-                                $html .= '<p><strong>Nume:</strong> ' . $warn($client['name'] ?? '', 'Nume') . '</p>';
-                                $html .= '<p><strong>CUI (din factură):</strong> ' . $warn($client['cui'] ?? '', 'CUI') . '</p>';
-                                $html .= '<p><strong>CUI (din profil):</strong> ' . $warn($org->company_tax_id ?? '', 'CUI profil') . '</p>';
-                                $html .= '<p><strong>Reg. Com. (din factură):</strong> ' . e($client['reg_com'] ?? '-') . '</p>';
-                                $html .= '<p><strong>Reg. Com. (din profil):</strong> ' . e($org->company_registration ?? '-') . '</p>';
-                                $html .= '<p><strong>Adresă (din factură):</strong> ' . e($client['address'] ?? '-') . '</p>';
-                                $html .= '<p><strong>Adresă (din profil):</strong> ' . e(implode(', ', array_filter([
-                                    $org->company_address,
-                                    $org->company_city,
-                                    $org->company_county,
-                                ])) ?: '-') . '</p>';
-                                $html .= '<p><strong>Email:</strong> ' . e($org->billing_email ?? $org->email ?? '-') . '</p>';
-                                $html .= '</div>';
-
-                                $html .= '</div>';
-
-                                return new HtmlString($html);
-                            })
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible()
-                    ->collapsed(false),
-
-                // Invoice items section
-                Section::make('Articole factură')
-                    ->schema([
-                        Forms\Components\Placeholder::make('items_table')
-                            ->label('')
-                            ->content(function ($record) {
-                                if (!$record) return '-';
-                                $meta = $record->meta ?? [];
+                                $client = $meta['client'] ?? [];
                                 $items = $meta['items'] ?? [];
                                 $currency = $record->currency ?? 'RON';
                                 $vatRate = (float) ($record->vat_rate ?? 19);
 
+                                // Also load current marketplace data for comparison
+                                $marketplace = \App\Models\MarketplaceClient::find($record->marketplace_client_id);
+
+                                $warn = fn ($val, $label) => empty($val)
+                                    ? "<span style='color:#ef4444;font-weight:600;'>⚠ {$label} LIPSEȘTE</span>"
+                                    : e($val);
+
+                                $row = fn ($label, $value) => "<tr><td style='padding:6px 12px 6px 0;opacity:0.7;white-space:nowrap;'>{$label}</td><td style='padding:6px 0;'>{$value}</td></tr>";
+
+                                $html = '<div style="font-size:14px;line-height:1.6;">';
+
+                                // ── EMITENT ──
+                                $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Emitent (din factură)</h4>';
+                                $html .= '<table style="width:100%;">';
+                                $html .= $row('Nume', $warn($issuer['name'] ?? '', 'Nume'));
+                                $html .= $row('CUI', $warn($issuer['cui'] ?? '', 'CUI'));
+                                if ($marketplace && !empty($marketplace->cui) && empty($issuer['cui'])) {
+                                    $html .= $row('CUI (din setări)', '<span style="color:#22c55e;">' . e($marketplace->cui) . ' — va fi completat automat la trimitere</span>');
+                                }
+                                $html .= $row('Reg. Com.', e($issuer['reg_com'] ?? '-'));
+                                $html .= $row('Adresă', e($issuer['address'] ?? '-'));
+                                $html .= $row('Bancă', e($issuer['bank_name'] ?? '-'));
+                                $html .= $row('IBAN', e($issuer['iban'] ?? '-'));
+                                $html .= $row('Plătitor TVA', ($issuer['vat_payer'] ?? false) ? 'Da' : 'Nu');
+                                $html .= '</table>';
+
+                                // ── SEPARATOR ──
+                                $html .= '<hr style="border:none;border-top:1px solid currentColor;opacity:0.15;margin:20px 0;">';
+
+                                // ── CLIENT ──
+                                $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Client (organizator)</h4>';
+                                $html .= '<table style="width:100%;">';
+                                $html .= $row('Nume', $warn($client['name'] ?? '', 'Nume'));
+                                $html .= $row('CUI (factură)', $warn($client['cui'] ?? '', 'CUI'));
+                                if ($org) {
+                                    $orgCui = $org->company_tax_id ?? '';
+                                    if ($orgCui && empty($client['cui'])) {
+                                        $html .= $row('CUI (profil)', '<span style="color:#22c55e;">' . e($orgCui) . ' — va fi completat automat la trimitere</span>');
+                                    } elseif ($orgCui) {
+                                        $html .= $row('CUI (profil)', e($orgCui));
+                                    } else {
+                                        $html .= $row('CUI (profil)', $warn('', 'CUI profil'));
+                                    }
+                                    $html .= $row('Reg. Com. (factură)', e($client['reg_com'] ?? '-'));
+                                    $html .= $row('Reg. Com. (profil)', e($org->company_registration ?? '-'));
+                                    $html .= $row('Adresă (factură)', e($client['address'] ?? '-'));
+                                    $orgAddr = implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county]));
+                                    $html .= $row('Adresă (profil)', e($orgAddr ?: '-'));
+                                    $html .= $row('Email', e($org->billing_email ?? $org->email ?? '-'));
+                                } else {
+                                    $html .= $row('Organizator', '<span style="color:#ef4444;">Organizator negăsit</span>');
+                                }
+                                $html .= '</table>';
+
+                                // ── SEPARATOR ──
+                                $html .= '<hr style="border:none;border-top:1px solid currentColor;opacity:0.15;margin:20px 0;">';
+
+                                // ── ARTICOLE ──
+                                $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Articole factură</h4>';
+
                                 if (empty($items)) {
-                                    return new HtmlString('<p style="color:#6b7280;">Nu sunt articole în această factură.</p>');
-                                }
+                                    $html .= '<p style="opacity:0.5;">Nu sunt articole în această factură.</p>';
+                                } else {
+                                    $html .= '<table style="width:100%;border-collapse:collapse;">';
+                                    $html .= '<thead><tr style="border-bottom:2px solid currentColor;opacity:0.9;">';
+                                    $html .= '<th style="padding:8px 8px 8px 0;text-align:left;font-size:12px;text-transform:uppercase;opacity:0.6;">Articol</th>';
+                                    $html .= '<th style="padding:8px;text-align:center;font-size:12px;text-transform:uppercase;opacity:0.6;">Cant.</th>';
+                                    $html .= '<th style="padding:8px;text-align:right;font-size:12px;text-transform:uppercase;opacity:0.6;">Preț unitar</th>';
+                                    $html .= '<th style="padding:8px;text-align:right;font-size:12px;text-transform:uppercase;opacity:0.6;">Fără TVA</th>';
+                                    $html .= '<th style="padding:8px;text-align:right;font-size:12px;text-transform:uppercase;opacity:0.6;">TVA</th>';
+                                    $html .= '<th style="padding:8px 0 8px 8px;text-align:right;font-size:12px;text-transform:uppercase;opacity:0.6;">Total</th>';
+                                    $html .= '</tr></thead><tbody>';
 
-                                $html = '<table style="width:100%;border-collapse:collapse;font-size:14px;">';
-                                $html .= '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">';
-                                $html .= '<th style="padding:10px 8px;text-align:left;font-size:12px;text-transform:uppercase;color:#6b7280;">Articol</th>';
-                                $html .= '<th style="padding:10px 8px;text-align:center;font-size:12px;text-transform:uppercase;color:#6b7280;">Cantitate</th>';
-                                $html .= '<th style="padding:10px 8px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;">Preț unitar</th>';
-                                $html .= '<th style="padding:10px 8px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;">Valoare fără TVA</th>';
-                                $html .= '<th style="padding:10px 8px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;">TVA</th>';
-                                $html .= '<th style="padding:10px 8px;text-align:right;font-size:12px;text-transform:uppercase;color:#6b7280;">Total</th>';
-                                $html .= '</tr></thead><tbody>';
+                                    $totalNet = 0;
+                                    $totalVat = 0;
+                                    $totalGross = 0;
 
-                                $totalNet = 0;
-                                $totalVat = 0;
-                                $totalGross = 0;
+                                    foreach ($items as $item) {
+                                        $qty = (float) ($item['quantity'] ?? 1);
+                                        $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                                        $lineTotal = (float) ($item['total'] ?? ($qty * $price));
+                                        $lineVat = round($lineTotal * $vatRate / 100, 2);
+                                        $lineGross = $lineTotal + $lineVat;
 
-                                foreach ($items as $item) {
-                                    $qty = (float) ($item['quantity'] ?? 1);
-                                    $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                                    $lineTotal = (float) ($item['total'] ?? ($qty * $price));
-                                    $lineVat = round($lineTotal * $vatRate / 100, 2);
-                                    $lineGross = $lineTotal + $lineVat;
+                                        $totalNet += $lineTotal;
+                                        $totalVat += $lineVat;
+                                        $totalGross += $lineGross;
 
-                                    $totalNet += $lineTotal;
-                                    $totalVat += $lineVat;
-                                    $totalGross += $lineGross;
+                                        $html .= '<tr style="border-bottom:1px solid currentColor;border-bottom-color:inherit;opacity:0.9;">';
+                                        $html .= '<td style="padding:8px 8px 8px 0;border-bottom:1px solid rgba(128,128,128,0.2);">' . e($item['description'] ?? '-') . '</td>';
+                                        $html .= '<td style="padding:8px;text-align:center;border-bottom:1px solid rgba(128,128,128,0.2);">' . $qty . '</td>';
+                                        $html .= '<td style="padding:8px;text-align:right;border-bottom:1px solid rgba(128,128,128,0.2);">' . number_format($price, 2) . ' ' . $currency . '</td>';
+                                        $html .= '<td style="padding:8px;text-align:right;border-bottom:1px solid rgba(128,128,128,0.2);">' . number_format($lineTotal, 2) . ' ' . $currency . '</td>';
+                                        $html .= '<td style="padding:8px;text-align:right;border-bottom:1px solid rgba(128,128,128,0.2);">' . number_format($lineVat, 2) . ' ' . $currency . '</td>';
+                                        $html .= '<td style="padding:8px 0 8px 8px;text-align:right;font-weight:600;border-bottom:1px solid rgba(128,128,128,0.2);">' . number_format($lineGross, 2) . ' ' . $currency . '</td>';
+                                        $html .= '</tr>';
+                                    }
 
-                                    $html .= '<tr style="border-bottom:1px solid #e5e7eb;">';
-                                    $html .= '<td style="padding:10px 8px;">' . e($item['description'] ?? '-') . '</td>';
-                                    $html .= '<td style="padding:10px 8px;text-align:center;">' . $qty . '</td>';
-                                    $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($price, 2) . ' ' . $currency . '</td>';
-                                    $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($lineTotal, 2) . ' ' . $currency . '</td>';
-                                    $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($lineVat, 2) . ' ' . $currency . '</td>';
-                                    $html .= '<td style="padding:10px 8px;text-align:right;font-weight:600;">' . number_format($lineGross, 2) . ' ' . $currency . '</td>';
+                                    // Totals
+                                    $html .= '<tr style="font-weight:700;border-top:2px solid rgba(128,128,128,0.3);">';
+                                    $html .= '<td style="padding:10px 8px 10px 0;" colspan="3">TOTAL</td>';
+                                    $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($totalNet, 2) . ' ' . $currency . '</td>';
+                                    $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($totalVat, 2) . ' ' . $currency . '</td>';
+                                    $html .= '<td style="padding:10px 0 10px 8px;text-align:right;">' . number_format($totalGross, 2) . ' ' . $currency . '</td>';
                                     $html .= '</tr>';
+                                    $html .= '</tbody></table>';
+
+                                    // Check totals match
+                                    $invoiceSubtotal = (float) $record->subtotal;
+                                    $invoiceTotal = (float) $record->amount;
+                                    if (abs($totalNet - $invoiceSubtotal) > 0.01 || abs($totalGross - $invoiceTotal) > 0.01) {
+                                        $html .= '<p style="color:#ef4444;font-size:13px;margin-top:8px;">⚠ Totalurile articolelor nu corespund cu totalurile facturii (subtotal: ' . number_format($invoiceSubtotal, 2) . ', total: ' . number_format($invoiceTotal, 2) . ')</p>';
+                                    }
                                 }
 
-                                // Totals row
-                                $html .= '<tr style="background:#f9fafb;font-weight:700;border-top:2px solid #d1d5db;">';
-                                $html .= '<td style="padding:10px 8px;" colspan="3">TOTAL</td>';
-                                $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($totalNet, 2) . ' ' . $currency . '</td>';
-                                $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($totalVat, 2) . ' ' . $currency . '</td>';
-                                $html .= '<td style="padding:10px 8px;text-align:right;">' . number_format($totalGross, 2) . ' ' . $currency . '</td>';
-                                $html .= '</tr>';
-
-                                $html .= '</tbody></table>';
-
-                                // Compare with invoice totals
-                                $invoiceSubtotal = (float) $record->subtotal;
-                                $invoiceVat = (float) $record->vat_amount;
-                                $invoiceTotal = (float) $record->amount;
-
-                                if (abs($totalNet - $invoiceSubtotal) > 0.01 || abs($totalGross - $invoiceTotal) > 0.01) {
-                                    $html .= '<p style="color:#dc2626;font-size:13px;margin-top:8px;">⚠ Totalurile articolelor nu corespund cu totalurile facturii (subtotal factură: ' . number_format($invoiceSubtotal, 2) . ', total factură: ' . number_format($invoiceTotal, 2) . ')</p>';
-                                }
-
+                                $html .= '</div>';
                                 return new HtmlString($html);
                             })
                             ->columnSpanFull(),
                     ])
-                    ->collapsible()
-                    ->collapsed(false),
+                    ->collapsible(),
             ]);
     }
 

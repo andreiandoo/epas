@@ -287,39 +287,84 @@ class EditOrganizerInvoice extends EditRecord
         $issuer = $meta['issuer'] ?? [];
         $client = $meta['client'] ?? [];
         $items = $meta['items'] ?? [];
+        $metaUpdated = false;
+
+        // Auto-fill issuer data from marketplace settings if missing
+        if (empty($issuer['cui']) && !empty($marketplace->cui)) {
+            $issuer['cui'] = $marketplace->cui;
+            $meta['issuer']['cui'] = $marketplace->cui;
+            $metaUpdated = true;
+        }
+        if (empty($issuer['name']) && ($marketplace->company_name ?? $marketplace->name)) {
+            $issuer['name'] = $marketplace->company_name ?? $marketplace->name;
+            $meta['issuer']['name'] = $issuer['name'];
+            $metaUpdated = true;
+        }
+        if (empty($issuer['reg_com']) && !empty($marketplace->reg_com)) {
+            $issuer['reg_com'] = $marketplace->reg_com;
+            $meta['issuer']['reg_com'] = $marketplace->reg_com;
+            $metaUpdated = true;
+        }
+        if (empty($issuer['address'])) {
+            $addr = implode(', ', array_filter([$marketplace->address, $marketplace->city, $marketplace->state]));
+            if ($addr) {
+                $issuer['address'] = $addr;
+                $meta['issuer']['address'] = $addr;
+                $metaUpdated = true;
+            }
+        }
+        if (empty($issuer['bank_name']) && !empty($marketplace->bank_name)) {
+            $issuer['bank_name'] = $marketplace->bank_name;
+            $meta['issuer']['bank_name'] = $marketplace->bank_name;
+            $metaUpdated = true;
+        }
+        if (empty($issuer['iban']) && !empty($marketplace->bank_account)) {
+            $issuer['iban'] = $marketplace->bank_account;
+            $meta['issuer']['iban'] = $marketplace->bank_account;
+            $metaUpdated = true;
+        }
+        if (!isset($issuer['vat_payer']) && isset($marketplace->vat_payer)) {
+            $issuer['vat_payer'] = (bool) $marketplace->vat_payer;
+            $meta['issuer']['vat_payer'] = (bool) $marketplace->vat_payer;
+            $metaUpdated = true;
+        }
+
+        // Auto-fill client data from organizer profile if missing
+        $org = $invoice->organizer;
+        if ($org) {
+            if (empty($client['cui']) && !empty($org->company_tax_id)) {
+                $client['cui'] = $org->company_tax_id;
+                $meta['client']['cui'] = $org->company_tax_id;
+                $metaUpdated = true;
+            }
+            if (empty($client['name']) && !empty($org->company_name)) {
+                $client['name'] = $org->company_name ?? $org->name;
+                $meta['client']['name'] = $client['name'];
+                $metaUpdated = true;
+            }
+            if (empty($client['reg_com']) && !empty($org->company_registration)) {
+                $client['reg_com'] = $org->company_registration;
+                $meta['client']['reg_com'] = $org->company_registration;
+                $metaUpdated = true;
+            }
+            if (empty($client['address'])) {
+                $addr = implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county]));
+                if ($addr) {
+                    $client['address'] = $addr;
+                    $meta['client']['address'] = $addr;
+                    $metaUpdated = true;
+                }
+            }
+        }
+
+        if ($metaUpdated) {
+            $invoice->update(['meta' => $meta]);
+        }
 
         // Validate required data before sending
         $errors = [];
         if (empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
-        if (empty($client['cui'])) {
-            // Try to get from organizer profile
-            $org = $invoice->organizer;
-            if ($org && !empty($org->company_tax_id)) {
-                $client['cui'] = $org->company_tax_id;
-                // Also update the meta for future use
-                $meta['client']['cui'] = $org->company_tax_id;
-                if (empty($client['reg_com']) && !empty($org->company_registration)) {
-                    $client['reg_com'] = $org->company_registration;
-                    $meta['client']['reg_com'] = $org->company_registration;
-                }
-                if (empty($client['address'])) {
-                    $addr = implode(', ', array_filter([
-                        $org->company_address, $org->company_city, $org->company_county,
-                    ]));
-                    if ($addr) {
-                        $client['address'] = $addr;
-                        $meta['client']['address'] = $addr;
-                    }
-                }
-                if (empty($client['name']) && !empty($org->company_name)) {
-                    $client['name'] = $org->company_name;
-                    $meta['client']['name'] = $org->company_name;
-                }
-                $invoice->update(['meta' => $meta]);
-            } else {
-                $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
-            }
-        }
+        if (empty($client['cui'])) $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
         if (empty($items)) $errors[] = 'Factura nu conține articole.';
 
         if (!empty($errors)) {
