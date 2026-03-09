@@ -13,6 +13,11 @@ class EditFestivalEdition extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('import_external_tickets')
+                ->label('Import Bilete Externe')
+                ->icon('heroicon-o-arrow-up-tray')
+                ->color('info')
+                ->url(fn () => FestivalEditionResource::getUrl('external-tickets', ['record' => $this->record])),
             Actions\DeleteAction::make(),
         ];
     }

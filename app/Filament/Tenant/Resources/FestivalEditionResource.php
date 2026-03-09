@@ -83,6 +83,14 @@ class FestivalEditionResource extends Resource
                                 'USD' => 'USD',
                             ])
                             ->default('RON'),
+                        Forms\Components\Select::make('cashless_mode')
+                            ->label('Mod cashless')
+                            ->options([
+                                'nfc'    => 'NFC (Bratara cu cip)',
+                                'qr'     => 'QR Code',
+                                'hybrid' => 'Hybrid (NFC + QR)',
+                            ])
+                            ->default('nfc'),
                     ])->columns(2),
             ]);
     }
@@ -142,9 +150,10 @@ class FestivalEditionResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListFestivalEditions::route('/'),
-            'create' => Pages\CreateFestivalEdition::route('/create'),
-            'edit'   => Pages\EditFestivalEdition::route('/{record}/edit'),
+            'index'            => Pages\ListFestivalEditions::route('/'),
+            'create'           => Pages\CreateFestivalEdition::route('/create'),
+            'edit'             => Pages\EditFestivalEdition::route('/{record}/edit'),
+            'external-tickets' => Pages\ImportFestivalExternalTickets::route('/{record}/external-tickets'),
         ];
     }
 }

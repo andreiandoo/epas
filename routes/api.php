@@ -2788,4 +2788,18 @@ Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(f
     // NFC offline sync
     Route::post('/wristbands/sync-offline', [App\Http\Controllers\Api\Festival\WristbandController::class, 'syncOfflineTransactions'])
         ->name('api.festival.wristbands.sync-offline');
+
+    // Check-in (internal + external tickets)
+    Route::post('/check-in', [App\Http\Controllers\Api\Festival\CheckInController::class, 'checkInByCode'])
+        ->name('api.festival.check-in');
+    Route::post('/editions/{edition}/check-in', [App\Http\Controllers\Api\Festival\CheckInController::class, 'checkIn'])
+        ->name('api.festival.editions.check-in');
+    Route::delete('/editions/{edition}/check-in/{barcode}', [App\Http\Controllers\Api\Festival\CheckInController::class, 'undoCheckIn'])
+        ->name('api.festival.editions.check-in.undo');
+
+    // External ticket import & listing (API)
+    Route::post('/editions/{edition}/external-tickets', [App\Http\Controllers\Api\Festival\CheckInController::class, 'importExternal'])
+        ->name('api.festival.editions.external-tickets.import');
+    Route::get('/editions/{edition}/external-tickets', [App\Http\Controllers\Api\Festival\CheckInController::class, 'listExternal'])
+        ->name('api.festival.editions.external-tickets.list');
 });
