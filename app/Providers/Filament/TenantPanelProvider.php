@@ -68,6 +68,7 @@ class TenantPanelProvider extends PanelProvider
             // Note: Groups cannot have icons if their items also have icons (Filament 4 constraint)
             ->navigationGroups([
                 NavigationGroup::make('Sales'),
+                NavigationGroup::make('Festival'),
                 NavigationGroup::make('Services'),
                 NavigationGroup::make('Website'),
                 NavigationGroup::make('Settings')
