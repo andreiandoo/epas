@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Pages;
 
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\MarketplaceClient;
 use App\Services\Accounting\AccountingService;
 use BackedEnum;
@@ -11,13 +12,13 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
 class AccountingConfig extends Page implements HasForms
 {
     use InteractsWithForms;
+    use HasMarketplaceContext;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Contabilitate';
@@ -47,10 +48,16 @@ class AccountingConfig extends Page implements HasForms
     public ?string $keez_client_eid = '';
     public ?string $keez_environment = 'staging';
 
+    // Oblio fields
+    public ?string $oblio_client_id = '';
+    public ?string $oblio_client_secret = '';
+    public ?string $oblio_cif = '';
+    public ?string $oblio_series_name = 'FACT';
+    public bool $oblio_use_draft = true;
+
     public function mount(): void
     {
-        $admin = Auth::guard('marketplace_admin')->user();
-        $this->marketplace = $admin?->marketplaceClient;
+        $this->marketplace = static::getMarketplaceClient();
 
         if (!$this->marketplace) {
             abort(404);
@@ -81,6 +88,7 @@ class AccountingConfig extends Page implements HasForms
                 'smartbill' => $this->loadSmartBillConfig($auth),
                 'fgo' => $this->loadFgoConfig($auth),
                 'keez' => $this->loadKeezConfig($auth),
+                'oblio' => $this->loadOblioConfig($auth),
                 default => null,
             };
         } catch (\Exception $e) {
@@ -111,6 +119,15 @@ class AccountingConfig extends Page implements HasForms
         $this->keez_environment = $auth['environment'] ?? 'staging';
     }
 
+    protected function loadOblioConfig(array $auth): void
+    {
+        $this->oblio_client_id = $auth['client_id'] ?? '';
+        $this->oblio_client_secret = $auth['client_secret'] ?? '';
+        $this->oblio_cif = $auth['cif'] ?? '';
+        $this->oblio_series_name = $auth['series_name'] ?? 'FACT';
+        $this->oblio_use_draft = $auth['use_draft'] ?? true;
+    }
+
     public function form(Form $form): Form
     {
         return $form
@@ -118,12 +135,44 @@ class AccountingConfig extends Page implements HasForms
                 Forms\Components\Select::make('provider')
                     ->label('Provider contabilitate')
                     ->options([
+                        'oblio' => 'Oblio.eu',
                         'smartbill' => 'SmartBill',
                         'fgo' => 'FGO',
                         'keez' => 'Keez',
                     ])
                     ->live()
                     ->required(),
+
+                // Oblio fields
+                Forms\Components\Section::make('Oblio.eu')
+                    ->description('Conectare la Oblio.eu pentru facturare automată. Nu există sandbox — folosiți opțiunea Draft pentru teste.')
+                    ->schema([
+                        Forms\Components\TextInput::make('oblio_client_id')
+                            ->label('Email (Client ID)')
+                            ->email()
+                            ->required()
+                            ->helperText('Email-ul contului Oblio.eu'),
+                        Forms\Components\TextInput::make('oblio_client_secret')
+                            ->label('API Token (Client Secret)')
+                            ->password()
+                            ->required()
+                            ->helperText('Token-ul API din setările Oblio.eu'),
+                        Forms\Components\TextInput::make('oblio_cif')
+                            ->label('CIF Companie')
+                            ->required()
+                            ->helperText('CUI/CIF-ul companiei pentru care se emit facturi'),
+                        Forms\Components\TextInput::make('oblio_series_name')
+                            ->label('Serie Facturi')
+                            ->default('FACT')
+                            ->required()
+                            ->helperText('Seria de facturare configurată în Oblio'),
+                        Forms\Components\Toggle::make('oblio_use_draft')
+                            ->label('Trimite ca Draft')
+                            ->helperText('Facturile vor fi create ca draft (ciornă) — util pentru testare. Dezactivați pentru producție.')
+                            ->default(true),
+                    ])
+                    ->visible(fn () => $this->provider === 'oblio')
+                    ->columns(2),
 
                 // SmartBill fields
                 Forms\Components\Section::make('SmartBill')
@@ -287,6 +336,13 @@ class AccountingConfig extends Page implements HasForms
     protected function getCredentials(): array
     {
         return match ($this->provider) {
+            'oblio' => [
+                'client_id' => $this->oblio_client_id,
+                'client_secret' => $this->oblio_client_secret,
+                'cif' => $this->oblio_cif,
+                'series_name' => $this->oblio_series_name,
+                'use_draft' => $this->oblio_use_draft,
+            ],
             'smartbill' => [
                 'username' => $this->smartbill_username,
                 'token' => $this->smartbill_token,
@@ -310,8 +366,6 @@ class AccountingConfig extends Page implements HasForms
 
     public static function shouldRegisterNavigation(): bool
     {
-        $admin = Auth::guard('marketplace_admin')->user();
-        if (!$admin?->marketplaceClient) return false;
-        return $admin->marketplaceClient->hasMicroservice('accounting-connectors');
+        return static::marketplaceHasMicroservice('accounting-connectors');
     }
 }

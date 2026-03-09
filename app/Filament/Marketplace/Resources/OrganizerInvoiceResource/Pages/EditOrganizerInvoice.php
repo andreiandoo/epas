@@ -246,6 +246,22 @@ class EditOrganizerInvoice extends EditRecord
         $client = $meta['client'] ?? [];
         $items = $meta['items'] ?? [];
 
+        // Check if connector uses draft mode (Oblio)
+        $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'connected')
+            ->first();
+
+        $useDraft = false;
+        if ($connector) {
+            try {
+                $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
+                $useDraft = $auth['use_draft'] ?? false;
+            } catch (\Exception $e) {
+                // ignore
+            }
+        }
+
         // Build accounting invoice data
         $invoiceData = [
             'seller_vat' => $issuer['cui'] ?? '',
@@ -253,6 +269,7 @@ class EditOrganizerInvoice extends EditRecord
             'due_date' => $invoice->due_date?->format('Y-m-d'),
             'currency' => $invoice->currency ?? 'RON',
             'number' => $invoice->number,
+            'is_draft' => $useDraft,
             'customer' => [
                 'name' => $client['name'] ?? '',
                 'vat_number' => $client['cui'] ?? '',

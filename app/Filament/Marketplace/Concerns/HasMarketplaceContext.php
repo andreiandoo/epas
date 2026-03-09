@@ -11,13 +11,24 @@ trait HasMarketplaceContext
      */
     public static function getMarketplaceClient(): ?MarketplaceClient
     {
-        $user = auth()->user();
+        // Try marketplace_admin guard first (works for both marketplace admins and super-admins via middleware)
+        $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
 
-        if (!$user || !method_exists($user, 'marketplaceClient')) {
-            return null;
+        if ($admin && method_exists($admin, 'marketplaceClient')) {
+            $client = $admin->marketplaceClient;
+            if ($client) {
+                return $client;
+            }
         }
 
-        return $user->marketplaceClient;
+        // Fallback to default auth guard
+        $user = auth()->user();
+
+        if ($user && method_exists($user, 'marketplaceClient')) {
+            return $user->marketplaceClient;
+        }
+
+        return null;
     }
 
     /**

@@ -14,6 +14,7 @@ use App\Services\Accounting\Adapters\MockAccountingAdapter;
 use App\Services\Accounting\Adapters\SmartBillAdapter;
 use App\Services\Accounting\Adapters\FgoAdapter;
 use App\Services\Accounting\Adapters\KeezAdapter;
+use App\Services\Accounting\Adapters\OblioAdapter;
 use App\Services\Insurance\InsuranceService;
 use App\Services\Insurance\Adapters\MockInsurerAdapter;
 
@@ -75,6 +76,9 @@ class MicroservicesServiceProvider extends ServiceProvider
 
             // Register Keez adapter
             $service->registerAdapter('keez', new KeezAdapter());
+
+            // Register Oblio.eu adapter
+            $service->registerAdapter('oblio', new OblioAdapter());
 
             return $service;
         });
