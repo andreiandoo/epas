@@ -2784,4 +2784,8 @@ Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(f
         ->name('api.festival.wristbands.set-pin');
     Route::post('/wristbands/{uid}/remove-pin', [App\Http\Controllers\Api\Festival\WristbandController::class, 'removePin'])
         ->name('api.festival.wristbands.remove-pin');
+
+    // NFC offline sync
+    Route::post('/wristbands/sync-offline', [App\Http\Controllers\Api\Festival\WristbandController::class, 'syncOfflineTransactions'])
+        ->name('api.festival.wristbands.sync-offline');
 });

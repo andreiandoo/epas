@@ -39,6 +39,7 @@ class EditionController extends Controller
             'start_date'     => 'nullable|date',
             'end_date'       => 'nullable|date|after_or_equal:start_date',
             'currency'       => 'string|size:3',
+            'cashless_mode'  => 'in:nfc,qr,hybrid',
             'settings'       => 'nullable|array',
         ]);
 
@@ -70,6 +71,7 @@ class EditionController extends Controller
             'end_date'       => 'nullable|date|after_or_equal:start_date',
             'status'         => 'in:draft,announced,active,completed,cancelled',
             'currency'       => 'string|size:3',
+            'cashless_mode'  => 'in:nfc,qr,hybrid',
             'settings'       => 'nullable|array',
         ]);
 

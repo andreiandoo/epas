@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Festival;
 
 use App\Http\Controllers\Controller;
+use App\Models\FestivalEdition;
 use App\Models\FestivalPassPurchase;
 use App\Models\Vendor;
 use App\Models\VendorEdition;
@@ -10,6 +11,7 @@ use App\Models\VendorProduct;
 use App\Models\VendorSaleItem;
 use App\Models\Wristband;
 use App\Models\WristbandTransaction;
+use App\Services\NfcSyncService;
 use App\Services\WristbandSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +21,8 @@ use Illuminate\Support\Facades\Log;
 class WristbandController extends Controller
 {
     public function __construct(
-        private WristbandSecurityService $security
+        private WristbandSecurityService $security,
+        private NfcSyncService $nfcSync,
     ) {}
 
     /**
@@ -30,11 +33,23 @@ class WristbandController extends Controller
         $data = $request->validate([
             'tenant_id'           => 'required|integer|exists:tenants,id',
             'festival_edition_id' => 'required|integer|exists:festival_editions,id',
-            'wristband_type'      => 'required|in:nfc,qr,rfid,hybrid',
+            'wristband_type'      => 'nullable|in:nfc,qr,rfid,hybrid',
             'currency'            => 'string|size:3',
             'uids'                => 'required|array|min:1',
             'uids.*'              => 'required|string|max:100',
         ]);
+
+        $edition = FestivalEdition::findOrFail($data['festival_edition_id']);
+
+        // Determine wristband type based on edition's cashless mode
+        if ($edition->isNfcMode()) {
+            $wristbandType = 'nfc';
+        } elseif ($edition->isQrMode()) {
+            $wristbandType = 'qr';
+        } else {
+            // Hybrid — accept from request, default to nfc
+            $wristbandType = $data['wristband_type'] ?? 'nfc';
+        }
 
         $created = 0;
         $skipped = 0;
@@ -48,22 +63,31 @@ class WristbandController extends Controller
                 continue;
             }
 
-            Wristband::create([
+            $wristband = Wristband::create([
                 'tenant_id'           => $data['tenant_id'],
                 'festival_edition_id' => $data['festival_edition_id'],
                 'uid'                 => $uid,
-                'wristband_type'      => $data['wristband_type'],
+                'wristband_type'      => $wristbandType,
                 'status'              => 'unassigned',
                 'balance_cents'       => 0,
                 'currency'            => $data['currency'] ?? 'RON',
             ]);
+
+            // Auto-generate QR payload for QR wristbands
+            if ($wristbandType === 'qr') {
+                $payload = $this->security->generateQrPayload($wristband);
+                $wristband->update(['qr_payload' => $payload]);
+            }
+
             $created++;
         }
 
         return response()->json([
-            'created' => $created,
-            'skipped' => $skipped,
-            'errors'  => $errors,
+            'created'        => $created,
+            'skipped'        => $skipped,
+            'errors'         => $errors,
+            'wristband_type' => $wristbandType,
+            'cashless_mode'  => $edition->cashless_mode->value,
         ], 201);
     }
 
@@ -98,15 +122,22 @@ class WristbandController extends Controller
     {
         $wristband = Wristband::where('uid', $uid)->firstOrFail();
 
-        return response()->json([
-            'uid'           => $wristband->uid,
-            'status'        => $wristband->status,
-            'balance_cents' => $wristband->balance_cents,
-            'balance'       => $wristband->balance,
-            'currency'      => $wristband->currency,
-            'access_zones'  => $wristband->access_zones,
-            'activated_at'  => $wristband->activated_at,
-        ]);
+        $response = [
+            'uid'            => $wristband->uid,
+            'status'         => $wristband->status,
+            'wristband_type' => $wristband->wristband_type,
+            'balance_cents'  => $wristband->balance_cents,
+            'balance'        => $wristband->balance,
+            'currency'       => $wristband->currency,
+            'access_zones'   => $wristband->access_zones,
+            'activated_at'   => $wristband->activated_at,
+        ];
+
+        if ($wristband->festival_edition_id) {
+            $response['cashless_mode'] = $wristband->edition?->cashless_mode?->value;
+        }
+
+        return response()->json($response);
     }
 
     /**
@@ -430,11 +461,13 @@ class WristbandController extends Controller
         }
 
         return response()->json([
-            'uid'           => $wristband->uid,
-            'status'        => $wristband->status,
-            'balance_cents' => $wristband->balance_cents,
-            'currency'      => $wristband->currency,
-            'has_pin'       => (bool) $wristband->pin_hash,
+            'uid'            => $wristband->uid,
+            'status'         => $wristband->status,
+            'wristband_type' => $wristband->wristband_type,
+            'balance_cents'  => $wristband->balance_cents,
+            'currency'       => $wristband->currency,
+            'has_pin'        => (bool) $wristband->pin_hash,
+            'cashless_mode'  => $wristband->edition?->cashless_mode?->value,
         ]);
     }
 
@@ -458,6 +491,70 @@ class WristbandController extends Controller
         $this->security->setPin($wristband, $data['pin']);
 
         return response()->json(['message' => 'PIN set successfully.']);
+    }
+
+    /**
+     * Sync offline NFC transactions from a terminal.
+     * Used when cashless_mode is 'nfc' or 'hybrid'.
+     */
+    public function syncOfflineTransactions(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'tenant_id'              => 'required|integer|exists:tenants,id',
+            'festival_edition_id'    => 'required|integer|exists:festival_editions,id',
+            'transactions'           => 'required|array|min:1|max:500',
+            'transactions.*.offline_ref'       => 'required|string|max:100',
+            'transactions.*.uid'               => 'required|string|max:100',
+            'transactions.*.transaction_type'  => 'required|in:payment,topup,refund',
+            'transactions.*.amount_cents'      => 'required|integer|min:1',
+            'transactions.*.balance_after_cents' => 'required|integer|min:0',
+            'transactions.*.transacted_at'     => 'required|date',
+            'transactions.*.vendor_id'         => 'nullable|integer',
+            'transactions.*.vendor_name'       => 'nullable|string|max:200',
+            'transactions.*.vendor_location'   => 'nullable|string|max:200',
+            'transactions.*.pos_device_id'     => 'nullable|integer',
+            'transactions.*.pos_device_uid'    => 'nullable|string|max:100',
+            'transactions.*.employee_id'       => 'nullable|integer',
+            'transactions.*.shift_id'          => 'nullable|integer',
+            'transactions.*.operator'          => 'nullable|string|max:100',
+            'transactions.*.payment_method'    => 'nullable|in:cash,card,online',
+            'transactions.*.description'       => 'nullable|string|max:500',
+            'transactions.*.items'             => 'nullable|array',
+            'transactions.*.items.*.product_id'      => 'nullable|integer',
+            'transactions.*.items.*.name'            => 'required|string|max:200',
+            'transactions.*.items.*.category'        => 'nullable|string|max:100',
+            'transactions.*.items.*.variant'         => 'nullable|string|max:100',
+            'transactions.*.items.*.quantity'        => 'required|integer|min:1',
+            'transactions.*.items.*.unit_price_cents' => 'required|integer|min:0',
+        ]);
+
+        $edition = FestivalEdition::findOrFail($data['festival_edition_id']);
+
+        if (! $edition->supportsNfc()) {
+            return response()->json([
+                'message' => 'This edition does not support NFC mode. Cashless mode is: ' . $edition->cashless_mode->value,
+            ], 422);
+        }
+
+        $results = $this->nfcSync->syncBatch(
+            $data['transactions'],
+            $data['festival_edition_id'],
+            $data['tenant_id'],
+        );
+
+        $synced = collect($results)->where('status', 'synced')->count();
+        $duplicates = collect($results)->where('status', 'duplicate')->count();
+        $errors = collect($results)->whereNotIn('status', ['synced', 'duplicate'])->count();
+
+        return response()->json([
+            'summary' => [
+                'total'      => count($results),
+                'synced'     => $synced,
+                'duplicates' => $duplicates,
+                'errors'     => $errors,
+            ],
+            'results' => $results,
+        ]);
     }
 
     /**

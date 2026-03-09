@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CashlessMode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -20,16 +21,18 @@ class FestivalEdition extends Model
         'end_date',
         'status',
         'currency',
+        'cashless_mode',
         'settings',
         'meta',
     ];
 
     protected $casts = [
-        'year'       => 'integer',
-        'start_date' => 'date',
-        'end_date'   => 'date',
-        'settings'   => 'array',
-        'meta'       => 'array',
+        'year'           => 'integer',
+        'start_date'     => 'date',
+        'end_date'       => 'date',
+        'cashless_mode'  => CashlessMode::class,
+        'settings'       => 'array',
+        'meta'           => 'array',
     ];
 
     // ── Relationships ──
@@ -114,6 +117,31 @@ class FestivalEdition extends Model
     public function isCompleted(): bool
     {
         return $this->status === 'completed';
+    }
+
+    public function isNfcMode(): bool
+    {
+        return $this->cashless_mode === CashlessMode::Nfc;
+    }
+
+    public function isQrMode(): bool
+    {
+        return $this->cashless_mode === CashlessMode::Qr;
+    }
+
+    public function isHybridMode(): bool
+    {
+        return $this->cashless_mode === CashlessMode::Hybrid;
+    }
+
+    public function supportsNfc(): bool
+    {
+        return $this->cashless_mode->supportsNfc();
+    }
+
+    public function supportsQr(): bool
+    {
+        return $this->cashless_mode->supportsQr();
     }
 
     public function totalRevenueCents(): int

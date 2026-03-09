@@ -28,13 +28,19 @@ class WristbandTransaction extends Model
         'related_wristband_id',
         'operator',
         'meta',
+        'sync_source',
+        'offline_ref',
+        'offline_transacted_at',
+        'is_reconciled',
     ];
 
     protected $casts = [
-        'amount_cents'         => 'integer',
-        'balance_before_cents' => 'integer',
-        'balance_after_cents'  => 'integer',
-        'meta'                 => 'array',
+        'amount_cents'           => 'integer',
+        'balance_before_cents'   => 'integer',
+        'balance_after_cents'    => 'integer',
+        'meta'                   => 'array',
+        'offline_transacted_at'  => 'datetime',
+        'is_reconciled'          => 'boolean',
     ];
 
     public function wristband(): BelongsTo
@@ -120,5 +126,15 @@ class WristbandTransaction extends Model
     public function scopeForEdition($query, int $editionId)
     {
         return $query->where('festival_edition_id', $editionId);
+    }
+
+    public function scopeOffline($query)
+    {
+        return $query->where('sync_source', 'offline_sync');
+    }
+
+    public function scopeUnreconciled($query)
+    {
+        return $query->where('is_reconciled', false);
     }
 }
