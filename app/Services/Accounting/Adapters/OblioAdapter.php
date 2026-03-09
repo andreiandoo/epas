@@ -221,9 +221,19 @@ class OblioAdapter implements AccountingAdapterInterface
             $customer = $invoice['customer'] ?? [];
             $isDraft = $invoice['is_draft'] ?? false;
 
+            $resolvedSeries = $this->seriesName ?: ($invoice['series'] ?? 'FACT');
+
+            Log::info('Oblio createInvoice debug', [
+                'this_seriesName' => $this->seriesName,
+                'invoice_series' => $invoice['series'] ?? 'NOT SET',
+                'resolved_series' => $resolvedSeries,
+                'this_cif' => $this->cif,
+                'credentials_series' => $this->credentials['series_name'] ?? 'NOT IN CREDS',
+            ]);
+
             $payload = [
                 'cif' => $this->cif ?: ($invoice['seller_vat'] ?? ''),
-                'seriesName' => $invoice['series'] ?? $this->seriesName,
+                'seriesName' => $resolvedSeries,
                 'issueDate' => $invoice['issue_date'] ?? date('Y-m-d'),
                 'dueDate' => $invoice['due_date'] ?? date('Y-m-d', strtotime('+30 days')),
                 'currency' => $invoice['currency'] ?? 'RON',
