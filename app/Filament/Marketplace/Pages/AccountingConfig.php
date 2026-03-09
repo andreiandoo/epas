@@ -10,6 +10,7 @@ use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Filament\Schemas\Components\Section;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Facades\Crypt;
@@ -144,7 +145,7 @@ class AccountingConfig extends Page implements HasForms
                     ->required(),
 
                 // Oblio fields
-                Forms\Components\Section::make('Oblio.eu')
+                Section::make('Oblio.eu')
                     ->description('Conectare la Oblio.eu pentru facturare automată. Nu există sandbox — folosiți opțiunea Draft pentru teste.')
                     ->schema([
                         Forms\Components\TextInput::make('oblio_client_id')
@@ -175,7 +176,7 @@ class AccountingConfig extends Page implements HasForms
                     ->columns(2),
 
                 // SmartBill fields
-                Forms\Components\Section::make('SmartBill')
+                Section::make('SmartBill')
                     ->schema([
                         Forms\Components\TextInput::make('smartbill_username')
                             ->label('Email / Username')
@@ -192,7 +193,7 @@ class AccountingConfig extends Page implements HasForms
                     ->columns(2),
 
                 // FGO fields
-                Forms\Components\Section::make('FGO')
+                Section::make('FGO')
                     ->schema([
                         Forms\Components\TextInput::make('fgo_cod_unic')
                             ->label('CUI (Cod Unic)')
@@ -216,7 +217,7 @@ class AccountingConfig extends Page implements HasForms
                     ->columns(2),
 
                 // Keez fields
-                Forms\Components\Section::make('Keez')
+                Section::make('Keez')
                     ->schema([
                         Forms\Components\TextInput::make('keez_application_id')
                             ->label('Application ID')
