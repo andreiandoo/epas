@@ -288,6 +288,48 @@ class EditOrganizerInvoice extends EditRecord
         $client = $meta['client'] ?? [];
         $items = $meta['items'] ?? [];
 
+        // Validate required data before sending
+        $errors = [];
+        if (empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
+        if (empty($client['cui'])) {
+            // Try to get from organizer profile
+            $org = $invoice->organizer;
+            if ($org && !empty($org->company_tax_id)) {
+                $client['cui'] = $org->company_tax_id;
+                // Also update the meta for future use
+                $meta['client']['cui'] = $org->company_tax_id;
+                if (empty($client['reg_com']) && !empty($org->company_registration)) {
+                    $client['reg_com'] = $org->company_registration;
+                    $meta['client']['reg_com'] = $org->company_registration;
+                }
+                if (empty($client['address'])) {
+                    $addr = implode(', ', array_filter([
+                        $org->company_address, $org->company_city, $org->company_county,
+                    ]));
+                    if ($addr) {
+                        $client['address'] = $addr;
+                        $meta['client']['address'] = $addr;
+                    }
+                }
+                if (empty($client['name']) && !empty($org->company_name)) {
+                    $client['name'] = $org->company_name;
+                    $meta['client']['name'] = $org->company_name;
+                }
+                $invoice->update(['meta' => $meta]);
+            } else {
+                $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
+            }
+        }
+        if (empty($items)) $errors[] = 'Factura nu conține articole.';
+
+        if (!empty($errors)) {
+            Notification::make()->danger()
+                ->title('Date incomplete pentru contabilitate')
+                ->body(implode("\n", $errors))
+                ->send();
+            return;
+        }
+
         // Check if connector uses draft mode (Oblio)
         $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
             ->where('marketplace_client_id', $marketplace->id)
@@ -304,6 +346,12 @@ class EditOrganizerInvoice extends EditRecord
             }
         }
 
+        // Parse client address into components if possible
+        $addressParts = array_map('trim', explode(',', $client['address'] ?? ''));
+        $street = $addressParts[0] ?? '';
+        $city = $addressParts[1] ?? '';
+        $county = $addressParts[2] ?? '';
+
         // Build accounting invoice data
         $invoiceData = [
             'seller_vat' => $issuer['cui'] ?? '',
@@ -316,11 +364,11 @@ class EditOrganizerInvoice extends EditRecord
                 'name' => $client['name'] ?? '',
                 'vat_number' => $client['cui'] ?? '',
                 'reg_number' => $client['reg_com'] ?? '',
-                'email' => '',
+                'email' => $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '',
                 'address' => [
-                    'street' => $client['address'] ?? '',
-                    'city' => '',
-                    'county' => '',
+                    'street' => $street,
+                    'city' => $city,
+                    'county' => $county,
                     'country' => 'Romania',
                 ],
             ],
