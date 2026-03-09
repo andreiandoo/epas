@@ -79,6 +79,8 @@ class MarketplaceOrganizer extends Authenticatable
         'payout_details',
         'bank_name',
         'iban',
+        'contract_number_series',
+        'contract_date',
         'total_events',
         'total_tickets_sold',
         'total_revenue',
@@ -112,6 +114,7 @@ class MarketplaceOrganizer extends Authenticatable
         'pending_balance' => 'decimal:2',
         'total_paid_out' => 'decimal:2',
         'guarantor_id_issued_date' => 'date',
+        'contract_date' => 'date',
     ];
 
     protected static function boot()

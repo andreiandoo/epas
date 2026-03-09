@@ -187,6 +187,18 @@ class MarketplaceOrganizerObserver
                 'issued_at' => now(),
             ]);
 
+            // Auto-fill contract fields on organizer if not already set
+            $contractNumber = $variables['marketplace_contract_number'] ?? null;
+            if ($contractNumber && !$organizer->contract_number_series) {
+                // Build contract series from marketplace prefix (if available) + number
+                $prefix = $marketplace->settings['contract_prefix'] ?? $marketplace->slug ?? 'CTR';
+                $contractSeries = strtoupper($prefix) . '/' . $contractNumber;
+                $organizer->updateQuietly([
+                    'contract_number_series' => $contractSeries,
+                    'contract_date' => now()->toDateString(),
+                ]);
+            }
+
             Log::info('MarketplaceOrganizerObserver: Organizer contract generated successfully', [
                 'organizer_id' => $organizer->id,
                 'document_path' => $filePath,

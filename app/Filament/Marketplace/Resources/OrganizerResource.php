@@ -331,6 +331,24 @@ class OrganizerResource extends Resource
                                 ->itemLabel(fn (array $state): ?string => $state['bank_name'] ?? 'New Account'),
                         ]),
 
+                    Section::make('Contract Details')
+                        ->icon('heroicon-o-document-check')
+                        ->description('Contract number/series and date. Auto-filled when a contract is generated, but can be overridden by admin.')
+                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                        ->schema([
+                            Forms\Components\TextInput::make('contract_number_series')
+                                ->label('Contract Number & Series')
+                                ->maxLength(50)
+                                ->placeholder('e.g., AMB/1322')
+                                ->helperText('Auto-filled on contract generation. Format: PREFIX/NUMBER'),
+
+                            Forms\Components\DatePicker::make('contract_date')
+                                ->label('Contract Date')
+                                ->native(false)
+                                ->helperText('Auto-filled on contract generation date'),
+                        ])
+                        ->columns(2),
+
                     Section::make('Termeni și Condiții Bilete')
                         ->icon('heroicon-o-document-text')
                         ->description('Acești termeni vor fi preluați automat în câmpul "Termeni bilete" când creați un eveniment nou pentru acest organizator')

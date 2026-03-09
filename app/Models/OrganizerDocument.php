@@ -15,6 +15,7 @@ class OrganizerDocument extends Model
         'marketplace_client_id',
         'marketplace_organizer_id',
         'event_id',
+        'marketplace_payout_id',
         'tax_template_id',
         'title',
         'document_type',
@@ -58,6 +59,7 @@ class OrganizerDocument extends Model
         'cerere_avizare' => 'Cerere avizare',
         'declaratie_impozite' => 'Declaratie impozite',
         'organizer_contract' => 'Contract organizator',
+        'decont' => 'Decont',
     ];
 
     // =========================================
@@ -77,6 +79,11 @@ class OrganizerDocument extends Model
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class, 'event_id');
+    }
+
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(MarketplacePayout::class, 'marketplace_payout_id');
     }
 
     public function taxTemplate(): BelongsTo

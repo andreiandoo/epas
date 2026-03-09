@@ -89,6 +89,45 @@ class ViewPayout extends ViewRecord
                     $this->record->update(['admin_notes' => $data['admin_notes']]);
                     $this->refreshFormData(['admin_notes']);
                 }),
+
+            Actions\Action::make('view_decont')
+                ->label('Vezi Decont')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('info')
+                ->visible(fn () => $this->record->decontDocument !== null)
+                ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
+
+            Actions\Action::make('regenerate_decont')
+                ->label('Regenerează Decont')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalDescription('Decontul existent va fi șters și regenerat din template-ul activ.')
+                ->visible(fn () => $this->record->isCompleted() && $this->record->decontDocument !== null)
+                ->action(function () {
+                    // Delete existing decont
+                    $existingDecont = $this->record->decontDocument;
+                    if ($existingDecont) {
+                        if ($existingDecont->file_path) {
+                            \Illuminate\Support\Facades\Storage::disk('public')->delete($existingDecont->file_path);
+                        }
+                        $existingDecont->delete();
+                    }
+
+                    // Trigger regeneration via observer by dispatching a job-like call
+                    $observer = new \App\Observers\MarketplacePayoutObserver();
+                    // Use reflection to call protected method
+                    $method = new \ReflectionMethod($observer, 'generateDecont');
+                    $method->setAccessible(true);
+                    $method->invoke($observer, $this->record);
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Decont regenerat')
+                        ->success()
+                        ->send();
+
+                    $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                }),
         ];
     }
 }

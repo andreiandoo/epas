@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\MarketplaceCustomer::observe(\App\Observers\MarketplaceCustomerObserver::class);
         \App\Models\MarketplaceOrganizer::observe(\App\Observers\MarketplaceOrganizerObserver::class);
         \App\Models\MediaLibrary::observe(\App\Observers\MediaLibraryObserver::class);
+        \App\Models\MarketplacePayout::observe(\App\Observers\MarketplacePayoutObserver::class);
 
         // Register microservices event listeners
         \Illuminate\Support\Facades\Event::listen(

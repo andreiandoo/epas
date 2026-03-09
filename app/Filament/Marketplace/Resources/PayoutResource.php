@@ -286,6 +286,20 @@ class PayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record->payment_reference),
 
+                Section::make('Decont Document')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('decontDocument.title')
+                            ->label('Document'),
+                        Infolists\Components\TextEntry::make('decontDocument.issued_at')
+                            ->label('Generated At')
+                            ->dateTime('d.m.Y H:i'),
+                        Infolists\Components\TextEntry::make('decontDocument.formatted_file_size')
+                            ->label('Size'),
+                    ])
+                    ->columns(3)
+                    ->visible(fn ($record) => $record->decontDocument !== null),
+
                 Section::make('Timeline')
                     ->schema([
                         Infolists\Components\TextEntry::make('created_at')

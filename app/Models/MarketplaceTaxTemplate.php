@@ -38,6 +38,7 @@ class MarketplaceTaxTemplate extends Model
         'after_event_published' => 'After Event is Published',
         'after_event_finished' => 'After Event is Finished',
         'after_organizer_registered' => 'After Organizer is Registered',
+        'after_payout_completed' => 'After Payout is Completed',
     ];
 
     /**
@@ -60,6 +61,7 @@ class MarketplaceTaxTemplate extends Model
         'cerere_avizare' => 'Cerere avizare',
         'declaratie_impozite' => 'Declaratie impozite',
         'organizer_contract' => 'Organizer Contract',
+        'decont' => 'Decont',
         'other' => 'Other',
     ];
 
@@ -147,6 +149,29 @@ class MarketplaceTaxTemplate extends Model
             '{{order_currency}}' => 'Currency',
             '{{customer_name}}' => 'Customer Name',
             '{{customer_email}}' => 'Customer Email',
+        ],
+        'Contract' => [
+            '{{contract_number_series}}' => 'Contract Number & Series',
+            '{{contract_date}}' => 'Contract Date',
+        ],
+        'Payout' => [
+            '{{payout_number}}' => 'Payout Reference Number',
+            '{{payout_date}}' => 'Payout Completion Date',
+            '{{payout_amount}}' => 'Net Payout Amount',
+            '{{payout_currency}}' => 'Payout Currency',
+            '{{payout_gross_amount}}' => 'Gross Amount',
+            '{{payout_commission_amount}}' => 'Commission Amount',
+            '{{payout_commission_percent}}' => 'Commission Percentage',
+            '{{payout_fees_amount}}' => 'Fees Amount',
+            '{{payout_adjustments_amount}}' => 'Adjustments Amount',
+            '{{payout_adjustments_note}}' => 'Adjustments Note',
+            '{{payout_period_start}}' => 'Period Start Date',
+            '{{payout_period_end}}' => 'Period End Date',
+            '{{payout_payment_reference}}' => 'Payment/Transfer Reference',
+            '{{payout_payment_method}}' => 'Payment Method',
+            '{{payout_bank_name}}' => 'Payout Bank Name',
+            '{{payout_iban}}' => 'Payout IBAN',
+            '{{payout_account_holder}}' => 'Payout Account Holder',
         ],
         'Date/Time' => [
             '{{current_day}}' => 'Current Day (01-31)',
@@ -259,7 +284,8 @@ class MarketplaceTaxTemplate extends Model
         ?MarketplaceOrganizer $organizer = null,
         MarketplaceEvent|Event|null $event = null,
         ?Order $order = null,
-        bool $incrementContractNumber = false
+        bool $incrementContractNumber = false,
+        ?MarketplacePayout $payout = null
     ): array {
         $variables = [];
 
@@ -449,6 +475,52 @@ class MarketplaceTaxTemplate extends Model
             $variables['order_currency'] = $order->currency ?? 'RON';
             $variables['customer_name'] = $order->customer_name ?? ($order->customer->full_name ?? '');
             $variables['customer_email'] = $order->customer_email ?? ($order->customer->email ?? '');
+        }
+
+        // Contract variables (from organizer)
+        if ($organizer) {
+            $variables['contract_number_series'] = $organizer->contract_number_series ?? '';
+            $variables['contract_date'] = $organizer->contract_date
+                ? (is_string($organizer->contract_date)
+                    ? $organizer->contract_date
+                    : $organizer->contract_date->format('d.m.Y'))
+                : '';
+        }
+
+        // Payout variables
+        if ($payout) {
+            $variables['payout_number'] = $payout->reference ?? '';
+            $variables['payout_date'] = $payout->completed_at
+                ? $payout->completed_at->format('d.m.Y')
+                : now()->format('d.m.Y');
+            $variables['payout_amount'] = number_format($payout->amount ?? 0, 2);
+            $variables['payout_currency'] = $payout->currency ?? 'RON';
+            $variables['payout_gross_amount'] = number_format($payout->gross_amount ?? 0, 2);
+            $variables['payout_commission_amount'] = number_format($payout->commission_amount ?? 0, 2);
+
+            // Calculate commission percentage
+            $commissionPercent = ($payout->gross_amount > 0)
+                ? round(($payout->commission_amount / $payout->gross_amount) * 100, 2)
+                : 0;
+            $variables['payout_commission_percent'] = $commissionPercent . '%';
+
+            $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
+            $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
+            $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
+            $variables['payout_period_start'] = $payout->period_start
+                ? $payout->period_start->format('d.m.Y')
+                : '';
+            $variables['payout_period_end'] = $payout->period_end
+                ? $payout->period_end->format('d.m.Y')
+                : '';
+            $variables['payout_payment_reference'] = $payout->payment_reference ?? '';
+            $variables['payout_payment_method'] = $payout->payment_method ?? '';
+
+            // Payout method (bank details)
+            $payoutMethod = $payout->payout_method ?? [];
+            $variables['payout_bank_name'] = $payoutMethod['bank_name'] ?? $organizer?->bank_name ?? '';
+            $variables['payout_iban'] = $payoutMethod['iban'] ?? $organizer?->iban ?? '';
+            $variables['payout_account_holder'] = $payoutMethod['account_holder'] ?? '';
         }
 
         // Date/Time variables (always available)
