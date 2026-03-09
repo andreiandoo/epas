@@ -56,6 +56,9 @@ class AccountingConfig extends Page implements HasForms
     public ?string $oblio_series_name = 'FACT';
     public bool $oblio_use_draft = true;
 
+    // General settings
+    public bool $use_provider_template = false;
+
     public function mount(): void
     {
         $this->marketplace = static::getMarketplaceClient();
@@ -80,6 +83,10 @@ class AccountingConfig extends Page implements HasForms
         $this->provider = $connector->provider;
         $this->connectionStatus = $connector->status;
         $this->lastError = $connector->last_error;
+
+        // Load settings
+        $connectorSettings = json_decode($connector->settings ?? '{}', true) ?: [];
+        $this->use_provider_template = (bool) ($connectorSettings['use_provider_template'] ?? false);
 
         // Decrypt and load credentials
         try {
@@ -239,6 +246,16 @@ class AccountingConfig extends Page implements HasForms
                     ])
                     ->visible(fn () => $this->provider === 'keez')
                     ->columns(2),
+
+                // General settings
+                Section::make('Setări facturare')
+                    ->schema([
+                        Forms\Components\Toggle::make('use_provider_template')
+                            ->label(fn () => 'Folosește model factură ' . $this->getProviderLabel())
+                            ->helperText('Dacă este activat, facturile vor folosi PDF-ul generat de provider-ul de contabilitate. Dacă nu, se va folosi modelul de factură din Tax Templates.')
+                            ->default(false),
+                    ])
+                    ->visible(fn () => $this->provider !== null),
             ]);
     }
 
@@ -250,10 +267,13 @@ class AccountingConfig extends Page implements HasForms
         }
 
         $credentials = $this->getCredentials();
+        $settings = [
+            'use_provider_template' => $this->use_provider_template,
+        ];
 
         try {
             $service = app(AccountingService::class);
-            $result = $service->connectMarketplace($this->marketplace->id, $this->provider, $credentials);
+            $result = $service->connectMarketplace($this->marketplace->id, $this->provider, $credentials, $settings);
 
             $this->connectionStatus = $result['success'] ? 'connected' : 'error';
             $this->lastError = $result['success'] ? null : $result['message'];
@@ -355,6 +375,17 @@ class AccountingConfig extends Page implements HasForms
                 'environment' => $this->keez_environment,
             ],
             default => [],
+        };
+    }
+
+    protected function getProviderLabel(): string
+    {
+        return match ($this->provider) {
+            'oblio' => 'Oblio.eu',
+            'smartbill' => 'SmartBill',
+            'fgo' => 'FGO',
+            'keez' => 'Keez',
+            default => 'provider',
         };
     }
 

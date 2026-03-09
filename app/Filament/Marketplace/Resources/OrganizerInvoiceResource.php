@@ -268,10 +268,35 @@ class OrganizerInvoiceResource extends Resource
 
     /**
      * Render invoice as HTML for preview modal.
-     * Uses tax template of type 'invoice' if available, otherwise falls back to built-in layout.
+     * Priority: 1) Provider PDF (if use_provider_template enabled), 2) Tax template, 3) Built-in fallback.
      */
     public static function renderInvoiceHtml(Invoice $record): string
     {
+        // Check if accounting connector has use_provider_template enabled
+        $meta = $record->meta ?? [];
+        $pdfUrl = $meta['accounting']['pdf_url'] ?? null;
+
+        if ($pdfUrl && static::isProviderTemplateEnabled($record->marketplace_client_id)) {
+            $provider = ucfirst($meta['accounting']['provider'] ?? 'contabilitate');
+            $accNumber = e($meta['accounting']['invoice_number'] ?? $record->number);
+
+            return <<<HTML
+            <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;text-align:center;padding:40px 20px;">
+                <div style="margin-bottom:24px;">
+                    <svg style="width:64px;height:64px;margin:0 auto;color:#2563eb;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                    </svg>
+                </div>
+                <h3 style="font-size:18px;font-weight:600;color:#1f2937;margin-bottom:8px;">Factură #{$accNumber}</h3>
+                <p style="color:#6b7280;margin-bottom:24px;">Factura a fost generată de {$provider}.</p>
+                <a href="{$pdfUrl}" target="_blank" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                    Vizualizează / Descarcă PDF
+                </a>
+                <p style="color:#9ca3af;font-size:12px;margin-top:16px;">PDF generat de {$provider}</p>
+            </div>
+            HTML;
+        }
+
         // Try to use a tax template
         $template = \App\Models\MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
             ->where('type', 'invoice')
@@ -296,6 +321,24 @@ class OrganizerInvoiceResource extends Resource
 
         // Fallback: built-in simple layout
         return static::renderInvoiceHtmlFallback($record);
+    }
+
+    /**
+     * Check if the marketplace's accounting connector has use_provider_template enabled.
+     */
+    protected static function isProviderTemplateEnabled(?int $marketplaceClientId): bool
+    {
+        if (!$marketplaceClientId) return false;
+
+        $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('status', 'connected')
+            ->first();
+
+        if (!$connector) return false;
+
+        $settings = json_decode($connector->settings ?? '{}', true) ?: [];
+        return (bool) ($settings['use_provider_template'] ?? false);
     }
 
     /**
