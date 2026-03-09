@@ -346,6 +346,15 @@ class OrganizerResource extends Resource
                                 ->label('Contract Date')
                                 ->native(false)
                                 ->helperText('Auto-filled on contract generation date'),
+
+                            Forms\Components\TextInput::make('invoice_due_days')
+                                ->label('Zile scadență facturi')
+                                ->numeric()
+                                ->minValue(1)
+                                ->maxValue(365)
+                                ->suffix('zile')
+                                ->placeholder('Default din setări')
+                                ->helperText('Suprascrie setarea globală de zile scadență. Lasă gol pentru a folosi valoarea din Setări.'),
                         ])
                         ->columns(2),
 

@@ -44,18 +44,25 @@ class InvoiceGeneratorService
             // Determine status
             $isPaid = $monthDate->copy()->endOfMonth()->lt(Carbon::now()->subMonth());
 
-            // Build invoice number
-            $number = $this->generateInvoiceNumber($organizer, $monthDate, $marketplace);
-
-            // Check if already exists
+            // Check if invoice already exists for this organizer+month
             $exists = Invoice::where('marketplace_client_id', $marketplace->id)
                 ->where('marketplace_organizer_id', $organizer->id)
-                ->where('number', $number)
+                ->where('period_start', $monthDate->copy()->startOfMonth())
+                ->where('period_end', $monthDate->copy()->endOfMonth())
                 ->exists();
 
             if ($exists) {
                 continue;
             }
+
+            // Build invoice number (auto-increments)
+            $number = $this->generateInvoiceNumber($organizer, $monthDate, $marketplace);
+
+            // Calculate due date: organizer override > marketplace setting > default 30 days
+            $dueDays = $organizer->invoice_due_days
+                ?? ($settings['invoice_due_days'] ?? 30);
+            $issueDate = Carbon::now();
+            $dueDate = $issueDate->copy()->addDays((int) $dueDays);
 
             // Build issuer data
             $issuer = [
@@ -103,10 +110,10 @@ class InvoiceGeneratorService
                 'number' => $number,
                 'type' => 'fiscal',
                 'description' => 'Comision vânzări ' . $monthDate->translatedFormat('F Y'),
-                'issue_date' => $monthDate->copy()->startOfMonth(),
+                'issue_date' => $issueDate,
                 'period_start' => $monthDate->copy()->startOfMonth(),
                 'period_end' => $monthDate->copy()->endOfMonth(),
-                'due_date' => $monthDate->copy()->endOfMonth(),
+                'due_date' => $dueDate,
                 'subtotal' => $commissionAmount,
                 'vat_rate' => $vatRate,
                 'vat_amount' => $vatAmount,
@@ -149,17 +156,23 @@ class InvoiceGeneratorService
     }
 
     /**
-     * Generate invoice number using marketplace settings or fallback format.
+     * Generate invoice number using marketplace settings: [prefix][sequential_number]-[year]
+     * Auto-increments invoice_next_number in marketplace settings.
      */
     protected function generateInvoiceNumber(MarketplaceOrganizer $organizer, Carbon $monthDate, MarketplaceClient $marketplace): string
     {
         $settings = $marketplace->settings ?? [];
-        $prefix = $settings['invoice_prefix'] ?? null;
+        $prefix = $settings['invoice_prefix'] ?? 'FACT';
+        $nextNumber = (int) ($settings['invoice_next_number'] ?? 1);
+        $year = $monthDate->format('Y');
 
-        if ($prefix) {
-            return $prefix . '-' . $organizer->id . '-' . $monthDate->format('Ym');
-        }
+        $number = $prefix . $nextNumber . '-' . $year;
 
-        return 'INV-' . $organizer->id . '-' . $monthDate->format('Ym');
+        // Auto-increment for next invoice
+        $settings['invoice_next_number'] = $nextNumber + 1;
+        $marketplace->settings = $settings;
+        $marketplace->save();
+
+        return $number;
     }
 }

@@ -81,6 +81,7 @@ class MarketplaceOrganizer extends Authenticatable
         'iban',
         'contract_number_series',
         'contract_date',
+        'invoice_due_days',
         'total_events',
         'total_tickets_sold',
         'total_revenue',

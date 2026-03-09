@@ -77,6 +77,7 @@ class Settings extends Page
                 'order_next_number' => $settings['order_next_number'] ?? 1,
                 'invoice_prefix' => $settings['invoice_prefix'] ?? 'FACT',
                 'invoice_next_number' => $settings['invoice_next_number'] ?? 1,
+                'invoice_due_days' => $settings['invoice_due_days'] ?? 30,
 
                 // Legal Pages
                 'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
@@ -334,6 +335,15 @@ class Settings extends Page
                                             ->numeric()
                                             ->default(1)
                                             ->minValue(1),
+
+                                        Forms\Components\TextInput::make('invoice_due_days')
+                                            ->label('Zile scadență facturi')
+                                            ->numeric()
+                                            ->default(30)
+                                            ->minValue(1)
+                                            ->maxValue(365)
+                                            ->suffix('zile')
+                                            ->helperText('Numărul de zile între data emiterii și data scadenței. Poate fi suprascris per organizator.'),
                                     ])->columns(2),
                             ]),
 
@@ -611,6 +621,7 @@ class Settings extends Page
         $settings['order_next_number'] = (int) ($data['order_next_number'] ?? 1);
         $settings['invoice_prefix'] = $data['invoice_prefix'] ?? 'FACT';
         $settings['invoice_next_number'] = (int) ($data['invoice_next_number'] ?? 1);
+        $settings['invoice_due_days'] = (int) ($data['invoice_due_days'] ?? 30);
 
         $settings['legal'] = [
             'terms_title' => $data['terms_title'] ?? 'Terms & Conditions',

@@ -268,8 +268,40 @@ class OrganizerInvoiceResource extends Resource
 
     /**
      * Render invoice as HTML for preview modal.
+     * Uses tax template of type 'invoice' if available, otherwise falls back to built-in layout.
      */
     public static function renderInvoiceHtml(Invoice $record): string
+    {
+        // Try to use a tax template
+        $template = \App\Models\MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
+            ->where('type', 'invoice')
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->first();
+
+        if ($template) {
+            $variables = \App\Models\MarketplaceTaxTemplate::getInvoiceVariables($record);
+
+            // Add date/time variables
+            $now = now();
+            $variables['current_day'] = $now->format('d');
+            $variables['current_month'] = $now->format('m');
+            $variables['current_month_name'] = $now->translatedFormat('F');
+            $variables['current_year'] = $now->format('Y');
+            $variables['current_date'] = $now->format('d.m.Y');
+            $variables['current_datetime'] = $now->format('d.m.Y H:i');
+
+            return $template->processTemplate($variables);
+        }
+
+        // Fallback: built-in simple layout
+        return static::renderInvoiceHtmlFallback($record);
+    }
+
+    /**
+     * Fallback invoice HTML when no tax template exists.
+     */
+    protected static function renderInvoiceHtmlFallback(Invoice $record): string
     {
         $meta = $record->meta ?? [];
         $issuer = $meta['issuer'] ?? [];

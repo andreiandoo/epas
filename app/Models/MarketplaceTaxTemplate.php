@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Event;
+use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -157,6 +158,36 @@ class MarketplaceTaxTemplate extends Model
         'Contract' => [
             '{{contract_number_series}}' => 'Contract Number & Series',
             '{{contract_date}}' => 'Contract Date',
+        ],
+        'Invoice' => [
+            '{{invoice_number}}' => 'Invoice Number',
+            '{{invoice_issue_date}}' => 'Issue Date (DD.MM.YYYY)',
+            '{{invoice_due_date}}' => 'Due Date (DD.MM.YYYY)',
+            '{{invoice_period}}' => 'Invoice Period (e.g., Ianuarie 2026)',
+            '{{invoice_currency}}' => 'Currency (RON, EUR, etc.)',
+            '{{invoice_subtotal}}' => 'Subtotal (without VAT)',
+            '{{invoice_vat_rate}}' => 'VAT Rate (%)',
+            '{{invoice_vat_amount}}' => 'VAT Amount',
+            '{{invoice_total}}' => 'Total Amount (with VAT)',
+            '{{invoice_status}}' => 'Status (Achitată/Neachitată)',
+            '{{invoice_items_rows}}' => 'Invoice Items Table Rows (HTML <tr> elements)',
+            '{{invoice_commission_rate}}' => 'Commission Rate (%)',
+            '{{invoice_order_count}}' => 'Number of Orders',
+            '{{invoice_total_sales}}' => 'Total Sales Amount',
+            '{{issuer_name}}' => 'Issuer Company Name',
+            '{{issuer_cui}}' => 'Issuer CUI/CIF',
+            '{{issuer_reg_com}}' => 'Issuer Trade Register',
+            '{{issuer_address}}' => 'Issuer Address',
+            '{{issuer_bank_name}}' => 'Issuer Bank Name',
+            '{{issuer_iban}}' => 'Issuer IBAN',
+            '{{issuer_email}}' => 'Issuer Email',
+            '{{issuer_phone}}' => 'Issuer Phone',
+            '{{issuer_website}}' => 'Issuer Website',
+            '{{issuer_vat_payer}}' => 'Issuer VAT Payer Status',
+            '{{client_name}}' => 'Client Company Name',
+            '{{client_cui}}' => 'Client CUI/CIF',
+            '{{client_reg_com}}' => 'Client Trade Register',
+            '{{client_address}}' => 'Client Address',
         ],
         'Payout' => [
             '{{payout_number}}' => 'Payout Reference Number',
@@ -537,6 +568,72 @@ class MarketplaceTaxTemplate extends Model
         $variables['current_datetime'] = $now->format('d.m.Y H:i');
 
         return $variables;
+    }
+
+    /**
+     * Get invoice-specific variables from an Invoice model
+     */
+    public static function getInvoiceVariables(Invoice $invoice): array
+    {
+        $meta = $invoice->meta ?? [];
+        $issuer = $meta['issuer'] ?? [];
+        $client = $meta['client'] ?? [];
+        $items = $meta['items'] ?? [];
+        $currency = $invoice->currency ?? 'RON';
+
+        // Build items HTML rows
+        $itemsRows = '';
+        $nr = 0;
+        foreach ($items as $item) {
+            $nr++;
+            $itemsRows .= '<tr>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;text-align:center;">' . $nr . '</td>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;">' . e($item['description'] ?? '') . '</td>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;text-align:center;">buc</td>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;text-align:right;">' . ($item['quantity'] ?? 0) . '</td>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;text-align:right;">' . number_format($item['price'] ?? 0, 2) . '</td>';
+            $itemsRows .= '<td style="border:1px solid #000;padding:6px;text-align:right;">' . number_format($item['total'] ?? 0, 2) . '</td>';
+            $itemsRows .= '</tr>';
+        }
+
+        $statusLabel = $invoice->status === 'paid' ? 'Achitată' : 'Neachitată';
+
+        // Period
+        $period = '';
+        if ($invoice->period_start) {
+            $period = $invoice->period_start->translatedFormat('F Y');
+        }
+
+        return [
+            'invoice_number' => $invoice->number ?? '',
+            'invoice_issue_date' => $invoice->issue_date?->format('d.m.Y') ?? '',
+            'invoice_due_date' => $invoice->due_date?->format('d.m.Y') ?? '',
+            'invoice_period' => $period,
+            'invoice_currency' => $currency,
+            'invoice_subtotal' => number_format($invoice->subtotal ?? 0, 2),
+            'invoice_vat_rate' => $invoice->vat_rate ?? 0,
+            'invoice_vat_amount' => number_format($invoice->vat_amount ?? 0, 2),
+            'invoice_total' => number_format($invoice->amount ?? 0, 2),
+            'invoice_status' => $statusLabel,
+            'invoice_items_rows' => $itemsRows,
+            'invoice_commission_rate' => $meta['commission_rate'] ?? '',
+            'invoice_order_count' => $meta['order_count'] ?? 0,
+            'invoice_total_sales' => number_format($meta['total_sales'] ?? 0, 2),
+            'issuer_name' => $issuer['name'] ?? '',
+            'issuer_cui' => $issuer['cui'] ?? '',
+            'issuer_reg_com' => $issuer['reg_com'] ?? '',
+            'issuer_address' => $issuer['address'] ?? '',
+            'issuer_bank_name' => $issuer['bank_name'] ?? '',
+            'issuer_iban' => $issuer['iban'] ?? '',
+            'issuer_email' => $issuer['email'] ?? '',
+            'issuer_phone' => $issuer['phone'] ?? '',
+            'issuer_website' => $issuer['website'] ?? '',
+            'issuer_vat_payer' => !empty($issuer['vat_payer']) ? 'Plătitor TVA' : 'Neplătitor TVA',
+            'client_name' => $client['name'] ?? '',
+            'client_cui' => $client['cui'] ?? '',
+            'client_reg_com' => $client['reg_com'] ?? '',
+            'client_address' => $client['address'] ?? '',
+        ];
     }
 
     /**
