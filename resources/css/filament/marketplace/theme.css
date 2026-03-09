@@ -69,6 +69,16 @@ body {
     border-color: rgb(229 231 235 / var(--tw-divide-opacity));
 }
 
+/* Header: stack title and actions vertically on edit pages with many actions */
+.fi-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.fi-header .fi-header-actions-ctn {
+    flex-wrap: wrap;
+}
+
 /* Fix dropdown/select option styling */
 @layer components {
     /* Remove thick borders from select dropdown options */
