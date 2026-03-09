@@ -681,6 +681,26 @@ class Event extends Model
         return $this->hasMany(Order::class, 'event_id');
     }
 
+    public function festivalSponsors(): HasMany
+    {
+        return $this->hasMany(FestivalSponsor::class);
+    }
+
+    public function festivalAlerts(): HasMany
+    {
+        return $this->hasMany(FestivalAlert::class);
+    }
+
+    public function medicalIncidents(): HasMany
+    {
+        return $this->hasMany(MedicalIncident::class);
+    }
+
+    public function festivalReviews(): HasMany
+    {
+        return $this->hasMany(FestivalReview::class);
+    }
+
     /**
      * Calculate total revenue for this event (paid/confirmed/completed orders)
      */

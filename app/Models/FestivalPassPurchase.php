@@ -107,6 +107,9 @@ class FestivalPassPurchase extends Model
             'cancel_reason' => $reason,
         ]);
 
-        $this->festivalPass->decrement('quota_sold');
+        $pass = $this->festivalPass;
+        if ($pass && $pass->quota_sold > 0) {
+            $pass->decrement('quota_sold');
+        }
     }
 }

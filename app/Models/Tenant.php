@@ -583,6 +583,41 @@ class Tenant extends Model
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>=', now()));
     }
 
+    public function festivalVolunteers(): HasMany
+    {
+        return $this->hasMany(FestivalVolunteer::class);
+    }
+
+    public function volunteerShifts(): HasMany
+    {
+        return $this->hasMany(VolunteerShift::class);
+    }
+
+    public function festivalTransportShuttles(): HasMany
+    {
+        return $this->hasMany(FestivalTransportShuttle::class);
+    }
+
+    public function lostAndFound(): HasMany
+    {
+        return $this->hasMany(LostAndFound::class);
+    }
+
+    public function festivalReviews(): HasMany
+    {
+        return $this->hasMany(FestivalReview::class);
+    }
+
+    public function medicalIncidents(): HasMany
+    {
+        return $this->hasMany(MedicalIncident::class);
+    }
+
+    public function wristbandTransactions(): HasMany
+    {
+        return $this->hasMany(WristbandTransaction::class);
+    }
+
     // ──────────────────────────────────────────────
     // Theater relations
     // ──────────────────────────────────────────────
