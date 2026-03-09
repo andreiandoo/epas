@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Festival;
 
 use App\Http\Controllers\Controller;
+use App\Models\FestivalPassPurchase;
 use App\Models\Vendor;
 use App\Models\VendorEdition;
 use App\Models\VendorProduct;
@@ -75,7 +76,7 @@ class WristbandController extends Controller
             'festival_pass_purchase_id' => 'required|integer|exists:festival_pass_purchases,id',
         ]);
 
-        $purchase = \App\Models\FestivalPassPurchase::findOrFail($data['festival_pass_purchase_id']);
+        $purchase = FestivalPassPurchase::findOrFail($data['festival_pass_purchase_id']);
         $wristband->assignTo($purchase);
         $wristband->activate();
 

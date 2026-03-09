@@ -84,7 +84,7 @@ class WristbandTransaction extends Model
 
     public function isDebit(): bool
     {
-        return in_array($this->transaction_type, ['payment', 'transfer_out']);
+        return in_array($this->transaction_type, ['payment', 'transfer_out', 'cashout']);
     }
 
     public function isCredit(): bool

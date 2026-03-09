@@ -10,6 +10,7 @@ class FestivalPass extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'festival_edition_id',
         'event_id',
         'name',
         'slug',
@@ -50,6 +51,11 @@ class FestivalPass extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function edition(): BelongsTo
+    {
+        return $this->belongsTo(FestivalEdition::class, 'festival_edition_id');
     }
 
     public function event(): BelongsTo

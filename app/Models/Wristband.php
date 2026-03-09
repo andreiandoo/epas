@@ -254,7 +254,7 @@ class Wristband extends Model
                 'tenant_id'            => $this->tenant_id,
                 'festival_edition_id'  => $this->festival_edition_id,
                 'customer_id'          => $this->customer_id,
-                'transaction_type'     => 'refund',
+                'transaction_type'     => 'cashout',
                 'amount_cents'         => $balanceBefore,
                 'balance_before_cents' => $balanceBefore,
                 'balance_after_cents'  => 0,
