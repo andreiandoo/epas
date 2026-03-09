@@ -78,8 +78,8 @@ class AccountingService
 
         // Create job
         $jobId = DB::table('acc_jobs')->insertGetId([
-            'id' => \Illuminate\Support\Str::uuid(),
-            'tenant_id' => $tenantId,
+            'marketplace_client_id' => $marketplaceClientId,
+            'tenant_id' => null,
             'type' => 'create_invoice',
             'payload' => json_encode($invoiceData),
             'status' => 'processing',
@@ -104,8 +104,8 @@ class AccountingService
             return [
                 'success' => true,
                 'job_id' => $jobId,
-                'external_ref' => $invoiceResult['external_ref'],
-                'invoice_number' => $invoiceResult['invoice_number'],
+                'external_ref' => $invoiceResult['external_ref'] ?? null,
+                'invoice_number' => $invoiceResult['invoice_number'] ?? null,
             ];
 
         } catch (\Exception $e) {
@@ -239,7 +239,6 @@ class AccountingService
 
         // Create job
         $jobId = DB::table('acc_jobs')->insertGetId([
-            'id' => \Illuminate\Support\Str::uuid(),
             'tenant_id' => $tenantId,
             'type' => 'create_invoice',
             'payload' => json_encode($invoiceData),
@@ -271,8 +270,8 @@ class AccountingService
             return [
                 'success' => true,
                 'job_id' => $jobId,
-                'external_ref' => $invoiceResult['external_ref'],
-                'invoice_number' => $invoiceResult['invoice_number'],
+                'external_ref' => $invoiceResult['external_ref'] ?? null,
+                'invoice_number' => $invoiceResult['invoice_number'] ?? null,
             ];
 
         } catch (\Exception $e) {
