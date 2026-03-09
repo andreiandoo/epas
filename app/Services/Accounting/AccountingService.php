@@ -290,7 +290,7 @@ class AccountingService
     /**
      * Get invoice PDF for marketplace context
      */
-    public function getMarketplaceInvoicePdf(int $marketplaceClientId, string $externalRef): array
+    public function getMarketplaceInvoicePdf(int $marketplaceClientId, string $externalRef, string $docType = 'invoice'): array
     {
         $connector = DB::table('acc_connectors')
             ->where('marketplace_client_id', $marketplaceClientId)
@@ -305,6 +305,10 @@ class AccountingService
 
         $auth = json_decode(Crypt::decryptString($connector->auth), true);
         $adapter = $this->getAdapter($connector->provider, $auth);
+
+        if ($adapter instanceof \App\Services\Accounting\Adapters\OblioAdapter) {
+            return $adapter->getInvoicePdf($externalRef, $docType);
+        }
 
         return $adapter->getInvoicePdf($externalRef);
     }

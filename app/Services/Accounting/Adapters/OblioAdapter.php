@@ -22,6 +22,7 @@ class OblioAdapter implements AccountingAdapterInterface
     protected string $accessToken = '';
     protected string $cif = '';
     protected string $seriesName = '';
+    protected string $proformaSeriesName = '';
 
     /**
      * {@inheritdoc}
@@ -38,6 +39,7 @@ class OblioAdapter implements AccountingAdapterInterface
         $this->credentials = $credentials;
         $this->cif = $credentials['cif'] ?? '';
         $this->seriesName = $credentials['series_name'] ?? 'FACT';
+        $this->proformaSeriesName = $credentials['proforma_series_name'] ?? '';
 
         try {
             $token = $this->getAccessToken();
@@ -220,16 +222,17 @@ class OblioAdapter implements AccountingAdapterInterface
         try {
             $customer = $invoice['customer'] ?? [];
             $isDraft = $invoice['is_draft'] ?? false;
+            $docType = $invoice['doc_type'] ?? 'invoice'; // 'invoice' or 'proforma'
 
-            $resolvedSeries = $this->seriesName ?: ($invoice['series'] ?? 'FACT');
+            // Use proforma series if sending proforma, otherwise fiscal series
+            if ($docType === 'proforma') {
+                $resolvedSeries = $this->proformaSeriesName ?: ($invoice['series'] ?? $this->seriesName ?: 'PF');
+            } else {
+                $resolvedSeries = $this->seriesName ?: ($invoice['series'] ?? 'FACT');
+            }
 
-            Log::info('Oblio createInvoice debug', [
-                'this_seriesName' => $this->seriesName,
-                'invoice_series' => $invoice['series'] ?? 'NOT SET',
-                'resolved_series' => $resolvedSeries,
-                'this_cif' => $this->cif,
-                'credentials_series' => $this->credentials['series_name'] ?? 'NOT IN CREDS',
-            ]);
+            // Determine API endpoint based on doc type
+            $endpoint = $docType === 'proforma' ? '/api/docs/proforma' : '/api/docs/invoice';
 
             $payload = [
                 'cif' => $this->cif ?: ($invoice['seller_vat'] ?? ''),
@@ -271,16 +274,17 @@ class OblioAdapter implements AccountingAdapterInterface
 
             // Add idempotency key if invoice number is available
             if (!empty($invoice['number'])) {
-                $payload['idempotencyKey'] = 'inv_' . $invoice['number'] . '_' . md5(json_encode($payload['products']));
+                $payload['idempotencyKey'] = $docType . '_' . $invoice['number'] . '_' . md5(json_encode($payload['products']));
             }
 
-            $result = $this->apiRequest('POST', '/api/docs/invoice', $payload);
+            $result = $this->apiRequest('POST', $endpoint, $payload);
 
             $data = $result['data'] ?? $result;
 
             return [
-                'external_ref' => ($data['seriesName'] ?? $this->seriesName) . '/' . ($data['number'] ?? ''),
-                'invoice_number' => ($data['seriesName'] ?? $this->seriesName) . ($data['number'] ?? ''),
+                'external_ref' => ($data['seriesName'] ?? $resolvedSeries) . '/' . ($data['number'] ?? ''),
+                'invoice_number' => ($data['seriesName'] ?? $resolvedSeries) . ($data['number'] ?? ''),
+                'doc_type' => $docType,
                 'details' => $data,
             ];
         } catch (\Exception $e) {
@@ -310,7 +314,7 @@ class OblioAdapter implements AccountingAdapterInterface
     /**
      * {@inheritdoc}
      */
-    public function getInvoicePdf(string $externalRef): array
+    public function getInvoicePdf(string $externalRef, string $docType = 'invoice'): array
     {
         if (!$this->authenticated) {
             throw new \RuntimeException('Nu este autentificat.');
@@ -321,7 +325,9 @@ class OblioAdapter implements AccountingAdapterInterface
             $seriesName = $parts[0] ?? $this->seriesName;
             $number = $parts[1] ?? $externalRef;
 
-            $result = $this->apiRequest('GET', '/api/docs/invoice', [
+            $endpoint = $docType === 'proforma' ? '/api/docs/proforma' : '/api/docs/invoice';
+
+            $result = $this->apiRequest('GET', $endpoint, [
                 'cif' => $this->cif,
                 'seriesName' => $seriesName,
                 'number' => $number,

@@ -54,6 +54,7 @@ class AccountingConfig extends Page implements HasForms
     public ?string $oblio_client_secret = '';
     public ?string $oblio_cif = '';
     public ?string $oblio_series_name = 'FACT';
+    public ?string $oblio_proforma_series = '';
     public bool $oblio_use_draft = true;
 
     // General settings
@@ -133,6 +134,7 @@ class AccountingConfig extends Page implements HasForms
         $this->oblio_client_secret = $auth['client_secret'] ?? '';
         $this->oblio_cif = $auth['cif'] ?? '';
         $this->oblio_series_name = $auth['series_name'] ?? 'FACT';
+        $this->oblio_proforma_series = $auth['proforma_series_name'] ?? '';
         $this->oblio_use_draft = $auth['use_draft'] ?? true;
     }
 
@@ -170,10 +172,13 @@ class AccountingConfig extends Page implements HasForms
                             ->required()
                             ->helperText('CUI/CIF-ul companiei pentru care se emit facturi'),
                         Forms\Components\TextInput::make('oblio_series_name')
-                            ->label('Serie Facturi')
+                            ->label('Serie Facturi Fiscale')
                             ->default('FACT')
                             ->required()
-                            ->helperText('Seria de facturare configurată în Oblio'),
+                            ->helperText('Seria de facturare fiscală configurată în Oblio'),
+                        Forms\Components\TextInput::make('oblio_proforma_series')
+                            ->label('Serie Proforma')
+                            ->helperText('Seria pentru facturi proforma (lăsați gol dacă nu folosiți proforma)'),
                         Forms\Components\Toggle::make('oblio_use_draft')
                             ->label('Trimite ca Draft')
                             ->helperText('Facturile vor fi create ca draft (ciornă) — util pentru testare. Dezactivați pentru producție.')
@@ -355,6 +360,7 @@ class AccountingConfig extends Page implements HasForms
                 'client_secret' => $this->oblio_client_secret,
                 'cif' => $this->oblio_cif,
                 'series_name' => $this->oblio_series_name,
+                'proforma_series_name' => $this->oblio_proforma_series,
                 'use_draft' => $this->oblio_use_draft,
             ],
             'smartbill' => [

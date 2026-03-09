@@ -129,13 +129,44 @@ class EditOrganizerInvoice extends EditRecord
                 ->modalCancelActionLabel('Închide')
                 ->visible(fn () => $this->record->anafQueue !== null),
 
+            Actions\Action::make('sendProforma')
+                ->label('Trimite Proformă')
+                ->icon('heroicon-o-document-duplicate')
+                ->color('info')
+                ->requiresConfirmation()
+                ->modalHeading('Trimite factură proformă')
+                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca PROFORMĂ în software-ul de contabilitate.")
+                ->visible(function () {
+                    if (!static::marketplaceHasMicroservice('accounting-connectors')) {
+                        return false;
+                    }
+                    $marketplace = static::getMarketplaceClient();
+                    if (!$marketplace) return false;
+                    if (!app(AccountingService::class)->hasMarketplaceConnector($marketplace->id)) return false;
+                    // Check if proforma series is configured
+                    $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+                        ->where('marketplace_client_id', $marketplace->id)
+                        ->where('status', 'connected')
+                        ->first();
+                    if (!$connector) return false;
+                    try {
+                        $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
+                        return !empty($auth['proforma_series_name']);
+                    } catch (\Exception $e) {
+                        return false;
+                    }
+                })
+                ->action(function () {
+                    $this->sendToAccounting($this->record, 'proforma');
+                }),
+
             Actions\Action::make('sendAccounting')
-                ->label('Trimite în contabilitate')
+                ->label('Trimite Factură Fiscală')
                 ->icon('heroicon-o-calculator')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalHeading('Trimite factura în contabilitate')
-                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă în software-ul de contabilitate.")
+                ->modalHeading('Trimite factură fiscală')
+                ->modalDescription(fn () => "Factura #{$this->record->number} va fi trimisă ca FACTURĂ FISCALĂ în software-ul de contabilitate.")
                 ->visible(function () {
                     if (!static::marketplaceHasMicroservice('accounting-connectors')) {
                         return false;
@@ -145,11 +176,22 @@ class EditOrganizerInvoice extends EditRecord
                     return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
                 })
                 ->action(function () {
-                    $this->sendToAccounting($this->record);
+                    $this->sendToAccounting($this->record, 'invoice');
                 }),
 
+            Actions\Action::make('viewProformaPdf')
+                ->label('PDF Proformă')
+                ->icon('heroicon-o-document-duplicate')
+                ->color('gray')
+                ->url(function () {
+                    $meta = $this->record->meta ?? [];
+                    return $meta['accounting_proforma']['pdf_url'] ?? null;
+                })
+                ->openUrlInNewTab()
+                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting_proforma']['pdf_url'])),
+
             Actions\Action::make('viewAccountingPdf')
-                ->label('Vizualizează PDF Contabilitate')
+                ->label('PDF Factură Fiscală')
                 ->icon('heroicon-o-document-text')
                 ->color('gray')
                 ->url(function () {
@@ -165,8 +207,7 @@ class EditOrganizerInvoice extends EditRecord
                 ->color('gray')
                 ->visible(function () {
                     $meta = $this->record->meta ?? [];
-                    // Show if sent to accounting but no PDF yet, or to refresh
-                    return !empty($meta['accounting']['external_ref']);
+                    return !empty($meta['accounting']['external_ref']) || !empty($meta['accounting_proforma']['external_ref']);
                 })
                 ->action(function () {
                     $this->fetchAccountingPdf($this->record);
@@ -182,10 +223,13 @@ class EditOrganizerInvoice extends EditRecord
                     $organizer = $this->record->organizer;
                     $email = $organizer?->billing_email ?? $organizer?->email ?? 'N/A';
                     $meta = $this->record->meta ?? [];
-                    $provider = $meta['accounting']['provider'] ?? 'contabilitate';
+                    $provider = $meta['accounting']['provider'] ?? $meta['accounting_proforma']['provider'] ?? 'contabilitate';
                     return "PDF-ul facturii #{$this->record->number} din {$provider} va fi trimis la: {$email}";
                 })
-                ->visible(fn () => !empty(($this->record->meta ?? [])['accounting']['pdf_url']))
+                ->visible(function () {
+                    $meta = $this->record->meta ?? [];
+                    return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                })
                 ->action(function () {
                     $this->sendAccountingPdfEmail($this->record);
                 }),
@@ -275,7 +319,7 @@ class EditOrganizerInvoice extends EditRecord
         }
     }
 
-    protected function sendToAccounting(Invoice $invoice): void
+    protected function sendToAccounting(Invoice $invoice, string $docType = 'invoice'): void
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) {
@@ -405,6 +449,7 @@ class EditOrganizerInvoice extends EditRecord
             'currency' => $invoice->currency ?? 'RON',
             'number' => $invoice->number,
             'is_draft' => $useDraft,
+            'doc_type' => $docType,
             'customer' => [
                 'name' => $client['name'] ?? '',
                 'vat_number' => $client['cui'] ?? '',
@@ -438,19 +483,23 @@ class EditOrganizerInvoice extends EditRecord
             );
 
             if ($result['success']) {
-                // Store accounting reference in meta
-                $meta['accounting'] = [
+                $docTypeLabel = $docType === 'proforma' ? 'proforma' : 'fiscal';
+
+                // Store accounting reference in meta (separate keys for proforma vs fiscal)
+                $metaKey = $docType === 'proforma' ? 'accounting_proforma' : 'accounting';
+                $meta[$metaKey] = [
                     'external_ref' => $result['external_ref'],
                     'invoice_number' => $result['invoice_number'],
+                    'doc_type' => $docType,
                     'provider' => $connector->provider ?? 'unknown',
                     'sent_at' => now()->toIso8601String(),
                 ];
 
                 // Try to fetch PDF link immediately
                 try {
-                    $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $result['external_ref']);
+                    $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $result['external_ref'], $docType);
                     if (!empty($pdfResult['pdf_url'])) {
-                        $meta['accounting']['pdf_url'] = $pdfResult['pdf_url'];
+                        $meta[$metaKey]['pdf_url'] = $pdfResult['pdf_url'];
                     }
                 } catch (\Throwable $e) {
                     // PDF might not be immediately available, that's OK
@@ -460,12 +509,12 @@ class EditOrganizerInvoice extends EditRecord
                 $invoice->update(['meta' => $meta]);
 
                 $msg = "Nr. extern: {$result['invoice_number']}";
-                if (!empty($meta['accounting']['pdf_url'])) {
+                if (!empty($meta[$metaKey]['pdf_url'])) {
                     $msg .= ' — PDF disponibil.';
                 }
 
                 Notification::make()->success()
-                    ->title('Factură trimisă în contabilitate')
+                    ->title($docType === 'proforma' ? 'Proformă trimisă' : 'Factură fiscală trimisă')
                     ->body($msg)
                     ->send();
             }
@@ -487,37 +536,37 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $meta = $invoice->meta ?? [];
-        $externalRef = $meta['accounting']['external_ref'] ?? null;
+        $updated = false;
 
-        if (!$externalRef) {
-            Notification::make()->danger()->title('Factura nu a fost trimisă în contabilitate.')->send();
-            return;
+        $service = app(AccountingService::class);
+
+        // Fetch PDF for each type that has an external ref
+        foreach (['accounting' => 'invoice', 'accounting_proforma' => 'proforma'] as $metaKey => $docType) {
+            $externalRef = $meta[$metaKey]['external_ref'] ?? null;
+            if (!$externalRef) continue;
+
+            try {
+                $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $externalRef, $docType);
+                if (!empty($pdfResult['pdf_url'])) {
+                    $meta[$metaKey]['pdf_url'] = $pdfResult['pdf_url'];
+                    $meta[$metaKey]['pdf_fetched_at'] = now()->toIso8601String();
+                    $updated = true;
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Fetch {$docType} PDF failed: {$e->getMessage()}");
+            }
         }
 
-        try {
-            $service = app(AccountingService::class);
-            $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $externalRef);
-
-            if (!empty($pdfResult['pdf_url'])) {
-                $meta['accounting']['pdf_url'] = $pdfResult['pdf_url'];
-                $meta['accounting']['pdf_fetched_at'] = now()->toIso8601String();
-                $invoice->update(['meta' => $meta]);
-
-                Notification::make()->success()
-                    ->title('PDF actualizat')
-                    ->body('Link-ul PDF a fost preluat cu succes.')
-                    ->send();
-            } else {
-                Notification::make()->warning()
-                    ->title('PDF indisponibil')
-                    ->body('PDF-ul nu este încă disponibil. Încercați din nou mai târziu.')
-                    ->send();
-            }
-        } catch (\Throwable $e) {
-            \Log::error("Fetch accounting PDF failed: {$e->getMessage()}");
-            Notification::make()->danger()
-                ->title('Eroare la preluarea PDF')
-                ->body($e->getMessage())
+        if ($updated) {
+            $invoice->update(['meta' => $meta]);
+            Notification::make()->success()
+                ->title('PDF actualizat')
+                ->body('Link-urile PDF au fost preluate cu succes.')
+                ->send();
+        } else {
+            Notification::make()->warning()
+                ->title('PDF indisponibil')
+                ->body('PDF-urile nu sunt încă disponibile. Încercați din nou mai târziu.')
                 ->send();
         }
     }
@@ -537,7 +586,8 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         $meta = $invoice->meta ?? [];
-        $pdfUrl = $meta['accounting']['pdf_url'] ?? null;
+        // Prefer fiscal PDF, fallback to proforma
+        $pdfUrl = $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
 
         if (!$pdfUrl) {
             Notification::make()->danger()->title('PDF-ul nu este disponibil.')->send();
@@ -553,8 +603,9 @@ class EditOrganizerInvoice extends EditRecord
         }
 
         try {
-            $provider = ucfirst($meta['accounting']['provider'] ?? 'contabilitate');
-            $accNumber = $meta['accounting']['invoice_number'] ?? $invoice->number;
+            $accMeta = !empty($meta['accounting']['pdf_url']) ? $meta['accounting'] : ($meta['accounting_proforma'] ?? []);
+            $provider = ucfirst($accMeta['provider'] ?? 'contabilitate');
+            $accNumber = $accMeta['invoice_number'] ?? $invoice->number;
 
             $html = <<<HTML
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
