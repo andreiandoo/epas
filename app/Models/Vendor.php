@@ -21,6 +21,20 @@ class Vendor extends Authenticatable
         'phone',
         'company_name',
         'cui',
+        'reg_com',
+        'cod_caen',
+        'fiscal_name',
+        'fiscal_address',
+        'county',
+        'city',
+        'is_vat_payer',
+        'vat_since',
+        'is_active_fiscal',
+        'is_split_vat',
+        'bank_name',
+        'iban',
+        'anaf_verified_at',
+        'anaf_data',
         'contact_person',
         'logo_url',
         'status',
@@ -35,8 +49,14 @@ class Vendor extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
-        'meta'     => 'array',
+        'password'         => 'hashed',
+        'is_vat_payer'     => 'boolean',
+        'is_active_fiscal' => 'boolean',
+        'is_split_vat'     => 'boolean',
+        'vat_since'        => 'date',
+        'anaf_verified_at' => 'datetime',
+        'anaf_data'        => 'array',
+        'meta'             => 'array',
     ];
 
     // ── Relationships ──
@@ -76,7 +96,30 @@ class Vendor extends Authenticatable
         return $this->hasMany(WristbandTransaction::class);
     }
 
+    public function merchandiseAllocations(): HasMany
+    {
+        return $this->hasMany(MerchandiseAllocation::class);
+    }
+
     // ── Helpers ──
+
+    public function formattedCui(): ?string
+    {
+        if (! $this->cui) {
+            return null;
+        }
+
+        return ($this->is_vat_payer ? 'RO' : '') . $this->cui;
+    }
+
+    public function needsAnafRefresh(): bool
+    {
+        if (! $this->cui) {
+            return false;
+        }
+
+        return ! $this->anaf_verified_at || $this->anaf_verified_at->lt(now()->subDays(30));
+    }
 
     public function isActive(): bool
     {

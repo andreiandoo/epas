@@ -94,6 +94,16 @@ class FestivalEdition extends Model
         return $this->hasMany(FestivalPass::class);
     }
 
+    public function merchandiseItems(): HasMany
+    {
+        return $this->hasMany(MerchandiseItem::class);
+    }
+
+    public function merchandiseAllocations(): HasMany
+    {
+        return $this->hasMany(MerchandiseAllocation::class);
+    }
+
     // ── Helpers ──
 
     public function isActive(): bool

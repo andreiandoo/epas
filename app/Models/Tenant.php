@@ -739,6 +739,21 @@ class Tenant extends Model
         return $this->hasMany(Vendor::class);
     }
 
+    public function merchandiseSuppliers(): HasMany
+    {
+        return $this->hasMany(MerchandiseSupplier::class);
+    }
+
+    public function merchandiseItems(): HasMany
+    {
+        return $this->hasMany(MerchandiseItem::class);
+    }
+
+    public function merchandiseAllocations(): HasMany
+    {
+        return $this->hasMany(MerchandiseAllocation::class);
+    }
+
     // ──────────────────────────────────────────────
     // Donation helpers
     // ──────────────────────────────────────────────

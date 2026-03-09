@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             VenueSeeder::class,
             DocumentationSeeder::class,
             ContractTemplateSeeder::class,
+            FestivalVendorSeeder::class,
         ]);
     }
 }

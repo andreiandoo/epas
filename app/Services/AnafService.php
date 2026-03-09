@@ -99,21 +99,34 @@ class AnafService
         // Parse the address - ANAF returns it in a specific format
         $parsedAddress = $this->parseAddress($address);
 
+        $isVatPayer = isset($company['inregistrare_scop_Tva']) &&
+                     $company['inregistrare_scop_Tva']['scpTVA'] === true;
+
+        $vatSince = null;
+        if ($isVatPayer && isset($company['inregistrare_scop_Tva']['dataInceputTvaRo'])) {
+            $vatSince = $company['inregistrare_scop_Tva']['dataInceputTvaRo'];
+        }
+
+        $isSplitVat = isset($company['inregistrare_RTVAI']) &&
+                      ($company['inregistrare_RTVAI']['statusRO_e_Factura'] ?? false) === true;
+
         return [
             'cui' => $general['cui'] ?? null,
             'company_name' => $general['denumire'] ?? null,
             'reg_com' => $general['nrRegCom'] ?? null,
+            'cod_caen' => $general['cod_CAEN'] ?? null,
             'address' => $address,
             'parsed_address' => $parsedAddress,
             'city' => $parsedAddress['city'] ?? null,
-            'state' => $parsedAddress['county'] ?? null,
+            'county' => $parsedAddress['county'] ?? null,
             'country' => 'Romania',
             'phone' => $general['telefon'] ?? null,
             'fax' => $general['fax'] ?? null,
-            'vat_payer' => isset($company['inregistrare_scop_Tva']) &&
-                          $company['inregistrare_scop_Tva']['scpTVA'] === true,
+            'vat_payer' => $isVatPayer,
+            'vat_since' => $vatSince,
+            'is_split_vat' => $isSplitVat,
             'is_active' => ($general['stare'] ?? '') === 'ACTIVA',
-            'raw_data' => $company, // Keep raw data for reference
+            'raw_data' => $company,
         ];
     }
 
@@ -176,6 +189,38 @@ class AnafService
         }
 
         return $result;
+    }
+
+    /**
+     * Lookup and update a Vendor model with ANAF data.
+     */
+    public function updateVendorFromAnaf(\App\Models\Vendor $vendor): bool
+    {
+        if (! $vendor->cui) {
+            return false;
+        }
+
+        $data = $this->lookupByCui($vendor->cui);
+        if (! $data) {
+            return false;
+        }
+
+        $vendor->update([
+            'fiscal_name'     => $data['company_name'],
+            'reg_com'         => $data['reg_com'],
+            'cod_caen'        => $data['cod_caen'],
+            'fiscal_address'  => $data['address'],
+            'county'          => $data['county'],
+            'city'            => $data['city'],
+            'is_vat_payer'    => $data['vat_payer'],
+            'vat_since'       => $data['vat_since'],
+            'is_active_fiscal'=> $data['is_active'],
+            'is_split_vat'    => $data['is_split_vat'],
+            'anaf_verified_at'=> now(),
+            'anaf_data'       => $data['raw_data'],
+        ]);
+
+        return true;
     }
 
     /**
