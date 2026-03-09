@@ -726,6 +726,20 @@ class Tenant extends Model
     }
 
     // ──────────────────────────────────────────────
+    // Festival editions & vendors
+    // ──────────────────────────────────────────────
+
+    public function festivalEditions(): HasMany
+    {
+        return $this->hasMany(FestivalEdition::class);
+    }
+
+    public function vendors(): HasMany
+    {
+        return $this->hasMany(Vendor::class);
+    }
+
+    // ──────────────────────────────────────────────
     // Donation helpers
     // ──────────────────────────────────────────────
 

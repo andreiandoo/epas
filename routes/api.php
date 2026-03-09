@@ -2626,3 +2626,130 @@ Route::prefix('organizer/events/{event}')->middleware(['throttle:120,1', 'auth:s
 Route::get('organizer/analytics/download/{filename}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'download'])
     ->middleware(['throttle:60,1', 'auth:sanctum'])
     ->name('api.organizer.analytics.download');
+
+/*
+|--------------------------------------------------------------------------
+| Vendor Portal API (vendor domains — e.g. vendors.festival.com)
+|--------------------------------------------------------------------------
+*/
+
+// Vendor auth (public)
+Route::prefix('vendor')->middleware(['throttle:30,1'])->group(function () {
+    Route::post('/login', [App\Http\Controllers\Api\Vendor\AuthController::class, 'login'])
+        ->name('api.vendor.login');
+});
+
+// Vendor authenticated routes
+Route::prefix('vendor')->middleware(['throttle:120,1', 'vendor.auth'])->group(function () {
+    Route::get('/me', [App\Http\Controllers\Api\Vendor\AuthController::class, 'me'])
+        ->name('api.vendor.me');
+    Route::post('/logout', [App\Http\Controllers\Api\Vendor\AuthController::class, 'logout'])
+        ->name('api.vendor.logout');
+
+    // Menu management (per edition)
+    Route::prefix('editions/{editionId}/menu')->group(function () {
+        Route::get('/categories', [App\Http\Controllers\Api\Vendor\MenuController::class, 'categories'])
+            ->name('api.vendor.menu.categories');
+        Route::post('/categories', [App\Http\Controllers\Api\Vendor\MenuController::class, 'storeCategory'])
+            ->name('api.vendor.menu.categories.store');
+        Route::put('/categories/{categoryId}', [App\Http\Controllers\Api\Vendor\MenuController::class, 'updateCategory'])
+            ->name('api.vendor.menu.categories.update');
+        Route::delete('/categories/{categoryId}', [App\Http\Controllers\Api\Vendor\MenuController::class, 'destroyCategory'])
+            ->name('api.vendor.menu.categories.destroy');
+
+        Route::get('/products', [App\Http\Controllers\Api\Vendor\MenuController::class, 'products'])
+            ->name('api.vendor.menu.products');
+        Route::post('/products', [App\Http\Controllers\Api\Vendor\MenuController::class, 'storeProduct'])
+            ->name('api.vendor.menu.products.store');
+        Route::put('/products/{productId}', [App\Http\Controllers\Api\Vendor\MenuController::class, 'updateProduct'])
+            ->name('api.vendor.menu.products.update');
+        Route::delete('/products/{productId}', [App\Http\Controllers\Api\Vendor\MenuController::class, 'destroyProduct'])
+            ->name('api.vendor.menu.products.destroy');
+        Route::post('/products/{productId}/toggle', [App\Http\Controllers\Api\Vendor\MenuController::class, 'toggleAvailability'])
+            ->name('api.vendor.menu.products.toggle');
+    });
+
+    // Sales dashboard & reports (per edition)
+    Route::prefix('editions/{editionId}/sales')->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\Api\Vendor\SalesController::class, 'dashboard'])
+            ->name('api.vendor.sales.dashboard');
+        Route::get('/', [App\Http\Controllers\Api\Vendor\SalesController::class, 'index'])
+            ->name('api.vendor.sales.index');
+        Route::get('/report/category', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByCategory'])
+            ->name('api.vendor.sales.report.category');
+        Route::get('/report/product', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByProduct'])
+            ->name('api.vendor.sales.report.product');
+        Route::get('/report/daily', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByDay'])
+            ->name('api.vendor.sales.report.daily');
+        Route::get('/report/hourly', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByHour'])
+            ->name('api.vendor.sales.report.hourly');
+        Route::get('/report/pos-devices', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByPosDevice'])
+            ->name('api.vendor.sales.report.pos-devices');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Festival Operations API (organizer / staff)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(function () {
+    // Edition management
+    Route::get('/editions', [App\Http\Controllers\Api\Festival\EditionController::class, 'index'])
+        ->name('api.festival.editions.index');
+    Route::post('/editions', [App\Http\Controllers\Api\Festival\EditionController::class, 'store'])
+        ->name('api.festival.editions.store');
+    Route::get('/editions/{editionId}', [App\Http\Controllers\Api\Festival\EditionController::class, 'show'])
+        ->name('api.festival.editions.show');
+    Route::put('/editions/{editionId}', [App\Http\Controllers\Api\Festival\EditionController::class, 'update'])
+        ->name('api.festival.editions.update');
+
+    // Vendor management per edition
+    Route::get('/editions/{editionId}/vendors', [App\Http\Controllers\Api\Festival\EditionController::class, 'listVendors'])
+        ->name('api.festival.editions.vendors.index');
+    Route::post('/editions/{editionId}/vendors', [App\Http\Controllers\Api\Festival\EditionController::class, 'storeVendor'])
+        ->name('api.festival.editions.vendors.store');
+    Route::put('/editions/{editionId}/vendors/{vendorId}', [App\Http\Controllers\Api\Festival\EditionController::class, 'updateVendorEdition'])
+        ->name('api.festival.editions.vendors.update');
+
+    // POS device management
+    Route::get('/editions/{editionId}/vendors/{vendorId}/pos-devices', [App\Http\Controllers\Api\Festival\EditionController::class, 'listPosDevices'])
+        ->name('api.festival.editions.vendors.pos-devices.index');
+    Route::post('/editions/{editionId}/vendors/{vendorId}/pos-devices', [App\Http\Controllers\Api\Festival\EditionController::class, 'storePosDevice'])
+        ->name('api.festival.editions.vendors.pos-devices.store');
+
+    // Organizer reports
+    Route::get('/editions/{editionId}/report/overview', [App\Http\Controllers\Api\Festival\EditionController::class, 'reportOverview'])
+        ->name('api.festival.editions.report.overview');
+    Route::get('/editions/{editionId}/report/vendors', [App\Http\Controllers\Api\Festival\EditionController::class, 'reportVendorBreakdown'])
+        ->name('api.festival.editions.report.vendors');
+
+    // Edition comparison
+    Route::post('/editions/compare', [App\Http\Controllers\Api\Festival\EditionController::class, 'compareEditions'])
+        ->name('api.festival.editions.compare');
+    Route::post('/vendors/{vendorId}/compare', [App\Http\Controllers\Api\Festival\EditionController::class, 'compareVendorAcrossEditions'])
+        ->name('api.festival.vendors.compare');
+
+    // Wristband operations
+    Route::post('/wristbands/import', [App\Http\Controllers\Api\Festival\WristbandController::class, 'import'])
+        ->name('api.festival.wristbands.import');
+    Route::get('/wristbands/{uid}', [App\Http\Controllers\Api\Festival\WristbandController::class, 'show'])
+        ->name('api.festival.wristbands.show');
+    Route::post('/wristbands/{uid}/assign', [App\Http\Controllers\Api\Festival\WristbandController::class, 'assign'])
+        ->name('api.festival.wristbands.assign');
+    Route::post('/wristbands/{uid}/topup', [App\Http\Controllers\Api\Festival\WristbandController::class, 'topUp'])
+        ->name('api.festival.wristbands.topup');
+    Route::post('/wristbands/{uid}/charge', [App\Http\Controllers\Api\Festival\WristbandController::class, 'charge'])
+        ->name('api.festival.wristbands.charge');
+    Route::post('/wristbands/{uid}/refund', [App\Http\Controllers\Api\Festival\WristbandController::class, 'refund'])
+        ->name('api.festival.wristbands.refund');
+    Route::post('/wristbands/{uid}/transfer', [App\Http\Controllers\Api\Festival\WristbandController::class, 'transfer'])
+        ->name('api.festival.wristbands.transfer');
+    Route::post('/wristbands/{uid}/cashout', [App\Http\Controllers\Api\Festival\WristbandController::class, 'cashout'])
+        ->name('api.festival.wristbands.cashout');
+    Route::post('/wristbands/{uid}/disable', [App\Http\Controllers\Api\Festival\WristbandController::class, 'disable'])
+        ->name('api.festival.wristbands.disable');
+    Route::get('/wristbands/{uid}/transactions', [App\Http\Controllers\Api\Festival\WristbandController::class, 'transactions'])
+        ->name('api.festival.wristbands.transactions');
+});
