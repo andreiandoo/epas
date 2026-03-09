@@ -262,7 +262,7 @@ class PosTicketClaimController extends Controller
     }
 
     /**
-     * Direct download - show tickets without requiring personal data
+     * Direct download - generate PDF ticket and stream to browser
      */
     public function download(string $token)
     {
@@ -287,10 +287,16 @@ class PosTicketClaimController extends Controller
             $claim->markClaimed();
         }
 
-        return view('pos-claim-download', [
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pos-claim-download', [
             'claim' => $claim,
             'order' => $order,
-        ]);
+        ])->setPaper([0, 0, 396, 612], 'portrait');
+
+        $safeName = preg_replace('/[^a-zA-Z0-9 ]/', '', $claim->event_name);
+        $safeName = str_replace(' ', '-', trim($safeName));
+        $filename = 'bilet-' . mb_substr($safeName, 0, 30) . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     /**
