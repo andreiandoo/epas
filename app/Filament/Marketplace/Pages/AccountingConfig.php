@@ -250,17 +250,10 @@ class AccountingConfig extends Page implements HasForms
         }
 
         $credentials = $this->getCredentials();
-        $tenantId = "marketplace_{$this->marketplace->id}";
 
         try {
             $service = app(AccountingService::class);
-            $result = $service->connect($tenantId, $this->provider, $credentials);
-
-            // Also store marketplace_client_id
-            DB::table('acc_connectors')
-                ->where('tenant_id', $tenantId)
-                ->where('provider', $this->provider)
-                ->update(['marketplace_client_id' => $this->marketplace->id]);
+            $result = $service->connectMarketplace($this->marketplace->id, $this->provider, $credentials);
 
             $this->connectionStatus = $result['success'] ? 'connected' : 'error';
             $this->lastError = $result['success'] ? null : $result['message'];

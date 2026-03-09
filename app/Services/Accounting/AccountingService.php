@@ -122,7 +122,48 @@ class AccountingService
     }
 
     /**
-     * Connect to accounting provider
+     * Connect marketplace to accounting provider
+     */
+    public function connectMarketplace(int $marketplaceClientId, string $provider, array $credentials, array $settings = []): array
+    {
+        $adapter = $this->getAdapter($provider);
+
+        // Authenticate
+        $authResult = $adapter->authenticate($credentials);
+
+        if (!$authResult['success']) {
+            return [
+                'success' => false,
+                'message' => $authResult['message'],
+            ];
+        }
+
+        // Test connection
+        $testResult = $adapter->testConnection();
+
+        // Save connector using marketplace_client_id
+        DB::table('acc_connectors')->updateOrInsert(
+            ['marketplace_client_id' => $marketplaceClientId, 'provider' => $provider],
+            [
+                'auth' => Crypt::encryptString(json_encode($credentials)),
+                'status' => $testResult['connected'] ? 'connected' : 'error',
+                'settings' => json_encode($settings),
+                'last_test_at' => now(),
+                'last_error' => $testResult['connected'] ? null : $testResult['message'],
+                'updated_at' => now(),
+                'created_at' => DB::raw('COALESCE(created_at, NOW())'),
+            ]
+        );
+
+        return [
+            'success' => $testResult['connected'],
+            'message' => $testResult['message'],
+            'details' => $testResult['details'] ?? [],
+        ];
+    }
+
+    /**
+     * Connect to accounting provider (tenant context)
      */
     public function connect(string $tenantId, string $provider, array $credentials, array $settings = []): array
     {
@@ -142,7 +183,7 @@ class AccountingService
         $testResult = $adapter->testConnection();
 
         // Save connector
-        $connector = DB::table('acc_connectors')->updateOrInsert(
+        DB::table('acc_connectors')->updateOrInsert(
             ['tenant_id' => $tenantId, 'provider' => $provider],
             [
                 'auth' => Crypt::encryptString(json_encode($credentials)),
