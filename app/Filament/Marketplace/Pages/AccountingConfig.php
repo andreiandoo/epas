@@ -128,7 +128,7 @@ class AccountingConfig extends Page implements HasForms
         $this->oblio_use_draft = $auth['use_draft'] ?? true;
     }
 
-    public function form(Form $form): Form
+    public function form(Form|\Filament\Schemas\Schema $form): Form|\Filament\Schemas\Schema
     {
         return $form
             ->schema([
