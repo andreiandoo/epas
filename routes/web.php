@@ -284,6 +284,8 @@ Route::post('/claim/{token}/skip', [\App\Http\Controllers\PosTicketClaimControll
     ->name('pos-claim.skip');
 Route::get('/claim/{token}/status', [\App\Http\Controllers\PosTicketClaimController::class, 'status'])
     ->name('pos-claim.status');
+Route::get('/claim/{token}/download', [\App\Http\Controllers\PosTicketClaimController::class, 'download'])
+    ->name('pos-claim.download');
 
 // Gate Scanner (organizer check-in interface)
 Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show'])

@@ -209,6 +209,57 @@
             font-weight: 400;
         }
 
+        .options-screen {
+            text-align: center;
+        }
+        .btn-download {
+            background: #10b981;
+            color: #fff;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-download:active {
+            transform: scale(0.98);
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e7eb;
+        }
+        .btn-points {
+            background: #7c3aed;
+            color: #fff;
+            margin-top: 0;
+        }
+        .points-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
         .alert {
             padding: 10px 14px;
             border-radius: 8px;
@@ -275,17 +326,41 @@
             </div>
 
         @else
-            {{-- Active claim form --}}
-            <div id="step-required" style="{{ ($step ?? 'required') !== 'required' ? 'display:none;' : '' }}">
+            {{-- Initial options screen --}}
+            <div id="step-options" style="{{ ($step ?? 'required') !== 'required' ? 'display:none;' : '' }}">
+                <div class="options-screen">
+                    <p class="intro-text" style="text-align:center;">
+                        Biletele tale pentru <strong>{{ $claim->event_name }}</strong> sunt gata!
+                    </p>
+
+                    <a href="/claim/{{ $claim->token }}/download" class="btn btn-download">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Descarcă biletul direct
+                    </a>
+
+                    <div class="divider">sau</div>
+
+                    <div class="points-badge">
+                        🎁 Completează datele și câștigă <strong>100 puncte AmBilet</strong> pe care le poți folosi ca reducere la orice eveniment viitor!
+                    </div>
+
+                    <button type="button" class="btn btn-points" id="btn-show-form">
+                        Completează și câștigă 100 puncte
+                    </button>
+                </div>
+            </div>
+
+            {{-- Claim form (hidden initially, shown on button click) --}}
+            <div id="step-required" style="display:none;">
                 <div class="step-indicator">
                     <div class="step-dot active" id="dot1">1</div>
                     <div class="step-line" id="line1"></div>
                     <div class="step-dot inactive" id="dot2">2</div>
                 </div>
 
-                <p class="intro-text">
-                    Pentru a putea valida accesul tău la <strong>{{ $claim->event_name }}</strong>@if($claim->event_date) din <strong>{{ $claim->event_date }}</strong>@endif@if($claim->venue_name), <strong>{{ $claim->venue_name }}</strong>@endif, sunt necesare următoarele detalii:
-                </p>
+                <div class="points-badge" style="text-align:center;">
+                    🎁 Completează formularul și primești <strong>100 puncte AmBilet</strong> — le poți folosi ca reducere la orice eveniment viitor!
+                </div>
 
                 <div class="alert alert-error" id="error-required"></div>
 
@@ -424,6 +499,15 @@
         return json;
     }
 
+    // Show form button (from options screen)
+    const btnShowForm = document.getElementById('btn-show-form');
+    if (btnShowForm) {
+        btnShowForm.addEventListener('click', function() {
+            document.getElementById('step-options').style.display = 'none';
+            document.getElementById('step-required').style.display = 'block';
+        });
+    }
+
     // Step 1 form
     const formReq = document.getElementById('form-required');
     if (formReq) {
@@ -536,6 +620,8 @@
     }
 
     function showSuccess() {
+        const opts = document.getElementById('step-options');
+        if (opts) opts.style.display = 'none';
         document.getElementById('step-required').style.display = 'none';
         document.getElementById('step-optional').style.display = 'none';
         document.getElementById('step-success').style.display = 'block';

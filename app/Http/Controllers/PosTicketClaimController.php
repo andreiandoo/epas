@@ -262,6 +262,38 @@ class PosTicketClaimController extends Controller
     }
 
     /**
+     * Direct download - show tickets without requiring personal data
+     */
+    public function download(string $token)
+    {
+        $claim = PosTicketClaim::where('token', $token)->first();
+
+        if (!$claim) {
+            return response()->view('pos-claim', ['error' => 'not_found', 'claim' => null], 404);
+        }
+
+        if ($claim->isExpired()) {
+            return response()->view('pos-claim', ['error' => 'expired', 'claim' => $claim]);
+        }
+
+        $order = $claim->order()->with(['tickets.ticketType'])->first();
+
+        if (!$order) {
+            return response()->view('pos-claim', ['error' => 'not_found', 'claim' => null], 404);
+        }
+
+        // Mark as claimed if still pending (direct download = no personal data)
+        if ($claim->isPending()) {
+            $claim->markClaimed();
+        }
+
+        return view('pos-claim-download', [
+            'claim' => $claim,
+            'order' => $order,
+        ]);
+    }
+
+    /**
      * Send ticket email to customer
      */
     private function sendTicketEmail(Order $order, string $email, string $eventName): void
