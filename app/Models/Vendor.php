@@ -76,6 +76,16 @@ class Vendor extends Authenticatable
         return $this->hasMany(VendorPosDevice::class);
     }
 
+    public function employees(): HasMany
+    {
+        return $this->hasMany(VendorEmployee::class);
+    }
+
+    public function shifts(): HasMany
+    {
+        return $this->hasMany(VendorShift::class);
+    }
+
     public function productCategories(): HasMany
     {
         return $this->hasMany(VendorProductCategory::class);

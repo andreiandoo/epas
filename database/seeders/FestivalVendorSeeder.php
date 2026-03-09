@@ -9,6 +9,10 @@ use App\Models\MerchandiseSupplier;
 use App\Models\Tenant;
 use App\Models\Vendor;
 use App\Models\VendorEdition;
+use App\Models\VendorEmployee;
+use App\Models\VendorPosDevice;
+use App\Models\VendorProductCategory;
+use App\Models\VendorProduct;
 use App\Models\Wristband;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -258,5 +262,176 @@ class FestivalVendorSeeder extends Seeder
                 'status'             => 'allocated',
             ]
         );
+
+        // ── POS Devices ──
+
+        foreach ($vendors as $i => $vendor) {
+            for ($d = 1; $d <= 2; $d++) {
+                VendorPosDevice::firstOrCreate(
+                    ['tenant_id' => $tenant->id, 'device_uid' => "POS-{$vendor->slug}-{$d}"],
+                    [
+                        'vendor_id'           => $vendor->id,
+                        'festival_edition_id' => $edition->id,
+                        'name'                => "POS #{$d} " . $vendor->name,
+                        'status'              => 'active',
+                    ]
+                );
+            }
+        }
+
+        // ── Angajati vendori ──
+
+        $employeesData = [
+            // Burger Brothers
+            ['vendor' => 0, 'name' => 'Ion Popescu',    'pin' => '1234', 'role' => 'admin'],
+            ['vendor' => 0, 'name' => 'Ana Matei',      'pin' => '1235', 'role' => 'operator'],
+            ['vendor' => 0, 'name' => 'Mihai Radu',     'pin' => '1236', 'role' => 'operator'],
+            // Cocktail Lab
+            ['vendor' => 1, 'name' => 'Maria Ionescu',  'pin' => '2234', 'role' => 'admin'],
+            ['vendor' => 1, 'name' => 'Alex Dumitru',   'pin' => '2235', 'role' => 'operator'],
+            ['vendor' => 1, 'name' => 'Elena Vasile',   'pin' => '2236', 'role' => 'operator'],
+            ['vendor' => 1, 'name' => 'Cosmin Barbu',   'pin' => '2237', 'role' => 'operator'],
+            // Merch Store
+            ['vendor' => 2, 'name' => 'Andrei Marin',   'pin' => '3234', 'role' => 'admin'],
+            ['vendor' => 2, 'name' => 'Diana Stan',     'pin' => '3235', 'role' => 'operator'],
+        ];
+
+        foreach ($employeesData as $ed) {
+            $v = $vendors[$ed['vendor']];
+            VendorEmployee::firstOrCreate(
+                ['vendor_id' => $v->id, 'pin' => $ed['pin']],
+                [
+                    'tenant_id' => $tenant->id,
+                    'name'      => $ed['name'],
+                    'role'      => $ed['role'],
+                    'status'    => 'active',
+                    'permissions' => $ed['role'] === 'operator'
+                        ? ['sell', 'refund']
+                        : null,
+                ]
+            );
+        }
+
+        // ── Categorii produse cu subcategorii ──
+
+        // Burger Brothers
+        $catBurgeri = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => 'burgeri'],
+            ['name' => 'Burgeri', 'sort_order' => 1, 'icon' => 'fire', 'color' => '#e74c3c']
+        );
+        $catGarnituri = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => 'garnituri'],
+            ['name' => 'Garnituri', 'sort_order' => 2, 'icon' => 'star', 'color' => '#f39c12']
+        );
+        $catBauturi = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => 'bauturi-bb'],
+            ['name' => 'Bauturi', 'sort_order' => 3, 'icon' => 'cup', 'color' => '#3498db']
+        );
+        // Subcategorie: Burgeri → Clasici, Premium
+        $subClasic = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => 'burgeri-clasici'],
+            ['name' => 'Clasici', 'parent_id' => $catBurgeri->id, 'sort_order' => 1]
+        );
+        $subPremium = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => 'burgeri-premium'],
+            ['name' => 'Premium', 'parent_id' => $catBurgeri->id, 'sort_order' => 2]
+        );
+
+        // Produse Burger Brothers
+        $burgerProducts = [
+            ['cat' => $subClasic->id,  'name' => 'Classic Burger',    'price' => 2500, 'tags' => []],
+            ['cat' => $subClasic->id,  'name' => 'Cheeseburger',      'price' => 2800, 'tags' => []],
+            ['cat' => $subPremium->id, 'name' => 'Truffle Burger',    'price' => 4500, 'tags' => ['premium']],
+            ['cat' => $subPremium->id, 'name' => 'Wagyu Smash',       'price' => 5500, 'tags' => ['premium']],
+            ['cat' => $catGarnituri->id, 'name' => 'Cartofi prajiti', 'price' => 1200, 'tags' => ['vegan']],
+            ['cat' => $catGarnituri->id, 'name' => 'Coleslaw',        'price' => 800,  'tags' => ['vegan']],
+            ['cat' => $catBauturi->id, 'name' => 'Cola 330ml',        'price' => 800,  'tags' => []],
+            ['cat' => $catBauturi->id, 'name' => 'Apa plata 500ml',   'price' => 500,  'tags' => []],
+        ];
+
+        foreach ($burgerProducts as $idx => $p) {
+            VendorProduct::firstOrCreate(
+                ['vendor_id' => $vendors[0]->id, 'festival_edition_id' => $edition->id, 'slug' => Str::slug($p['name'])],
+                [
+                    'vendor_product_category_id' => $p['cat'],
+                    'name'         => $p['name'],
+                    'price_cents'  => $p['price'],
+                    'currency'     => 'RON',
+                    'is_available' => true,
+                    'sort_order'   => $idx + 1,
+                    'tags'         => $p['tags'],
+                ]
+            );
+        }
+
+        // Cocktail Lab — categorii
+        $catCocktails = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[1]->id, 'festival_edition_id' => $edition->id, 'slug' => 'cocktails'],
+            ['name' => 'Cocktails', 'sort_order' => 1, 'icon' => 'beaker', 'color' => '#9b59b6']
+        );
+        $catShots = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[1]->id, 'festival_edition_id' => $edition->id, 'slug' => 'shots'],
+            ['name' => 'Shots', 'sort_order' => 2, 'icon' => 'bolt', 'color' => '#e67e22']
+        );
+        $catNonAlc = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[1]->id, 'festival_edition_id' => $edition->id, 'slug' => 'non-alcoolice'],
+            ['name' => 'Non-alcoolice', 'sort_order' => 3, 'icon' => 'heart', 'color' => '#2ecc71']
+        );
+
+        $drinkProducts = [
+            ['cat' => $catCocktails->id, 'name' => 'Mojito',          'price' => 3500],
+            ['cat' => $catCocktails->id, 'name' => 'Aperol Spritz',   'price' => 3200],
+            ['cat' => $catCocktails->id, 'name' => 'Long Island',     'price' => 4000],
+            ['cat' => $catShots->id,     'name' => 'Tequila Shot',    'price' => 1500],
+            ['cat' => $catShots->id,     'name' => 'Jagermeister',    'price' => 1800],
+            ['cat' => $catNonAlc->id,    'name' => 'Limonada fresh',  'price' => 1500],
+            ['cat' => $catNonAlc->id,    'name' => 'Virgin Mojito',   'price' => 2000],
+        ];
+
+        foreach ($drinkProducts as $idx => $p) {
+            VendorProduct::firstOrCreate(
+                ['vendor_id' => $vendors[1]->id, 'festival_edition_id' => $edition->id, 'slug' => Str::slug($p['name'])],
+                [
+                    'vendor_product_category_id' => $p['cat'],
+                    'name'         => $p['name'],
+                    'price_cents'  => $p['price'],
+                    'currency'     => 'RON',
+                    'is_available' => true,
+                    'sort_order'   => $idx + 1,
+                ]
+            );
+        }
+
+        // Merch Store — categorii
+        $catTricouri = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[2]->id, 'festival_edition_id' => $edition->id, 'slug' => 'tricouri'],
+            ['name' => 'Tricouri', 'sort_order' => 1, 'icon' => 'tag', 'color' => '#1abc9c']
+        );
+        $catAccesorii = VendorProductCategory::firstOrCreate(
+            ['vendor_id' => $vendors[2]->id, 'festival_edition_id' => $edition->id, 'slug' => 'accesorii'],
+            ['name' => 'Accesorii', 'sort_order' => 2, 'icon' => 'sparkles', 'color' => '#e91e63']
+        );
+
+        $merchProducts = [
+            ['cat' => $catTricouri->id,  'name' => 'Tricou Alpha Fest 2026',    'price' => 8000],
+            ['cat' => $catTricouri->id,  'name' => 'Tricou Line-up',            'price' => 9000],
+            ['cat' => $catAccesorii->id, 'name' => 'Sapca Alpha Fest',          'price' => 4500],
+            ['cat' => $catAccesorii->id, 'name' => 'Breloc Alpha Fest',         'price' => 1500],
+            ['cat' => $catAccesorii->id, 'name' => 'Rucsac festival',           'price' => 12000],
+        ];
+
+        foreach ($merchProducts as $idx => $p) {
+            VendorProduct::firstOrCreate(
+                ['vendor_id' => $vendors[2]->id, 'festival_edition_id' => $edition->id, 'slug' => Str::slug($p['name'])],
+                [
+                    'vendor_product_category_id' => $p['cat'],
+                    'name'         => $p['name'],
+                    'price_cents'  => $p['price'],
+                    'currency'     => 'RON',
+                    'is_available' => true,
+                    'sort_order'   => $idx + 1,
+                ]
+            );
+        }
     }
 }

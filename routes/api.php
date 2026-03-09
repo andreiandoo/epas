@@ -2686,6 +2686,26 @@ Route::prefix('vendor')->middleware(['throttle:120,1', 'vendor.auth'])->group(fu
         Route::get('/report/pos-devices', [App\Http\Controllers\Api\Vendor\SalesController::class, 'reportByPosDevice'])
             ->name('api.vendor.sales.report.pos-devices');
     });
+
+    // Employee management
+    Route::prefix('employees')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'index'])
+            ->name('api.vendor.employees.index');
+        Route::post('/', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'store'])
+            ->name('api.vendor.employees.store');
+        Route::put('/{employeeId}', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'update'])
+            ->name('api.vendor.employees.update');
+        Route::delete('/{employeeId}', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'destroy'])
+            ->name('api.vendor.employees.destroy');
+        Route::post('/auth-pin', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'authenticateByPin'])
+            ->name('api.vendor.employees.auth-pin');
+        Route::post('/{employeeId}/end-shift', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'endShift'])
+            ->name('api.vendor.employees.end-shift');
+    });
+
+    // Shifts (per edition)
+    Route::get('/editions/{editionId}/shifts', [App\Http\Controllers\Api\Vendor\EmployeeController::class, 'shifts'])
+        ->name('api.vendor.shifts.index');
 });
 
 /*

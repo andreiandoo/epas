@@ -13,6 +13,8 @@ class VendorSaleItem extends Model
         'vendor_product_id',
         'wristband_transaction_id',
         'vendor_pos_device_id',
+        'vendor_employee_id',
+        'vendor_shift_id',
         'product_name',
         'category_name',
         'variant_name',
@@ -58,6 +60,16 @@ class VendorSaleItem extends Model
     public function posDevice(): BelongsTo
     {
         return $this->belongsTo(VendorPosDevice::class, 'vendor_pos_device_id');
+    }
+
+    public function employee(): BelongsTo
+    {
+        return $this->belongsTo(VendorEmployee::class, 'vendor_employee_id');
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(VendorShift::class, 'vendor_shift_id');
     }
 
     public function getNetVendorCentsAttribute(): int
