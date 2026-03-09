@@ -19,6 +19,10 @@ class Wristband extends Model
         'status',
         'balance_cents',
         'currency',
+        'pin_hash',
+        'qr_payload',
+        'last_transaction_at',
+        'last_pos_device_uid',
         'assigned_at',
         'activated_at',
         'disabled_at',
@@ -28,14 +32,17 @@ class Wristband extends Model
         'meta',
     ];
 
+    protected $hidden = ['pin_hash'];
+
     protected $casts = [
-        'balance_cents' => 'integer',
-        'assigned_at'   => 'datetime',
-        'activated_at'  => 'datetime',
-        'disabled_at'   => 'datetime',
-        'access_zones'  => 'array',
-        'scan_log'      => 'array',
-        'meta'          => 'array',
+        'balance_cents'        => 'integer',
+        'assigned_at'          => 'datetime',
+        'activated_at'         => 'datetime',
+        'disabled_at'          => 'datetime',
+        'last_transaction_at'  => 'datetime',
+        'access_zones'         => 'array',
+        'scan_log'             => 'array',
+        'meta'                 => 'array',
     ];
 
     // ── Relationships ──

@@ -10,12 +10,18 @@ use App\Models\VendorProduct;
 use App\Models\VendorSaleItem;
 use App\Models\Wristband;
 use App\Models\WristbandTransaction;
+use App\Services\WristbandSecurityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WristbandController extends Controller
 {
+    public function __construct(
+        private WristbandSecurityService $security
+    ) {}
+
     /**
      * Import a batch of wristband UIDs (from manufacturer CSV).
      */
@@ -134,6 +140,7 @@ class WristbandController extends Controller
 
     /**
      * Charge wristband (vendor sale with line items).
+     * Includes rate limiting, optional PIN validation, and fraud detection.
      */
     public function charge(Request $request, string $uid): JsonResponse
     {
@@ -143,9 +150,18 @@ class WristbandController extends Controller
             return response()->json(['message' => 'Wristband is not active.'], 422);
         }
 
+        // Rate limiting — max 1 charge per 10 seconds per wristband
+        if ($this->security->isRateLimited($uid, 'charge', 10)) {
+            return response()->json(['message' => 'Too many transactions. Please wait.'], 429);
+        }
+
         $data = $request->validate([
             'vendor_id'         => 'required|integer|exists:vendors,id',
             'pos_device_id'     => 'nullable|integer|exists:vendor_pos_devices,id',
+            'pos_device_uid'    => 'nullable|string|max:100',
+            'employee_id'       => 'nullable|integer|exists:vendor_employees,id',
+            'shift_id'          => 'nullable|integer|exists:vendor_shifts,id',
+            'pin'               => 'nullable|string|max:6',
             'operator'          => 'nullable|string|max:100',
             'items'             => 'required|array|min:1',
             'items.*.product_id' => 'nullable|integer|exists:vendor_products,id',
@@ -155,6 +171,25 @@ class WristbandController extends Controller
             'items.*.quantity'  => 'required|integer|min:1',
             'items.*.unit_price_cents' => 'required|integer|min:0',
         ]);
+
+        // PIN validation (if wristband has PIN set)
+        if (! $this->security->validatePin($wristband, $data['pin'] ?? null)) {
+            return response()->json(['message' => 'Invalid PIN.', 'pin_required' => true], 403);
+        }
+
+        // Fraud detection — concurrent usage from different POS devices
+        $conflictingDevice = $this->security->detectConcurrentUsage(
+            $uid,
+            $data['pos_device_uid'] ?? null
+        );
+        if ($conflictingDevice) {
+            Log::warning('Wristband concurrent usage detected', [
+                'uid'              => $uid,
+                'current_device'   => $data['pos_device_uid'] ?? null,
+                'previous_device'  => $conflictingDevice,
+            ]);
+            // Log but don't block — flag in response for POS app to show warning
+        }
 
         $totalCents = 0;
         foreach ($data['items'] as $item) {
@@ -174,7 +209,7 @@ class WristbandController extends Controller
             ->where('festival_edition_id', $wristband->festival_edition_id)
             ->first();
 
-        return DB::transaction(function () use ($wristband, $vendor, $vendorEdition, $data, $totalCents) {
+        return DB::transaction(function () use ($wristband, $vendor, $vendorEdition, $data, $totalCents, $conflictingDevice) {
             $transaction = $wristband->charge(
                 $totalCents,
                 $vendor->name,
@@ -200,6 +235,8 @@ class WristbandController extends Controller
                     'vendor_product_id'        => $item['product_id'] ?? null,
                     'wristband_transaction_id' => $transaction->id,
                     'vendor_pos_device_id'     => $data['pos_device_id'] ?? null,
+                    'vendor_employee_id'       => $data['employee_id'] ?? null,
+                    'vendor_shift_id'          => $data['shift_id'] ?? null,
                     'product_name'             => $item['name'],
                     'category_name'            => $item['category'] ?? null,
                     'variant_name'             => $item['variant'] ?? null,
@@ -218,11 +255,29 @@ class WristbandController extends Controller
                 \App\Models\VendorPosDevice::find($data['pos_device_id'])?->heartbeat();
             }
 
-            return response()->json([
+            // Track last transaction for fraud detection
+            $wristband->update([
+                'last_transaction_at'  => now(),
+                'last_pos_device_uid'  => $data['pos_device_uid'] ?? null,
+            ]);
+
+            // Update shift sales counters
+            if (! empty($data['shift_id'])) {
+                \App\Models\VendorShift::find($data['shift_id'])?->recordSale($totalCents);
+            }
+
+            $response = [
                 'transaction'   => $transaction,
                 'total_charged' => $totalCents,
                 'new_balance'   => $wristband->balance_cents,
-            ]);
+            ];
+
+            if ($conflictingDevice) {
+                $response['warning'] = 'concurrent_usage_detected';
+                $response['conflicting_device'] = $conflictingDevice;
+            }
+
+            return response()->json($response);
         });
     }
 
@@ -333,5 +388,100 @@ class WristbandController extends Controller
         $wristband->disable($data['reason'] ?? 'manual');
 
         return response()->json(['wristband' => $wristband->fresh()]);
+    }
+
+    /**
+     * Generate signed QR payload for a wristband.
+     */
+    public function generateQr(string $uid): JsonResponse
+    {
+        $wristband = Wristband::where('uid', $uid)->firstOrFail();
+
+        $payload = $this->security->generateQrPayload($wristband);
+
+        $wristband->update(['qr_payload' => $payload]);
+
+        return response()->json([
+            'uid'        => $wristband->uid,
+            'qr_payload' => $payload,
+        ]);
+    }
+
+    /**
+     * Resolve a wristband from a signed QR payload (used by POS app).
+     */
+    public function resolveQr(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'qr_payload' => 'required|string',
+            'tenant_id'  => 'required|integer',
+        ]);
+
+        $parsed = $this->security->validateQrPayload($data['qr_payload'], $data['tenant_id']);
+
+        if (! $parsed) {
+            return response()->json(['message' => 'Invalid or tampered QR code.'], 403);
+        }
+
+        $wristband = Wristband::where('uid', $parsed['uid'])->first();
+
+        if (! $wristband) {
+            return response()->json(['message' => 'Wristband not found.'], 404);
+        }
+
+        return response()->json([
+            'uid'           => $wristband->uid,
+            'status'        => $wristband->status,
+            'balance_cents' => $wristband->balance_cents,
+            'currency'      => $wristband->currency,
+            'has_pin'       => (bool) $wristband->pin_hash,
+        ]);
+    }
+
+    /**
+     * Set or change wristband PIN.
+     */
+    public function setPin(Request $request, string $uid): JsonResponse
+    {
+        $wristband = Wristband::where('uid', $uid)->firstOrFail();
+
+        $data = $request->validate([
+            'pin'         => 'required|string|min:4|max:6',
+            'current_pin' => 'nullable|string',
+        ]);
+
+        // If PIN already set, require current PIN
+        if ($wristband->pin_hash && ! $this->security->validatePin($wristband, $data['current_pin'] ?? null)) {
+            return response()->json(['message' => 'Current PIN is incorrect.'], 403);
+        }
+
+        $this->security->setPin($wristband, $data['pin']);
+
+        return response()->json(['message' => 'PIN set successfully.']);
+    }
+
+    /**
+     * Remove wristband PIN (requires current PIN or operator override).
+     */
+    public function removePin(Request $request, string $uid): JsonResponse
+    {
+        $wristband = Wristband::where('uid', $uid)->firstOrFail();
+
+        $data = $request->validate([
+            'current_pin' => 'nullable|string',
+            'operator'    => 'nullable|string|max:100',
+        ]);
+
+        // Either provide correct PIN or operator override
+        $pinValid = $this->security->validatePin($wristband, $data['current_pin'] ?? null);
+        $hasOperator = ! empty($data['operator']);
+
+        if (! $pinValid && ! $hasOperator) {
+            return response()->json(['message' => 'Current PIN or operator override required.'], 403);
+        }
+
+        $wristband->update(['pin_hash' => null]);
+
+        return response()->json(['message' => 'PIN removed.']);
     }
 }

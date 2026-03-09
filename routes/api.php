@@ -2772,4 +2772,16 @@ Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(f
         ->name('api.festival.wristbands.disable');
     Route::get('/wristbands/{uid}/transactions', [App\Http\Controllers\Api\Festival\WristbandController::class, 'transactions'])
         ->name('api.festival.wristbands.transactions');
+
+    // QR security endpoints
+    Route::post('/wristbands/{uid}/generate-qr', [App\Http\Controllers\Api\Festival\WristbandController::class, 'generateQr'])
+        ->name('api.festival.wristbands.generate-qr');
+    Route::post('/wristbands/resolve-qr', [App\Http\Controllers\Api\Festival\WristbandController::class, 'resolveQr'])
+        ->name('api.festival.wristbands.resolve-qr');
+
+    // PIN management
+    Route::post('/wristbands/{uid}/set-pin', [App\Http\Controllers\Api\Festival\WristbandController::class, 'setPin'])
+        ->name('api.festival.wristbands.set-pin');
+    Route::post('/wristbands/{uid}/remove-pin', [App\Http\Controllers\Api\Festival\WristbandController::class, 'removePin'])
+        ->name('api.festival.wristbands.remove-pin');
 });
