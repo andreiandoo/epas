@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Resources\PayoutResource\Pages;
 
+use App\Filament\Marketplace\Resources\OrganizerResource;
 use App\Filament\Marketplace\Resources\PayoutResource;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
@@ -116,6 +117,32 @@ class ListPayouts extends ListRecords
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
+                Forms\Components\Placeholder::make('no_bank_account_warning')
+                    ->label('')
+                    ->content(function (Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return '';
+                        $count = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count();
+                        if ($count > 0) return '';
+                        $editUrl = OrganizerResource::getUrl('edit', ['record' => $organizerId]);
+                        return new HtmlString(
+                            '<div class="rounded-lg border border-warning-300 bg-warning-50 dark:border-warning-600 dark:bg-warning-950 p-3 text-sm">'
+                            . '<div class="flex items-center gap-2 text-warning-700 dark:text-warning-400">'
+                            . '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
+                            . '<span>Acest organizator nu are niciun cont bancar configurat.</span>'
+                            . '</div>'
+                            . '<a href="' . $editUrl . '" target="_blank" class="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400">'
+                            . '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>'
+                            . 'Deschide pagina organizatorului pentru a adăuga un cont bancar'
+                            . '</a></div>'
+                        );
+                    })
+                    ->visible(function (Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return false;
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() === 0;
+                    }),
+
                 Forms\Components\Select::make('bank_account_id')
                     ->label('Cont bancar')
                     ->options(function (Get $get) {
@@ -132,7 +159,11 @@ class ListPayouts extends ListRecords
                     })
                     ->searchable()
                     ->required()
-                    ->visible(fn (Get $get) => $get('marketplace_organizer_id') !== null),
+                    ->visible(function (Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return false;
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
+                    }),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('gross_amount')
@@ -532,10 +563,10 @@ class ListPayouts extends ListRecords
         $commissionRate = $event->getEffectiveCommissionRate();
 
         // Commission type label
-        $commissionTypeLabel = match ($commissionMode) {
-            'added_on_top' => 'Adăugat peste preț (organizatorul primește 100%)',
-            'included' => "Inclus în preț ({$commissionRate}%)",
-            default => "Procentual ({$commissionRate}%)",
+        $commissionModeLabel = match ($commissionMode) {
+            'added_on_top' => 'Adăugat',
+            'included' => 'Inclus',
+            default => 'Procentual',
         };
 
         // Completed orders
@@ -571,10 +602,13 @@ class ListPayouts extends ListRecords
         $totalTicketsSold = array_sum(array_column($ticketBreakdown, 'quantity'));
 
         // Commission calculation
+        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
         if ($commissionMode === 'added_on_top') {
-            $commissionAmount = 0;
-            $netRevenue = (float) $completedOrders->sum('subtotal');
+            // Commission paid by buyer — organizer gets subtotal
+            $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
+            $netRevenue = $subtotalRevenue;
         } else {
+            // Commission deducted from organizer's revenue
             $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
             $netRevenue = $grossRevenue - $commissionAmount;
         }
@@ -608,11 +642,7 @@ class ListPayouts extends ListRecords
         $html .= '<div class="border-t border-gray-200 dark:border-white/10 px-3 py-2 space-y-1 bg-gray-50 dark:bg-white/5">';
         $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . $totalTicketsSold . '</span></div>';
         $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Vânzări brute:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Tip comision:</span><span class="font-medium">' . $commissionTypeLabel . '</span></div>';
-
-        if ($commissionAmount > 0) {
-            $html .= '<div class="flex justify-between text-orange-600 dark:text-orange-400"><span>Comision platformă:</span><span class="font-mono font-medium">-' . number_format($commissionAmount, 2) . ' RON</span></div>';
-        }
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Comision:</span><span class="font-medium">' . $commissionModeLabel . ' | ' . number_format($commissionRate, 2) . '% | ' . number_format($commissionAmount, 2) . ' RON</span></div>';
 
         if ($totalRefundedCount > 0) {
             $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
