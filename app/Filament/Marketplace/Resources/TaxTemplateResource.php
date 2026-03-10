@@ -145,8 +145,8 @@ class TaxTemplateResource extends Resource
 
                         Forms\Components\RichEditor::make('html_content')
                             ->label('Page 1 HTML Template (WYSIWYG)')
-                            ->required()
                             ->columnSpanFull()
+                            ->dehydrated(true)
                             ->fileAttachmentsDisk('public')
                             ->fileAttachmentsDirectory('tax-templates')
                             ->fileAttachmentsVisibility('public')
@@ -171,13 +171,11 @@ class TaxTemplateResource extends Resource
 
                         Forms\Components\Textarea::make('html_content_source')
                             ->label('Page 1 HTML Template (Source Code)')
-                            ->required()
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
                             ->formatStateUsing(fn ($record) => $record?->html_content)
-                            ->dehydrated(false)
                             ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content', $state))
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
@@ -209,6 +207,7 @@ class TaxTemplateResource extends Resource
                         Forms\Components\RichEditor::make('html_content_page_2')
                             ->label('Page 2 HTML Template (WYSIWYG)')
                             ->columnSpanFull()
+                            ->dehydrated(true)
                             ->fileAttachmentsDisk('public')
                             ->fileAttachmentsDirectory('tax-templates')
                             ->fileAttachmentsVisibility('public')
@@ -238,7 +237,6 @@ class TaxTemplateResource extends Resource
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
-                            ->dehydrated(false)
                             ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content_page_2', $state))
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),

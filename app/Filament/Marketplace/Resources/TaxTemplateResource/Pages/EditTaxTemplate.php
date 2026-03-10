@@ -19,6 +19,15 @@ class EditTaxTemplate extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        // If source mode was used, the textarea value takes priority
+        if (!empty($data['html_content_source'])) {
+            $data['html_content'] = $data['html_content_source'];
+        }
+
+        if (!empty($data['html_content_page_2_source'])) {
+            $data['html_content_page_2'] = $data['html_content_page_2_source'];
+        }
+
         // Remove virtual fields that shouldn't be persisted
         unset(
             $data['page1_source_mode'],
