@@ -31,6 +31,7 @@ class MarketplacePayout extends Model
         'adjustments_amount',
         'adjustments_note',
         'status',
+        'source',
         'payout_method',
         'approved_by',
         'approved_at',

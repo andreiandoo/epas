@@ -363,6 +363,22 @@ class PayoutResource extends Resource
                     })
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('source')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'organizer' => 'primary',
+                        'manual' => 'warning',
+                        'automated' => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'organizer' => 'Organizer',
+                        'manual' => 'Manual',
+                        'automated' => 'Automat',
+                        default => ucfirst($state),
+                    })
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('period_start')
                     ->date()
                     ->sortable()

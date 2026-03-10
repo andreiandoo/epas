@@ -711,3 +711,21 @@ Schedule::call(function () {
         \Log::info("Auto-deactivated {$count} ticket types (active_until reached)");
     }
 })->everyMinute()->name('ticket-types:deactivate-expired');
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Auto-Deconts
+|--------------------------------------------------------------------------
+*/
+
+// Auto-generate deconts for finished events with remaining balance (daily at 6 AM)
+Schedule::command('marketplace:generate-auto-deconts --days-after=3')
+    ->dailyAt('06:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Auto-deconts generation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to generate auto-deconts');
+    });

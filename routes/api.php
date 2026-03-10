@@ -1649,6 +1649,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::delete('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'undoCheckIn'])
             ->name('api.marketplace-client.organizer.events.check-in.undo');
 
+        // Seating map for POS
+        Route::get('/events/{event}/seating-map', [OrganizerEventsController::class, 'seatingMap'])
+            ->name('api.marketplace-client.organizer.events.seating-map');
+
         // Event form helpers (categories, genres, venues)
         Route::get('/event-categories', [OrganizerEventsController::class, 'categories'])
             ->name('api.marketplace-client.organizer.event-categories');

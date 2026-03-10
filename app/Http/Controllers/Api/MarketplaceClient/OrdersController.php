@@ -9,6 +9,8 @@ use App\Models\Ticket;
 use App\Models\Customer;
 use App\Models\PosTicketClaim;
 use App\Models\MarketplaceTransaction;
+use App\Models\Seating\EventSeatingLayout;
+use App\Models\Seating\EventSeat;
 use App\Services\MarketplaceWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +32,8 @@ class OrdersController extends BaseController
             'tickets' => 'required|array|min:1',
             'tickets.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'tickets.*.quantity' => 'required|integer|min:1|max:20',
+            'seat_uids' => 'nullable|array',
+            'seat_uids.*' => 'string|max:32',
             'customer' => 'required|array',
             'customer.email' => 'required|email',
             'customer.first_name' => 'required|string|max:255',
@@ -191,6 +195,83 @@ class OrdersController extends BaseController
                         'price' => $item['unit_price'],
                     ]);
                 }
+            }
+
+            // Handle seated ticket sales - mark selected seats as sold
+            $seatUids = $request->input('seat_uids', []);
+            if (!empty($seatUids)) {
+                $layout = EventSeatingLayout::where('event_id', $event->id)
+                    ->published()
+                    ->latest('published_at')
+                    ->first();
+
+                if (!$layout) {
+                    throw new \Exception('No seating layout found for this event');
+                }
+
+                // Validate and lock all requested seats atomically
+                $seats = EventSeat::where('event_seating_id', $layout->id)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($seats->count() !== count($seatUids)) {
+                    $found = $seats->pluck('seat_uid')->toArray();
+                    $missing = array_diff($seatUids, $found);
+                    throw new \Exception('Seats not found: ' . implode(', ', $missing));
+                }
+
+                $unavailable = $seats->filter(fn($s) => $s->status !== 'available' && $s->status !== 'held');
+                if ($unavailable->isNotEmpty()) {
+                    $labels = $unavailable->map(fn($s) => "{$s->section_name} {$s->row_label}-{$s->seat_label}")->join(', ');
+                    throw new \Exception("Locuri indisponibile: {$labels}");
+                }
+
+                // Mark all seats as sold
+                EventSeat::where('event_seating_id', $layout->id)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->update([
+                        'status' => 'sold',
+                        'last_change_at' => now(),
+                        'version' => DB::raw('version + 1'),
+                    ]);
+
+                // Clean up any seat holds for these seats
+                \App\Models\Seating\SeatHold::where('event_seating_id', $layout->id)
+                    ->whereIn('seat_uid', $seatUids)
+                    ->delete();
+
+                // Assign seat info to tickets (1:1 mapping seat_uid → ticket)
+                $tickets = $order->tickets()->orderBy('id')->get();
+                $seatIndex = 0;
+                foreach ($tickets as $ticket) {
+                    if ($seatIndex < count($seatUids)) {
+                        $seat = $seats->firstWhere('seat_uid', $seatUids[$seatIndex]);
+                        if ($seat) {
+                            $ticket->update([
+                                'seat_label' => $seat->section_name . ' ' . $seat->row_label . '-' . $seat->seat_label,
+                                'meta' => array_merge($ticket->meta ?? [], [
+                                    'seat_uid' => $seat->seat_uid,
+                                    'event_seating_id' => $layout->id,
+                                    'section_name' => $seat->section_name,
+                                    'row_label' => $seat->row_label,
+                                    'seat_number' => $seat->seat_label,
+                                ]),
+                            ]);
+                        }
+                        $seatIndex++;
+                    }
+                }
+
+                // Store seated items in order meta
+                $order->update([
+                    'meta' => array_merge($order->meta ?? [], [
+                        'seated_items' => [[
+                            'event_seating_id' => $layout->id,
+                            'seat_uids' => $seatUids,
+                        ]],
+                    ]),
+                ]);
             }
 
             // Auto-confirm POS cash orders and invitations immediately
