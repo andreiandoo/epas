@@ -22,6 +22,7 @@ import { useApp } from '../context/AppContext';
 import { apiPost, apiGet, publicApiGet } from '../api/client';
 import { formatCurrency } from '../utils/formatCurrency';
 import TicketListScreen from './TicketListScreen';
+import SeatingMapScreen from './SeatingMapScreen';
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -318,31 +319,35 @@ function RecentSaleItem({ sale }) {
 
 // ─── Cart Item Row ────────────────────────────────────────────────────────────
 
-function CartItemRow({ item, onUpdateQuantity }) {
+function CartItemRow({ item, onUpdateQuantity, hideControls }) {
   return (
     <View style={styles.cartItem}>
       <View style={[styles.cartItemColorBar, { backgroundColor: item.color }]} />
       <View style={styles.cartItemInfo}>
         <Text style={styles.cartItemName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.cartItemPrice}>{formatCurrency(item.price)} fiecare</Text>
+        <Text style={styles.cartItemPrice}>
+          {hideControls ? `${item.quantity} ${item.quantity === 1 ? 'loc' : 'locuri'}` : `${formatCurrency(item.price)} fiecare`}
+        </Text>
       </View>
-      <View style={styles.quantityControls}>
-        <TouchableOpacity
-          style={styles.quantityButton}
-          onPress={() => onUpdateQuantity(item.id, item.quantity - 1)}
-          activeOpacity={0.7}
-        >
-          <MinusIcon size={16} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <Text style={styles.quantityText}>{item.quantity}</Text>
-        <TouchableOpacity
-          style={styles.quantityButton}
-          onPress={() => onUpdateQuantity(item.id, item.quantity + 1)}
-          activeOpacity={0.7}
-        >
-          <PlusIcon size={16} color={colors.white} />
-        </TouchableOpacity>
-      </View>
+      {!hideControls && (
+        <View style={styles.quantityControls}>
+          <TouchableOpacity
+            style={styles.quantityButton}
+            onPress={() => onUpdateQuantity(item.id, item.quantity - 1)}
+            activeOpacity={0.7}
+          >
+            <MinusIcon size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <Text style={styles.quantityText}>{item.quantity}</Text>
+          <TouchableOpacity
+            style={styles.quantityButton}
+            onPress={() => onUpdateQuantity(item.id, item.quantity + 1)}
+            activeOpacity={0.7}
+          >
+            <PlusIcon size={16} color={colors.white} />
+          </TouchableOpacity>
+        </View>
+      )}
       <Text style={styles.cartItemTotal}>
         {formatCurrency(item.price * item.quantity)}
       </Text>
@@ -372,6 +377,11 @@ export default function SalesScreen({ navigation }) {
   const [claimUrl, setClaimUrl] = useState(null);
   const [claimToken, setClaimToken] = useState(null);
   const [isInvitationMode, setIsInvitationMode] = useState(false);
+  const [showSeatingMap, setShowSeatingMap] = useState(false);
+  const [selectedSeatUids, setSelectedSeatUids] = useState([]);
+
+  // Check if current event has seating
+  const hasSeating = selectedEvent?.has_seating === true;
 
   // Auto-close QR overlay: 30s timeout + poll claim status every 5s
   useEffect(() => {
@@ -497,6 +507,7 @@ export default function SalesScreen({ navigation }) {
         source: 'pos_app',
         sold_by: user?.name || 'POS',
         ...(isInvitationMode && { is_invitation: true }),
+        ...(selectedSeatUids.length > 0 && { seat_uids: selectedSeatUids }),
       };
 
       const response = await apiPost('/orders', orderPayload);
@@ -576,6 +587,7 @@ export default function SalesScreen({ navigation }) {
     setBuyerEmail('');
     setLastOrderData(null);
     setIsInvitationMode(false);
+    setSelectedSeatUids([]);
     setActiveView('tickets');
   };
 
@@ -595,6 +607,28 @@ export default function SalesScreen({ navigation }) {
       Alert.alert('Eroare', e.message || 'Nu s-au putut trimite biletele. Încercați din nou.');
     }
   };
+
+  // ─── Seating Map View ────────────────────────────────────────────────────
+
+  const handleSeatingConfirm = (seatingResult) => {
+    // seatingResult: { cartItems, seatUids, selectedSeats }
+    setCartItems(seatingResult.cartItems);
+    setSelectedSeatUids(seatingResult.seatUids);
+    setShowSeatingMap(false);
+    setActiveView('cart');
+  };
+
+  if (showSeatingMap) {
+    return (
+      <View style={styles.container}>
+        <SeatingMapScreen
+          eventId={selectedEvent?.id}
+          onConfirm={handleSeatingConfirm}
+          onClose={() => setShowSeatingMap(false)}
+        />
+      </View>
+    );
+  }
 
   // ─── Ticket List View (inline, keeps tab bar visible) ──────────────────────
 
@@ -640,12 +674,22 @@ export default function SalesScreen({ navigation }) {
         <View style={styles.cartHeader}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => setActiveView('tickets')}
+            onPress={() => {
+              if (selectedSeatUids.length > 0) {
+                // Go back to seating map for seated events
+                setCartItems([]);
+                setSelectedSeatUids([]);
+                setShowSeatingMap(true);
+              }
+              setActiveView('tickets');
+            }}
             activeOpacity={0.7}
           >
             <ArrowLeftIcon size={22} color={colors.white} />
           </TouchableOpacity>
-          <Text style={styles.cartTitle}>{isInvitationMode ? 'Invitație' : 'Coș'}</Text>
+          <Text style={styles.cartTitle}>
+            {isInvitationMode ? 'Invitație' : selectedSeatUids.length > 0 ? 'Locuri Selectate' : 'Coș'}
+          </Text>
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountBadgeText}>{cartCount}</Text>
           </View>
@@ -662,7 +706,8 @@ export default function SalesScreen({ navigation }) {
               <CartItemRow
                 key={item.id}
                 item={item}
-                onUpdateQuantity={updateQuantity}
+                onUpdateQuantity={selectedSeatUids.length > 0 ? () => {} : updateQuantity}
+                hideControls={selectedSeatUids.length > 0}
               />
             ))}
           </View>
@@ -966,24 +1011,55 @@ export default function SalesScreen({ navigation }) {
           {isInvitationMode ? 'Selectează Bilete pentru Invitație' : 'Selectează Bilete'}
         </Text>
 
-        {/* Ticket Types Grid */}
-        <View style={styles.ticketGrid}>
-          {ticketTypes.map((ticket) => (
-            <TicketTypeCard
-              key={ticket.id}
-              ticket={ticket}
-              onAdd={addToCart}
-              isInvitation={isInvitationMode}
-            />
-          ))}
-          {ticketTypes.length === 0 && (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                Niciun tip de bilet disponibil
-              </Text>
+        {/* Seated Event: Show seating map button */}
+        {hasSeating && !isInvitationMode && (
+          <TouchableOpacity
+            style={styles.seatingMapButton}
+            onPress={() => setShowSeatingMap(true)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.seatingMapIconWrap}>
+              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+                <Rect x={3} y={3} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
+                <Rect x={14} y={3} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
+                <Rect x={3} y={14} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
+                <Rect x={14} y={14} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
+                <Circle cx={6.5} cy={6.5} r={1.5} fill={colors.purple} />
+                <Circle cx={17.5} cy={6.5} r={1.5} fill={colors.green} />
+                <Circle cx={6.5} cy={17.5} r={1.5} fill={colors.purple} />
+                <Circle cx={17.5} cy={17.5} r={1.5} fill={colors.amber} />
+              </Svg>
             </View>
-          )}
-        </View>
+            <View style={styles.seatingMapButtonContent}>
+              <Text style={styles.seatingMapButtonTitle}>Selecteaza Locuri pe Harta</Text>
+              <Text style={styles.seatingMapButtonSubtitle}>Eveniment cu locuri numerotate</Text>
+            </View>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+              <Path d="M9 18l6-6-6-6" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          </TouchableOpacity>
+        )}
+
+        {/* Regular Ticket Types Grid (non-seated or invitation mode) */}
+        {(!hasSeating || isInvitationMode) && (
+          <View style={styles.ticketGrid}>
+            {ticketTypes.map((ticket) => (
+              <TicketTypeCard
+                key={ticket.id}
+                ticket={ticket}
+                onAdd={addToCart}
+                isInvitation={isInvitationMode}
+              />
+            ))}
+            {ticketTypes.length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>
+                  Niciun tip de bilet disponibil
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Today's Sales Section */}
         {recentSales.length > 0 && (
@@ -1170,6 +1246,40 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginBottom: 16,
+  },
+
+  // ── Seating Map Button ──────────────────────────────────────────────────
+  seatingMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.purpleBg,
+    borderWidth: 1.5,
+    borderColor: colors.purpleBorder,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    gap: 14,
+  },
+  seatingMapIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(139,92,246,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seatingMapButtonContent: {
+    flex: 1,
+  },
+  seatingMapButtonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.purple,
+    marginBottom: 3,
+  },
+  seatingMapButtonSubtitle: {
+    fontSize: 13,
+    color: colors.textTertiary,
   },
 
   // ── Ticket Grid ───────────────────────────────────────────────────────────
