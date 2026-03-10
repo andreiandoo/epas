@@ -1,223 +1,255 @@
-<!-- HEADER: Emitent + Client + Decont ID — all on one row, smaller font -->
-<table style="width:100%; table-layout:fixed; border-collapse:collapse; margin:0 0 8px 0; font-family:DejaVu Sans, sans-serif; font-size:8.5px; line-height:1.4;">
-    <tr>
-        <td style="width:35%; vertical-align:top; padding:0;">
-            <p style="margin:0 0 1px 0; font-size:10px; font-weight:bold;">{{marketplace_legal_name}}</p>
-            <p style="margin:0 0 1px 0;">CUI {{marketplace_vat}}, {{marketplace_trade_register}}</p>
-            <p style="margin:0 0 1px 0;">{{marketplace_address}}, {{marketplace_city}}, {{marketplace_state}}</p>
-            <p style="margin:0 0 1px 0;">{{marketplace_bank_name}}, Cont:{{tax_registry_iban}}</p>
-            <p style="margin:0 0 1px 0;">{{marketplace_website}} | {{marketplace_email}} | {{marketplace_phone}}</p>
-        </td>
-        <td style="width:40%; vertical-align:top; padding:0 8px; border-left:1px solid #ccc;">
-            <p style="margin:0 0 1px 0; font-size:7px; color:#666;">Client:</p>
-            <p style="margin:0 0 1px 0; font-size:9px; font-weight:bold;">{{organizer_company_name}}</p>
-            <p style="margin:0 0 1px 0;">CUI/CIF: {{organizer_tax_id}}, {{organizer_registration_number}}</p>
-            <p style="margin:0 0 1px 0;">{{organizer_address}}, {{organizer_city}}, {{organizer_county}}</p>
-            <p style="margin:0 0 1px 0;">Cont:{{organizer_iban}}, {{organizer_bank_name}}</p>
-            <p style="margin:0 0 1px 0;">e-mail: {{organizer_email}}</p>
-        </td>
-        <td style="width:25%; vertical-align:top; text-align:right; padding:0; border-left:1px solid #ccc; padding-left:8px;">
-            <p style="margin:0 0 2px 0; font-size:15px; font-weight:bold;">DECONT</p>
-            <p style="margin:0 0 2px 0; font-size:12px; font-weight:bold; color:#0066cc;">{{payout_number}}</p>
-            <p style="margin:0; font-size:9px;">Data: <strong>{{payout_date}}</strong></p>
-            <p style="margin:4px 0 0 0; font-size:7.5px; color:#666;">Cota TVA 0%</p>
-        </td>
-    </tr>
+<!-- TOP RED BAND -->
+<div style="background:#c0392b; height:5px; width:100%;"></div>
+
+<!-- HEADER: Furnizor + Titlu decont -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; border-bottom:1.5px solid #e0e0e0;">
+  <tr>
+    <td style="width:60%; vertical-align:top; padding:16px 20px 12px 20px;">
+      <table style="border-collapse:collapse;">
+        <tr>
+          <td style="border-left:2.5px solid #c0392b; padding:0 0 0 6px; vertical-align:top;">
+            <div style="font-size:7pt; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#888; margin-bottom:4px;">Furnizor</div>
+            <div style="font-size:11.5pt; font-weight:700; letter-spacing:0.3px; color:#1a1a1a; margin-bottom:3px;">{{marketplace_legal_name}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.55;">CUI {{marketplace_vat}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.55;">{{marketplace_trade_register}} &middot; {{marketplace_website}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.55;">{{marketplace_address}}, {{marketplace_city}}, {{marketplace_state}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.55;">{{marketplace_bank_name}} &middot; Cont: {{tax_registry_iban}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.55;">email: {{marketplace_email}} &middot; tel. {{marketplace_phone}}</div>
+          </td>
+        </tr>
+      </table>
+    </td>
+    <td style="width:40%; vertical-align:top; text-align:right; padding:16px 20px 12px 0;">
+      <div style="font-size:15pt; font-weight:700; color:#1a1a1a; letter-spacing:0.5px;">DECONT <span style="color:#c0392b;">{{payout_number}}</span></div>
+      <div style="font-size:10pt; font-weight:600; color:#c0392b; margin-top:2px;">Data: {{payout_date}}</div>
+    </td>
+  </tr>
 </table>
 
-<hr style="border:none; border-top:1px solid #333; margin:0 0 6px 0;" />
-
-<!-- MAIN TABLE: Items — with visible borders -->
-<table style="width:100%; table-layout:fixed; border-collapse:collapse; margin:0 0 5px 0; font-family:DejaVu Sans, sans-serif; font-size:9px; border:2px solid #333;">
-    <thead>
-        <tr style="background:#e8e8e8;">
-            <th style="border:1px solid #333; padding:4px; text-align:center; width:5%; font-weight:bold;">Nr.crt.</th>
-            <th style="border:1px solid #333; padding:4px; text-align:left; width:48%; font-weight:bold;">Denumire:</th>
-            <th style="border:1px solid #333; padding:4px; text-align:center; width:9%; font-weight:bold;">U.M.</th>
-            <th style="border:1px solid #333; padding:4px; text-align:right; width:13%; font-weight:bold;">Preț</th>
-            <th style="border:1px solid #333; padding:4px; text-align:right; width:11%; font-weight:bold;">TVA</th>
-            <th style="border:1px solid #333; padding:4px; text-align:right; width:14%; font-weight:bold;">Valoare</th>
+<!-- CLIENT -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; background:#fafafa; border-bottom:1.5px solid #e0e0e0;">
+  <tr>
+    <td style="padding:12px 20px;">
+      <table style="border-collapse:collapse;">
+        <tr>
+          <td style="border-left:2.5px solid #c0392b; padding:0 0 0 6px; vertical-align:top;">
+            <div style="font-size:7pt; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:#888; margin-bottom:4px;">Client</div>
+            <div style="font-size:11pt; font-weight:700; color:#1a4a7a; margin-bottom:4px; letter-spacing:0.2px;">{{organizer_company_name}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.6;">CUI/CIF: {{organizer_tax_id}} &middot; {{organizer_registration_number}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.6;">{{organizer_address}}, {{organizer_city}}, {{organizer_county}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.6;">Cont: {{organizer_iban}} &middot; {{organizer_bank_name}}</div>
+            <div style="font-size:8pt; color:#444; line-height:1.6;">e-mail: {{organizer_email}} &nbsp;&nbsp;&nbsp;&nbsp; <strong>Cota TVA 0%</strong></div>
+          </td>
         </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- TABEL PRINCIPAL -->
+<div style="padding:0 20px;">
+  <table style="width:100%; border-collapse:collapse; font-size:8.5pt; font-family:DejaVu Sans, sans-serif; margin-top:14px;">
+    <thead>
+      <tr>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:center; width:28px; font-weight:600;">Nr.</th>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:left; font-weight:600;">Denumire</th>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:center; width:36px; font-weight:600;">U.M.</th>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:right; width:70px; font-weight:600;">Pre&#x21B;</th>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:center; width:40px; font-weight:600;">TVA</th>
+        <th style="background:#1a1a1a; color:#fff; border:1px solid #333; padding:5px 7px; text-align:right; width:60px; font-weight:600;">Valoare</th>
+      </tr>
     </thead>
     <tbody>
-        <!-- Event reference row -->
-        <tr>
-            <td colspan="4" style="border:1px solid #333; padding:4px; font-size:9px;">
-                <strong>Servicii de mandat pentru plăți on-line pt.evenimentul:</strong>
-                &nbsp;&nbsp;{{event_name}} {{event_date}}
-            </td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-size:9px;"></td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-size:9px;">decont</td>
-        </tr>
+      <!-- Event reference row -->
+      <tr style="background:#f0f4f8;">
+        <td colspan="6" style="border:1px solid #ccc; padding:5px 7px; font-size:8pt;">
+          <strong>Servicii de mandat pentru pl&#x103;&#x21B;i on-line pt. evenimentul:</strong>
+          &nbsp;&nbsp;<span style="color:#1a4a7a; font-weight:600;">{{event_name}} {{event_date}}</span>
+        </td>
+      </tr>
 
-        <!-- Section 1: Bilete vândute online -->
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center; font-weight:bold;">1</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Bilete vândute online (taxa de ticketing adăugată la prețul biletului):</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">{{payout_commission_percent}}</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">1a</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Valoare bilete vândute</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">lei</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">{{payout_gross_amount}}</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0.00</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0.00</td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">1b</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Nr. bilete vândute</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">buc</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">{{total_tickets_sold}}</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
+      <!-- Section 1: Bilete vandute online -->
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">1</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;">Bilete v&#xe2;ndute online (taxa de ticketing ad&#x103;ugat&#x103; la pre&#x21B;ul biletului): <strong style="color:#c0392b;">{{payout_commission_percent}}</strong></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
+      <tr style="background:#fafafa;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">1a</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px;">Valoare bilete v&#xe2;ndute</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">lei</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">{{payout_gross_amount}}</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">0,00</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; color:#888;">0,00</td>
+      </tr>
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">1b</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px; font-size:7.5pt; color:#555;">Nr. bilete v&#xe2;ndute</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">buc</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">{{total_tickets_sold}}</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
 
-        <!-- Section 2: Bilete returnate -->
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center; font-weight:bold;">2</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Taxe pentru bilete returnate:</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">{{payout_commission_percent}}</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">2a</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Valoarea totală a biletelor returnate</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">lei</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">{{payout_adjustments_amount}}</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0.00</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0.00</td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">2b</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Nr. bilete returnate</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">buc</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
+      <!-- Section 2: Bilete returnate -->
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">2</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;">Taxe pentru bilete returnate: <strong style="color:#c0392b;">{{payout_commission_percent}}</strong></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
+      <tr style="background:#fafafa;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">2a</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px;">Valoarea total&#x103; a biletelor returnate</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">lei</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">{{payout_adjustments_amount}}</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">0,00</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; color:#888;">0,00</td>
+      </tr>
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">2b</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px;">Nr. bilete returnate</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">buc</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">0</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
 
-        <!-- Section 3: Bilete pretipărite -->
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center; font-weight:bold;">3</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Taxă de ticketing pt. bilete online pretipărite:</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">0 lei/buc</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">3a</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Valoare totală a biletelor online pretipărite</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">lei</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0.00</td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">3b</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Nr. bilete online pretipărite predate cu pv/email și scanate la acces</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">buc</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
-        <tr>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">3c</td>
-            <td style="border:1px solid #333; padding:3px 4px;">Taxă de curierat expediere bilete/invitații pretipărite</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:center;">lei</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;">0</td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-            <td style="border:1px solid #333; padding:3px 4px; text-align:right;"></td>
-        </tr>
+      <!-- Section 3: Bilete pretipărite -->
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">3</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;">Tax&#x103; de ticketing pt. bilete online pretip&#x103;rite: <strong style="color:#555;">0 lei/buc</strong></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
+      <tr style="background:#fafafa;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">3a</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px;">Valoare total&#x103; a biletelor online pretip&#x103;rite</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">lei</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">0</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">0,00</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; color:#888;">0,00</td>
+      </tr>
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">3b</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px; font-size:7.5pt; color:#555;">Nr. bilete online pretip&#x103;rite predate cu pv/email &#x219;i scanate la acces</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">buc</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">0</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
+      <tr style="background:#fff;">
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#888; font-size:7.5pt;">3c</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; padding-left:18px;">Tax&#x103; de curierat expediere bilete/invita&#x21B;ii pretip&#x103;rite</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:center; color:#555;">lei</td>
+        <td style="border:1px solid #ddd; padding:4px 7px; text-align:right; font-weight:600;">0</td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+        <td style="border:1px solid #ddd; padding:4px 7px;"></td>
+      </tr>
 
-        <!-- Totals row -->
-        <tr style="background:#e8e8e8;">
-            <td colspan="3" style="border:1px solid #333; padding:4px; text-align:right; font-size:8.5px;"></td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold; font-size:8.5px;">Total fără TVA</td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold; font-size:8.5px;">Total TVA</td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold; font-size:8.5px;">Total de plată</td>
-        </tr>
-        <tr>
-            <td colspan="3" style="border:1px solid #333; padding:4px; font-size:8.5px; text-align:right;">
-                Calculul facturii decont s-a realizat conform contract: <strong>{{contract_number_series}}</strong> / <strong>{{contract_date}}</strong>
-            </td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold;">{{payout_fees_amount}} lei</td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold;">0.00 lei</td>
-            <td style="border:1px solid #333; padding:4px; text-align:right; font-weight:bold;">{{payout_fees_amount}} lei</td>
-        </tr>
+      <!-- Totals row -->
+      <tr style="background:#f5f5f5;">
+        <td colspan="3" style="border:1px solid #ccc; padding:5px 7px; font-size:7.5pt; color:#555; text-align:right; font-style:italic;">
+          Calculul facturii decont s-a realizat conform contract: <strong style="font-style:normal;">{{contract_number_series}}</strong> / <strong style="font-style:normal;">{{contract_date}}</strong>
+        </td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:center; font-weight:700; font-size:7.5pt; background:#ebebeb;">Total f&#x103;r&#x103; TVA</td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:center; font-weight:700; font-size:7.5pt; background:#ebebeb;">Total TVA</td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:center; font-weight:700; font-size:7.5pt; background:#ebebeb;">Total de plat&#x103;</td>
+      </tr>
+      <tr style="background:#fff;">
+        <td colspan="3" style="border:1px solid #ddd; padding:5px 7px;"></td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:right; font-weight:700; font-size:9pt;">{{payout_fees_amount}} lei</td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:right; font-weight:700; font-size:9pt;">0,00 lei</td>
+        <td style="border:1px solid #ccc; padding:5px 7px; text-align:right; font-weight:700; font-size:9pt;">{{payout_fees_amount}} lei</td>
+      </tr>
     </tbody>
+  </table>
+</div>
+
+<!-- SUMMARY BOX -->
+<div style="padding:14px 20px 0 20px;">
+  <table style="border-collapse:collapse; font-size:8.5pt; font-family:DejaVu Sans, sans-serif; width:100%;">
+    <tr>
+      <td style="border:1px solid #ccc; padding:4px 10px; background:#f5f7fa; color:#333;">Total sume tranzac&#x21B;ionate online p&#xe2;n&#x103; la data de:</td>
+      <td style="border:1px solid #ccc; padding:4px 8px; text-align:center; font-size:7.5pt; color:#555; background:#f5f7fa;">{{payout_date}}</td>
+      <td style="border:1px solid #ccc; padding:4px 8px; text-align:center; font-size:7pt; color:#888; width:60px;">A=1a+3a</td>
+      <td style="border:1px solid #ccc; padding:4px 10px; text-align:right; font-weight:700; width:110px;">{{payout_gross_amount}} lei</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ccc; padding:4px 10px; background:#f5f7fa; color:#333;">Total tranzac&#x21B;ii / bilete returnate (2a)</td>
+      <td style="border:1px solid #ccc; padding:4px 8px; background:#f5f7fa;"></td>
+      <td style="border:1px solid #ccc; padding:4px 8px; text-align:center; font-size:7pt; color:#888;">B=2a</td>
+      <td style="border:1px solid #ccc; padding:4px 10px; text-align:right; font-weight:700; color:#c0392b;">-{{payout_adjustments_amount}} lei</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ccc; padding:4px 10px; background:#f5f7fa; color:#333;">Suma decontat&#x103; &#xee;n avans la data de:</td>
+      <td colspan="2" style="border:1px solid #ccc; padding:4px 8px; text-align:center; font-size:7pt; color:#888;">C</td>
+      <td style="border:1px solid #ccc; padding:4px 10px; text-align:right; font-weight:700; color:#888;">0,00 lei</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #ccc; padding:4px 10px; background:#f5f7fa; color:#333;">Total taxe {{marketplace_legal_name}} pt factura curent&#x103;</td>
+      <td style="border:1px solid #ccc; padding:4px 8px; background:#f5f7fa;"></td>
+      <td style="border:1px solid #ccc; padding:4px 8px; text-align:center; font-size:7pt; color:#888;">D=1a+2a+3a</td>
+      <td style="border:1px solid #ccc; padding:4px 10px; text-align:right; font-weight:700; color:#888;">{{payout_commission_amount}} lei</td>
+    </tr>
+    <tr>
+      <td colspan="3" style="border:1px solid #900; padding:7px 10px; background:#c0392b; color:#fff; font-weight:700; font-size:9pt; letter-spacing:0.3px;">VALOARE TOTALA de achitat &nbsp; (E=A-B-C-D)</td>
+      <td style="border:1px solid #900; padding:7px 10px; background:#c0392b; color:#fff; text-align:right; font-weight:800; font-size:11pt;">{{payout_amount}} lei</td>
+    </tr>
+  </table>
+</div>
+
+<!-- NOTE -->
+<div style="padding:6px 20px 0 20px; font-size:7.5pt; color:#888; font-style:italic; font-family:DejaVu Sans, sans-serif;">
+  *pentru detalierea tranzac&#x21B;iilor decontate accesa&#x21B;i contul dvs. pe {{marketplace_website}}
+</div>
+
+<!-- SEPARATOR -->
+<div style="margin:14px 20px 0 20px; border-top:1px solid #e0e0e0;"></div>
+
+<!-- SIGNATURE + DETALII -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; font-size:8.5pt;">
+  <tr>
+    <td style="width:55%; vertical-align:top; padding:12px 0 0 20px; color:#333; line-height:1.7;">
+      <div style="font-weight:700; margin-bottom:3px;">Detaliile:</div>
+      <div>Pl&#x103;tit prin virament bancar &#x2014; Ref: {{payout_payment_reference}}</div>
+      <div style="font-size:7.5pt; color:#555; margin-top:3px;">Factur&#x103; generat&#x103; &#x219;i trimis&#x103; prin email: {{organizer_email}} &middot; &#xee;n data: {{payout_date}}</div>
+      <div style="margin-top:6px; font-weight:700; font-size:8pt;">Cont contabil 751 &#x2013; Factur&#x103; &#x2013; informa&#x21B;ii &#xee;n scopuri contabile</div>
+    </td>
+    <td style="width:45%; vertical-align:top; text-align:right; padding:12px 20px 0 0; color:#333; line-height:1.8;">
+      <div>V&#x103; mul&#x21B;umim.</div>
+      <div style="font-weight:700;">{{marketplace_legal_name}}</div>
+      <div style="margin-top:6px;">{{marketplace_signature_image}}</div>
+    </td>
+  </tr>
 </table>
 
-<!-- SUMMARY TABLE -->
-<table style="width:65%; border-collapse:collapse; margin:6px 0 8px 0; font-family:DejaVu Sans, sans-serif; font-size:9px;">
-    <tr>
-        <td style="border:1px solid #999; padding:3px 6px;">Total sume tranzacționate online până la data de:</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center; width:12%;">{{payout_date}}</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center; width:10%; font-size:7.5px;">A=1a+3a</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:right; width:18%; font-weight:bold;">{{payout_gross_amount}} lei</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #999; padding:3px 6px;">Total tranzacții / bilete returnate (2a)</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center;"></td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center; font-size:7.5px;">B=2a</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:right; font-weight:bold;">-{{payout_adjustments_amount}} lei</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #999; padding:3px 6px;">Suma decontată în avans la data de:</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center;"></td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center; font-size:7.5px;">C</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:right;">0.00 lei</td>
-    </tr>
-    <tr>
-        <td style="border:1px solid #999; padding:3px 6px;">Total taxe {{marketplace_legal_name}} pt factura curentă</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center;"></td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:center; font-size:7.5px;">D=1a+2a+3a</td>
-        <td style="border:1px solid #999; padding:3px 6px; text-align:right;">{{payout_commission_amount}} lei</td>
-    </tr>
-    <tr style="background:#f0f7ff;">
-        <td style="border:2px solid #333; padding:4px 6px; font-weight:bold; font-size:9.5px;">VALOARE TOTALĂ de achitat</td>
-        <td style="border:2px solid #333; padding:4px 6px; text-align:center;"></td>
-        <td style="border:2px solid #333; padding:4px 6px; text-align:center; font-size:7.5px; font-weight:bold;">(E=A-B-C-D)</td>
-        <td style="border:2px solid #333; padding:4px 6px; text-align:right; font-weight:bold; font-size:10px;">{{payout_amount}} lei</td>
-    </tr>
+<!-- FURNIZOR / CLIENT -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; margin-top:15px;">
+  <tr>
+    <td style="width:50%; padding:0 0 0 20px; border-top:1px solid #ccc; padding-top:3px; font-size:7.5pt; color:#aaa;">
+      Furnizor
+      <div style="font-size:7.5pt; color:#555; margin-top:1px;">{{payout_date}}</div>
+    </td>
+    <td style="width:50%; padding:0 20px 0 0; border-top:1px solid #ccc; padding-top:3px; font-size:7.5pt; color:#aaa; text-align:right;">
+      Client
+    </td>
+  </tr>
 </table>
 
-<p style="font-size:7.5px; color:#555; margin:0 0 8px 0; font-family:DejaVu Sans, sans-serif;">*pentru detalierea tranzacțiilor decontate accesați contul dvs. pe {{marketplace_website}}</p>
+<!-- BOTTOM LEGAL NOTE -->
+<div style="padding:12px 20px 0 20px;">
+  <div style="border-top:1px dashed #ccc; padding-top:8px; font-size:7pt; color:#aaa; font-family:DejaVu Sans, sans-serif;">
+    Facturile pot circula fara semnatura si stampila conf.art.155(6) din Legea 571/2003 privind Codul Fiscal
+  </div>
+</div>
 
-<!-- DETAILS + THANK YOU with signature image -->
-<table style="width:100%; table-layout:fixed; border-collapse:collapse; margin:0 0 5px 0; font-family:DejaVu Sans, sans-serif; font-size:8.5px;">
-    <tr>
-        <td style="width:55%; vertical-align:top; padding:0; line-height:1.5;">
-            <p style="margin:0 0 2px 0;"><strong>Detaliile:</strong></p>
-            <p style="margin:0 0 2px 0;">Plătit prin virament bancar — Ref: {{payout_payment_reference}}</p>
-            <p style="margin:0 0 2px 0;">Factură generată și trimisă prin email: {{organizer_email}} în data: {{payout_date}}</p>
-            <p style="margin:0 0 2px 0;"><strong>Cont contabil 751</strong> — Factură — informații în scopuri contabile</p>
-            <p style="margin:0 0 0 0; font-size:7px; color:#666;">Facturile pot circula fără semnătură și ștampilă conf.art.155(6) din Legea 571/2003 privind Codul Fiscal</p>
-        </td>
-        <td style="width:45%; vertical-align:top; text-align:right; padding:0; line-height:1.5;">
-            <p style="margin:0 0 2px 0;">Vă mulțumim.</p>
-            <p style="margin:0 0 4px 0; font-weight:bold;">{{marketplace_legal_name}}</p>
-            {{marketplace_signature_image}}
-        </td>
-    </tr>
-</table>
-
-<!-- SIGNATURE LINE -->
-<table style="width:100%; table-layout:fixed; border-collapse:collapse; margin:10px 0 0 0; font-family:DejaVu Sans, sans-serif; font-size:9px;">
-    <tr>
-        <td style="width:50%; padding:0; border-top:1px solid #999; padding-top:4px;">
-            <strong>Furnizor</strong>
-            <br/>
-            <span style="font-size:8px;">{{payout_date}}</span>
-        </td>
-        <td style="width:50%; padding:0; border-top:1px solid #999; padding-top:4px; text-align:right;">
-            <strong>Client</strong>
-        </td>
-    </tr>
-</table>
+<!-- BOTTOM RED BAND -->
+<div style="background:#c0392b; height:4px; width:100%; margin-top:18px;"></div>
