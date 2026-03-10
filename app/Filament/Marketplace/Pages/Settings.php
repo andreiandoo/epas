@@ -310,7 +310,7 @@ class Settings extends Page
                                     ])->columns(3),
 
                                 SC\Section::make('Serii documente')
-                                    ->description('Configurează prefixele și numerotarea pentru comenzi și facturi')
+                                    ->description('Configurează prefixele și numerotarea pentru comenzi, facturi și deconturi')
                                     ->schema([
                                         Forms\Components\TextInput::make('order_prefix')
                                             ->label('Prefix serie comenzi')
@@ -344,6 +344,18 @@ class Settings extends Page
                                             ->maxValue(365)
                                             ->suffix('zile')
                                             ->helperText('Numărul de zile între data emiterii și data scadenței. Poate fi suprascris per organizator.'),
+
+                                        Forms\Components\TextInput::make('decont_prefix')
+                                            ->label('Prefix serie deconturi')
+                                            ->default('DEC')
+                                            ->maxLength(10)
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Ex: DEC → DEC0001, DEC0002...'),
+
+                                        Forms\Components\TextInput::make('decont_next_number')
+                                            ->label('Număr curent deconturi')
+                                            ->numeric()
+                                            ->default(1)
+                                            ->minValue(1),
                                     ])->columns(2),
                             ]),
 
