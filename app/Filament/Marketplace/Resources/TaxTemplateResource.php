@@ -80,6 +80,16 @@ class TaxTemplateResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true),
+
+                        Forms\Components\Select::make('page_orientation')
+                            ->label('Orientare pagină')
+                            ->options([
+                                'portrait' => 'Portrait (vertical)',
+                                'landscape' => 'Landscape (orizontal)',
+                            ])
+                            ->default('portrait')
+                            ->live()
+                            ->helperText('Orientarea paginii A4 pentru generarea PDF-ului'),
                     ])
                     ->columns(2),
 
@@ -387,10 +397,18 @@ class TaxTemplateResource extends Resource
                                     $processed
                                 );
 
+                                // Determine page orientation
+                                $orientation = $get('page_orientation') ?? 'portrait';
+                                $isLandscape = $orientation === 'landscape';
+                                $pageWidth = $isLandscape ? '297mm' : '210mm';
+                                $pageHeight = $isLandscape ? '210mm' : '297mm';
+                                $iframeHeight = $isLandscape ? '600px' : '900px';
+
                                 // Wrap in A4-like page structure (same as DomPDF rendering)
+                                $pageSize = $isLandscape ? 'A4 landscape' : 'A4';
                                 $wrappedHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><style>
-                                    @page { margin: 15mm 12mm; }
-                                    body { font-family: DejaVu Sans, Arial, sans-serif; margin: 0; padding: 40px 35px; background: #fff; color: #000; }
+                                    @page { size: ' . $pageSize . '; margin: 10mm 12mm; }
+                                    body { font-family: DejaVu Sans, Arial, sans-serif; margin: 0; padding: 30px 35px; background: #fff; color: #000; }
                                 </style></head><body>' . $processed . '</body></html>';
 
                                 // Escape the processed HTML for use in srcdoc attribute
@@ -398,10 +416,10 @@ class TaxTemplateResource extends Resource
 
                                 // Use iframe with srcdoc to completely isolate CSS styles — A4 page simulation
                                 return new HtmlString(
-                                    '<div style="background:#e5e7eb; padding:20px; border-radius:8px;">' .
-                                    '<div style="max-width:210mm; margin:0 auto; box-shadow:0 2px 8px rgba(0,0,0,0.15);">' .
+                                    '<div style="background:#e5e7eb; padding:20px; border-radius:8px; overflow-x:auto;">' .
+                                    '<div style="width:' . $pageWidth . '; margin:0 auto; box-shadow:0 2px 8px rgba(0,0,0,0.15);">' .
                                     '<iframe srcdoc="' . $escapedHtml . '" ' .
-                                    'style="width:210mm; min-height:297mm; height:900px; border:none; background:white; display:block;" ' .
+                                    'style="width:' . $pageWidth . '; min-height:' . $pageHeight . '; height:' . $iframeHeight . '; border:none; background:white; display:block;" ' .
                                     'sandbox="allow-same-origin" ' .
                                     'title="Template Preview">' .
                                     '</iframe>' .
