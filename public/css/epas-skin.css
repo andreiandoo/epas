@@ -4270,6 +4270,7 @@ html.dark {
 .dark .fi-tabs {
 	background-color: transparent !important;
 	border-color: var(--metro-border) !important;
+	margin:0;
 }
 
 .dark .fi-tabs-tab {
