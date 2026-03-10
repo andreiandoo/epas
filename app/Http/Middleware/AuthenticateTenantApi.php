@@ -150,6 +150,7 @@ class AuthenticateTenantApi
             'api/microservices/insurance' => 'insurance:quote',
             'api/webhooks' => 'webhooks:manage',
             'api/metrics' => 'metrics:read',
+            'api/festival' => 'festival:manage',
         ];
 
         foreach ($scopeMap as $pathPrefix => $scope) {

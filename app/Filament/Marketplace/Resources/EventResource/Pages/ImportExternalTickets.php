@@ -11,11 +11,13 @@ use Filament\Schemas\Components as SC;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
+use Livewire\WithFileUploads;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ImportExternalTickets extends Page
 {
     use HasMarketplaceContext;
+    use WithFileUploads;
 
     protected static string $resource = EventResource::class;
     protected string $view = 'filament.marketplace.resources.event-resource.pages.import-external-tickets';

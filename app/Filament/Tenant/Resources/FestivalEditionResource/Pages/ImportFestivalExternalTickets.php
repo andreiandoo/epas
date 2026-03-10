@@ -8,9 +8,11 @@ use Filament\Resources\Pages\Page;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Str;
+use Livewire\WithFileUploads;
 
 class ImportFestivalExternalTickets extends Page
 {
+    use WithFileUploads;
     protected static string $resource = FestivalEditionResource::class;
     protected string $view = 'filament.tenant.resources.festival-edition-resource.pages.import-festival-external-tickets';
     protected static ?string $title = 'Import Bilete Externe';
