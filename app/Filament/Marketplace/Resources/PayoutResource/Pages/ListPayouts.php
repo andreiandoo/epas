@@ -88,14 +88,43 @@ class ListPayouts extends ListRecords
                     ->live()
                     ->afterStateUpdated(function ($state, Set $set) {
                         if ($state) {
-                            $event = Event::find($state);
+                            $event = Event::with('marketplaceOrganizer')->find($state);
                             if ($event) {
                                 $balance = self::calculateEventBalance($event);
                                 $set('available_balance_info', number_format($balance, 2) . ' RON disponibil');
-                                $set('gross_amount', $balance > 0 ? number_format($balance, 2, '.', '') : '0.00');
+
+                                // Calculate and prefill all amount fields
+                                $organizer = $event->marketplaceOrganizer;
+                                $commissionMode = $event->getEffectiveCommissionMode();
+                                $commissionRate = $event->getEffectiveCommissionRate();
+
+                                $completedOrders = Order::where('marketplace_organizer_id', $organizer?->id)
+                                    ->where('event_id', $event->id)
+                                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                    ->get();
+
+                                $grossRevenue = (float) $completedOrders->sum('total');
+                                $subtotalRevenue = (float) $completedOrders->sum('subtotal');
+
+                                if ($commissionMode === 'added_on_top') {
+                                    $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
+                                    $netRevenue = $subtotalRevenue;
+                                } else {
+                                    $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
+                                    $netRevenue = $grossRevenue - $commissionAmount;
+                                }
+
+                                $set('gross_amount', number_format($grossRevenue, 2, '.', ''));
+                                $set('commission_amount', number_format($commissionAmount, 2, '.', ''));
+                                $set('fees_amount', '0.00');
+                                $set('net_amount', number_format(max(0, $grossRevenue - $commissionAmount), 2, '.', ''));
                             }
                         } else {
                             $set('available_balance_info', null);
+                            $set('gross_amount', '0.00');
+                            $set('commission_amount', '0.00');
+                            $set('fees_amount', '0.00');
+                            $set('net_amount', '0.00');
                         }
                     }),
 
