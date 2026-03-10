@@ -109,7 +109,7 @@ class ListPayouts extends ListRecords
                         ->required()
                         ->visible(fn (Forms\Components\Utilities\Get $get) => $get('marketplace_organizer_id') !== null),
 
-                    Forms\Components\Grid::make(2)->schema([
+                    \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('gross_amount')
                             ->label('Suma brută')
                             ->numeric()
@@ -157,7 +157,7 @@ class ListPayouts extends ListRecords
                             ->readOnly(),
                     ]),
 
-                    Forms\Components\Grid::make(2)->schema([
+                    \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\DatePicker::make('period_start')
                             ->label('Perioada de la')
                             ->default(now()->startOfMonth()->toDateString()),
