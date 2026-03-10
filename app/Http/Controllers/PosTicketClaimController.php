@@ -276,7 +276,7 @@ class PosTicketClaimController extends Controller
             return response()->view('pos-claim', ['error' => 'expired', 'claim' => $claim]);
         }
 
-        $order = $claim->order()->with(['tickets.ticketType'])->first();
+        $order = $claim->order()->with(['tickets.ticketType', 'event.venue', 'marketplaceClient'])->first();
 
         if (!$order) {
             return response()->view('pos-claim', ['error' => 'not_found', 'claim' => null], 404);
@@ -287,10 +287,50 @@ class PosTicketClaimController extends Controller
             $claim->markClaimed();
         }
 
+        $event = $order->event;
+        $venue = $event?->venue;
+        $client = $order->marketplaceClient;
+
+        // Resolve venue name (translatable)
+        $rawVenueName = $venue?->name;
+        $venueName = is_array($rawVenueName)
+            ? ($rawVenueName['ro'] ?? $rawVenueName['en'] ?? reset($rawVenueName) ?: null)
+            : $rawVenueName;
+
+        // Build venue location string
+        $venueLocation = $venueName;
+        if ($venue?->city) {
+            $venueLocation = $venueLocation ? "{$venueLocation}, {$venue->city}" : $venue->city;
+        }
+        if ($venue?->address) {
+            $venueLocation = $venueLocation ? "{$venueLocation}, {$venue->address}" : $venue->address;
+        }
+
+        // Event date formatted
+        $eventDateFormatted = null;
+        if ($event?->event_date) {
+            $eventDateFormatted = $event->event_date instanceof \Carbon\Carbon
+                ? $event->event_date->format('d.m.Y')
+                : $event->event_date;
+        }
+
+        // Access time (door_time or start_time)
+        $accessTime = $event?->door_time ?? $event?->start_time;
+
+        // Organizer data
+        $organizerName = $client?->company_name ?? $client?->name ?? null;
+        $organizerCui = $client?->cui ?? null;
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pos-claim-download', [
             'claim' => $claim,
             'order' => $order,
-        ])->setPaper([0, 0, 396, 612], 'portrait');
+            'event' => $event,
+            'venueLocation' => $venueLocation,
+            'eventDateFormatted' => $eventDateFormatted,
+            'accessTime' => $accessTime,
+            'organizerName' => $organizerName,
+            'organizerCui' => $organizerCui,
+        ])->setPaper([0, 0, 396, 700], 'portrait');
 
         $safeName = preg_replace('/[^a-zA-Z0-9 ]/', '', $claim->event_name);
         $safeName = str_replace(' ', '-', trim($safeName));
