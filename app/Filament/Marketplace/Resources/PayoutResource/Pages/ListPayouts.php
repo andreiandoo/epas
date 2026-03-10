@@ -229,7 +229,26 @@ class ListPayouts extends ListRecords
             ->modalCancelActionLabel('Închide')
             ->modalWidth('5xl')
             ->form([
-                \Filament\Schemas\Components\Grid::make(3)->schema([
+                Forms\Components\Radio::make('quick_filter')
+                    ->label('Perioadă rapidă')
+                    ->options([
+                        '' => 'Ultimele 10',
+                        '1' => '1 zi',
+                        '3' => '3 zile',
+                        '7' => '7 zile',
+                        'custom' => 'Personalizat',
+                    ])
+                    ->default('')
+                    ->inline()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Set $set) {
+                        if ($state !== 'custom') {
+                            $set('date_from', null);
+                            $set('date_to', null);
+                        }
+                    }),
+
+                \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\DatePicker::make('date_from')
                         ->label('De la')
                         ->live()
@@ -239,22 +258,26 @@ class ListPayouts extends ListRecords
                         ->label('Până la')
                         ->live()
                         ->placeholder('Fără limită'),
-
-                    Forms\Components\TextInput::make('limit')
-                        ->label('Nr. rezultate')
-                        ->numeric()
-                        ->default(10)
-                        ->minValue(1)
-                        ->maxValue(200)
-                        ->live(onBlur: true),
-                ]),
+                ])->visible(fn (Get $get) => $get('quick_filter') === 'custom'),
 
                 Forms\Components\Placeholder::make('events_table')
                     ->label('')
                     ->content(function (Get $get) {
-                        $dateFrom = $get('date_from');
-                        $dateTo = $get('date_to');
-                        $limit = (int) ($get('limit') ?: 10);
+                        $quickFilter = $get('quick_filter');
+                        $dateFrom = null;
+                        $dateTo = null;
+                        $limit = null;
+
+                        if ($quickFilter === 'custom') {
+                            $dateFrom = $get('date_from');
+                            $dateTo = $get('date_to');
+                        } elseif ($quickFilter && $quickFilter !== '') {
+                            $days = (int) $quickFilter;
+                            $dateFrom = now()->subDays($days)->toDateString();
+                        } else {
+                            // Default: last 10
+                            $limit = 10;
+                        }
 
                         return new HtmlString(
                             $this->renderFinishedEventsTable($dateFrom, $dateTo, $limit)
@@ -266,7 +289,7 @@ class ListPayouts extends ListRecords
     /**
      * Render the finished events table HTML
      */
-    protected function renderFinishedEventsTable(?string $dateFrom, ?string $dateTo, int $limit): string
+    protected function renderFinishedEventsTable(?string $dateFrom, ?string $dateTo, ?int $limit = null): string
     {
         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
         $marketplaceClientId = $marketplaceAdmin->marketplace_client_id;
@@ -288,7 +311,11 @@ class ListPayouts extends ListRecords
             $query->where('event_date', '<=', $dateTo . ' 23:59:59');
         }
 
-        $events = $query->limit($limit)->get();
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        $events = $query->get();
 
         $rows = [];
         foreach ($events as $event) {
