@@ -242,16 +242,6 @@ class ListPayouts extends ListRecords
                         ->readOnly(),
                 ]),
 
-                \Filament\Schemas\Components\Grid::make(2)->schema([
-                    Forms\Components\DatePicker::make('period_start')
-                        ->label('Perioada de la')
-                        ->default(now()->startOfMonth()->toDateString()),
-
-                    Forms\Components\DatePicker::make('period_end')
-                        ->label('Perioada până la')
-                        ->default(now()->toDateString()),
-                ]),
-
                 Forms\Components\Textarea::make('admin_notes')
                     ->label('Note admin')
                     ->rows(2),
@@ -277,14 +267,16 @@ class ListPayouts extends ListRecords
                     'account_holder' => $bankAccount->account_holder,
                 ];
 
+                $event = Event::find($data['event_id']);
+
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
                     'event_id' => $data['event_id'],
                     'amount' => (float) $data['net_amount'],
                     'currency' => 'RON',
-                    'period_start' => $data['period_start'],
-                    'period_end' => $data['period_end'],
+                    'period_start' => $event?->created_at?->toDateString(),
+                    'period_end' => $event?->event_date?->toDateString() ?? now()->toDateString(),
                     'gross_amount' => (float) $data['gross_amount'],
                     'commission_amount' => (float) ($data['commission_amount'] ?? 0),
                     'fees_amount' => (float) ($data['fees_amount'] ?? 0),
