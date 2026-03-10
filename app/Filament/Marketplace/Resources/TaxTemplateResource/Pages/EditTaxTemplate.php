@@ -17,6 +17,19 @@ class EditTaxTemplate extends EditRecord
         ];
     }
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Remove virtual fields that shouldn't be persisted
+        unset(
+            $data['page1_source_mode'],
+            $data['page2_source_mode'],
+            $data['html_content_source'],
+            $data['html_content_page_2_source'],
+        );
+
+        return $data;
+    }
+
     protected function getRedirectUrl(): string
     {
         return $this->getResource()::getUrl('index');

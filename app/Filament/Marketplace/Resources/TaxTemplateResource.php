@@ -129,16 +129,11 @@ class TaxTemplateResource extends Resource
                 Section::make('Page 1 - HTML Content')
                     ->icon('heroicon-o-code-bracket')
                     ->schema([
-                        Forms\Components\Select::make('page_orientation')
-                            ->label('Page 1 Orientation')
-                            ->options(MarketplaceTaxTemplate::ORIENTATIONS)
-                            ->default('portrait')
-                            ->required(),
-
                         Forms\Components\Toggle::make('page1_source_mode')
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
+                            ->dehydrated(false)
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_source', $get('html_content'));
@@ -182,6 +177,7 @@ class TaxTemplateResource extends Resource
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
                             ->formatStateUsing(fn ($record) => $record?->html_content)
+                            ->dehydrated(false)
                             ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content', $state))
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
@@ -200,6 +196,7 @@ class TaxTemplateResource extends Resource
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
+                            ->dehydrated(false)
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_page_2_source', $get('html_content_page_2'));
@@ -241,6 +238,7 @@ class TaxTemplateResource extends Resource
                             ->extraAttributes(['class' => 'font-mono text-sm'])
                             ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
+                            ->dehydrated(false)
                             ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content_page_2', $state))
                             ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),
