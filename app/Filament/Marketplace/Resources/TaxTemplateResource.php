@@ -172,8 +172,9 @@ class TaxTemplateResource extends Resource
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code with inline CSS. Styles are preserved in source mode.')
+                            ->helperText('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.')
                             ->formatStateUsing(fn ($record) => $record?->html_content)
+                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
                     ]),
 
@@ -229,8 +230,9 @@ class TaxTemplateResource extends Resource
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code with inline CSS. Styles are preserved in source mode.')
+                            ->helperText('Edit raw HTML code with inline CSS. Click outside textarea to refresh preview.')
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
+                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),
                     ])
                     ->collapsible()
