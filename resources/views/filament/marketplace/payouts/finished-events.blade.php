@@ -45,8 +45,8 @@
                                             wire:click="generateEventDecont({{ $row['event']->id }})"
                                             wire:loading.attr="disabled"
                                             wire:target="generateEventDecont({{ $row['event']->id }})"
-                                            class="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50">
-                                        <x-heroicon-m-document-plus class="w-3.5 h-3.5" />
+                                            class="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-500 disabled:opacity-50 whitespace-nowrap">
+                                        <x-heroicon-m-document-plus class="w-3.5 h-3.5 shrink-0" />
                                         <span wire:loading.remove wire:target="generateEventDecont({{ $row['event']->id }})">Generează decont</span>
                                         <span wire:loading wire:target="generateEventDecont({{ $row['event']->id }})">Se generează...</span>
                                     </button>

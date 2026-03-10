@@ -227,49 +227,99 @@ class ListPayouts extends ListRecords
             ->modalHeading('Evenimente încheiate')
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('Închide')
-            ->modalContent(function () {
-                $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
-                $marketplaceClientId = $marketplaceAdmin->marketplace_client_id;
+            ->modalWidth('5xl')
+            ->form([
+                \Filament\Schemas\Components\Grid::make(3)->schema([
+                    Forms\Components\DatePicker::make('date_from')
+                        ->label('De la')
+                        ->live()
+                        ->placeholder('Fără limită'),
 
-                // Get all finished events for this marketplace
-                $events = Event::where('marketplace_client_id', $marketplaceClientId)
-                    ->whereNotNull('marketplace_organizer_id')
-                    ->orderByDesc('event_date')
-                    ->get()
-                    ->filter(fn ($event) => $event->isPast());
+                    Forms\Components\DatePicker::make('date_to')
+                        ->label('Până la')
+                        ->live()
+                        ->placeholder('Fără limită'),
 
-                $rows = [];
-                foreach ($events as $event) {
-                    $title = is_array($event->title)
-                        ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
-                        : ($event->title ?? 'Untitled');
+                    Forms\Components\TextInput::make('limit')
+                        ->label('Nr. rezultate')
+                        ->numeric()
+                        ->default(10)
+                        ->minValue(1)
+                        ->maxValue(200)
+                        ->live(onBlur: true),
+                ]),
 
-                    $organizer = $event->marketplaceOrganizer;
-                    $organizerName = $organizer?->name ?? '-';
-                    $eventDate = $event->event_date?->format('d.m.Y') ?? '-';
+                Forms\Components\Placeholder::make('events_table')
+                    ->label('')
+                    ->content(function (Get $get) {
+                        $dateFrom = $get('date_from');
+                        $dateTo = $get('date_to');
+                        $limit = (int) ($get('limit') ?: 10);
 
-                    // Check for existing payout/decont
-                    $existingPayout = MarketplacePayout::where('event_id', $event->id)
-                        ->where('marketplace_client_id', $marketplaceClientId)
-                        ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
-                        ->first();
+                        return new HtmlString(
+                            $this->renderFinishedEventsTable($dateFrom, $dateTo, $limit)
+                        );
+                    }),
+            ]);
+    }
 
-                    $balance = $organizer ? self::calculateEventBalance($event) : 0;
+    /**
+     * Render the finished events table HTML
+     */
+    protected function renderFinishedEventsTable(?string $dateFrom, ?string $dateTo, int $limit): string
+    {
+        $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
+        $marketplaceClientId = $marketplaceAdmin->marketplace_client_id;
 
-                    $rows[] = [
-                        'event' => $event,
-                        'title' => $title,
-                        'organizer_name' => $organizerName,
-                        'event_date' => $eventDate,
-                        'balance' => $balance,
-                        'existing_payout' => $existingPayout,
-                    ];
-                }
+        $query = Event::where('marketplace_client_id', $marketplaceClientId)
+            ->whereNotNull('marketplace_organizer_id')
+            ->where(function ($q) {
+                $q->where('event_date', '<', now())
+                  ->orWhere(function ($q2) {
+                      $q2->whereNull('event_date')->where('created_at', '<', now()->subMonths(3));
+                  });
+            })
+            ->orderByDesc('event_date');
 
-                return new HtmlString(view('filament.marketplace.payouts.finished-events', [
-                    'rows' => $rows,
-                ])->render());
-            });
+        if ($dateFrom) {
+            $query->where('event_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->where('event_date', '<=', $dateTo . ' 23:59:59');
+        }
+
+        $events = $query->limit($limit)->get();
+
+        $rows = [];
+        foreach ($events as $event) {
+            $title = is_array($event->title)
+                ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
+                : ($event->title ?? 'Untitled');
+
+            $organizer = $event->marketplaceOrganizer;
+            $organizerName = $organizer?->name ?? '-';
+            $eventDate = $event->event_date?->format('d.m.Y') ?? '-';
+
+            $existingPayout = MarketplacePayout::where('event_id', $event->id)
+                ->where('marketplace_client_id', $marketplaceClientId)
+                ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+                ->first();
+
+            $balance = $organizer ? self::calculateEventBalance($event) : 0;
+
+            $rows[] = [
+                'event' => $event,
+                'title' => $title,
+                'organizer_name' => $organizerName,
+                'event_date' => $eventDate,
+                'balance' => $balance,
+                'existing_payout' => $existingPayout,
+            ];
+        }
+
+        return view('filament.marketplace.payouts.finished-events', [
+            'rows' => $rows,
+        ])->render();
     }
 
     /**
