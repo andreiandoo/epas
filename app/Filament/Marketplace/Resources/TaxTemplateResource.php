@@ -133,15 +133,12 @@ class TaxTemplateResource extends Resource
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
-                            ->dehydrated(false)
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_source', $get('html_content'));
-                                } else {
-                                    $set('html_content', $get('html_content_source'));
                                 }
                             })
-                            ->helperText('Switch to edit raw HTML code directly'),
+                            ->helperText('Switch between WYSIWYG and raw HTML source code'),
 
                         Forms\Components\RichEditor::make('html_content')
                             ->label('Page 1 HTML Template (WYSIWYG)')
@@ -174,10 +171,8 @@ class TaxTemplateResource extends Resource
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->helperText('Edit raw HTML code with inline CSS. Styles are preserved in source mode.')
                             ->formatStateUsing(fn ($record) => $record?->html_content)
-                            ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content', $state))
-                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page1_source_mode')),
                     ]),
 
@@ -194,15 +189,12 @@ class TaxTemplateResource extends Resource
                             ->label('Edit HTML Source Code')
                             ->default(false)
                             ->live()
-                            ->dehydrated(false)
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_page_2_source', $get('html_content_page_2'));
-                                } else {
-                                    $set('html_content_page_2', $get('html_content_page_2_source'));
                                 }
                             })
-                            ->helperText('Switch to edit raw HTML code directly'),
+                            ->helperText('Switch between WYSIWYG and raw HTML source code'),
 
                         Forms\Components\RichEditor::make('html_content_page_2')
                             ->label('Page 2 HTML Template (WYSIWYG)')
@@ -235,10 +227,8 @@ class TaxTemplateResource extends Resource
                             ->rows(25)
                             ->columnSpanFull()
                             ->extraAttributes(['class' => 'font-mono text-sm'])
-                            ->helperText('Edit raw HTML code. Use variables like {{marketplace_legal_name}}')
+                            ->helperText('Edit raw HTML code with inline CSS. Styles are preserved in source mode.')
                             ->formatStateUsing(fn ($record) => $record?->html_content_page_2)
-                            ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('html_content_page_2', $state))
-                            ->live(onBlur: true)
                             ->visible(fn ($get) => $get('page2_source_mode')),
                     ])
                     ->collapsible()

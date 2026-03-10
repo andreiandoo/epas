@@ -19,12 +19,13 @@ class EditTaxTemplate extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        // If source mode was used, the textarea value takes priority
-        if (!empty($data['html_content_source'])) {
+        // When source mode is ON, the textarea has the raw HTML with inline CSS preserved.
+        // The RichEditor (Trix) strips inline styles, so we bypass it entirely.
+        if (!empty($data['page1_source_mode']) && isset($data['html_content_source'])) {
             $data['html_content'] = $data['html_content_source'];
         }
 
-        if (!empty($data['html_content_page_2_source'])) {
+        if (!empty($data['page2_source_mode']) && isset($data['html_content_page_2_source'])) {
             $data['html_content_page_2'] = $data['html_content_page_2_source'];
         }
 
