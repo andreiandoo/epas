@@ -68,11 +68,6 @@ class TaxTemplateResource extends Resource
                             ->placeholder('Select when to generate this template')
                             ->helperText('When should this template be automatically generated?'),
 
-                        Forms\Components\Textarea::make('description')
-                            ->label('Description')
-                            ->rows(2)
-                            ->columnSpanFull(),
-
                         Forms\Components\Toggle::make('is_default')
                             ->label('Default Template')
                             ->helperText('Make this the default template for its type'),
@@ -90,8 +85,13 @@ class TaxTemplateResource extends Resource
                             ->default('portrait')
                             ->live()
                             ->helperText('Orientarea paginii A4 pentru generarea PDF-ului'),
+
+                        Forms\Components\Textarea::make('description')
+                            ->label('Description')
+                            ->rows(2)
+                            ->columnSpanFull(),
                     ])
-                    ->columns(2),
+                    ->columns(3),
 
                 Section::make('Available Variables')
                     ->icon('heroicon-o-variable')
@@ -132,13 +132,14 @@ class TaxTemplateResource extends Resource
                         Forms\Components\Toggle::make('page1_source_mode')
                             ->label('Edit HTML Source Code')
                             ->default(false)
+                            ->formatStateUsing(fn ($record) => $record?->html_content && str_contains($record->html_content, 'style="'))
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_source', $get('html_content'));
                                 }
                             })
-                            ->helperText('Switch between WYSIWYG and raw HTML source code'),
+                            ->helperText('Auto-enabled when content has inline CSS. Prevents style stripping.'),
 
                         Forms\Components\RichEditor::make('html_content')
                             ->label('Page 1 HTML Template (WYSIWYG)')
@@ -188,13 +189,14 @@ class TaxTemplateResource extends Resource
                         Forms\Components\Toggle::make('page2_source_mode')
                             ->label('Edit HTML Source Code')
                             ->default(false)
+                            ->formatStateUsing(fn ($record) => $record?->html_content_page_2 && str_contains($record->html_content_page_2, 'style="'))
                             ->live()
                             ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 if ($state) {
                                     $set('html_content_page_2_source', $get('html_content_page_2'));
                                 }
                             })
-                            ->helperText('Switch between WYSIWYG and raw HTML source code'),
+                            ->helperText('Auto-enabled when content has inline CSS. Prevents style stripping.'),
 
                         Forms\Components\RichEditor::make('html_content_page_2')
                             ->label('Page 2 HTML Template (WYSIWYG)')
@@ -240,7 +242,11 @@ class TaxTemplateResource extends Resource
                         Forms\Components\Placeholder::make('preview')
                             ->label('')
                             ->content(function ($get, $record) {
-                                $htmlContent = $get('html_content');
+                                // Use source textarea when source mode is ON (preserves inline CSS)
+                                $sourceMode = $get('page1_source_mode');
+                                $htmlContent = $sourceMode
+                                    ? ($get('html_content_source') ?: $record?->html_content)
+                                    : $get('html_content');
 
                                 if (!$htmlContent) {
                                     return new HtmlString('<div class="text-gray-500 italic p-4 text-center">Enter HTML content above to see preview</div>');
@@ -406,7 +412,7 @@ class TaxTemplateResource extends Resource
                                     '<div style="width:' . $pageWidth . '; margin:0 auto; box-shadow:0 2px 8px rgba(0,0,0,0.15);">' .
                                     '<iframe srcdoc="' . $escapedHtml . '" ' .
                                     'style="width:' . $pageWidth . '; min-height:' . $pageHeight . '; height:' . $iframeHeight . '; border:none; background:white; display:block;" ' .
-                                    'sandbox="allow-same-origin" ' .
+                                    'sandbox="allow-same-origin allow-scripts" ' .
                                     'title="Template Preview">' .
                                     '</iframe>' .
                                     '</div>' .
