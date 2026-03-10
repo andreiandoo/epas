@@ -81,18 +81,17 @@ class ListPayouts extends ListRecords
                                 $status = $event->isPast() ? '🔴 Încheiat' : '🟢 Live';
                                 $date = $event->event_date?->format('d.m.Y') ?? '';
                                 return [$event->id => "{$title} ({$date}) — {$status}"];
-                            });
+                            })
+                            ->toArray();
                     })
                     ->searchable()
+                    ->preload()
                     ->required()
                     ->live()
                     ->afterStateUpdated(function ($state, Set $set) {
                         if ($state) {
                             $event = Event::with('marketplaceOrganizer')->find($state);
                             if ($event) {
-                                $balance = self::calculateEventBalance($event);
-                                $set('available_balance_info', number_format($balance, 2) . ' RON disponibil');
-
                                 // Calculate and prefill all amount fields
                                 $organizer = $event->marketplaceOrganizer;
                                 $commissionMode = $event->getEffectiveCommissionMode();
@@ -108,10 +107,8 @@ class ListPayouts extends ListRecords
 
                                 if ($commissionMode === 'added_on_top') {
                                     $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
-                                    $netRevenue = $subtotalRevenue;
                                 } else {
                                     $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-                                    $netRevenue = $grossRevenue - $commissionAmount;
                                 }
 
                                 $set('gross_amount', number_format($grossRevenue, 2, '.', ''));
@@ -120,7 +117,6 @@ class ListPayouts extends ListRecords
                                 $set('net_amount', number_format(max(0, $grossRevenue - $commissionAmount), 2, '.', ''));
                             }
                         } else {
-                            $set('available_balance_info', null);
                             $set('gross_amount', '0.00');
                             $set('commission_amount', '0.00');
                             $set('fees_amount', '0.00');
@@ -130,7 +126,14 @@ class ListPayouts extends ListRecords
 
                 Forms\Components\Placeholder::make('available_balance_info')
                     ->label('Sold disponibil')
-                    ->content(fn ($state) => $state ?? '-')
+                    ->content(function (Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return '-';
+                        $event = Event::with('marketplaceOrganizer')->find($eventId);
+                        if (!$event) return '-';
+                        $balance = self::calculateEventBalance($event);
+                        return number_format($balance, 2) . ' RON disponibil';
+                    })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
                 Forms\Components\Placeholder::make('event_details')
