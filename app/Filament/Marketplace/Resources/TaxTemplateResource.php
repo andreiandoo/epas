@@ -255,6 +255,7 @@ class TaxTemplateResource extends Resource
 
                                 // Create sample data for preview
                                 $sampleVariables = [
+                                    // Tax Registry
                                     'tax_registry_country' => 'Romania',
                                     'tax_registry_county' => 'București',
                                     'tax_registry_city' => 'București',
@@ -266,20 +267,23 @@ class TaxTemplateResource extends Resource
                                     'tax_registry_cif' => 'RO12345678',
                                     'tax_registry_iban' => 'RO49AAAA1B31007593840000',
 
-                                    'marketplace_legal_name' => $marketplace?->legal_name ?? 'Marketplace SRL',
-                                    'marketplace_vat' => $marketplace?->vat_number ?? 'RO98765432',
-                                    'marketplace_trade_register' => $marketplace?->trade_register ?? 'J40/1234/2024',
+                                    // Marketplace
+                                    'marketplace_legal_name' => $marketplace?->legal_name ?? $marketplace?->company_name ?? 'Marketplace SRL',
+                                    'marketplace_vat' => $marketplace?->cui ?? $marketplace?->vat_number ?? 'RO98765432',
+                                    'marketplace_trade_register' => $marketplace?->reg_com ?? $marketplace?->trade_register ?? 'J40/1234/2024',
                                     'marketplace_address' => $marketplace?->address ?? 'Bulevardul Central Nr. 1',
                                     'marketplace_city' => $marketplace?->city ?? 'București',
                                     'marketplace_state' => $marketplace?->state ?? 'București',
-                                    'marketplace_email' => $marketplace?->contact_email ?? 'office@marketplace.ro',
-                                    'marketplace_phone' => $marketplace?->contact_phone ?? '+40 21 987 6543',
+                                    'marketplace_email' => $marketplace?->contact_email ?? $marketplace?->email ?? 'office@marketplace.ro',
+                                    'marketplace_phone' => $marketplace?->contact_phone ?? $marketplace?->phone ?? '+40 21 987 6543',
                                     'marketplace_website' => $marketplace?->domain ?? 'www.marketplace.ro',
+                                    'marketplace_bank_name' => $marketplace?->bank_name ?? 'Banca Transilvania',
                                     'marketplace_contract_number' => $marketplace?->getCurrentContractNumber() ?? '1',
                                     'marketplace_signature_image' => $marketplace?->signature_image
                                         ? '<img src="' . \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />'
                                         : '<span style="color:#999;font-style:italic;">[Signature Image]</span>',
 
+                                    // Organizer
                                     'organizer_name' => 'Sample Organizer',
                                     'organizer_email' => 'organizer@sample.ro',
                                     'organizer_company_name' => 'Event Organizer SRL',
@@ -293,7 +297,7 @@ class TaxTemplateResource extends Resource
                                     'organizer_bank_name' => 'Banca Transilvania',
                                     'organizer_iban' => 'RO49BTRL1234567890123456',
 
-                                    // Guarantor sample data
+                                    // Guarantor
                                     'guarantor_first_name' => 'Ion',
                                     'guarantor_last_name' => 'Popescu',
                                     'guarantor_cnp' => '1850101123456',
@@ -305,11 +309,14 @@ class TaxTemplateResource extends Resource
                                     'guarantor_address' => 'Str. Exemplu Nr. 10, Ap. 5',
                                     'guarantor_city' => 'București',
 
+                                    // Event
                                     'event_name' => 'Sample Concert 2024',
                                     'event_date' => date('d.m.Y H:i', strtotime('+30 days')),
                                     'event_city' => 'București',
                                     'venue_name' => 'Arena Exemplu',
                                     'venue_address' => 'Str. Arenei Nr. 1, București',
+
+                                    // Tickets
                                     'ticket_types_table' => '<table style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Price</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Available</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Sold</th></tr></thead><tbody><tr><td style="border:1px solid #ddd; padding:8px;">General Admission</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">150.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">500</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">245</td></tr><tr><td style="border:1px solid #ddd; padding:8px;">VIP</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">350.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">100</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">52</td></tr></tbody></table>',
                                     'ticket_types_series' => "General Admission: GA001 - GA500\nVIP: VIP001 - VIP100",
                                     'ticket_types_rows' => '<tr><td class="left-align">General Admission</td><td>500</td><td>150.00</td><td>75,000.00</td><td><span class="underline-blue">GA001 - GA500</span></td></tr><tr><td class="left-align">VIP</td><td>100</td><td>350.00</td><td>35,000.00</td><td><span class="underline-blue">VIP001 - VIP100</span></td></tr>',
@@ -321,12 +328,38 @@ class TaxTemplateResource extends Resource
                                     'total_sales_value' => '54,950.00',
                                     'total_sales_currency' => 'RON',
 
+                                    // Orders
                                     'order_number' => 'ORD-2024-00123',
                                     'order_date' => date('d.m.Y H:i'),
                                     'order_total' => '150.00',
                                     'order_currency' => 'RON',
                                     'customer_name' => 'Ion Popescu',
                                     'customer_email' => 'ion.popescu@example.com',
+
+                                    // Contract
+                                    'contract_number_series' => 'AMB001',
+                                    'contract_date' => '15.01.2024',
+
+                                    // Payout
+                                    'payout_number' => 'DEC00123',
+                                    'payout_date' => date('d.m.Y'),
+                                    'payout_amount' => '6,947.00',
+                                    'payout_currency' => 'RON',
+                                    'payout_gross_amount' => '7,065.00',
+                                    'payout_commission_amount' => '0.00',
+                                    'payout_commission_percent' => '6%',
+                                    'payout_fees_amount' => '0.00',
+                                    'payout_adjustments_amount' => '118.00',
+                                    'payout_payment_reference' => 'VB-2024-00123',
+
+                                    // Invoice
+                                    'invoice_number' => 'FACT-00456',
+                                    'invoice_date' => date('d.m.Y'),
+                                    'invoice_due_date' => date('d.m.Y', strtotime('+30 days')),
+                                    'invoice_amount' => '1,500.00',
+                                    'invoice_currency' => 'RON',
+                                    'invoice_vat_amount' => '285.00',
+                                    'invoice_subtotal' => '1,215.00',
 
                                     // Date/Time variables
                                     'current_day' => date('d'),
@@ -347,18 +380,32 @@ class TaxTemplateResource extends Resource
                                     );
                                 }
 
-                                // Escape the processed HTML for use in srcdoc attribute
-                                $escapedHtml = htmlspecialchars($processed, ENT_QUOTES, 'UTF-8');
+                                // Replace any remaining unreplaced variables with highlighted placeholders
+                                $processed = preg_replace(
+                                    '/\{\{\s*(\w+)\s*\}\}/',
+                                    '<span style="background:#fef3c7;color:#92400e;padding:1px 3px;border-radius:2px;font-size:8px;">$1</span>',
+                                    $processed
+                                );
 
-                                // Use iframe with srcdoc to completely isolate CSS styles
+                                // Wrap in A4-like page structure (same as DomPDF rendering)
+                                $wrappedHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><style>
+                                    @page { margin: 15mm 12mm; }
+                                    body { font-family: DejaVu Sans, Arial, sans-serif; margin: 0; padding: 40px 35px; background: #fff; color: #000; }
+                                </style></head><body>' . $processed . '</body></html>';
+
+                                // Escape the processed HTML for use in srcdoc attribute
+                                $escapedHtml = htmlspecialchars($wrappedHtml, ENT_QUOTES, 'UTF-8');
+
+                                // Use iframe with srcdoc to completely isolate CSS styles — A4 page simulation
                                 return new HtmlString(
-                                    '<div class="border rounded-lg bg-white dark:bg-gray-900">' .
-                                    '<div class="px-4 py-2 border-b text-xs text-gray-500">Preview with sample data (CSS isolated):</div>' .
+                                    '<div style="background:#e5e7eb; padding:20px; border-radius:8px;">' .
+                                    '<div style="max-width:210mm; margin:0 auto; box-shadow:0 2px 8px rgba(0,0,0,0.15);">' .
                                     '<iframe srcdoc="' . $escapedHtml . '" ' .
-                                    'style="width: 100%; height: 500px; border: none; background: white;" ' .
+                                    'style="width:210mm; min-height:297mm; height:900px; border:none; background:white; display:block;" ' .
                                     'sandbox="allow-same-origin" ' .
                                     'title="Template Preview">' .
                                     '</iframe>' .
+                                    '</div>' .
                                     '</div>'
                                 );
                             }),

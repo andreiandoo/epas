@@ -101,6 +101,7 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_email}}' => 'Contact Email',
             '{{marketplace_phone}}' => 'Contact Phone',
             '{{marketplace_website}}' => 'Website',
+            '{{marketplace_bank_name}}' => 'Bank Name',
             '{{marketplace_contract_number}}' => 'Contract Number (incremental)',
             '{{marketplace_signature_image}}' => 'Signature Image',
         ],
@@ -340,6 +341,7 @@ class MarketplaceTaxTemplate extends Model
             $variables['marketplace_email'] = $marketplace->contact_email ?? '';
             $variables['marketplace_phone'] = $marketplace->contact_phone ?? '';
             $variables['marketplace_website'] = $marketplace->website ?? $marketplace->domain ?? '';
+            $variables['marketplace_bank_name'] = $marketplace->bank_name ?? '';
             $variables['marketplace_contract_number'] = $incrementContractNumber
                 ? $marketplace->getNextContractNumber()
                 : $marketplace->getCurrentContractNumber();
