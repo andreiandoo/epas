@@ -21,11 +21,13 @@ class EventTaxReport extends Page
     public ?Event $event = null;
     public array $taxReport = [];
 
-    public function mount(int $event): void
+    public function mount(int|Event $event): void
     {
         $marketplace = static::getMarketplaceClient();
 
-        $this->event = Event::where('id', $event)
+        $eventId = $event instanceof Event ? $event->id : $event;
+
+        $this->event = Event::where('id', $eventId)
             ->where('marketplace_client_id', $marketplace?->id)
             ->firstOrFail();
 
