@@ -56,7 +56,7 @@ class ListPayouts extends ListRecords
 
                     Forms\Components\Select::make('event_id')
                         ->label('Eveniment')
-                        ->options(function (Forms\Components\Utilities\Get $get) {
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $organizerId = $get('marketplace_organizer_id');
                             if (!$organizerId) return [];
 
@@ -92,11 +92,11 @@ class ListPayouts extends ListRecords
                     Forms\Components\Placeholder::make('available_balance_info')
                         ->label('Sold disponibil')
                         ->content(fn ($state) => $state ?? '-')
-                        ->visible(fn (Forms\Components\Utilities\Get $get) => $get('event_id') !== null),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('event_id') !== null),
 
                     Forms\Components\Select::make('bank_account_id')
                         ->label('Cont bancar')
-                        ->options(function (Forms\Components\Utilities\Get $get) {
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $organizerId = $get('marketplace_organizer_id');
                             if (!$organizerId) return [];
 
@@ -107,7 +107,7 @@ class ListPayouts extends ListRecords
                                 ]);
                         })
                         ->required()
-                        ->visible(fn (Forms\Components\Utilities\Get $get) => $get('marketplace_organizer_id') !== null),
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('marketplace_organizer_id') !== null),
 
                     \Filament\Schemas\Components\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('gross_amount')
@@ -116,7 +116,7 @@ class ListPayouts extends ListRecords
                             ->required()
                             ->suffix('RON')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, Forms\Components\Utilities\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $gross = (float) $state;
                                 $commission = (float) $get('commission_amount');
                                 $fees = (float) $get('fees_amount');
@@ -129,7 +129,7 @@ class ListPayouts extends ListRecords
                             ->default('0.00')
                             ->suffix('RON')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, Forms\Components\Utilities\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $gross = (float) $get('gross_amount');
                                 $commission = (float) $state;
                                 $fees = (float) $get('fees_amount');
@@ -142,7 +142,7 @@ class ListPayouts extends ListRecords
                             ->default('0.00')
                             ->suffix('RON')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, Forms\Components\Utilities\Get $get) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $gross = (float) $get('gross_amount');
                                 $commission = (float) $get('commission_amount');
                                 $fees = (float) $state;
@@ -255,7 +255,14 @@ class ListPayouts extends ListRecords
         return parent::getTabsContentComponent()
             ->extraAttributes([
                 'x-data' => '{}',
-                'x-init' => "\$nextTick(() => { const header = document.querySelector('.fi-header'); if (!header) return; const actions = header.querySelector('.fi-header-actions-ctn'); if (actions) header.insertBefore(\$el, actions); else header.appendChild(\$el); \$el.style.flex = '1'; \$el.style.minWidth = '0'; const nav = \$el.querySelector('.fi-tabs'); if (nav) { nav.style.marginInline = 'unset'; nav.style.marginLeft = 'auto'; nav.style.marginRight = '0'; } })",
+                'x-init' => "\$nextTick(() => {
+                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
+                    if (!toolbar) return;
+                    const nav = \$el.querySelector('.fi-tabs');
+                    if (!nav) return;
+                    nav.style.order = '-1';
+                    toolbar.prepend(nav);
+                })",
             ]);
     }
 

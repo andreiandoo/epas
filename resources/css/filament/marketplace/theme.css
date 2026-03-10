@@ -69,14 +69,24 @@ body {
     border-color: rgb(229 231 235 / var(--tw-divide-opacity));
 }
 
-/* Header: stack title and actions vertically on edit pages with many actions */
-.fi-header {
+/* Header: stack title and actions vertically on edit/view pages with many actions */
+/* Scope to pages that have tabs (edit pages), not list pages */
+.fi-page-edit-record .fi-header,
+.fi-page-view-record .fi-header {
     flex-direction: column !important;
     align-items: flex-start !important;
 }
 
-.fi-header .fi-header-actions-ctn {
+.fi-page-edit-record .fi-header .fi-header-actions-ctn,
+.fi-page-view-record .fi-header .fi-header-actions-ctn {
     flex-wrap: wrap;
+}
+
+/* List pages: header row with title left, actions right */
+.fi-page-list-records .fi-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
 }
 
 /* Fix dropdown/select option styling */
