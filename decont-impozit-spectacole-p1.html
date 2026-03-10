@@ -1,0 +1,185 @@
+<!-- PAGE 1: IMPOZIT PE SPECTACOLE - Decont lunar -->
+
+<!-- HEADER -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; margin-bottom:10px;">
+  <tr>
+    <td style="width:22%; vertical-align:top; border:1px solid #000; padding:6px; font-size:7.5pt; text-align:center; line-height:1.4;">
+      Stema unit&#x103;&#x21B;ii<br/>administrativ-<br/>teritoriale
+    </td>
+    <td style="width:53%; vertical-align:middle; text-align:center; padding:6px; font-size:9pt;">
+      <div style="font-weight:700; font-size:10pt; margin-bottom:2px;">ROM&#xc2;NIA</div>
+      <div>{{tax_registry_commune}}</div>
+      <div>{{tax_registry_name}}</div>
+    </td>
+    <td style="width:25%; vertical-align:middle; text-align:center; border:1px solid #000; padding:6px; font-weight:700; font-size:9pt;">
+      Model 2016 ITL 017
+    </td>
+  </tr>
+</table>
+
+<!-- ORGAN FISCAL INFO -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; font-size:8.5pt; margin-bottom:6px;">
+  <tr>
+    <td style="width:60%; padding:2px 0; line-height:1.6;">
+      <div>Cod SIRUTA {{tax_registry_siruta_code}}</div>
+      <div>Codul de identificare fiscal&#x103;: {{tax_registry_cif}}</div>
+      <div>Adresa: {{tax_registry_address}}, {{tax_registry_city}}, {{tax_registry_county}}</div>
+      <div>Cont IBAN {{tax_registry_iban}} &nbsp; Tel/fax {{tax_registry_phone}}</div>
+    </td>
+    <td style="width:40%; text-align:right; vertical-align:top; padding:2px 0; line-height:1.6;">
+      <div>Nr. ............/............/20............</div>
+      <div style="font-weight:700; font-size:11pt; color:#c00; margin-top:8px;">MODEL DE COMPLETAT</div>
+    </td>
+  </tr>
+</table>
+
+<!-- TITLE -->
+<div style="text-align:center; font-family:DejaVu Sans, sans-serif; margin:14px 0 10px 0;">
+  <div style="font-size:13pt; font-weight:700;">IMPOZIT PE SPECTACOLE</div>
+  <div style="font-size:10pt; font-weight:700;">Decont pe luna <span style="color:#c00;">{{current_month_name}}</span> anul <span style="color:#c00;">{{current_year}}</span></div>
+</div>
+
+<!-- DECLARATIE TEXT -->
+<div style="font-family:DejaVu Sans, sans-serif; font-size:8pt; line-height:1.6; text-align:justify; margin-bottom:10px; padding:0 5px;">
+  Subscrisa <strong>{{organizer_company_name}}</strong>, cu sediul &#xee;n ROM&#xc2;NIA, jude&#x21B;ul <strong>{{organizer_county}}</strong>,
+  codul po&#x219;tal ............, municipiul/ora&#x219;ul/comuna <strong>{{organizer_city}}</strong>,
+  satul/sectorul ............, str. <strong>{{organizer_address}}</strong>,
+  C.I.F. <strong>{{organizer_tax_id}}</strong>, tel/fax ............, e-mail <strong>{{organizer_email}}</strong>, reprezentat&#x103; prin
+  <strong>{{guarantor_last_name}} {{guarantor_first_name}}</strong>, &#xee;n calitate de ............,
+  cu domiciliul fiscal &#xee;n ROM&#xc2;NIA, jude&#x21B;ul <strong>{{organizer_county}}</strong>,
+  municipiul/ora&#x219;ul/comuna <strong>{{organizer_city}}</strong>,
+  str. <strong>{{guarantor_address}}</strong>,
+  identificat prin <strong>{{guarantor_id_type}}</strong> seria <strong>{{guarantor_id_series}}</strong> nr. <strong>{{guarantor_id_number}}</strong>,
+  C.I.F. <strong>{{organizer_tax_id}}</strong>,
+  tel./fax ............, e-mail <strong>{{organizer_email}}</strong>, declar:
+</div>
+
+<!-- MAIN TABLE -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; font-size:7pt; margin-bottom:8px;">
+  <thead>
+    <tr>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:24px; font-weight:600; vertical-align:middle;">Nr.<br/>crt.</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; font-weight:600; vertical-align:middle;">Tipul spectacolului &#x219;i adresa la care se desf&#x103;&#x219;oar&#x103; acesta</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:62px; font-weight:600; vertical-align:middle; font-size:6.5pt;">&#xce;ncas&#x103;rile din<br/>v&#xe2;nzarea<br/>biletelor de<br/>intrare &#x219;i a<br/>abonamentelor<br/>la spectacole<br/>- lei -</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:62px; font-weight:600; vertical-align:middle; font-size:6.5pt;">&#xce;ncas&#x103;rile<br/>reprezent&#xe2;nd<br/>contravaloarea<br/>timbrelor<br/>(cinematografic,<br/>muzical, folcloric<br/>etc.)<br/>- lei -</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:42px; font-weight:600; vertical-align:middle; font-size:6.5pt;">Sumele<br/>cedate &#xee;n<br/>scopuri<br/>umanitare</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:55px; font-weight:600; vertical-align:middle; font-size:6.5pt;">&#xce;ncas&#x103;rile<br/>supuse<br/>impozitului<br/>pe<br/>spectacole<br/>- lei -</th>
+      <th rowspan="3" style="border:1px solid #000; padding:3px; text-align:center; width:35px; font-weight:600; vertical-align:middle; font-size:6.5pt;">Cota de<br/>impozit</th>
+      <th colspan="4" style="border:1px solid #000; padding:3px; text-align:center; font-weight:600;">Impozitul pe spectacole</th>
+    </tr>
+    <tr>
+      <th rowspan="2" style="border:1px solid #000; padding:3px; text-align:center; width:40px; font-weight:600; vertical-align:middle; font-size:6.5pt;">datorat</th>
+      <th rowspan="2" style="border:1px solid #000; padding:3px; text-align:center; width:40px; font-weight:600; vertical-align:middle; font-size:6.5pt;">pl&#x103;tit</th>
+      <th colspan="2" style="border:1px solid #000; padding:3px; text-align:center; font-weight:600; font-size:6.5pt;">Diferen&#x21B;a</th>
+    </tr>
+    <tr>
+      <th style="border:1px solid #000; padding:3px; text-align:center; width:38px; font-weight:600; font-size:6.5pt;">de primit</th>
+      <th style="border:1px solid #000; padding:3px; text-align:center; width:38px; font-weight:600; font-size:6.5pt;">de pl&#x103;tit</th>
+    </tr>
+    <!-- Column numbers row -->
+    <tr style="background:#f5f5f5;">
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">0</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">1</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">2</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">3</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">4</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">5=2-3-4</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">6</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">7=5x6</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">8</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">9=8-7</td>
+      <td style="border:1px solid #000; padding:2px; text-align:center; font-size:6.5pt;">10=7-8</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:center;">1</td>
+      <td style="border:1px solid #000; padding:3px 4px; font-size:7.5pt;">{{event_name}} &#x2014; {{venue_name}}, {{venue_address}}</td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;">{{total_sales_value}}</td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;">{{total_sales_value}}</td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:center;">2%</td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:right;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:center;">2</td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:center;">3</td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #000; padding:3px 4px; text-align:center;">4</td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+      <td style="border:1px solid #000; padding:3px 4px;"></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- DECLARATIE -->
+<div style="font-family:DejaVu Sans, sans-serif; font-size:8pt; line-height:1.5; margin:12px 0 8px 0; text-align:justify;">
+  Prin semnarea prezentei am luat cuno&#x219;tin&#x21B;&#x103; c&#x103; declararea necorespunz&#x103;toare adev&#x103;rului se pedepse&#x219;te conform legii penale, cele declarate fiind corecte &#x219;i complete.
+</div>
+
+<!-- DATA + SIGNATURES -->
+<table style="width:100%; border-collapse:collapse; font-family:DejaVu Sans, sans-serif; font-size:8pt; margin-top:10px;">
+  <tr>
+    <td style="width:50%; padding:4px 0; vertical-align:top;">
+      <div style="margin-bottom:20px;">
+        .............................................................................<br/>
+        <span style="font-size:7pt;">(data &#xee;ntocmirii declara&#x21B;iei)</span>
+      </div>
+      <div style="text-align:center;">
+        <strong>Reprezentantul legal,</strong><br/>
+        ...........................................................<br/>
+        <span style="font-size:7pt;">(numele, prenumele &#x219;i semn&#x103;tura)</span><br/>
+        <strong style="color:#c00;">C&#xc2;MP OBLIGATORIU</strong>
+      </div>
+    </td>
+    <td style="width:50%; padding:4px 0; vertical-align:top; text-align:center;">
+      <div style="margin-bottom:20px;">&nbsp;</div>
+      <div>
+        <strong>&#x218;eful compartimentului contabil,</strong><br/>
+        ...........................................................<br/>
+        <span style="font-size:7pt;">(numele, prenumele &#x219;i semn&#x103;tura)</span><br/>
+        <strong style="color:#c00;">C&#xc2;MP OBLIGATORIU</strong>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<!-- FOOTNOTE -->
+<div style="font-family:DejaVu Sans, sans-serif; font-size:6.5pt; color:#555; margin-top:20px; border-top:1px solid #ccc; padding-top:5px;">
+  *) Se va completa: codul de identificare fiscal&#x103; (codul numeric personal, num&#x103;rul de identificare fiscal&#x103;, dup&#x103; caz); etc.
+</div>
