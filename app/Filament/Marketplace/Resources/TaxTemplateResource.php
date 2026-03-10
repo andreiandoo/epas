@@ -255,7 +255,11 @@ class TaxTemplateResource extends Resource
                                     ? ($get('html_content_page_2_source') ?: $record?->html_content_page_2)
                                     : $get('html_content_page_2');
 
-                                if (!$htmlContent1 && !$htmlContent2) {
+                                // Treat empty HTML (whitespace, empty tags) as no content
+                                $hasContent1 = $htmlContent1 && trim(strip_tags($htmlContent1)) !== '';
+                                $hasContent2 = $htmlContent2 && trim(strip_tags($htmlContent2)) !== '';
+
+                                if (!$hasContent1 && !$hasContent2) {
                                     return new HtmlString('<div class="text-gray-500 italic p-4 text-center">Enter HTML content above to see preview</div>');
                                 }
 
@@ -264,14 +268,14 @@ class TaxTemplateResource extends Resource
                                 $output = '<div style="background:#e5e7eb; padding:20px; border-radius:8px; overflow-x:auto;">';
 
                                 // Page 1 preview
-                                if ($htmlContent1) {
+                                if ($hasContent1) {
                                     $processed1 = static::processPreviewHtml($htmlContent1, $sampleVariables);
                                     $orientation1 = $get('page_orientation') ?? 'portrait';
                                     $output .= static::renderPagePreview($processed1, $orientation1, 'Page 1');
                                 }
 
                                 // Page 2 preview
-                                if ($htmlContent2) {
+                                if ($hasContent2) {
                                     $processed2 = static::processPreviewHtml($htmlContent2, $sampleVariables);
                                     $orientation2 = $get('page_2_orientation') ?? $get('page_orientation') ?? 'portrait';
                                     $output .= static::renderPagePreview($processed2, $orientation2, 'Page 2');

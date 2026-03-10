@@ -3,6 +3,8 @@
 namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\PayoutResource\Pages;
+use App\Filament\Marketplace\Resources\EventResource;
+use App\Filament\Marketplace\Resources\OrganizerResource;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceAdmin;
 use Filament\Forms;
@@ -164,14 +166,22 @@ class PayoutResource extends Resource
                             ->iconPosition(IconPosition::After),
 
                         Infolists\Components\TextEntry::make('organizer.name')
-                            ->label('Organizer'),
+                            ->label('Organizer')
+                            ->url(fn ($record) => $record->marketplace_organizer_id
+                                ? OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
+                                : null)
+                            ->color('primary'),
 
                         Infolists\Components\TextEntry::make('event.title')
                             ->label('Event')
                             ->placeholder('General payout (no specific event)')
                             ->formatStateUsing(fn ($state) => is_array($state)
                                 ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
-                                : $state),
+                                : $state)
+                            ->url(fn ($record) => $record->event_id
+                                ? EventResource::getUrl('edit', ['record' => $record->event_id])
+                                : null)
+                            ->color('primary'),
 
                         Infolists\Components\TextEntry::make('amount')
                             ->money('RON')

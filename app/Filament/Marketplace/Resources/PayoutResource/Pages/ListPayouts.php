@@ -103,6 +103,19 @@ class ListPayouts extends ListRecords
                     ->content(fn ($state) => $state ?? '-')
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
+                Forms\Components\Placeholder::make('event_details')
+                    ->label('')
+                    ->content(function (Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return '';
+
+                        $event = Event::with(['ticketTypes'])->find($eventId);
+                        if (!$event) return '';
+
+                        return new HtmlString($this->renderEventBreakdown($event));
+                    })
+                    ->visible(fn (Get $get) => $get('event_id') !== null),
+
                 Forms\Components\Select::make('bank_account_id')
                     ->label('Cont bancar')
                     ->options(function (Get $get) {
@@ -110,11 +123,14 @@ class ListPayouts extends ListRecords
                         if (!$organizerId) return [];
 
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
+                            ->orderByDesc('is_primary')
                             ->get()
                             ->mapWithKeys(fn ($acc) => [
-                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' (primar)' : ''),
-                            ]);
+                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
+                            ])
+                            ->toArray();
                     })
+                    ->searchable()
                     ->required()
                     ->visible(fn (Get $get) => $get('marketplace_organizer_id') !== null),
 
@@ -183,6 +199,15 @@ class ListPayouts extends ListRecords
             ->action(function (array $data): void {
                 $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
                 $bankAccount = MarketplaceOrganizerBankAccount::find($data['bank_account_id']);
+
+                if (!$bankAccount) {
+                    \Filament\Notifications\Notification::make()
+                        ->title('Eroare')
+                        ->body('Contul bancar selectat nu a fost găsit.')
+                        ->danger()
+                        ->send();
+                    return;
+                }
 
                 $payoutMethod = [
                     'type' => 'bank_transfer',
@@ -493,6 +518,110 @@ class ListPayouts extends ListRecords
             ->sum('amount');
 
         return max(0, $netRevenue - $eventPayouts - $eventPendingPayouts);
+    }
+
+    /**
+     * Render detailed event breakdown HTML for the manual decont modal
+     */
+    protected function renderEventBreakdown(Event $event): string
+    {
+        $organizer = $event->marketplaceOrganizer;
+        if (!$organizer) return '';
+
+        $commissionMode = $event->getEffectiveCommissionMode();
+        $commissionRate = $event->getEffectiveCommissionRate();
+
+        // Commission type label
+        $commissionTypeLabel = match ($commissionMode) {
+            'added_on_top' => 'Adăugat peste preț (organizatorul primește 100%)',
+            'included' => "Inclus în preț ({$commissionRate}%)",
+            default => "Procentual ({$commissionRate}%)",
+        };
+
+        // Completed orders
+        $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->with('items')
+            ->get();
+
+        // Refunded orders
+        $refundedOrders = Order::where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event->id)
+            ->where('status', 'refunded')
+            ->get();
+
+        $totalRefundedAmount = (float) $refundedOrders->sum('refund_amount');
+        $totalRefundedCount = $refundedOrders->count();
+
+        // Ticket type breakdown from order items
+        $ticketBreakdown = [];
+        foreach ($completedOrders as $order) {
+            foreach ($order->items as $item) {
+                $name = $item->name ?? 'Unknown';
+                if (!isset($ticketBreakdown[$name])) {
+                    $ticketBreakdown[$name] = ['quantity' => 0, 'total' => 0, 'unit_price' => (float) $item->unit_price];
+                }
+                $ticketBreakdown[$name]['quantity'] += $item->quantity;
+                $ticketBreakdown[$name]['total'] += (float) $item->total;
+            }
+        }
+
+        $grossRevenue = (float) $completedOrders->sum('total');
+        $totalTicketsSold = array_sum(array_column($ticketBreakdown, 'quantity'));
+
+        // Commission calculation
+        if ($commissionMode === 'added_on_top') {
+            $commissionAmount = 0;
+            $netRevenue = (float) $completedOrders->sum('subtotal');
+        } else {
+            $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
+            $netRevenue = $grossRevenue - $commissionAmount;
+        }
+
+        // Build HTML
+        $html = '<div class="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden text-sm">';
+
+        // Ticket types table
+        if (!empty($ticketBreakdown)) {
+            $html .= '<table class="w-full">';
+            $html .= '<thead><tr class="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">';
+            $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tip bilet</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț unitar</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Cantitate</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total</th>';
+            $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/5">';
+
+            foreach ($ticketBreakdown as $name => $data) {
+                $html .= '<tr>';
+                $html .= '<td class="px-3 py-1.5 text-gray-900 dark:text-white">' . e($name) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($data['unit_price'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . $data['quantity'] . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($data['total'], 2) . '</td>';
+                $html .= '</tr>';
+            }
+
+            $html .= '</tbody></table>';
+        }
+
+        // Summary section
+        $html .= '<div class="border-t border-gray-200 dark:border-white/10 px-3 py-2 space-y-1 bg-gray-50 dark:bg-white/5">';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . $totalTicketsSold . '</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Vânzări brute:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Tip comision:</span><span class="font-medium">' . $commissionTypeLabel . '</span></div>';
+
+        if ($commissionAmount > 0) {
+            $html .= '<div class="flex justify-between text-orange-600 dark:text-orange-400"><span>Comision platformă:</span><span class="font-mono font-medium">-' . number_format($commissionAmount, 2) . ' RON</span></div>';
+        }
+
+        if ($totalRefundedCount > 0) {
+            $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
+        }
+
+        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold"><span>Sold net:</span><span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format($netRevenue, 2) . ' RON</span></div>';
+        $html .= '</div></div>';
+
+        return $html;
     }
 
     public function getTabsContentComponent(): Component
