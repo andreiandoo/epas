@@ -2944,7 +2944,16 @@ class EventsController extends BaseController
             'tickets_sold' => $event->total_tickets_sold,
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) {
+            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($event) {
+                // Count checked-in tickets for this ticket type
+                $checkedIn = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                    ->whereHas('order', function ($q) use ($event) {
+                        $q->where('event_id', $event->id)
+                          ->whereIn('status', ['paid', 'confirmed', 'completed']);
+                    })
+                    ->whereNotNull('checked_in_at')
+                    ->count();
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -2959,6 +2968,8 @@ class EventsController extends BaseController
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
+                    'color' => $tt->color ?? null,
+                    'checked_in' => $checkedIn,
                 ];
             }),
             'has_seating' => (bool) $event->seating_layout_id,
