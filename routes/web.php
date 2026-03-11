@@ -293,7 +293,7 @@ Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show']
 
 // Android APK Download
 Route::get('/download-android', function () {
-    $path = storage_path('app/public/downloads/tixello-staff.apk');
+    $path = public_path('downloads/tixello-staff.apk');
     if (!file_exists($path)) {
         abort(404, 'APK not available yet');
     }
