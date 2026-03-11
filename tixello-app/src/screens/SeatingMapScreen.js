@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
+  Animated,
 } from 'react-native';
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from 'react-native-svg';
 import { GestureHandlerRootView, GestureDetector, Gesture, ScrollView } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { colors } from '../theme/colors';
 import { formatCurrency } from '../utils/formatCurrency';
 import { apiGet } from '../api/client';
@@ -69,13 +65,11 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   const [mapData, setMapData] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
 
-  // Gesture shared values
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
+  // Gesture values using Animated API
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const translateXAnim = useRef(new Animated.Value(0)).current;
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+  const gestureState = useRef({ scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 });
 
   useEffect(() => {
     loadSeatingMap();
@@ -153,31 +147,31 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
 
   // Pinch gesture
   const pinchGesture = Gesture.Pinch()
-    .onStart(() => { savedScale.value = scale.value; })
-    .onUpdate((e) => { scale.value = Math.min(Math.max(savedScale.value * e.scale, 0.5), 5); })
-    .onEnd(() => { savedScale.value = scale.value; });
+    .onStart(() => { gestureState.current.savedScale = gestureState.current.scale; })
+    .onUpdate((e) => {
+      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, 0.5), 5);
+      gestureState.current.scale = newScale;
+      scaleAnim.setValue(newScale);
+    })
+    .onEnd(() => { gestureState.current.savedScale = gestureState.current.scale; });
 
   // Pan gesture
   const panGesture = Gesture.Pan()
     .minPointers(1)
     .onStart(() => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
+      gestureState.current.savedTx = gestureState.current.tx;
+      gestureState.current.savedTy = gestureState.current.ty;
     })
     .onUpdate((e) => {
-      translateX.value = savedTranslateX.value + e.translationX;
-      translateY.value = savedTranslateY.value + e.translationY;
+      const newTx = gestureState.current.savedTx + e.translationX;
+      const newTy = gestureState.current.savedTy + e.translationY;
+      gestureState.current.tx = newTx;
+      gestureState.current.ty = newTy;
+      translateXAnim.setValue(newTx);
+      translateYAnim.setValue(newTy);
     });
 
   const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
 
   const toggleSeat = useCallback((seat) => {
     if (!seat.isAllowed) return;
@@ -221,12 +215,12 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   };
 
   const resetView = () => {
-    scale.value = withSpring(1);
-    translateX.value = withSpring(0);
-    translateY.value = withSpring(0);
-    savedScale.value = 1;
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
+      Animated.spring(translateXAnim, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(translateYAnim, { toValue: 0, useNativeDriver: true }),
+    ]).start();
+    gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
   };
 
   const ticketTypeLegend = mapData?.ticket_types || [];
@@ -318,7 +312,7 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
       {/* Map with pinch-to-zoom and pan */}
       <View style={styles.mapContainer}>
         <GestureDetector gesture={composedGesture}>
-          <Animated.View style={[styles.mapAnimatedView, animatedStyle]}>
+          <Animated.View style={[styles.mapAnimatedView, { transform: [{ translateX: translateXAnim }, { translateY: translateYAnim }, { scale: scaleAnim }] }]}>
             <Svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${canvas.width} ${canvas.height}`}>
               <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#12121e" rx={8} />
 
