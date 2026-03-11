@@ -2154,6 +2154,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.team.activate':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/activate';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER API KEY ====================
 
     case 'organizer.api-key':

@@ -231,6 +231,52 @@ class TeamController extends BaseController
     }
 
     /**
+     * Activate a pending team member manually
+     */
+    public function activate(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'member_id' => 'required|string',
+        ]);
+
+        if (str_starts_with($validated['member_id'], 'owner_')) {
+            return $this->error('Proprietarul este deja activ', 422);
+        }
+
+        $member = $organizer->teamMembers()->find($validated['member_id']);
+
+        if (!$member) {
+            return $this->error('Membrul nu a fost gasit', 404);
+        }
+
+        if ($member->status === 'active') {
+            return $this->error('Membrul este deja activ', 422);
+        }
+
+        $member->update([
+            'status' => 'active',
+            'accepted_at' => now(),
+        ]);
+
+        return $this->success([
+            'member' => [
+                'id' => (string) $member->id,
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $member->role,
+                'permissions' => $member->getEffectivePermissions(),
+                'status' => $member->status,
+            ],
+        ], 'Cont activat cu succes');
+    }
+
+    /**
      * Resend invite to a pending member
      */
     public function resendInvite(Request $request): JsonResponse

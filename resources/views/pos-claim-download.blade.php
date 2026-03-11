@@ -212,27 +212,13 @@
                 <div class="ticket-info">
                     <table class="info-table">
                         <tr>
-                            <td class="info-label">Suma achitata:</td>
+                            <td class="info-label">Suma achitată:</td>
                             <td class="info-value">{{ number_format($ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100), 2, ',', '.') }} {{ $order->currency ?? 'RON' }}</td>
                         </tr>
-                        @if($eventDateFormatted)
                         <tr>
-                            <td class="info-label">Data eveniment:</td>
-                            <td class="info-value">{{ $eventDateFormatted }}</td>
+                            <td class="info-label">Încasare:</td>
+                            <td class="info-value">Cash</td>
                         </tr>
-                        @endif
-                        @if($venueLocation)
-                        <tr>
-                            <td class="info-label">Locatie:</td>
-                            <td class="info-value">{{ $venueLocation }}</td>
-                        </tr>
-                        @endif
-                        @if($accessTime)
-                        <tr>
-                            <td class="info-label">Ora acces:</td>
-                            <td class="info-value">{{ $accessTime }}</td>
-                        </tr>
-                        @endif
                     </table>
 
                     @if($organizerName || $organizerCui)
@@ -254,10 +240,10 @@
                 </div>
 
                 <div class="terms-section">
-                    Cumparatorul de bilet a fost de acord cu Termenii si Conditiile Evenimentului prezentate la intrarea in eveniment si pe pagina de prezentare a evenimentului.
+                    Cumpărătorul de bilet a fost de acord cu Termenii și Condițiile Evenimentului prezentate la intrarea în eveniment și pe pagina de prezentare a evenimentului.
                 </div>
 
-                <p class="ticket-instruction">Prezinta acest cod QR sau codul biletului la intrare</p>
+                <p class="ticket-instruction">Prezintă acest cod QR sau codul biletului la intrare</p>
             </div>
 
             <div class="ticket-footer">

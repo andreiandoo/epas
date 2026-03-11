@@ -330,7 +330,8 @@ class PosTicketClaimController extends Controller
             'accessTime' => $accessTime,
             'organizerName' => $organizerName,
             'organizerCui' => $organizerCui,
-        ])->setPaper([0, 0, 396, 700], 'portrait');
+        ])->setOption('isRemoteEnabled', true)
+          ->setPaper([0, 0, 396, 700], 'portrait');
 
         $safeName = preg_replace('/[^a-zA-Z0-9 ]/', '', $claim->event_name);
         $safeName = str_replace(' ', '-', trim($safeName));

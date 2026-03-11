@@ -1568,6 +1568,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.team.resend-invite');
         Route::post('/team/resend-all-invites', [OrganizerTeamController::class, 'resendAllInvites'])
             ->name('api.marketplace-client.organizer.team.resend-all-invites');
+        Route::post('/team/activate', [OrganizerTeamController::class, 'activate'])
+            ->name('api.marketplace-client.organizer.team.activate');
 
         // Dashboard
         Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])

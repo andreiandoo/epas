@@ -769,6 +769,8 @@ class EventsController extends BaseController
                     'phone' => $customer?->phone ?? $ticket->order->customer_phone,
                 ],
                 'order_number' => $ticket->order->order_number,
+                'source' => $ticket->order->source,
+                'is_invitation' => !empty($ticket->order->meta['is_invitation']),
                 'purchased_at' => $ticket->created_at->toIso8601String(),
             ];
         }, [
