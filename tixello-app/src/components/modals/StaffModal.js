@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,12 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { getTeamMembers } from '../../api/team';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -87,7 +89,27 @@ function StaffCard({ member }) {
   );
 }
 
-export default function StaffModal({ visible, onClose, staffMembers = [] }) {
+export default function StaffModal({ visible, onClose }) {
+  const [staffMembers, setStaffMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp = await getTeamMembers();
+      const members = resp.data?.members || resp.members || [];
+      // Only show active members
+      setStaffMembers(members.filter(m => m.status === 'active'));
+    } catch (e) {
+      console.error('Failed to fetch team members:', e);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (visible) fetchMembers();
+  }, [visible]);
+
   const activeCount = staffMembers.filter(m => m.status === 'Active' || m.status === 'active').length;
   const totalScans = staffMembers.reduce((sum, m) => sum + (m.scans || 0), 0);
   const totalSales = staffMembers.reduce((sum, m) => sum + (m.sales || 0), 0);
@@ -134,7 +156,11 @@ export default function StaffModal({ visible, onClose, staffMembers = [] }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {staffMembers.length === 0 ? (
+            {loading ? (
+              <View style={styles.emptyState}>
+                <ActivityIndicator size="large" color={colors.purple} />
+              </View>
+            ) : staffMembers.length === 0 ? (
               <View style={styles.emptyState}>
                 <Svg width={48} height={48} viewBox="0 0 24 24" fill="none">
                   <Path

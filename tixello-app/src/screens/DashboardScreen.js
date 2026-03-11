@@ -938,7 +938,7 @@ function SalesBreakdownModal({ visible, onClose, eventId }) {
 
 export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
   const { userRole } = useAuth();
-  const { selectedEvent, eventStats, ticketTypes, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
+  const { selectedEvent, eventStats, ticketTypes, allTicketTypes, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
   const {
     shiftStartTime,
     cashTurnover,
@@ -1043,13 +1043,13 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
       <TicketSalesByTypeModal
         visible={showTicketSales}
         onClose={() => setShowTicketSales(false)}
-        ticketTypes={ticketTypes}
+        ticketTypes={allTicketTypes}
       />
 
       <RemainingByTypeModal
         visible={showRemaining}
         onClose={() => setShowRemaining(false)}
-        ticketTypes={ticketTypes}
+        ticketTypes={allTicketTypes}
       />
     </View>
   );

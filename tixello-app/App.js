@@ -191,7 +191,7 @@ function MainTabs() {
         <EmergencyModal visible={showEmergency} onClose={() => setShowEmergency(false)} />
       )}
       {showStaff && (
-        <StaffModal visible={showStaff} onClose={() => setShowStaff(false)} staffMembers={[]} />
+        <StaffModal visible={showStaff} onClose={() => setShowStaff(false)} />
       )}
       {showGuestList && (
         <GuestListModal visible={showGuestList} onClose={() => setShowGuestList(false)} />

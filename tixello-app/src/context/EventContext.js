@@ -10,6 +10,7 @@ export function EventProvider({ children }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventStats, setEventStats] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
+  const [allTicketTypes, setAllTicketTypes] = useState([]);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [eventCommission, setEventCommission] = useState(null);
@@ -85,18 +86,21 @@ export function EventProvider({ children }) {
         useFixed: event.use_fixed_commission || false,
       });
       const allTypes = event.ticket_types || [];
+      const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
+      const enrichType = (t, i) => ({
+        ...t,
+        color: t.color || colorPalette[i % colorPalette.length],
+        available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
+        checked_in: t.checked_in ?? 0,
+      });
+      // Store ALL ticket types for dashboard breakdowns
+      setAllTicketTypes(allTypes.map(enrichType));
       // Filter by is_entry_ticket: only show entry tickets in mobile POS
       // Fallback: if no ticket type has is_entry_ticket=true, show all (backward compat)
       const entryTypes = allTypes.filter(t => t.is_entry_ticket);
       const types = entryTypes.length > 0 ? entryTypes : allTypes;
       if (types.length > 0) {
-        const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
-        setTicketTypes(types.map((t, i) => ({
-          ...t,
-          color: t.color || colorPalette[i % colorPalette.length],
-          available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
-          checked_in: t.checked_in ?? 0,
-        })));
+        setTicketTypes(types.map(enrichType));
       } else {
         setTicketTypes([]);
       }
@@ -141,6 +145,7 @@ export function EventProvider({ children }) {
       selectedEvent,
       eventStats,
       ticketTypes,
+      allTicketTypes,
       isLoadingEvents,
       isLoadingStats,
       isReportsOnlyMode,

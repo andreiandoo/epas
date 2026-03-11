@@ -110,6 +110,8 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   }, [canvas.width, canvas.height]);
 
   // Process seats from geometry + statuses
+  // IMPORTANT: seat.x/seat.y are absolute within the section (same as website)
+  // Do NOT add row.y — it's already baked into seat.y
   const processedData = useMemo(() => {
     if (!mapData) return { seats: [], rowLabels: [] };
     const { sections, seats } = mapData;
@@ -132,7 +134,7 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
           rowLabelList.push({
             key: `${section.name}-${row.label}`,
             x: sectionX + (firstSeat.x || 0) - seatRadius - 6,
-            y: sectionY + (row.y || 0) + (firstSeat.y || 0) + seatRadius * 0.35,
+            y: sectionY + (firstSeat.y || 0) + seatRadius * 0.35,
             label: row.label,
             fontSize: Math.max(seatRadius * 0.85, 7),
           });
@@ -140,7 +142,7 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
 
         (row.seats || []).forEach(seat => {
           const cx = sectionX + (seat.x || 0);
-          const cy = sectionY + (row.y || 0) + (seat.y || 0);
+          const cy = sectionY + (seat.y || 0);
           const seatUid = seat.seat_uid || seat.uid;
           const seatInfo = seatStatusMap[seatUid] || {};
           const seatTicketTypeId = seatInfo.ticket_type_id;
@@ -165,11 +167,19 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
     return { seats: seatList, rowLabels: rowLabelList };
   }, [mapData, ticketTypeId]);
 
-  // Set initial scale to fit screen when map loads
+  // Center map on load — match website's centerMapToContent()
   useEffect(() => {
     if (mapData) {
+      const availableWidth = SCREEN_WIDTH - 16;
+      const availableHeight = SCREEN_HEIGHT - 260;
+      const scaledW = canvas.width * baseScale;
+      const scaledH = canvas.height * baseScale;
+      const centerTx = (availableWidth - scaledW) / 2;
+      const centerTy = (availableHeight - scaledH) / 2;
       scaleAnim.setValue(baseScale);
-      gestureState.current = { scale: baseScale, savedScale: baseScale, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+      translateXAnim.setValue(centerTx);
+      translateYAnim.setValue(centerTy);
+      gestureState.current = { scale: baseScale, savedScale: baseScale, tx: centerTx, ty: centerTy, savedTx: centerTx, savedTy: centerTy };
     }
   }, [mapData, baseScale]);
 
@@ -245,12 +255,18 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   };
 
   const resetView = () => {
+    const availableWidth = SCREEN_WIDTH - 16;
+    const availableHeight = SCREEN_HEIGHT - 260;
+    const scaledW = canvas.width * baseScale;
+    const scaledH = canvas.height * baseScale;
+    const centerTx = (availableWidth - scaledW) / 2;
+    const centerTy = (availableHeight - scaledH) / 2;
     Animated.parallel([
       Animated.spring(scaleAnim, { toValue: baseScale, useNativeDriver: true }),
-      Animated.spring(translateXAnim, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(translateYAnim, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(translateXAnim, { toValue: centerTx, useNativeDriver: true }),
+      Animated.spring(translateYAnim, { toValue: centerTy, useNativeDriver: true }),
     ]).start();
-    gestureState.current = { scale: baseScale, savedScale: baseScale, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+    gestureState.current = { scale: baseScale, savedScale: baseScale, tx: centerTx, ty: centerTy, savedTx: centerTx, savedTy: centerTy };
   };
 
   const zoomIn = () => {
@@ -540,7 +556,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: colors.textSecondary },
   legendPrice: { fontSize: 11, fontWeight: '600', color: colors.textTertiary },
-  mapContainer: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  mapContainer: { flex: 1, overflow: 'hidden' },
   mapAnimatedView: {},
   zoomControls: { position: 'absolute', right: 12, top: 12, gap: 6 },
   zoomButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(10,10,15,0.9)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
