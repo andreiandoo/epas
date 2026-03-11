@@ -16,7 +16,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
-import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember } from '../../api/team';
+import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember, activateTeamMember } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -140,7 +140,7 @@ function OptionPicker({ options, selected, onSelect, getColor, getBg, getBorder,
   );
 }
 
-function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, onRemove }) {
+function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, onRemove, onActivate }) {
   const isOwner = member.role === 'owner';
   const assignedGate = gates.find(g => g.id === member.gate_id);
 
@@ -191,20 +191,41 @@ function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, o
 
       <View style={styles.memberBottom}>
         {/* Status badge */}
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor: getStatusBg(member.status),
-              borderColor: getStatusBorder(member.status),
-            },
-          ]}
-        >
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
-          <Text style={[styles.statusBadgeText, { color: getStatusColor(member.status) }]}>
-            {getStatusLabel(member.status)}
-          </Text>
-        </View>
+        {member.status === 'pending' ? (
+          <TouchableOpacity
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: getStatusBg(member.status),
+                borderColor: getStatusBorder(member.status),
+              },
+            ]}
+            onPress={() => onActivate(member.id)}
+            activeOpacity={0.7}
+          >
+            <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
+              <Path d="M20 6L9 17l-5-5" stroke={colors.green} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+            <Text style={[styles.statusBadgeText, { color: colors.green }]}>
+              Activează
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor: getStatusBg(member.status),
+                borderColor: getStatusBorder(member.status),
+              },
+            ]}
+          >
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
+            <Text style={[styles.statusBadgeText, { color: getStatusColor(member.status) }]}>
+              {getStatusLabel(member.status)}
+            </Text>
+          </View>
+        )}
 
         {/* Gate badge */}
         {assignedGate ? (
@@ -390,6 +411,25 @@ export default function StaffAssignmentModal({ visible, onClose }) {
     }
   };
 
+  const handleActivate = async (memberId) => {
+    // Optimistic update
+    setMembers(prev =>
+      prev.map(m => m.id === memberId ? { ...m, status: 'active' } : m)
+    );
+
+    try {
+      await activateTeamMember(memberId);
+      Alert.alert('Succes', 'Contul a fost activat.');
+    } catch (e) {
+      console.error('Failed to activate member:', e);
+      // Revert on error
+      setMembers(prev =>
+        prev.map(m => m.id === memberId ? { ...m, status: 'pending' } : m)
+      );
+      Alert.alert('Eroare', e.message || 'Nu s-a putut activa contul.');
+    }
+  };
+
   const handleRemove = async (memberId) => {
     Alert.alert(
       'Elimină membru',
@@ -495,6 +535,7 @@ export default function StaffAssignmentModal({ visible, onClose }) {
                         expandedMemberId === member.id ? null : member.id
                       )}
                       onAssignGate={handleAssignGate}
+                      onActivate={handleActivate}
                       onRemove={handleRemove}
                     />
                   ))

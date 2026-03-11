@@ -987,10 +987,10 @@ export default function CheckInScreen({ navigation }) {
                 </View>
                 <View style={styles.recentItemText}>
                   <Text style={styles.recentName} numberOfLines={1}>
-                    {scan.name}
+                    {scan.ticketType}
                   </Text>
                   <Text style={styles.recentTicketType} numberOfLines={1}>
-                    {scan.ticketType} {'\u2022'} {scan.code}
+                    {scan.name} {'\u2022'} {scan.code}
                   </Text>
                 </View>
                 <Text style={styles.recentTime}>{scan.time}</Text>

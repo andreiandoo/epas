@@ -257,7 +257,7 @@ function ReportsOnlyPlaceholder({ onViewReports }) {
 
 // ─── Ticket Type Card ─────────────────────────────────────────────────────────
 
-function TicketTypeCard({ ticket, onAdd, isInvitation }) {
+function TicketTypeCard({ ticket, onAdd, hasSeating }) {
   const isSoldOut = ticket.available <= 0;
 
   return (
@@ -266,7 +266,7 @@ function TicketTypeCard({ ticket, onAdd, isInvitation }) {
       onPress={() => !isSoldOut && onAdd(ticket)}
       activeOpacity={isSoldOut ? 1 : 0.7}
     >
-      <View style={[styles.ticketColorBar, { backgroundColor: isInvitation ? colors.amber : ticket.color }]} />
+      <View style={[styles.ticketColorBar, { backgroundColor: ticket.color }]} />
       <View style={styles.ticketCardContent}>
         <Text
           style={[styles.ticketName, isSoldOut && styles.ticketNameDisabled]}
@@ -274,9 +274,11 @@ function TicketTypeCard({ ticket, onAdd, isInvitation }) {
         >
           {ticket.name}
         </Text>
-        <Text style={styles.ticketPrice}>{isInvitation ? '0,00 RON' : formatCurrency(ticket.price)}</Text>
+        <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
         {isSoldOut ? (
           <Text style={styles.soldOutText}>Epuizat</Text>
+        ) : hasSeating ? (
+          <Text style={styles.ticketAvailable}>Alege locuri pe harta</Text>
         ) : (
           <Text style={styles.ticketAvailable}>{ticket.available} disponibile</Text>
         )}
@@ -287,7 +289,13 @@ function TicketTypeCard({ ticket, onAdd, isInvitation }) {
           onPress={() => onAdd(ticket)}
           activeOpacity={0.7}
         >
-          <PlusIcon size={18} color={colors.white} />
+          {hasSeating ? (
+            <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+              <Path d="M9 18l6-6-6-6" stroke={colors.white} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
+          ) : (
+            <PlusIcon size={18} color={colors.white} />
+          )}
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -376,8 +384,8 @@ export default function SalesScreen({ navigation }) {
   const [lastOrderData, setLastOrderData] = useState(null);
   const [claimUrl, setClaimUrl] = useState(null);
   const [claimToken, setClaimToken] = useState(null);
-  const [isInvitationMode, setIsInvitationMode] = useState(false);
   const [showSeatingMap, setShowSeatingMap] = useState(false);
+  const [seatingMapTicketTypeId, setSeatingMapTicketTypeId] = useState(null);
   const [selectedSeatUids, setSelectedSeatUids] = useState([]);
 
   // Check if current event has seating
@@ -452,6 +460,12 @@ export default function SalesScreen({ navigation }) {
 
   // Cart actions
   const addToCart = (ticket) => {
+    // For seated events, open the seating map filtered by this ticket type
+    if (hasSeating) {
+      setSeatingMapTicketTypeId(ticket.id);
+      setShowSeatingMap(true);
+      return;
+    }
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === ticket.id);
       if (existing) {
@@ -501,12 +515,11 @@ export default function SalesScreen({ navigation }) {
         customer: {
           email: 'pos@ambilet.ro',
           first_name: 'POS',
-          last_name: isInvitationMode ? 'Invitație' : (method === 'cash' ? 'Numerar' : 'Card'),
+          last_name: method === 'cash' ? 'Numerar' : 'Card',
         },
         payment_method: method,
         source: 'pos_app',
         sold_by: user?.name || 'POS',
-        ...(isInvitationMode && { is_invitation: true }),
         ...(selectedSeatUids.length > 0 && { seat_uids: selectedSeatUids }),
       };
 
@@ -546,9 +559,9 @@ export default function SalesScreen({ navigation }) {
           .join(', ');
 
         addSale({
-          method: isInvitationMode ? 'invitation' : method,
-          total: isInvitationMode ? 0 : cartTotal,
-          description: (isInvitationMode ? '[Invitație] ' : '') + saleDescription,
+          method: method,
+          total: cartTotal,
+          description: saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -586,8 +599,8 @@ export default function SalesScreen({ navigation }) {
     setPaymentMethod(null);
     setBuyerEmail('');
     setLastOrderData(null);
-    setIsInvitationMode(false);
     setSelectedSeatUids([]);
+    setSeatingMapTicketTypeId(null);
     setActiveView('tickets');
   };
 
@@ -612,9 +625,22 @@ export default function SalesScreen({ navigation }) {
 
   const handleSeatingConfirm = (seatingResult) => {
     // seatingResult: { cartItems, seatUids, selectedSeats }
-    setCartItems(seatingResult.cartItems);
-    setSelectedSeatUids(seatingResult.seatUids);
+    // Merge with existing cart items (user may select from multiple ticket types)
+    setCartItems(prev => {
+      const merged = [...prev];
+      seatingResult.cartItems.forEach(newItem => {
+        const existing = merged.find(m => m.id === newItem.id);
+        if (existing) {
+          existing.quantity += newItem.quantity;
+        } else {
+          merged.push(newItem);
+        }
+      });
+      return merged;
+    });
+    setSelectedSeatUids(prev => [...prev, ...seatingResult.seatUids]);
     setShowSeatingMap(false);
+    setSeatingMapTicketTypeId(null);
     setActiveView('cart');
   };
 
@@ -623,8 +649,9 @@ export default function SalesScreen({ navigation }) {
       <View style={styles.container}>
         <SeatingMapScreen
           eventId={selectedEvent?.id}
+          ticketTypeId={seatingMapTicketTypeId}
           onConfirm={handleSeatingConfirm}
-          onClose={() => setShowSeatingMap(false)}
+          onClose={() => { setShowSeatingMap(false); setSeatingMapTicketTypeId(null); }}
         />
       </View>
     );
@@ -688,7 +715,7 @@ export default function SalesScreen({ navigation }) {
             <ArrowLeftIcon size={22} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.cartTitle}>
-            {isInvitationMode ? 'Invitație' : selectedSeatUids.length > 0 ? 'Locuri Selectate' : 'Coș'}
+            {selectedSeatUids.length > 0 ? 'Locuri Selectate' : 'Coș'}
           </Text>
           <View style={styles.cartCountBadge}>
             <Text style={styles.cartCountBadgeText}>{cartCount}</Text>
@@ -716,9 +743,9 @@ export default function SalesScreen({ navigation }) {
           <View style={styles.summarySection}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
-              <Text style={styles.summaryValue}>{isInvitationMode ? '0,00 RON' : formatCurrency(subtotal)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(subtotal)}</Text>
             </View>
-            {!isInvitationMode && commissionRate > 0 && commissionMode === 'added_on_top' && (
+            {commissionRate > 0 && commissionMode === 'added_on_top' && (
               <>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Comision {commissionRate}%</Text>
@@ -726,7 +753,7 @@ export default function SalesScreen({ navigation }) {
                 </View>
               </>
             )}
-            {!isInvitationMode && commissionRate > 0 && commissionMode === 'included' && (
+            {commissionRate > 0 && commissionMode === 'included' && (
               <Text style={[styles.summaryLabel, { fontSize: 11, marginTop: 4 }]}>
                 Include comision {commissionRate}%
               </Text>
@@ -735,7 +762,7 @@ export default function SalesScreen({ navigation }) {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryTotalLabel}>Total</Text>
               <Text style={styles.summaryTotalValue}>
-                {isInvitationMode ? '0,00 RON' : formatCurrency(total)}
+                {formatCurrency(total)}
               </Text>
             </View>
           </View>
@@ -743,11 +770,11 @@ export default function SalesScreen({ navigation }) {
           {/* Payment Methods */}
           <View style={styles.paymentSection}>
             <Text style={styles.paymentSectionTitle}>
-              {isInvitationMode ? 'Emite Invitație' : 'Metodă de Plată'}
+              Metodă de Plată
             </Text>
 
-            {/* Plată Card - hidden in invitation mode */}
-            {!isInvitationMode && <TouchableOpacity
+            {/* Plată Card */}
+            <TouchableOpacity
               style={[
                 styles.paymentButton,
                 paymentMethod === 'tap' && styles.paymentButtonActive,
@@ -783,7 +810,7 @@ export default function SalesScreen({ navigation }) {
                   </View>
                 </View>
               )}
-            </TouchableOpacity>}
+            </TouchableOpacity>
 
             {/* Cash */}
             <TouchableOpacity
@@ -799,17 +826,10 @@ export default function SalesScreen({ navigation }) {
                 <ActivityIndicator size="small" color={colors.purple} />
               ) : (
                 <View style={styles.paymentButtonContent}>
-                  {isInvitationMode ? (
-                    <GiftIcon
-                      size={22}
-                      color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
-                    />
-                  ) : (
-                    <CashIcon
-                      size={22}
-                      color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
-                    />
-                  )}
+                  <CashIcon
+                    size={22}
+                    color={paymentMethod === 'cash' ? colors.purple : colors.textSecondary}
+                  />
                   <View style={styles.paymentButtonText}>
                     <Text
                       style={[
@@ -817,11 +837,8 @@ export default function SalesScreen({ navigation }) {
                         paymentMethod === 'cash' && styles.paymentMethodNameActive,
                       ]}
                     >
-                      {isInvitationMode ? 'Emite Invitație' : 'Numerar'}
+                      Numerar
                     </Text>
-                    {isInvitationMode && (
-                      <Text style={styles.paymentPoweredBy}>Valoare 0 RON</Text>
-                    )}
                   </View>
                 </View>
               )}
@@ -847,7 +864,7 @@ export default function SalesScreen({ navigation }) {
                     </View>
                   </View>
                   <Text style={styles.successTitle}>
-                    {isInvitationMode ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                    Plată Reușită!
                   </Text>
                   <Text style={styles.qrCodeDescription}>
                     Clientul scanează codul QR pentru a primi biletele pe email.
@@ -859,7 +876,7 @@ export default function SalesScreen({ navigation }) {
                     <CheckIcon size={64} color={colors.green} />
                   </View>
                   <Text style={styles.successTitle}>
-                    {isInvitationMode ? 'Invitație Emisă!' : 'Plată Reușită!'}
+                    Plată Reușită!
                   </Text>
                   <Text style={styles.successAmount}>
                     {formatCurrency(lastPaymentAmount)}
@@ -869,24 +886,10 @@ export default function SalesScreen({ navigation }) {
 
               <TouchableOpacity
                 style={styles.sendEmailButton}
-                onPress={() => {
-                  setShowPaymentSuccess(false);
-                  setShowEmailCapture(true);
-                }}
-                activeOpacity={0.7}
-              >
-                <MailIcon size={20} color={colors.white} />
-                <Text style={styles.sendEmailButtonText}>
-                  Trimite Biletele pe Email
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.skipButton}
                 onPress={() => finishPayment(true)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.skipButtonText}>Finalizează</Text>
+                <Text style={styles.sendEmailButtonText}>Finalizează</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -982,84 +985,27 @@ export default function SalesScreen({ navigation }) {
           </Svg>
         </TouchableOpacity>
 
-        {/* Mode Toggle: Vânzare / Invitații */}
-        <View style={styles.modeToggleRow}>
-          <TouchableOpacity
-            style={[styles.modeToggleBtn, !isInvitationMode && styles.modeToggleBtnActive]}
-            onPress={() => { setIsInvitationMode(false); setCartItems([]); }}
-            activeOpacity={0.7}
-          >
-            <CashIcon size={16} color={!isInvitationMode ? colors.purple : colors.textTertiary} />
-            <Text style={[styles.modeToggleText, !isInvitationMode && styles.modeToggleTextActive]}>
-              Vânzare
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.modeToggleBtn, isInvitationMode && styles.modeToggleBtnActive]}
-            onPress={() => { setIsInvitationMode(true); setCartItems([]); }}
-            activeOpacity={0.7}
-          >
-            <GiftIcon size={16} color={isInvitationMode ? colors.purple : colors.textTertiary} />
-            <Text style={[styles.modeToggleText, isInvitationMode && styles.modeToggleTextActive]}>
-              Invitații
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Select Tickets Heading */}
-        <Text style={styles.sectionHeading}>
-          {isInvitationMode ? 'Selectează Bilete pentru Invitație' : 'Selectează Bilete'}
-        </Text>
+        <Text style={styles.sectionHeading}>Selectează Bilete</Text>
 
-        {/* Seated Event: Show seating map button */}
-        {hasSeating && !isInvitationMode && (
-          <TouchableOpacity
-            style={styles.seatingMapButton}
-            onPress={() => setShowSeatingMap(true)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.seatingMapIconWrap}>
-              <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-                <Rect x={3} y={3} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
-                <Rect x={14} y={3} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
-                <Rect x={3} y={14} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
-                <Rect x={14} y={14} width={7} height={7} rx={1.5} stroke={colors.purple} strokeWidth={1.5} />
-                <Circle cx={6.5} cy={6.5} r={1.5} fill={colors.purple} />
-                <Circle cx={17.5} cy={6.5} r={1.5} fill={colors.green} />
-                <Circle cx={6.5} cy={17.5} r={1.5} fill={colors.purple} />
-                <Circle cx={17.5} cy={17.5} r={1.5} fill={colors.amber} />
-              </Svg>
+        {/* Ticket Types Grid */}
+        <View style={styles.ticketGrid}>
+          {ticketTypes.map((ticket) => (
+            <TicketTypeCard
+              key={ticket.id}
+              ticket={ticket}
+              onAdd={addToCart}
+              hasSeating={hasSeating}
+            />
+          ))}
+          {ticketTypes.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>
+                Niciun tip de bilet disponibil
+              </Text>
             </View>
-            <View style={styles.seatingMapButtonContent}>
-              <Text style={styles.seatingMapButtonTitle}>Selecteaza Locuri pe Harta</Text>
-              <Text style={styles.seatingMapButtonSubtitle}>Eveniment cu locuri numerotate</Text>
-            </View>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-              <Path d="M9 18l6-6-6-6" stroke={colors.textTertiary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </TouchableOpacity>
-        )}
-
-        {/* Regular Ticket Types Grid (non-seated or invitation mode) */}
-        {(!hasSeating || isInvitationMode) && (
-          <View style={styles.ticketGrid}>
-            {ticketTypes.map((ticket) => (
-              <TicketTypeCard
-                key={ticket.id}
-                ticket={ticket}
-                onAdd={addToCart}
-                isInvitation={isInvitationMode}
-              />
-            ))}
-            {ticketTypes.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>
-                  Niciun tip de bilet disponibil
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Today's Sales Section */}
         {recentSales.length > 0 && (

@@ -106,10 +106,10 @@ export default function GuestListModal({ visible, onClose }) {
   }, [visible, selectedEvent?.id]);
 
   const isInvitation = (p) => {
-    const typeName = (p.ticket_type_name || p.ticket_type || '').toLowerCase();
-    if (typeName.includes('invit')) return true;
     if (p.is_invitation) return true;
     if (p.source === 'invitation' || p.source === 'comp') return true;
+    const typeName = (p.ticket_type_name || p.ticket_type || '').toLowerCase();
+    if (typeName.includes('invit')) return true;
     return false;
   };
 
@@ -130,16 +130,10 @@ export default function GuestListModal({ visible, onClose }) {
         _raw: p,
       }));
 
-      // Filter for invitations only
+      // Show ONLY invitations — never fall back to all tickets
       const invitations = mapped.filter(g => isInvitation(g._raw));
-      if (invitations.length > 0) {
-        setGuests(invitations);
-        setShowingAll(false);
-      } else {
-        // Fallback: show all participants if no invitations found
-        setGuests(mapped);
-        setShowingAll(true);
-      }
+      setGuests(invitations);
+      setShowingAll(false);
     } catch (e) {
       console.error('Failed to fetch guests:', e);
     }
@@ -257,11 +251,6 @@ export default function GuestListModal({ visible, onClose }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {showingAll && !isLoading && guests.length > 0 && (
-              <View style={styles.fallbackNotice}>
-                <Text style={styles.fallbackNoticeText}>Se afișează toți participanții</Text>
-              </View>
-            )}
             {isLoading ? (
               <View style={styles.emptyState}>
                 <ActivityIndicator size="large" color={colors.purple} />
@@ -279,7 +268,7 @@ export default function GuestListModal({ visible, onClose }) {
                   />
                 </Svg>
                 <Text style={styles.emptyText}>
-                  {searchQuery ? 'Niciun invitat găsit' : 'Niciun participant încă'}
+                  {searchQuery ? 'Niciun invitat găsit' : 'Nicio invitație emisă'}
                 </Text>
               </View>
             ) : (
