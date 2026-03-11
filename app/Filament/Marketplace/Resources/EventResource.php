@@ -1062,7 +1062,6 @@ class EventResource extends Resource
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
                                     ->collapsible()
                                     ->collapsed()
-                                    ->persistCollapsed()
                                     ->reorderable()
                                     ->reorderableWithDragAndDrop()
                                     ->orderColumn('sort_order')
@@ -1329,7 +1328,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(now())
+                                                    ->minDate(today())
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                     ->visible(fn (SGet $get) => $get('is_active'))
                                                     ->columnSpan(6),
@@ -1341,7 +1340,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(now())
+                                                    ->minDate(today())
                                                     ->visible(fn (SGet $get) => !$get('is_active'))
                                                     ->columnSpan(4),
                                                 Forms\Components\Toggle::make('autostart_when_previous_sold_out')
@@ -1426,7 +1425,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(now())
+                                                    ->minDate(today())
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set) {
                                                         if (!$state) return;
