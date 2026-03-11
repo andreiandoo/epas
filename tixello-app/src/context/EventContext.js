@@ -93,8 +93,9 @@ export function EventProvider({ children }) {
         const colorPalette = ['#8B5CF6', '#F59E0B', '#10B981', '#06B6D4', '#EF4444', '#EC4899'];
         setTicketTypes(types.map((t, i) => ({
           ...t,
-          color: colorPalette[i % colorPalette.length],
+          color: t.color || colorPalette[i % colorPalette.length],
           available: t.available ?? (t.quantity != null && t.quantity_sold != null ? t.quantity - t.quantity_sold : 0),
+          checked_in: t.checked_in ?? 0,
         })));
       } else {
         setTicketTypes([]);

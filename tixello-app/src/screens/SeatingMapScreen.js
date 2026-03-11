@@ -46,16 +46,21 @@ function CheckIcon({ size = 20, color = colors.white }) {
   );
 }
 
-// ─── Seat Status Colors ──────────────────────────────────────────────────────
+function ZoomInIcon({ size = 18, color = colors.white }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35M11 8v6M8 11h6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
-const SEAT_COLORS = {
-  available: '#10B981',
-  selected: '#8B5CF6',
-  sold: '#374151',
-  held: '#F59E0B',
-  blocked: '#EF4444',
-  disabled: '#1F2937',
-};
+function ZoomOutIcon({ size = 18, color = colors.white }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M11 19a8 8 0 100-16 8 8 0 000 16zM21 21l-4.35-4.35M8 11h6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -92,21 +97,47 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
     setLoading(false);
   };
 
+  // Canvas dimensions
+  const canvas = mapData?.canvas || { width: 1000, height: 800 };
+
+  // Base scale: how much to shrink the full-res SVG to fit the screen
+  const baseScale = useMemo(() => {
+    const availableWidth = SCREEN_WIDTH - 16;
+    const availableHeight = SCREEN_HEIGHT - 260;
+    const scaleW = availableWidth / canvas.width;
+    const scaleH = availableHeight / canvas.height;
+    return Math.min(scaleW, scaleH);
+  }, [canvas.width, canvas.height]);
+
   // Process seats from geometry + statuses
-  const processedSeats = useMemo(() => {
-    if (!mapData) return [];
+  const processedData = useMemo(() => {
+    if (!mapData) return { seats: [], rowLabels: [] };
     const { sections, seats } = mapData;
     const seatStatusMap = {};
     (seats || []).forEach(s => { seatStatusMap[s.seat_uid] = s; });
 
-    const result = [];
+    const seatList = [];
+    const rowLabelList = [];
+
     (sections || []).forEach(section => {
       const sectionX = section.x_position || section.x || 0;
       const sectionY = section.y_position || section.y || 0;
       const sectionMeta = section.metadata || {};
       const seatSize = parseInt(sectionMeta.seat_size) || 15;
+      const seatRadius = seatSize / 2;
 
       (section.rows || []).forEach(row => {
+        const firstSeat = row.seats?.[0];
+        if (firstSeat) {
+          rowLabelList.push({
+            key: `${section.name}-${row.label}`,
+            x: sectionX + (firstSeat.x || 0) - seatRadius - 6,
+            y: sectionY + (row.y || 0) + (firstSeat.y || 0) + seatRadius * 0.35,
+            label: row.label,
+            fontSize: Math.max(seatRadius * 0.85, 7),
+          });
+        }
+
         (row.seats || []).forEach(seat => {
           const cx = sectionX + (seat.x || 0);
           const cy = sectionY + (row.y || 0) + (seat.y || 0);
@@ -115,9 +146,9 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
           const seatTicketTypeId = seatInfo.ticket_type_id;
           const isAllowed = !ticketTypeId || seatTicketTypeId == ticketTypeId;
 
-          result.push({
+          seatList.push({
             seat_uid: seatUid,
-            cx, cy, seatSize,
+            cx, cy, seatSize, seatRadius,
             status: seatInfo.status || 'available',
             section_name: seatInfo.section_name || section.name || '',
             row_label: seatInfo.row_label || row.label || '',
@@ -125,31 +156,30 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
             ticket_type_id: seatTicketTypeId,
             ticket_type_name: seatInfo.ticket_type_name,
             price: seatInfo.price || 0,
-            color: seatInfo.color || SEAT_COLORS.available,
+            color: seatInfo.color || '#10B981',
             isAllowed,
           });
         });
       });
     });
-    return result;
+    return { seats: seatList, rowLabels: rowLabelList };
   }, [mapData, ticketTypeId]);
 
-  // Canvas dimensions
-  const canvas = mapData?.canvas || { width: 1000, height: 800 };
+  // Set initial scale to fit screen when map loads
+  useEffect(() => {
+    if (mapData) {
+      scaleAnim.setValue(baseScale);
+      gestureState.current = { scale: baseScale, savedScale: baseScale, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+    }
+  }, [mapData, baseScale]);
 
-  const baseScale = useMemo(() => {
-    const availableWidth = SCREEN_WIDTH - 32;
-    const availableHeight = SCREEN_HEIGHT - 280;
-    const scaleW = availableWidth / canvas.width;
-    const scaleH = availableHeight / canvas.height;
-    return Math.min(scaleW, scaleH);
-  }, [canvas.width, canvas.height]);
-
-  // Pinch gesture
+  // Pinch gesture — scale range: baseScale * 0.5 to baseScale * 8
   const pinchGesture = Gesture.Pinch()
     .onStart(() => { gestureState.current.savedScale = gestureState.current.scale; })
     .onUpdate((e) => {
-      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, 0.5), 5);
+      const minScale = baseScale * 0.5;
+      const maxScale = baseScale * 8;
+      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, minScale), maxScale);
       gestureState.current.scale = newScale;
       scaleAnim.setValue(newScale);
     })
@@ -216,16 +246,28 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
 
   const resetView = () => {
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: baseScale, useNativeDriver: true }),
       Animated.spring(translateXAnim, { toValue: 0, useNativeDriver: true }),
       Animated.spring(translateYAnim, { toValue: 0, useNativeDriver: true }),
     ]).start();
-    gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+    gestureState.current = { scale: baseScale, savedScale: baseScale, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+  };
+
+  const zoomIn = () => {
+    const newScale = Math.min(gestureState.current.scale * 1.5, baseScale * 8);
+    gestureState.current.scale = newScale;
+    gestureState.current.savedScale = newScale;
+    Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
+  };
+
+  const zoomOut = () => {
+    const newScale = Math.max(gestureState.current.scale / 1.5, baseScale * 0.5);
+    gestureState.current.scale = newScale;
+    gestureState.current.savedScale = newScale;
+    Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
   };
 
   const ticketTypeLegend = mapData?.ticket_types || [];
-  const svgWidth = canvas.width * baseScale;
-  const svgHeight = canvas.height * baseScale;
 
   // ─── Loading / Error States ──────────────────────────────────────────────
 
@@ -293,17 +335,17 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
               styles.legendItem,
               ticketTypeId && tt.id == ticketTypeId && styles.legendItemActive,
             ]}>
-              <View style={[styles.legendDot, { backgroundColor: tt.color || colors.green }]} />
+              <View style={[styles.legendDot, { backgroundColor: tt.color || '#10B981' }]} />
               <Text style={styles.legendText} numberOfLines={1}>{tt.name}</Text>
               <Text style={styles.legendPrice}>{formatCurrency(tt.price)}</Text>
             </View>
           ))}
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: SEAT_COLORS.sold, opacity: 0.5 }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#9CA3AF' }]} />
             <Text style={styles.legendText}>Vandut</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: SEAT_COLORS.selected }]} />
+            <View style={[styles.legendDot, { backgroundColor: '#a51c30' }]} />
             <Text style={styles.legendText}>Selectat</Text>
           </View>
         </ScrollView>
@@ -312,9 +354,24 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
       {/* Map with pinch-to-zoom and pan */}
       <View style={styles.mapContainer}>
         <GestureDetector gesture={composedGesture}>
-          <Animated.View style={[styles.mapAnimatedView, { transform: [{ translateX: translateXAnim }, { translateY: translateYAnim }, { scale: scaleAnim }] }]}>
-            <Svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${canvas.width} ${canvas.height}`}>
-              <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#12121e" rx={8} />
+          <Animated.View style={[
+            styles.mapAnimatedView,
+            {
+              transform: [
+                { translateX: translateXAnim },
+                { translateY: translateYAnim },
+                { scale: scaleAnim },
+              ],
+            },
+          ]}>
+            {/* SVG at FULL canvas resolution for crisp vector rendering at any zoom */}
+            <Svg
+              width={canvas.width}
+              height={canvas.height}
+              viewBox={`0 0 ${canvas.width} ${canvas.height}`}
+            >
+              {/* Background */}
+              <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
 
               {/* Section labels */}
               {(mapData?.sections || []).map((section, idx) => {
@@ -324,10 +381,10 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
                   <SvgText
                     key={`sl-${idx}`}
                     x={sx + (section.width || 100) / 2}
-                    y={sy - 10}
-                    fill="rgba(255,255,255,0.4)"
-                    fontSize={11}
-                    fontWeight="600"
+                    y={sy - 12}
+                    fill="rgba(255,255,255,0.5)"
+                    fontSize={12}
+                    fontWeight="700"
                     textAnchor="middle"
                   >
                     {section.name || ''}
@@ -336,60 +393,81 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
               })}
 
               {/* Row labels */}
-              {(mapData?.sections || []).map((section, sIdx) => {
-                const sx = section.x_position || section.x || 0;
-                const sy = section.y_position || section.y || 0;
-                const seatSize = parseInt((section.metadata || {}).seat_size) || 15;
-                const seatRadius = seatSize / 2;
-                return (section.rows || []).map((row, rIdx) => {
-                  const firstSeat = row.seats?.[0];
-                  if (!firstSeat) return null;
-                  return (
-                    <SvgText
-                      key={`r-${sIdx}-${rIdx}`}
-                      x={sx + firstSeat.x - seatRadius - 6}
-                      y={sy + firstSeat.y + 3}
-                      textAnchor="end"
-                      fontSize={9}
-                      fontWeight="500"
-                      fill="rgba(255,255,255,0.4)"
-                    >
-                      {row.label}
-                    </SvgText>
-                  );
-                });
-              })}
+              {processedData.rowLabels.map(rl => (
+                <SvgText
+                  key={rl.key}
+                  x={rl.x}
+                  y={rl.y}
+                  textAnchor="end"
+                  fontSize={rl.fontSize}
+                  fontWeight="500"
+                  fill="rgba(255,255,255,0.45)"
+                >
+                  {rl.label}
+                </SvgText>
+              ))}
 
               {/* Seats */}
-              {processedSeats.map(seat => {
+              {processedData.seats.map(seat => {
                 const isSelected = selectedSeats.some(s => s.seat_uid === seat.seat_uid);
-                const seatRadius = (seat.seatSize || 15) / 2;
+                const seatRadius = seat.seatRadius;
                 const isAvailable = seat.status === 'available';
 
-                let fillColor;
-                if (isSelected) fillColor = SEAT_COLORS.selected;
-                else if (isAvailable && seat.isAllowed) fillColor = seat.color || SEAT_COLORS.available;
-                else if (isAvailable && !seat.isAllowed) fillColor = '#2D2D3D';
-                else fillColor = SEAT_COLORS[seat.status] || SEAT_COLORS.disabled;
+                // Colors matching website: ticket type color + white stroke, selected = #a51c30
+                let fillColor, strokeColor, strokeWidth, opacity;
+
+                if (isSelected) {
+                  fillColor = '#a51c30';
+                  strokeColor = '#7a141f';
+                  strokeWidth = 1.5;
+                  opacity = 1;
+                } else if (isAvailable && seat.isAllowed) {
+                  fillColor = seat.color;
+                  strokeColor = '#ffffff';
+                  strokeWidth = 0.8;
+                  opacity = 1;
+                } else if (isAvailable && !seat.isAllowed) {
+                  fillColor = '#2D2D3D';
+                  strokeColor = 'rgba(255,255,255,0.1)';
+                  strokeWidth = 0.5;
+                  opacity = 0.4;
+                } else {
+                  // sold, held, blocked, disabled
+                  fillColor = '#9CA3AF';
+                  strokeColor = 'rgba(255,255,255,0.15)';
+                  strokeWidth = 0.5;
+                  opacity = seat.status === 'disabled' ? 0.25 : 0.45;
+                }
 
                 const isClickable = (isAvailable && seat.isAllowed) || isSelected;
-                const strokeColor = isSelected ? '#FFFFFF' : 'rgba(0,0,0,0.3)';
-                const strokeWidth = isSelected ? 1.5 : 0.5;
-                const opacity = seat.status === 'disabled' ? 0.3
-                  : ['sold', 'held', 'blocked'].includes(seat.status) ? 0.4
-                  : (!seat.isAllowed && isAvailable) ? 0.35 : 1;
-                const drawRadius = isSelected ? seatRadius * 1.3 : seatRadius;
-                const fontSize = Math.round(seatRadius * 0.75 * 10) / 10;
+                const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
+                const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
+                // Larger invisible hit target for easier tapping
+                const hitRadius = Math.max(seatRadius * 1.8, 12);
 
                 return (
                   <G key={seat.seat_uid} onPress={isClickable ? () => toggleSeat(seat) : undefined}>
-                    <Circle cx={seat.cx} cy={seat.cy} r={Math.max(seatRadius * 1.5, 10)} fill="transparent" />
-                    <Circle cx={seat.cx} cy={seat.cy} r={drawRadius} fill={fillColor}
-                      stroke={strokeColor} strokeWidth={strokeWidth} opacity={opacity} />
-                    {seatRadius >= 6 && (
-                      <SvgText x={seat.cx} y={seat.cy + fontSize * 0.35} textAnchor="middle"
-                        fontSize={fontSize} fontWeight="600"
-                        fill={isSelected ? '#FFFFFF' : 'rgba(0,0,0,0.7)'} opacity={opacity}>
+                    {/* Invisible hit target */}
+                    <Circle cx={seat.cx} cy={seat.cy} r={hitRadius} fill="transparent" />
+                    {/* Visible seat */}
+                    <Circle
+                      cx={seat.cx} cy={seat.cy} r={drawRadius}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeWidth={strokeWidth}
+                      opacity={opacity}
+                    />
+                    {/* Seat label */}
+                    {seatRadius >= 5 && (
+                      <SvgText
+                        x={seat.cx}
+                        y={seat.cy + fontSize * 0.35}
+                        textAnchor="middle"
+                        fontSize={fontSize}
+                        fontWeight="700"
+                        fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
+                        opacity={opacity}
+                      >
                         {seat.seat_label}
                       </SvgText>
                     )}
@@ -400,9 +478,21 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
           </Animated.View>
         </GestureDetector>
 
-        <TouchableOpacity style={styles.resetButton} onPress={resetView} activeOpacity={0.7}>
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
+        {/* Zoom controls */}
+        <View style={styles.zoomControls}>
+          <TouchableOpacity style={styles.zoomButton} onPress={zoomIn} activeOpacity={0.7}>
+            <ZoomInIcon size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.zoomButton} onPress={zoomOut} activeOpacity={0.7}>
+            <ZoomOutIcon size={18} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.zoomButton} onPress={resetView} activeOpacity={0.7}>
+            <SvgText style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>
+              FIT
+            </SvgText>
+            <Text style={styles.resetLabel}>Reset</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Bottom Bar */}
@@ -436,7 +526,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-  selectedBadge: { backgroundColor: colors.purple, borderRadius: 12, minWidth: 28, height: 28, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  selectedBadge: { backgroundColor: '#a51c30', borderRadius: 12, minWidth: 28, height: 28, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
   selectedBadgeText: { fontSize: 14, fontWeight: '700', color: colors.white },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
   loadingText: { fontSize: 15, color: colors.textSecondary },
@@ -451,16 +541,17 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 11, color: colors.textSecondary },
   legendPrice: { fontSize: 11, fontWeight: '600', color: colors.textTertiary },
   mapContainer: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  mapAnimatedView: { alignItems: 'center', justifyContent: 'center' },
-  resetButton: { position: 'absolute', right: 16, top: 16, backgroundColor: 'rgba(10,10,15,0.85)', borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 8 },
-  resetButtonText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  mapAnimatedView: {},
+  zoomControls: { position: 'absolute', right: 12, top: 12, gap: 6 },
+  zoomButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(10,10,15,0.9)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  resetLabel: { fontSize: 9, fontWeight: '600', color: colors.textTertiary, marginTop: -1 },
   bottomBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(10,10,15,0.98)', gap: 12 },
   bottomBarInfo: { flex: 1 },
   bottomBarCount: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  bottomBarTotal: { fontSize: 18, fontWeight: '700', color: colors.purple, marginBottom: 4 },
+  bottomBarTotal: { fontSize: 18, fontWeight: '700', color: '#a51c30', marginBottom: 4 },
   seatLabelsScroll: { flexGrow: 0, maxHeight: 28 },
-  seatLabelChip: { backgroundColor: colors.purpleBg, borderWidth: 1, borderColor: colors.purpleBorder, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginRight: 4 },
-  seatLabelChipText: { fontSize: 11, fontWeight: '600', color: colors.purple },
-  confirmButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.purple, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, gap: 8 },
+  seatLabelChip: { backgroundColor: 'rgba(165,28,48,0.15)', borderWidth: 1, borderColor: 'rgba(165,28,48,0.3)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginRight: 4 },
+  seatLabelChipText: { fontSize: 11, fontWeight: '600', color: '#a51c30' },
+  confirmButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#a51c30', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, gap: 8 },
   confirmButtonText: { fontSize: 16, fontWeight: '700', color: colors.white },
 });

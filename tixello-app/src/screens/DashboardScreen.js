@@ -230,7 +230,7 @@ function ReportsStatsGrid({ stats }) {
   );
 }
 
-function AdminLiveStats({ stats, onShowSales }) {
+function AdminLiveStats({ stats, onShowSales, onShowTicketSales, onShowRemaining }) {
   const totalSold = stats?.total_sold ?? 0;
   const checkedIn = stats?.checked_in ?? 0;
   const revenue = stats?.revenue ?? 0;
@@ -267,7 +267,7 @@ function AdminLiveStats({ stats, onShowSales }) {
       <View style={styles.statsGrid}>
         <TouchableOpacity
           style={[styles.statCard, { borderColor: colors.greenBorder }]}
-          onPress={onShowSales}
+          onPress={onShowTicketSales}
           activeOpacity={0.7}
         >
           <Icon name="ticket" size={18} color={colors.green} />
@@ -283,11 +283,15 @@ function AdminLiveStats({ stats, onShowSales }) {
           <Text style={styles.statCardValue}>{formatCurrency(revenue)}</Text>
           <Text style={styles.statCardLabel}>Venituri</Text>
         </TouchableOpacity>
-        <View style={[styles.statCard, { borderColor: colors.amberBorder }]}>
+        <TouchableOpacity
+          style={[styles.statCard, { borderColor: colors.amberBorder }]}
+          onPress={onShowRemaining}
+          activeOpacity={0.7}
+        >
           <Icon name="hourglass" size={18} color={colors.amber} />
           <Text style={styles.statCardValue}>{remaining.toLocaleString()}</Text>
           <Text style={styles.statCardLabel}>Rămase</Text>
-        </View>
+        </TouchableOpacity>
         <View style={[styles.statCard, { borderColor: colors.purpleBorder }]}>
           <Icon name="speedometer" size={18} color={colors.purple} />
           <Text style={styles.statCardValue}>{capacityPct}%</Text>
@@ -415,7 +419,7 @@ function RecentActivity({ recentScans }) {
   );
 }
 
-function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onCloseShift }) {
+function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans, onShowGuestList, onShowStaff, onShowSales, onShowTicketSales, onShowRemaining, onCloseShift }) {
   return (
     <>
       {isReportsOnlyMode && <ReportsOnlyBanner />}
@@ -424,7 +428,7 @@ function AdminDashboard({ navigation, eventStats, isReportsOnlyMode, recentScans
         <ReportsStatsGrid stats={eventStats} />
       ) : (
         <>
-          <AdminLiveStats stats={eventStats} onShowSales={onShowSales} />
+          <AdminLiveStats stats={eventStats} onShowSales={onShowSales} onShowTicketSales={onShowTicketSales} onShowRemaining={onShowRemaining} />
           <QuickActions navigation={navigation} onShowGuestList={onShowGuestList} onShowStaff={onShowStaff} />
           <RecentActivity recentScans={recentScans} />
           {onCloseShift && (
@@ -686,7 +690,138 @@ function ShiftSummaryModal({ visible, onClose, onConfirm, cashTurnover, cardTurn
 }
 
 // ---------------------------------------------------------------------------
-// Sales Breakdown Modal
+// Ticket Sales By Type Modal (Vânzări card)
+// ---------------------------------------------------------------------------
+
+function TicketSalesByTypeModal({ visible, onClose, ticketTypes }) {
+  const totalSold = (ticketTypes || []).reduce((sum, t) => sum + (t.quantity_sold || 0), 0);
+  const totalRevenue = (ticketTypes || []).reduce((sum, t) => sum + ((t.quantity_sold || 0) * (t.price || 0)), 0);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.salesModal}>
+          <Text style={styles.salesModalTitle}>Vânzări per Tip Bilet</Text>
+
+          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            {(ticketTypes || []).map(tt => {
+              const sold = tt.quantity_sold || 0;
+              const total = tt.quantity || 0;
+              const pct = total > 0 ? ((sold / total) * 100).toFixed(0) : '0';
+              const barWidth = total > 0 ? Math.min((sold / total) * 100, 100) : 0;
+
+              return (
+                <View key={tt.id} style={styles.ttBreakdownCard}>
+                  <View style={styles.ttBreakdownHeader}>
+                    <View style={[styles.ttBreakdownDot, { backgroundColor: tt.color || colors.purple }]} />
+                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{tt.name}</Text>
+                    <Text style={styles.ttBreakdownPrice}>{formatCurrency(tt.price)}</Text>
+                  </View>
+                  <View style={styles.ttBreakdownNumbers}>
+                    <Text style={styles.ttBreakdownSold}>{sold}</Text>
+                    <Text style={styles.ttBreakdownTotal}> / {total} bilete</Text>
+                    <Text style={styles.ttBreakdownPct}>{pct}%</Text>
+                  </View>
+                  <View style={styles.ttBreakdownBarBg}>
+                    <View style={[styles.ttBreakdownBarFill, { width: `${barWidth}%`, backgroundColor: tt.color || colors.purple }]} />
+                  </View>
+                  <Text style={styles.ttBreakdownRevenue}>
+                    Încasări: {formatCurrency(sold * (tt.price || 0))}
+                  </Text>
+                </View>
+              );
+            })}
+
+            {/* Totals */}
+            <View style={styles.ttBreakdownTotals}>
+              <View style={styles.ttBreakdownTotalRow}>
+                <Text style={styles.ttBreakdownTotalLabel}>Total bilete vândute</Text>
+                <Text style={styles.ttBreakdownTotalValue}>{totalSold}</Text>
+              </View>
+              <View style={styles.ttBreakdownTotalRow}>
+                <Text style={styles.ttBreakdownTotalLabel}>Total încasări</Text>
+                <Text style={[styles.ttBreakdownTotalValue, { color: colors.green }]}>{formatCurrency(totalRevenue)}</Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity style={styles.salesModalCloseBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={styles.salesModalCloseBtnText}>Închide</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Remaining By Type Modal (Rămase card)
+// ---------------------------------------------------------------------------
+
+function RemainingByTypeModal({ visible, onClose, ticketTypes }) {
+  const totalCheckedIn = (ticketTypes || []).reduce((sum, t) => sum + (t.checked_in || 0), 0);
+  const totalSold = (ticketTypes || []).reduce((sum, t) => sum + (t.quantity_sold || 0), 0);
+  const totalRemaining = totalSold - totalCheckedIn;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.salesModal}>
+          <Text style={styles.salesModalTitle}>Intrați / Rămase per Tip</Text>
+
+          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            {(ticketTypes || []).map(tt => {
+              const sold = tt.quantity_sold || 0;
+              const checkedIn = tt.checked_in || 0;
+              const remaining = sold - checkedIn;
+              const pct = sold > 0 ? ((checkedIn / sold) * 100).toFixed(0) : '0';
+              const barWidth = sold > 0 ? Math.min((checkedIn / sold) * 100, 100) : 0;
+
+              return (
+                <View key={tt.id} style={styles.ttBreakdownCard}>
+                  <View style={styles.ttBreakdownHeader}>
+                    <View style={[styles.ttBreakdownDot, { backgroundColor: tt.color || colors.purple }]} />
+                    <Text style={styles.ttBreakdownName} numberOfLines={1}>{tt.name}</Text>
+                  </View>
+                  <View style={styles.ttBreakdownNumbers}>
+                    <Text style={[styles.ttBreakdownSold, { color: colors.green }]}>{checkedIn} intrați</Text>
+                    <Text style={styles.ttBreakdownTotal}> / {sold} vândute</Text>
+                    <Text style={styles.ttBreakdownPct}>{pct}%</Text>
+                  </View>
+                  <View style={styles.ttBreakdownBarBg}>
+                    <View style={[styles.ttBreakdownBarFill, { width: `${barWidth}%`, backgroundColor: colors.green }]} />
+                  </View>
+                  <Text style={[styles.ttBreakdownRevenue, { color: colors.amber }]}>
+                    Rămase: {remaining}
+                  </Text>
+                </View>
+              );
+            })}
+
+            {/* Totals */}
+            <View style={styles.ttBreakdownTotals}>
+              <View style={styles.ttBreakdownTotalRow}>
+                <Text style={styles.ttBreakdownTotalLabel}>Total intrați</Text>
+                <Text style={[styles.ttBreakdownTotalValue, { color: colors.green }]}>{totalCheckedIn}</Text>
+              </View>
+              <View style={styles.ttBreakdownTotalRow}>
+                <Text style={styles.ttBreakdownTotalLabel}>Total rămase</Text>
+                <Text style={[styles.ttBreakdownTotalValue, { color: colors.amber }]}>{totalRemaining}</Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <TouchableOpacity style={styles.salesModalCloseBtn} onPress={onClose} activeOpacity={0.7}>
+            <Text style={styles.salesModalCloseBtnText}>Închide</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sales Breakdown Modal (Venituri card — Online/POS breakdown)
 // ---------------------------------------------------------------------------
 
 function SalesBreakdownModal({ visible, onClose, eventId }) {
@@ -803,7 +938,7 @@ function SalesBreakdownModal({ visible, onClose, eventId }) {
 
 export default function DashboardScreen({ navigation, onShowStaff, onShowGuestList }) {
   const { userRole } = useAuth();
-  const { selectedEvent, eventStats, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
+  const { selectedEvent, eventStats, ticketTypes, isReportsOnlyMode, refreshStats, refreshTicketTypes, isLoadingStats } = useEvent();
   const {
     shiftStartTime,
     cashTurnover,
@@ -821,6 +956,10 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
   const [showShiftSummary, setShowShiftSummary] = useState(false);
   // Sales breakdown modal
   const [showSalesBreakdown, setShowSalesBreakdown] = useState(false);
+  // Ticket sales by type modal
+  const [showTicketSales, setShowTicketSales] = useState(false);
+  // Remaining by type modal
+  const [showRemaining, setShowRemaining] = useState(false);
 
   const handleCloseShift = () => {
     setShowShiftSummary(true);
@@ -867,6 +1006,8 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
             onShowGuestList={onShowGuestList}
             onShowStaff={onShowStaff}
             onShowSales={() => setShowSalesBreakdown(true)}
+            onShowTicketSales={() => setShowTicketSales(true)}
+            onShowRemaining={() => setShowRemaining(true)}
             onCloseShift={shiftStartTime ? handleCloseShift : null}
           />
         ) : (
@@ -897,6 +1038,18 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
         visible={showSalesBreakdown}
         onClose={() => setShowSalesBreakdown(false)}
         eventId={selectedEvent?.id}
+      />
+
+      <TicketSalesByTypeModal
+        visible={showTicketSales}
+        onClose={() => setShowTicketSales(false)}
+        ticketTypes={ticketTypes}
+      />
+
+      <RemainingByTypeModal
+        visible={showRemaining}
+        onClose={() => setShowRemaining(false)}
+        ticketTypes={ticketTypes}
       />
     </View>
   );
@@ -1480,6 +1633,97 @@ const styles = StyleSheet.create({
   salesModalCloseBtnText: {
     fontSize: 15,
     fontWeight: '600',
+    color: colors.textPrimary,
+  },
+
+  // Ticket type breakdown styles (shared by TicketSalesByType and RemainingByType modals)
+  ttBreakdownCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+  },
+  ttBreakdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  ttBreakdownDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  ttBreakdownName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  ttBreakdownPrice: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  ttBreakdownNumbers: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 6,
+  },
+  ttBreakdownSold: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  ttBreakdownTotal: {
+    fontSize: 13,
+    color: colors.textTertiary,
+    marginRight: 8,
+  },
+  ttBreakdownPct: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginLeft: 'auto',
+  },
+  ttBreakdownBarBg: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 3,
+    marginBottom: 6,
+    overflow: 'hidden',
+  },
+  ttBreakdownBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  ttBreakdownRevenue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  ttBreakdownTotals: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 12,
+    marginTop: 4,
+    gap: 6,
+  },
+  ttBreakdownTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ttBreakdownTotalLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  ttBreakdownTotalValue: {
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
 });

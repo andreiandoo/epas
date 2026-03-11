@@ -184,9 +184,10 @@ export default function TicketListScreen({ onClose }) {
     return aChecked - bChecked;
   });
 
-  // Stats
-  const totalCount = participants.length;
-  const checkedInCount = participants.filter(
+  // Stats — use eventStats.total_sold for total count (consistent with Dashboard)
+  const { eventStats } = useEvent();
+  const totalCount = eventStats?.total_sold ?? participants.length;
+  const checkedInCount = eventStats?.checked_in ?? participants.filter(
     (p) => p.checked_in_at || p.status === 'checked_in'
   ).length;
 
