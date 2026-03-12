@@ -47,12 +47,11 @@ class ListEvents extends ListRecords
                     if (!toolbar) return;
                     const nav = \$el.querySelector('.fi-tabs');
                     if (!nav) return;
-                    const bulkActions = toolbar.querySelector('.fi-ta-bulk-actions');
-                    if (bulkActions) {
-                        bulkActions.after(nav);
-                    } else {
-                        toolbar.prepend(nav);
-                    }
+                    toolbar.prepend(nav);
+                    nav.style.order = '-1';
+                    const style = document.createElement('style');
+                    style.textContent = '.fi-ta-header-toolbar .fi-ta-bulk-actions { order: -2; }';
+                    document.head.appendChild(style);
                 })",
             ]);
     }
