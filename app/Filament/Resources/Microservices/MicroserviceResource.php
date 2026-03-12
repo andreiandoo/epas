@@ -183,7 +183,7 @@ class MicroserviceResource extends Resource
                     Forms\Components\TextInput::make('metadata.sms_pricing.transactional.price')
                         ->label('Preț SMS Tranzacțional')
                         ->numeric()
-                        ->step(0.01)
+                        ->step(0.00001)
                         ->minValue(0)
                         ->prefix('EUR')
                         ->helperText('Costul per SMS tranzacțional (confirmare bilet)'),
@@ -191,7 +191,7 @@ class MicroserviceResource extends Resource
                     Forms\Components\TextInput::make('metadata.sms_pricing.promotional.price')
                         ->label('Preț SMS Promoțional')
                         ->numeric()
-                        ->step(0.01)
+                        ->step(0.00001)
                         ->minValue(0)
                         ->prefix('EUR')
                         ->helperText('Costul per SMS promoțional (campanii)'),
