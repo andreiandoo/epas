@@ -23,7 +23,8 @@ class StatisticsController extends BaseController
         $orders = Order::where('marketplace_client_id', $client->id)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
-        $completedOrders = (clone $orders)->where('status', 'completed');
+        $completedOrders = (clone $orders)->where('status', 'completed')
+            ->where('source', '!=', 'test_order');
 
         return $this->success([
             'period' => [
@@ -68,6 +69,7 @@ class StatisticsController extends BaseController
 
         $sales = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
+            ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
             ->selectRaw('COUNT(*) as orders')
@@ -100,6 +102,7 @@ class StatisticsController extends BaseController
 
         $sales = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
+            ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->with('event:id,title,slug,start_date')
             ->selectRaw('event_id')
@@ -145,6 +148,7 @@ class StatisticsController extends BaseController
 
         $sales = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
+            ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->with('tenant:id,name,slug')
             ->selectRaw('tenant_id')
@@ -190,6 +194,7 @@ class StatisticsController extends BaseController
 
         $orders = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
+            ->where('source', '!=', 'test_order')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->with(['event:id,title', 'tenant:id,name'])
             ->orderBy('paid_at')
@@ -254,6 +259,7 @@ class StatisticsController extends BaseController
 
         $orders = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
+            ->where('source', '!=', 'test_order')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->with(['event:id,title', 'tenant:id,name'])
             ->orderBy('paid_at')

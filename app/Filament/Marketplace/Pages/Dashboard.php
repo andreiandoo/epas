@@ -120,15 +120,18 @@ class Dashboard extends Page
                 $query->whereIn('marketplace_event_id', $eventIds)
                     ->whereIn('status', ['paid', 'confirmed']);
             })
+            ->where('source', '!=', 'test_order')
             ->sum('total_cents') / 100;
 
         // Total tickets sold
         $totalTickets = Ticket::whereHas('order', function ($query) use ($eventIds, $marketplaceId) {
             $query->where('marketplace_client_id', $marketplaceId)
-                ->whereIn('status', ['paid', 'confirmed']);
+                ->whereIn('status', ['paid', 'confirmed'])
+                ->where('source', '!=', 'test_order');
         })->orWhereHas('order', function ($query) use ($eventIds) {
             $query->whereIn('marketplace_event_id', $eventIds)
-                ->whereIn('status', ['paid', 'confirmed']);
+                ->whereIn('status', ['paid', 'confirmed'])
+                ->where('source', '!=', 'test_order');
         })->count();
 
         // Pending payouts

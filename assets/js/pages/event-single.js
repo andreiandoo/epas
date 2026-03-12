@@ -819,16 +819,32 @@ const EventPage = {
         if (this.isPreview) {
             const titleEl = document.getElementById(this.elements.eventTitle);
             if (titleEl) {
+                const isTestMode = !!this.previewToken;
+                const borderColor = isTestMode ? 'border-amber-500' : 'border-indigo-500';
+                const bgColor = isTestMode ? 'bg-amber-50' : 'bg-indigo-50';
+                const iconColor = isTestMode ? 'text-amber-600' : 'text-indigo-600';
+                const titleColor = isTestMode ? 'text-amber-800' : 'text-indigo-800';
+                const textColor = isTestMode ? 'text-amber-600' : 'text-indigo-600';
+                const icon = isTestMode
+                    ? `<svg class="w-6 h-6 ${iconColor} flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                       </svg>`
+                    : `<svg class="w-6 h-6 ${iconColor} flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                       </svg>`;
+                const title = isTestMode ? 'Mod test comandă activ' : 'Previzualizare';
+                const description = isTestMode
+                    ? 'Comenzile plasate vor fi gratuite și marcate ca test. Nu se procesează plăți.'
+                    : 'Acest eveniment nu este încă public. Aceasta este o previzualizare.';
+
                 titleEl.insertAdjacentHTML('beforebegin', `
-                    <div id="event-preview-banner" class="p-4 mb-6 border-l-4 border-indigo-500 bg-indigo-50 rounded-r-xl">
+                    <div id="event-preview-banner" class="p-4 mb-6 border-l-4 ${borderColor} ${bgColor} rounded-r-xl">
                         <div class="flex items-start gap-3">
-                            <svg class="w-6 h-6 text-indigo-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                            </svg>
+                            ${icon}
                             <div>
-                                <h3 class="font-bold text-indigo-800">Previzualizare</h3>
-                                <p class="mt-1 text-sm text-indigo-600">Acest eveniment nu este încă public. Aceasta este o previzualizare.</p>
+                                <h3 class="font-bold ${titleColor}">${title}</h3>
+                                <p class="mt-1 text-sm ${textColor}">${description}</p>
                             </div>
                         </div>
                     </div>

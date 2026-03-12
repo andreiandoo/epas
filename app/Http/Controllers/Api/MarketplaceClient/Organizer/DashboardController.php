@@ -68,7 +68,8 @@ class DashboardController extends BaseController
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
-        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'completed']);
+        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'completed'])
+            ->where('source', '!=', 'test_order');
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
         $grossRevenue = (float) (clone $completedOrders)->sum('total');
@@ -80,6 +81,7 @@ class DashboardController extends BaseController
         // Weekly sales (last 7 days)
         $weeklySales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
             ->where('created_at', '>=', now()->subDays(7))
             ->withCount('tickets')
             ->get()
@@ -147,6 +149,7 @@ class DashboardController extends BaseController
 
         $sales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
             ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
             ->selectRaw('COUNT(*) as orders')
@@ -251,7 +254,8 @@ class DashboardController extends BaseController
         $query->orderByDesc('created_at');
 
         // Compute aggregate stats from full query (only completed/paid orders)
-        $statsQuery = (clone $query)->whereIn('status', ['completed', 'paid']);
+        $statsQuery = (clone $query)->whereIn('status', ['completed', 'paid'])
+            ->where('source', '!=', 'test_order');
         $stats = [
             'total_revenue' => (float) (clone $statsQuery)->sum('total'),
             'total_tickets' => (int) (clone $statsQuery)->withCount('tickets')->get()->sum('tickets_count'),
@@ -360,6 +364,7 @@ class DashboardController extends BaseController
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->get();
 
