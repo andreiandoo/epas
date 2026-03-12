@@ -5,7 +5,7 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <span class="text-sm text-gray-500 dark:text-gray-400">Name:</span>
-                    <p class="font-medium">{{ $record->name }}</p>
+                    <p class="font-medium">{{ $record->getTranslation('name', app()->getLocale()) }}</p>
                 </div>
                 <div>
                     <span class="text-sm text-gray-500 dark:text-gray-400">Price:</span>
