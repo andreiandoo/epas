@@ -299,17 +299,18 @@ class SmsCampaigns extends Page
             ->pluck('name', 'id')
             ->toArray();
 
-        $eventQuery = Event::where('marketplace_client_id', $marketplace->id);
+        $eventOptions = [];
         if ($this->filterOrganizer) {
-            $eventQuery->where('marketplace_organizer_id', $this->filterOrganizer);
+            $eventOptions = Event::where('marketplace_client_id', $marketplace->id)
+                ->where('marketplace_organizer_id', $this->filterOrganizer)
+                ->orderByDesc('event_date')
+                ->get()
+                ->mapWithKeys(function ($event) {
+                    $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
+                    return [$event->id => $title];
+                })
+                ->toArray();
         }
-        $eventOptions = $eventQuery->orderByDesc('event_date')
-            ->get()
-            ->mapWithKeys(function ($event) {
-                $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
-                return [$event->id => $title];
-            })
-            ->toArray();
 
         $cityOptions = MarketplaceCity::where('marketplace_client_id', $marketplace->id)
             ->where('is_visible', true)

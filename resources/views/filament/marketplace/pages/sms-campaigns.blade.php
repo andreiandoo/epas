@@ -177,7 +177,7 @@
                         open: false,
                         search: '',
                         options: {{ Js::from(collect($organizerOptions)->map(fn($name, $id) => ['id' => (string)$id, 'name' => $name])->values()) }},
-                        selected: @entangle('filterOrganizer'),
+                        selected: @entangle('filterOrganizer').live,
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
                         get selectedLabel() { const o = this.options.find(o => o.id === this.selected); return o ? o.name : ''; },
@@ -217,15 +217,18 @@
                         selected: @entangle('filterEvents'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        toggle(id) { this.selected = this.selected.includes(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
                         isSelected(id) { return this.selected.includes(id); },
-                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Evenimente</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                        <button @click="if (options.length > 0) open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]" :class="options.length === 0 && 'opacity-60 cursor-not-allowed'">
                             <div class="flex flex-wrap gap-1 flex-1">
-                                <template x-if="selected.length === 0">
+                                <template x-if="selected.length === 0 && options.length === 0">
+                                    <span class="text-gray-400 italic">— Selectează mai întâi un organizator —</span>
+                                </template>
+                                <template x-if="selected.length === 0 && options.length > 0">
                                     <span class="text-gray-400">— Selectează evenimente —</span>
                                 </template>
                                 <template x-for="id in selected" :key="id">
@@ -266,10 +269,10 @@
                         selected: @entangle('filterCities'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        toggle(id) { this.selected = this.selected.includes(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
                         isSelected(id) { return this.selected.includes(id); },
                         get selectedLabels() { return this.options.filter(o => this.selected.includes(o.id)).map(o => o.name); },
-                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Orașe</label>
@@ -316,10 +319,10 @@
                         selected: @entangle('filterArtists'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        toggle(id) { this.selected = this.selected.includes(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
                         isSelected(id) { return this.selected.includes(id); },
                         get selectedLabels() { return this.options.filter(o => this.selected.includes(o.id)).map(o => o.name); },
-                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Artiști</label>
@@ -366,9 +369,9 @@
                         selected: @entangle('filterGenres'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        toggle(id) { this.selected = this.selected.includes(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
                         isSelected(id) { return this.selected.includes(id); },
-                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Genuri muzicale</label>
@@ -415,9 +418,9 @@
                         selected: @entangle('filterVenues'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        toggle(id) { this.selected = this.selected.includes(id) ? this.selected.filter(x => x !== id) : [...this.selected, id]; },
                         isSelected(id) { return this.selected.includes(id); },
-                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        remove(id) { this.selected = this.selected.filter(x => x !== id); },
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Locații</label>
