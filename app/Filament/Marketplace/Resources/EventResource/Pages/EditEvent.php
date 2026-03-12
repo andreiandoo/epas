@@ -397,6 +397,7 @@ class EditEvent extends EditRecord
                 $this->record->update($updateData);
 
                 // Create MediaLibrary entries for searchability (only for new uploads)
+                // The observer auto-compresses and may convert to WebP, changing the path
                 if ($data['poster_mode'] === 'upload' && !empty($posterUrl)) {
                     $this->createMediaLibraryEntry(
                         $posterUrl,
@@ -413,6 +414,41 @@ class EditEvent extends EditRecord
                         'events',
                         $marketplace?->id
                     );
+                }
+
+                // After MediaLibrary observer runs compression/WebP conversion,
+                // the file path may have changed (e.g. .jpeg → .webp).
+                // Re-read the MediaLibrary records to get the final paths.
+                $pathUpdates = [];
+
+                if (!empty($posterUrl)) {
+                    $posterMedia = \App\Models\MediaLibrary::where('marketplace_client_id', $marketplace?->id)
+                        ->where(function ($q) use ($posterUrl) {
+                            $q->where('path', $posterUrl)
+                              ->orWhere('path', preg_replace('/\.\w+$/', '.webp', $posterUrl));
+                        })
+                        ->latest()
+                        ->first();
+                    if ($posterMedia && $posterMedia->path !== $posterUrl) {
+                        $pathUpdates['poster_url'] = $posterMedia->path;
+                    }
+                }
+
+                if (!empty($heroUrl)) {
+                    $heroMedia = \App\Models\MediaLibrary::where('marketplace_client_id', $marketplace?->id)
+                        ->where(function ($q) use ($heroUrl) {
+                            $q->where('path', $heroUrl)
+                              ->orWhere('path', preg_replace('/\.\w+$/', '.webp', $heroUrl));
+                        })
+                        ->latest()
+                        ->first();
+                    if ($heroMedia && $heroMedia->path !== $heroUrl) {
+                        $pathUpdates['hero_image_url'] = $heroMedia->path;
+                    }
+                }
+
+                if (!empty($pathUpdates)) {
+                    $this->record->update($pathUpdates);
                 }
 
                 Notification::make()
