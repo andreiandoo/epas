@@ -140,12 +140,12 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1">Nume campanie *</label>
-                        <input type="text" wire:model="campaignName" class="block w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="ex: Promo festival vara 2026">
+                        <input type="text" wire:model="campaignName" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="ex: Promo festival vara 2026">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1">Mesaj SMS *</label>
-                        <textarea x-model="msg" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="Scrie mesajul SMS..."></textarea>
+                        <textarea x-model="msg" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="Scrie mesajul SMS..."></textarea>
 
                         <div class="mt-2 flex items-center justify-between text-xs">
                             <div class="flex items-center gap-4">
@@ -185,7 +185,7 @@
                         clear() { this.selected = ''; this.open = false; this.search = ''; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Organizator</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left">
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left">
                             <span x-text="selectedLabel || '— Toți organizatorii —'" :class="!selected && 'text-gray-400'"></span>
                             <div class="flex items-center gap-1">
                                 <template x-if="selected">
@@ -196,7 +196,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -223,7 +223,7 @@
                         clear() { this.selected = ''; this.open = false; this.search = ''; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Eveniment</label>
-                        <button @click="!disabled && (open = !open)" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 shadow-sm text-sm px-3 py-2 text-left" :class="disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-slate-800'">
+                        <button @click="!disabled && (open = !open)" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 shadow-sm text-sm px-3 py-2 text-left" :class="disabled ? 'bg-gray-100 dark:bg-gray-100 text-gray-400 dark:text-gray-400 cursor-not-allowed' : 'bg-white dark:bg-white text-slate-800 dark:text-slate-800'">
                             <span x-text="selectedLabel || '— Toate evenimentele —'" :class="!selected && 'text-gray-400'"></span>
                             <div class="flex items-center gap-1">
                                 <template x-if="selected">
@@ -234,7 +234,7 @@
                         </button>
                         <div x-show="open && !disabled" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -265,7 +265,7 @@
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Orașe</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
                                     <span class="text-gray-400">— Selectează orașe —</span>
@@ -286,7 +286,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -315,7 +315,7 @@
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Artiști</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
                                     <span class="text-gray-400">— Selectează artiști —</span>
@@ -336,7 +336,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -364,7 +364,7 @@
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Genuri muzicale</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
                                     <span class="text-gray-400">— Selectează genuri —</span>
@@ -385,7 +385,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -413,7 +413,7 @@
                         clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Locații</label>
-                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
                             <div class="flex flex-wrap gap-1 flex-1">
                                 <template x-if="selected.length === 0">
                                     <span class="text-gray-400">— Selectează locații —</span>
@@ -434,7 +434,7 @@
                         </button>
                         <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
-                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
@@ -556,7 +556,7 @@
                 <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Programare</h3>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Data și ora trimiterii (opțional)</label>
-                    <input type="datetime-local" wire:model="scheduledAt" class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2">
+                    <input type="datetime-local" wire:model="scheduledAt" class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2">
                     <p class="text-xs text-gray-500 mt-1">Lasă gol dacă vrei să trimiți manual sau să salvezi ca ciornă.</p>
                 </div>
             </div>
