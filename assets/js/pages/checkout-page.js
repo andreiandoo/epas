@@ -811,6 +811,12 @@ const CheckoutPage = {
                 checkoutData.cultural_card_surcharge = this.totals.culturalCardSurcharge;
             }
 
+            // Add preview token if any cart item has one (test order mode)
+            const previewToken = this.items.find(i => i.event?.preview_token)?.event?.preview_token;
+            if (previewToken) {
+                checkoutData.preview_token = previewToken;
+            }
+
             const response = await AmbiletAPI.post('/checkout', checkoutData);
 
             if (!response.success) {

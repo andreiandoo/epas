@@ -49,7 +49,19 @@ class CheckoutController extends BaseController
             'ticket_insurance' => 'nullable|boolean',
             'ticket_insurance_amount' => 'nullable|numeric|min:0',
             'cultural_card_surcharge' => 'nullable|numeric|min:0',
+            'preview_token' => 'nullable|string',
         ]);
+
+        // Determine if this is a test order via valid preview token
+        $isTestOrder = false;
+        $previewToken = $request->input('preview_token');
+        if ($previewToken) {
+            // Validate token against at least the first event in the items
+            $firstEventId = $request->input('items.0.event.id') ?? $request->input('items.0.event_id');
+            if ($firstEventId && $this->validatePreviewToken($previewToken, (int) $firstEventId)) {
+                $isTestOrder = true;
+            }
+        }
 
         // Get ticket insurance data
         $hasInsurance = $request->boolean('ticket_insurance');
@@ -108,7 +120,7 @@ class CheckoutController extends BaseController
         }
 
         // Validate cart items are still available
-        $validationErrors = $this->validateCartItemsForCheckout($cartItems);
+        $validationErrors = $this->validateCartItemsForCheckout($cartItems, $isTestOrder);
         if (!empty($validationErrors)) {
             Log::channel('marketplace')->warning('Checkout validation failed', [
                 'client_id' => $client->id,
@@ -221,31 +233,34 @@ class CheckoutController extends BaseController
                 }
 
                 // Check availability and update stock
-                if ($mktTicketType) {
-                    $available = $mktTicketType->quantity === null
-                        ? PHP_INT_MAX
-                        : max(0, $mktTicketType->quantity - ($mktTicketType->quantity_sold ?? 0) - ($mktTicketType->quantity_reserved ?? 0));
+                // Skip stock validation and decrement for test orders (allows repeated testing)
+                if (!$isTestOrder) {
+                    if ($mktTicketType) {
+                        $available = $mktTicketType->quantity === null
+                            ? PHP_INT_MAX
+                            : max(0, $mktTicketType->quantity - ($mktTicketType->quantity_sold ?? 0) - ($mktTicketType->quantity_reserved ?? 0));
 
-                    if ($available < $quantity) {
-                        throw new \Exception("Not enough tickets for {$mktTicketType->name}");
-                    }
+                        if ($available < $quantity) {
+                            throw new \Exception("Not enough tickets for {$mktTicketType->name}");
+                        }
 
-                    $mktTicketType->increment('quantity_sold', $quantity);
+                        $mktTicketType->increment('quantity_sold', $quantity);
 
-                    if ($mktTicketType->quantity !== null && ($mktTicketType->quantity_sold >= $mktTicketType->quantity)) {
-                        $mktTicketType->update(['status' => 'sold_out']);
-                    }
-                } elseif ($ticketType) {
-                    $available = $ticketType->quota_total === null
-                        ? PHP_INT_MAX
-                        : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+                        if ($mktTicketType->quantity !== null && ($mktTicketType->quantity_sold >= $mktTicketType->quantity)) {
+                            $mktTicketType->update(['status' => 'sold_out']);
+                        }
+                    } elseif ($ticketType) {
+                        $available = $ticketType->quota_total === null
+                            ? PHP_INT_MAX
+                            : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
 
-                    if ($available < $quantity) {
-                        throw new \Exception("Not enough tickets for {$ticketType->name}");
-                    }
+                        if ($available < $quantity) {
+                            throw new \Exception("Not enough tickets for {$ticketType->name}");
+                        }
 
-                    if ($ticketType->quota_total !== null) {
-                        $ticketType->increment('quota_sold', $quantity);
+                        if ($ticketType->quota_total !== null) {
+                            $ticketType->increment('quota_sold', $quantity);
+                        }
                     }
                 }
 
@@ -330,7 +345,7 @@ class CheckoutController extends BaseController
             $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
             $isMultiEvent = count($eventIds) > 1;
 
-            // Create single order
+            // Create single order (test orders are free, auto-confirmed)
             $order = Order::create([
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $isMultiEvent ? null : $primaryOrganizerId,
@@ -338,21 +353,22 @@ class CheckoutController extends BaseController
                 'marketplace_customer_id' => $customer->id,
                 'event_id' => $isMultiEvent ? null : ($primaryEvent?->id),
                 'marketplace_event_id' => $isMultiEvent ? null : ($primaryMarketplaceEvent?->id),
-                'order_number' => 'MKT-' . strtoupper(Str::random(8)),
-                'status' => 'pending',
-                'payment_status' => 'pending',
-                'subtotal' => $subtotal,
-                'discount_amount' => $discount,
-                'commission_rate' => $avgCommissionRate,
-                'commission_amount' => $totalCommission,
-                'total' => $orderTotal,
+                'order_number' => ($isTestOrder ? 'TEST-' : 'MKT-') . strtoupper(Str::random(8)),
+                'status' => $isTestOrder ? 'confirmed' : 'pending',
+                'payment_status' => $isTestOrder ? 'test' : 'pending',
+                'subtotal' => $isTestOrder ? 0 : $subtotal,
+                'discount_amount' => $isTestOrder ? 0 : $discount,
+                'commission_rate' => $isTestOrder ? 0 : $avgCommissionRate,
+                'commission_amount' => $isTestOrder ? 0 : $totalCommission,
+                'total' => $isTestOrder ? 0 : $orderTotal,
                 'currency' => $currency,
-                'source' => 'marketplace',
+                'source' => $isTestOrder ? 'test_order' : 'marketplace',
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
-                'expires_at' => now()->addMinutes(15),
-                'meta' => [
+                'expires_at' => $isTestOrder ? null : now()->addMinutes(15),
+                'paid_at' => $isTestOrder ? now() : null,
+                'meta' => array_merge([
                     'cart_id' => isset($cart) ? $cart->id : null,
                     'promo_code' => $promoCode,
                     'beneficiaries' => $validated['beneficiaries'] ?? [],
@@ -361,12 +377,12 @@ class CheckoutController extends BaseController
                     'ticket_insurance' => $hasInsurance && $insuranceAmount > 0,
                     'insurance_amount' => $hasInsurance ? $insuranceAmount : 0,
                     'cultural_card_surcharge' => $culturalCardSurcharge > 0 ? $culturalCardSurcharge : null,
-                    'payment_method' => $request->input('payment_method', 'card'),
+                    'payment_method' => $isTestOrder ? 'test' : $request->input('payment_method', 'card'),
                     'commission_mode' => $commissionMode,
                     'multi_event' => $isMultiEvent,
                     'event_ids' => array_keys($eventIds),
                     'seated_items' => $seatedItemsMeta,
-                ],
+                ], $isTestOrder ? ['is_test_order' => true] : []),
             ]);
 
             // Create order items and pending tickets
@@ -459,8 +475,8 @@ class CheckoutController extends BaseController
                         'marketplace_customer_id' => $customer->id,
                         'code' => strtoupper(Str::random(8)),
                         'barcode' => Str::uuid()->toString(),
-                        'status' => 'pending',
-                        'price' => $item['unit_price'],
+                        'status' => $isTestOrder ? 'valid' : 'pending',
+                        'price' => $isTestOrder ? 0 : $item['unit_price'],
                         'seat_label' => $seatLabel,
                         'attendee_name' => $beneficiary['name'] ?? null,
                         'attendee_email' => $beneficiary['email'] ?? null,
@@ -651,7 +667,7 @@ class CheckoutController extends BaseController
      * Validate cart items for checkout (accepts array of items)
      * Note: Marketplace sells tenant events, so we use TicketType model (not MarketplaceTicketType)
      */
-    protected function validateCartItemsForCheckout(array $items): array
+    protected function validateCartItemsForCheckout(array $items, bool $isTestOrder = false): array
     {
         $errors = [];
 
@@ -714,7 +730,7 @@ class CheckoutController extends BaseController
                 continue;
             }
 
-            if (!$ticketType->event || !$ticketType->event->is_published) {
+            if (!$ticketType->event || (!$ticketType->event->is_published && !$isTestOrder)) {
                 $errors[$key] = "Event is no longer available";
                 continue;
             }

@@ -43,7 +43,11 @@ class OrdersController extends BaseController
 
         $event = Event::find($request->event_id);
 
-        if (!$event || $event->status !== 'published') {
+        // Check for valid preview token (allows orders on unpublished events)
+        $previewToken = $request->input('preview_token');
+        $isTestOrder = $previewToken && $this->validatePreviewToken($previewToken, (int) $request->event_id);
+
+        if (!$event || ($event->status !== 'published' && !$isTestOrder)) {
             return $this->error('Event not available', 400);
         }
 

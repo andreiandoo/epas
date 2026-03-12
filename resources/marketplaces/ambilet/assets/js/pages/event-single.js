@@ -139,6 +139,7 @@ const EventPage = {
         this.slug = urlParams.get('slug') ||
                    window.location.pathname.split('/bilete/')[1]?.split('?')[0] || '';
         this.isPreview = urlParams.get('preview') === '1';
+        this.previewToken = urlParams.get('preview_token') || null;
 
         if (!this.slug) {
             window.location.href = '/';
@@ -842,8 +843,9 @@ const EventPage = {
         this.renderDate(e);
 
         // Time
-        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.start_time || '20:00');
-        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Doors:</span> ' + (e.doors_time || '19:00');
+        
+        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.doors_time || '19:00');
+        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Start:</span> ' + (e.start_time || '20:00');
 
         // Venue (with city)
         var venueName = e.venue?.name || e.location || 'Locație TBA';
@@ -1211,7 +1213,7 @@ const EventPage = {
                 '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-32 mb-4 rounded-2xl" loading="lazy" width="300" height="128">' +
             '</div>' +
             '<div class="md:w-3/4">' +
-                '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
+                '<div class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</div>' +
                 '<div class="flex items-center gap-3 mb-2">' +
                     '<p class="text-muted">' + venueAddress + '</p>' +
                     (googleMapsUrl
@@ -1234,13 +1236,6 @@ const EventPage = {
                 '</div>';
             });
             html += '</div>';
-        }
-
-        if (googleMapsUrl) {
-            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-secondary border border-secondary text-sm rounded-md mt-2 py-2 px-6 hover:bg-secondary hover:text-white transition-all ease-in-out duration-200">' +
-                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                'Deschide in Google Maps' +
-            '</a>';
         }
 
         html += '</div></div>';
@@ -1721,7 +1716,8 @@ const EventPage = {
                         taxes: self.event.taxes || [],
                         target_price: targetPrice,
                         commission_rate: defaultCommissionRate,
-                        commission_mode: defaultCommissionMode
+                        commission_mode: defaultCommissionMode,
+                        preview_token: self.previewToken || null
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
@@ -3539,7 +3535,8 @@ const EventPage = {
             taxes: self.event.taxes || [],
             target_price: targetPrice,
             commission_rate: commissionRate,
-            commission_mode: commissionMode
+            commission_mode: commissionMode,
+            preview_token: self.previewToken || null
         };
 
         // Get cart once before the loop
@@ -3583,7 +3580,7 @@ const EventPage = {
                 try {
                     console.log('[EventPage] Calling API to hold seats:', seatUids);
 
-                    var response = await AmbiletAPI.post('/cart/items/with-seats', {
+                    var apiPayload = {
                         event_id: self.event.id,
                         ticket_type_id: tt.id,
                         event_seating_id: eventSeatingId,
@@ -3596,7 +3593,11 @@ const EventPage = {
                                 seat_label: s.seat
                             };
                         })
-                    });
+                    };
+                    if (self.previewToken) {
+                        apiPayload.preview_token = self.previewToken;
+                    }
+                    var response = await AmbiletAPI.post('/cart/items/with-seats', apiPayload);
 
                     if (response.success && response.data) {
                         console.log('[EventPage] Seats held successfully:', response.data);
@@ -3623,7 +3624,8 @@ const EventPage = {
                                 taxes: eventData.taxes,
                                 target_price: eventData.target_price,
                                 commission_rate: eventData.commission_rate,
-                                commission_mode: eventData.commission_mode
+                                commission_mode: eventData.commission_mode,
+                                preview_token: eventData.preview_token
                             },
                             ticketTypeId: tt.id,
                             ticketType: {
@@ -3675,7 +3677,8 @@ const EventPage = {
                         taxes: eventData.taxes,
                         target_price: eventData.target_price,
                         commission_rate: eventData.commission_rate,
-                        commission_mode: eventData.commission_mode
+                        commission_mode: eventData.commission_mode,
+                        preview_token: eventData.preview_token
                     },
                     ticketTypeId: tt.id,
                     ticketType: {

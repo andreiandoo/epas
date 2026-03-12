@@ -14,6 +14,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditEvent extends EditRecord
@@ -130,6 +131,34 @@ class EditEvent extends EditRecord
             ->color('gray')
             ->url($couponUrl)
             ->openUrlInNewTab();
+
+        // Test order link - generates a signed URL for placing test orders on unpublished events
+        $actions[] = Actions\Action::make('test_order_link')
+            ->label('Link test comandă')
+            ->icon('heroicon-o-beaker')
+            ->color('warning')
+            ->action(function () use ($marketplace) {
+                $event = $this->record;
+                $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+                $slug = $event->getTranslation('slug', $lang)
+                    ?? $event->getTranslation('slug', 'ro')
+                    ?? $event->getTranslation('slug', 'en')
+                    ?? $event->id;
+
+                $token = BaseController::generatePreviewToken($event->id, auth()->id());
+                $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
+                $url = "https://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
+
+                // Copy to clipboard via JS
+                $this->js("navigator.clipboard.writeText('{$url}')");
+
+                Notification::make()
+                    ->success()
+                    ->title('Link copiat în clipboard!')
+                    ->body("Valid 24h. Comenzile plasate vor fi gratuite și marcate ca test.\n{$url}")
+                    ->persistent()
+                    ->send();
+            });
 
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();

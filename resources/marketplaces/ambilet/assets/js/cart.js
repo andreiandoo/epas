@@ -60,7 +60,8 @@ const AmbiletCart = {
                     taxes: eventData.taxes || [],
                     target_price: eventData.target_price || null,
                     commission_rate: eventData.commission_rate || 5,
-                    commission_mode: eventData.commission_mode || 'included'
+                    commission_mode: eventData.commission_mode || 'included',
+                    preview_token: eventData.preview_token || null
                 },
                 ticketTypeId,
                 ticketType: {

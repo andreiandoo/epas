@@ -141,6 +141,56 @@ abstract class BaseController extends Controller
     }
 
     /**
+     * Generate a signed preview token for test orders on unpublished events.
+     * Token is HMAC-signed, event-specific, and expires after 24 hours.
+     */
+    public static function generatePreviewToken(int $eventId, int $adminId, int $hoursValid = 24): string
+    {
+        $payload = json_encode([
+            'event_id' => $eventId,
+            'admin_id' => $adminId,
+            'expires' => now()->addHours($hoursValid)->timestamp,
+        ]);
+
+        $encoded = base64_encode($payload);
+        $signature = hash_hmac('sha256', $encoded, config('app.key'));
+
+        return $encoded . '.' . $signature;
+    }
+
+    /**
+     * Validate a preview token. Returns the decoded payload or null if invalid.
+     */
+    protected function validatePreviewToken(?string $token, int $eventId): ?array
+    {
+        if (!$token || !str_contains($token, '.')) {
+            return null;
+        }
+
+        [$encoded, $signature] = explode('.', $token, 2);
+
+        $expectedSignature = hash_hmac('sha256', $encoded, config('app.key'));
+        if (!hash_equals($expectedSignature, $signature)) {
+            return null;
+        }
+
+        $payload = json_decode(base64_decode($encoded), true);
+        if (!$payload) {
+            return null;
+        }
+
+        if (($payload['expires'] ?? 0) < now()->timestamp) {
+            return null;
+        }
+
+        if (($payload['event_id'] ?? null) !== $eventId) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    /**
      * Paginated response
      *
      * @param mixed $paginator Laravel paginator instance

@@ -240,7 +240,8 @@ class OrderResource extends Resource
                     ->label('Nr. Comandă')
                     ->formatStateUsing(fn ($state, $record) =>
                         '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
-                        ($record->order_number ? " ({$record->order_number})" : '')
+                        ($record->order_number ? " ({$record->order_number})" : '') .
+                        ($record->source === 'test_order' ? ' ⚗️ TEST' : '')
                     )
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
@@ -384,6 +385,7 @@ class OrderResource extends Resource
 
         // POS/mobile app orders: display total = subtotal (face value), not DB total which may include commission
         $isPosOrder = $record->source === 'pos_app';
+        $isTestOrder = $record->source === 'test_order';
         $displayTotal = $isPosOrder
             ? number_format($record->subtotal ?? $record->tickets->sum('price'), 2)
             : number_format($record->total ?? ($record->total_cents / 100), 2);
@@ -479,6 +481,14 @@ class OrderResource extends Resource
                         <div style='font-size: 11px; color: #64748B; text-transform: uppercase;'>Ultima actualizare</div>
                     </div>
                 </div>
+                " . ($isTestOrder ? "
+                <div style='display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 10px 14px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 10px; font-size: 13px; color: #F59E0B;'>
+                    <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width:16px;height:16px;flex-shrink:0;'>
+                        <path stroke-linecap='round' stroke-linejoin='round' d='M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5' />
+                    </svg>
+                    <span><strong>COMANDĂ DE TEST</strong> &nbsp;·&nbsp; Gratuită, fără plată &nbsp;·&nbsp; Nu afectează stocul sau statisticile</span>
+                </div>
+                " : "") . "
                 " . ($isPosOrder ? "
                 <div style='display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 10px 14px; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 10px; font-size: 13px; color: #A5B4FC;'>
                     <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width:16px;height:16px;flex-shrink:0;'>

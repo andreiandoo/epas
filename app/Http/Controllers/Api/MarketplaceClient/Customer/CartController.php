@@ -51,10 +51,15 @@ class CartController extends BaseController
             'event_id' => 'required|integer',
             'ticket_type_id' => 'required|integer',
             'quantity' => 'required|integer|min:1|max:20',
+            'preview_token' => 'nullable|string',
         ]);
 
+        // Check for valid preview token (allows adding unpublished events to cart)
+        $previewToken = $validated['preview_token'] ?? null;
+        $allowUnpublished = $previewToken && $this->validatePreviewToken($previewToken, $validated['event_id']);
+
         // Validate event exists and belongs to this marketplace
-        $event = $this->findEvent($client->id, $validated['event_id']);
+        $event = $this->findEvent($client->id, $validated['event_id'], $allowUnpublished);
 
         if (!$event) {
             return $this->error('Event not found or not available', 404);
@@ -140,10 +145,15 @@ class CartController extends BaseController
             'seat_uids' => 'required|array|min:1|max:10',
             'seat_uids.*' => 'required|string|max:32',
             'seats' => 'nullable|array', // Optional seat details for display
+            'preview_token' => 'nullable|string',
         ]);
 
+        // Check for valid preview token (allows adding unpublished events to cart)
+        $previewToken = $validated['preview_token'] ?? null;
+        $allowUnpublished = $previewToken && $this->validatePreviewToken($previewToken, $validated['event_id']);
+
         // Validate event exists and belongs to this marketplace
-        $event = $this->findEvent($client->id, $validated['event_id']);
+        $event = $this->findEvent($client->id, $validated['event_id'], $allowUnpublished);
 
         if (!$event) {
             return $this->error('Event not found or not available', 404);
@@ -557,12 +567,16 @@ class CartController extends BaseController
     /**
      * Find a published event belonging to the marketplace client
      */
-    protected function findEvent(int $clientId, int $eventId): ?Event
+    protected function findEvent(int $clientId, int $eventId, bool $allowUnpublished = false): ?Event
     {
-        return Event::where('marketplace_client_id', $clientId)
-            ->where('id', $eventId)
-            ->where('is_published', true)
-            ->where(function ($q) {
+        $query = Event::where('marketplace_client_id', $clientId)
+            ->where('id', $eventId);
+
+        if (!$allowUnpublished) {
+            $query->where('is_published', true);
+        }
+
+        return $query->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             })
             ->first();
