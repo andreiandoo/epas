@@ -93,6 +93,9 @@ if (!empty($eventPreload['data'])) {
     $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($eventPreload['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
 }
 
+// Check if event is password protected
+$isPasswordProtected = !empty($ev['is_password_protected']);
+
 $cssBundle = 'event';
 require_once __DIR__ . '/includes/head.php';
 ?>
