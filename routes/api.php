@@ -591,6 +591,16 @@ Route::prefix('microservices')->middleware(['throttle:api'])->group(function () 
 
 /*
 |--------------------------------------------------------------------------
+| SMS Delivery Reports (SendSMS.ro callbacks)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/sms/delivery-report/{smsLogId}', [\App\Http\Controllers\Api\SmsWebhookController::class, 'deliveryReport'])
+    ->name('api.sms.delivery-report')
+    ->withoutMiddleware(['throttle:api']);
+
+/*
+|--------------------------------------------------------------------------
 | Webhooks Management API Routes
 |--------------------------------------------------------------------------
 */

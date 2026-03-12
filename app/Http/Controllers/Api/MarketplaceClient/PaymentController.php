@@ -379,6 +379,11 @@ class PaymentController extends BaseController
                 // Award XP for ticket purchase (gamification)
                 $this->awardPurchaseXp($order);
 
+                // Send SMS ticket confirmation (if marketplace has SMS service active)
+                if ($order->customer_phone && $order->marketplaceClient) {
+                    \App\Jobs\SendTicketConfirmationSmsJob::dispatch($order->id);
+                }
+
                 Log::channel('marketplace')->info('Payment completed for marketplace order', [
                     'order_id' => $order->id,
                     'client_slug' => $clientSlug,

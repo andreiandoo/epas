@@ -46,6 +46,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SMS Configuration (SendSMS.ro)
+    |--------------------------------------------------------------------------
+    */
+
+    'sms' => [
+        'enabled' => env('SMS_ENABLED', false),
+        'provider' => env('SMS_PROVIDER', 'sendsms'),
+
+        'sendsms' => [
+            'username' => env('SENDSMS_USERNAME'),
+            'api_key' => env('SENDSMS_API_KEY'),
+            'from' => env('SENDSMS_FROM', 'Tixello'),
+            'endpoint' => env('SENDSMS_ENDPOINT', 'https://api.sendsms.ro/json'),
+        ],
+
+        'pricing' => [
+            'transactional' => (float) env('SMS_PRICE_TRANSACTIONAL', 0.40),
+            'promotional' => (float) env('SMS_PRICE_PROMOTIONAL', 0.50),
+        ],
+
+        'rate_limit' => env('SMS_RATE_LIMIT', 60), // messages per minute
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | eFactura (ANAF) Configuration
     |--------------------------------------------------------------------------
     */

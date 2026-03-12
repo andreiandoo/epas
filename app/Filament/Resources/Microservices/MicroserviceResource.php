@@ -84,6 +84,7 @@ class MicroserviceResource extends Resource
                                     'monthly' => 'Monthly',
                                     'yearly' => 'Yearly',
                                     'one_time' => 'One-time',
+                                    'on_demand' => 'On Demand',
                                 ])
                                 ->default('monthly')
                                 ->helperText('Payment frequency'),
@@ -100,6 +101,7 @@ class MicroserviceResource extends Resource
                                     'accounting' => 'Accounting',
                                     'analytics' => 'Analytics',
                                     'crm' => 'CRM',
+                                    'notifications' => 'Notifications',
                                     'payment-addons' => 'Payment Add-ons',
                                 ])
                                 ->searchable()
@@ -173,6 +175,28 @@ class MicroserviceResource extends Resource
                             ]),
                     ]),
             ])->columns(1),
+
+            // SMS Pricing (only for sms-notifications microservice)
+            SC\Section::make('SMS Pricing')
+                ->description('Editează prețurile per SMS. Aceste prețuri se aplică tuturor clienților.')
+                ->schema([
+                    Forms\Components\TextInput::make('metadata.sms_pricing.transactional.price')
+                        ->label('Preț SMS Tranzacțional')
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0)
+                        ->prefix('EUR')
+                        ->helperText('Costul per SMS tranzacțional (confirmare bilet)'),
+
+                    Forms\Components\TextInput::make('metadata.sms_pricing.promotional.price')
+                        ->label('Preț SMS Promoțional')
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0)
+                        ->prefix('EUR')
+                        ->helperText('Costul per SMS promoțional (campanii)'),
+                ])->columns(2)
+                ->visible(fn ($record) => $record?->slug === 'sms-notifications'),
         ])->columns(1);
     }
 
