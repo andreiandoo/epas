@@ -2787,7 +2787,9 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
-                    ->searchable()
+                    ->searchable(query: function ($query, string $search): void {
+                        $query->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
+                    })
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('seating_layout_id')
