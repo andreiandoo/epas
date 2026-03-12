@@ -185,7 +185,7 @@
                     {{-- Event --}}
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1">Eveniment</label>
-                        <select wire:model="filterEvent" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600" @if(empty($filterOrganizer)) disabled @endif>
+                        <select wire:model="filterEvent" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600" {{ empty($filterOrganizer) ? 'disabled' : '' }}>
                             <option value="">— Toate evenimentele —</option>
                             @foreach ($eventOptions as $id => $title)
                                 <option value="{{ $id }}">{{ $title }}</option>
@@ -271,6 +271,7 @@
                 $totalSmsNeeded = $audienceWithPhone * $smsPerRecipient;
                 $hasEnoughCredits = $promotionalCredits >= $totalSmsNeeded;
                 $deficit = $totalSmsNeeded - $promotionalCredits;
+                $costEur = $totalSmsNeeded * $promotionalPrice;
             @endphp
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -293,7 +294,7 @@
                         <hr class="border-gray-700">
                         <div class="flex justify-between">
                             <span class="text-gray-400">Total SMS necesare:</span>
-                            <span class="font-bold text-lg" :class="'{{ $hasEnoughCredits ? 'text-green-400' : 'text-red-400' }}'">
+                            <span class="font-bold text-lg {{ $hasEnoughCredits ? 'text-green-400' : 'text-red-400' }}">
                                 <span x-text="{{ $audienceWithPhone }} * smsCount">{{ $totalSmsNeeded }}</span>
                             </span>
                         </div>
@@ -310,19 +311,29 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-400">Credite necesare:</span>
-                            <span class="font-semibold" :class="'{{ $hasEnoughCredits ? 'text-white' : 'text-red-400' }}'">
+                            <span class="font-semibold {{ $hasEnoughCredits ? 'text-white' : 'text-red-400' }}">
                                 <span x-text="{{ $audienceWithPhone }} * smsCount">{{ $totalSmsNeeded }}</span>
                             </span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-400">Preț / SMS:</span>
-                            <span class="text-white">{{ number_format($promotionalPrice, 2) }} €</span>
+                            <span class="text-white">
+                                {{ number_format($promotionalPrice, 5) }} EUR
+                                @if ($clientCurrency === 'RON' && $eurToRon)
+                                    <span class="text-gray-500">({{ number_format($promotionalPrice * $eurToRon, 4) }} RON)</span>
+                                @endif
+                            </span>
                         </div>
                         <hr class="border-gray-700">
                         <div class="flex justify-between">
                             <span class="text-gray-400">Cost estimat:</span>
                             <span class="font-bold text-white">
-                                <span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }}).toFixed(2)">{{ number_format($totalSmsNeeded * $promotionalPrice, 2) }}</span> €
+                                <span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }}).toFixed(2)">{{ number_format($costEur, 2) }}</span> EUR
+                                @if ($clientCurrency === 'RON' && $eurToRon)
+                                    <span class="text-gray-500">
+                                        (<span x-text="({{ $audienceWithPhone }} * smsCount * {{ $promotionalPrice }} * {{ $eurToRon }}).toFixed(2)">{{ number_format($costEur * $eurToRon, 2) }}</span> RON)
+                                    </span>
+                                @endif
                             </span>
                         </div>
 
@@ -359,6 +370,9 @@
             </div>
 
             {{-- Actions --}}
+            @php
+                $sendDisabled = !$hasEnoughCredits && $audienceWithPhone > 0 && $smsPerRecipient > 0;
+            @endphp
             <div class="flex flex-wrap items-center gap-3">
                 <x-filament::button wire:click="saveDraft" color="gray" icon="heroicon-o-document">
                     Salvează ciornă
@@ -370,15 +384,15 @@
                     </x-filament::button>
                 @endif
 
-                <x-filament::button
+                <button
                     wire:click="sendNow"
-                    color="success"
-                    icon="heroicon-o-paper-airplane"
                     wire:confirm="Ești sigur că vrei să trimiți {{ $audienceWithPhone }} SMS-uri ACUM?"
-                    @if(!$hasEnoughCredits && $audienceWithPhone > 0 && $smsPerRecipient > 0) disabled @endif
+                    class="fi-btn fi-btn-size-md gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold inline-flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 {{ $sendDisabled ? 'bg-gray-400 cursor-not-allowed opacity-50' : 'bg-success-600 hover:bg-success-500 text-white focus:ring-success-500' }}"
+                    {{ $sendDisabled ? 'disabled' : '' }}
                 >
+                    <x-heroicon-o-paper-airplane class="w-5 h-5" />
                     Trimite acum
-                </x-filament::button>
+                </button>
 
                 <x-filament::button wire:click="switchToList" color="gray" outlined icon="heroicon-o-x-mark">
                     Anulează

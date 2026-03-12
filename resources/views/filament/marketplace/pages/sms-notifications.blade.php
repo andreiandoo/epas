@@ -48,7 +48,12 @@
                     <x-heroicon-o-chat-bubble-bottom-center-text class="h-5 w-5 text-primary-500" />
                 </div>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($transactionalCredits) }}</p>
-                <p class="text-xs text-gray-400 mt-1">{{ $pricing['transactional']['price'] ?? '0.40' }} EUR / SMS</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    {{ $pricing['transactional']['price'] ?? '0.40' }} EUR / SMS
+                    @if ($clientCurrency === 'RON' && $eurToRon)
+                        ({{ number_format(($pricing['transactional']['price'] ?? 0.40) * $eurToRon, 4) }} RON)
+                    @endif
+                </p>
             </div>
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-2">
@@ -56,7 +61,12 @@
                     <x-heroicon-o-megaphone class="h-5 w-5 text-yellow-500" />
                 </div>
                 <p class="text-3xl font-bold text-gray-900 dark:text-white">{{ number_format($promotionalCredits) }}</p>
-                <p class="text-xs text-gray-400 mt-1">{{ $pricing['promotional']['price'] ?? '0.50' }} EUR / SMS</p>
+                <p class="text-xs text-gray-400 mt-1">
+                    {{ $pricing['promotional']['price'] ?? '0.50' }} EUR / SMS
+                    @if ($clientCurrency === 'RON' && $eurToRon)
+                        ({{ number_format(($pricing['promotional']['price'] ?? 0.50) * $eurToRon, 4) }} RON)
+                    @endif
+                </p>
             </div>
         </div>
 
@@ -68,7 +78,7 @@
                 <div class="space-y-6">
                     @if($this->transactionalEnabled)
                         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                             x-data="{ qty: @entangle('transactionalQuantity'), price: {{ $pricing['transactional']['price'] ?? 0.40 }} }">
+                             x-data="{ qty: @entangle('transactionalQuantity'), price: {{ $pricing['transactional']['price'] ?? 0.40 }}, eurToRon: {{ $eurToRon ?? 'null' }} }">
                             <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Tranzacționale</p>
                             <div class="flex items-end gap-4">
                                 <div class="flex-1">
@@ -78,11 +88,21 @@
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
-                                    <p class="text-sm font-medium py-2" x-text="price.toFixed(2) + ' EUR'"></p>
+                                    <p class="text-sm font-medium py-2">
+                                        <span x-text="price.toFixed(2) + ' EUR'"></span>
+                                        <template x-if="eurToRon">
+                                            <span class="text-gray-400 text-xs" x-text="'(' + (price * eurToRon).toFixed(4) + ' RON)'"></span>
+                                        </template>
+                                    </p>
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
-                                    <p class="text-lg font-bold text-primary-600" x-text="(qty * price).toFixed(2) + ' EUR'"></p>
+                                    <p class="text-lg font-bold text-primary-600">
+                                        <span x-text="(qty * price).toFixed(2) + ' EUR'"></span>
+                                        <template x-if="eurToRon">
+                                            <span class="text-sm font-normal text-gray-400" x-text="'(' + (qty * price * eurToRon).toFixed(2) + ' RON)'"></span>
+                                        </template>
+                                    </p>
                                 </div>
                                 <button wire:click="purchaseCredits('transactional')" wire:loading.attr="disabled"
                                         class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
@@ -95,7 +115,7 @@
 
                     @if($this->promotionalEnabled)
                         <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                             x-data="{ qty: @entangle('promotionalQuantity'), price: {{ $pricing['promotional']['price'] ?? 0.50 }} }">
+                             x-data="{ qty: @entangle('promotionalQuantity'), price: {{ $pricing['promotional']['price'] ?? 0.50 }}, eurToRon: {{ $eurToRon ?? 'null' }} }">
                             <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Promoționale</p>
                             <div class="flex items-end gap-4">
                                 <div class="flex-1">
@@ -105,11 +125,21 @@
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
-                                    <p class="text-sm font-medium py-2" x-text="price.toFixed(2) + ' EUR'"></p>
+                                    <p class="text-sm font-medium py-2">
+                                        <span x-text="price.toFixed(2) + ' EUR'"></span>
+                                        <template x-if="eurToRon">
+                                            <span class="text-gray-400 text-xs" x-text="'(' + (price * eurToRon).toFixed(4) + ' RON)'"></span>
+                                        </template>
+                                    </p>
                                 </div>
                                 <div class="flex-1">
                                     <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
-                                    <p class="text-lg font-bold text-yellow-600" x-text="(qty * price).toFixed(2) + ' EUR'"></p>
+                                    <p class="text-lg font-bold text-yellow-600">
+                                        <span x-text="(qty * price).toFixed(2) + ' EUR'"></span>
+                                        <template x-if="eurToRon">
+                                            <span class="text-sm font-normal text-gray-400" x-text="'(' + (qty * price * eurToRon).toFixed(2) + ' RON)'"></span>
+                                        </template>
+                                    </p>
                                 </div>
                                 <button wire:click="purchaseCredits('promotional')" wire:loading.attr="disabled"
                                         class="px-6 py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">

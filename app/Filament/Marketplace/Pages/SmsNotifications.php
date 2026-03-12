@@ -217,6 +217,13 @@ class SmsNotifications extends Page
                 ->get();
         }
 
+        // Currency conversion for RON clients
+        $clientCurrency = $marketplace ? strtoupper($marketplace->currency ?? 'EUR') : 'EUR';
+        $eurToRon = null;
+        if ($clientCurrency === 'RON') {
+            $eurToRon = \App\Models\ExchangeRate::getLatestRate('EUR', 'RON');
+        }
+
         return [
             'pricing' => $pricing,
             'transactionalCredits' => $transactionalCredits,
@@ -224,6 +231,8 @@ class SmsNotifications extends Page
             'recentLogs' => $recentLogs,
             'transactionalCost' => round($this->transactionalQuantity * ($pricing['transactional']['price'] ?? 0.40), 2),
             'promotionalCost' => round($this->promotionalQuantity * ($pricing['promotional']['price'] ?? 0.50), 2),
+            'clientCurrency' => $clientCurrency,
+            'eurToRon' => $eurToRon,
         ];
     }
 

@@ -341,6 +341,13 @@ class SmsCampaigns extends Page
         $microservice = \App\Models\Microservice::where('slug', 'sms-notifications')->first();
         $promotionalPrice = (float) ($microservice->metadata['sms_pricing']['promotional']['price'] ?? 0.50);
 
+        // Currency conversion for RON clients
+        $clientCurrency = strtoupper($marketplace->currency ?? 'EUR');
+        $eurToRon = null;
+        if ($clientCurrency === 'RON') {
+            $eurToRon = \App\Models\ExchangeRate::getLatestRate('EUR', 'RON');
+        }
+
         return [
             'campaigns' => $campaigns,
             'organizerOptions' => $organizerOptions,
@@ -351,6 +358,8 @@ class SmsCampaigns extends Page
             'venueOptions' => $venueOptions,
             'promotionalCredits' => $promotionalCredits,
             'promotionalPrice' => $promotionalPrice,
+            'clientCurrency' => $clientCurrency,
+            'eurToRon' => $eurToRon,
         ];
     }
 }
