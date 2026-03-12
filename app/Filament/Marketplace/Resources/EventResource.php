@@ -33,8 +33,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Facades\DB;
@@ -2963,6 +2965,108 @@ class EventResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    BulkAction::make('assign_venue')
+                        ->label('Alocă venue')
+                        ->icon('heroicon-o-map-pin')
+                        ->form([
+                            Forms\Components\Select::make('venue_id')
+                                ->label('Venue')
+                                ->searchable()
+                                ->preload()
+                                ->required()
+                                ->options(function () use ($marketplace) {
+                                    return Venue::query()
+                                        ->where(fn($q) => $q
+                                            ->whereNull('marketplace_client_id')
+                                            ->orWhere('marketplace_client_id', $marketplace?->id)
+                                            ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(fn ($venue) => [
+                                            $venue->id => $venue->getTranslation('name', app()->getLocale())
+                                                . ($venue->city ? ' (' . $venue->city . ')' : '')
+                                        ]);
+                                }),
+                        ])
+                        ->action(function (Collection $records, array $data) use ($marketplace) {
+                            $venue = Venue::find($data['venue_id']);
+                            if (!$venue) return;
+
+                            $updateData = [
+                                'venue_id' => $venue->id,
+                                'address' => $venue->address ?? $venue->full_address ?? '',
+                            ];
+
+                            // Auto-match marketplace city
+                            if ($venue->city) {
+                                $cityName = strtolower(trim($venue->city));
+                                $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+                                    ->where('is_visible', true)
+                                    ->get()
+                                    ->first(function ($city) use ($cityName) {
+                                        $nameVariants = is_array($city->name) ? $city->name : [];
+                                        foreach ($nameVariants as $lang => $name) {
+                                            if (strtolower(trim($name)) === $cityName) {
+                                                return true;
+                                            }
+                                        }
+                                        return false;
+                                    });
+
+                                if ($matchedCity) {
+                                    $updateData['marketplace_city_id'] = $matchedCity->id;
+                                }
+                            }
+
+                            foreach ($records as $record) {
+                                $record->update($updateData);
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('bulk_publish')
+                        ->label('Publică')
+                        ->icon('heroicon-o-eye')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $records->each(fn ($record) => $record->update(['is_published' => true]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('bulk_unpublish')
+                        ->label('Depublică')
+                        ->icon('heroicon-o-eye-slash')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $records->each(fn ($record) => $record->update(['is_published' => false]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('change_organizer')
+                        ->label('Schimbă organizator')
+                        ->icon('heroicon-o-user-group')
+                        ->form([
+                            Forms\Components\Select::make('marketplace_organizer_id')
+                                ->label('Organizator')
+                                ->searchable()
+                                ->preload()
+                                ->required()
+                                ->options(function () use ($marketplace) {
+                                    return MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
+                                        ->whereNotNull('verified_at')
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id');
+                                }),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $records->each(fn ($record) => $record->update([
+                                'marketplace_organizer_id' => $data['marketplace_organizer_id'],
+                            ]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     DeleteBulkAction::make(),
                 ]),
             ])

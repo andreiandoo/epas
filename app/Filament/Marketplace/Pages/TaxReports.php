@@ -51,21 +51,20 @@ class TaxReports extends Page
             ->pluck('name', 'id')
             ->toArray();
 
-        // Event options (filtered by organizer if selected)
-        $eventQuery = Event::where('marketplace_client_id', $marketplace->id)
-            ->orderByDesc('event_date');
-
+        // Event options - only load when organizer is selected
+        $eventOptions = [];
         if ($this->filterOrganizer) {
-            $eventQuery->where('marketplace_organizer_id', $this->filterOrganizer);
+            $eventOptions = Event::where('marketplace_client_id', $marketplace->id)
+                ->where('marketplace_organizer_id', $this->filterOrganizer)
+                ->orderByDesc('event_date')
+                ->get()
+                ->mapWithKeys(function ($event) {
+                    $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
+                    $date = $event->event_date?->format('d.m.Y') ?? '';
+                    return [$event->id => $title . ($date ? " ({$date})" : '')];
+                })
+                ->toArray();
         }
-
-        $eventOptions = $eventQuery->get()
-            ->mapWithKeys(function ($event) {
-                $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
-                $date = $event->event_date?->format('d.m.Y') ?? '';
-                return [$event->id => $title . ($date ? " ({$date})" : '')];
-            })
-            ->toArray();
 
         // Check if user has applied any filter
         $hasFilters = $this->filterOrganizer !== ''
