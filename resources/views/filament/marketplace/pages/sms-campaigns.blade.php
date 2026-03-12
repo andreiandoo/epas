@@ -209,45 +209,53 @@
                         </div>
                     </div>
 
-                    {{-- Event (searchable single select) --}}
+                    {{-- Events (searchable multiselect) --}}
                     <div x-data="{
                         open: false,
                         search: '',
-                        options: {{ Js::from(collect($eventOptions)->map(fn($name, $id) => ['id' => (string)$id, 'name' => $name])->values()) }},
-                        selected: @entangle('filterEvent'),
-                        disabled: {{ empty($filterOrganizer) ? 'true' : 'false' }},
+                        options: {{ Js::from(collect($eventOptions)->map(fn($name, $id) => ['id' => $id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterEvents'),
                         norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
                         get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
-                        get selectedLabel() { const o = this.options.find(o => o.id === this.selected); return o ? o.name : ''; },
-                        pick(id) { this.selected = id; this.open = false; this.search = ''; },
-                        clear() { this.selected = ''; this.open = false; this.search = ''; },
+                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        isSelected(id) { return this.selected.includes(id); },
+                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        clearAll() { this.selected = []; },
                     }" @click.outside="open = false" class="relative">
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Eveniment</label>
-                        <button @click="!disabled && (open = !open)" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 shadow-sm text-sm px-3 py-2 text-left" :class="disabled ? 'bg-gray-100 dark:bg-gray-100 text-gray-400 dark:text-gray-400 cursor-not-allowed' : 'bg-white dark:bg-white text-slate-800 dark:text-slate-800'">
-                            <span x-text="selectedLabel || '— Toate evenimentele —'" :class="!selected && 'text-gray-400'"></span>
-                            <div class="flex items-center gap-1">
-                                <template x-if="selected">
-                                    <button @click.stop="clear()" class="text-gray-400 hover:text-red-500" type="button">&times;</button>
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Evenimente</label>
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white dark:bg-white text-slate-800 dark:text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                            <div class="flex flex-wrap gap-1 flex-1">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">— Selectează evenimente —</span>
+                                </template>
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
+                                        <span x-text="options.find(o => o.id === id)?.name"></span>
+                                        <button @click.stop="remove(id)" type="button" class="hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <template x-if="selected.length > 0">
+                                    <button @click.stop="clearAll()" class="text-gray-400 hover:text-red-500 text-xs" type="button">&times;</button>
                                 </template>
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             </div>
                         </button>
-                        <div x-show="open && !disabled" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
                             <div class="p-2 border-b border-gray-100">
                                 <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 dark:bg-gray-50 text-slate-800 dark:text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
                             </div>
                             <div class="max-h-48 overflow-y-auto">
                                 <template x-for="opt in filtered" :key="opt.id">
-                                    <button @click="pick(opt.id)" type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 text-slate-700" :class="opt.id === selected && 'bg-primary-50 font-semibold text-primary-700'">
+                                    <label @click.stop class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary-50 cursor-pointer text-slate-700">
+                                        <input type="checkbox" :checked="isSelected(opt.id)" @change="toggle(opt.id)" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
                                         <span x-text="opt.name"></span>
-                                    </button>
+                                    </label>
                                 </template>
                                 <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
                             </div>
                         </div>
-                        <template x-if="disabled">
-                            <p class="text-xs text-gray-500 mt-1">Selectează un organizator mai întâi</p>
-                        </template>
                     </div>
 
                     {{-- Cities (searchable multiselect) --}}

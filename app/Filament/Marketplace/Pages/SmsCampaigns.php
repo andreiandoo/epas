@@ -31,7 +31,7 @@ class SmsCampaigns extends Page
     public string $campaignName = '';
     public string $messageText = '';
     public string $filterOrganizer = '';
-    public string $filterEvent = '';
+    public array $filterEvents = [];
     public array $filterCities = [];
     public array $filterArtists = [];
     public array $filterGenres = [];
@@ -74,8 +74,8 @@ class SmsCampaigns extends Page
         $this->campaignName = $campaign->name;
         $this->messageText = $campaign->message_text;
         $this->filterOrganizer = (string) ($campaign->marketplace_organizer_id ?? '');
-        $this->filterEvent = (string) ($campaign->event_id ?? '');
         $filters = $campaign->filters ?? [];
+        $this->filterEvents = $filters['event_ids'] ?? [];
         $this->filterCities = $filters['city_ids'] ?? [];
         $this->filterArtists = $filters['artist_ids'] ?? [];
         $this->filterGenres = $filters['genre_ids'] ?? [];
@@ -90,7 +90,7 @@ class SmsCampaigns extends Page
         $this->campaignName = '';
         $this->messageText = '';
         $this->filterOrganizer = '';
-        $this->filterEvent = '';
+        $this->filterEvents = [];
         $this->filterCities = [];
         $this->filterArtists = [];
         $this->filterGenres = [];
@@ -103,7 +103,7 @@ class SmsCampaigns extends Page
 
     public function updatedFilterOrganizer(): void
     {
-        $this->filterEvent = '';
+        $this->filterEvents = [];
     }
 
     public function calculateAudience(): void
@@ -122,6 +122,13 @@ class SmsCampaigns extends Page
     {
         $query = MarketplaceCustomer::where('marketplace_client_id', $marketplace->id)
             ->where('status', 'active');
+
+        if (!empty($this->filterEvents)) {
+            $query->whereHas('orders', function ($oq) {
+                $oq->whereIn('status', ['completed', 'paid', 'confirmed'])
+                    ->whereIn('event_id', $this->filterEvents);
+            });
+        }
 
         if (!empty($this->filterCities)) {
             $query->where(function ($q) {
@@ -230,8 +237,9 @@ class SmsCampaigns extends Page
             'status' => $status,
             'message_text' => $this->messageText,
             'marketplace_organizer_id' => $this->filterOrganizer ?: null,
-            'event_id' => $this->filterEvent ?: null,
+            'event_id' => !empty($this->filterEvents) ? $this->filterEvents[0] : null,
             'filters' => [
+                'event_ids' => $this->filterEvents,
                 'city_ids' => $this->filterCities,
                 'artist_ids' => $this->filterArtists,
                 'genre_ids' => $this->filterGenres,
@@ -291,18 +299,17 @@ class SmsCampaigns extends Page
             ->pluck('name', 'id')
             ->toArray();
 
-        $eventOptions = [];
+        $eventQuery = Event::where('marketplace_client_id', $marketplace->id);
         if ($this->filterOrganizer) {
-            $eventOptions = Event::where('marketplace_client_id', $marketplace->id)
-                ->where('marketplace_organizer_id', $this->filterOrganizer)
-                ->orderByDesc('event_date')
-                ->get()
-                ->mapWithKeys(function ($event) {
-                    $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
-                    return [$event->id => $title];
-                })
-                ->toArray();
+            $eventQuery->where('marketplace_organizer_id', $this->filterOrganizer);
         }
+        $eventOptions = $eventQuery->orderByDesc('event_date')
+            ->get()
+            ->mapWithKeys(function ($event) {
+                $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
+                return [$event->id => $title];
+            })
+            ->toArray();
 
         $cityOptions = MarketplaceCity::where('marketplace_client_id', $marketplace->id)
             ->where('is_visible', true)

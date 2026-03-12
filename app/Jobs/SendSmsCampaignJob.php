@@ -101,6 +101,14 @@ class SendSmsCampaignJob implements ShouldQueue
 
         $filters = $campaign->filters ?? [];
 
+        // Event filter
+        if (!empty($filters['event_ids'])) {
+            $query->whereHas('orders', function ($oq) use ($filters) {
+                $oq->whereIn('status', ['completed', 'paid', 'confirmed'])
+                    ->whereIn('event_id', $filters['event_ids']);
+            });
+        }
+
         // City filter
         if (!empty($filters['city_ids'])) {
             $query->where(function ($q) use ($filters, $campaign) {
