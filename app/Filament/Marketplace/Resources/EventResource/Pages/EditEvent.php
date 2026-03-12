@@ -144,6 +144,7 @@ class EditEvent extends EditRecord
 
                 $token = BaseController::generatePreviewToken($event->id, auth()->id());
                 $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
+                $domain = preg_replace('#^https?://#', '', rtrim($domain, '/'));
                 $url = "https://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
 
                 // Copy to clipboard via JS
