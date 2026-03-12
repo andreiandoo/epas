@@ -137,7 +137,11 @@ class MarketplaceClient extends Model
             ->wherePivot('status', 'active')
             ->first();
 
-        return $microservice?->pivot?->settings;
+        $settings = $microservice?->pivot?->settings;
+        if (is_string($settings)) {
+            return json_decode($settings, true);
+        }
+        return $settings;
     }
 
     /**
