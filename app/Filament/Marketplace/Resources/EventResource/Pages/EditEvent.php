@@ -140,10 +140,7 @@ class EditEvent extends EditRecord
             ->action(function () use ($marketplace) {
                 $event = $this->record;
                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
-                $slug = $event->getTranslation('slug', $lang)
-                    ?? $event->getTranslation('slug', 'ro')
-                    ?? $event->getTranslation('slug', 'en')
-                    ?? $event->id;
+                $slug = $event->slug ?? $event->id;
 
                 $token = BaseController::generatePreviewToken($event->id, auth()->id());
                 $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
