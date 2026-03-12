@@ -529,6 +529,7 @@ class MarketplaceEventsController extends BaseController
                 'views_count' => (int) ($event->views_count ?? 0),
                 'interested_count' => (int) ($event->interested_count ?? 0),
                 // Event status flags
+                'is_password_protected' => !empty($event->access_password),
                 'is_sold_out' => (bool) ($event->is_sold_out ?? false),
                 'is_cancelled' => (bool) ($event->is_cancelled ?? false),
                 'cancel_reason' => $event->is_cancelled ? ($event->cancel_reason ?? null) : null,
@@ -898,6 +899,40 @@ class MarketplaceEventsController extends BaseController
             ->values();
 
         return $this->success(['cities' => $cities]);
+    }
+
+    /**
+     * Verify event access password
+     */
+    public function verifyPassword(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::where('marketplace_client_id', $client->id);
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $event = $query->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        if (empty($event->access_password)) {
+            return $this->success(['valid' => true]);
+        }
+
+        $password = $request->input('password', '');
+
+        if ($password === $event->access_password) {
+            return $this->success(['valid' => true]);
+        }
+
+        return $this->error('Parolă incorectă', 403);
     }
 
     /**

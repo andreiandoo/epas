@@ -394,6 +394,13 @@ const EventPage = {
                 const preloadData = window.__EVENT_PRELOAD__;
                 window.__EVENT_PRELOAD__ = null;
                 this.event = this.transformApiData(preloadData);
+
+                // Check password protection before rendering
+                if (this.event.is_password_protected && !this.isEventUnlocked()) {
+                    this.showPasswordGate();
+                    return;
+                }
+
                 this.render();
                 if (this.event.organizer && this.event.organizer.id) {
                     this.loadOrganizerTracking(this.event.organizer.id);
@@ -413,6 +420,13 @@ const EventPage = {
             const response = await AmbiletAPI.getEvent(this.slug, params);
             if (response.success && response.data) {
                 this.event = this.transformApiData(response.data);
+
+                // Check password protection before rendering
+                if (this.event.is_password_protected && !this.isEventUnlocked()) {
+                    this.showPasswordGate();
+                    return;
+                }
+
                 this.render();
                 if (this.event.organizer && this.event.organizer.id) {
                     this.loadOrganizerTracking(this.event.organizer.id);
@@ -426,6 +440,126 @@ const EventPage = {
                 this.showError('Eveniment negăsit');
             } else {
                 this.showError('Eroare la încărcarea evenimentului');
+            }
+        }
+    },
+
+    /**
+     * Check if event is unlocked via sessionStorage
+     */
+    isEventUnlocked() {
+        try {
+            return sessionStorage.getItem('event_unlocked_' + this.event.id) === '1';
+        } catch (e) {
+            return false;
+        }
+    },
+
+    /**
+     * Show password gate instead of event content
+     */
+    showPasswordGate() {
+        const el = document.getElementById(this.elements.loadingState);
+        const eventContent = document.getElementById('event-content');
+        const mobileBtn = document.getElementById('mobileTicketBtn');
+
+        if (eventContent) eventContent.style.display = 'none';
+        if (mobileBtn) mobileBtn.style.display = 'none';
+
+        const title = this.event?.title || 'Eveniment protejat';
+
+        el.className = 'flex flex-col items-center gap-8';
+        el.innerHTML =
+            '<div class="w-full max-w-md mx-auto py-16 px-4 text-center">' +
+                '<div class="mb-8">' +
+                    '<div class="w-20 h-20 mx-auto mb-6 flex items-center justify-center rounded-full bg-primary/10">' +
+                        '<svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>' +
+                    '</div>' +
+                    '<h1 class="mb-2 text-2xl font-bold text-secondary">' + title + '</h1>' +
+                    '<p class="text-muted">Acest eveniment este protejat cu parolă. Introdu parola pentru a accesa pagina.</p>' +
+                '</div>' +
+                '<div id="password-gate-form">' +
+                    '<div class="flex gap-2">' +
+                        '<input type="password" id="event-password-input" placeholder="Introdu parola" ' +
+                            'class="flex-1 px-4 py-3 text-base border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary" ' +
+                            'autocomplete="off">' +
+                        '<button onclick="EventPage.submitPassword()" id="password-submit-btn" ' +
+                            'class="px-6 py-3 text-base font-semibold text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors">' +
+                            'Accesează' +
+                        '</button>' +
+                    '</div>' +
+                    '<p id="password-error" class="mt-3 text-sm text-red-600 hidden">Parolă incorectă. Încearcă din nou.</p>' +
+                '</div>' +
+            '</div>';
+
+        // Focus input and handle Enter key
+        const input = document.getElementById('event-password-input');
+        if (input) {
+            input.focus();
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    EventPage.submitPassword();
+                }
+            });
+        }
+    },
+
+    /**
+     * Submit password for verification
+     */
+    async submitPassword() {
+        const input = document.getElementById('event-password-input');
+        const errorEl = document.getElementById('password-error');
+        const btn = document.getElementById('password-submit-btn');
+        const password = input?.value?.trim();
+
+        if (!password) {
+            input?.focus();
+            return;
+        }
+
+        // Disable button while checking
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Se verifică...';
+        }
+        if (errorEl) errorEl.classList.add('hidden');
+
+        try {
+            const response = await AmbiletAPI.verifyEventPassword(this.slug, password);
+            if (response.success) {
+                // Store unlock in sessionStorage
+                try {
+                    sessionStorage.setItem('event_unlocked_' + this.event.id, '1');
+                } catch (e) {}
+
+                // Re-render the page normally
+                const el = document.getElementById(this.elements.loadingState);
+                el.className = 'flex flex-col gap-8 lg:flex-row';
+                el.style.display = 'none';
+
+                const eventContent = document.getElementById('event-content');
+                if (eventContent) eventContent.style.display = '';
+
+                this.render();
+                if (this.event.organizer && this.event.organizer.id) {
+                    this.loadOrganizerTracking(this.event.organizer.id);
+                }
+                if (!this.event.ticketTypes?.length) {
+                    this.refreshFromApi();
+                }
+            }
+        } catch (error) {
+            if (errorEl) errorEl.classList.remove('hidden');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Accesează';
             }
         }
     },
@@ -502,6 +636,7 @@ const EventPage = {
             interested_count: eventData.interested_count || 0,
             views_count: eventData.views_count || 0,
             // Status flags
+            is_password_protected: eventData.is_password_protected || false,
             is_sold_out: eventData.is_sold_out || false,
             is_cancelled: eventData.is_cancelled || false,
             cancel_reason: eventData.cancel_reason || null,

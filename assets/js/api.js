@@ -726,6 +726,13 @@ const AmbiletAPI = {
     },
 
     /**
+     * Verify event access password
+     */
+    async verifyEventPassword(identifier, password) {
+        return this.post(`/marketplace-events/${identifier}/verify-password`, { password });
+    },
+
+    /**
      * Extract UTM and ad click parameters from current URL
      */
     getTrackingParams() {

@@ -1388,6 +1388,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.cities');
     Route::get('/events/{event}', [MarketplaceEventsController::class, 'show'])
         ->name('api.marketplace-client.events.show');
+    Route::post('/events/{event}/verify-password', [MarketplaceEventsController::class, 'verifyPassword'])
+        ->name('api.marketplace-client.events.verify-password');
     Route::get('/events/{event}/availability', [MarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.events.availability');
     Route::post('/events/{event}/track-view', [MarketplaceEventsController::class, 'trackView'])
@@ -2231,6 +2233,8 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
         ->name('api.marketplace-client.marketplace-events.organizer');
     Route::get('/{identifier}', [PublicMarketplaceEventsController::class, 'show'])
         ->name('api.marketplace-client.marketplace-events.show');
+    Route::post('/{identifier}/verify-password', [PublicMarketplaceEventsController::class, 'verifyPassword'])
+        ->name('api.marketplace-client.marketplace-events.verify-password');
     Route::get('/{event}/availability', [PublicMarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.marketplace-events.availability');
 });

@@ -1903,6 +1903,16 @@ class EventResource extends Resource
                                         '</a>'
                                     );
                                 }),
+                            Forms\Components\TextInput::make('access_password')
+                                ->label($t('Parolă acces eveniment', 'Event access password'))
+                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă setezi o parolă, pagina evenimentului va fi accesibilă doar după introducerea parolei. Lasă gol pentru acces liber.', 'If you set a password, the event page will only be accessible after entering the password. Leave empty for open access.'))
+                                ->placeholder($t('Lasă gol pentru acces liber', 'Leave empty for open access'))
+                                ->helperText(fn (?Event $record) => $record?->access_password
+                                    ? new \Illuminate\Support\HtmlString('<span class="text-warning-600 font-medium">' . $t('🔒 Evenimentul este protejat cu parolă', '🔒 Event is password protected') . '</span>')
+                                    : null
+                                )
+                                ->prefixIcon('heroicon-o-lock-closed')
+                                ->columnSpanFull(),
                         ]),
 
                         // Event Status Badge (Încheiat/Amânat/Anulat)
