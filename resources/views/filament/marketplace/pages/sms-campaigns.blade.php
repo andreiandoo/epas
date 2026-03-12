@@ -140,12 +140,12 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1">Nume campanie *</label>
-                        <input type="text" wire:model="campaignName" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600" placeholder="ex: Promo festival vara 2026">
+                        <input type="text" wire:model="campaignName" class="block w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="ex: Promo festival vara 2026">
                     </div>
 
                     <div>
                         <label class="block text-sm font-medium text-gray-300 mb-1">Mesaj SMS *</label>
-                        <textarea x-model="msg" rows="4" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600" placeholder="Scrie mesajul SMS..."></textarea>
+                        <textarea x-model="msg" rows="4" class="block w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2" placeholder="Scrie mesajul SMS..."></textarea>
 
                         <div class="mt-2 flex items-center justify-between text-xs">
                             <div class="flex items-center gap-4">
@@ -171,88 +171,280 @@
                 <p class="text-xs text-gray-500 mb-4">Filtrele se aplică cumulativ (intersecție). Lasă gol pentru toți clienții activi.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {{-- Organizer --}}
-                    <div>
+
+                    {{-- Organizer (searchable single select) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($organizerOptions)->map(fn($name, $id) => ['id' => (string)$id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterOrganizer'),
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        get selectedLabel() { const o = this.options.find(o => o.id === this.selected); return o ? o.name : ''; },
+                        pick(id) { this.selected = id; this.open = false; this.search = ''; },
+                        clear() { this.selected = ''; this.open = false; this.search = ''; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Organizator</label>
-                        <select wire:model.live="filterOrganizer" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600">
-                            <option value="">— Toți organizatorii —</option>
-                            @foreach ($organizerOptions as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left">
+                            <span x-text="selectedLabel || '— Toți organizatorii —'" :class="!selected && 'text-gray-400'"></span>
+                            <div class="flex items-center gap-1">
+                                <template x-if="selected">
+                                    <button @click.stop="clear()" class="text-gray-400 hover:text-red-500" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <button @click="pick(opt.id)" type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 text-slate-700" :class="opt.id === selected && 'bg-primary-50 font-semibold text-primary-700'">
+                                        <span x-text="opt.name"></span>
+                                    </button>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
+                        </div>
                     </div>
 
-                    {{-- Event --}}
-                    <div>
+                    {{-- Event (searchable single select) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($eventOptions)->map(fn($name, $id) => ['id' => (string)$id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterEvent'),
+                        disabled: {{ empty($filterOrganizer) ? 'true' : 'false' }},
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        get selectedLabel() { const o = this.options.find(o => o.id === this.selected); return o ? o.name : ''; },
+                        pick(id) { this.selected = id; this.open = false; this.search = ''; },
+                        clear() { this.selected = ''; this.open = false; this.search = ''; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Eveniment</label>
-                        <select wire:model="filterEvent" class="fi-input block w-full rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600" {{ empty($filterOrganizer) ? 'disabled' : '' }}>
-                            <option value="">— Toate evenimentele —</option>
-                            @foreach ($eventOptions as $id => $title)
-                                <option value="{{ $id }}">{{ $title }}</option>
-                            @endforeach
-                        </select>
-                        @if (empty($filterOrganizer))
+                        <button @click="!disabled && (open = !open)" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 shadow-sm text-sm px-3 py-2 text-left" :class="disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-slate-800'">
+                            <span x-text="selectedLabel || '— Toate evenimentele —'" :class="!selected && 'text-gray-400'"></span>
+                            <div class="flex items-center gap-1">
+                                <template x-if="selected">
+                                    <button @click.stop="clear()" class="text-gray-400 hover:text-red-500" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open && !disabled" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <button @click="pick(opt.id)" type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-primary-50 text-slate-700" :class="opt.id === selected && 'bg-primary-50 font-semibold text-primary-700'">
+                                        <span x-text="opt.name"></span>
+                                    </button>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
+                        </div>
+                        <template x-if="disabled">
                             <p class="text-xs text-gray-500 mt-1">Selectează un organizator mai întâi</p>
-                        @endif
+                        </template>
                     </div>
 
-                    {{-- Cities --}}
-                    <div>
+                    {{-- Cities (searchable multiselect) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($cityOptions)->map(fn($name, $id) => ['id' => $id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterCities'),
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        isSelected(id) { return this.selected.includes(id); },
+                        get selectedLabels() { return this.options.filter(o => this.selected.includes(o.id)).map(o => o.name); },
+                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        clearAll() { this.selected = []; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Orașe</label>
-                        <div class="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-gray-600 bg-white/5 p-2">
-                            @forelse ($cityOptions as $id => $name)
-                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer text-sm text-gray-300">
-                                    <input type="checkbox" wire:model="filterCities" value="{{ $id }}" class="rounded border-gray-500 bg-white/10 text-primary-500 focus:ring-primary-500">
-                                    {{ $name }}
-                                </label>
-                            @empty
-                                <p class="text-xs text-gray-500 px-2 py-1">Niciun oraș disponibil</p>
-                            @endforelse
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                            <div class="flex flex-wrap gap-1 flex-1">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">— Selectează orașe —</span>
+                                </template>
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
+                                        <span x-text="options.find(o => o.id === id)?.name"></span>
+                                        <button @click.stop="remove(id)" type="button" class="hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <template x-if="selected.length > 0">
+                                    <button @click.stop="clearAll()" class="text-gray-400 hover:text-red-500 text-xs" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <label @click.stop class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary-50 cursor-pointer text-slate-700">
+                                        <input type="checkbox" :checked="isSelected(opt.id)" @change="toggle(opt.id)" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                                        <span x-text="opt.name"></span>
+                                    </label>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
                         </div>
                     </div>
 
-                    {{-- Artists --}}
-                    <div>
+                    {{-- Artists (searchable multiselect) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($artistOptions)->map(fn($name, $id) => ['id' => $id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterArtists'),
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        isSelected(id) { return this.selected.includes(id); },
+                        get selectedLabels() { return this.options.filter(o => this.selected.includes(o.id)).map(o => o.name); },
+                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        clearAll() { this.selected = []; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Artiști</label>
-                        <div class="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-gray-600 bg-white/5 p-2">
-                            @forelse ($artistOptions as $id => $name)
-                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer text-sm text-gray-300">
-                                    <input type="checkbox" wire:model="filterArtists" value="{{ $id }}" class="rounded border-gray-500 bg-white/10 text-primary-500 focus:ring-primary-500">
-                                    {{ $name }}
-                                </label>
-                            @empty
-                                <p class="text-xs text-gray-500 px-2 py-1">Niciun artist disponibil</p>
-                            @endforelse
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                            <div class="flex flex-wrap gap-1 flex-1">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">— Selectează artiști —</span>
+                                </template>
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
+                                        <span x-text="options.find(o => o.id === id)?.name"></span>
+                                        <button @click.stop="remove(id)" type="button" class="hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <template x-if="selected.length > 0">
+                                    <button @click.stop="clearAll()" class="text-gray-400 hover:text-red-500 text-xs" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <label @click.stop class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary-50 cursor-pointer text-slate-700">
+                                        <input type="checkbox" :checked="isSelected(opt.id)" @change="toggle(opt.id)" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                                        <span x-text="opt.name"></span>
+                                    </label>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
                         </div>
                     </div>
 
-                    {{-- Genres --}}
-                    <div>
+                    {{-- Genres (searchable multiselect) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($genreOptions)->map(fn($name, $id) => ['id' => $id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterGenres'),
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        isSelected(id) { return this.selected.includes(id); },
+                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        clearAll() { this.selected = []; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Genuri muzicale</label>
-                        <div class="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-gray-600 bg-white/5 p-2">
-                            @forelse ($genreOptions as $id => $name)
-                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer text-sm text-gray-300">
-                                    <input type="checkbox" wire:model="filterGenres" value="{{ $id }}" class="rounded border-gray-500 bg-white/10 text-primary-500 focus:ring-primary-500">
-                                    {{ $name }}
-                                </label>
-                            @empty
-                                <p class="text-xs text-gray-500 px-2 py-1">Niciun gen disponibil</p>
-                            @endforelse
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                            <div class="flex flex-wrap gap-1 flex-1">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">— Selectează genuri —</span>
+                                </template>
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
+                                        <span x-text="options.find(o => o.id === id)?.name"></span>
+                                        <button @click.stop="remove(id)" type="button" class="hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <template x-if="selected.length > 0">
+                                    <button @click.stop="clearAll()" class="text-gray-400 hover:text-red-500 text-xs" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <label @click.stop class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary-50 cursor-pointer text-slate-700">
+                                        <input type="checkbox" :checked="isSelected(opt.id)" @change="toggle(opt.id)" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                                        <span x-text="opt.name"></span>
+                                    </label>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
                         </div>
                     </div>
 
-                    {{-- Venues --}}
-                    <div>
+                    {{-- Venues (searchable multiselect) --}}
+                    <div x-data="{
+                        open: false,
+                        search: '',
+                        options: {{ Js::from(collect($venueOptions)->map(fn($name, $id) => ['id' => $id, 'name' => $name])->values()) }},
+                        selected: @entangle('filterVenues'),
+                        norm(s) { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() },
+                        get filtered() { const q = this.norm(this.search); return this.options.filter(o => this.norm(o.name).includes(q)); },
+                        toggle(id) { const i = this.selected.indexOf(id); if (i === -1) this.selected.push(id); else this.selected.splice(i, 1); },
+                        isSelected(id) { return this.selected.includes(id); },
+                        remove(id) { const i = this.selected.indexOf(id); if (i !== -1) this.selected.splice(i, 1); },
+                        clearAll() { this.selected = []; },
+                    }" @click.outside="open = false" class="relative">
                         <label class="block text-sm font-medium text-gray-300 mb-1">Locații</label>
-                        <div class="space-y-1 max-h-40 overflow-y-auto rounded-lg border border-gray-600 bg-white/5 p-2">
-                            @forelse ($venueOptions as $id => $name)
-                                <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5 cursor-pointer text-sm text-gray-300">
-                                    <input type="checkbox" wire:model="filterVenues" value="{{ $id }}" class="rounded border-gray-500 bg-white/10 text-primary-500 focus:ring-primary-500">
-                                    {{ $name }}
-                                </label>
-                            @empty
-                                <p class="text-xs text-gray-500 px-2 py-1">Nicio locație disponibilă</p>
-                            @endforelse
+                        <button @click="open = !open" type="button" class="flex items-center justify-between w-full rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm text-sm px-3 py-2 text-left min-h-[38px]">
+                            <div class="flex flex-wrap gap-1 flex-1">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">— Selectează locații —</span>
+                                </template>
+                                <template x-for="id in selected" :key="id">
+                                    <span class="inline-flex items-center gap-0.5 bg-primary-100 text-primary-700 rounded px-1.5 py-0.5 text-xs font-medium">
+                                        <span x-text="options.find(o => o.id === id)?.name"></span>
+                                        <button @click.stop="remove(id)" type="button" class="hover:text-red-600">&times;</button>
+                                    </span>
+                                </template>
+                            </div>
+                            <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+                                <template x-if="selected.length > 0">
+                                    <button @click.stop="clearAll()" class="text-gray-400 hover:text-red-500 text-xs" type="button">&times;</button>
+                                </template>
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </div>
+                        </button>
+                        <div x-show="open" x-cloak x-transition class="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-100">
+                                <input x-model="search" type="text" placeholder="Caută..." class="w-full rounded border border-gray-200 bg-gray-50 text-slate-800 text-sm px-2 py-1.5 focus:border-primary-500 focus:ring-primary-500" @click.stop>
+                            </div>
+                            <div class="max-h-48 overflow-y-auto">
+                                <template x-for="opt in filtered" :key="opt.id">
+                                    <label @click.stop class="flex items-center gap-2 px-3 py-2 text-sm hover:bg-primary-50 cursor-pointer text-slate-700">
+                                        <input type="checkbox" :checked="isSelected(opt.id)" @change="toggle(opt.id)" class="rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                                        <span x-text="opt.name"></span>
+                                    </label>
+                                </template>
+                                <div x-show="filtered.length === 0" class="px-3 py-2 text-sm text-gray-400">Niciun rezultat</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -364,7 +556,7 @@
                 <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">Programare</h3>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Data și ora trimiterii (opțional)</label>
-                    <input type="datetime-local" wire:model="scheduledAt" class="fi-input block w-full max-w-xs rounded-lg border-gray-300 bg-white/5 text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600">
+                    <input type="datetime-local" wire:model="scheduledAt" class="block w-full max-w-xs rounded-lg border border-gray-300 bg-white text-slate-800 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm px-3 py-2">
                     <p class="text-xs text-gray-500 mt-1">Lasă gol dacă vrei să trimiți manual sau să salvezi ca ciornă.</p>
                 </div>
             </div>
