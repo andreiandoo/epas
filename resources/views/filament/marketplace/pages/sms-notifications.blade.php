@@ -26,16 +26,15 @@
                 </div>
 
                 {{-- Promotional --}}
-                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg opacity-60">
+                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div>
                         <p class="font-medium text-gray-900 dark:text-white">SMS Promoționale</p>
                         <p class="text-sm text-gray-500 dark:text-gray-400">Campanii promoționale către clienți</p>
-                        <span class="inline-flex items-center rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:text-yellow-200 mt-1">În curând</span>
                     </div>
-                    <button type="button" disabled
-                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-not-allowed rounded-full border-2 border-transparent bg-gray-200 dark:bg-gray-600"
-                            role="switch" aria-checked="false">
-                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 translate-x-0"></span>
+                    <button wire:click="togglePromotional" type="button"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 {{ $this->promotionalEnabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600' }}"
+                            role="switch" aria-checked="{{ $this->promotionalEnabled ? 'true' : 'false' }}">
+                        <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $this->promotionalEnabled ? 'translate-x-5' : 'translate-x-0' }}"></span>
                     </button>
                 </div>
             </div>
@@ -62,35 +61,64 @@
         </div>
 
         {{-- Purchase Credits --}}
-        @if($this->transactionalEnabled)
+        @if($this->transactionalEnabled || $this->promotionalEnabled)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Achiziționează credite SMS</h3>
 
                 <div class="space-y-6">
-                    {{-- Transactional Credits --}}
-                    <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Tranzacționale</p>
-                        <div class="flex items-end gap-4">
-                            <div class="flex-1">
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Număr SMS-uri</label>
-                                <input type="number" wire:model.live="transactionalQuantity" min="1" step="10"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm" />
+                    @if($this->transactionalEnabled)
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                             x-data="{ qty: @entangle('transactionalQuantity'), price: {{ $pricing['transactional']['price'] ?? 0.40 }} }">
+                            <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Tranzacționale</p>
+                            <div class="flex items-end gap-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Număr SMS-uri</label>
+                                    <input type="number" x-model.number="qty" min="1" step="10"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm" />
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
+                                    <p class="text-sm font-medium py-2" x-text="price.toFixed(2) + ' EUR'"></p>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
+                                    <p class="text-lg font-bold text-primary-600" x-text="(qty * price).toFixed(2) + ' EUR'"></p>
+                                </div>
+                                <button wire:click="purchaseCredits('transactional')" wire:loading.attr="disabled"
+                                        class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                                    <span wire:loading.remove wire:target="purchaseCredits('transactional')">Cumpără credite</span>
+                                    <span wire:loading wire:target="purchaseCredits('transactional')">Se procesează...</span>
+                                </button>
                             </div>
-                            <div class="flex-1">
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
-                                <p class="text-sm font-medium py-2">{{ $pricing['transactional']['price'] ?? '0.40' }} EUR</p>
-                            </div>
-                            <div class="flex-1">
-                                <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
-                                <p class="text-lg font-bold text-primary-600">{{ number_format($transactionalCost, 2) }} EUR</p>
-                            </div>
-                            <button wire:click="purchaseCredits('transactional')" wire:loading.attr="disabled"
-                                    class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-                                <span wire:loading.remove wire:target="purchaseCredits('transactional')">Cumpără credite</span>
-                                <span wire:loading wire:target="purchaseCredits('transactional')">Se procesează...</span>
-                            </button>
                         </div>
-                    </div>
+                    @endif
+
+                    @if($this->promotionalEnabled)
+                        <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                             x-data="{ qty: @entangle('promotionalQuantity'), price: {{ $pricing['promotional']['price'] ?? 0.50 }} }">
+                            <p class="font-medium text-gray-900 dark:text-white mb-3">SMS Promoționale</p>
+                            <div class="flex items-end gap-4">
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Număr SMS-uri</label>
+                                    <input type="number" x-model.number="qty" min="1" step="10"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm" />
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Preț/SMS</label>
+                                    <p class="text-sm font-medium py-2" x-text="price.toFixed(2) + ' EUR'"></p>
+                                </div>
+                                <div class="flex-1">
+                                    <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Total</label>
+                                    <p class="text-lg font-bold text-yellow-600" x-text="(qty * price).toFixed(2) + ' EUR'"></p>
+                                </div>
+                                <button wire:click="purchaseCredits('promotional')" wire:loading.attr="disabled"
+                                        class="px-6 py-2.5 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
+                                    <span wire:loading.remove wire:target="purchaseCredits('promotional')">Cumpără credite</span>
+                                    <span wire:loading wire:target="purchaseCredits('promotional')">Se procesează...</span>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         @endif

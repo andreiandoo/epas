@@ -167,6 +167,11 @@ class SendSmsService
         return config('app.url') . '/orders/' . $order->order_number;
     }
 
+    public function getSmsCostPublic(string $type, ?int $marketplaceClientId = null): float
+    {
+        return $this->getSmsCost($type, $marketplaceClientId);
+    }
+
     protected function getSmsCost(string $type, ?int $marketplaceClientId = null): float
     {
         // Try to get price from microservice metadata first

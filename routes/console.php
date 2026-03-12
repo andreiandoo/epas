@@ -718,6 +718,17 @@ Schedule::call(function () {
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| SMS Campaigns Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Send scheduled SMS campaigns that are due (every minute)
+Schedule::command('sms:send-scheduled-campaigns')
+    ->everyMinute()
+    ->withoutOverlapping();
+
 // Auto-generate deconts for finished events with remaining balance (daily at 6 AM)
 Schedule::command('marketplace:generate-auto-deconts --days-after=3')
     ->dailyAt('06:00')
