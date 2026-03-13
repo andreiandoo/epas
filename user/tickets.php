@@ -90,6 +90,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <div id="qr-modal-qr" class="qr-modal-qr"></div>
                 <p id="qr-modal-code" class="mt-2 font-mono text-sm text-muted"></p>
                 <p id="qr-modal-type" class="mt-1 text-sm font-medium text-secondary"></p>
+                <p id="qr-modal-seat" class="mt-1 text-sm font-medium text-primary" style="display:none"></p>
             </div>
         </div>
 <?php

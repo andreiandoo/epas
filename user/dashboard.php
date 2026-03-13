@@ -355,7 +355,7 @@ const UserDashboard = {
     async loadUpcomingEvents() {
         // Try dedicated upcoming events endpoint first
         try {
-            const response = await AmbiletAPI.customer.getUpcomingEvents(3);
+            const response = await AmbiletAPI.customer.getUpcomingEvents(5);
             if (response.success && response.data) {
                 const events = response.data.upcoming_events || response.data;
                 if (Array.isArray(events) && events.length) {
@@ -367,38 +367,39 @@ const UserDashboard = {
             console.warn('Upcoming events endpoint failed:', e.message);
         }
 
-        // Fallback: try loading upcoming tickets
+        // Fallback: load upcoming tickets and group by event
         try {
-            const ticketsRes = await AmbiletAPI.customer.getAllTickets('upcoming', { limit: 3 });
+            const ticketsRes = await AmbiletAPI.customer.getAllTickets('upcoming');
             if (ticketsRes.success && ticketsRes.data) {
-                const tickets = ticketsRes.data?.data || ticketsRes.data;
+                const tickets = ticketsRes.data.tickets || ticketsRes.data || [];
                 if (Array.isArray(tickets) && tickets.length) {
-                    // Transform tickets to event format for rendering
-                    const events = tickets.map(t => ({
-                        event: {
-                            id: t.event?.id || t.event_id,
-                            name: t.event?.name || t.event_name || '',
-                            slug: t.event?.slug || t.event_slug || '',
-                            date: t.event?.start_date || t.event?.starts_at || t.event_date || '',
-                            date_formatted: t.event?.date_formatted || '',
-                            time: t.event?.start_time || '',
-                            venue: t.event?.venue_name || t.venue_name || '',
-                            city: t.event?.venue_city || t.city || '',
-                            image: t.event?.image || t.event_image || '',
-                            days_until: t.event?.days_until,
-                        },
-                        tickets_count: t.quantity || 1,
-                    }));
-                    // Deduplicate by event id
-                    const seen = new Set();
-                    const unique = events.filter(e => {
-                        const key = e.event.id || e.event.slug;
-                        if (seen.has(key)) return false;
-                        seen.add(key);
-                        return true;
+                    // Group tickets by event and count per event
+                    const byEvent = {};
+                    tickets.forEach(t => {
+                        const eid = t.event?.id;
+                        if (!eid) return;
+                        if (!byEvent[eid]) {
+                            byEvent[eid] = {
+                                event: {
+                                    id: t.event.id,
+                                    name: t.event.name || '',
+                                    slug: t.event.slug || '',
+                                    date: t.event.date || '',
+                                    date_formatted: t.event.date_formatted || '',
+                                    time: t.event.time || '',
+                                    venue: t.event.venue || '',
+                                    city: t.event.city || '',
+                                    image: t.event.image || '',
+                                    days_until: t.event.days_until,
+                                },
+                                tickets_count: 0,
+                            };
+                        }
+                        byEvent[eid].tickets_count++;
                     });
-                    if (unique.length) {
-                        this.renderUpcomingEvents(unique);
+                    const events = Object.values(byEvent).slice(0, 5);
+                    if (events.length) {
+                        this.renderUpcomingEvents(events);
                         return;
                     }
                 }
