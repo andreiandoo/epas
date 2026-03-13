@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\SeatingLayoutResource\Pages;
 
 use App\Filament\Marketplace\Resources\SeatingLayoutResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListSeatingLayouts extends ListRecords
 {
-    protected static string $resource = SeatingLayoutResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = SeatingLayoutResource::class;
 }

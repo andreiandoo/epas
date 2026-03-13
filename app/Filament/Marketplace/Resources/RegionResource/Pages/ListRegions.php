@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\RegionResource\Pages;
 
 use App\Filament\Marketplace\Resources\RegionResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListRegions extends ListRecords
 {
-    protected static string $resource = RegionResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = RegionResource::class;
 }

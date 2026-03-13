@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\CityResource\Pages;
 
 use App\Filament\Marketplace\Resources\CityResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListCities extends ListRecords
 {
-    protected static string $resource = CityResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = CityResource::class;
 }

@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\MarketplaceAdminResource\Pages;
 
 use App\Filament\Marketplace\Resources\MarketplaceAdminResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListMarketplaceAdmins extends ListRecords
 {
-    protected static string $resource = MarketplaceAdminResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = MarketplaceAdminResource::class;
 }

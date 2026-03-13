@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\CountyResource\Pages;
 
 use App\Filament\Marketplace\Resources\CountyResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListCounties extends ListRecords
 {
-    protected static string $resource = CountyResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = CountyResource::class;
 }

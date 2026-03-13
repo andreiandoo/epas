@@ -3,17 +3,12 @@
 namespace App\Filament\Marketplace\Resources\EventCategoryResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventCategoryResource;
-use Filament\Actions;
+use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
 use Filament\Resources\Pages\ListRecords;
 
 class ListEventCategories extends ListRecords
 {
-    protected static string $resource = EventCategoryResource::class;
+    use MovesCreateButtonToTable;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\CreateAction::make(),
-        ];
-    }
+    protected static string $resource = EventCategoryResource::class;
 }
