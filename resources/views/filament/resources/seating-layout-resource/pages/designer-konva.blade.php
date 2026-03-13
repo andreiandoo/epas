@@ -1561,10 +1561,7 @@
                     this.drawSections();
                 });
             },
-            /**
-             * Calculate seat positions for rectangular table based on arrangement mode.
-             * Returns array of {x, y} for each seat.
-             */
+            // Calculate seat positions for rectangular table based on arrangement mode
             calcRectSeatPositions(seatCount, centerX, centerY, tableWidth, tableHeight, seatSpacing, arrangement) {
                 const positions = [];
                 const tableGap = 15;
@@ -1629,7 +1626,7 @@
                         }
                     }
                 } else {
-                    // "sides" mode - seats only on top and bottom (long sides)
+                    // sides mode - seats only on top and bottom (long sides)
                     const seatsPerSide = Math.ceil(seatCount / 2);
                     const totalSeatsWidth = (seatsPerSide - 1) * seatSpacing;
                     const startX = centerX - totalSeatsWidth / 2;
