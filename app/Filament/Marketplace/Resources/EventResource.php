@@ -527,15 +527,15 @@ class EventResource extends Resource
 
                                                 // Auto-fill marketplace_city_id by matching venue city name
                                                 if ($venue->city) {
-                                                    $cityName = strtolower(trim($venue->city));
+                                                    $cityName = strtolower(trim(Str::ascii($venue->city)));
                                                     $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
                                                         ->where('is_visible', true)
                                                         ->get()
                                                         ->first(function ($city) use ($cityName) {
-                                                            // Check all language variants of the city name
+                                                            // Check all language variants (diacritic-insensitive)
                                                             $nameVariants = is_array($city->name) ? $city->name : [];
                                                             foreach ($nameVariants as $lang => $name) {
-                                                                if (strtolower(trim($name)) === $cityName) {
+                                                                if (strtolower(trim(Str::ascii($name))) === $cityName) {
                                                                     return true;
                                                                 }
                                                             }
@@ -3022,14 +3022,14 @@ class EventResource extends Resource
 
                             // Auto-match marketplace city
                             if ($venue->city) {
-                                $cityName = strtolower(trim($venue->city));
+                                $cityName = strtolower(trim(Str::ascii($venue->city)));
                                 $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
                                     ->where('is_visible', true)
                                     ->get()
                                     ->first(function ($city) use ($cityName) {
                                         $nameVariants = is_array($city->name) ? $city->name : [];
                                         foreach ($nameVariants as $lang => $name) {
-                                            if (strtolower(trim($name)) === $cityName) {
+                                            if (strtolower(trim(Str::ascii($name))) === $cityName) {
                                                 return true;
                                             }
                                         }
