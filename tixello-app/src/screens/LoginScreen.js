@@ -9,8 +9,9 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Image,
 } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Rect, Line } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 
@@ -63,20 +64,11 @@ export default function LoginScreen({ onLoginSuccess }) {
         {/* Header with logo */}
         <View style={styles.header}>
           <View style={styles.logoRow}>
-            <Svg width={36} height={36} viewBox="0 0 48 48" fill="none">
-              <Defs>
-                <LinearGradient id="loginGrad" x1="6" y1="10" x2="42" y2="38">
-                  <Stop stopColor="#A51C30" />
-                  <Stop offset="1" stopColor="#C41E3A" />
-                </LinearGradient>
-              </Defs>
-              <Path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#loginGrad)" />
-              <Line x1="17" y1="15" x2="31" y2="15" stroke="white" strokeOpacity="0.25" strokeWidth="1.5" strokeLinecap="round" />
-              <Line x1="15" y1="19" x2="33" y2="19" stroke="white" strokeOpacity="0.35" strokeWidth="1.5" strokeLinecap="round" />
-              <Rect x="20" y="27" width="8" height="8" rx="1.5" fill="white" />
-            </Svg>
-            <Text style={styles.brandTextAm}>Am</Text>
-            <Text style={styles.brandTextBilet}>Bilet</Text>
+            <Image
+              source={require('../../assets/logo-header.png')}
+              style={styles.loginLogo}
+              resizeMode="contain"
+            />
           </View>
 
           <Text style={styles.title}>Bine ai revenit</Text>
@@ -174,18 +166,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 32,
-    gap: 4,
   },
-  brandTextAm: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: 'rgba(255,255,255,0.85)',
-    marginLeft: 10,
-  },
-  brandTextBilet: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#C41E3A',
+  loginLogo: {
+    width: 160,
+    height: 72,
   },
   title: {
     fontSize: 28,
