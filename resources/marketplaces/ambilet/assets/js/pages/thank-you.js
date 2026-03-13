@@ -2,8 +2,20 @@ const ThankYouPage = {
     order: null,
 
     async init() {
-        this.createConfetti();
         await this.loadOrderData();
+    },
+
+    isPaymentFailed() {
+        if (!this.order) return false;
+        const status = this.order.status;
+        const paymentStatus = this.order.payment_status;
+        return status === 'failed' || status === 'cancelled' || status === 'expired'
+            || paymentStatus === 'failed' || paymentStatus === 'declined' || paymentStatus === 'expired';
+    },
+
+    isPending() {
+        if (!this.order) return false;
+        return this.order.status === 'pending' || this.order.payment_status === 'pending';
     },
 
     createConfetti() {
@@ -50,7 +62,14 @@ const ThankYouPage = {
             const response = await AmbiletAPI.get(`/order-confirmation/${orderRef}`);
             if (response.success && response.data?.order) {
                 this.order = response.data.order;
-                this.renderOrderData();
+                if (this.isPaymentFailed()) {
+                    this.renderFailedPayment();
+                } else if (this.isPending()) {
+                    this.renderPendingPayment();
+                } else {
+                    this.createConfetti();
+                    this.renderOrderData();
+                }
             } else {
                 console.warn('Order data not found in response:', response);
                 this.showDemoData();
@@ -63,9 +82,241 @@ const ThankYouPage = {
 
     showDemoData() {
         // Show demo/placeholder data
+        this.createConfetti();
         document.getElementById('printingText').textContent = 'Biletele sunt gata!';
         document.getElementById('ticketsCount').textContent = 'Verifică email-ul pentru bilete';
         document.getElementById('buyerEmail').textContent = 'Email-ul tău';
+    },
+
+    renderFailedPayment() {
+        // Update progress steps to show failure on last step
+        const steps = document.querySelectorAll('.bg-green-500');
+        const lastStep = steps[steps.length - 1];
+        if (lastStep) {
+            lastStep.classList.remove('bg-green-500');
+            lastStep.classList.add('bg-red-500');
+            lastStep.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+            const label = lastStep.nextElementSibling;
+            if (label) { label.classList.remove('text-green-600'); label.classList.add('text-red-600'); }
+        }
+        const lastLine = document.querySelectorAll('.bg-green-500');
+        // Change connector line before last step to red
+        const connectors = document.querySelectorAll('.h-px.bg-green-500');
+        if (connectors.length > 0) {
+            connectors[connectors.length - 1].classList.remove('bg-green-500');
+            connectors[connectors.length - 1].classList.add('bg-red-500');
+        }
+
+        // Change main icon and message
+        const successIcon = document.querySelector('.bg-success\\/20');
+        if (successIcon) {
+            successIcon.classList.remove('bg-success/20');
+            successIcon.classList.add('bg-red-100');
+            successIcon.innerHTML = '<svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+        }
+
+        const heading = document.querySelector('h1');
+        if (heading) heading.textContent = 'Plata nu a fost procesată';
+
+        const printingText = document.getElementById('printingText');
+        if (printingText) {
+            printingText.textContent = 'Din păcate, plata nu a putut fi finalizată. Te rugăm să verifici datele cardului și să încerci din nou.';
+            printingText.classList.remove('text-lg');
+            printingText.classList.add('text-base');
+        }
+
+        // Hide printer, tickets carousel, email confirmation
+        const printerSection = document.querySelector('.printer-section');
+        if (printerSection) printerSection.style.display = 'none';
+
+        const ticketsCarousel = document.getElementById('ticketsCarousel');
+        if (ticketsCarousel) ticketsCarousel.style.display = 'none';
+
+        const emailSection = document.querySelector('.email-animation');
+        if (emailSection) emailSection.style.display = 'none';
+
+        // Hide download/calendar actions
+        const actionsGrid = document.querySelector('.content-section.delay-2');
+        if (actionsGrid) actionsGrid.style.display = 'none';
+
+        // Hide share section
+        const shareSection = document.querySelector('.content-section.delay-3');
+        if (shareSection) shareSection.style.display = 'none';
+
+        // Show order details (but change status badge to failed)
+        const statusBadge = document.querySelector('.bg-success\\/10.text-success');
+        if (statusBadge) {
+            statusBadge.classList.remove('bg-success/10', 'text-success');
+            statusBadge.classList.add('bg-red-100', 'text-red-600');
+            statusBadge.textContent = 'Eșuată';
+        }
+
+        // Still render order details (event info, payment info) so user sees what they tried to buy
+        this.renderOrderDetails();
+
+        // Add retry button
+        const backSection = document.querySelector('.content-section.delay-4');
+        if (backSection) {
+            backSection.style.opacity = '1';
+            backSection.style.animation = 'none';
+            const eventSlug = this.order?.event?.slug;
+            const retryUrl = eventSlug ? '/bilete/' + eventSlug : '/';
+            backSection.innerHTML = `
+                <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                    <a href="${retryUrl}" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold text-white bg-primary btn-primary rounded-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Încearcă din nou
+                    </a>
+                    <a href="/" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold border text-secondary rounded-xl border-border hover:bg-surface">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        Pagina principală
+                    </a>
+                </div>
+            `;
+        }
+    },
+
+    renderPendingPayment() {
+        // Change main icon to pending/waiting
+        const successIcon = document.querySelector('.bg-success\\/20');
+        if (successIcon) {
+            successIcon.classList.remove('bg-success/20');
+            successIcon.classList.add('bg-yellow-100');
+            successIcon.innerHTML = '<svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+        }
+
+        const heading = document.querySelector('h1');
+        if (heading) heading.textContent = 'Plata este în procesare';
+
+        const printingText = document.getElementById('printingText');
+        if (printingText) printingText.textContent = 'Plata ta este în curs de verificare. Vei primi biletele pe email imediat ce plata este confirmată.';
+
+        // Hide printer and tickets carousel
+        const printerSection = document.querySelector('.printer-section');
+        if (printerSection) printerSection.style.display = 'none';
+
+        const ticketsCarousel = document.getElementById('ticketsCarousel');
+        if (ticketsCarousel) ticketsCarousel.style.display = 'none';
+
+        // Hide download/calendar actions
+        const actionsGrid = document.querySelector('.content-section.delay-2');
+        if (actionsGrid) actionsGrid.style.display = 'none';
+
+        // Update email section text
+        const emailSection = document.querySelector('.email-animation');
+        if (emailSection) {
+            const emailText = emailSection.querySelector('.font-semibold');
+            if (emailText) emailText.textContent = 'Vei primi biletele pe email după confirmarea plății';
+            const checkIcon = emailSection.querySelector('.text-success.flex-shrink-0');
+            if (checkIcon) {
+                checkIcon.classList.remove('text-success');
+                checkIcon.classList.add('text-yellow-500');
+                checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+            }
+        }
+
+        // Change status badge to pending
+        const statusBadge = document.querySelector('.bg-success\\/10.text-success');
+        if (statusBadge) {
+            statusBadge.classList.remove('bg-success/10', 'text-success');
+            statusBadge.classList.add('bg-yellow-100', 'text-yellow-700');
+            statusBadge.textContent = 'În așteptare';
+        }
+
+        // Render order details
+        this.renderOrderDetails();
+    },
+
+    renderOrderDetails() {
+        const order = this.order;
+        if (!order) return;
+
+        // Event info
+        const eventInfo = document.getElementById('eventInfo');
+        const event = order.event;
+        if (event && eventInfo) {
+            const eventTitle = event.name || event.title || 'Eveniment';
+            const eventDate = event.date ? AmbiletUtils.formatDate(event.date) : '';
+            const eventTime = event.doors_open || (event.date ? new Date(event.date).toLocaleTimeString('ro-RO', {hour: '2-digit', minute: '2-digit'}) : '');
+            const venue = (typeof event.venue === 'object' && event.venue !== null) ? (event.venue.ro || event.venue.en || Object.values(event.venue)[0] || '') : (event.venue || '');
+            eventInfo.innerHTML = `
+                <img src="${getStorageUrl(event.image)}" alt="${eventTitle}" class="object-cover w-20 h-20 rounded-xl" loading="lazy" onerror="this.style.display='none'">
+                <div>
+                    <h3 class="font-bold text-secondary">${eventTitle}</h3>
+                    <p class="mt-1 text-sm text-muted">${eventDate}${eventTime ? ' • ' + eventTime : ''}</p>
+                    <p class="text-sm text-muted">${venue}${event.city ? ', ' + event.city : ''}</p>
+                </div>
+            `;
+        }
+
+        // Ticket summary
+        const ticketsSummary = document.getElementById('ticketsSummary');
+        if (order.items && order.items.length > 0 && ticketsSummary) {
+            let html = `<h4 class="mb-3 font-semibold text-secondary">Bilete</h4>`;
+            html += order.items.map(item => `
+                <div class="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div>
+                        <span class="font-medium text-secondary">${item.name}</span>
+                        <span class="ml-1 text-sm text-muted">× ${item.quantity}</span>
+                    </div>
+                    <span class="font-semibold">${AmbiletUtils.formatCurrency(item.total)}</span>
+                </div>
+            `).join('');
+            ticketsSummary.innerHTML = html;
+        }
+
+        // Payment summary
+        const subtotal = parseFloat(order.subtotal) || 0;
+        const total = parseFloat(order.total) || 0;
+        const discount = parseFloat(order.discount) || 0;
+        const serviceFee = parseFloat(order.service_fee) || 0;
+        const insuranceAmount = parseFloat(order.insurance_amount) || 0;
+
+        document.getElementById('paymentSummary').innerHTML = `
+            <h4 class="mb-3 font-semibold text-secondary">Sumar plată</h4>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-muted">Subtotal</span>
+                    <span>${AmbiletUtils.formatCurrency(subtotal)}</span>
+                </div>
+                ${serviceFee > 0 ? `
+                <div class="flex justify-between">
+                    <span class="text-muted">Comision serviciu</span>
+                    <span>${AmbiletUtils.formatCurrency(serviceFee)}</span>
+                </div>` : ''}
+                ${insuranceAmount > 0 ? `
+                <div class="flex justify-between">
+                    <span class="text-muted">Taxa de retur</span>
+                    <span>${AmbiletUtils.formatCurrency(insuranceAmount)}</span>
+                </div>` : ''}
+                ${discount > 0 ? `
+                <div class="flex justify-between text-success">
+                    <span>Reducere</span>
+                    <span>-${AmbiletUtils.formatCurrency(discount)}</span>
+                </div>` : ''}
+                <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
+                    <span>Total</span>
+                    <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
+                </div>
+            </div>
+        `;
+
+        // Payment method
+        if (order.payment_method) {
+            const cardEl = document.getElementById('cardNumber');
+            if (cardEl) cardEl.textContent = order.payment_method;
+        }
+
+        // Hide points section
+        const pointsEl = document.getElementById('pointsEarned');
+        if (pointsEl) pointsEl.style.display = 'none';
+
+        // Make order details visible immediately (no animation delay)
+        const orderDetails = document.getElementById('orderDetails');
+        if (orderDetails) {
+            orderDetails.style.opacity = '1';
+            orderDetails.style.animation = 'none';
+        }
     },
 
     renderOrderData() {
