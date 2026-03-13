@@ -47,10 +47,19 @@ class ListEvents extends ListRecords
                     if (!toolbar) return;
                     const nav = \$el.querySelector('.fi-tabs');
                     if (!nav) return;
-                    toolbar.prepend(nav);
-                    nav.style.order = '-1';
+                    // Move create button into toolbar, before tabs
+                    const createBtn = document.getElementById('create-event-btn');
+                    if (createBtn) {
+                        toolbar.prepend(nav);
+                        toolbar.prepend(createBtn);
+                        createBtn.style.order = '-2';
+                        nav.style.order = '-1';
+                    } else {
+                        toolbar.prepend(nav);
+                        nav.style.order = '-1';
+                    }
                     const style = document.createElement('style');
-                    style.textContent = '.fi-ta-header-toolbar .fi-ta-bulk-actions { order: -2; }';
+                    style.textContent = '.fi-ta-header-toolbar .fi-ta-bulk-actions { order: -3; }';
                     document.head.appendChild(style);
                 })",
             ]);
@@ -59,7 +68,10 @@ class ListEvents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->extraAttributes([
+                    'id' => 'create-event-btn',
+                ]),
         ];
     }
 
