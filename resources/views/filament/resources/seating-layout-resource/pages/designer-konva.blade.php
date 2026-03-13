@@ -111,6 +111,7 @@
             editTableColor: '#8B4513',
             editTableTextColor: '#FFFFFF',
             editTableSeatSpacing: 20,
+            editTableArrangement: 'sides',
             selectedRowData: null,
             selectedRowSectionId: null,
             editRowLabel: '',
@@ -1338,6 +1339,7 @@
                 } else {
                     this.editTableWidth = parseFloat(metadata.width) || 80;
                     this.editTableHeight = parseFloat(metadata.height) || 30;
+                    this.editTableArrangement = metadata.arrangement || 'sides';
                 }
 
                 // Redraw to show selection highlight
@@ -1432,21 +1434,15 @@
                     metadata.height = this.editTableHeight;
                     const tableWidth = this.editTableWidth;
                     const tableHeight = this.editTableHeight;
-                    const seatsPerSide = Math.ceil(seatCount / 2);
-                    const spacing = tableWidth / (seatsPerSide + 1);
-                    let idx = 0;
-                    // Top seats
-                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
-                        row.seats[idx].y = centerY - tableHeight / 2 - 15;
-                        idx++;
-                    }
-                    // Bottom seats
-                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = centerX - tableWidth / 2 + (i + 1) * spacing;
-                        row.seats[idx].y = centerY + tableHeight / 2 + 15;
-                        idx++;
-                    }
+                    const seatSpacing = parseFloat(metadata.seat_spacing) || this.editTableSeatSpacing;
+                    const arrangement = this.editTableArrangement || metadata.arrangement || 'sides';
+                    const positions = this.calcRectSeatPositions(seatCount, centerX, centerY, tableWidth, tableHeight, seatSpacing, arrangement);
+                    row.seats.forEach((seat, i) => {
+                        if (positions[i]) {
+                            seat.x = positions[i].x;
+                            seat.y = positions[i].y;
+                        }
+                    });
                 }
                 row.metadata = metadata;
 
@@ -1542,23 +1538,14 @@
                 } else if (metadata.table_type === 'rect') {
                     const tableWidth = parseFloat(metadata.width) || 80;
                     const tableHeight = parseFloat(metadata.height) || 30;
-                    const seatsPerSide = Math.ceil(seatCount / 2);
-                    // Use seatSpacing as the horizontal distance between seat centers
-                    const totalSeatsWidth = (seatsPerSide - 1) * seatSpacing;
-                    const startX = centerX - totalSeatsWidth / 2;
-                    let idx = 0;
-                    // Top seats
-                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = startX + i * seatSpacing;
-                        row.seats[idx].y = centerY - tableHeight / 2 - tableGap;
-                        idx++;
-                    }
-                    // Bottom seats
-                    for (let i = 0; i < seatsPerSide && idx < seatCount; i++) {
-                        row.seats[idx].x = startX + i * seatSpacing;
-                        row.seats[idx].y = centerY + tableHeight / 2 + tableGap;
-                        idx++;
-                    }
+                    const arrangement = this.editTableArrangement || metadata.arrangement || 'sides';
+                    const positions = this.calcRectSeatPositions(seatCount, centerX, centerY, tableWidth, tableHeight, seatSpacing, arrangement);
+                    row.seats.forEach((seat, i) => {
+                        if (positions[i]) {
+                            seat.x = positions[i].x;
+                            seat.y = positions[i].y;
+                        }
+                    });
                 }
                 row.metadata.seat_spacing = this.editTableSeatSpacing;
 
@@ -1571,6 +1558,137 @@
                 if (!wire) return;
 
                 wire.updateTableSeatSpacing(this.selectedTableRow.id, this.editTableSeatSpacing).then(() => {
+                    this.drawSections();
+                });
+            },
+            /**
+             * Calculate seat positions for rectangular table based on arrangement mode.
+             * Returns array of {x, y} for each seat.
+             */
+            calcRectSeatPositions(seatCount, centerX, centerY, tableWidth, tableHeight, seatSpacing, arrangement) {
+                const positions = [];
+                const tableGap = 15;
+
+                if (arrangement === 'around') {
+                    // Seats on all 4 sides
+                    // Calculate how many seats fit on short ends based on height and spacing
+                    const endSeats = Math.max(1, Math.floor(tableHeight / seatSpacing));
+                    // Total end seats (both ends combined), but don't exceed total seat count
+                    const totalEndSeats = Math.min(endSeats * 2, Math.max(0, seatCount - 2));
+                    const sideSeats = seatCount - totalEndSeats;
+                    const topSeats = Math.ceil(sideSeats / 2);
+                    const bottomSeats = sideSeats - topSeats;
+                    const leftEndSeats = Math.ceil(totalEndSeats / 2);
+                    const rightEndSeats = totalEndSeats - leftEndSeats;
+
+                    // Top side seats
+                    if (topSeats > 0) {
+                        const topWidth = (topSeats - 1) * seatSpacing;
+                        const topStartX = centerX - topWidth / 2;
+                        for (let i = 0; i < topSeats; i++) {
+                            positions.push({
+                                x: topStartX + i * seatSpacing,
+                                y: centerY - tableHeight / 2 - tableGap
+                            });
+                        }
+                    }
+
+                    // Right end seats
+                    if (rightEndSeats > 0) {
+                        const rightHeight = (rightEndSeats - 1) * seatSpacing;
+                        const rightStartY = centerY - rightHeight / 2;
+                        for (let i = 0; i < rightEndSeats; i++) {
+                            positions.push({
+                                x: centerX + tableWidth / 2 + tableGap,
+                                y: rightStartY + i * seatSpacing
+                            });
+                        }
+                    }
+
+                    // Bottom side seats (reversed order for continuous numbering)
+                    if (bottomSeats > 0) {
+                        const bottomWidth = (bottomSeats - 1) * seatSpacing;
+                        const bottomStartX = centerX + bottomWidth / 2;
+                        for (let i = 0; i < bottomSeats; i++) {
+                            positions.push({
+                                x: bottomStartX - i * seatSpacing,
+                                y: centerY + tableHeight / 2 + tableGap
+                            });
+                        }
+                    }
+
+                    // Left end seats (reversed order for continuous numbering)
+                    if (leftEndSeats > 0) {
+                        const leftHeight = (leftEndSeats - 1) * seatSpacing;
+                        const leftStartY = centerY + leftHeight / 2;
+                        for (let i = 0; i < leftEndSeats; i++) {
+                            positions.push({
+                                x: centerX - tableWidth / 2 - tableGap,
+                                y: leftStartY - i * seatSpacing
+                            });
+                        }
+                    }
+                } else {
+                    // "sides" mode - seats only on top and bottom (long sides)
+                    const seatsPerSide = Math.ceil(seatCount / 2);
+                    const totalSeatsWidth = (seatsPerSide - 1) * seatSpacing;
+                    const startX = centerX - totalSeatsWidth / 2;
+
+                    // Top seats
+                    for (let i = 0; i < seatsPerSide && positions.length < seatCount; i++) {
+                        positions.push({
+                            x: startX + i * seatSpacing,
+                            y: centerY - tableHeight / 2 - tableGap
+                        });
+                    }
+                    // Bottom seats
+                    for (let i = 0; i < seatsPerSide && positions.length < seatCount; i++) {
+                        positions.push({
+                            x: startX + i * seatSpacing,
+                            y: centerY + tableHeight / 2 + tableGap
+                        });
+                    }
+                }
+                return positions;
+            },
+            previewTableArrangement() {
+                if (!this.selectedTableRow) return;
+
+                const section = this.sections.find(s => s.id === this.selectedTableSectionId);
+                if (!section) return;
+
+                const row = section.rows?.find(r => r.id === this.selectedTableRow.id);
+                if (!row || !row.seats) return;
+
+                const metadata = row.metadata || {};
+                if (metadata.table_type !== 'rect') return;
+
+                const centerX = parseFloat(metadata.center_x) || 50;
+                const centerY = parseFloat(metadata.center_y) || 50;
+                const tableWidth = parseFloat(metadata.width) || 80;
+                const tableHeight = parseFloat(metadata.height) || 30;
+                const seatSpacing = parseFloat(metadata.seat_spacing) || this.editTableSeatSpacing;
+                const seatCount = row.seats.length;
+
+                const positions = this.calcRectSeatPositions(seatCount, centerX, centerY, tableWidth, tableHeight, seatSpacing, this.editTableArrangement);
+
+                // Apply positions to seats
+                row.seats.forEach((seat, i) => {
+                    if (positions[i]) {
+                        seat.x = positions[i].x;
+                        seat.y = positions[i].y;
+                    }
+                });
+
+                row.metadata.arrangement = this.editTableArrangement;
+                this.drawSections();
+            },
+            updateTableArrangement() {
+                if (!this.selectedTableRow) return;
+                const wire = this.getWire();
+                if (!wire) return;
+
+                wire.updateTableArrangement(this.selectedTableRow.id, this.editTableArrangement).then(() => {
                     this.drawSections();
                 });
             },
@@ -3804,6 +3922,18 @@
                                 class="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700">Salvează</button>
                         </div>
 
+                        {{-- Arrangement (rect only) --}}
+                        <template x-if="selectedTableRow?.metadata?.table_type === 'rect'">
+                            <div class="flex items-center gap-1">
+                                <label class="text-xs text-gray-600 w-16">Aranjam.:</label>
+                                <select x-model="editTableArrangement" x-on:change="previewTableArrangement(); updateTableArrangement()"
+                                    class="flex-1 px-1 py-0.5 text-xs text-gray-900 bg-white border border-gray-300 rounded">
+                                    <option value="sides">Scaune pe laterale</option>
+                                    <option value="around">Scaune împrejur</option>
+                                </select>
+                            </div>
+                        </template>
+
                         {{-- Table Color --}}
                         <div class="flex items-center gap-1">
                             <label class="text-xs text-gray-600 w-16">Culoare:</label>
@@ -3906,7 +4036,8 @@
                         <div class="flex items-center gap-1">
                             <label class="text-xs text-gray-600 w-16">Curbură:</label>
                             <input type="range" x-model.number="editRowCurve" x-on:input="previewRowCurve()" x-on:change="updateRowCurve()" min="-50" max="50" class="flex-1">
-                            <span class="w-8 text-xs text-center font-medium" x-text="editRowCurve"></span>
+                            <input type="number" x-model.number="editRowCurve" x-on:input="previewRowCurve()" x-on:change="updateRowCurve()" min="-50" max="50"
+                                class="w-14 px-1 py-0.5 text-xs text-center text-gray-900 bg-white border border-gray-300 rounded">
                         </div>
 
                         {{-- Spacing --}}
@@ -4029,7 +4160,8 @@
                             <div>
                                 <div class="flex items-center gap-2">
                                     <input type="range" x-model.number="addRowCurve" min="-50" max="50" class="flex-1">
-                                    <span class="w-10 text-xs text-center font-medium text-orange-700" x-text="addRowCurve"></span>
+                                    <input type="number" x-model.number="addRowCurve" min="-50" max="50"
+                                        class="w-14 px-1 py-0.5 text-xs text-center text-orange-900 bg-white border border-orange-300 rounded">
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-1">
                                     <span>-50</span>
