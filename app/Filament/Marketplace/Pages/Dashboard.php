@@ -2,12 +2,13 @@
 
 namespace App\Filament\Marketplace\Pages;
 
-use App\Models\MarketplaceClient;
 use App\Models\Event;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
-use App\Models\MarketplaceCustomer;
 use App\Models\Order;
+use App\Models\ServiceOrder;
 use App\Models\Ticket;
 use BackedEnum;
 use Carbon\Carbon;
@@ -61,119 +62,158 @@ class Dashboard extends Page
         }
 
         $marketplaceId = $marketplace->id;
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Calculate date range for chart
+        // Date range for chart
         $days = (int) $this->chartPeriod;
         $startDate = Carbon::now()->subDays($days)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        // Active events (upcoming or ongoing) - using Event model with correct fields
+        // Event IDs for this marketplace
+        $eventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+
+        // 1. Evenimente
         $today = Carbon::now()->startOfDay();
+        $totalEvents = Event::where('marketplace_client_id', $marketplaceId)->count();
         $activeEvents = Event::where('marketplace_client_id', $marketplaceId)
             ->where('is_cancelled', false)
             ->where(function ($query) use ($today) {
-                // Single day events
                 $query->where(function ($q) use ($today) {
-                    $q->where('duration_mode', 'single_day')
-                      ->where('event_date', '>=', $today);
-                })
-                // Range events
-                ->orWhere(function ($q) use ($today) {
-                    $q->where('duration_mode', 'range')
-                      ->where('range_end_date', '>=', $today);
-                })
-                // Multi-day events
-                ->orWhere(function ($q) use ($today) {
-                    $q->whereNotIn('duration_mode', ['single_day', 'range'])
-                      ->whereNotNull('multi_slots');
+                    $q->where('duration_mode', 'single_day')->where('event_date', '>=', $today);
+                })->orWhere(function ($q) use ($today) {
+                    $q->where('duration_mode', 'range')->where('range_end_date', '>=', $today);
+                })->orWhere(function ($q) use ($today) {
+                    $q->whereNotIn('duration_mode', ['single_day', 'range'])->whereNotNull('multi_slots');
                 });
             })
             ->count();
 
-        // Total events
-        $totalEvents = Event::where('marketplace_client_id', $marketplaceId)->count();
-
-        // Total organizers
-        $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
-
-        // Pending organizers
-        $pendingOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'pending')
-            ->count();
-
-        // Total customers
+        // 2. Clienți
         $totalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)->count();
 
-        // Total revenue (from orders linked to marketplace events)
-        // Use marketplace_event_id for marketplace orders, or check via tickets for tenant events
-        $eventIds = Event::where('marketplace_client_id', $marketplaceId)
-            ->pluck('id')
-            ->toArray();
+        // 3. Comenzi
+        $ordersQuery = fn ($statuses = null) => Order::where(function ($q) use ($marketplaceId, $eventIds) {
+            $q->where('marketplace_client_id', $marketplaceId)
+                ->orWhereIn('marketplace_event_id', $eventIds);
+        })->where('source', '!=', 'test_order')
+            ->when($statuses, fn ($q) => $q->whereIn('status', $statuses));
 
-        $totalRevenue = Order::where(function ($query) use ($eventIds, $marketplaceId) {
-                // Direct marketplace orders
-                $query->where('marketplace_client_id', $marketplaceId)
-                    ->whereIn('status', ['paid', 'confirmed']);
-            })
-            ->orWhere(function ($query) use ($eventIds) {
-                // Or orders with marketplace_event_id
-                $query->whereIn('marketplace_event_id', $eventIds)
-                    ->whereIn('status', ['paid', 'confirmed']);
-            })
-            ->where('source', '!=', 'test_order')
-            ->sum('total_cents') / 100;
+        $totalOrders = $ordersQuery()->count();
+        $todayOrders = $ordersQuery()->whereDate('created_at', today())->count();
+        $paidOrdersCount = $ordersQuery($paidStatuses)->count();
+        $otherOrdersCount = $totalOrders - $paidOrdersCount;
 
-        // Total tickets sold
+        // 4. Încasări (orders paid + service orders paid)
+        $orderRevenue = $ordersQuery($paidStatuses)->sum('total');
+        if ($orderRevenue == 0) {
+            $orderRevenue = $ordersQuery($paidStatuses)->sum('total_cents') / 100;
+        }
+
+        $serviceOrderRevenue = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['active', 'completed'])
+            ->where('payment_status', 'paid')
+            ->sum('total');
+
+        $totalIncasari = $orderRevenue + $serviceOrderRevenue;
+
+        // 5. Venituri (commissions from orders + service order values)
+        $commissions = $ordersQuery($paidStatuses)->sum('commission_amount');
+
+        $serviceOrdersTotal = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['active', 'completed'])
+            ->where('payment_status', 'paid')
+            ->sum('total');
+
+        // 6. Bilete vândute
         $totalTickets = Ticket::whereHas('order', function ($query) use ($eventIds, $marketplaceId) {
-            $query->where('marketplace_client_id', $marketplaceId)
-                ->whereIn('status', ['paid', 'confirmed'])
+            $query->where(function ($q) use ($marketplaceId, $eventIds) {
+                $q->where('marketplace_client_id', $marketplaceId)
+                    ->orWhereIn('marketplace_event_id', $eventIds);
+            })->whereIn('status', ['paid', 'confirmed', 'completed'])
                 ->where('source', '!=', 'test_order');
-        })->orWhereHas('order', function ($query) use ($eventIds) {
-            $query->whereIn('marketplace_event_id', $eventIds)
-                ->whereIn('status', ['paid', 'confirmed'])
-                ->where('source', '!=', 'test_order');
-        })->count();
+        })->where('status', 'valid')->count();
 
-        // Pending payouts
-        $pendingPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'pending')
-            ->count();
+        // 7. Organizatori
+        $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
+        $activeOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'active')->count();
 
-        // Pending payouts value
+        // 8. Payouts
         $pendingPayoutsValue = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'approved', 'processing'])
+            ->sum('amount');
+        $completedPayoutsValue = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'completed')
             ->sum('amount');
 
-        // Chart data - daily sales for the selected period
-        $chartData = $this->getChartData($eventIds, $startDate, $endDate, $days);
-
-        // Ticket chart data
-        $ticketChartData = $this->getTicketChartData($eventIds, $startDate, $endDate, $days);
-
-        // Top organizers
+        // Top Organizers (by revenue + tickets)
         $topOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
             ->where('status', 'active')
             ->orderByDesc('total_revenue')
             ->limit(5)
             ->get();
 
+        // Top Live Events (active/upcoming, with revenue and ticket counts)
+        $topLiveEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_cancelled', false)
+            ->where(function ($query) use ($today) {
+                $query->where(function ($q) use ($today) {
+                    $q->where('duration_mode', 'single_day')->where('event_date', '>=', $today);
+                })->orWhere(function ($q) use ($today) {
+                    $q->where('duration_mode', 'range')->where('range_end_date', '>=', $today);
+                })->orWhere(function ($q) use ($today) {
+                    $q->whereNotIn('duration_mode', ['single_day', 'range'])->whereNotNull('multi_slots');
+                });
+            })
+            ->withCount(['tickets as sold_tickets_count' => function ($q) {
+                $q->where('status', 'valid');
+            }])
+            ->get()
+            ->map(function ($event) use ($marketplaceId) {
+                $event->event_revenue = Order::where(function ($q) use ($event, $marketplaceId) {
+                    $q->where('marketplace_event_id', $event->id)
+                        ->orWhere(function ($q2) use ($event, $marketplaceId) {
+                            $q2->where('marketplace_client_id', $marketplaceId)
+                                ->where('event_id', $event->id);
+                        });
+                })->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'test_order')
+                    ->sum('total');
+                return $event;
+            })
+            ->sortByDesc('event_revenue')
+            ->take(5);
+
+        // Chart data
+        $chartData = $this->getChartData($eventIds, $startDate, $endDate, $days);
+        $ticketChartData = $this->getTicketChartData($eventIds, $startDate, $endDate, $days);
+
         return [
             'marketplace' => $marketplace,
             'stats' => [
-                'active_events' => $activeEvents,
                 'total_events' => $totalEvents,
-                'total_organizers' => $totalOrganizers,
-                'pending_organizers' => $pendingOrganizers,
+                'active_events' => $activeEvents,
                 'total_customers' => $totalCustomers,
-                'total_revenue' => $totalRevenue,
+                'total_orders' => $totalOrders,
+                'today_orders' => $todayOrders,
+                'paid_orders' => $paidOrdersCount,
+                'other_orders' => $otherOrdersCount,
+                'total_incasari' => $totalIncasari,
+                'order_revenue' => $orderRevenue,
+                'service_revenue' => $serviceOrderRevenue,
+                'commissions' => $commissions,
+                'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => $totalTickets,
-                'pending_payouts' => $pendingPayouts,
+                'total_organizers' => $totalOrganizers,
+                'active_organizers' => $activeOrganizers,
                 'pending_payouts_value' => $pendingPayoutsValue,
+                'completed_payouts_value' => $completedPayoutsValue,
             ],
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
             'topOrganizers' => $topOrganizers,
+            'topLiveEvents' => $topLiveEvents,
         ];
     }
 
@@ -186,38 +226,34 @@ class Dashboard extends Page
         if (empty($eventIds) && !$marketplaceId) {
             $current = $startDate->copy();
             while ($current <= $endDate) {
-                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
                 $data[] = 0;
                 $current->addDay();
             }
             return ['labels' => $labels, 'data' => $data];
         }
 
-        // Get daily totals - use marketplace_client_id or marketplace_event_id
         $dailySales = Order::where(function ($query) use ($marketplaceId, $eventIds) {
                 $query->where('marketplace_client_id', $marketplaceId)
                     ->orWhereIn('marketplace_event_id', $eventIds);
             })
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
+            ->selectRaw('DATE(created_at) as date, SUM(total) as total')
             ->groupBy('date')
             ->pluck('total', 'date')
             ->toArray();
 
-        // Fill in all days
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $dateKey = $current->format('Y-m-d');
-            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
             $data[] = (float) ($dailySales[$dateKey] ?? 0);
             $current->addDay();
         }
 
-        return [
-            'labels' => $labels,
-            'data' => $data,
-        ];
+        return ['labels' => $labels, 'data' => $data];
     }
 
     private function getTicketChartData(array $eventIds, Carbon $startDate, Carbon $endDate, int $days): array
@@ -229,48 +265,36 @@ class Dashboard extends Page
         if (empty($eventIds) && !$marketplaceId) {
             $current = $startDate->copy();
             while ($current <= $endDate) {
-                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
                 $data[] = 0;
                 $current->addDay();
             }
-            return ['labels' => $labels, 'data' => $data, 'tooltipData' => []];
+            return ['labels' => $labels, 'data' => $data];
         }
 
-        // Get tickets grouped by date - use marketplace_client_id or marketplace_event_id
-        $tickets = Ticket::with(['ticketType.event', 'order'])
-            ->whereHas('order', function ($query) use ($eventIds, $marketplaceId, $startDate, $endDate) {
+        $dailyTickets = Ticket::whereHas('order', function ($query) use ($eventIds, $marketplaceId, $startDate, $endDate) {
                 $query->where(function ($q) use ($marketplaceId, $eventIds) {
-                        $q->where('marketplace_client_id', $marketplaceId)
-                            ->orWhereIn('marketplace_event_id', $eventIds);
-                    })
-                    ->whereIn('status', ['paid', 'confirmed'])
-                    ->whereBetween('created_at', [$startDate, $endDate]);
+                    $q->where('marketplace_client_id', $marketplaceId)
+                        ->orWhereIn('marketplace_event_id', $eventIds);
+                })
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where('source', '!=', 'test_order')
+                ->whereBetween('created_at', [$startDate, $endDate]);
             })
-            ->get();
+            ->where('status', 'valid')
+            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
 
-        // Group by date
-        $dailyTickets = [];
-        foreach ($tickets as $ticket) {
-            $dateKey = $ticket->order->created_at->format('Y-m-d');
-            if (!isset($dailyTickets[$dateKey])) {
-                $dailyTickets[$dateKey] = 0;
-            }
-            $dailyTickets[$dateKey]++;
-        }
-
-        // Fill in all days
         $current = $startDate->copy();
         while ($current <= $endDate) {
             $dateKey = $current->format('Y-m-d');
-            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
-            $data[] = $dailyTickets[$dateKey] ?? 0;
+            $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
+            $data[] = (int) ($dailyTickets[$dateKey] ?? 0);
             $current->addDay();
         }
 
-        return [
-            'labels' => $labels,
-            'data' => $data,
-            'tooltipData' => [],
-        ];
+        return ['labels' => $labels, 'data' => $data];
     }
 }
