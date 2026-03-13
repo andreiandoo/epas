@@ -4,7 +4,6 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ConversionFunnelChart;
 use App\Filament\Widgets\EventsByMonthChart;
-use App\Filament\Widgets\LiveStatsCards;
 use App\Filament\Widgets\RecentEventsTable;
 use App\Filament\Widgets\RevenueChart;
 use App\Filament\Widgets\StatsOverview;
@@ -18,7 +17,6 @@ class CustomDashboard extends BaseDashboard
     {
         return [
             StatsOverview::class,
-            LiveStatsCards::class,
             EventsByMonthChart::class,
             RevenueChart::class,
             ConversionFunnelChart::class,
