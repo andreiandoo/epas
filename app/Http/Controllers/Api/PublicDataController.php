@@ -32,6 +32,11 @@ class PublicDataController extends Controller
     private const CACHE_TTL = 300; // 5 minutes
 
     /**
+     * Cache TTL for daily summary data (24 hours).
+     */
+    private const DAILY_CACHE_TTL = 86400; // 24 hours
+
+    /**
      * Build a cached JSON response with proper Cache-Control headers.
      */
     private function cachedJson(string $cacheKey, int $ttl, callable $builder): JsonResponse
@@ -82,6 +87,11 @@ class PublicDataController extends Controller
 
         return $this->cachedJson($cacheKey, self::CACHE_TTL, function () use ($request) {
             $query = Venue::query()->with(['venueType.category']);
+
+            if ($request->boolean('has_coordinates')) {
+                $query->whereNotNull('lat')->whereNotNull('lng')
+                    ->where('lat', '!=', 0)->where('lng', '!=', 0);
+            }
 
             if ($request->has('city')) {
                 $query->where('city', $request->get('city'));
@@ -832,5 +842,98 @@ class PublicDataController extends Controller
             'related_artists' => $spotifyService->getRelatedArtists($artist->spotify_id),
             'embed_html' => $spotifyService->getEmbedHtml($artist->spotify_id),
         ]);
+    }
+
+    /**
+     * Daily-cached summary with all totals for tixello.com pages.
+     * Returns counts, city lists, and breakdowns - all cached for 24h.
+     */
+    public function summary(): JsonResponse
+    {
+        return $this->cachedJson('api:public:summary', self::DAILY_CACHE_TTL, function () {
+            $venuesWithCoords = Venue::whereNotNull('lat')->whereNotNull('lng')
+                ->where('lat', '!=', 0)->where('lng', '!=', 0);
+
+            $venueCities = (clone $venuesWithCoords)
+                ->select('city')
+                ->distinct()
+                ->whereNotNull('city')
+                ->where('city', '!=', '')
+                ->pluck('city');
+
+            $upcomingEvents = Event::where('event_date', '>=', now());
+
+            return [
+                'venues' => [
+                    'total' => Venue::count(),
+                    'with_coordinates' => (clone $venuesWithCoords)->count(),
+                    'cities_on_map' => $venueCities->count(),
+                    'cities_list' => $venueCities->sort()->values(),
+                ],
+                'events' => [
+                    'total' => Event::count(),
+                    'upcoming' => (clone $upcomingEvents)->count(),
+                    'upcoming_this_month' => (clone $upcomingEvents)
+                        ->where('event_date', '<=', now()->endOfMonth())
+                        ->count(),
+                ],
+                'artists' => [
+                    'total' => Artist::count(),
+                    'active' => Artist::where('is_active', true)->count(),
+                ],
+                'tenants' => [
+                    'total' => Tenant::count(),
+                    'active' => Tenant::where('is_active', true)->count(),
+                ],
+                'orders' => [
+                    'total' => Order::count(),
+                    'paid' => Order::where('status', 'paid')->count(),
+                ],
+                'customers' => Customer::count(),
+                'tickets_sold' => Ticket::count(),
+                'cached_at' => now()->toIso8601String(),
+                'cache_ttl_hours' => self::DAILY_CACHE_TTL / 3600,
+            ];
+        });
+    }
+
+    /**
+     * Lightweight endpoint returning only venue map pins (id, name, slug, lat, lng, city).
+     * Returns ALL venues with coordinates in a single response, cached for 24h.
+     */
+    public function venuesMap(): JsonResponse
+    {
+        return $this->cachedJson('api:public:venues-map', self::DAILY_CACHE_TTL, function () {
+            $venues = Venue::whereNotNull('lat')->whereNotNull('lng')
+                ->where('lat', '!=', 0)->where('lng', '!=', 0)
+                ->select(['id', 'name', 'slug', 'lat', 'lng', 'city', 'country', 'address', 'capacity', 'capacity_total', 'venue_type_id'])
+                ->with('venueType:id,name,slug,icon')
+                ->get();
+
+            $cities = $venues->pluck('city')->filter()->unique()->sort()->values();
+
+            return [
+                'pins' => $venues->map(fn ($v) => [
+                    'id' => $v->id,
+                    'name' => $v->getTranslation('name', 'en'),
+                    'name_translations' => $v->name,
+                    'slug' => $v->slug,
+                    'lat' => (float) $v->lat,
+                    'lng' => (float) $v->lng,
+                    'city' => $v->city,
+                    'country' => $v->country,
+                    'address' => $v->address,
+                    'capacity' => $v->capacity ?? $v->capacity_total,
+                    'venue_type' => $v->venueType ? [
+                        'name' => $v->venueType->getTranslation('name', 'en'),
+                        'slug' => $v->venueType->slug,
+                        'icon' => $v->venueType->icon,
+                    ] : null,
+                ])->values(),
+                'total' => $venues->count(),
+                'cities' => $cities,
+                'cities_count' => $cities->count(),
+            ];
+        });
     }
 }

@@ -136,6 +136,8 @@ Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
     Route::get('/artists/{slug}/spotify', [PublicDataController::class, 'artistSpotifyStats'])->name('api.public.artist.spotify');
     Route::get('/tenants', [PublicDataController::class, 'tenants'])->name('api.public.tenants');
     Route::get('/tenants/{slug}', [PublicDataController::class, 'tenant'])->name('api.public.tenant');
+    Route::get('/summary', [PublicDataController::class, 'summary'])->name('api.public.summary');
+    Route::get('/venues-map', [PublicDataController::class, 'venuesMap'])->name('api.public.venues-map');
     Route::get('/events', [PublicDataController::class, 'events'])->name('api.public.events');
     Route::get('/events/{slug}', [PublicDataController::class, 'event'])->name('api.public.event');
 
