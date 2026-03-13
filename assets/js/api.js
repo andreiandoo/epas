@@ -105,6 +105,13 @@ const AmbiletAPI = {
         if (endpoint.match(/\/customer\/orders\/[\w-]+$/)) return 'customer.order';
         if (endpoint === '/customer/orders' || endpoint.includes('/customer/orders?')) return 'customer.orders';
 
+        // Customer refunds
+        if (endpoint.includes('/customer/refunds/reasons')) return 'customer.refunds.reasons';
+        if (endpoint.includes('/customer/refunds/check-eligibility')) return 'customer.refunds.check-eligibility';
+        if (endpoint.match(/\/customer\/refunds\/\d+\/cancel$/)) return 'customer.refund.cancel';
+        if (endpoint.match(/\/customer\/refunds\/\d+$/)) return 'customer.refund.show';
+        if (endpoint === '/customer/refunds' || endpoint.includes('/customer/refunds?')) return 'customer.refunds';
+
         // Customer tickets
         if (endpoint.includes('/customer/tickets/all')) return 'customer.tickets.all';
         if (endpoint.match(/\/customer\/tickets\/\d+$/)) return 'customer.ticket';
@@ -384,6 +391,16 @@ const AmbiletAPI = {
         const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
         if (ticketMatch) {
             return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract refund ID from /customer/refunds/{id}/cancel or /customer/refunds/{id}
+        const refundCancelMatch = endpoint.match(/\/customer\/refunds\/(\d+)\/cancel$/);
+        if (refundCancelMatch) {
+            return `id=${encodeURIComponent(refundCancelMatch[1])}`;
+        }
+        const refundMatch = endpoint.match(/\/customer\/refunds\/(\d+)$/);
+        if (refundMatch) {
+            return `id=${encodeURIComponent(refundMatch[1])}`;
         }
 
         // Extract review ID from /customer/reviews/{id}
@@ -1054,6 +1071,43 @@ const AmbiletAPI = {
          */
         async getOrder(orderId) {
             return AmbiletAPI.get(`/customer/orders/${orderId}`);
+        },
+
+        // ==================== REFUND REQUESTS ====================
+
+        /**
+         * Get refund reasons
+         */
+        async getRefundReasons() {
+            return AmbiletAPI.get('/customer/refunds/reasons');
+        },
+
+        /**
+         * Check refund eligibility for an order
+         */
+        async checkRefundEligibility(orderId) {
+            return AmbiletAPI.post('/customer/refunds/check-eligibility', { order_id: orderId });
+        },
+
+        /**
+         * Submit refund request
+         */
+        async submitRefundRequest(data) {
+            return AmbiletAPI.post('/customer/refunds', data);
+        },
+
+        /**
+         * Get customer's refund requests
+         */
+        async getRefundRequests(params = {}) {
+            return AmbiletAPI.get('/customer/refunds', params);
+        },
+
+        /**
+         * Cancel a pending refund request
+         */
+        async cancelRefundRequest(refundId) {
+            return AmbiletAPI.post(`/customer/refunds/${refundId}/cancel`);
         },
 
         /**

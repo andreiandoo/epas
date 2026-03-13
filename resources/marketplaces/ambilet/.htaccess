@@ -228,6 +228,10 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/recenzii/?$ user/reviews.php [L]
 
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/cerere-rambursare/?$ user/refund-request.php [L,QSA]
+
 # Legacy: redirect /user/* to /cont/*
 RewriteRule ^user/?$ /cont [R=301,L]
 RewriteRule ^user/dashboard/?$ /cont/dashboard [R=301,L]
