@@ -243,6 +243,7 @@ class TeamController extends BaseController
 
         $validated = $request->validate([
             'member_id' => 'required|string',
+            'password' => 'required|string|min:6',
         ]);
 
         if (str_starts_with($validated['member_id'], 'owner_')) {
@@ -261,6 +262,7 @@ class TeamController extends BaseController
 
         $member->update([
             'status' => 'active',
+            'password' => bcrypt($validated['password']),
             'accepted_at' => now(),
         ]);
 
