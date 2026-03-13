@@ -10,16 +10,16 @@ use Filament\Forms\Components\RichEditor;
 
 class TranslatableField
 {
-    protected static array $locales = ['en', 'ro'];
+    protected static array $locales = ['ro', 'en'];
 
     protected static array $localeLabels = [
+        'ro' => 'Română',
         'en' => 'English',
-        'ro' => 'Romanian',
     ];
 
     protected static array $localeIcons = [
-        'en' => 'heroicon-o-globe-alt',
         'ro' => 'heroicon-o-flag',
+        'en' => 'heroicon-o-globe-alt',
     ];
 
     /**
@@ -73,6 +73,7 @@ class TranslatableField
         return Tabs::make($name)
             ->label($label)
             ->tabs($tabs)
+            ->persistTab()
             ->contained(false);
     }
 }

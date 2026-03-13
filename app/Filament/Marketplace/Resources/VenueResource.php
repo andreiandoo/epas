@@ -244,11 +244,12 @@ class VenueResource extends Resource
                             ->columnSpan(2)
                             ->schema([
                                 SC\Tabs::make('Name Translations')
+                                    ->persistTab()
                                     ->tabs([
-                                        SC\Tabs\Tab::make('English')
+                                        SC\Tabs\Tab::make('Română')
                                             ->schema([
-                                                Forms\Components\TextInput::make('name.en')
-                                                    ->label('Venue name (EN)')
+                                                Forms\Components\TextInput::make('name.ro')
+                                                    ->label('Nume locație (RO)')
                                                     ->required()
                                                     ->maxLength(255)
                                                     ->live(onBlur: true)
@@ -256,10 +257,10 @@ class VenueResource extends Resource
                                                         if ($state) $set('slug', Str::slug($state));
                                                     }),
                                             ]),
-                                        SC\Tabs\Tab::make('Română')
+                                        SC\Tabs\Tab::make('English')
                                             ->schema([
-                                                Forms\Components\TextInput::make('name.ro')
-                                                    ->label('Nume locație (RO)')
+                                                Forms\Components\TextInput::make('name.en')
+                                                    ->label('Venue name (EN)')
                                                     ->maxLength(255),
                                             ]),
                                     ])->columnSpanFull(),
@@ -431,17 +432,18 @@ class VenueResource extends Resource
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('Description Translations')
+                                ->persistTab()
                                 ->tabs([
-                                    SC\Tabs\Tab::make('English')
-                                        ->schema([
-                                            Forms\Components\RichEditor::make('description.en')
-                                                ->label('Description (EN)')
-                                                ->columnSpanFull(),
-                                        ]),
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([
                                             Forms\Components\RichEditor::make('description.ro')
                                                 ->label('Descriere (RO)')
+                                                ->columnSpanFull(),
+                                        ]),
+                                    SC\Tabs\Tab::make('English')
+                                        ->schema([
+                                            Forms\Components\RichEditor::make('description.en')
+                                                ->label('Description (EN)')
                                                 ->columnSpanFull(),
                                         ]),
                                 ])->columnSpanFull(),

@@ -2356,6 +2356,102 @@ async function saveCancelled(e) {
         AmbiletNotifications.error('Eroare la anularea evenimentului');
     }
 }
+
+// ==================== OFFLINE DETECTION & AUTO-SAVE ====================
+
+let _isOffline = !navigator.onLine;
+let _pendingSave = false;
+let _offlineBanner = null;
+
+function createOfflineBanner() {
+    if (_offlineBanner) return _offlineBanner;
+
+    _offlineBanner = document.createElement('div');
+    _offlineBanner.id = 'offline-banner';
+    _offlineBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:12px 20px;text-align:center;font-weight:600;font-size:14px;transition:transform 0.3s ease,opacity 0.3s ease;transform:translateY(-100%);opacity:0;display:flex;align-items:center;justify-content:center;gap:8px;';
+    document.body.appendChild(_offlineBanner);
+    return _offlineBanner;
+}
+
+function showOfflineBanner(isOffline) {
+    const banner = createOfflineBanner();
+
+    if (isOffline) {
+        banner.style.background = 'linear-gradient(135deg, #dc2626, #b91c1c)';
+        banner.style.color = '#fff';
+        banner.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728M5.636 18.364a9 9 0 010-12.728M12 9v4m0 4h.01"/></svg>' +
+            '<span>Conexiune la internet pierdută. Poți continua să editezi — salvarea se va face automat când revine conexiunea.</span>';
+    } else {
+        banner.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+        banner.style.color = '#fff';
+        banner.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+            '<span>Conexiune restabilită!' + (_pendingSave ? ' Se salvează automat...' : '') + '</span>';
+    }
+
+    // Show
+    requestAnimationFrame(() => {
+        banner.style.transform = 'translateY(0)';
+        banner.style.opacity = '1';
+    });
+
+    // Auto-hide the "back online" banner after 4s
+    if (!isOffline) {
+        setTimeout(() => {
+            banner.style.transform = 'translateY(-100%)';
+            banner.style.opacity = '0';
+        }, 4000);
+    }
+}
+
+window.addEventListener('offline', () => {
+    _isOffline = true;
+    _pendingSave = true;
+    showOfflineBanner(true);
+});
+
+window.addEventListener('online', () => {
+    _isOffline = false;
+    showOfflineBanner(false);
+
+    // Auto-save draft if we have unsaved changes and the form is open
+    if (_pendingSave) {
+        const createView = document.getElementById('create-event-view');
+        const eventName = document.querySelector('#create-event-form [name="name"]');
+        if (createView && !createView.classList.contains('hidden') && eventName && eventName.value.trim()) {
+            setTimeout(async () => {
+                try {
+                    await saveEventDraft();
+                    _pendingSave = false;
+                } catch (e) {
+                    AmbiletNotifications.error('Salvarea automată a eșuat. Te rugăm salvează manual.');
+                }
+            }, 1000);
+        } else {
+            _pendingSave = false;
+        }
+    }
+});
+
+// Wrap saveEventDraft to detect offline saves
+const _originalSaveEventDraft = saveEventDraft;
+saveEventDraft = async function() {
+    if (_isOffline) {
+        _pendingSave = true;
+        AmbiletNotifications.error('Nu există conexiune la internet. Modificările vor fi salvate automat când revine conexiunea.');
+        return;
+    }
+    return _originalSaveEventDraft();
+};
+
+// Wrap saveAndSubmitEvent similarly
+const _originalSaveAndSubmitEvent = saveAndSubmitEvent;
+saveAndSubmitEvent = async function() {
+    if (_isOffline) {
+        AmbiletNotifications.error('Nu poți trimite spre aprobare fără conexiune la internet. Așteaptă restabilirea conexiunii.');
+        return;
+    }
+    return _originalSaveAndSubmitEvent();
+};
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
