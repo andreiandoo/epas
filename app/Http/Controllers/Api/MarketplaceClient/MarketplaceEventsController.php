@@ -1232,6 +1232,7 @@ class MarketplaceEventsController extends BaseController
             'venue_city' => $venue?->city,
             'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
             'has_paid_promotion' => $this->hasActivePaidPromotion($event),
+            'is_password_protected' => !empty($event->access_password),
             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
             'is_cancelled' => (bool) ($event->is_cancelled ?? false),
             'is_postponed' => (bool) ($event->is_postponed ?? false),
