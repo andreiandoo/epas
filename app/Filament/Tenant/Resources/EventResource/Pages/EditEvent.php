@@ -28,7 +28,7 @@ class EditEvent extends EditRecord
         // Check if invitations microservice is active
         $hasInvitations = $tenant?->microservices()
             ->where('microservices.slug', 'invitations')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists() ?? false;
 
         $actions = [];

@@ -49,7 +49,7 @@ class BlogCategoryResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'blog')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 

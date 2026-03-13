@@ -29,7 +29,7 @@ class GroupBookingPage extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'group-booking')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 

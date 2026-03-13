@@ -205,7 +205,7 @@ class PackageGeneratorService
 
         // Add modules based on active microservices
         // microservices() is a BelongsToMany that returns Microservice models directly
-        $microservices = $tenant->microservices()->wherePivot('status', 'active')->get();
+        $microservices = $tenant->microservices()->wherePivot('is_active', true)->get();
 
         foreach ($microservices as $microservice) {
             $slug = $microservice->slug ?? '';

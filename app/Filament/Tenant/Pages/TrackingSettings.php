@@ -42,7 +42,7 @@ class TrackingSettings extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'tracking-pixels-manager')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 
@@ -57,7 +57,7 @@ class TrackingSettings extends Page
         // Check if microservice is active
         $hasAccess = $tenant->microservices()
             ->where('microservices.slug', 'tracking-pixels-manager')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAccess) {

@@ -24,7 +24,7 @@ class TicketCustomizerController extends Controller
         // Verify the tenant has the ticket-customizer microservice enabled
         $hasAccess = $tenant->microservices()
             ->where('slug', 'ticket-customizer')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAccess) {

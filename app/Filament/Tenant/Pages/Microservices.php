@@ -27,7 +27,7 @@ class Microservices extends Page
         }
 
         $microservices = $tenant->microservices()
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->orderByPivot('activated_at', 'desc')
             ->get();
 

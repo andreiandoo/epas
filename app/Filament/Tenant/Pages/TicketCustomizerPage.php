@@ -30,7 +30,7 @@ class TicketCustomizerPage extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'ticket-customizer')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 

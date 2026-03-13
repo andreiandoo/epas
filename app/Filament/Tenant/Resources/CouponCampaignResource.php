@@ -50,7 +50,7 @@ class CouponCampaignResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'coupon-codes')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 

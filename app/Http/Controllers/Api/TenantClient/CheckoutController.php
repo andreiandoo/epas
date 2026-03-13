@@ -34,7 +34,7 @@ class CheckoutController extends Controller
         // Check if tenant has WhatsApp notifications microservice enabled
         $hasWhatsApp = $tenant->microservices()
             ->where('slug', 'whatsapp-notifications')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         // Check gamification microservice and get redemption info
@@ -135,7 +135,7 @@ class CheckoutController extends Controller
         if ($redeemPoints > 0 && $customerId) {
             $hasGamification = $tenant->microservices()
                 ->where('slug', 'gamification')
-                ->wherePivot('status', 'active')
+                ->wherePivot('is_active', true)
                 ->exists();
 
             if ($hasGamification) {
@@ -297,7 +297,7 @@ class CheckoutController extends Controller
         // Check if gamification microservice is enabled
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {
@@ -389,7 +389,7 @@ class CheckoutController extends Controller
 
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {

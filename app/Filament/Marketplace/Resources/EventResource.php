@@ -1051,7 +1051,7 @@ class EventResource extends Resource
                                         ->nullable()
                                         ->visible(fn () => static::getMarketplaceClient()?->microservices()
                                             ->where('slug', 'ticket-customizer')
-                                            ->wherePivot('status', 'active')
+                                            ->wherePivot('is_active', true)
                                             ->exists() ?? false),
                                     Forms\Components\TextInput::make('general_stock')
                                         ->label($t('Stoc general', 'General Stock'))

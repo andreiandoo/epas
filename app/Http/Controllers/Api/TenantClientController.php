@@ -507,7 +507,7 @@ class TenantClientController extends Controller
         $modules = ['core', 'events', 'auth', 'cart', 'checkout'];
 
         $microservices = $tenant->microservices()
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->get();
 
         $moduleMap = [

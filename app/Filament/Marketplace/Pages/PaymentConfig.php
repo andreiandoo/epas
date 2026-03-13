@@ -60,7 +60,7 @@ class PaymentConfig extends Page implements HasForms
                     'slug' => $ms->slug,
                     'icon' => $ms->icon_image,
                     'description' => $ms->getTranslation('short_description', app()->getLocale()),
-                    'is_active' => $ms->pivot->status === 'active',
+                    'is_active' => (bool) $ms->pivot->is_active,
                     'is_default' => (bool) $ms->pivot->is_default,
                     'status' => $ms->pivot->status,
                     'settings' => $settings,

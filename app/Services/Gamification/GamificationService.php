@@ -30,7 +30,7 @@ class GamificationService
 
         return $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 

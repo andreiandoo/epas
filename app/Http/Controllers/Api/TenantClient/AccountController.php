@@ -821,7 +821,7 @@ class AccountController extends Controller
         // Check if gamification is enabled
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {
@@ -869,7 +869,7 @@ class AccountController extends Controller
         // Check if gamification is enabled
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {
@@ -916,7 +916,7 @@ class AccountController extends Controller
         // Check if gamification is enabled
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {
@@ -977,7 +977,7 @@ class AccountController extends Controller
         // Check if gamification is enabled
         $hasGamification = $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasGamification) {
@@ -1095,7 +1095,7 @@ class AccountController extends Controller
         // Check if affiliates microservice is enabled
         $hasAffiliates = $tenant->microservices()
             ->where('slug', 'affiliates')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAffiliates) {

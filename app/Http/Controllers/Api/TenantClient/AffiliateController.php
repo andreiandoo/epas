@@ -36,7 +36,7 @@ class AffiliateController extends Controller
         // Check if affiliate microservice is enabled
         $hasAffiliates = $tenant->microservices()
             ->where('slug', 'affiliates')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAffiliates) {
@@ -97,7 +97,7 @@ class AffiliateController extends Controller
         // Check if affiliate microservice is enabled
         $hasAffiliates = $tenant->microservices()
             ->where('slug', 'affiliates')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAffiliates) {

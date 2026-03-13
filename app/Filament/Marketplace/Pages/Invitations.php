@@ -81,7 +81,7 @@ class Invitations extends Page
         // Check if microservice is active
         $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'invitations')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
 
         if (!$hasAccess) {

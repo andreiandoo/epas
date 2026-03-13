@@ -227,7 +227,7 @@ class MarketplaceClient extends Model
      */
     public function activeTenants(): BelongsToMany
     {
-        return $this->tenants()->wherePivot('status', 'active');
+        return $this->tenants()->wherePivot('is_active', true);
     }
 
     /**

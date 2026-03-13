@@ -242,7 +242,7 @@ class MarketplaceClientResource extends Resource
                                             if ($record) {
                                                 $enabledIds = $record->microservices()
                                                     ->where('category', '!=', 'payment')
-                                                    ->wherePivot('status', 'active')
+                                                    ->wherePivot('is_active', true)
                                                     ->pluck('microservices.id')
                                                     ->toArray();
                                                 $component->state($enabledIds);
@@ -373,7 +373,7 @@ class MarketplaceClientResource extends Resource
 
                                     Forms\Components\Placeholder::make('microservices_count')
                                         ->label('Active Microservices')
-                                        ->content(fn ($record) => $record?->microservices()->wherePivot('status', 'active')->count() ?? 0),
+                                        ->content(fn ($record) => $record?->microservices()->wherePivot('is_active', true)->count() ?? 0),
                                 ])
                                 ->columns(3),
 

@@ -77,7 +77,7 @@ class EditEvent extends EditRecord
         // Check if invitations microservice is active
         $hasInvitations = $marketplace?->microservices()
             ->where('microservices.slug', 'invitations')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists() ?? false;
 
         $actions = [];
@@ -725,7 +725,7 @@ class EditEvent extends EditRecord
             $marketplace = static::getMarketplaceClient();
             $hasInvitations = $marketplace?->microservices()
                 ->where('microservices.slug', 'invitations')
-                ->wherePivot('status', 'active')
+                ->wherePivot('is_active', true)
                 ->exists() ?? false;
 
             if ($hasInvitations) {

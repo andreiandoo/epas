@@ -42,7 +42,7 @@ class MicroserviceSettings extends Page
         // Check if tenant has this microservice active (using pivot table)
         $activeMicroservice = $this->tenant->microservices()
             ->where('microservices.id', $this->microservice->id)
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->first();
 
         if (!$activeMicroservice) {
@@ -54,7 +54,7 @@ class MicroserviceSettings extends Page
 
         // Load saved settings from pivot configuration
         // Handle case where configuration might be stored as JSON string
-        $config = $activeMicroservice->pivot->settings;
+        $config = $activeMicroservice->pivot->configuration;
         if (is_string($config)) {
             $config = json_decode($config, true) ?? [];
         }

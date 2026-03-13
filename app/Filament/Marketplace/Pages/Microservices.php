@@ -30,7 +30,7 @@ class Microservices extends Page
         }
 
         $microservices = $marketplace->microservices()
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->orderByPivot('activated_at', 'desc')
             ->get();
 

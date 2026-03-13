@@ -127,7 +127,7 @@ class BootstrapController extends Controller
             ->whereHas('microservice', fn ($q) => $q->where('slug', 'affiliates'))
             ->first();
 
-        $config = $microservice?->pivot->settings ?? [];
+        $config = $microservice?->pivot->configuration ?? [];
 
         return [
             'cookie_name' => $config['cookie_name'] ?? 'aff_ref',

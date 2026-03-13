@@ -51,7 +51,7 @@ class ShopShippingZoneResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'shop')
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 
