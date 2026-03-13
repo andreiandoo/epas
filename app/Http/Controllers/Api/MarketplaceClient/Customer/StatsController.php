@@ -149,7 +149,11 @@ class StatsController extends BaseController
     }
 
     /**
-     * Get upcoming events for dashboard
+     * Get upcoming events for dashboard.
+     *
+     * Finds upcoming events via two paths:
+     * 1. Orders with marketplace_event_id set directly
+     * 2. Orders without marketplace_event_id — resolved through tickets
      */
     public function upcomingEvents(Request $request): JsonResponse
     {
@@ -157,19 +161,43 @@ class StatsController extends BaseController
 
         $limit = min((int) $request->get('limit', 5), 20);
 
+        // Get orders with future events — either via direct relation or via tickets
         $orders = Order::where('marketplace_customer_id', $customer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->whereHas('marketplaceEvent', function ($q) {
-                $q->where('starts_at', '>=', now());
+            ->where(function ($q) {
+                // Path 1: order has marketplace_event_id set
+                $q->whereHas('marketplaceEvent', function ($eq) {
+                    $eq->where('starts_at', '>=', now());
+                });
+                // Path 2: order has no marketplace_event_id but tickets link to future events
+                $q->orWhere(function ($q2) {
+                    $q2->whereNull('marketplace_event_id')
+                        ->whereHas('tickets', function ($tq) {
+                            $tq->whereHas('marketplaceEvent', function ($eq) {
+                                $eq->where('starts_at', '>=', now());
+                            });
+                        });
+                });
             })
-            ->with(['marketplaceEvent:id,name,slug,starts_at,ends_at,venue_name,venue_city,image'])
+            ->with([
+                'marketplaceEvent:id,name,slug,starts_at,ends_at,venue_name,venue_city,image',
+                'tickets.marketplaceEvent:id,name,slug,starts_at,ends_at,venue_name,venue_city,image',
+            ])
             ->withCount('tickets')
             ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
 
         $events = $orders->map(function ($order) {
+            // Resolve event: direct relation first, fallback to first ticket's event
             $event = $order->marketplaceEvent;
+            if (!$event) {
+                $event = $order->tickets->first()?->marketplaceEvent;
+            }
+            if (!$event || !$event->starts_at || $event->starts_at->isPast()) {
+                return null;
+            }
+
             $daysUntil = now()->diffInDays($event->starts_at, false);
 
             return [
@@ -189,7 +217,7 @@ class StatsController extends BaseController
                     'days_until' => max(0, $daysUntil),
                 ],
             ];
-        })->sortBy(function ($item) {
+        })->filter()->sortBy(function ($item) {
             return $item['event']['date'];
         })->values();
 

@@ -25,7 +25,10 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
     protected function seedForMarketplace(MarketplaceClient $marketplace): void
     {
         $name = $marketplace->public_name ?? $marketplace->name ?? 'Marketplace';
-        $domain = $marketplace->domain ?? 'ambilet.ro';
+        // Strip protocol and trailing slash from domain to get bare hostname
+        $rawDomain = $marketplace->domain ?? 'ambilet.ro';
+        $domain = preg_replace('#^https?://#', '', rtrim($rawDomain, '/'));
+        $contactEmail = $marketplace->contact_email ?? "{$contactEmail}";
         $logoUrl = "https://{$domain}/assets/images/ambilet_logo.webp";
         $primaryColor = '#A51C30';
         $primaryDark = '#8B1728';
@@ -79,7 +82,7 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
 </p>
 
 <p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 8px;">Prezintă codul QR de pe bilet la intrarea în eveniment.</p>
-<p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 20px;">Dacă ai întrebări despre comandă sau eveniment, nu ezita să ne contactezi la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+<p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 20px;">Dacă ai întrebări despre comandă sau eveniment, nu ezita să ne contactezi la <a href="mailto:{$contactEmail}" style="color:{$primaryColor};">{$contactEmail}</a>.</p>
 CONTENT),
             ],
 
@@ -214,7 +217,7 @@ CONTENT),
 <p style="color:#991b1b;font-size:14px;margin:0;">Vei primi un refund automat în contul din care ai efectuat plata. Procesarea poate dura 5-10 zile lucrătoare.</p>
 </div>
 
-<p style="color:#6b7280;font-size:13px;margin:0;">Ne cerem scuze pentru inconvenient. Pentru întrebări, contactează-ne la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+<p style="color:#6b7280;font-size:13px;margin:0;">Ne cerem scuze pentru inconvenient. Pentru întrebări, contactează-ne la <a href="mailto:{$contactEmail}" style="color:{$primaryColor};">{$contactEmail}</a>.</p>
 CONTENT),
             ],
 
@@ -276,7 +279,7 @@ CONTENT),
 <p style="color:#92400e;font-size:14px;margin:0;">{{rejection_reason}}</p>
 </div>
 
-<p style="color:#6b7280;font-size:13px;margin:0;">Dacă ai întrebări, contactează-ne la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
+<p style="color:#6b7280;font-size:13px;margin:0;">Dacă ai întrebări, contactează-ne la <a href="mailto:{$contactEmail}" style="color:{$primaryColor};">{$contactEmail}</a>.</p>
 CONTENT),
             ],
 

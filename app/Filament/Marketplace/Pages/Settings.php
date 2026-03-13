@@ -650,19 +650,27 @@ class Settings extends Page
             'linkedin' => $data['social_linkedin'] ?? '',
         ];
 
-        // Update mail settings
+        // Update mail settings — preserve existing values when form fields are empty.
+        // This prevents Livewire re-renders or tab switches from wiping encrypted credentials.
         $mailSettings = $settings['mail'] ?? [];
+        $incomingDriver = $data['mail_driver'] ?? null;
 
-        // Always save driver (even if empty, to clear settings)
-        $mailSettings['driver'] = $data['mail_driver'] ?? '';
+        // Only update driver if explicitly provided; never clear an existing driver with empty string
+        if (filled($incomingDriver)) {
+            $mailSettings['driver'] = $incomingDriver;
+        } elseif ($incomingDriver === '') {
+            // User explicitly selected "Use Platform Default" → clear all mail settings
+            $mailSettings = ['driver' => ''];
+        }
+        // If $incomingDriver is null (field missing from state), preserve existing settings entirely
 
-        // Only save settings if a driver is selected
-        if (!empty($data['mail_driver'])) {
-            // Common fields for all providers
-            if (!empty($data['mail_from_address'])) {
+        // Only update individual fields when a driver is actively selected
+        if (!empty($mailSettings['driver'])) {
+            // Common fields — always overwrite when provided, keep existing otherwise
+            if (array_key_exists('mail_from_address', $data) && filled($data['mail_from_address'])) {
                 $mailSettings['from_address'] = $data['mail_from_address'];
             }
-            if (!empty($data['mail_from_name'])) {
+            if (array_key_exists('mail_from_name', $data) && filled($data['mail_from_name'])) {
                 $mailSettings['from_name'] = $data['mail_from_name'];
             }
 
@@ -673,7 +681,7 @@ class Settings extends Page
             if (!empty($data['mail_port'])) {
                 $mailSettings['port'] = $data['mail_port'];
             }
-            if (!empty($data['mail_username'])) {
+            if (array_key_exists('mail_username', $data) && filled($data['mail_username'])) {
                 $mailSettings['username'] = $data['mail_username'];
             }
             if (!empty($data['mail_password'])) {
@@ -683,7 +691,7 @@ class Settings extends Page
                 $mailSettings['encryption'] = $data['mail_encryption'];
             }
 
-            // API-based providers
+            // API-based providers — only re-encrypt when a new value is provided
             if (!empty($data['mail_api_key'])) {
                 $mailSettings['api_key'] = encrypt($data['mail_api_key']);
             }
