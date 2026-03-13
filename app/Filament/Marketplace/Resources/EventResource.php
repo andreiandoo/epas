@@ -544,6 +544,17 @@ class EventResource extends Resource
 
                                                     if ($matchedCity) {
                                                         $set('marketplace_city_id', $matchedCity->id);
+                                                    } else {
+                                                        // City doesn't exist in marketplace — auto-create it
+                                                        $newCity = MarketplaceCity::create([
+                                                            'marketplace_client_id' => $marketplace?->id,
+                                                            'name' => ['ro' => $venue->city, 'en' => $venue->city],
+                                                            'country' => $venue->country ?? 'RO',
+                                                            'latitude' => $venue->lat,
+                                                            'longitude' => $venue->lng,
+                                                            'is_visible' => true,
+                                                        ]);
+                                                        $set('marketplace_city_id', $newCity->id);
                                                     }
                                                 }
                                             }
