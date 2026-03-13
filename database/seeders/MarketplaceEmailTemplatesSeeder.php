@@ -42,7 +42,7 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
                 'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
 <h2 style="color:#1a1a1a;font-size:22px;margin:0 0 16px;">Mulțumim pentru comanda ta!</h2>
 <p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 12px;">Salut <strong>{{customer_name}}</strong>,</p>
-<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Comanda ta <strong>#{{order_number}}</strong> a fost procesată cu succes. Mai jos găsești detaliile evenimentului.</p>
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 20px;">Comanda ta <strong>#{{order_number}}</strong> a fost procesată cu succes. Mai jos găsești detaliile evenimentului și biletele tale.</p>
 
 <table style="width:100%;border-collapse:collapse;margin:0 0 24px;border-radius:8px;overflow:hidden;">
 <tr style="background:{$primaryColor};color:#fff;">
@@ -58,11 +58,11 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
 </tr>
 <tr style="background:#f9fafb;">
 <td style="padding:10px 16px;font-size:14px;color:#6b7280;">Locație</td>
-<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{event_venue}}</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;">{{venue_location}}</td>
 </tr>
 <tr>
 <td style="padding:10px 16px;font-size:14px;color:#6b7280;border-top:1px solid #f3f4f6;">Bilete</td>
-<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{tickets_count}} bilet(e)</td>
+<td style="padding:10px 16px;font-size:14px;color:#1a1a1a;border-top:1px solid #f3f4f6;">{{ticket_count}} bilet(e)</td>
 </tr>
 <tr style="background:#f9fafb;">
 <td style="padding:10px 16px;font-size:14px;color:#6b7280;">Total achitat</td>
@@ -70,7 +70,15 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
 </tr>
 </table>
 
-<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 8px;">Biletele au fost trimise pe adresa de email asociată contului tău. Prezintă codul QR de pe bilet la intrarea în eveniment.</p>
+<!-- Bilete cu coduri QR -->
+{{tickets_list}}
+
+<!-- Buton descărcare bilete -->
+<p style="text-align:center;margin:24px 0;">
+<a href="{{download_url}}" style="display:inline-block;padding:14px 32px;background:{$primaryColor};color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Descarcă biletele</a>
+</p>
+
+<p style="color:#4a4a4a;font-size:15px;line-height:1.6;margin:0 0 8px;">Prezintă codul QR de pe bilet la intrarea în eveniment.</p>
 <p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 20px;">Dacă ai întrebări despre comandă sau eveniment, nu ezita să ne contactezi la <a href="mailto:contact@{$domain}" style="color:{$primaryColor};">contact@{$domain}</a>.</p>
 CONTENT),
             ],

@@ -117,9 +117,12 @@ class MarketplaceEmailTemplate extends Model
                 'event_name' => 'Event name',
                 'event_date' => 'Event date and time',
                 'venue_name' => 'Venue name',
+                'venue_city' => 'Venue city',
+                'venue_location' => 'Venue name + city combined',
                 'ticket_count' => 'Number of tickets',
                 'total_amount' => 'Total order amount',
-                'tickets_list' => 'List of tickets (HTML)',
+                'tickets_list' => 'List of tickets with QR codes (HTML)',
+                'download_url' => 'URL to download/view tickets',
             ],
             'points_earned', 'points_redeemed' => [
                 'points_amount' => 'Points amount',

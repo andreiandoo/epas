@@ -109,7 +109,7 @@ class EmailTemplateResource extends Resource
                                             if (empty($vars)) {
                                                 return new HtmlString('<span class="text-sm text-gray-500">Variabilele comune (customer_name, customer_email, marketplace_name) sunt disponibile.</span>');
                                             }
-                                            $html = '<div class="text-sm space-y-1">';
+                                            $html = '<div class="space-y-1 text-sm">';
                                             foreach ($vars as $key => $desc) {
                                                 $html .= '<div><code class="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">{{' . e($key) . '}}</code> <span class="text-gray-500">— ' . e($desc) . '</span></div>';
                                             }
@@ -119,7 +119,7 @@ class EmailTemplateResource extends Resource
                                         ->label(''),
                                 ]),
                         ])->columnSpan(1),
-                    ]),
+                    ])->columns(1),
             ]);
     }
 

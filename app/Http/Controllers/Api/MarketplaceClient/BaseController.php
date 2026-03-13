@@ -116,10 +116,24 @@ abstract class BaseController extends Controller
                         ->subject($subject)
                         ->html($html);
 
-                    $transport->send($email);
-                    $log->markSent();
+                    $sentMessage = $transport->send($email);
+                    $messageId = $sentMessage?->getMessageId();
+                    $log->markSent($messageId);
+
+                    Log::channel('marketplace')->info('Email sent via marketplace transport', [
+                        'marketplace_client_id' => $client->id,
+                        'to' => $toEmail,
+                        'subject' => $subject,
+                        'message_id' => $messageId,
+                        'driver' => $client->getMailSettings()['driver'] ?? 'unknown',
+                    ]);
                     return;
                 }
+
+                Log::channel('marketplace')->warning('Marketplace mail configured but transport creation failed, falling back to Laravel mailer', [
+                    'marketplace_client_id' => $client->id,
+                    'driver' => $client->getMailSettings()['driver'] ?? 'unknown',
+                ]);
             }
 
             // Fallback to Laravel default mailer
@@ -127,6 +141,12 @@ abstract class BaseController extends Controller
                 $message->to($toEmail, $toName)->subject($subject);
             });
             $log->markSent();
+
+            Log::channel('marketplace')->info('Email sent via Laravel default mailer (fallback)', [
+                'marketplace_client_id' => $client->id,
+                'to' => $toEmail,
+                'subject' => $subject,
+            ]);
         } catch (\Throwable $e) {
             Log::channel('marketplace')->error('Failed to send marketplace email', [
                 'marketplace_client_id' => $client->id,
