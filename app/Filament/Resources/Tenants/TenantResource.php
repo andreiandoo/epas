@@ -674,7 +674,7 @@ class TenantResource extends Resource
                     // TAB 6: Microservices
                     SC\Tabs\Tab::make('Microservices')
                         ->icon('heroicon-o-puzzle-piece')
-                        ->badge(fn ($record) => $record?->microservices()->wherePivot('is_active', true)->count() ?: null)
+                        ->badge(fn ($record) => $record?->microservices()->wherePivot('status', 'active')->count() ?: null)
                         ->schema([
                             SC\Section::make('Active Microservices')
                                 ->description('Manage microservices activated for this tenant')
@@ -686,7 +686,7 @@ class TenantResource extends Resource
                                                 return 'Save the tenant first to manage microservices.';
                                             }
 
-                                            $activeMicroservices = $record->microservices()->wherePivot('is_active', true)->get();
+                                            $activeMicroservices = $record->microservices()->wherePivot('status', 'active')->get();
 
                                             if ($activeMicroservices->isEmpty()) {
                                                 return new \Illuminate\Support\HtmlString(
@@ -746,7 +746,7 @@ class TenantResource extends Resource
                                         ->afterStateHydrated(function ($component, $record) {
                                             if ($record) {
                                                 $activeIds = $record->microservices()
-                                                    ->wherePivot('is_active', true)
+                                                    ->wherePivot('status', 'active')
                                                     ->pluck('microservice_id')
                                                     ->toArray();
                                                 $component->state($activeIds);

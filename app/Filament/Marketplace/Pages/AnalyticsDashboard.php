@@ -53,7 +53,7 @@ class AnalyticsDashboard extends Page
         // Check if microservice is active
         $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'analytics')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
 
         if (!$hasAccess) {

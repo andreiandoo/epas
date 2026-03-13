@@ -51,7 +51,7 @@ class TrackingSettings extends Page
         // Check if microservice is active
         $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'tracking-pixels-manager')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
 
         if (!$hasAccess) {

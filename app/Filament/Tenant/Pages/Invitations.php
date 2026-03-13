@@ -72,7 +72,7 @@ class Invitations extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'invitations')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 
@@ -87,7 +87,7 @@ class Invitations extends Page
         // Check if microservice is active
         $hasAccess = $tenant->microservices()
             ->where('microservices.slug', 'invitations')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
 
         if (!$hasAccess) {

@@ -44,7 +44,7 @@ class AnalyticsDashboard extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'analytics')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 
@@ -59,7 +59,7 @@ class AnalyticsDashboard extends Page
         // Check if microservice is active
         $hasAccess = $tenant->microservices()
             ->where('microservices.slug', 'analytics')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
 
         if (!$hasAccess) {

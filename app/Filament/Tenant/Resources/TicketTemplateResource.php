@@ -49,7 +49,7 @@ class TicketTemplateResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'ticket-customizer')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

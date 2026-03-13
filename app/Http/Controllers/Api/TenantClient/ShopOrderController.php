@@ -36,7 +36,7 @@ class ShopOrderController extends Controller
     {
         return $tenant->microservices()
             ->where('slug', 'shop')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

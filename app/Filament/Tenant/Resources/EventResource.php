@@ -627,7 +627,7 @@ class EventResource extends Resource
                         ->nullable()
                         ->visible(fn () => auth()->user()->tenant?->microservices()
                             ->where('slug', 'ticket-customizer')
-                            ->wherePivot('is_active', true)
+                            ->wherePivot('status', 'active')
                             ->exists() ?? false),
 
                     // Commission Mode for event

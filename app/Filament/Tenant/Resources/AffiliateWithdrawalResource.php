@@ -62,7 +62,7 @@ class AffiliateWithdrawalResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'affiliates')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

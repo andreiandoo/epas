@@ -30,7 +30,7 @@ class WhatsAppNotificationsPage extends Page
         // Check for whatsapp or whatsapp-cloud microservice
         return $tenant->microservices()
             ->whereIn('microservices.slug', ['whatsapp', 'whatsapp-notifications', 'whatsapp-cloud'])
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

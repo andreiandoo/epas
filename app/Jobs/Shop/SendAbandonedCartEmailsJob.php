@@ -25,7 +25,7 @@ class SendAbandonedCartEmailsJob implements ShouldQueue
     {
         $query = Tenant::whereHas('microservices', function ($q) {
             $q->where('slug', 'shop')
-                ->wherePivot('is_active', true);
+                ->wherePivot('status', 'active');
         });
 
         if ($this->tenantId) {

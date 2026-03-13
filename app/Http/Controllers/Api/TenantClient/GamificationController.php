@@ -39,7 +39,7 @@ class GamificationController extends Controller
     {
         return $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

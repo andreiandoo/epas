@@ -36,7 +36,7 @@ class EditTenant extends EditRecord
 
         // Get currently active microservice IDs
         $currentActiveIds = $this->record->microservices()
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->pluck('microservice_id')
             ->toArray();
 

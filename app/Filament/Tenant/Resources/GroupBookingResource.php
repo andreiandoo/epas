@@ -51,7 +51,7 @@ class GroupBookingResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'group-booking')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

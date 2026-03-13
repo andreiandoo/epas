@@ -46,7 +46,7 @@ class BlogController extends Controller
     {
         return $tenant->microservices()
             ->where('slug', 'blog')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

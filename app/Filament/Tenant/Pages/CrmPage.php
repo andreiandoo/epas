@@ -29,7 +29,7 @@ class CrmPage extends Page
 
         return $tenant->microservices()
             ->where('microservices.slug', 'crm')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

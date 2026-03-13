@@ -56,7 +56,7 @@ class ShopProductResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'shop')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

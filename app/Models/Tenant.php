@@ -424,7 +424,7 @@ class Tenant extends Model
 
     public function getActiveMicroservices()
     {
-        return $this->tenantMicroservices()->where('is_active', true)->get();
+        return $this->tenantMicroservices()->where('status', 'active')->get();
     }
 
     /**
@@ -434,7 +434,7 @@ class Tenant extends Model
     {
         return $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 
@@ -445,9 +445,13 @@ class Tenant extends Model
     {
         $microservice = $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->first();
 
-        return $microservice?->pivot?->configuration;
+        $settings = $microservice?->pivot?->settings;
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true);
+        }
+        return $settings;
     }
 }

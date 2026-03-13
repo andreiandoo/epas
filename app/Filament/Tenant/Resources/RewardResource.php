@@ -44,7 +44,7 @@ class RewardResource extends Resource
 
         return $tenant->microservices()
             ->where('slug', 'gamification')
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 

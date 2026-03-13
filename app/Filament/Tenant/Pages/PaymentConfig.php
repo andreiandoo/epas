@@ -65,7 +65,7 @@ class PaymentConfig extends Page
         // Use pivot table relationship
         $activeMicroservice = $tenant->microservices()
             ->whereIn('microservices.slug', $paymentMicroserviceSlugs)
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->first();
 
         if ($activeMicroservice) {

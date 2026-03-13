@@ -358,7 +358,7 @@ class AffiliateTrackingService
             ->where('slug', 'affiliate-tracking')
             ->first();
 
-        $config = $microservice?->pivot->configuration ?? [];
+        $config = $microservice?->pivot->settings ?? [];
 
         // Default configuration
         return array_merge([
