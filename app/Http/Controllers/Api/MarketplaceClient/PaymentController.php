@@ -470,25 +470,66 @@ class PaymentController extends BaseController
     public function sendOrderConfirmationEmail(Order $order): void
     {
         $marketplace = $order->marketplaceClient;
-        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType']);
+        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'marketplaceEvent']);
 
         $customerName = $order->customer_name ?? 'Client';
         $customerEmail = $order->customer_email;
         $marketplaceName = $marketplace->name;
         $orderNumber = $order->order_number;
-        $totalAmount = number_format($order->total, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
+        $currency = $order->currency ?? 'RON';
+
+        // Calculate total including insurance
+        $insuranceAmount = $order->meta['insurance_amount'] ?? 0;
+        $totalAmount = number_format($order->total, 2, ',', '.') . ' ' . $currency;
+
+        // Resolve event data — fallback chain: ticket → order → Event model
+        $resolveEvent = function ($ticket) use ($order) {
+            // 1. From ticket's marketplace_event_id
+            if ($ticket->marketplaceEvent) {
+                return $ticket->marketplaceEvent;
+            }
+            // 2. From order's marketplace_event_id
+            if ($order->marketplaceEvent) {
+                return $order->marketplaceEvent;
+            }
+            // 3. From ticket's event_id via Event model → build a fake object with matching fields
+            $eventId = $ticket->event_id ?? $order->event_id;
+            if ($eventId) {
+                $event = \App\Models\Event::find($eventId);
+                if ($event) {
+                    // Check if there's a MarketplaceEvent with same event_id
+                    $mke = \App\Models\MarketplaceEvent::where('marketplace_client_id', $order->marketplace_client_id)
+                        ->where('id', $eventId)
+                        ->first();
+                    if ($mke) {
+                        return $mke;
+                    }
+                    // Return event data as a stdClass with expected fields
+                    return (object) [
+                        'name' => is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title)) : ($event->title ?? $event->name ?? 'Eveniment'),
+                        'starts_at' => $event->starts_at,
+                        'ends_at' => $event->ends_at,
+                        'doors_open_at' => $event->doors_open_at ?? null,
+                        'venue_name' => $event->venue?->getTranslation('name') ?? $event->venue_name ?? '',
+                        'venue_city' => $event->venue?->city ?? $event->venue_city ?? '',
+                    ];
+                }
+            }
+            return null;
+        };
 
         // Group tickets by marketplace event
         $ticketsByEvent = [];
         foreach ($order->tickets as $ticket) {
-            $eventId = $ticket->marketplace_event_id ?? 0;
-            if (!isset($ticketsByEvent[$eventId])) {
-                $ticketsByEvent[$eventId] = [
-                    'event' => $ticket->marketplaceEvent,
+            $event = $resolveEvent($ticket);
+            $eventKey = $ticket->marketplace_event_id ?? $ticket->event_id ?? 0;
+            if (!isset($ticketsByEvent[$eventKey])) {
+                $ticketsByEvent[$eventKey] = [
+                    'event' => $event,
                     'tickets' => [],
                 ];
             }
-            $ticketsByEvent[$eventId]['tickets'][] = $ticket;
+            $ticketsByEvent[$eventKey]['tickets'][] = $ticket;
         }
 
         // Build tickets HTML
@@ -640,6 +681,10 @@ class PaymentController extends BaseController
         $html .= '<table style="width:100%;border-collapse:collapse;font-size:14px;" cellpadding="0" cellspacing="0">';
         $html .= '<tr><td style="padding:6px 0;color:#888;">Comandă:</td><td style="padding:6px 0;text-align:right;font-weight:600;">#' . e($orderNumber) . '</td></tr>';
         $html .= '<tr><td style="padding:6px 0;color:#888;">Bilete:</td><td style="padding:6px 0;text-align:right;">' . $ticketCount . '</td></tr>';
+        if ($insuranceAmount > 0) {
+            $insuranceFormatted = number_format($insuranceAmount, 2, ',', '.') . ' ' . $currency;
+            $html .= '<tr><td style="padding:6px 0;color:#888;">Asigurare retur:</td><td style="padding:6px 0;text-align:right;">' . $insuranceFormatted . '</td></tr>';
+        }
         $html .= '<tr style="border-top:1px solid #eee;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
         $html .= '</table>';
         $html .= '</div>';
@@ -658,6 +703,13 @@ class PaymentController extends BaseController
             ->first();
 
         if ($template) {
+            // Build total_amount that includes insurance for template display
+            $templateTotalAmount = $totalAmount;
+            $insuranceLabel = '';
+            if ($insuranceAmount > 0) {
+                $insuranceLabel = number_format($insuranceAmount, 2, ',', '.') . ' ' . $currency;
+            }
+
             $vars = [
                 'customer_name' => $customerName,
                 'customer_email' => $customerEmail,
@@ -668,7 +720,8 @@ class PaymentController extends BaseController
                 'venue_city' => $firstVenueCity,
                 'venue_location' => $firstVenueLocation,
                 'ticket_count' => (string) $ticketCount,
-                'total_amount' => $totalAmount,
+                'total_amount' => $templateTotalAmount,
+                'insurance_amount' => $insuranceLabel,
                 'marketplace_name' => $marketplaceName,
                 'tickets_list' => $ticketsHtml,
                 'download_url' => $downloadUrl,

@@ -28,7 +28,7 @@ class MarketplaceEmailTemplatesSeeder extends Seeder
         // Strip protocol and trailing slash from domain to get bare hostname
         $rawDomain = $marketplace->domain ?? 'ambilet.ro';
         $domain = preg_replace('#^https?://#', '', rtrim($rawDomain, '/'));
-        $contactEmail = $marketplace->contact_email ?? "{$contactEmail}";
+        $contactEmail = $marketplace->contact_email ?? "contact@{$domain}";
         $logoUrl = "https://{$domain}/assets/images/ambilet_logo.webp";
         $primaryColor = '#A51C30';
         $primaryDark = '#8B1728';
@@ -529,7 +529,7 @@ UNSUB : '';
 <!-- HEADER -->
 <tr>
 <td style="background:linear-gradient(135deg,{$primary},{$primaryDark});padding:24px 32px;text-align:center;">
-<img src="{$logoUrl}" alt="{$name}" style="height:36px;width:auto;filter:brightness(0) invert(1);" />
+<img src="{$logoUrl}" alt="{$name}" style="height:36px;width:auto;" />
 </td>
 </tr>
 
