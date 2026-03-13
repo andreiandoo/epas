@@ -165,7 +165,7 @@ $cssBundle = 'static';
     <?php include 'includes/header.php'; ?>
 
     <!-- Hero Section -->
-    <section class="relative px-6 py-16 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 py-16 overflow-hidden text-center pt-28 bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/30 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">Întrebări Frecvente</h1>

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
-$pageTitle = 'Comandă confirmată!';
-$pageDescription = 'Mulțumim pentru achiziție! Biletele tale au fost procesate cu succes.';
+$pageTitle = 'Stare comandă';
+$pageDescription = 'Verifică starea comenzii tale.';
 $orderRef = $_GET['order'] ?? '';
 $cssBundle = 'checkout';
 require_once __DIR__ . '/includes/head.php';
