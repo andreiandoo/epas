@@ -45,8 +45,8 @@ const ProfileCompletionModal = {
         const completion = this.customer.profile_completion;
         if (!completion) return;
 
-        // Priority 1: Profile completion (<80%) — personal + location
-        if (completion.percentage < 80) {
+        // Priority 1: Profile completion (<80%) — only on dashboard page, only if email verified
+        if (completion.percentage < 80 && this.isDashboardPage() && this.customer.email_verified) {
             if (sessionStorage.getItem('pcm_dismissed')) return;
             this.mode = 'profile';
             this.buildProfileSteps();
@@ -56,8 +56,18 @@ const ProfileCompletionModal = {
             }
         }
 
-        // Priority 2: Sequential interest modals
-        this.tryShowInterestModal();
+        // Priority 2: Sequential interest modals (check 7-day cooldown)
+        if (!this.isInterestCooldownActive()) {
+            this.tryShowInterestModal();
+        }
+    },
+
+    /**
+     * Check if we are on the customer dashboard page (/cont or /cont/dashboard)
+     */
+    isDashboardPage() {
+        const path = window.location.pathname.replace(/\/+$/, '');
+        return path === '/cont' || path === '/cont/dashboard';
     },
 
     /**
@@ -118,6 +128,36 @@ const ProfileCompletionModal = {
         if (!lastModal) return true;
         const hoursSince = (Date.now() - new Date(lastModal).getTime()) / (1000 * 60 * 60);
         return hoursSince >= 24;
+    },
+
+    /**
+     * Check if interest modals are in 7-day cooldown (dismissed/skipped 2+ times)
+     */
+    isInterestCooldownActive() {
+        const cooldownUntil = localStorage.getItem('pcm_interest_cooldown_until');
+        if (cooldownUntil && Date.now() < parseInt(cooldownUntil, 10)) {
+            return true;
+        }
+        // Cooldown expired — clean up
+        if (cooldownUntil) {
+            localStorage.removeItem('pcm_interest_cooldown_until');
+            localStorage.removeItem('pcm_interest_dismiss_count');
+        }
+        return false;
+    },
+
+    /**
+     * Track interest modal dismiss/skip. After 2 dismissals, set 7-day cooldown.
+     */
+    trackInterestDismiss() {
+        let count = parseInt(localStorage.getItem('pcm_interest_dismiss_count') || '0', 10);
+        count++;
+        localStorage.setItem('pcm_interest_dismiss_count', String(count));
+
+        if (count >= 2) {
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            localStorage.setItem('pcm_interest_cooldown_until', String(Date.now() + sevenDays));
+        }
     },
 
     /**
@@ -233,6 +273,8 @@ const ProfileCompletionModal = {
         this.isOpen = false;
         if (this.mode === 'profile') {
             sessionStorage.setItem('pcm_dismissed', '1');
+        } else if (this.mode.startsWith('interest_')) {
+            this.trackInterestDismiss();
         }
         const el = document.getElementById('pcm-overlay');
         if (el) el.remove();
@@ -715,9 +757,11 @@ const ProfileCompletionModal = {
 
     skip() {
         if (this.currentStep < this.steps.length - 1) {
+            // Multi-step: skip to next step (no dismiss tracking yet)
             this.currentStep++;
             this.render();
         } else {
+            // Last step or single-step: dismiss tracks the dismissal
             this.dismiss();
         }
     },
