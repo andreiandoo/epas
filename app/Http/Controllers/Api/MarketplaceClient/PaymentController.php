@@ -467,7 +467,7 @@ class PaymentController extends BaseController
     /**
      * Send order confirmation email with embedded ticket details
      */
-    protected function sendOrderConfirmationEmail(Order $order): void
+    public function sendOrderConfirmationEmail(Order $order): void
     {
         $marketplace = $order->marketplaceClient;
         $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType']);

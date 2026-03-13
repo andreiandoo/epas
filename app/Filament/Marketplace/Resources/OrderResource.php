@@ -1210,15 +1210,11 @@ class OrderResource extends Resource
 
     protected static function resendConfirmation(Order $record): void
     {
-        // Send confirmation email
         try {
-            // Option 1: Using a Mailable
-            \Mail::to($record->customer_email)
-                ->send(new \App\Mail\OrderConfirmation($record));
-            
-            // Option 2: Using a Notification
-            // $record->customer?->notify(new \App\Notifications\OrderConfirmed($record));
-            
+            // Use the same email logic as PaymentController
+            $controller = new \App\Http\Controllers\Api\MarketplaceClient\PaymentController();
+            $controller->sendOrderConfirmationEmail($record);
+
             // Update meta
             $record->update([
                 'meta' => array_merge($record->meta ?? [], [
@@ -1226,13 +1222,13 @@ class OrderResource extends Resource
                     'confirmation_resent_count' => ($record->meta['confirmation_resent_count'] ?? 0) + 1,
                 ]),
             ]);
-            
+
             \Filament\Notifications\Notification::make()
                 ->title('Email trimis')
                 ->body('Confirmarea a fost retrimisă către ' . $record->customer_email)
                 ->success()
                 ->send();
-                
+
         } catch (\Exception $e) {
             \Filament\Notifications\Notification::make()
                 ->title('Eroare')
