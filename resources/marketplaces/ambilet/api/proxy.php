@@ -670,6 +670,19 @@ switch ($action) {
         $requiresAuth = true; // Forward auth token if available
         break;
 
+    case 'event.verify-password':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/events/' . urlencode($slug) . '/verify-password';
+        $cacheTTL = 0; // Never cache password verification
+        break;
+
     case 'events.featured':
         $params = [];
         if (isset($_GET['type'])) $params['type'] = $_GET['type'];

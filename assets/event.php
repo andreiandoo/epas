@@ -1,11 +1,102 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
+
+// Full-page HTML cache: serves cached HTML on hit (zero API calls)
+$pageCacheTTL = 300; // 5 minutes
+require_once __DIR__ . '/includes/page-cache.php';
 
 $eventSlug = $_GET['slug'] ?? '';
 $pageTitle = 'Eveniment';
 $pageDescription = 'Detalii eveniment si cumparare bilete';
 $bodyClass = 'bg-surface';
 
+// Preview mode: prevent browser from caching the page itself
+// AND invalidate all server caches so the next public visit gets fresh data
+if (!empty($_GET['preview'])) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+
+    if ($eventSlug) {
+        // 1. Invalidate full-page HTML cache for the public (non-preview) URL
+        $publicUri = '/bilete/' . $eventSlug;
+        $pageCacheDir = __DIR__ . '/includes/cache/pages';
+        $publicCacheFile = $pageCacheDir . '/' . md5($publicUri) . '.html';
+        if (file_exists($publicCacheFile)) @unlink($publicCacheFile);
+
+        // 2. Invalidate application-level api_cached() entry
+        $appCacheDir = sys_get_temp_dir() . '/ambilet_cache';
+        $appCacheFile = $appCacheDir . '/' . md5('event_preload_' . $eventSlug) . '.json';
+        if (file_exists($appCacheFile)) @unlink($appCacheFile);
+
+        // 3. Invalidate proxy API cache for single event endpoint
+        //    The proxy uses action='event' with empty $params (slug is in the URL, not params)
+        //    so cache key = 'event_' + md5(serialize([])) — shared by all events (10s TTL anyway)
+        $apiCacheDir = __DIR__ . '/cache/api';
+        if (is_dir($apiCacheDir)) {
+            $apiCacheKey = 'event_' . md5(serialize([]));
+            $apiCacheFile = $apiCacheDir . '/' . $apiCacheKey . '.json';
+            if (file_exists($apiCacheFile)) @unlink($apiCacheFile);
+        }
+    }
+}
+
+// Server-side: fetch event data for LCP image preload and SEO meta
+$eventPreload = null;
+$isPreview = !empty($_GET['preview']);
+if ($eventSlug) {
+    if ($isPreview) {
+        // Preview mode: always fetch fresh data, bypass cache
+        $eventPreload = api_get('/events/' . urlencode($eventSlug));
+    } else {
+        $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
+            return api_get('/events/' . urlencode($eventSlug));
+        }, 1800); // 30min cache (stale-while-revalidate extends to ~2.5h)
+    }
+    // API returns: { data: { event: {...}, venue: {...}, ... } }
+    $ev = $eventPreload['data']['event'] ?? null;
+    if ($ev) {
+        $pageTitle = $ev['name'] ?? $ev['title'] ?? $pageTitle;
+        $pageDescription = !empty($ev['short_description']) ? mb_substr(strip_tags($ev['short_description']), 0, 160) : $pageDescription;
+    }
+}
+
+// Build LCP image URLs for preload (hero for desktop, poster for mobile)
+$lcpHeroUrl = '';
+$lcpPosterUrl = '';
+if (!empty($ev)) {
+    $heroRaw = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $ev['image_url'] ?? $ev['image'] ?? '';
+    $posterRaw = $ev['poster_url'] ?? $ev['poster_image_url'] ?? '';
+    if ($heroRaw) {
+        $lcpHeroUrl = (str_starts_with($heroRaw, 'http') ? '' : STORAGE_URL . '/') . $heroRaw;
+    }
+    if ($posterRaw) {
+        $lcpPosterUrl = (str_starts_with($posterRaw, 'http') ? '' : STORAGE_URL . '/') . $posterRaw;
+    }
+}
+// Fallback: if only one exists, use it for both
+$lcpImageUrl = $lcpHeroUrl ?: $lcpPosterUrl;
+if (!$lcpPosterUrl) $lcpPosterUrl = $lcpHeroUrl;
+if (!$lcpHeroUrl) $lcpHeroUrl = $lcpPosterUrl;
+
+// Extra head tags: responsive preload (poster on mobile, hero on desktop)
+$extraHead = '';
+if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl) {
+    $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpPosterUrl) . '" media="(max-width: 767px)" fetchpriority="high">'
+        . "\n    " . '<link rel="preload" as="image" href="' . htmlspecialchars($lcpHeroUrl) . '" media="(min-width: 768px)" fetchpriority="high">';
+} elseif ($lcpImageUrl) {
+    $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
+}
+
+// Inject server-fetched data so JS can render immediately (no API roundtrip)
+if (!empty($eventPreload['data'])) {
+    $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($eventPreload['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+}
+
+// Check if event is password protected
+$isPasswordProtected = !empty($ev['is_password_protected']);
+
+$cssBundle = 'event';
 require_once __DIR__ . '/includes/head.php';
 ?>
     <style>
@@ -36,6 +127,13 @@ require_once __DIR__ . '/includes/head.php';
         .event-image { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
 
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* Prevent event description from overflowing on mobile */
+        #event-description { overflow-x: hidden; overflow-wrap: break-word; word-break: break-word; }
+        #event-description img, #event-description iframe, #event-description video, #event-description table, #event-description pre {
+            max-width: 100%; height: auto;
+        }
+        #event-description table { display: block; overflow-x: auto; }
 
         .points-counter { animation: pointsPulse 0.3s ease; }
         @keyframes pointsPulse {
@@ -103,7 +201,7 @@ require_once __DIR__ . '/includes/head.php';
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasă</a>
                 <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="font-medium text-secondary" id="breadcrumb-title">Se încarcă...</span>
+                <span class="font-medium text-secondary" id="breadcrumb-title"><?= (!empty($pageTitle) && $pageTitle !== 'Eveniment') ? htmlspecialchars($pageTitle) : 'Se încarcă...' ?></span>
             </nav>
         </div>
     </div>
@@ -114,9 +212,26 @@ require_once __DIR__ . '/includes/head.php';
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
+                    <?php if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl): ?>
+                    <div class="relative overflow-hidden rounded-t-3xl" style="aspect-ratio: 1.904/1;">
+                        <picture>
+                            <source srcset="<?= htmlspecialchars($lcpPosterUrl) ?>" media="(max-width: 767px)">
+                            <img src="<?= htmlspecialchars($lcpHeroUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
+                        </picture>
+                    </div>
+                    <?php elseif ($lcpImageUrl): ?>
+                    <div class="relative overflow-hidden rounded-t-3xl" style="aspect-ratio: 1.904/1;">
+                        <img src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
+                    </div>
+                    <?php else: ?>
                     <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
+                    <?php endif; ?>
                     <div class="p-6 md:p-8">
+                        <?php if (!empty($pageTitle) && $pageTitle !== 'Eveniment'): ?>
+                        <h1 class="mb-4 text-2xl font-bold md:text-3xl text-secondary"><?= htmlspecialchars($pageTitle) ?></h1>
+                        <?php else: ?>
                         <div class="w-3/4 h-10 mb-4 bg-gray-200 rounded animate-pulse"></div>
+                        <?php endif; ?>
                         <div class="grid gap-4 mb-6 sm:grid-cols-2">
                             <div class="h-24 bg-gray-100 animate-pulse rounded-xl"></div>
                             <div class="h-24 bg-gray-100 animate-pulse rounded-xl"></div>
@@ -137,7 +252,7 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
                     <div class="relative overflow-hidden rounded-t-3xl mobile:rounded-none" style="aspect-ratio: 1.904/1;">
-                        <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
+                        <img id="mainImage" src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
                     </div>
@@ -180,7 +295,7 @@ require_once __DIR__ . '/includes/head.php';
                         <!-- Social Stats -->
                         <div id="social-stats" class="flex flex-wrap items-center gap-4 mb-8 mobile:justify-between mobile:border-t mobile:border-b border-slate-200 mobile:p-4">
                             <!-- Interested Button -->
-                            <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
+                            <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary" aria-label="Arată interes pentru acest eveniment">
                                 <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                                 <span id="event-interested">Mă interesează</span>
                             </button>
@@ -191,7 +306,7 @@ require_once __DIR__ . '/includes/head.php';
                             </span>
                             <!-- Share Dropdown -->
                             <div class="relative" id="share-dropdown">
-                                <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary">
+                                <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary" aria-label="Distribuie acest eveniment">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                                     <span class="mobile:hidden">Distribuie</span>
                                 </button>
@@ -230,8 +345,8 @@ require_once __DIR__ . '/includes/head.php';
                                 </svg>
                             </span>
                             <div>
-                                <h2 class="text-lg font-bold text-secondary">Alte date din turneu</h2>
-                                <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-un turneu. Alege și alte date.</span></p>
+                                <h2 id="tour-section-title" class="text-lg font-bold text-secondary">Alte date din serie</h2>
+                                <p class="text-sm text-muted"><span id="tour-name-display"></span><span id="tour-name-fallback">Evenimentul face parte dintr-o serie. Alege și alte date.</span></p>
                             </div>
                         </div>
                         <div id="tour-events-list" class="px-2 py-2 divide-y divide-gray-50">
@@ -241,7 +356,7 @@ require_once __DIR__ . '/includes/head.php';
                 </section>
 
                 <!-- Artist Section -->
-                <div class="px-8 mb-8 mobile:mb-0" id="artist-section" style="display:none;">
+                <div class="px-8 mb-8 mobile:mb-0 mobile:p-0" id="artist-section" style="display:none;">
                     <div id="artist-content" class="mobile:p-4"></div>
                 </div>
 
@@ -289,7 +404,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <!-- Hidden subtotal for JavaScript calculations -->
                                 <span id="subtotal" class="hidden">0 lei</span>
 
-                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+                                <button id="checkoutBtn" onclick="EventPage.handleCheckout()" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl bg-primary" aria-label="Cumpără bilete pentru acest eveniment">
                                     <svg id="checkoutBtnIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                     <span id="checkoutBtnText">Cumpără bilete</span>
                                 </button>
@@ -330,13 +445,16 @@ require_once __DIR__ . '/includes/head.php';
 
         <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
         <div id="mobileTicketBtn" class="hidden sticky bottom-0 left-0 right-0 z-[105] p-4 bg-primary border-t lg:hidden border-border border-b safe-area-bottom mobile:block">
-            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl">
+            <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold bg-white text-primary rounded-xl" aria-label="Cumpără bilete pentru acest eveniment">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Cumpără bilete</span>
                 <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">De la -- lei</span>
             </button>
         </div>
     </main>
+
+    <!-- Sentinel for lazy-loading related events (always visible, zero height) -->
+    <div id="related-events-sentinel" aria-hidden="true"></div>
 
     <!-- Custom Recommended Events (Îți recomandăm) - Premium Section -->
     <section class="relative mt-16 -mx-4 overflow-hidden md:-mx-8 lg:-mx-12" id="custom-related-section" style="display:none;">
@@ -347,7 +465,7 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Section header -->
             <div class="flex flex-col items-center mb-10 text-center">
                 <h2 class="mb-3 text-3xl font-extrabold text-white md:text-4xl">Îți recomandăm</h2>
-                <p class="max-w-md text-white/70">Evenimente selectate special pentru tine, care nu trebuie ratate</p>
+                <p class="max-w-md text-white/90">Evenimente selectate special pentru tine, care nu trebuie ratate</p>
             </div>
 
             <!-- Premium events grid -->
@@ -357,34 +475,36 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </section>
 
-    <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0">
-        <!-- Related Events -->
-        <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
-                    <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
+    <div class="border-t bg-slate-200 border-slate-300">
+        <div class="px-4 pb-8 mx-auto max-w-7xl mobile:px-0 mobile:py-6">
+            <!-- Related Events -->
+            <section class="mt-8 mobile:px-4 mobile:mb-8 mobile:mt-18" id="related-events-section" style="display:none;">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
+                        <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
+                    </div>
+                    <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">
+                        Vezi toate
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </a>
                 </div>
-                <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                    Vezi toate
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                </a>
-            </div>
-            <!-- Mobile: horizontal scroll snap, Desktop: grid -->
-            <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="related-events"></div>
-        </section>
+                <!-- Mobile: horizontal scroll snap, Desktop: grid -->
+                <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="related-events"></div>
+            </section>
+        </div>
     </div>
 
     <!-- Mobile Ticket Drawer -->
-    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
-    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()" style="visibility:hidden"></div>
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-[1000] flex flex-col overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="visibility:hidden">
         <!-- Drawer Header -->
         <div class="flex items-center justify-between flex-shrink-0 p-4 bg-white border-b border-border">
             <div>
                 <h2 class="text-lg font-bold text-secondary">Selectează bilete</h2>
                 <p class="text-sm text-muted">Alege tipul și cantitatea</p>
             </div>
-            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200">
+            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200" aria-label="Închide selecția de bilete">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
@@ -394,7 +514,7 @@ require_once __DIR__ . '/includes/head.php';
             <div id="drawerTicketTypes" class="p-4 space-y-2"></div>
             <!-- Drawer Ticket Terms (collapsible) -->
             <div id="drawer-ticket-terms-section" class="px-4 pb-4" style="display: none;">
-                <button type="button" onclick="toggleDrawerTerms()" class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium transition-colors rounded-xl text-primary bg-primary/5 hover:bg-primary/10">
+                <button type="button" onclick="toggleDrawerTerms()" class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium transition-colors rounded-xl text-primary bg-primary/5 hover:bg-primary/10" aria-label="Vezi termenii și condițiile pentru biletele selectate">
                     <span class="flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         Vezi termeni și condiții
@@ -431,7 +551,7 @@ require_once __DIR__ . '/includes/head.php';
                     <span id="drawerTotalPrice" class="text-primary">0 lei</span>
                 </div>
             </div>
-            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+            <button onclick="closeTicketDrawer(); EventPage.handleCheckout();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl bg-primary" aria-label="Cumpără bilete pentru acest eveniment">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 Cumpără bilete
             </button>
@@ -441,149 +561,12 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </div>
 
-    <script>
-    // Mobile ticket drawer functions
-    function openTicketDrawer() {
-        document.getElementById('ticketDrawerBackdrop').classList.add('open');
-        document.getElementById('ticketDrawer').classList.add('open');
-        document.body.style.overflow = 'hidden';
-        syncDrawerContent();
-    }
-
-    function closeTicketDrawer() {
-        document.getElementById('ticketDrawerBackdrop').classList.remove('open');
-        document.getElementById('ticketDrawer').classList.remove('open');
-        document.body.style.overflow = '';
-    }
-
-    function toggleDrawerTerms() {
-        var content = document.getElementById('drawer-ticket-terms-content');
-        var chevron = document.getElementById('drawer-terms-chevron');
-        if (!content) return;
-        var isHidden = content.classList.contains('hidden');
-        content.classList.toggle('hidden', !isHidden);
-        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
-    }
-
-    // Sync drawer content with main ticket selection
-    function syncDrawerContent() {
-        const mainContent = document.getElementById('ticket-types');
-        const drawerContent = document.getElementById('drawerTicketTypes');
-        if (mainContent && drawerContent) {
-            // Clone the ticket cards for the drawer
-            drawerContent.innerHTML = mainContent.innerHTML;
-            // Update onclick handlers to work in drawer context
-            drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
-                const originalOnclick = btn.getAttribute('onclick');
-                btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');
-            });
-        }
-        syncDrawerSummary();
-    }
-
-    function syncDrawerSummary() {
-        setTimeout(() => {
-            const mainSummary = document.getElementById('cartSummary');
-            const mainEmpty = document.getElementById('emptyCart');
-            const drawerSummary = document.getElementById('drawerCartSummary');
-            const drawerEmpty = document.getElementById('drawerEmptyCart');
-            const mainTotal = document.getElementById('totalPrice');
-            const drawerTotal = document.getElementById('drawerTotalPrice');
-            const mainSubtotal = document.getElementById('subtotal');
-            const drawerSubtotal = document.getElementById('drawerSubtotal');
-            const mainTaxes = document.getElementById('taxesContainer');
-            const drawerTaxes = document.getElementById('drawerTaxesContainer');
-            const mainPoints = document.getElementById('pointsEarned');
-            const drawerPoints = document.getElementById('drawerPointsEarned');
-            const drawerPointsRow = document.getElementById('drawerPointsRow');
-
-            if (mainSummary && !mainSummary.classList.contains('hidden')) {
-                drawerSummary.style.display = 'block';
-                drawerEmpty.style.display = 'none';
-                if (mainTotal && drawerTotal) {
-                    drawerTotal.textContent = mainTotal.textContent;
-                }
-                // Sync subtotal
-                if (mainSubtotal && drawerSubtotal) {
-                    drawerSubtotal.textContent = mainSubtotal.textContent;
-                }
-                // Sync taxes
-                if (mainTaxes && drawerTaxes) {
-                    drawerTaxes.innerHTML = mainTaxes.innerHTML;
-                }
-                // Sync points
-                if (mainPoints && drawerPoints) {
-                    drawerPoints.textContent = mainPoints.textContent;
-                    // Show points row if there are points
-                    const pointsValue = parseInt(mainPoints.textContent) || 0;
-                    if (drawerPointsRow) {
-                        drawerPointsRow.style.display = pointsValue > 0 ? 'flex' : 'none';
-                    }
-                }
-            } else {
-                drawerSummary.style.display = 'none';
-                drawerEmpty.style.display = 'block';
-            }
-
-            // Also sync qty values from main to drawer
-            document.querySelectorAll('#ticket-types [id^="qty-"]').forEach(qtyEl => {
-                const drawerQty = document.querySelector('#drawerTicketTypes [id="' + qtyEl.id + '"]');
-                if (drawerQty) {
-                    drawerQty.textContent = qtyEl.textContent;
-                }
-            });
-
-            // Sync selected state
-            document.querySelectorAll('#ticket-types .ticket-card').forEach(card => {
-                const ticketId = card.dataset.ticket;
-                const drawerCard = document.querySelector('#drawerTicketTypes [data-ticket="' + ticketId + '"]');
-                if (drawerCard) {
-                    if (card.classList.contains('selected')) {
-                        drawerCard.classList.add('selected');
-                    } else {
-                        drawerCard.classList.remove('selected');
-                    }
-                }
-            });
-        }, 50);
-    }
-
-    // Show mobile button after event loads and update min price
-    document.addEventListener('DOMContentLoaded', () => {
-        // Poll for event load
-        const checkLoaded = setInterval(() => {
-            if (typeof EventPage !== 'undefined' && EventPage.event && EventPage.ticketTypes?.length) {
-                clearInterval(checkLoaded);
-                // Don't show mobile ticket button for ended events
-                if (EventPage.eventEnded) return;
-                const mobileBtn = document.getElementById('mobileTicketBtn');
-                const minPriceEl = document.getElementById('mobileMinPrice');
-                if (mobileBtn) {
-                    // Find minimum price (skip 0-price if paid tickets exist)
-                    const allPrices = EventPage.ticketTypes
-                        .filter(t => !t.is_sold_out && t.available > 0)
-                        .map(t => t.price);
-                    const paidPrices = allPrices.filter(p => p > 0);
-                    const prices = paidPrices.length > 0 ? paidPrices : allPrices;
-                    if (prices.length && minPriceEl) {
-                        const minPrice = Math.min(...prices);
-                        if (minPrice > 0) {
-                            minPriceEl.textContent = 'De la ' + minPrice.toFixed(0) + ' lei';
-                        } else {
-                            minPriceEl.textContent = 'Gratuit';
-                        }
-                    }
-                }
-            }
-        }, 100);
-    });
-    </script>
-
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
 // Page controller script
-$scriptsExtra = '<script src="' . asset('assets/js/pages/event-single.js') . '"></script>
+$scriptsExtra = '<script defer src="' . asset('assets/js/pages/event-drawer.js') . '"></script>
+<script defer src="' . asset('assets/js/pages/event-single.js') . '"></script>
 <script>document.addEventListener(\'DOMContentLoaded\', () => EventPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';

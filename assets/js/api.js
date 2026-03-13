@@ -161,6 +161,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/verify-password$/i)) return 'event.verify-password';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.includes('/marketplace-events')) return 'events';
 
@@ -409,7 +410,11 @@ const AmbiletAPI = {
             return `id=${encodeURIComponent(ordersPayMatch[1])}`;
         }
 
-        // Extract slug from endpoints like /marketplace-events/event-slug
+        // Extract slug from endpoints like /marketplace-events/event-slug or /marketplace-events/event-slug/verify-password
+        const eventVerifyMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/verify-password$/i);
+        if (eventVerifyMatch) {
+            return `slug=${encodeURIComponent(eventVerifyMatch[1])}`;
+        }
         const eventMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)$/i);
         if (eventMatch) {
             return `slug=${encodeURIComponent(eventMatch[1])}`;
