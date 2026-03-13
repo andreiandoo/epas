@@ -41,6 +41,9 @@
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_customers']) }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Clienți</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {{ number_format($stats['registered_customers']) }} registered · {{ number_format($stats['guest_customers']) }} guest
+                        </p>
                     </div>
                 </div>
             </div>
@@ -86,18 +89,21 @@
                 </div>
             </div>
 
-            {{-- 5. Venituri (comisioane) --}}
+            {{-- 5. Venituri (comisioane + servicii) --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg shrink-0">
                         <x-heroicon-o-currency-euro class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div class="min-w-0">
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['commissions'], 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['commissions'] + $stats['service_orders_total'], 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Venituri</p>
-                        @if($stats['service_orders_total'] > 0)
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">+ {{ number_format($stats['service_orders_total'], 2) }} servicii</p>
-                        @endif
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Comisioane: {{ number_format($stats['commissions'], 2) }}
+                            @if($stats['service_orders_total'] > 0)
+                                · Servicii: {{ number_format($stats['service_orders_total'], 2) }}
+                            @endif
+                        </p>
                     </div>
                 </div>
             </div>
@@ -111,6 +117,12 @@
                     <div class="min-w-0">
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_tickets']) }}</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Bilete Vândute</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            @if($stats['today_tickets'] > 0)
+                                <span class="text-blue-600 dark:text-blue-400">+{{ $stats['today_tickets'] }} azi</span> ·
+                            @endif
+                            {{ number_format($stats['total_tickets_db']) }} total în DB
+                        </p>
                     </div>
                 </div>
             </div>
