@@ -16,7 +16,7 @@ class ConversionFunnelChart extends ChartWidget
 
     protected int|string|array $columnSpan = 1;
 
-    protected static ?string $maxHeight = '200px';
+    protected ?string $maxHeight = '200px';
 
     protected function getData(): array
     {

@@ -10,7 +10,7 @@ class TicketSalesChart extends ChartWidget
     protected ?string $heading = 'Bilete vândute (30 zile)';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 1;
-    protected static ?string $maxHeight = '200px';
+    protected ?string $maxHeight = '200px';
 
     protected function getData(): array
     {
