@@ -1123,6 +1123,31 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'order-confirmation':
+        $method = 'GET';
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $endpoint = '/orders/' . urlencode($orderId);
+        // No auth required — uses marketplace API key only
+        break;
+
+    case 'order.download-tickets-pdf':
+        $method = 'GET';
+        $orderRef = $_GET['order'] ?? '';
+        if (!$orderRef) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order reference']);
+            exit;
+        }
+        $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef);
+        $rawResponse = true;
+        // No auth required — uses marketplace API key + order reference
+        break;
+
     case 'customer.tickets':
         $method = 'GET';
         $endpoint = '/customer/tickets';

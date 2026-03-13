@@ -584,13 +584,13 @@ class PaymentController extends BaseController
         $firstVenueLocation = implode(', ', array_filter([$firstVenueName, $firstVenueCity]));
         $ticketCount = $order->tickets->count();
 
-        // Build download URL (thank-you page with order reference)
+        // Build download URL — direct PDF download via proxy
         $marketplaceDomain = rtrim($marketplace->domain ?? '', '/');
         if ($marketplaceDomain && !str_starts_with($marketplaceDomain, 'http')) {
             $marketplaceDomain = 'https://' . $marketplaceDomain;
         }
         $downloadUrl = $marketplaceDomain
-            ? $marketplaceDomain . '/multumim?order=' . urlencode($orderNumber)
+            ? $marketplaceDomain . '/api/proxy.php?action=order.download-tickets-pdf&order=' . urlencode($orderNumber)
             : '';
 
         // Build full email HTML (fallback when no template configured)

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Order;
 use App\Models\Ticket;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,7 @@ class TicketsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $order = Order::with(['tickets.ticketType', 'event'])
+        $order = Order::with(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType'])
             ->where('id', $orderId)
             ->where('marketplace_client_id', $client->id)
             ->first();
@@ -27,32 +28,36 @@ class TicketsController extends BaseController
             return $this->error('Order not found', 404);
         }
 
-        if ($order->status !== 'completed' || $order->payment_status !== 'paid') {
+        if (!in_array($order->status, ['completed', 'confirmed', 'paid'])) {
             return $this->error('Tickets are only available for completed orders', 400);
         }
 
         $tickets = $order->tickets->map(function ($ticket) use ($order) {
+            $event = $ticket->marketplaceEvent;
+
             return [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
-                'qr_code' => $ticket->qr_code_url ?? route('api.marketplace-client.tickets.qr', [
-                    'ticket' => $ticket->id,
-                ]),
+                'code' => $ticket->code,
                 'status' => $ticket->status,
-                'ticket_type' => $ticket->ticketType?->name,
-                'event' => [
-                    'id' => $order->event->id,
-                    'title' => $order->event->title,
-                    'date' => $order->event->start_date?->toIso8601String(),
-                    'venue' => $order->event->venue?->name,
-                    'address' => $order->event->venue?->address,
-                ],
+                'ticket_type' => $ticket->marketplaceTicketType?->name,
                 'attendee' => [
                     'name' => $ticket->attendee_name ?? $order->customer_name,
                     'email' => $ticket->attendee_email ?? $order->customer_email,
                 ],
-                'download_url' => route('api.marketplace-client.tickets.download', [
-                    'ticket' => $ticket->id,
+                'event' => $event ? [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'date' => $event->starts_at?->toIso8601String(),
+                    'venue' => $event->venue_name,
+                    'city' => $event->venue_city,
+                ] : null,
+                'seat' => method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null,
+                'qr_url' => 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+                    'size' => '180x180',
+                    'data' => method_exists($ticket, 'getVerifyUrl') ? $ticket->getVerifyUrl() : ($ticket->code ?? $ticket->barcode),
+                    'color' => '1a1a2e',
+                    'margin' => '0',
                 ]),
             ];
         });
@@ -60,10 +65,66 @@ class TicketsController extends BaseController
         return $this->success([
             'order_number' => $order->order_number,
             'tickets' => $tickets,
-            'download_all_url' => route('api.marketplace-client.orders.tickets.download', [
-                'order' => $order->id,
-            ]),
         ]);
+    }
+
+    /**
+     * Download all tickets for an order as PDF.
+     * Public endpoint — authenticated by marketplace API key + order reference number.
+     */
+    public function downloadPdf(Request $request): mixed
+    {
+        $client = $this->requireClient($request);
+
+        $orderRef = $request->query('order');
+        if (!$orderRef) {
+            return $this->error('Missing order reference', 400);
+        }
+
+        $order = Order::with(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType'])
+            ->where('marketplace_client_id', $client->id)
+            ->where('order_number', $orderRef)
+            ->whereIn('status', ['completed', 'confirmed', 'paid'])
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+
+        $tickets = $order->tickets;
+        if ($tickets->isEmpty()) {
+            return $this->error('No tickets found for this order', 404);
+        }
+
+        // Get first event for filename
+        $firstEvent = $tickets->first()->marketplaceEvent;
+        $eventName = $firstEvent->name ?? 'Eveniment';
+        $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
+
+        // Theme color from marketplace settings
+        $primaryColor = $client->settings['theme']['primary_color'] ?? '#1a1a2e';
+
+        $pdf = Pdf::loadView('marketplace-tickets-pdf', [
+            'order' => $order,
+            'tickets' => $tickets,
+            'eventName' => $eventName,
+            'marketplaceName' => $marketplaceName,
+            'primaryColor' => $primaryColor,
+        ])
+            ->setOption('isRemoteEnabled', true)
+            ->setPaper([0, 0, 396, 700], 'portrait');
+
+        $safeEventName = preg_replace('/[^a-zA-Z0-9_\-]/', '-', $eventName);
+        $filename = "bilete-{$safeEventName}-{$order->order_number}.pdf";
+
+        Log::channel('marketplace')->info('Tickets PDF downloaded', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'client_id' => $client->id,
+            'ticket_count' => $tickets->count(),
+        ]);
+
+        return $pdf->download($filename);
     }
 
     /**
@@ -73,12 +134,11 @@ class TicketsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $ticket = Ticket::with(['order', 'ticketType', 'event'])
+        $ticket = Ticket::with(['order', 'marketplaceEvent', 'marketplaceTicketType'])
             ->where('id', $ticketId)
             ->whereHas('order', function ($query) use ($client) {
                 $query->where('marketplace_client_id', $client->id)
-                    ->where('status', 'completed')
-                    ->where('payment_status', 'paid');
+                    ->whereIn('status', ['completed', 'confirmed', 'paid']);
             })
             ->first();
 
@@ -86,21 +146,25 @@ class TicketsController extends BaseController
             return $this->error('Ticket not found or not available for download', 404);
         }
 
-        // Check if PDF already exists
-        $pdfPath = "tickets/{$ticket->id}.pdf";
+        $order = $ticket->order;
+        $eventName = $ticket->marketplaceEvent?->name ?? 'Eveniment';
+        $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
+        $primaryColor = $client->settings['theme']['primary_color'] ?? '#1a1a2e';
 
-        if (!Storage::disk('local')->exists($pdfPath)) {
-            // Generate PDF (you'll need to implement this based on your ticket generation system)
-            $this->generateTicketPdf($ticket, $pdfPath);
-        }
+        $pdf = Pdf::loadView('marketplace-tickets-pdf', [
+            'order' => $order,
+            'tickets' => collect([$ticket]),
+            'eventName' => $eventName,
+            'marketplaceName' => $marketplaceName,
+            'primaryColor' => $primaryColor,
+        ])
+            ->setOption('isRemoteEnabled', true)
+            ->setPaper([0, 0, 396, 700], 'portrait');
 
-        Log::channel('marketplace')->info('Ticket downloaded', [
-            'ticket_id' => $ticket->id,
-            'order_id' => $ticket->order_id,
-            'client_id' => $client->id,
-        ]);
+        $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
+        $filename = "bilet-{$ticketCode}.pdf";
 
-        return Storage::disk('local')->download($pdfPath, "ticket-{$ticket->barcode}.pdf");
+        return $pdf->download($filename);
     }
 
     /**
@@ -110,31 +174,34 @@ class TicketsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $order = Order::with(['tickets.ticketType', 'event'])
+        $order = Order::with(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType'])
             ->where('id', $orderId)
             ->where('marketplace_client_id', $client->id)
-            ->where('status', 'completed')
-            ->where('payment_status', 'paid')
+            ->whereIn('status', ['completed', 'confirmed', 'paid'])
             ->first();
 
         if (!$order) {
             return $this->error('Order not found or not available for download', 404);
         }
 
-        // Generate ZIP file with all tickets
-        $zipPath = "tickets/orders/{$order->order_number}.zip";
+        $eventName = $order->tickets->first()?->marketplaceEvent?->name ?? 'Eveniment';
+        $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
+        $primaryColor = $client->settings['theme']['primary_color'] ?? '#1a1a2e';
 
-        if (!Storage::disk('local')->exists($zipPath)) {
-            $this->generateOrderTicketsZip($order, $zipPath);
-        }
+        // For simplicity, return all tickets in a single PDF (better UX than ZIP)
+        $pdf = Pdf::loadView('marketplace-tickets-pdf', [
+            'order' => $order,
+            'tickets' => $order->tickets,
+            'eventName' => $eventName,
+            'marketplaceName' => $marketplaceName,
+            'primaryColor' => $primaryColor,
+        ])
+            ->setOption('isRemoteEnabled', true)
+            ->setPaper([0, 0, 396, 700], 'portrait');
 
-        Log::channel('marketplace')->info('All tickets downloaded', [
-            'order_id' => $order->id,
-            'client_id' => $client->id,
-            'ticket_count' => $order->tickets->count(),
-        ]);
+        $filename = "bilete-{$order->order_number}.pdf";
 
-        return Storage::disk('local')->download($zipPath, "tickets-{$order->order_number}.zip");
+        return $pdf->download($filename);
     }
 
     /**
@@ -146,24 +213,24 @@ class TicketsController extends BaseController
 
         $ticket = Ticket::whereHas('order', function ($query) use ($client) {
             $query->where('marketplace_client_id', $client->id)
-                ->where('status', 'completed')
-                ->where('payment_status', 'paid');
+                ->whereIn('status', ['completed', 'confirmed', 'paid']);
         })->find($ticketId);
 
         if (!$ticket) {
             return $this->error('Ticket not found', 404);
         }
 
-        // Generate QR code
-        $qrCodePath = "tickets/qr/{$ticket->id}.png";
-
-        if (!Storage::disk('local')->exists($qrCodePath)) {
-            $this->generateQrCode($ticket, $qrCodePath);
-        }
-
-        return response()->file(Storage::disk('local')->path($qrCodePath), [
-            'Content-Type' => 'image/png',
+        // Redirect to QR code API
+        $verifyUrl = method_exists($ticket, 'getVerifyUrl') ? $ticket->getVerifyUrl() : ($ticket->code ?? $ticket->barcode);
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+            'size' => '300x300',
+            'data' => $verifyUrl,
+            'color' => '1a1a2e',
+            'margin' => '1',
+            'format' => 'png',
         ]);
+
+        return redirect($qrUrl);
     }
 
     /**
@@ -177,8 +244,11 @@ class TicketsController extends BaseController
             'barcode' => 'required|string',
         ]);
 
-        $ticket = Ticket::with(['order', 'ticketType', 'event'])
-            ->where('barcode', $request->barcode)
+        $ticket = Ticket::with(['order', 'marketplaceTicketType', 'marketplaceEvent'])
+            ->where(function ($q) use ($request) {
+                $q->where('barcode', $request->barcode)
+                    ->orWhere('code', $request->barcode);
+            })
             ->whereHas('order', function ($query) use ($client) {
                 $query->where('marketplace_client_id', $client->id);
             })
@@ -191,7 +261,7 @@ class TicketsController extends BaseController
             ]);
         }
 
-        $isValid = $ticket->status === 'valid' && $ticket->order->status === 'completed';
+        $isValid = $ticket->status === 'valid' && in_array($ticket->order->status, ['completed', 'confirmed', 'paid']);
 
         return $this->success([
             'valid' => $isValid,
@@ -200,70 +270,12 @@ class TicketsController extends BaseController
             'ticket' => $isValid ? [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
-                'ticket_type' => $ticket->ticketType?->name,
-                'event' => $ticket->event->title,
+                'ticket_type' => $ticket->marketplaceTicketType?->name,
+                'event' => $ticket->marketplaceEvent?->name,
                 'attendee_name' => $ticket->attendee_name ?? $ticket->order->customer_name,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
             ] : null,
         ]);
-    }
-
-    /**
-     * Generate ticket PDF (stub - implement based on your system)
-     */
-    protected function generateTicketPdf(Ticket $ticket, string $path): void
-    {
-        // This would integrate with your existing ticket PDF generation system
-        // For example, using the TicketTemplateController or a dedicated service
-
-        // Placeholder - you'll need to implement this
-        Storage::disk('local')->put($path, 'PDF content placeholder');
-    }
-
-    /**
-     * Generate ZIP with all order tickets (stub)
-     */
-    protected function generateOrderTicketsZip(Order $order, string $path): void
-    {
-        // Create a ZIP file with all ticket PDFs
-        // Placeholder - implement based on your needs
-
-        $zip = new \ZipArchive();
-        $tempPath = storage_path('app/' . $path);
-
-        Storage::disk('local')->makeDirectory(dirname($path));
-
-        if ($zip->open($tempPath, \ZipArchive::CREATE) === true) {
-            foreach ($order->tickets as $ticket) {
-                $ticketPdfPath = "tickets/{$ticket->id}.pdf";
-                if (!Storage::disk('local')->exists($ticketPdfPath)) {
-                    $this->generateTicketPdf($ticket, $ticketPdfPath);
-                }
-                $zip->addFile(
-                    Storage::disk('local')->path($ticketPdfPath),
-                    "ticket-{$ticket->barcode}.pdf"
-                );
-            }
-            $zip->close();
-        }
-    }
-
-    /**
-     * Generate QR code for ticket (stub)
-     */
-    protected function generateQrCode(Ticket $ticket, string $path): void
-    {
-        // Use a QR code library to generate the code
-        // For example: SimpleSoftwareIO/simple-qrcode
-
-        Storage::disk('local')->makeDirectory(dirname($path));
-
-        // Placeholder - implement with actual QR generation
-        // Example with simple-qrcode:
-        // $qrCode = QrCode::format('png')->size(300)->generate($ticket->barcode);
-        // Storage::disk('local')->put($path, $qrCode);
-
-        Storage::disk('local')->put($path, 'QR placeholder');
     }
 }

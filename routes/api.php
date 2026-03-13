@@ -1459,6 +1459,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.orders.tickets');
     Route::get('/orders/{order}/tickets/download', [MarketplaceTicketsController::class, 'downloadAll'])
         ->name('api.marketplace-client.orders.tickets.download');
+    Route::get('/tickets/download-pdf', [MarketplaceTicketsController::class, 'downloadPdf'])
+        ->name('api.marketplace-client.tickets.download-pdf');
     Route::get('/tickets/{ticket}/download', [MarketplaceTicketsController::class, 'download'])
         ->name('api.marketplace-client.tickets.download');
     Route::get('/tickets/{ticket}/qr', [MarketplaceTicketsController::class, 'qrCode'])

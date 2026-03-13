@@ -1149,6 +1149,19 @@ switch ($action) {
         // No auth required — uses marketplace API key only
         break;
 
+    case 'order.download-tickets-pdf':
+        $method = 'GET';
+        $orderRef = $_GET['order'] ?? '';
+        if (!$orderRef) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order reference']);
+            exit;
+        }
+        $endpoint = '/tickets/download-pdf?order=' . urlencode($orderRef);
+        $rawResponse = true;
+        // No auth required — uses marketplace API key + order reference
+        break;
+
     case 'customer.orders':
         $method = 'GET';
         $params = [];
@@ -1509,6 +1522,60 @@ switch ($action) {
         $params = [];
         if (isset($_GET['code'])) $params['code'] = $_GET['code'];
         $endpoint = '/customer/referrals/validate' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    // ==================== CUSTOMER REFUNDS ====================
+
+    case 'customer.refunds.reasons':
+        $method = 'GET';
+        $endpoint = '/customer/refunds/reasons';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refunds.check-eligibility':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/refunds/check-eligibility';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refunds':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $method = 'POST';
+            $body = file_get_contents('php://input');
+            $endpoint = '/customer/refunds';
+        } else {
+            $method = 'GET';
+            $params = [];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+            $endpoint = '/customer/refunds' . ($params ? '?' . http_build_query($params) : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refund.show':
+        $refundId = $_GET['id'] ?? '';
+        if (!$refundId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing refund ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/refunds/' . urlencode($refundId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.refund.cancel':
+        $refundId = $_GET['id'] ?? '';
+        if (!$refundId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing refund ID']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/customer/refunds/' . urlencode($refundId) . '/cancel';
+        $requiresAuth = true;
         break;
 
     // ==================== ORGANIZER AUTH ====================
