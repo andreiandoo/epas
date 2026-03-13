@@ -8,8 +8,13 @@ use Filament\Widgets\ChartWidget;
 class OrdersByStatusChart extends ChartWidget
 {
     protected ?string $heading = 'Orders by Status';
-    protected static ?int $sort = 6;
+    protected static ?int $sort = 99;
     protected int | string | array $columnSpan = 1;
+
+    public static function canView(): bool
+    {
+        return false;
+    }
 
     protected function getData(): array
     {

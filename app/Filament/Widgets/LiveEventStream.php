@@ -173,6 +173,6 @@ class LiveEventStream extends Widget
 
     public static function canView(): bool
     {
-        return true;
+        return false;
     }
 }

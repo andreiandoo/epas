@@ -2,48 +2,29 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\ConversionFunnelChart;
+use App\Filament\Widgets\EventsByMonthChart;
+use App\Filament\Widgets\LiveStatsCards;
+use App\Filament\Widgets\RecentEventsTable;
+use App\Filament\Widgets\RevenueChart;
+use App\Filament\Widgets\StatsOverview;
+use App\Filament\Widgets\TicketSalesChart;
+use App\Filament\Widgets\TopTenantsTable;
 use Filament\Pages\Dashboard as BaseDashboard;
-use Illuminate\Support\Facades\Log;
 
 class CustomDashboard extends BaseDashboard
 {
-    /**
-     * Override canAccess to add logging and always return true for diagnosis
-     */
-    public static function canAccess(): bool
+    public function getWidgets(): array
     {
-        $user = auth()->user();
-        $canAccess = true; // Force true to diagnose
-
-        Log::channel('single')->info('=== DASHBOARD ACCESS CHECK ===', [
-            'user_id' => $user?->id ?? null,
-            'user_email' => $user?->email ?? null,
-            'user_role' => $user?->role ?? null,
-            'canAccess' => $canAccess,
-            'is_authenticated' => auth()->check(),
-            'session_id' => session()->getId(),
-        ]);
-
-        return $canAccess;
-    }
-
-    /**
-     * Override mountCanAuthorizeAccess to add even more logging
-     */
-    public function mountCanAuthorizeAccess(): void
-    {
-        Log::channel('single')->info('=== DASHBOARD MOUNT AUTHORIZE ACCESS ===', [
-            'user_id' => auth()->id(),
-            'about_to_check' => 'static::canAccess()',
-        ]);
-
-        $canAccess = static::canAccess();
-
-        Log::channel('single')->info('=== DASHBOARD MOUNT RESULT ===', [
-            'canAccess' => $canAccess,
-            'will_abort' => !$canAccess,
-        ]);
-
-        abort_unless($canAccess, 403);
+        return [
+            StatsOverview::class,
+            LiveStatsCards::class,
+            EventsByMonthChart::class,
+            RevenueChart::class,
+            ConversionFunnelChart::class,
+            TicketSalesChart::class,
+            RecentEventsTable::class,
+            TopTenantsTable::class,
+        ];
     }
 }

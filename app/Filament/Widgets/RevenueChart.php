@@ -7,9 +7,10 @@ use Filament\Widgets\ChartWidget;
 
 class RevenueChart extends ChartWidget
 {
-    protected ?string $heading = 'Revenue (Last 12 Months)';
+    protected ?string $heading = 'Venituri (12 luni)';
     protected static ?int $sort = 3;
-    protected int | string | array $columnSpan = 'full';
+    protected int | string | array $columnSpan = 1;
+    protected static ?string $maxHeight = '200px';
 
     protected function getData(): array
     {

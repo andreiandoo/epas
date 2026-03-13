@@ -12,6 +12,7 @@ class TopTenantsTable extends BaseWidget
     protected static ?string $heading = 'Top Tenants';
     protected static ?int $sort = 5;
     protected int | string | array $columnSpan = 1;
+    protected int | string | array $columnSpan = 1;
 
     public function table(Table $table): Table
     {

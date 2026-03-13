@@ -8,13 +8,15 @@ use Filament\Widgets\ChartWidget;
 
 class ConversionFunnelChart extends ChartWidget
 {
-    protected ?string $heading = 'Conversion Funnel (Today)';
+    protected ?string $heading = 'Conversii (azi)';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 4;
 
     protected ?string $pollingInterval = '60s';
 
-    protected int|string|array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 1;
+
+    protected static ?string $maxHeight = '200px';
 
     protected function getData(): array
     {
