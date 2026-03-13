@@ -58,6 +58,7 @@ class EventCategoryResource extends Resource
                 SC\Section::make('Category Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -81,6 +82,7 @@ class EventCategoryResource extends Resource
                             ])->columnSpanFull(),
 
                         SC\Tabs::make('Description Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -167,6 +169,7 @@ class EventCategoryResource extends Resource
                             ->columnSpanFull(),
 
                         SC\Tabs::make('SEO Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

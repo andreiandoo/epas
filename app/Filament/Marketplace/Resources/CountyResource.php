@@ -58,6 +58,7 @@ class CountyResource extends Resource
                 SC\Section::make('County Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -143,6 +144,7 @@ class CountyResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

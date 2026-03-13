@@ -48,6 +48,7 @@ class MarketplaceVenueCategoryResource extends Resource
             SC\Section::make('Informații categorie')
                 ->schema([
                     SC\Tabs::make('Name Translations')
+                        ->persistTab()
                         ->tabs([
                             SC\Tabs\Tab::make('Română')
                                 ->schema([

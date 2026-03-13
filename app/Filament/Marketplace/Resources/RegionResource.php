@@ -57,6 +57,7 @@ class RegionResource extends Resource
                 SC\Section::make('Region Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -137,6 +138,7 @@ class RegionResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

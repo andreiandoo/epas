@@ -55,11 +55,12 @@ class PageResource extends Resource
                 SC\Section::make('Page Details')
                     ->schema([
                         SC\Tabs::make('Title')
+                            ->persistTab()
                             ->tabs([
-                                SC\Tabs\Tab::make('English')
+                                SC\Tabs\Tab::make('Română')
                                     ->schema([
-                                        Forms\Components\TextInput::make('title.en')
-                                            ->label('Page Title (EN)')
+                                        Forms\Components\TextInput::make('title.ro')
+                                            ->label('Titlu pagină (RO)')
                                             ->required()
                                             ->maxLength(255)
                                             ->live(onBlur: true)
@@ -69,10 +70,10 @@ class PageResource extends Resource
                                                 }
                                             }),
                                     ]),
-                                SC\Tabs\Tab::make('Romanian')
+                                SC\Tabs\Tab::make('English')
                                     ->schema([
-                                        Forms\Components\TextInput::make('title.ro')
-                                            ->label('Page Title (RO)')
+                                        Forms\Components\TextInput::make('title.en')
+                                            ->label('Page Title (EN)')
                                             ->maxLength(255),
                                     ]),
                             ])
@@ -97,11 +98,12 @@ class PageResource extends Resource
                 SC\Section::make('Content')
                     ->schema([
                         SC\Tabs::make('Content')
+                            ->persistTab()
                             ->tabs([
-                                SC\Tabs\Tab::make('English')
+                                SC\Tabs\Tab::make('Română')
                                     ->schema([
-                                        Forms\Components\RichEditor::make('content.en')
-                                            ->label('Page Content (EN)')
+                                        Forms\Components\RichEditor::make('content.ro')
+                                            ->label('Conținut pagină (RO)')
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -119,10 +121,10 @@ class PageResource extends Resource
                                             ])
                                             ->columnSpanFull(),
                                     ]),
-                                SC\Tabs\Tab::make('Romanian')
+                                SC\Tabs\Tab::make('English')
                                     ->schema([
-                                        Forms\Components\RichEditor::make('content.ro')
-                                            ->label('Page Content (RO)')
+                                        Forms\Components\RichEditor::make('content.en')
+                                            ->label('Page Content (EN)')
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',

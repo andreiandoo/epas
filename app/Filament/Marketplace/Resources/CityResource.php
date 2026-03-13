@@ -59,6 +59,7 @@ class CityResource extends Resource
                 SC\Section::make('City Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -209,6 +210,7 @@ class CityResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
+                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
