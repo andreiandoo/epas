@@ -131,7 +131,7 @@ class Dashboard extends Page
                     ->orWhereIn('marketplace_event_id', $eventIds);
             })->whereIn('status', ['paid', 'confirmed', 'completed'])
                 ->where('source', '!=', 'test_order');
-        })->where('status', 'valid')->count();
+        })->where('tickets.status', 'valid')->count();
 
         // 7. Organizatori
         $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
@@ -166,23 +166,32 @@ class Dashboard extends Page
                 });
             })
             ->withCount(['tickets as sold_tickets_count' => function ($q) {
-                $q->where('status', 'valid');
+                $q->where('tickets.status', 'valid');
             }])
-            ->get()
-            ->map(function ($event) use ($marketplaceId) {
-                $event->event_revenue = Order::where(function ($q) use ($event, $marketplaceId) {
-                    $q->where('marketplace_event_id', $event->id)
-                        ->orWhere(function ($q2) use ($event, $marketplaceId) {
+            ->get();
+
+        // Batch-load revenue for all live events in one query
+        if ($topLiveEvents->isNotEmpty()) {
+            $liveEventIds = $topLiveEvents->pluck('id')->toArray();
+            $revenueByEvent = Order::where(function ($q) use ($liveEventIds, $marketplaceId) {
+                    $q->whereIn('marketplace_event_id', $liveEventIds)
+                        ->orWhere(function ($q2) use ($liveEventIds, $marketplaceId) {
                             $q2->where('marketplace_client_id', $marketplaceId)
-                                ->where('event_id', $event->id);
+                                ->whereIn('event_id', $liveEventIds);
                         });
-                })->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', '!=', 'test_order')
-                    ->sum('total');
-                return $event;
-            })
-            ->sortByDesc('event_revenue')
-            ->take(5);
+                })
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where('source', '!=', 'test_order')
+                ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
+                ->groupBy('eid')
+                ->pluck('rev', 'eid');
+
+            $topLiveEvents->each(function ($event) use ($revenueByEvent) {
+                $event->event_revenue = (float) ($revenueByEvent[$event->id] ?? 0);
+            });
+        }
+
+        $topLiveEvents = $topLiveEvents->sortByDesc('event_revenue')->take(5);
 
         // Chart data
         $chartData = $this->getChartData($eventIds, $startDate, $endDate, $days);
