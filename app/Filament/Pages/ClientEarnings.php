@@ -143,19 +143,19 @@ class ClientEarnings extends Page
             $query->where('tenant_id', $this->clientId);
         }
 
-        // Get orders
-        $ordersRaw = $query->orderBy('created_at', 'desc')->get();
+        // Get aggregates first (efficient, no memory issues)
+        $totalsQuery = clone $query;
+        $this->orderCount = $totalsQuery->count();
 
-        // Calculate totals
         if ($this->type === 'marketplace') {
-            $this->totalRevenue = (float) $ordersRaw->sum('total');
+            $this->totalRevenue = (float) (clone $query)->sum('total');
         } else {
-            $this->totalRevenue = $ordersRaw->sum('total_cents') / 100;
+            $this->totalRevenue = (clone $query)->sum('total_cents') / 100;
         }
-        // Platform commission = gross revenue × client's commission rate
         $this->totalCommission = round($this->totalRevenue * (($this->client['commission_rate'] ?? 0) / 100), 2);
 
-        $this->orderCount = $ordersRaw->count();
+        // Get orders (limit to last 500 for display to prevent memory issues)
+        $ordersRaw = $query->orderBy('created_at', 'desc')->limit(500)->get();
 
         // Map orders for display
         $this->orders = $ordersRaw->map(function ($order) {
@@ -169,7 +169,7 @@ class ClientEarnings extends Page
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number ?? "#{$order->id}",
-                'date' => $order->created_at,
+                'date' => $order->created_at->format('Y-m-d H:i'),
                 'customer' => $order->customer_name ?? $order->customer_email,
                 'revenue' => $revenue,
                 'commission' => $commission,

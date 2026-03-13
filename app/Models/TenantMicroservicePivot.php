@@ -6,12 +6,13 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
 
 class TenantMicroservicePivot extends Pivot
 {
-    protected $table = 'tenant_microservice';
+    protected $table = 'tenant_microservices';
 
     protected $casts = [
-        'is_active' => 'boolean',
         'activated_at' => 'datetime',
         'expires_at' => 'datetime',
-        'configuration' => 'array',
+        'trial_ends_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'settings' => 'array',
     ];
 }

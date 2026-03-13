@@ -54,15 +54,22 @@ class ViewMicroserviceTenants extends Page implements HasTable
                 Tables\Columns\TextColumn::make('contact_email')
                     ->label('Contact')
                     ->searchable(),
-                Tables\Columns\BadgeColumn::make('pivot_is_active')
+                Tables\Columns\BadgeColumn::make('pivot_status')
                     ->label('Status')
                     ->state(function ($record) {
-                        return $record->microservices->first()?->pivot->is_active ?? false;
+                        return $record->microservices->first()?->pivot->status ?? 'cancelled';
                     })
-                    ->formatStateUsing(fn ($state) => $state ? 'Active' : 'Inactive')
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'active' => 'Active',
+                        'trial' => 'Trial',
+                        'suspended' => 'Suspended',
+                        'cancelled' => 'Cancelled',
+                        default => ucfirst($state),
+                    })
                     ->colors([
-                        'success' => true,
-                        'danger' => false,
+                        'success' => 'active',
+                        'warning' => 'trial',
+                        'danger' => fn ($state) => in_array($state, ['suspended', 'cancelled']),
                     ]),
                 Tables\Columns\TextColumn::make('pivot_activated_at')
                     ->label('Activated')

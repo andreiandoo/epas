@@ -230,8 +230,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         </svg>
                     </button>
                     <?php if (!empty($navCities)): ?>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
-                        <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                        <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2 rounded-tl-none rounded-tr-none pb-2">
                             <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Alege orașul</span>
                                 <a href="/orase" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
@@ -269,8 +269,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
-                        <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                        <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex rounded-tl-none rounded-tr-none pb-2">
                             <!-- Categories -->
                             <div class="w-[250px] px-3 py-2 bg-gray-50 border-r border-gray-200">
                                 <?php if (!empty($navCategories)): ?>
@@ -313,8 +313,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             </div>
 
                             <!-- Featured Events -->
-                            <div class="flex flex-col justify-between flex-1 p-3">
-                                <div class="flex items-center justify-between mb-4">
+                            <div class="flex flex-col justify-between flex-1 pt-3 pb-2">
+                                <div class="flex items-center justify-between px-3 mb-4">
                                     <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
                                             <path d="M12 23c-1.1 0-1.99-.89-1.99-1.99h3.98c0 1.1-.89 1.99-1.99 1.99zm8.29-4.71L19 17V11c0-3.35-2.36-6.15-5.5-6.83V3c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v1.17C7.36 4.85 5 7.65 5 11v6l-1.29 1.29c-.63.63-.19 1.71.7 1.71h15.17c.9 0 1.34-1.08.71-1.71z"/>
@@ -329,7 +329,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     </a>
                                 </div>
 
-                                <div class="flex flex-col">
+                                <div class="flex flex-col px-3">
                                 <?php if (!empty($navFeaturedEvents)): ?>
                                 <?php foreach ($navFeaturedEvents as $event): ?>
                                     <a href="/bilete/<?= $event['slug'] ?>" class="flex gap-3.5 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all mb-2 justify-between">
@@ -369,7 +369,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 <?php endif; ?>
                                 </div>
 
-                                <div class="flex gap-2 pt-4 mt-4 border-t border-gray-200">
+                                <div class="flex gap-2 px-3 pt-2 mt-4 border-t border-gray-200">
                                     <?php foreach ($navQuickLinks as $link): ?>
                                     <a href="/<?= $link['slug'] ?>" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-gray-50 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-primary hover:text-white transition-all">
                                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $link['icon'] ?></svg>
@@ -395,8 +395,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
-                        <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                        <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2 rounded-tl-none rounded-tr-none pb-2">
                             <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Locații populare</span>
                                 <a href="/locatii" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">

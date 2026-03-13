@@ -208,7 +208,7 @@
                                 {{ $order['order_number'] }}
                             </td>
                             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
-                                {{ $order['date']->format('M d, H:i') }}
+                                {{ $order['date'] }}
                             </td>
                             <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
                                 {{ $order['customer'] ?? '-' }}

@@ -248,9 +248,9 @@ class MicroserviceResource extends Resource
                             ->size('sm'),
                         Tables\Columns\TextColumn::make('active_tenants_count')
                             ->label('Tenants')
-                            ->getStateUsing(fn (Microservice $record) => \DB::table('tenant_microservice')
+                            ->getStateUsing(fn (Microservice $record) => \DB::table('tenant_microservices')
                                 ->where('microservice_id', $record->id)
-                                ->where('is_active', true)
+                                ->where('status', 'active')
                                 ->count())
                             ->suffix(' tenants')
                             ->size('sm')
