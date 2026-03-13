@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Customer;
 use App\Models\ExchangeRate;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -17,20 +16,24 @@ class LiveStatsCards extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $totalCustomers = Customer::count();
-        $todayCustomers = Customer::whereDate('created_at', today())->count();
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        $totalOrders = Order::where('status', 'completed')->count();
-        $todayOrders = Order::where('status', 'completed')->whereDate('created_at', today())->count();
+        $totalOrders = Order::whereIn('status', $paidStatuses)->count();
+        $todayOrders = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->count();
 
-        $totalRevenue = Order::where('status', 'completed')->sum('total_cents') / 100;
-        $todayRevenue = Order::where('status', 'completed')->whereDate('created_at', today())->sum('total_cents') / 100;
+        // Try total (decimal) first, fallback to total_cents
+        $totalRevenue = Order::whereIn('status', $paidStatuses)->sum('total');
+        $todayRevenue = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->sum('total');
+        if ($totalRevenue == 0) {
+            $totalRevenue = Order::whereIn('status', $paidStatuses)->sum('total_cents') / 100;
+            $todayRevenue = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->sum('total_cents') / 100;
+        }
 
-        $totalTickets = Ticket::where('status', 'sold')->count();
-        $todayTickets = Ticket::where('status', 'sold')->whereDate('created_at', today())->count();
+        $totalTickets = Ticket::where('status', 'valid')->count();
+        $todayTickets = Ticket::where('status', 'valid')->whereDate('created_at', today())->count();
 
-        $totalCommissions = Order::where('status', 'completed')->sum('commission_amount');
-        $todayCommissions = Order::where('status', 'completed')->whereDate('created_at', today())->sum('commission_amount');
+        $totalCommissions = Order::whereIn('status', $paidStatuses)->sum('commission_amount');
+        $todayCommissions = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->sum('commission_amount');
 
         // Exchange rate EUR → RON
         $eurRon = ExchangeRate::getLatestRate('EUR', 'RON');
@@ -40,11 +43,6 @@ class LiveStatsCards extends StatsOverviewWidget
             ->first();
 
         return [
-            Stat::make('Clienți', number_format($totalCustomers))
-                ->description("+{$todayCustomers} azi")
-                ->descriptionIcon('heroicon-m-user-group')
-                ->color('info'),
-
             Stat::make('Comenzi', number_format($totalOrders))
                 ->description("+{$todayOrders} azi")
                 ->descriptionIcon('heroicon-m-shopping-cart')
