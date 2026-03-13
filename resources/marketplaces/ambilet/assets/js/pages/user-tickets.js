@@ -200,7 +200,7 @@ const UserTickets = {
                         <div class="tickets-collapsible${tickets.length > 2 ? ' mobile-collapsed' : ''}" data-event-idx="${idx}">
                             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
                                 ${tickets.map((t, i) => `
-                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}')">
+                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}', '${(self.formatSeatInfo(t.seat) || '').replace(/'/g, "\\'")}')">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-xs text-muted">#${i + 1}</span>
                                         <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
@@ -211,7 +211,7 @@ const UserTickets = {
                                     ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
                                     <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
                                     <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
-                                    ${t.seat ? `<p class="mt-0.5 text-[10px] text-muted">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(', ')}</p>` : ''}
+                                    ${t.seat ? `<p class="mt-1 px-1.5 py-0.5 bg-primary/5 text-primary text-[11px] font-medium rounded inline-block">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(' / ')}</p>` : ''}
                                 </div>
                                 `).join('')}
                             </div>
@@ -315,13 +315,24 @@ const UserTickets = {
         }
     },
 
+    // Format seat info for display
+    formatSeatInfo(seat) {
+        if (!seat) return '';
+        return [seat.section_name, seat.row_label ? 'R' + seat.row_label : '', seat.seat_number ? 'Loc ' + seat.seat_number : ''].filter(Boolean).join(' / ');
+    },
+
     // Show QR Modal
-    async showQRModal(code, type, attendeeName, eventName) {
+    async showQRModal(code, type, attendeeName, eventName, seatInfo) {
         const backdrop = document.getElementById('qr-modal-backdrop');
         document.getElementById('qr-modal-title').textContent = eventName;
         document.getElementById('qr-modal-attendee').textContent = attendeeName || '';
         document.getElementById('qr-modal-code').textContent = code;
         document.getElementById('qr-modal-type').textContent = type;
+        const seatEl = document.getElementById('qr-modal-seat');
+        if (seatEl) {
+            seatEl.textContent = seatInfo || '';
+            seatEl.style.display = seatInfo ? 'block' : 'none';
+        }
 
         const qrContainer = document.getElementById('qr-modal-qr');
         qrContainer.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 rounded-full animate-spin border-primary border-t-transparent"></div></div>';

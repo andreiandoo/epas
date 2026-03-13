@@ -727,7 +727,7 @@ class AccountController extends BaseController
                 // Handle both marketplace events and tenant events
                 if ($order->marketplaceEvent) {
                     $event = $order->marketplaceEvent;
-                    $seatMeta = $ticket->meta ?? [];
+                    $seatDetails = $ticket->getSeatDetails();
                     return [
                         'id' => $ticket->id,
                         'code' => $ticket->barcode,
@@ -737,11 +737,7 @@ class AccountController extends BaseController
                         'checked_in' => $ticket->checked_in_at !== null,
                         'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'seat_label' => $ticket->seat_label,
-                        'seat' => $ticket->seat_label ? [
-                            'section_name' => $seatMeta['section_name'] ?? null,
-                            'row_label' => $seatMeta['row_label'] ?? null,
-                            'seat_number' => $seatMeta['seat_number'] ?? null,
-                        ] : null,
+                        'seat' => $seatDetails,
                         'event' => [
                             'id' => $event->id,
                             'name' => $event->name,
@@ -771,7 +767,7 @@ class AccountController extends BaseController
                         ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
                         : $event->title;
 
-                    $seatMeta = $ticket->meta ?? [];
+                    $seatDetails = $ticket->getSeatDetails();
                     return [
                         'id' => $ticket->id,
                         'code' => $ticket->barcode,
@@ -781,11 +777,7 @@ class AccountController extends BaseController
                         'checked_in' => $ticket->checked_in_at !== null,
                         'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'seat_label' => $ticket->seat_label,
-                        'seat' => $ticket->seat_label ? [
-                            'section_name' => $seatMeta['section_name'] ?? null,
-                            'row_label' => $seatMeta['row_label'] ?? null,
-                            'seat_number' => $seatMeta['seat_number'] ?? null,
-                        ] : null,
+                        'seat' => $seatDetails,
                         'event' => [
                             'id' => $event->id,
                             'name' => $eventTitle,
