@@ -54,7 +54,7 @@ class MicroserviceSettings extends Page
 
         // Load saved settings from pivot configuration
         // Handle case where configuration might be stored as JSON string
-        $config = $activeMicroservice->pivot->configuration;
+        $config = $activeMicroservice->pivot->settings;
         if (is_string($config)) {
             $config = json_decode($config, true) ?? [];
         }
@@ -876,7 +876,7 @@ class MicroserviceSettings extends Page
         // Update configuration in pivot table
         $this->tenant->microservices()->updateExistingPivot(
             $this->microservice->id,
-            ['configuration' => $data]
+            ['settings' => $data]
         );
 
         Notification::make()

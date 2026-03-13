@@ -204,7 +204,7 @@ class Tenant extends Model
     {
         return $this->belongsToMany(Microservice::class, 'tenant_microservices')
             ->using(TenantMicroservicePivot::class)
-            ->withPivot(['status', 'activated_at', 'expires_at', 'settings'])
+            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings'])
             ->withTimestamps();
     }
 
@@ -424,7 +424,7 @@ class Tenant extends Model
 
     public function getActiveMicroservices()
     {
-        return $this->tenantMicroservices()->where('status', 'active')->get();
+        return $this->tenantMicroservices()->where('is_active', true)->get();
     }
 
     /**
@@ -434,7 +434,7 @@ class Tenant extends Model
     {
         return $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->exists();
     }
 
@@ -445,7 +445,7 @@ class Tenant extends Model
     {
         $microservice = $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->first();
 
         $settings = $microservice?->pivot?->settings;
