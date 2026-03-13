@@ -28,7 +28,7 @@ class RegionResource extends Resource
 
     protected static ?string $navigationLabel = 'Regions';
 
-    protected static ?string $navigationParentItem = 'Venues';
+    protected static ?string $navigationParentItem = 'Locații';
 
     protected static ?int $navigationSort = 1;
 
