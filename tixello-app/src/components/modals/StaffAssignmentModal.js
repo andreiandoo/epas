@@ -12,12 +12,14 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
 import { getTeamMembers, inviteTeamMember, removeTeamMember, updateTeamMember, activateTeamMember } from '../../api/team';
 import { getVenueGates } from '../../api/gates';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -311,6 +313,7 @@ function MemberCard({ member, gates, isExpanded, onToggleExpand, onAssignGate, o
 }
 
 export default function StaffAssignmentModal({ visible, onClose }) {
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const { selectedEvent } = useEvent();
   const [members, setMembers] = useState([]);
   const [gates, setGates] = useState([]);
@@ -323,6 +326,10 @@ export default function StaffAssignmentModal({ visible, onClose }) {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('staff');
   const [inviteGate, setInviteGate] = useState(null);
+
+  // Activation password state
+  const [activatingMemberId, setActivatingMemberId] = useState(null);
+  const [activatePassword, setActivatePassword] = useState('');
 
   const venueId = selectedEvent?.venue_id;
 
@@ -411,18 +418,31 @@ export default function StaffAssignmentModal({ visible, onClose }) {
     }
   };
 
-  const handleActivate = async (memberId) => {
+  const handleActivate = (memberId) => {
+    setActivatingMemberId(memberId);
+    setActivatePassword('');
+  };
+
+  const confirmActivate = async () => {
+    if (!activatePassword || activatePassword.length < 6) {
+      Alert.alert('Eroare', 'Parola trebuie sa aiba cel putin 6 caractere.');
+      return;
+    }
+
+    const memberId = activatingMemberId;
+    setActivatingMemberId(null);
+    setActivatePassword('');
+
     // Optimistic update
     setMembers(prev =>
       prev.map(m => m.id === memberId ? { ...m, status: 'active' } : m)
     );
 
     try {
-      await activateTeamMember(memberId);
+      await activateTeamMember(memberId, activatePassword);
       Alert.alert('Succes', 'Contul a fost activat.');
     } catch (e) {
       console.error('Failed to activate member:', e);
-      // Revert on error
       setMembers(prev =>
         prev.map(m => m.id === memberId ? { ...m, status: 'pending' } : m)
       );
@@ -469,9 +489,9 @@ export default function StaffAssignmentModal({ visible, onClose }) {
         behavior="padding"
       >
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>Echipă & Personal</Text>
@@ -663,7 +683,44 @@ export default function StaffAssignmentModal({ visible, onClose }) {
               </View>
             </ScrollView>
           )}
-        </View>
+
+          {/* Password activation modal */}
+          {activatingMemberId !== null && (
+            <View style={styles.passwordOverlay}>
+              <View style={styles.passwordCard}>
+                <Text style={styles.passwordTitle}>Setează Parola</Text>
+                <Text style={styles.passwordDescription}>
+                  Introdu o parolă pentru ca membrul să se poată autentifica în aplicație.
+                </Text>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Minim 6 caractere"
+                  placeholderTextColor={colors.textQuaternary}
+                  value={activatePassword}
+                  onChangeText={setActivatePassword}
+                  secureTextEntry
+                  autoFocus
+                />
+                <View style={styles.passwordButtons}>
+                  <TouchableOpacity
+                    style={styles.passwordCancelBtn}
+                    onPress={() => { setActivatingMemberId(null); setActivatePassword(''); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.passwordCancelText}>Anulează</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.passwordConfirmBtn, (!activatePassword || activatePassword.length < 6) && { opacity: 0.4 }]}
+                    onPress={confirmActivate}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.passwordConfirmText}>Activează</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -1017,5 +1074,77 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 12,
     color: colors.textQuaternary,
+  },
+  // Password activation modal
+  passwordOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  passwordCard: {
+    backgroundColor: '#1E1E2E',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 24,
+    width: '100%',
+  },
+  passwordTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  passwordDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  passwordInput: {
+    height: 48,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: colors.textPrimary,
+    marginBottom: 20,
+  },
+  passwordButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  passwordCancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  passwordCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  passwordConfirmBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 10,
+    backgroundColor: colors.green,
+    alignItems: 'center',
+  },
+  passwordConfirmText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.white,
   },
 });

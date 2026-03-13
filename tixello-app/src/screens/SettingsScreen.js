@@ -154,7 +154,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
 
   const staffName = user?.name || user?.public_name || 'Membru Echipă';
   const staffRole = userRole || 'staff';
-  const assignedGate = user?.assigned_gate || 'Gate A';
+  const assignedGate = user?.assigned_gate || '--';
 
   const handleEndShift = async () => {
     await logout();

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -168,6 +169,7 @@ function SuccessState() {
 export default function EmergencyModal({ visible, onClose }) {
   const [sent, setSent] = useState(false);
   const closeTimerRef = useRef(null);
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
 
   useEffect(() => {
     if (!visible) {
@@ -197,9 +199,9 @@ export default function EmergencyModal({ visible, onClose }) {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             {!sent && (
               <>
@@ -266,7 +268,7 @@ export default function EmergencyModal({ visible, onClose }) {
               </View>
             </View>
           )}
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

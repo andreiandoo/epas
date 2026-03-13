@@ -644,19 +644,6 @@ export default function SalesScreen({ navigation }) {
     setActiveView('cart');
   };
 
-  if (showSeatingMap) {
-    return (
-      <View style={styles.container}>
-        <SeatingMapScreen
-          eventId={selectedEvent?.id}
-          ticketTypeId={seatingMapTicketTypeId}
-          onConfirm={handleSeatingConfirm}
-          onClose={() => { setShowSeatingMap(false); setSeatingMapTicketTypeId(null); }}
-        />
-      </View>
-    );
-  }
-
   // ─── Ticket List View (inline, keeps tab bar visible) ──────────────────────
 
   if (showTicketList) {
@@ -1064,6 +1051,13 @@ export default function SalesScreen({ navigation }) {
         </TouchableOpacity>
       </Animated.View>
 
+      <SeatingMapScreen
+        visible={showSeatingMap}
+        eventId={selectedEvent?.id}
+        ticketTypeId={seatingMapTicketTypeId}
+        onConfirm={handleSeatingConfirm}
+        onClose={() => { setShowSeatingMap(false); setSeatingMapTicketTypeId(null); }}
+      />
     </View>
   );
 }

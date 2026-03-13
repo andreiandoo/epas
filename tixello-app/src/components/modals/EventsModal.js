@@ -10,6 +10,7 @@ import {
   Dimensions,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import { colors } from '../../theme/colors';
 import { getCategoryLabel } from '../../utils/eventCategories';
 
@@ -144,6 +145,7 @@ function EventItem({ event, category, onPress }) {
 }
 
 export default function EventsModal({ visible, onClose, events, onSelectEvent }) {
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const categories = ['live', 'today', 'future'];
 
   const handleSelectEvent = (event) => {
@@ -166,9 +168,9 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>Selectează Eveniment</Text>
@@ -226,7 +228,7 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
               })
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

@@ -9,7 +9,9 @@ import {
   TextInput,
   Dimensions,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
@@ -91,6 +93,7 @@ function GuestItem({ guest, onCheckIn, isCheckingIn }) {
 }
 
 export default function GuestListModal({ visible, onClose }) {
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const { selectedEvent } = useEvent();
   const [searchQuery, setSearchQuery] = useState('');
   const [guests, setGuests] = useState([]);
@@ -184,9 +187,9 @@ export default function GuestListModal({ visible, onClose }) {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} onPress={handleClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <View style={styles.titleRow}>
@@ -282,7 +285,7 @@ export default function GuestListModal({ visible, onClose }) {
               ))
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

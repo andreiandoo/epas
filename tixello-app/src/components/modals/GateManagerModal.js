@@ -13,11 +13,13 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Animated,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { useEvent } from '../../context/EventContext';
 import { getVenueGates, createVenueGate, updateVenueGate, deleteVenueGate } from '../../api/gates';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -228,6 +230,7 @@ function GateCard({ gate, onToggle, onDelete, onAssignSelf }) {
 }
 
 export default function GateManagerModal({ visible, onClose }) {
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const { selectedEvent } = useEvent();
   const [gates, setGates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -357,9 +360,9 @@ export default function GateManagerModal({ visible, onClose }) {
         behavior="padding"
       >
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>Administrare Porți</Text>
@@ -531,7 +534,7 @@ export default function GateManagerModal({ visible, onClose }) {
               )}
             </ScrollView>
           )}
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

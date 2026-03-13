@@ -8,11 +8,13 @@ import {
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop, Rect } from 'react-native-svg';
 import { colors } from '../../theme/colors';
 import { formatCurrency } from '../../utils/formatCurrency';
 import { getTeamMembers } from '../../api/team';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -110,6 +112,8 @@ export default function StaffModal({ visible, onClose }) {
     if (visible) fetchMembers();
   }, [visible]);
 
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
+
   const activeCount = staffMembers.filter(m => m.status === 'Active' || m.status === 'active').length;
   const totalScans = staffMembers.reduce((sum, m) => sum + (m.scans || 0), 0);
   const totalSales = staffMembers.reduce((sum, m) => sum + (m.sales || 0), 0);
@@ -123,9 +127,9 @@ export default function StaffModal({ visible, onClose }) {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} onPress={onClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>Prezentare Echipă</Text>
@@ -179,7 +183,7 @@ export default function StaffModal({ visible, onClose }) {
               ))
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

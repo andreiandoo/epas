@@ -7,13 +7,16 @@ import {
   StyleSheet,
   TextInput,
   Dimensions,
+  Animated,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../../theme/colors';
+import useSwipeToDismiss from '../../hooks/useSwipeToDismiss';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 export default function ManualEntryModal({ visible, onClose, onSubmit }) {
+  const { translateY, panResponder } = useSwipeToDismiss(onClose);
   const [ticketCode, setTicketCode] = useState('');
   const [guestId, setGuestId] = useState('');
 
@@ -48,9 +51,9 @@ export default function ManualEntryModal({ visible, onClose, onSubmit }) {
     >
       <View style={styles.overlay}>
         <TouchableOpacity style={styles.overlayTouchable} onPress={handleClose} activeOpacity={1} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={styles.title}>Manual Entry</Text>
@@ -145,7 +148,7 @@ export default function ManualEntryModal({ visible, onClose, onSubmit }) {
               <Text style={styles.submitButtonText}>Validate & Check In</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );

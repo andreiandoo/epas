@@ -7,14 +7,20 @@ import {
   ActivityIndicator,
   Dimensions,
   Animated,
+  Modal,
 } from 'react-native';
-import Svg, { Circle, Rect, G, Text as SvgText, Path } from 'react-native-svg';
+import Svg, { Circle, Rect, Text as SvgText, Path } from 'react-native-svg';
 import { GestureHandlerRootView, GestureDetector, Gesture, ScrollView } from 'react-native-gesture-handler';
 import { colors } from '../theme/colors';
 import { formatCurrency } from '../utils/formatCurrency';
 import { apiGet } from '../api/client';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const AVAILABLE_WIDTH = SCREEN_WIDTH;
+const HEADER_HEIGHT = 56;
+const LEGEND_HEIGHT = 44;
+const BOTTOM_BAR_HEIGHT = 90;
+const MAP_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - LEGEND_HEIGHT - 40;
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
 
@@ -62,23 +68,77 @@ function ZoomOutIcon({ size = 18, color = colors.white }) {
   );
 }
 
+// ─── Seat Component (memoized for performance) ─────────────────────────────
+
+const SeatCircle = React.memo(function SeatCircle({ seat, isSelected, onPress }) {
+  const seatRadius = seat.seatRadius;
+  const isAvailable = seat.status === 'available';
+
+  let fillColor, strokeColor, strokeW, opacity;
+
+  if (isSelected) {
+    fillColor = '#a51c30';
+    strokeColor = '#7a141f';
+    strokeW = 1.5;
+    opacity = 1;
+  } else if (isAvailable && seat.isAllowed) {
+    fillColor = seat.color;
+    strokeColor = '#ffffff';
+    strokeW = 0.8;
+    opacity = 1;
+  } else if (isAvailable && !seat.isAllowed) {
+    fillColor = '#2D2D3D';
+    strokeColor = 'rgba(255,255,255,0.1)';
+    strokeW = 0.5;
+    opacity = 0.4;
+  } else {
+    fillColor = '#9CA3AF';
+    strokeColor = 'rgba(255,255,255,0.15)';
+    strokeW = 0.5;
+    opacity = seat.status === 'disabled' ? 0.25 : 0.45;
+  }
+
+  const isClickable = (isAvailable && seat.isAllowed) || isSelected;
+  const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
+
+  return (
+    <Circle
+      cx={seat.cx}
+      cy={seat.cy}
+      r={drawRadius}
+      fill={fillColor}
+      stroke={strokeColor}
+      strokeWidth={strokeW}
+      opacity={opacity}
+      onPress={isClickable ? onPress : undefined}
+    />
+  );
+});
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onClose }) {
+export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onConfirm, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mapData, setMapData] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
 
-  // Gesture values using Animated API
+  // Gesture: start at scale=1 (SVG viewBox handles base fit), translate=(0,0)
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateXAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(0)).current;
   const gestureState = useRef({ scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 });
 
   useEffect(() => {
-    loadSeatingMap();
-  }, [eventId]);
+    if (visible && eventId) {
+      loadSeatingMap();
+    }
+    if (!visible) {
+      // Reset state when closing
+      setSelectedSeats([]);
+      setError(null);
+    }
+  }, [visible, eventId]);
 
   const loadSeatingMap = async () => {
     setLoading(true);
@@ -100,18 +160,7 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   // Canvas dimensions
   const canvas = mapData?.canvas || { width: 1000, height: 800 };
 
-  // Base scale: how much to shrink the full-res SVG to fit the screen
-  const baseScale = useMemo(() => {
-    const availableWidth = SCREEN_WIDTH - 16;
-    const availableHeight = SCREEN_HEIGHT - 260;
-    const scaleW = availableWidth / canvas.width;
-    const scaleH = availableHeight / canvas.height;
-    return Math.min(scaleW, scaleH);
-  }, [canvas.width, canvas.height]);
-
   // Process seats from geometry + statuses
-  // IMPORTANT: seat.x/seat.y are absolute within the section (same as website)
-  // Do NOT add row.y — it's already baked into seat.y
   const processedData = useMemo(() => {
     if (!mapData) return { seats: [], rowLabels: [] };
     const { sections, seats } = mapData;
@@ -167,29 +216,21 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
     return { seats: seatList, rowLabels: rowLabelList };
   }, [mapData, ticketTypeId]);
 
-  // Center map on load — match website's centerMapToContent()
+  // Reset view on new map data
   useEffect(() => {
     if (mapData) {
-      const availableWidth = SCREEN_WIDTH - 16;
-      const availableHeight = SCREEN_HEIGHT - 260;
-      const scaledW = canvas.width * baseScale;
-      const scaledH = canvas.height * baseScale;
-      const centerTx = (availableWidth - scaledW) / 2;
-      const centerTy = (availableHeight - scaledH) / 2;
-      scaleAnim.setValue(baseScale);
-      translateXAnim.setValue(centerTx);
-      translateYAnim.setValue(centerTy);
-      gestureState.current = { scale: baseScale, savedScale: baseScale, tx: centerTx, ty: centerTy, savedTx: centerTx, savedTy: centerTy };
+      scaleAnim.setValue(1);
+      translateXAnim.setValue(0);
+      translateYAnim.setValue(0);
+      gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
     }
-  }, [mapData, baseScale]);
+  }, [mapData]);
 
-  // Pinch gesture — scale range: baseScale * 0.5 to baseScale * 8
+  // Pinch gesture — scale range: 0.5x to 8x of fitted view
   const pinchGesture = Gesture.Pinch()
     .onStart(() => { gestureState.current.savedScale = gestureState.current.scale; })
     .onUpdate((e) => {
-      const minScale = baseScale * 0.5;
-      const maxScale = baseScale * 8;
-      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, minScale), maxScale);
+      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, 0.5), 8);
       gestureState.current.scale = newScale;
       scaleAnim.setValue(newScale);
     })
@@ -212,6 +253,13 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
     });
 
   const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
+  // Selected seats set for O(1) lookup
+  const selectedUids = useMemo(() => {
+    const set = new Set();
+    selectedSeats.forEach(s => set.add(s.seat_uid));
+    return set;
+  }, [selectedSeats]);
 
   const toggleSeat = useCallback((seat) => {
     if (!seat.isAllowed) return;
@@ -255,29 +303,23 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
   };
 
   const resetView = () => {
-    const availableWidth = SCREEN_WIDTH - 16;
-    const availableHeight = SCREEN_HEIGHT - 260;
-    const scaledW = canvas.width * baseScale;
-    const scaledH = canvas.height * baseScale;
-    const centerTx = (availableWidth - scaledW) / 2;
-    const centerTy = (availableHeight - scaledH) / 2;
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: baseScale, useNativeDriver: true }),
-      Animated.spring(translateXAnim, { toValue: centerTx, useNativeDriver: true }),
-      Animated.spring(translateYAnim, { toValue: centerTy, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
+      Animated.spring(translateXAnim, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(translateYAnim, { toValue: 0, useNativeDriver: true }),
     ]).start();
-    gestureState.current = { scale: baseScale, savedScale: baseScale, tx: centerTx, ty: centerTy, savedTx: centerTx, savedTy: centerTy };
+    gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
   };
 
   const zoomIn = () => {
-    const newScale = Math.min(gestureState.current.scale * 1.5, baseScale * 8);
+    const newScale = Math.min(gestureState.current.scale * 1.5, 8);
     gestureState.current.scale = newScale;
     gestureState.current.savedScale = newScale;
     Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
   };
 
   const zoomOut = () => {
-    const newScale = Math.max(gestureState.current.scale / 1.5, baseScale * 0.5);
+    const newScale = Math.max(gestureState.current.scale / 1.5, 0.5);
     gestureState.current.scale = newScale;
     gestureState.current.savedScale = newScale;
     Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
@@ -285,261 +327,198 @@ export default function SeatingMapScreen({ eventId, ticketTypeId, onConfirm, onC
 
   const ticketTypeLegend = mapData?.ticket_types || [];
 
-  // ─── Loading / Error States ──────────────────────────────────────────────
+  // ─── Render content based on state ──────────────────────────────────────
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-            <ArrowLeftIcon size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Harta Locurilor</Text>
-          <View style={{ width: 40 }} />
-        </View>
+  const renderContent = () => {
+    if (loading) {
+      return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.purple} />
           <Text style={styles.loadingText}>Se incarca harta...</Text>
         </View>
-      </View>
-    );
-  }
+      );
+    }
 
-  if (error) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-            <ArrowLeftIcon size={20} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Harta Locurilor</Text>
-          <View style={{ width: 40 }} />
-        </View>
+    if (error) {
+      return (
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadSeatingMap} activeOpacity={0.7}>
             <Text style={styles.retryButtonText}>Reincearca</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    );
-  }
+      );
+    }
 
-  // ─── Map View ──────────────────────────────────────────────────────
+    return (
+      <>
+        {/* Legend */}
+        <View style={styles.legendContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legendScroll}>
+            {ticketTypeLegend.map(tt => (
+              <View key={tt.id} style={[
+                styles.legendItem,
+                ticketTypeId && tt.id == ticketTypeId && styles.legendItemActive,
+              ]}>
+                <View style={[styles.legendDot, { backgroundColor: tt.color || '#10B981' }]} />
+                <Text style={styles.legendText} numberOfLines={1}>{tt.name}</Text>
+                <Text style={styles.legendPrice}>{formatCurrency(tt.price)}</Text>
+              </View>
+            ))}
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#9CA3AF' }]} />
+              <Text style={styles.legendText}>Vandut</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#a51c30' }]} />
+              <Text style={styles.legendText}>Selectat</Text>
+            </View>
+          </ScrollView>
+        </View>
+
+        {/* Map with pinch-to-zoom and pan */}
+        <View style={styles.mapContainer}>
+          <GestureDetector gesture={composedGesture}>
+            <Animated.View style={[
+              styles.mapAnimatedView,
+              {
+                width: AVAILABLE_WIDTH,
+                height: MAP_HEIGHT,
+                transform: [
+                  { scale: scaleAnim },
+                  { translateX: translateXAnim },
+                  { translateY: translateYAnim },
+                ],
+              },
+            ]}>
+              {/* SVG uses viewBox for auto-fit — no manual scale math needed */}
+              <Svg
+                width={AVAILABLE_WIDTH}
+                height={MAP_HEIGHT}
+                viewBox={`0 0 ${canvas.width} ${canvas.height}`}
+              >
+                {/* Background */}
+                <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
+
+                {/* Section labels */}
+                {(mapData?.sections || []).map((section, idx) => {
+                  const sx = section.x_position || section.x || 0;
+                  const sy = section.y_position || section.y || 0;
+                  return (
+                    <SvgText
+                      key={`sl-${idx}`}
+                      x={sx + (section.width || 100) / 2}
+                      y={sy - 12}
+                      fill="rgba(255,255,255,0.5)"
+                      fontSize={12}
+                      fontWeight="700"
+                      textAnchor="middle"
+                    >
+                      {section.name || ''}
+                    </SvgText>
+                  );
+                })}
+
+                {/* Row labels */}
+                {processedData.rowLabels.map(rl => (
+                  <SvgText
+                    key={rl.key}
+                    x={rl.x}
+                    y={rl.y}
+                    textAnchor="end"
+                    fontSize={rl.fontSize}
+                    fontWeight="500"
+                    fill="rgba(255,255,255,0.45)"
+                  >
+                    {rl.label}
+                  </SvgText>
+                ))}
+
+                {/* Seats — single Circle per seat for performance */}
+                {processedData.seats.map(seat => (
+                  <SeatCircle
+                    key={seat.seat_uid}
+                    seat={seat}
+                    isSelected={selectedUids.has(seat.seat_uid)}
+                    onPress={() => toggleSeat(seat)}
+                  />
+                ))}
+              </Svg>
+            </Animated.View>
+          </GestureDetector>
+
+          {/* Zoom controls */}
+          <View style={styles.zoomControls}>
+            <TouchableOpacity style={styles.zoomButton} onPress={zoomIn} activeOpacity={0.7}>
+              <ZoomInIcon size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={zoomOut} activeOpacity={0.7}>
+              <ZoomOutIcon size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.zoomButton} onPress={resetView} activeOpacity={0.7}>
+              <Text style={styles.resetLabel}>FIT</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Bottom Bar */}
+        {selectedSeats.length > 0 && (
+          <View style={styles.bottomBar}>
+            <View style={styles.bottomBarInfo}>
+              <Text style={styles.bottomBarCount}>
+                {selectedSeats.length} {selectedSeats.length === 1 ? 'loc' : 'locuri'}
+              </Text>
+              <Text style={styles.bottomBarTotal}>{formatCurrency(selectedTotal)}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seatLabelsScroll}>
+                {selectedSeats.map(s => (
+                  <View key={s.seat_uid} style={styles.seatLabelChip}>
+                    <Text style={styles.seatLabelChipText}>R{s.row_label}-{s.seat_label}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.8}>
+              <CheckIcon size={20} color={colors.white} />
+              <Text style={styles.confirmButtonText}>Confirma</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </>
+    );
+  };
 
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
-          <ArrowLeftIcon size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Selecteaza Locuri</Text>
-        {selectedSeats.length > 0 ? (
-          <View style={styles.selectedBadge}>
-            <Text style={styles.selectedBadgeText}>{selectedSeats.length}</Text>
-          </View>
-        ) : (
-          <View style={{ width: 40 }} />
-        )}
-      </View>
-
-      {/* Legend */}
-      <View style={styles.legendContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legendScroll}>
-          {ticketTypeLegend.map(tt => (
-            <View key={tt.id} style={[
-              styles.legendItem,
-              ticketTypeId && tt.id == ticketTypeId && styles.legendItemActive,
-            ]}>
-              <View style={[styles.legendDot, { backgroundColor: tt.color || '#10B981' }]} />
-              <Text style={styles.legendText} numberOfLines={1}>{tt.name}</Text>
-              <Text style={styles.legendPrice}>{formatCurrency(tt.price)}</Text>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <GestureHandlerRootView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
+            <ArrowLeftIcon size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {loading ? 'Harta Locurilor' : 'Selecteaza Locuri'}
+          </Text>
+          {selectedSeats.length > 0 ? (
+            <View style={styles.selectedBadge}>
+              <Text style={styles.selectedBadgeText}>{selectedSeats.length}</Text>
             </View>
-          ))}
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#9CA3AF' }]} />
-            <Text style={styles.legendText}>Vandut</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#a51c30' }]} />
-            <Text style={styles.legendText}>Selectat</Text>
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Map with pinch-to-zoom and pan */}
-      <View style={styles.mapContainer}>
-        <GestureDetector gesture={composedGesture}>
-          <Animated.View style={[
-            styles.mapAnimatedView,
-            {
-              transform: [
-                { translateX: translateXAnim },
-                { translateY: translateYAnim },
-                { scale: scaleAnim },
-              ],
-            },
-          ]}>
-            {/* SVG at FULL canvas resolution for crisp vector rendering at any zoom */}
-            <Svg
-              width={canvas.width}
-              height={canvas.height}
-              viewBox={`0 0 ${canvas.width} ${canvas.height}`}
-            >
-              {/* Background */}
-              <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
-
-              {/* Section labels */}
-              {(mapData?.sections || []).map((section, idx) => {
-                const sx = section.x_position || section.x || 0;
-                const sy = section.y_position || section.y || 0;
-                return (
-                  <SvgText
-                    key={`sl-${idx}`}
-                    x={sx + (section.width || 100) / 2}
-                    y={sy - 12}
-                    fill="rgba(255,255,255,0.5)"
-                    fontSize={12}
-                    fontWeight="700"
-                    textAnchor="middle"
-                  >
-                    {section.name || ''}
-                  </SvgText>
-                );
-              })}
-
-              {/* Row labels */}
-              {processedData.rowLabels.map(rl => (
-                <SvgText
-                  key={rl.key}
-                  x={rl.x}
-                  y={rl.y}
-                  textAnchor="end"
-                  fontSize={rl.fontSize}
-                  fontWeight="500"
-                  fill="rgba(255,255,255,0.45)"
-                >
-                  {rl.label}
-                </SvgText>
-              ))}
-
-              {/* Seats */}
-              {processedData.seats.map(seat => {
-                const isSelected = selectedSeats.some(s => s.seat_uid === seat.seat_uid);
-                const seatRadius = seat.seatRadius;
-                const isAvailable = seat.status === 'available';
-
-                // Colors matching website: ticket type color + white stroke, selected = #a51c30
-                let fillColor, strokeColor, strokeWidth, opacity;
-
-                if (isSelected) {
-                  fillColor = '#a51c30';
-                  strokeColor = '#7a141f';
-                  strokeWidth = 1.5;
-                  opacity = 1;
-                } else if (isAvailable && seat.isAllowed) {
-                  fillColor = seat.color;
-                  strokeColor = '#ffffff';
-                  strokeWidth = 0.8;
-                  opacity = 1;
-                } else if (isAvailable && !seat.isAllowed) {
-                  fillColor = '#2D2D3D';
-                  strokeColor = 'rgba(255,255,255,0.1)';
-                  strokeWidth = 0.5;
-                  opacity = 0.4;
-                } else {
-                  // sold, held, blocked, disabled
-                  fillColor = '#9CA3AF';
-                  strokeColor = 'rgba(255,255,255,0.15)';
-                  strokeWidth = 0.5;
-                  opacity = seat.status === 'disabled' ? 0.25 : 0.45;
-                }
-
-                const isClickable = (isAvailable && seat.isAllowed) || isSelected;
-                const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
-                const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
-                // Larger invisible hit target for easier tapping
-                const hitRadius = Math.max(seatRadius * 1.8, 12);
-
-                return (
-                  <G key={seat.seat_uid} onPress={isClickable ? () => toggleSeat(seat) : undefined}>
-                    {/* Invisible hit target */}
-                    <Circle cx={seat.cx} cy={seat.cy} r={hitRadius} fill="transparent" />
-                    {/* Visible seat */}
-                    <Circle
-                      cx={seat.cx} cy={seat.cy} r={drawRadius}
-                      fill={fillColor}
-                      stroke={strokeColor}
-                      strokeWidth={strokeWidth}
-                      opacity={opacity}
-                    />
-                    {/* Seat label */}
-                    {seatRadius >= 5 && (
-                      <SvgText
-                        x={seat.cx}
-                        y={seat.cy + fontSize * 0.35}
-                        textAnchor="middle"
-                        fontSize={fontSize}
-                        fontWeight="700"
-                        fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
-                        opacity={opacity}
-                      >
-                        {seat.seat_label}
-                      </SvgText>
-                    )}
-                  </G>
-                );
-              })}
-            </Svg>
-          </Animated.View>
-        </GestureDetector>
-
-        {/* Zoom controls */}
-        <View style={styles.zoomControls}>
-          <TouchableOpacity style={styles.zoomButton} onPress={zoomIn} activeOpacity={0.7}>
-            <ZoomInIcon size={18} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.zoomButton} onPress={zoomOut} activeOpacity={0.7}>
-            <ZoomOutIcon size={18} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.zoomButton} onPress={resetView} activeOpacity={0.7}>
-            <SvgText style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary }}>
-              FIT
-            </SvgText>
-            <Text style={styles.resetLabel}>Reset</Text>
-          </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
-      </View>
-
-      {/* Bottom Bar */}
-      {selectedSeats.length > 0 && (
-        <View style={styles.bottomBar}>
-          <View style={styles.bottomBarInfo}>
-            <Text style={styles.bottomBarCount}>
-              {selectedSeats.length} {selectedSeats.length === 1 ? 'loc' : 'locuri'}
-            </Text>
-            <Text style={styles.bottomBarTotal}>{formatCurrency(selectedTotal)}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seatLabelsScroll}>
-              {selectedSeats.map(s => (
-                <View key={s.seat_uid} style={styles.seatLabelChip}>
-                  <Text style={styles.seatLabelChipText}>R{s.row_label}-{s.seat_label}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.8}>
-            <CheckIcon size={20} color={colors.white} />
-            <Text style={styles.confirmButtonText}>Confirma</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </GestureHandlerRootView>
+        {renderContent()}
+      </GestureHandlerRootView>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 48, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12, backgroundColor: colors.background },
   backButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   selectedBadge: { backgroundColor: '#a51c30', borderRadius: 12, minWidth: 28, height: 28, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
@@ -557,11 +536,11 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 11, color: colors.textSecondary },
   legendPrice: { fontSize: 11, fontWeight: '600', color: colors.textTertiary },
   mapContainer: { flex: 1, overflow: 'hidden' },
-  mapAnimatedView: {},
+  mapAnimatedView: { transformOrigin: 'center center' },
   zoomControls: { position: 'absolute', right: 12, top: 12, gap: 6 },
   zoomButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(10,10,15,0.9)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  resetLabel: { fontSize: 9, fontWeight: '600', color: colors.textTertiary, marginTop: -1 },
-  bottomBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(10,10,15,0.98)', gap: 12 },
+  resetLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
+  bottomBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 28, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(10,10,15,0.98)', gap: 12 },
   bottomBarInfo: { flex: 1 },
   bottomBarCount: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   bottomBarTotal: { fontSize: 18, fontWeight: '700', color: '#a51c30', marginBottom: 4 },
