@@ -48,7 +48,7 @@ const ThankYouPage = {
         const orderRef = urlParams.get('order') || urlParams.get('orderId');
 
         if (!orderRef) {
-            this.showDemoData();
+            this.renderOrderNotFound();
             return;
         }
 
@@ -72,20 +72,81 @@ const ThankYouPage = {
                 }
             } else {
                 console.warn('Order data not found in response:', response);
-                this.showDemoData();
+                this.renderOrderNotFound();
             }
         } catch (error) {
             console.error('Failed to load order:', error);
-            this.showDemoData();
+            this.renderOrderNotFound();
         }
     },
 
-    showDemoData() {
-        // Show demo/placeholder data
-        this.createConfetti();
-        document.getElementById('printingText').textContent = 'Biletele sunt gata!';
-        document.getElementById('ticketsCount').textContent = 'Verifică email-ul pentru bilete';
-        document.getElementById('buyerEmail').textContent = 'Email-ul tău';
+    renderOrderNotFound() {
+        // Change progress steps - last step shows error
+        const steps = document.querySelectorAll('.bg-green-500');
+        const lastStep = steps[steps.length - 1];
+        if (lastStep) {
+            lastStep.classList.remove('bg-green-500');
+            lastStep.classList.add('bg-red-500');
+            lastStep.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+            const label = lastStep.nextElementSibling;
+            if (label) { label.classList.remove('text-green-600'); label.classList.add('text-red-600'); }
+        }
+        const connectors = document.querySelectorAll('.h-px.bg-green-500');
+        if (connectors.length > 0) {
+            connectors[connectors.length - 1].classList.remove('bg-green-500');
+            connectors[connectors.length - 1].classList.add('bg-red-500');
+        }
+
+        // Change main icon to error
+        const successIcon = document.querySelector('.bg-success\\/20');
+        if (successIcon) {
+            successIcon.classList.remove('bg-success/20');
+            successIcon.classList.add('bg-red-100');
+            successIcon.innerHTML = '<svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>';
+        }
+
+        const heading = document.querySelector('h1');
+        if (heading) heading.textContent = 'Comanda nu a fost gasita';
+
+        const printingText = document.getElementById('printingText');
+        if (printingText) {
+            printingText.textContent = 'Nu am putut gasi informatii despre aceasta comanda. Verifica numarul comenzii sau contacteaza suportul.';
+            printingText.classList.remove('text-lg');
+            printingText.classList.add('text-base');
+        }
+
+        // Hide printer, tickets, email, actions, share
+        const printerSection = document.querySelector('.printer-section');
+        if (printerSection) printerSection.style.display = 'none';
+        const ticketsCarousel = document.getElementById('ticketsCarousel');
+        if (ticketsCarousel) ticketsCarousel.style.display = 'none';
+        const emailSection = document.querySelector('.email-animation');
+        if (emailSection) emailSection.style.display = 'none';
+        const orderDetails = document.getElementById('orderDetails');
+        if (orderDetails) orderDetails.style.display = 'none';
+        const actionsGrid = document.querySelector('.content-section.delay-2');
+        if (actionsGrid) actionsGrid.style.display = 'none';
+        const shareSection = document.querySelector('.content-section.delay-3');
+        if (shareSection) shareSection.style.display = 'none';
+
+        // Replace back button with useful links
+        const backSection = document.querySelector('.content-section.delay-4');
+        if (backSection) {
+            backSection.style.opacity = '1';
+            backSection.style.animation = 'none';
+            backSection.innerHTML = `
+                <div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                    <a href="/cont/comenzi" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold text-white bg-primary btn-primary rounded-xl">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        Comenzile mele
+                    </a>
+                    <a href="/" class="inline-flex items-center gap-2 px-8 py-4 text-lg font-bold border text-secondary rounded-xl border-border hover:bg-surface">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                        Pagina principala
+                    </a>
+                </div>
+            `;
+        }
     },
 
     renderFailedPayment() {
