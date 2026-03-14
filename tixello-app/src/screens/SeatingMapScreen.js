@@ -9,17 +9,18 @@ import {
   Animated,
   Modal,
 } from 'react-native';
-import Svg, { Circle, Rect, Text as SvgText, Path } from 'react-native-svg';
+import Svg, { Circle, Rect, G, Text as SvgText, Path } from 'react-native-svg';
 import { GestureHandlerRootView, GestureDetector, Gesture, ScrollView } from 'react-native-gesture-handler';
 import { colors } from '../theme/colors';
 import { formatCurrency } from '../utils/formatCurrency';
 import { apiGet } from '../api/client';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const AVAILABLE_WIDTH = SCREEN_WIDTH;
 const HEADER_HEIGHT = 56;
 const LEGEND_HEIGHT = 44;
-const BOTTOM_BAR_HEIGHT = 90;
+
+// Available area for the map
+const MAP_WIDTH = SCREEN_WIDTH;
 const MAP_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - LEGEND_HEIGHT - 40;
 
 // ─── SVG Icon Components ──────────────────────────────────────────────────────
@@ -68,53 +69,6 @@ function ZoomOutIcon({ size = 18, color = colors.white }) {
   );
 }
 
-// ─── Seat Component (memoized for performance) ─────────────────────────────
-
-const SeatCircle = React.memo(function SeatCircle({ seat, isSelected, onPress }) {
-  const seatRadius = seat.seatRadius;
-  const isAvailable = seat.status === 'available';
-
-  let fillColor, strokeColor, strokeW, opacity;
-
-  if (isSelected) {
-    fillColor = '#a51c30';
-    strokeColor = '#7a141f';
-    strokeW = 1.5;
-    opacity = 1;
-  } else if (isAvailable && seat.isAllowed) {
-    fillColor = seat.color;
-    strokeColor = '#ffffff';
-    strokeW = 0.8;
-    opacity = 1;
-  } else if (isAvailable && !seat.isAllowed) {
-    fillColor = '#2D2D3D';
-    strokeColor = 'rgba(255,255,255,0.1)';
-    strokeW = 0.5;
-    opacity = 0.4;
-  } else {
-    fillColor = '#9CA3AF';
-    strokeColor = 'rgba(255,255,255,0.15)';
-    strokeW = 0.5;
-    opacity = seat.status === 'disabled' ? 0.25 : 0.45;
-  }
-
-  const isClickable = (isAvailable && seat.isAllowed) || isSelected;
-  const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
-
-  return (
-    <Circle
-      cx={seat.cx}
-      cy={seat.cy}
-      r={drawRadius}
-      fill={fillColor}
-      stroke={strokeColor}
-      strokeWidth={strokeW}
-      opacity={opacity}
-      onPress={isClickable ? onPress : undefined}
-    />
-  );
-});
-
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onConfirm, onClose }) {
@@ -123,7 +77,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
   const [mapData, setMapData] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
 
-  // Gesture: start at scale=1 (SVG viewBox handles base fit), translate=(0,0)
+  // Gesture values
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateXAnim = useRef(new Animated.Value(0)).current;
   const translateYAnim = useRef(new Animated.Value(0)).current;
@@ -134,7 +88,6 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
       loadSeatingMap();
     }
     if (!visible) {
-      // Reset state when closing
       setSelectedSeats([]);
       setError(null);
     }
@@ -157,12 +110,22 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
     setLoading(false);
   };
 
-  // Canvas dimensions
   const canvas = mapData?.canvas || { width: 1000, height: 800 };
+
+  // Fit zoom: how much to scale the full canvas to fit the screen (matching website centerMapToContent)
+  const fitZoom = useMemo(() => {
+    const padX = 10;
+    const padY = 10;
+    const availW = MAP_WIDTH - padX;
+    const availH = MAP_HEIGHT - padY;
+    const zoomW = availW / canvas.width;
+    const zoomH = availH / canvas.height;
+    return Math.min(zoomW, zoomH);
+  }, [canvas.width, canvas.height]);
 
   // Process seats from geometry + statuses
   const processedData = useMemo(() => {
-    if (!mapData) return { seats: [], rowLabels: [] };
+    if (!mapData) return { seats: [], rowLabels: [], sections: [] };
     const { sections, seats } = mapData;
     const seatStatusMap = {};
     (seats || []).forEach(s => { seatStatusMap[s.seat_uid] = s; });
@@ -213,24 +176,34 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
         });
       });
     });
-    return { seats: seatList, rowLabels: rowLabelList };
+    return { seats: seatList, rowLabels: rowLabelList, sections: sections || [] };
   }, [mapData, ticketTypeId]);
 
-  // Reset view on new map data
+  // Center map on load — matching website's centerMapToContent()
+  // With transformOrigin '0% 0%' and transform order [translateX, translateY, scale]:
+  // panX = (availWidth - canvasW * zoom) / 2
+  // panY = (availHeight - canvasH * zoom) / 2
   useEffect(() => {
     if (mapData) {
-      scaleAnim.setValue(1);
-      translateXAnim.setValue(0);
-      translateYAnim.setValue(0);
-      gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+      const panX = (MAP_WIDTH - canvas.width * fitZoom) / 2;
+      const panY = (MAP_HEIGHT - canvas.height * fitZoom) / 2;
+      scaleAnim.setValue(fitZoom);
+      translateXAnim.setValue(panX);
+      translateYAnim.setValue(panY);
+      gestureState.current = {
+        scale: fitZoom, savedScale: fitZoom,
+        tx: panX, ty: panY, savedTx: panX, savedTy: panY,
+      };
     }
-  }, [mapData]);
+  }, [mapData, fitZoom]);
 
-  // Pinch gesture — scale range: 0.5x to 8x of fitted view
+  // Pinch gesture
   const pinchGesture = Gesture.Pinch()
     .onStart(() => { gestureState.current.savedScale = gestureState.current.scale; })
     .onUpdate((e) => {
-      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, 0.5), 8);
+      const minScale = fitZoom * 0.5;
+      const maxScale = fitZoom * 8;
+      const newScale = Math.min(Math.max(gestureState.current.savedScale * e.scale, minScale), maxScale);
       gestureState.current.scale = newScale;
       scaleAnim.setValue(newScale);
     })
@@ -303,23 +276,28 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
   };
 
   const resetView = () => {
+    const panX = (MAP_WIDTH - canvas.width * fitZoom) / 2;
+    const panY = (MAP_HEIGHT - canvas.height * fitZoom) / 2;
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
-      Animated.spring(translateXAnim, { toValue: 0, useNativeDriver: true }),
-      Animated.spring(translateYAnim, { toValue: 0, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: fitZoom, useNativeDriver: true }),
+      Animated.spring(translateXAnim, { toValue: panX, useNativeDriver: true }),
+      Animated.spring(translateYAnim, { toValue: panY, useNativeDriver: true }),
     ]).start();
-    gestureState.current = { scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 };
+    gestureState.current = {
+      scale: fitZoom, savedScale: fitZoom,
+      tx: panX, ty: panY, savedTx: panX, savedTy: panY,
+    };
   };
 
   const zoomIn = () => {
-    const newScale = Math.min(gestureState.current.scale * 1.5, 8);
+    const newScale = Math.min(gestureState.current.scale * 1.5, fitZoom * 8);
     gestureState.current.scale = newScale;
     gestureState.current.savedScale = newScale;
     Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
   };
 
   const zoomOut = () => {
-    const newScale = Math.max(gestureState.current.scale / 1.5, 0.5);
+    const newScale = Math.max(gestureState.current.scale / 1.5, fitZoom * 0.5);
     gestureState.current.scale = newScale;
     gestureState.current.savedScale = newScale;
     Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }).start();
@@ -327,7 +305,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 
   const ticketTypeLegend = mapData?.ticket_types || [];
 
-  // ─── Render content based on state ──────────────────────────────────────
+  // ─── Render ──────────────────────────────────────────────────────
 
   const renderContent = () => {
     if (loading) {
@@ -376,43 +354,52 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
           </ScrollView>
         </View>
 
-        {/* Map with pinch-to-zoom and pan */}
+        {/* Map */}
         <View style={styles.mapContainer}>
           <GestureDetector gesture={composedGesture}>
             <Animated.View style={[
               styles.mapAnimatedView,
               {
-                width: AVAILABLE_WIDTH,
-                height: MAP_HEIGHT,
                 transform: [
-                  { scale: scaleAnim },
                   { translateX: translateXAnim },
                   { translateY: translateYAnim },
+                  { scale: scaleAnim },
                 ],
               },
             ]}>
-              {/* SVG uses viewBox for auto-fit — no manual scale math needed */}
+              {/* SVG at FULL canvas resolution — stays crisp at any zoom */}
               <Svg
-                width={AVAILABLE_WIDTH}
-                height={MAP_HEIGHT}
+                width={canvas.width}
+                height={canvas.height}
                 viewBox={`0 0 ${canvas.width} ${canvas.height}`}
               >
                 {/* Background */}
                 <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
 
                 {/* Section labels */}
-                {(mapData?.sections || []).map((section, idx) => {
+                {processedData.sections.map((section, idx) => {
                   const sx = section.x_position || section.x || 0;
                   const sy = section.y_position || section.y || 0;
+                  const rotation = section.rotation || 0;
+                  const sectionW = section.width || 100;
+                  const sectionH = section.height || 100;
+                  // Rotation center matches website: center of section bounding box
+                  const rcx = sx + sectionW / 2;
+                  const rcy = sy + sectionH / 2;
+                  const transform = rotation !== 0
+                    ? `rotate(${rotation} ${rcx} ${rcy})`
+                    : undefined;
+
                   return (
                     <SvgText
                       key={`sl-${idx}`}
-                      x={sx + (section.width || 100) / 2}
+                      x={sx + sectionW / 2}
                       y={sy - 12}
                       fill="rgba(255,255,255,0.5)"
                       fontSize={12}
                       fontWeight="700"
                       textAnchor="middle"
+                      transform={transform}
                     >
                       {section.name || ''}
                     </SvgText>
@@ -434,15 +421,70 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
                   </SvgText>
                 ))}
 
-                {/* Seats — single Circle per seat for performance */}
-                {processedData.seats.map(seat => (
-                  <SeatCircle
-                    key={seat.seat_uid}
-                    seat={seat}
-                    isSelected={selectedUids.has(seat.seat_uid)}
-                    onPress={() => toggleSeat(seat)}
-                  />
-                ))}
+                {/* Seats */}
+                {processedData.seats.map(seat => {
+                  const isSelected = selectedUids.has(seat.seat_uid);
+                  const seatRadius = seat.seatRadius;
+                  const isAvailable = seat.status === 'available';
+
+                  let fillColor, strokeColor, strokeWidth, opacity;
+
+                  if (isSelected) {
+                    fillColor = '#a51c30';
+                    strokeColor = '#7a141f';
+                    strokeWidth = 1.5;
+                    opacity = 1;
+                  } else if (isAvailable && seat.isAllowed) {
+                    fillColor = seat.color;
+                    strokeColor = '#ffffff';
+                    strokeWidth = 0.8;
+                    opacity = 1;
+                  } else if (isAvailable && !seat.isAllowed) {
+                    fillColor = '#2D2D3D';
+                    strokeColor = 'rgba(255,255,255,0.1)';
+                    strokeWidth = 0.5;
+                    opacity = 0.4;
+                  } else {
+                    fillColor = '#9CA3AF';
+                    strokeColor = 'rgba(255,255,255,0.15)';
+                    strokeWidth = 0.5;
+                    opacity = seat.status === 'disabled' ? 0.25 : 0.45;
+                  }
+
+                  const isClickable = (isAvailable && seat.isAllowed) || isSelected;
+                  const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
+                  const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
+                  const hitRadius = Math.max(seatRadius * 1.8, 12);
+
+                  return (
+                    <G key={seat.seat_uid} onPress={isClickable ? () => toggleSeat(seat) : undefined}>
+                      {/* Invisible hit target for easier tapping */}
+                      <Circle cx={seat.cx} cy={seat.cy} r={hitRadius} fill="transparent" />
+                      {/* Visible seat */}
+                      <Circle
+                        cx={seat.cx} cy={seat.cy} r={drawRadius}
+                        fill={fillColor}
+                        stroke={strokeColor}
+                        strokeWidth={strokeWidth}
+                        opacity={opacity}
+                      />
+                      {/* Seat label */}
+                      {seatRadius >= 5 && (
+                        <SvgText
+                          x={seat.cx}
+                          y={seat.cy + fontSize * 0.35}
+                          textAnchor="middle"
+                          fontSize={fontSize}
+                          fontWeight="700"
+                          fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
+                          opacity={opacity}
+                        >
+                          {seat.seat_label}
+                        </SvgText>
+                      )}
+                    </G>
+                  );
+                })}
               </Svg>
             </Animated.View>
           </GestureDetector>
@@ -536,7 +578,7 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 11, color: colors.textSecondary },
   legendPrice: { fontSize: 11, fontWeight: '600', color: colors.textTertiary },
   mapContainer: { flex: 1, overflow: 'hidden' },
-  mapAnimatedView: { transformOrigin: 'center center' },
+  mapAnimatedView: { transformOrigin: '0% 0%' },
   zoomControls: { position: 'absolute', right: 12, top: 12, gap: 6 },
   zoomButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(10,10,15,0.9)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   resetLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
