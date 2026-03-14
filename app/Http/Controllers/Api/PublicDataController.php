@@ -917,8 +917,8 @@ class PublicDataController extends Controller
                         'total' => $ordersTotal,
                         'paid' => $ordersPaid,
                     ],
-                    'customers' => [
-                        'total' => $tenantCustomers + $marketplaceCustomers,
+                    'customers' => $tenantCustomers + $marketplaceCustomers,
+                    'customers_breakdown' => [
                         'tenant' => $tenantCustomers,
                         'marketplace' => $marketplaceCustomers,
                     ],
