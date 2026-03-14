@@ -5922,6 +5922,17 @@ body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-grou
 	display: none;
 }
 
+/* Sub-items in cloned services (e.g. SMS Campaigns under Notificari SMS) */
+#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items {
+	flex-direction: column;
+	gap: 0.125rem;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn {
+	padding: 0.3125rem 0.75rem;
+	font-size: 0.75rem;
+}
+
 /* Hide secondary sidebar on mobile */
 @media (max-width: 63.99rem) {
 	.ep-secondary-sidebar {

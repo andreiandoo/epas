@@ -239,7 +239,15 @@ class MarketplacePanelProvider extends PanelProvider
                 items.forEach(item => {
                     if (item === microservicesItem) return;
                     const clone = item.cloneNode(true);
-                    clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => sub.remove());
+                    // Make sub-group items always visible with indent
+                    clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => {
+                        sub.style.display = 'flex';
+                        sub.style.paddingInlineStart = '1.5rem';
+                        // Remove x-show/x-collapse that hide sub-items
+                        sub.removeAttribute('x-show');
+                        sub.removeAttribute('x-collapse');
+                        sub.removeAttribute('x-collapse.duration.200ms');
+                    });
                     clone.querySelectorAll('[x-data*="dropdown"]').forEach(dd => dd.remove());
                     // Mark cloned links for auto-open detection
                     clone.querySelectorAll('a').forEach(a => a.setAttribute('data-ep-secondary-link', 'true'));
