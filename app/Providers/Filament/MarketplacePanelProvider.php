@@ -149,18 +149,34 @@ class MarketplacePanelProvider extends PanelProvider
                     toggle() {
                         this.open = !this.open;
                         document.body.classList.toggle('ep-secondary-sidebar-open', this.open);
+                        if (this.open) epPositionSecondarySidebar();
                     },
                     close() {
                         this.open = false;
                         document.body.classList.remove('ep-secondary-sidebar-open');
+                    },
+                    openIfClosed() {
+                        if (!this.open) {
+                            this.open = true;
+                            document.body.classList.add('ep-secondary-sidebar-open');
+                            epPositionSecondarySidebar();
+                        }
                     }
                 });
             });
+
+            function epPositionSecondarySidebar() {
+                const sidebar = document.querySelector('.fi-sidebar');
+                const secondary = document.getElementById('ep-secondary-sidebar');
+                if (!sidebar || !secondary) return;
+                secondary.style.left = sidebar.offsetWidth + 'px';
+            }
 
             function epSetupSecondarySidebar() {
                 const servicesGroup = document.querySelector('[data-group-label="Services"]');
                 if (!servicesGroup) return;
 
+                // Clone Services items BEFORE hiding them (must happen first)
                 const navItems = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
                 let microservicesItem = null;
 
@@ -171,12 +187,17 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 });
 
+                // Clone other Services group items into secondary sidebar
+                epCloneServicesItems(servicesGroup, microservicesItem);
+
+                // Mark the Microservices item so CSS can target it
                 if (microservicesItem) {
+                    microservicesItem.setAttribute('data-ep-microservices-trigger', 'true');
+
                     const btn = microservicesItem.querySelector('a.fi-sidebar-item-btn');
                     if (btn && !btn.dataset.epSecondaryBound) {
                         btn.dataset.epSecondaryBound = 'true';
                         btn.addEventListener('click', (e) => {
-                            // On mobile, let normal navigation happen (secondary sidebar is hidden)
                             if (window.matchMedia('(max-width: 63.99rem)').matches) return;
                             e.preventDefault();
                             e.stopPropagation();
@@ -185,8 +206,8 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 }
 
-                // Clone other Services group items into secondary sidebar
-                epCloneServicesItems(servicesGroup, microservicesItem);
+                // Now hide other Services items via CSS class on body
+                document.body.classList.add('ep-secondary-sidebar-ready');
 
                 // Close secondary sidebar when clicking any OTHER primary nav item
                 document.querySelectorAll('.fi-sidebar-item a.fi-sidebar-item-btn').forEach(link => {
@@ -201,8 +222,9 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 });
 
-                // Highlight active microservice in secondary sidebar
+                // Highlight active item and auto-open if current page is in secondary sidebar
                 epHighlightActiveSecondary();
+                epAutoOpenIfNeeded();
             }
 
             function epCloneServicesItems(servicesGroup, microservicesItem) {
@@ -217,10 +239,10 @@ class MarketplacePanelProvider extends PanelProvider
                 items.forEach(item => {
                     if (item === microservicesItem) return;
                     const clone = item.cloneNode(true);
-                    // Remove sub-group items to keep it flat
                     clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => sub.remove());
-                    // Remove dropdown elements
                     clone.querySelectorAll('[x-data*="dropdown"]').forEach(dd => dd.remove());
+                    // Mark cloned links for auto-open detection
+                    clone.querySelectorAll('a').forEach(a => a.setAttribute('data-ep-secondary-link', 'true'));
                     targetUl.appendChild(clone);
                     clonedCount++;
                 });
@@ -230,14 +252,49 @@ class MarketplacePanelProvider extends PanelProvider
 
             function epHighlightActiveSecondary() {
                 const currentPath = window.location.pathname;
-                document.querySelectorAll('#ep-secondary-sidebar .ep-secondary-sidebar-item').forEach(link => {
+                document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]').forEach(link => {
                     const href = link.getAttribute('href');
-                    link.classList.toggle('ep-active', href && currentPath.startsWith(href));
+                    if (!href) return;
+                    const isActive = currentPath === href || currentPath.startsWith(href + '/');
+                    link.classList.toggle('ep-active', isActive);
+                    // Also handle cloned Filament items
+                    const parentItem = link.closest('.fi-sidebar-item');
+                    if (parentItem) {
+                        parentItem.classList.toggle('fi-active', isActive);
+                    }
                 });
             }
 
+            function epAutoOpenIfNeeded() {
+                const currentPath = window.location.pathname;
+                // Check if current page matches any secondary sidebar link
+                const isSecondaryPage = Array.from(
+                    document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]')
+                ).some(link => {
+                    const href = link.getAttribute('href');
+                    return href && (currentPath === href || currentPath.startsWith(href + '/'));
+                });
+
+                if (isSecondaryPage && Alpine.store('secondarySidebar')) {
+                    Alpine.store('secondarySidebar').openIfClosed();
+                }
+            }
+
+            // Reposition on sidebar collapse/expand
+            const sidebarObserver = new MutationObserver(() => {
+                if (Alpine.store('secondarySidebar')?.open) {
+                    requestAnimationFrame(() => epPositionSecondarySidebar());
+                }
+            });
+
             // Bind on initial load and after Livewire SPA navigation
-            document.addEventListener('DOMContentLoaded', () => epSetupSecondarySidebar());
+            document.addEventListener('DOMContentLoaded', () => {
+                epSetupSecondarySidebar();
+                const sidebar = document.querySelector('.fi-sidebar');
+                if (sidebar) {
+                    sidebarObserver.observe(sidebar, { attributes: true, attributeFilter: ['class', 'style'] });
+                }
+            });
             document.addEventListener('livewire:navigated', () => {
                 requestAnimationFrame(() => epSetupSecondarySidebar());
             });

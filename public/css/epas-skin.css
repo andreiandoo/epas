@@ -5710,7 +5710,7 @@ h1.invoice-company-name,
 .ep-secondary-sidebar {
 	position: fixed;
 	top: 0;
-	left: var(--sidebar-width, 260px);
+	/* left is set dynamically by JS based on primary sidebar width */
 	width: var(--ep-secondary-sidebar-width, 220px);
 	height: 100dvh;
 	z-index: 39;
@@ -5719,16 +5719,12 @@ h1.invoice-company-name,
 	border-right: 1px solid #e5e7eb;
 	background-color: #f8fafc;
 	overflow: hidden;
+	transition: left 200ms ease-out;
 }
 
 .dark .ep-secondary-sidebar {
 	background-color: #1e1b2e;
 	border-color: #33323e;
-}
-
-/* Adjust when primary sidebar is collapsed */
-body:has(.fi-sidebar:not([x-bind\:class*="isOpen"] .fi-sidebar-open)) .ep-secondary-sidebar {
-	left: var(--collapsed-sidebar-width, 70px);
 }
 
 /* Content area shifts when secondary sidebar is open */
@@ -5737,6 +5733,22 @@ body:has(.fi-sidebar:not([x-bind\:class*="isOpen"] .fi-sidebar-open)) .ep-second
 		margin-inline-start: var(--ep-secondary-sidebar-width, 220px) !important;
 		transition: margin-inline-start 200ms ease-out;
 	}
+}
+
+/* Hide other Services items from primary sidebar (they appear in secondary) */
+body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-microservices-trigger]) {
+	display: none;
+}
+
+/* "Toate microserviciile" separator */
+.ep-secondary-sidebar-item-all {
+	border-top: 1px solid #e5e7eb;
+	margin-top: 0.25rem;
+	padding-top: 0.625rem;
+}
+
+.dark .ep-secondary-sidebar-item-all {
+	border-color: #33323e;
 }
 
 /* Header */
