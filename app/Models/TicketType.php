@@ -58,6 +58,8 @@ class TicketType extends Model
         'sort_order',
         // Color for seating map visualization
         'color',
+        // Single-day ticket: valid only on this date (for range events)
+        'valid_date',
     ];
 
     protected $casts = [
@@ -70,6 +72,7 @@ class TicketType extends Model
         'autostart_when_previous_sold_out' => 'boolean',
         'is_refundable'  => 'boolean',
         'is_entry_ticket' => 'boolean',
+        'valid_date'     => 'date',
         'min_per_order'    => 'integer',
         'max_per_order'    => 'integer',
         'commission_rate'  => 'decimal:2',

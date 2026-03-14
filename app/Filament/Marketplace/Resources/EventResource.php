@@ -1226,6 +1226,34 @@ class EventResource extends Resource
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
                                         ])->columnSpan(12),
 
+                                        // Single-day ticket (valid only for range events)
+                                        SC\Grid::make(2)->schema([
+                                            Forms\Components\Checkbox::make('is_single_day')
+                                                ->label($t('Bilet de 1 zi', 'Single-day ticket'))
+                                                ->live()
+                                                ->dehydrated(false)
+                                                ->afterStateHydrated(function ($state, SSet $set, $record) {
+                                                    if ($record && $record->valid_date) {
+                                                        $set('is_single_day', true);
+                                                    }
+                                                })
+                                                ->afterStateUpdated(function ($state, SSet $set) {
+                                                    if (!$state) {
+                                                        $set('valid_date', null);
+                                                    }
+                                                }),
+                                            Forms\Components\DatePicker::make('valid_date')
+                                                ->label($t('Valabil în data', 'Valid on date'))
+                                                ->inlineLabel($il)
+                                                ->visible(fn (SGet $get) => (bool) $get('is_single_day'))
+                                                ->minDate(fn (SGet $get) => $get('../../range_start_date'))
+                                                ->maxDate(fn (SGet $get) => $get('../../range_end_date'))
+                                                ->required(fn (SGet $get) => (bool) $get('is_single_day'))
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Biletul va fi valid doar în această zi', 'Ticket will be valid only on this date')),
+                                        ])
+                                            ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
+                                            ->columnSpan(12),
+
                                         // Per-ticket commission settings (override organizer/marketplace defaults)
                                         SC\Fieldset::make($t('Comision personalizat', 'Custom commission'))
                                             ->schema([
