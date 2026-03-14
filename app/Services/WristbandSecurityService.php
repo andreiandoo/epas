@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Wristband;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 
 class WristbandSecurityService
 {
@@ -104,7 +105,7 @@ class WristbandSecurityService
             return false; // PIN required but not provided
         }
 
-        return hash_equals($wristband->pin_hash, hash('sha256', $pin));
+        return Hash::check($pin, $wristband->pin_hash);
     }
 
     /**
@@ -113,7 +114,7 @@ class WristbandSecurityService
     public function setPin(Wristband $wristband, string $pin): void
     {
         $wristband->update([
-            'pin_hash' => hash('sha256', $pin),
+            'pin_hash' => Hash::make($pin),
         ]);
     }
 

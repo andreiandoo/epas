@@ -69,7 +69,6 @@ class WristbandController extends Controller
                 'uid'                 => $uid,
                 'wristband_type'      => $wristbandType,
                 'status'              => 'unassigned',
-                'balance_cents'       => 0,
                 'currency'            => $data['currency'] ?? 'RON',
             ]);
 
@@ -325,11 +324,15 @@ class WristbandController extends Controller
             'operator'     => 'nullable|string|max:100',
         ]);
 
-        $transaction = $wristband->refund(
-            $data['amount_cents'],
-            $data['description'] ?? null,
-            $data['operator'] ?? null,
-        );
+        try {
+            $transaction = $wristband->refund(
+                $data['amount_cents'],
+                $data['description'] ?? null,
+                $data['operator'] ?? null,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'transaction' => $transaction,
@@ -359,7 +362,11 @@ class WristbandController extends Controller
             return response()->json(['message' => 'Target wristband is not active.'], 422);
         }
 
-        $transaction = $source->transferTo($target, $data['operator'] ?? null);
+        try {
+            $transaction = $source->transferTo($target, $data['operator'] ?? null);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'transaction'          => $transaction,

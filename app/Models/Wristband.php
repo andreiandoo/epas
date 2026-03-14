@@ -17,7 +17,7 @@ class Wristband extends Model
         'uid',
         'wristband_type',
         'status',
-        'balance_cents',
+        // balance_cents intentionally excluded — only modified via financial methods with row-level locking
         'currency',
         'pin_hash',
         'qr_payload',
@@ -121,7 +121,8 @@ class Wristband extends Model
             $locked = self::lockForUpdate()->find($this->id);
             $balanceBefore = $locked->balance_cents;
 
-            $locked->update(['balance_cents' => $balanceBefore + $amountCents]);
+            $locked->balance_cents = $balanceBefore + $amountCents;
+            $locked->save();
             $this->balance_cents = $balanceBefore + $amountCents;
 
             return $this->transactions()->create([
@@ -155,7 +156,8 @@ class Wristband extends Model
             }
 
             $balanceBefore = $locked->balance_cents;
-            $locked->update(['balance_cents' => $balanceBefore - $amountCents]);
+            $locked->balance_cents = $balanceBefore - $amountCents;
+            $locked->save();
             $this->balance_cents = $balanceBefore - $amountCents;
 
             return $this->transactions()->create([
@@ -182,7 +184,23 @@ class Wristband extends Model
             $locked = self::lockForUpdate()->find($this->id);
             $balanceBefore = $locked->balance_cents;
 
-            $locked->update(['balance_cents' => $balanceBefore + $amountCents]);
+            // Validate: refund cannot exceed total charges minus existing refunds
+            $totalCharged = $locked->transactions()
+                ->where('transaction_type', 'payment')
+                ->sum('amount_cents');
+            $totalRefunded = $locked->transactions()
+                ->where('transaction_type', 'refund')
+                ->sum('amount_cents');
+            $maxRefundable = $totalCharged - $totalRefunded;
+
+            if ($amountCents > $maxRefundable) {
+                throw new \InvalidArgumentException(
+                    "Refund amount ({$amountCents}) exceeds maximum refundable ({$maxRefundable})"
+                );
+            }
+
+            $locked->balance_cents = $balanceBefore + $amountCents;
+            $locked->save();
             $this->balance_cents = $balanceBefore + $amountCents;
 
             return $this->transactions()->create([
@@ -202,6 +220,13 @@ class Wristband extends Model
 
     public function transferTo(Wristband $target, ?string $operator = null): WristbandTransaction
     {
+        if ($this->tenant_id !== $target->tenant_id) {
+            throw new \InvalidArgumentException('Cannot transfer between wristbands of different tenants.');
+        }
+        if ($this->festival_edition_id !== $target->festival_edition_id) {
+            throw new \InvalidArgumentException('Cannot transfer between wristbands of different festival editions.');
+        }
+
         return DB::transaction(function () use ($target, $operator) {
             $source = self::lockForUpdate()->find($this->id);
             $dest   = self::lockForUpdate()->find($target->id);
@@ -210,8 +235,10 @@ class Wristband extends Model
             $sourceBefore    = $source->balance_cents;
             $destBefore      = $dest->balance_cents;
 
-            $source->update(['balance_cents' => 0]);
-            $dest->update(['balance_cents' => $destBefore + $amountCents]);
+            $source->balance_cents = 0;
+            $source->save();
+            $dest->balance_cents = $destBefore + $amountCents;
+            $dest->save();
 
             $this->balance_cents   = 0;
             $target->balance_cents = $destBefore + $amountCents;
@@ -254,7 +281,8 @@ class Wristband extends Model
             $locked = self::lockForUpdate()->find($this->id);
             $balanceBefore = $locked->balance_cents;
 
-            $locked->update(['balance_cents' => 0]);
+            $locked->balance_cents = 0;
+            $locked->save();
             $this->balance_cents = 0;
 
             return $this->transactions()->create([
