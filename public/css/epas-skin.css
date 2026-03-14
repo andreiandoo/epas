@@ -4133,6 +4133,13 @@ td.fi-ta-cell.fi-ta-cell-title,
 td.fi-ta-cell.fi-ta-cell-name {
 	width: 300px;
 	white-space: normal;
+	display:block;
+}
+td.fi-ta-cell.fi-ta-cell-marketplace-organizer\.name > a > div {
+    font-size: 0.75rem !important;
+}
+td.fi-ta-cell.fi-ta-cell-marketplace-organizer\.name:hover > a > div {
+    color: #ef4444;
 }
 
 .dark .fi-ta-content {
