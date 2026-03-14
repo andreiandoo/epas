@@ -5740,10 +5740,11 @@ body.ep-secondary-sidebar-ready [data-group-label="Tools"] > .fi-sidebar-group-i
 	display: none;
 }
 
-/* Hide Communications, Gamification, and Settings groups entirely (moved into secondary sidebar) */
+/* Hide groups that are moved into secondary sidebar */
 body.ep-secondary-sidebar-ready [data-group-label="Communications"],
 body.ep-secondary-sidebar-ready [data-group-label="Gamification"],
-body.ep-secondary-sidebar-ready [data-group-label="Settings"] {
+body.ep-secondary-sidebar-ready [data-group-label="Settings"],
+body.ep-secondary-sidebar-ready [data-group-label="Help"] {
 	display: none !important;
 }
 
@@ -5897,18 +5898,12 @@ body.ep-secondary-sidebar-ready [data-group-label="Settings"] {
 	color: #34d399;
 }
 
-/* Cloned items styling override (all panels) */
-#ep-secondary-sidebar-services-clone .fi-sidebar-item,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item {
+/* Cloned items styling override (all panels) — using shared class via #ep-secondary-sidebar scope */
+.ep-secondary-sidebar-panel .fi-sidebar-item {
 	list-style: none;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item-btn {
+.ep-secondary-sidebar-panel .fi-sidebar-item-btn {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -5921,78 +5916,48 @@ body.ep-secondary-sidebar-ready [data-group-label="Settings"] {
 	transition: background-color 150ms, color 150ms;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn:hover,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn:hover,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item-btn:hover {
+.ep-secondary-sidebar-panel .fi-sidebar-item-btn:hover {
 	background-color: rgba(0,0,0,0.04);
 	color: #111827;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-settings-clone .fi-sidebar-item-btn {
+.dark .ep-secondary-sidebar-panel .fi-sidebar-item-btn {
 	color: #9ca3af;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover,
-.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn:hover,
-.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn:hover,
-.dark #ep-secondary-sidebar-settings-clone .fi-sidebar-item-btn:hover {
+.dark .ep-secondary-sidebar-panel .fi-sidebar-item-btn:hover {
 	background-color: rgba(255,255,255,0.06);
 	color: #e5e7eb;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+.ep-secondary-sidebar-panel .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
 	background-color: rgba(16,185,129,0.1);
 	color: #10b981;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
-.dark #ep-secondary-sidebar-settings-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+.dark .ep-secondary-sidebar-panel .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
 	background-color: rgba(16,185,129,0.15);
 	color: #34d399;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-icon,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item-icon,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-icon,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item-icon {
+.ep-secondary-sidebar-panel .fi-sidebar-item-icon {
 	width: 1.125rem;
 	height: 1.125rem;
 	flex-shrink: 0;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-grouped-border,
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-badge-ctn,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item-grouped-border,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-item-badge-ctn,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-grouped-border,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-badge-ctn,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item-grouped-border,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-item-badge-ctn {
+.ep-secondary-sidebar-panel .fi-sidebar-item-grouped-border,
+.ep-secondary-sidebar-panel .fi-sidebar-item-badge-ctn {
 	display: none;
 }
 
 /* Sub-items in cloned items (e.g. SMS Campaigns under Notificari SMS) */
-#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-sub-group-items,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-sub-group-items,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-sub-group-items {
+.ep-secondary-sidebar-panel .fi-sidebar-sub-group-items {
 	flex-direction: column;
 	gap: 0.125rem;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn,
-#ep-secondary-sidebar-communications-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn,
-#ep-secondary-sidebar-gamification-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn,
-#ep-secondary-sidebar-settings-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn {
+.ep-secondary-sidebar-panel .fi-sidebar-sub-group-items .fi-sidebar-item-btn {
 	padding: 0.3125rem 0.75rem;
 	font-size: 0.75rem;
 }

@@ -126,5 +126,12 @@
             </div>
         </div>
 
+        {{-- ===== PANEL: Help ===== --}}
+        <div class="ep-secondary-sidebar-panel" data-ep-panel="help" style="display: none;">
+            <div class="ep-secondary-sidebar-section">
+                <ul id="ep-secondary-sidebar-help-clone"></ul>
+            </div>
+        </div>
+
     </nav>
 </div>
