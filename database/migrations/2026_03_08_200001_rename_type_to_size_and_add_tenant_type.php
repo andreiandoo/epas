@@ -8,24 +8,19 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            // Rename existing 'type' (single|small|medium|large|premium) to 'size'
-            $table->renameColumn('type', 'size');
-        });
+            // Add new 'tenant_type' for tenant business model (keep existing 'type' intact)
+            $table->string('tenant_type', 32)->nullable()->after('type')
+                ->comment('Tenant business model: tenant-artist|agency|theater|festival');
 
-        Schema::table('tenants', function (Blueprint $table) {
-            // Add new 'type' for tenant business model
-            $table->string('type', 32)->nullable()->after('size')
-                ->comment('Tenant type: tenant-artist|agency|theater');
-
-            // Theater subtype (only relevant when type=theater)
-            $table->string('theater_subtype', 32)->nullable()->after('type')
+            // Theater subtype (only relevant when tenant_type=theater)
+            $table->string('theater_subtype', 32)->nullable()->after('tenant_type')
                 ->comment('Theater subtype: theater|opera|philharmonic');
 
             // JSON settings specific to the tenant type
             $table->json('type_settings')->nullable()->after('theater_subtype')
                 ->comment('Type-specific configuration');
 
-            $table->index('type');
+            $table->index('tenant_type');
             $table->index('theater_subtype');
         });
     }
@@ -33,13 +28,9 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->dropIndex(['type']);
+            $table->dropIndex(['tenant_type']);
             $table->dropIndex(['theater_subtype']);
-            $table->dropColumn(['type', 'theater_subtype', 'type_settings']);
-        });
-
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->renameColumn('size', 'type');
+            $table->dropColumn(['tenant_type', 'theater_subtype', 'type_settings']);
         });
     }
 };

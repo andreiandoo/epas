@@ -65,7 +65,7 @@ class TenantResource extends Resource
                                         ->default('active')
                                         ->required(),
 
-                                    Forms\Components\Select::make('size')
+                                    Forms\Components\Select::make('type')
                                         ->label('Client Size')
                                         ->options([
                                             'single' => 'Single',
@@ -77,7 +77,7 @@ class TenantResource extends Resource
                                         ->nullable()
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Client tier for billing/features'),
 
-                                    Forms\Components\Select::make('type')
+                                    Forms\Components\Select::make('tenant_type')
                                         ->label('Tenant Type')
                                         ->options(\App\Enums\TenantType::class)
                                         ->nullable()
@@ -88,7 +88,7 @@ class TenantResource extends Resource
                                         ->label('Theater Subtype')
                                         ->options(\App\Enums\TheaterSubtype::class)
                                         ->nullable()
-                                        ->visible(fn (callable $get) => $get('type') === 'theater')
+                                        ->visible(fn (callable $get) => $get('tenant_type') === 'theater')
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Specific type of performing arts institution'),
 
                                     Forms\Components\Select::make('locale')
@@ -906,13 +906,13 @@ class TenantResource extends Resource
                     ])
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('size')
+                Tables\Columns\TextColumn::make('type')
                     ->label('Size')
                     ->badge()
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('type')
+                Tables\Columns\TextColumn::make('tenant_type')
                     ->label('Tenant Type')
                     ->badge()
                     ->sortable()
@@ -970,7 +970,8 @@ class TenantResource extends Resource
                         'cancelled' => 'Cancelled',
                         'terminated' => 'Terminated',
                     ]),
-                Tables\Filters\SelectFilter::make('size')
+                Tables\Filters\SelectFilter::make('type')
+                    ->label('Client Size')
                     ->options([
                         'single' => 'Single',
                         'small' => 'Small',
@@ -978,7 +979,7 @@ class TenantResource extends Resource
                         'large' => 'Large',
                         'premium' => 'Premium',
                     ]),
-                Tables\Filters\SelectFilter::make('type')
+                Tables\Filters\SelectFilter::make('tenant_type')
                     ->label('Tenant Type')
                     ->options(\App\Enums\TenantType::class),
             ])

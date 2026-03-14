@@ -19,8 +19,8 @@ class Tenant extends Model
         'domain',
         'status',
         'plan',
-        'size',
         'type',
+        'tenant_type',
         'theater_subtype',
         'type_settings',
         'donations_enabled',
@@ -84,7 +84,7 @@ class Tenant extends Model
     ];
 
     protected $casts = [
-        'type' => TenantType::class,
+        'tenant_type' => TenantType::class,
         'theater_subtype' => TheaterSubtype::class,
         'type_settings' => 'array',
         'donations_enabled' => 'boolean',
@@ -214,9 +214,9 @@ class Tenant extends Model
 
     public function microservices(): BelongsToMany
     {
-        return $this->belongsToMany(Microservice::class, 'tenant_microservice')
+        return $this->belongsToMany(Microservice::class, 'tenant_microservices')
             ->using(TenantMicroservicePivot::class)
-            ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
+            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings'])
             ->withTimestamps();
     }
 
@@ -469,17 +469,17 @@ class Tenant extends Model
 
     public function isTenantArtist(): bool
     {
-        return $this->type === TenantType::TenantArtist;
+        return $this->tenant_type === TenantType::TenantArtist;
     }
 
     public function isAgency(): bool
     {
-        return $this->type === TenantType::Agency;
+        return $this->tenant_type === TenantType::Agency;
     }
 
     public function isTheater(): bool
     {
-        return $this->type === TenantType::Theater;
+        return $this->tenant_type === TenantType::Theater;
     }
 
     public function isOpera(): bool
@@ -494,7 +494,7 @@ class Tenant extends Model
 
     public function isFestival(): bool
     {
-        return $this->type === TenantType::Festival;
+        return $this->tenant_type === TenantType::Festival;
     }
 
     // ──────────────────────────────────────────────
