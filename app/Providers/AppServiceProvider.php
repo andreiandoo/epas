@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Filament\Tables\Table;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
@@ -44,6 +45,11 @@ class AppServiceProvider extends ServiceProvider
         // Define API rate limiter
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Increase table search debounce to 2s across all panels
+        Table::configureUsing(function (Table $table): void {
+            $table->searchDebounce('2000ms');
         });
 
         // Register observers
