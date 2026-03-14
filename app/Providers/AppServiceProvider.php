@@ -47,10 +47,9 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
-        // Increase table search debounce to 2s, but search instantly on Enter
+        // Increase table search debounce to 2s across all panels
         Table::configureUsing(function (Table $table): void {
-            $table->searchDebounce('2000ms')
-                ->searchOnEnter();
+            $table->searchDebounce('2000ms');
         });
 
         // Register observers
