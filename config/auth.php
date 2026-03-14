@@ -45,6 +45,11 @@ return [
             'driver' => 'session',
             'provider' => 'marketplace_admins',
         ],
+
+        'vendor' => [
+            'driver' => 'session',
+            'provider' => 'vendors',
+        ],
     ],
 
     /*
@@ -73,6 +78,11 @@ return [
         'marketplace_admins' => [
             'driver' => 'eloquent',
             'model' => App\Models\MarketplaceAdmin::class,
+        ],
+
+        'vendors' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Vendor::class,
         ],
 
         // 'users' => [
@@ -111,6 +121,13 @@ return [
         'marketplace_admins' => [
             'provider' => 'marketplace_admins',
             'table' => 'marketplace_password_resets',
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'vendors' => [
+            'provider' => 'vendors',
+            'table' => 'vendor_password_resets',
             'expire' => 60,
             'throttle' => 60,
         ],

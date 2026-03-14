@@ -140,6 +140,21 @@ class AuthenticateTenantApi
      */
     protected function getRequiredScope(Request $request): ?string
     {
+        // Route-name-based scopes take priority (granular financial routes)
+        $routeName = $request->route()?->getName();
+        if ($routeName) {
+            $routeScopes = [
+                'api.festival.wristbands.refund'   => 'festival:finance',
+                'api.festival.wristbands.cashout'   => 'festival:finance',
+                'api.festival.wristbands.transfer'  => 'festival:finance',
+                'api.festival.wristbands.disable'   => 'festival:admin',
+            ];
+
+            if (isset($routeScopes[$routeName])) {
+                return $routeScopes[$routeName];
+            }
+        }
+
         $path = $request->path();
 
         // Map routes to required scopes
@@ -148,6 +163,7 @@ class AuthenticateTenantApi
             'api/microservices/efactura' => 'efactura:submit',
             'api/microservices/accounting' => 'accounting:manage',
             'api/microservices/insurance' => 'insurance:quote',
+            'api/festival' => 'festival:manage',
             'api/webhooks' => 'webhooks:manage',
             'api/metrics' => 'metrics:read',
         ];
