@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Jobs\SendMarketplaceOrganizerEmailJob;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceOrganizerTeamMember;
 use App\Models\MarketplaceOrganizerBankAccount;
 use App\Models\OrganizerDocument;
 use Illuminate\Support\Facades\Storage;
@@ -188,7 +189,7 @@ class AuthController extends BaseController
     }
 
     /**
-     * Login an organizer
+     * Login an organizer or team member
      */
     public function login(Request $request): JsonResponse
     {
@@ -199,25 +200,58 @@ class AuthController extends BaseController
             'password' => 'required|string',
         ]);
 
+        // First try organizer login
         $organizer = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
             ->where('email', $validated['email'])
             ->first();
 
-        if (!$organizer || !Hash::check($validated['password'], $organizer->password)) {
-            return $this->error('Invalid credentials', 401);
+        if ($organizer && Hash::check($validated['password'], $organizer->password)) {
+            if ($organizer->isSuspended()) {
+                return $this->error('Your account has been suspended', 403);
+            }
+
+            $token = $organizer->createToken('organizer-api')->plainTextToken;
+
+            return $this->success([
+                'organizer' => $this->formatOrganizer($organizer),
+                'token' => $token,
+            ], 'Login successful');
         }
 
-        if ($organizer->isSuspended()) {
-            return $this->error('Your account has been suspended', 403);
+        // Try team member login
+        $teamMember = MarketplaceOrganizerTeamMember::whereHas('organizer', function ($q) use ($client) {
+                $q->where('marketplace_client_id', $client->id);
+            })
+            ->where('email', $validated['email'])
+            ->where('status', 'active')
+            ->first();
+
+        if ($teamMember && $teamMember->password && Hash::check($validated['password'], $teamMember->password)) {
+            $organizer = $teamMember->organizer;
+
+            if ($organizer->isSuspended()) {
+                return $this->error('Your account has been suspended', 403);
+            }
+
+            // Create token on parent organizer with team member identifier
+            $token = $organizer->createToken('team-member-' . $teamMember->id)->plainTextToken;
+
+            $organizerData = $this->formatOrganizer($organizer);
+            $organizerData['team_member'] = [
+                'id' => (string) $teamMember->id,
+                'name' => $teamMember->name,
+                'email' => $teamMember->email,
+                'role' => $teamMember->role,
+                'permissions' => $teamMember->getEffectivePermissions(),
+            ];
+
+            return $this->success([
+                'organizer' => $organizerData,
+                'token' => $token,
+            ], 'Login successful');
         }
 
-        // Generate token
-        $token = $organizer->createToken('organizer-api')->plainTextToken;
-
-        return $this->success([
-            'organizer' => $this->formatOrganizer($organizer),
-            'token' => $token,
-        ], 'Login successful');
+        return $this->error('Invalid credentials', 401);
     }
 
     /**
@@ -241,8 +275,26 @@ class AuthController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
+        $organizerData = $this->formatOrganizer($organizer);
+
+        // Check if this is a team member token
+        $tokenName = $request->user()->currentAccessToken()->name ?? '';
+        if (str_starts_with($tokenName, 'team-member-')) {
+            $memberId = (int) str_replace('team-member-', '', $tokenName);
+            $teamMember = MarketplaceOrganizerTeamMember::find($memberId);
+            if ($teamMember && $teamMember->marketplace_organizer_id === $organizer->id) {
+                $organizerData['team_member'] = [
+                    'id' => (string) $teamMember->id,
+                    'name' => $teamMember->name,
+                    'email' => $teamMember->email,
+                    'role' => $teamMember->role,
+                    'permissions' => $teamMember->getEffectivePermissions(),
+                ];
+            }
+        }
+
         return $this->success([
-            'organizer' => $this->formatOrganizer($organizer),
+            'organizer' => $organizerData,
         ]);
     }
 
