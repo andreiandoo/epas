@@ -50,6 +50,12 @@
 
     {{-- Scrollable nav --}}
     <nav class="ep-secondary-sidebar-nav">
+        {{-- Section: Other Services (cloned from DOM) - shown first --}}
+        <div class="ep-secondary-sidebar-section" id="ep-secondary-sidebar-services-section" style="display: none;">
+            <div class="ep-secondary-sidebar-section-label">Servicii</div>
+            <ul id="ep-secondary-sidebar-services-clone"></ul>
+        </div>
+
         {{-- Section: Active microservices --}}
         @if($microservices->isNotEmpty())
             <div class="ep-secondary-sidebar-section">
@@ -91,12 +97,6 @@
                     </a>
                 </li>
             </ul>
-        </div>
-
-        {{-- Section: Other Services (cloned from DOM) --}}
-        <div class="ep-secondary-sidebar-section" id="ep-secondary-sidebar-services-section" style="display: none;">
-            <div class="ep-secondary-sidebar-section-label">Alte servicii</div>
-            <ul id="ep-secondary-sidebar-services-clone"></ul>
         </div>
     </nav>
 </div>

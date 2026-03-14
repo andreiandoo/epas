@@ -250,12 +250,21 @@ class MarketplacePanelProvider extends PanelProvider
                 section.style.display = clonedCount > 0 ? '' : 'none';
             }
 
-            function epHighlightActiveSecondary() {
+            function epGetPathname(href) {
+                if (!href) return '';
+                try { return new URL(href, window.location.origin).pathname; }
+                catch { return href; }
+            }
+
+            function epIsActivePath(href) {
                 const currentPath = window.location.pathname;
+                const linkPath = epGetPathname(href);
+                return linkPath && (currentPath === linkPath || currentPath.startsWith(linkPath + '/'));
+            }
+
+            function epHighlightActiveSecondary() {
                 document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]').forEach(link => {
-                    const href = link.getAttribute('href');
-                    if (!href) return;
-                    const isActive = currentPath === href || currentPath.startsWith(href + '/');
+                    const isActive = epIsActivePath(link.getAttribute('href'));
                     link.classList.toggle('ep-active', isActive);
                     // Also handle cloned Filament items
                     const parentItem = link.closest('.fi-sidebar-item');
@@ -266,14 +275,24 @@ class MarketplacePanelProvider extends PanelProvider
             }
 
             function epAutoOpenIfNeeded() {
-                const currentPath = window.location.pathname;
                 // Check if current page matches any secondary sidebar link
                 const isSecondaryPage = Array.from(
                     document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]')
-                ).some(link => {
-                    const href = link.getAttribute('href');
-                    return href && (currentPath === href || currentPath.startsWith(href + '/'));
-                });
+                ).some(link => epIsActivePath(link.getAttribute('href')));
+
+                // Also check if current page was in the Services group (hidden items)
+                if (!isSecondaryPage) {
+                    const servicesGroup = document.querySelector('[data-group-label="Services"]');
+                    if (servicesGroup) {
+                        const isServicePage = Array.from(
+                            servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-microservices-trigger]) a')
+                        ).some(link => epIsActivePath(link.getAttribute('href')));
+                        if (isServicePage && Alpine.store('secondarySidebar')) {
+                            Alpine.store('secondarySidebar').openIfClosed();
+                            return;
+                        }
+                    }
+                }
 
                 if (isSecondaryPage && Alpine.store('secondarySidebar')) {
                     Alpine.store('secondarySidebar').openIfClosed();
