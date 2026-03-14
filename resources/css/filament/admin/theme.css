@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reduce main content padding on wide screens */
+@media (min-width: 64rem) {
+    .fi-main {
+        padding-inline: 1rem !important;
+    }
+}
+
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  * RAILWAY / METRO DARK THEME
