@@ -2872,13 +2872,12 @@ class EventResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
-                    ->formatStateUsing(function ($state, $record) {
-                        // Handle different duration modes
+                    ->getStateUsing(function ($record) {
+                        // Range: show interval
                         if ($record->duration_mode === 'range') {
                             $start = $record->range_start_date;
                             $end = $record->range_end_date;
 
-                            // If we have both start and end dates
                             if ($start && $end) {
                                 // Same month and year: "15-20 Ian 2025"
                                 if ($start->format('m Y') === $end->format('m Y')) {
@@ -2892,13 +2891,12 @@ class EventResource extends Resource
                                 return $start->format('d M Y') . ' - ' . $end->format('d M Y');
                             }
 
-                            // If only start date, show "from X"
                             if ($start) {
-                                return 'from ' . $start->format('d M Y');
+                                return 'din ' . $start->format('d M Y');
                             }
                         }
 
-                        // For multi_day, show first and last slot dates
+                        // Multi-day: show first and last slot dates
                         if ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
                             $slots = collect($record->multi_slots)->pluck('date')->filter()->sort();
                             if ($slots->count() > 1) {
@@ -2913,10 +2911,14 @@ class EventResource extends Resource
                             }
                         }
 
-                        // Default: single day - try event_date, then range_start_date as fallback
-                        return $state?->format('d M Y') ?? $record->range_start_date?->format('d M Y') ?? '-';
+                        // Single day: event_date or range_start_date fallback
+                        return $record->event_date?->format('d M Y')
+                            ?? $record->range_start_date?->format('d M Y')
+                            ?? '-';
                     })
-                    ->sortable()
+                    ->sortable(query: function ($query, string $direction) {
+                        $query->orderByRaw('COALESCE(event_date, range_start_date) ' . $direction);
+                    })
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_published')
                     ->boolean()
