@@ -119,5 +119,12 @@
             </div>
         </div>
 
+        {{-- ===== PANEL: Settings ===== --}}
+        <div class="ep-secondary-sidebar-panel" data-ep-panel="settings" style="display: none;">
+            <div class="ep-secondary-sidebar-section">
+                <ul id="ep-secondary-sidebar-settings-clone"></ul>
+            </div>
+        </div>
+
     </nav>
 </div>

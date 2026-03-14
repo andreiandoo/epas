@@ -1,11 +1,6 @@
 @php
-    use Illuminate\Support\Facades\Auth;
-
-    $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
-    $marketplace = $marketplaceAdmin?->marketplaceClient;
-
-    $supportEmail = $marketplace?->settings['support_email'] ?? $marketplace?->contact_email ?? 'support@tixello.com';
-    $supportPhone = $marketplace?->contact_phone ?? null;
+    $supportEmail = 'help@tixello.com';
+    $supportPhone = '0040 750 29 29 62';
 @endphp
 <div class="m-0 border-t border-gray-200 fi-sidebar-footer dark:border-gray-700">
     <div class="flex flex-col p-4 gap-y-2 bg-emerald-50 dark:bg-emerald-900/20">
