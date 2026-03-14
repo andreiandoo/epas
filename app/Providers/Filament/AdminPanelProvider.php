@@ -78,16 +78,8 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearch(false)
             ->userMenu(false)
 
-            // Custom topbar in actual topbar (not in content)
-            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
-
-            // Event form anchor menu (only on event pages)
-            ->renderHook('panels::content.start', function (): string {
-                if (request()->routeIs('filament.admin.resources.events.*')) {
-                    return view('filament.events.widgets.event-form-anchor-menu')->render();
-                }
-                return '';
-            })
+            // Custom topbar above fi-main (same placement as marketplace panel)
+            ->renderHook('panels::page.start', fn (): string => view('filament.components.custom-topbar')->render())
 
             // Sticky / floating save button for long forms
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())

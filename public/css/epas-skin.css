@@ -1,9 +1,10 @@
 /* EPAS Admin Panel Custom Styles */
 
-/* ===== MARKETPLACE PANEL: Hide default Filament topbar ===== */
-/* This is scoped to marketplace panel only */
+/* ===== HIDE DEFAULT FILAMENT TOPBAR (both admin and marketplace panels) ===== */
 body.fi-panel-marketplace .fi-topbar-ctn,
-body.fi-panel-marketplace .fi-topbar {
+body.fi-panel-marketplace .fi-topbar,
+body.fi-panel-admin .fi-topbar-ctn,
+body.fi-panel-admin .fi-topbar {
 	display: none !important;
 	visibility: hidden !important;
 	height: 0 !important;
@@ -12,7 +13,8 @@ body.fi-panel-marketplace .fi-topbar {
 
 /* Fix sidebar height and position when topbar is hidden */
 @media (min-width: 64rem) {
-	body.fi-panel-marketplace.fi-body-has-topbar .fi-sidebar {
+	body.fi-panel-marketplace.fi-body-has-topbar .fi-sidebar,
+	body.fi-panel-admin.fi-body-has-topbar .fi-sidebar {
 		height: 100dvh !important;
 		top: 0 !important;
 		border-right-width: 1px;
@@ -21,10 +23,11 @@ body.fi-panel-marketplace .fi-topbar {
 }
 
 /* Fix sidebar nav padding */
-body.fi-panel-marketplace .fi-sidebar-nav {
+body.fi-panel-marketplace .fi-sidebar-nav,
+body.fi-panel-admin .fi-sidebar-nav {
 	padding-block: calc(var(--spacing) * 6) !important;
 }
-/* ===== END MARKETPLACE PANEL TOPBAR HIDE ===== */
+/* ===== END TOPBAR HIDE ===== */
 .fi-page-header-main-ctn {
 	row-gap: calc(var(--spacing) * 6)!important;
     padding-block: calc(var(--spacing) * 6)!important;
@@ -5702,3 +5705,215 @@ h1.invoice-company-name,
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
+
+/* ===== SECONDARY SIDEBAR ===== */
+.ep-secondary-sidebar {
+	position: fixed;
+	top: 0;
+	left: var(--sidebar-width, 260px);
+	width: var(--ep-secondary-sidebar-width, 220px);
+	height: 100dvh;
+	z-index: 39;
+	display: flex;
+	flex-direction: column;
+	border-right: 1px solid #e5e7eb;
+	background-color: #f8fafc;
+	overflow: hidden;
+}
+
+.dark .ep-secondary-sidebar {
+	background-color: #1e1b2e;
+	border-color: #33323e;
+}
+
+/* Adjust when primary sidebar is collapsed */
+body:has(.fi-sidebar:not([x-bind\:class*="isOpen"] .fi-sidebar-open)) .ep-secondary-sidebar {
+	left: var(--collapsed-sidebar-width, 70px);
+}
+
+/* Content area shifts when secondary sidebar is open */
+@media (min-width: 64rem) {
+	body.ep-secondary-sidebar-open .fi-main-ctn {
+		margin-inline-start: var(--ep-secondary-sidebar-width, 220px) !important;
+		transition: margin-inline-start 200ms ease-out;
+	}
+}
+
+/* Header */
+.ep-secondary-sidebar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.875rem 1rem;
+	border-bottom: 1px solid #e5e7eb;
+	flex-shrink: 0;
+}
+
+.dark .ep-secondary-sidebar-header {
+	border-color: #33323e;
+}
+
+/* Close button */
+.ep-secondary-sidebar-close {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.5rem;
+	height: 1.5rem;
+	border-radius: 0.25rem;
+	color: #9ca3af;
+	transition: color 150ms, background-color 150ms;
+}
+
+.ep-secondary-sidebar-close:hover {
+	color: #374151;
+	background-color: rgba(0,0,0,0.05);
+}
+
+.dark .ep-secondary-sidebar-close:hover {
+	color: #e5e7eb;
+	background-color: rgba(255,255,255,0.08);
+}
+
+/* Scrollable nav */
+.ep-secondary-sidebar-nav {
+	flex: 1;
+	overflow-y: auto;
+	padding: 0.5rem 0;
+}
+
+.ep-secondary-sidebar-nav::-webkit-scrollbar {
+	width: 4px;
+}
+
+.ep-secondary-sidebar-nav::-webkit-scrollbar-thumb {
+	background-color: rgba(156,163,175,0.3);
+	border-radius: 2px;
+}
+
+/* Section */
+.ep-secondary-sidebar-section {
+	margin-bottom: 0.5rem;
+}
+
+/* Section label */
+.ep-secondary-sidebar-section-label {
+	text-transform: uppercase;
+	font-size: 0.65rem;
+	font-weight: 700;
+	letter-spacing: 0.075rem;
+	padding: 0.625rem 1rem 0.375rem;
+	color: #9ca3af;
+}
+
+.dark .ep-secondary-sidebar-section-label {
+	color: #6b7280;
+}
+
+/* Section list */
+.ep-secondary-sidebar-section ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+/* Nav items */
+.ep-secondary-sidebar-item {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4375rem 0.75rem;
+	margin: 0.0625rem 0.5rem;
+	font-size: 0.8125rem;
+	border-radius: 0.375rem;
+	color: #6b7280;
+	text-decoration: none;
+	transition: background-color 150ms, color 150ms;
+	line-height: 1.25;
+}
+
+.ep-secondary-sidebar-item:hover {
+	background-color: rgba(0,0,0,0.04);
+	color: #111827;
+}
+
+.dark .ep-secondary-sidebar-item {
+	color: #9ca3af;
+}
+
+.dark .ep-secondary-sidebar-item:hover {
+	background-color: rgba(255,255,255,0.06);
+	color: #e5e7eb;
+}
+
+/* Active item */
+.ep-secondary-sidebar-item.ep-active {
+	background-color: rgba(16,185,129,0.1);
+	color: #10b981;
+}
+
+.dark .ep-secondary-sidebar-item.ep-active {
+	background-color: rgba(16,185,129,0.15);
+	color: #34d399;
+}
+
+/* Cloned service items styling override */
+#ep-secondary-sidebar-services-clone .fi-sidebar-item {
+	list-style: none;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.4375rem 0.75rem;
+	margin: 0.0625rem 0.5rem;
+	font-size: 0.8125rem;
+	border-radius: 0.375rem;
+	color: #6b7280;
+	text-decoration: none;
+	transition: background-color 150ms, color 150ms;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover {
+	background-color: rgba(0,0,0,0.04);
+	color: #111827;
+}
+
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn {
+	color: #9ca3af;
+}
+
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover {
+	background-color: rgba(255,255,255,0.06);
+	color: #e5e7eb;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+	background-color: rgba(16,185,129,0.1);
+	color: #10b981;
+}
+
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+	background-color: rgba(16,185,129,0.15);
+	color: #34d399;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-icon {
+	width: 1.125rem;
+	height: 1.125rem;
+	flex-shrink: 0;
+}
+
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-grouped-border,
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-badge-ctn {
+	display: none;
+}
+
+/* Hide secondary sidebar on mobile */
+@media (max-width: 63.99rem) {
+	.ep-secondary-sidebar {
+		display: none !important;
+	}
+}
+/* ===== END SECONDARY SIDEBAR ===== */

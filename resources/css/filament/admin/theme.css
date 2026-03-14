@@ -27,8 +27,14 @@
   --metro-dot-spacing: 24px;
 }
 
-/* Custom body styling */
-body { border-top: 2px solid rgba(0,0,0,.06); }
+/* Custom body styling - Orange accent */
+body { border-top: 3px solid #f59e0b; }
+
+/* Hide default topbar and its container (we use custom-topbar) */
+.fi-topbar,
+.fi-topbar-ctn {
+    display: none !important;
+}
 
 /*
  * Metro Theme - Dark Mode Overrides

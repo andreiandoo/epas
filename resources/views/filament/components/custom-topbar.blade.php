@@ -334,7 +334,7 @@
 </div>
 
 {{-- Move topbar before .fi-main for marketplace panel --}}
-@if($isMarketplacePanel)
+@if($isMarketplacePanel || $isAdminPanel)
 <script>
 // Topbar deduplication and positioning with MutationObserver
 (function() {
