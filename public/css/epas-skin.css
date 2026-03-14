@@ -4128,6 +4128,13 @@ html.dark {
 	color: var(--metro-text-primary) !important;
 }
 
+/* Title/name column: fixed width with text wrapping */
+td.fi-ta-cell.fi-ta-cell-title,
+td.fi-ta-cell.fi-ta-cell-name {
+	width: 300px;
+	white-space: normal;
+}
+
 .dark .fi-ta-content {
 	background-color: var(--metro-bg-secondary) !important;
 }
