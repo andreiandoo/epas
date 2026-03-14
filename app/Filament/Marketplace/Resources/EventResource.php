@@ -3126,6 +3126,21 @@ class EventResource extends Resource
                 ]),
             ])
             ->recordUrl(fn (Event $record) => static::getUrl('edit', ['record' => $record]))
+            ->recordClasses(function (Event $record) {
+                $endDate = match ($record->duration_mode) {
+                    'range' => $record->range_end_date ?? $record->range_start_date,
+                    'multi_day' => !empty($record->multi_slots)
+                        ? Carbon::parse(collect($record->multi_slots)->pluck('date')->filter()->sort()->last())
+                        : null,
+                    default => $record->event_date,
+                };
+
+                if ($endDate && $endDate->endOfDay()->isPast()) {
+                    return 'event-row-ended';
+                }
+
+                return 'event-row-active';
+            })
             ->defaultSort('created_at', 'desc');
     }
 
