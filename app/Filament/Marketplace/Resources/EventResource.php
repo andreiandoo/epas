@@ -75,7 +75,7 @@ class EventResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         // For past/ended events, remove minDate constraints so all fields can be edited freely
-        $minDateForEvent = fn (?Event $record = null) => static::isEventEnded($record) ? null : $today;
+        $minDateForEvent = fn (mixed $record = null) => static::isEventEnded($record instanceof Event ? $record : null) ? null : $today;
 
         // Inline labels for ticket type fields — set to true for inline, false for stacked
         $il = false;
