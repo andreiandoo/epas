@@ -13,9 +13,31 @@ class EditEvent extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $record = $this->record;
+
+        // Merge translatable fields: preserve existing locale keys, add/update .en
+        $translatableFields = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
+        foreach ($translatableFields as $field) {
+            if (isset($data[$field]) && is_array($data[$field])) {
+                $existing = $record->getRawOriginal($field);
+                $existing = is_string($existing) ? (json_decode($existing, true) ?? []) : ($existing ?? []);
+                $data[$field] = array_merge($existing, $data[$field]);
+            }
+        }
+
+        // Handle slug: merge if stored as JSON, otherwise keep as-is
+        if (isset($data['slug']) && is_array($data['slug'])) {
+            $existingSlug = $record->getRawOriginal('slug');
+            $decoded = is_string($existingSlug) ? json_decode($existingSlug, true) : null;
+            if (is_array($decoded)) {
+                $data['slug'] = array_merge($decoded, $data['slug']);
+            }
+        }
+
         // Ensure slug.en exists
         $titleEn = $data['title']['en'] ?? null;
-        if (empty($data['slug']['en']) && $titleEn) {
+        $slugData = $data['slug'] ?? [];
+        if (is_array($slugData) && empty($slugData['en']) && $titleEn) {
             $data['slug']['en'] = Str::slug($titleEn);
         }
 

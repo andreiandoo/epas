@@ -43,23 +43,34 @@ class EventResource extends Resource
                 ->extraAttributes(['id' => 'basics','data-ep-section'=>'','data-ep-id'=>'basics','data-ep-label'=>'Basics','data-ep-icon'=>'document-text'])
                 ->schema([
                     Forms\Components\TextInput::make('title.en')
-                        ->label('Event title (EN)')
+                        ->label('Event title')
                         ->required()
                         ->maxLength(190)
                         ->placeholder('Type the event title…')
                         ->extraAttributes(['class' => 'ep-title'])
                         ->live(onBlur: true)
+                        ->afterStateHydrated(function ($component, $state, ?Event $record) {
+                            if (empty($state) && $record) {
+                                $val = $record->getTranslation('title', 'en');
+                                if ($val) $component->state($val);
+                            }
+                        })
                         ->afterStateUpdated(function (string $state, SSet $set) {
                             if ($state) $set('slug.en', \Illuminate\Support\Str::slug($state));
                         }),
                     SC\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('slug.en')
-                            ->label('Slug (EN)')
-                            ->helperText('Editable URL slug for EN locale.')
+                            ->label('Slug')
+                            ->helperText('URL slug')
                             ->maxLength(190)
                             ->rule('alpha_dash')
                             ->placeholder('auto-from-title')
-                            ->prefixIcon('heroicon-m-link'),
+                            ->prefixIcon('heroicon-m-link')
+                            ->afterStateHydrated(function ($component, $state, ?Event $record) {
+                                if (empty($state) && $record && $record->slug) {
+                                    $component->state(is_array($record->slug) ? (collect($record->slug)->first() ?? '') : $record->slug);
+                                }
+                            }),
                         Forms\Components\Select::make('tenant_id')
                             ->label('Tenant')
                             ->relationship('tenant', 'name')
@@ -67,6 +78,13 @@ class EventResource extends Resource
                             ->preload()
                             ->required()
                             ->live()
+                            ->hintIcon('heroicon-m-information-circle')
+                            ->hint(function (?Event $record) {
+                                if ($record && !$record->tenant_id && $record->marketplaceClient) {
+                                    return 'Marketplace: ' . $record->marketplaceClient->name;
+                                }
+                                return null;
+                            })
                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                 $set('venue_id', null);
 
@@ -700,17 +718,35 @@ class EventResource extends Resource
                 ->extraAttributes(['id'=>'content','data-ep-section'=>'','data-ep-id'=>'content','data-ep-label'=>'Content','data-ep-icon'=>'pencil-square'])
                 ->schema([
                     Forms\Components\Textarea::make('short_description.en')
-                        ->label('Short description (EN)')
+                        ->label('Short description')
                         ->rows(3)
-                        ->placeholder('1–2 lines summary…'),
+                        ->placeholder('1–2 lines summary…')
+                        ->afterStateHydrated(function ($component, $state, ?Event $record) {
+                            if (empty($state) && $record) {
+                                $val = $record->getTranslation('short_description', 'en');
+                                if ($val) $component->state($val);
+                            }
+                        }),
 
                     Forms\Components\RichEditor::make('description.en')
-                        ->label('Description (EN)')
-                        ->columnSpanFull(),
+                        ->label('Description')
+                        ->columnSpanFull()
+                        ->afterStateHydrated(function ($component, $state, ?Event $record) {
+                            if (empty($state) && $record) {
+                                $val = $record->getTranslation('description', 'en');
+                                if ($val) $component->state($val);
+                            }
+                        }),
 
                     Forms\Components\RichEditor::make('ticket_terms.en')
-                        ->label('Ticket terms (EN)')
-                        ->columnSpanFull(),
+                        ->label('Ticket terms')
+                        ->columnSpanFull()
+                        ->afterStateHydrated(function ($component, $state, ?Event $record) {
+                            if (empty($state) && $record) {
+                                $val = $record->getTranslation('ticket_terms', 'en');
+                                if ($val) $component->state($val);
+                            }
+                        }),
                 ])
                 ->columns(1),
 
@@ -1555,6 +1591,15 @@ class EventResource extends Resource
 
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Tenant')
+                    ->getStateUsing(function (Event $record) {
+                        if ($record->tenant?->name) {
+                            return $record->tenant->name;
+                        }
+                        if ($record->marketplaceClient?->name) {
+                            return $record->marketplaceClient->name;
+                        }
+                        return '-';
+                    })
                     ->sortable()
                     ->toggleable(),
 
