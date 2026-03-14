@@ -5735,9 +5735,55 @@ h1.invoice-company-name,
 	}
 }
 
-/* Hide other Services items from primary sidebar (they appear in secondary) */
-body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-microservices-trigger]) {
+/* Hide non-trigger Services items from primary sidebar (they appear in secondary) */
+body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) {
 	display: none;
+}
+
+/* Hide Communications and Gamification groups entirely (moved into secondary sidebar) */
+body.ep-secondary-sidebar-ready [data-group-label="Communications"],
+body.ep-secondary-sidebar-ready [data-group-label="Gamification"] {
+	display: none !important;
+}
+
+/* Injected trigger items styling */
+[data-ep-injected-trigger] .fi-sidebar-item-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	font-size: 0.875rem;
+	color: #6b7280;
+	text-decoration: none;
+	border-radius: 0.375rem;
+	transition: background-color 150ms, color 150ms;
+	cursor: pointer;
+}
+
+[data-ep-injected-trigger] .fi-sidebar-item-btn > span {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+[data-ep-injected-trigger] .fi-sidebar-item-btn:hover {
+	background-color: rgba(0,0,0,0.04);
+	color: #111827;
+}
+
+.dark [data-ep-injected-trigger] .fi-sidebar-item-btn {
+	color: #9ca3af;
+}
+
+.dark [data-ep-injected-trigger] .fi-sidebar-item-btn:hover {
+	background-color: rgba(255,255,255,0.06);
+	color: #e5e7eb;
+}
+
+[data-ep-injected-trigger] .fi-sidebar-group-icon {
+	width: 1.25rem;
+	height: 1.25rem;
+	flex-shrink: 0;
 }
 
 /* "Toate microserviciile" separator */
@@ -5869,12 +5915,16 @@ body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-grou
 	color: #34d399;
 }
 
-/* Cloned service items styling override */
-#ep-secondary-sidebar-services-clone .fi-sidebar-item {
+/* Cloned items styling override (all panels) */
+#ep-secondary-sidebar-services-clone .fi-sidebar-item,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item {
 	list-style: none;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn {
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -5887,48 +5937,68 @@ body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-grou
 	transition: background-color 150ms, color 150ms;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover {
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn:hover,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn:hover {
 	background-color: rgba(0,0,0,0.04);
 	color: #111827;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn {
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn,
+.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn,
+.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn {
 	color: #9ca3af;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover {
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item-btn:hover,
+.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item-btn:hover,
+.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item-btn:hover {
 	background-color: rgba(255,255,255,0.06);
 	color: #e5e7eb;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+#ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
 	background-color: rgba(16,185,129,0.1);
 	color: #10b981;
 }
 
-.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+.dark #ep-secondary-sidebar-services-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+.dark #ep-secondary-sidebar-communications-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn,
+.dark #ep-secondary-sidebar-gamification-clone .fi-sidebar-item.fi-active .fi-sidebar-item-btn {
 	background-color: rgba(16,185,129,0.15);
 	color: #34d399;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-icon {
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-icon,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item-icon,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-icon {
 	width: 1.125rem;
 	height: 1.125rem;
 	flex-shrink: 0;
 }
 
 #ep-secondary-sidebar-services-clone .fi-sidebar-item-grouped-border,
-#ep-secondary-sidebar-services-clone .fi-sidebar-item-badge-ctn {
+#ep-secondary-sidebar-services-clone .fi-sidebar-item-badge-ctn,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item-grouped-border,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-item-badge-ctn,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-grouped-border,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-item-badge-ctn {
 	display: none;
 }
 
-/* Sub-items in cloned services (e.g. SMS Campaigns under Notificari SMS) */
-#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items {
+/* Sub-items in cloned items (e.g. SMS Campaigns under Notificari SMS) */
+#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-sub-group-items,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-sub-group-items {
 	flex-direction: column;
 	gap: 0.125rem;
 }
 
-#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn {
+#ep-secondary-sidebar-services-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn,
+#ep-secondary-sidebar-communications-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn,
+#ep-secondary-sidebar-gamification-clone .fi-sidebar-sub-group-items .fi-sidebar-item-btn {
 	padding: 0.3125rem 0.75rem;
 	font-size: 0.75rem;
 }

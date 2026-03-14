@@ -138,32 +138,80 @@ class MarketplacePanelProvider extends PanelProvider
             // Sticky / floating save button for long forms
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
 
-            // Secondary sidebar for Services / Microservices navigation
+            // Secondary sidebar for Services / Microservices / Communications / Gamification navigation
             ->renderHook('panels::body.end', fn (): string => view('filament.components.marketplace-secondary-sidebar')->render())
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
-            // Secondary Sidebar – Alpine store & DOM interception
+            // Secondary Sidebar – Alpine store & DOM interception (multi-panel)
             document.addEventListener('alpine:init', () => {
                 Alpine.store('secondarySidebar', {
                     open: false,
-                    toggle() {
-                        this.open = !this.open;
-                        document.body.classList.toggle('ep-secondary-sidebar-open', this.open);
-                        if (this.open) epPositionSecondarySidebar();
+                    activePanel: null, // 'microservices', 'communications', 'gamification'
+                    togglePanel(panel) {
+                        if (this.open && this.activePanel === panel) {
+                            this.close();
+                        } else {
+                            this.activePanel = panel;
+                            this.open = true;
+                            document.body.classList.add('ep-secondary-sidebar-open');
+                            epShowPanel(panel);
+                            epPositionSecondarySidebar();
+                        }
                     },
                     close() {
                         this.open = false;
+                        this.activePanel = null;
                         document.body.classList.remove('ep-secondary-sidebar-open');
                     },
-                    openIfClosed() {
-                        if (!this.open) {
+                    openPanel(panel) {
+                        if (!this.open || this.activePanel !== panel) {
+                            this.activePanel = panel;
                             this.open = true;
                             document.body.classList.add('ep-secondary-sidebar-open');
+                            epShowPanel(panel);
                             epPositionSecondarySidebar();
                         }
                     }
                 });
             });
+
+            // Panel config: label, icon SVG, source group label, trigger label in Services
+            const EP_PANELS = {
+                microservices: {
+                    title: 'Microservices',
+                    icon: '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>',
+                    sourceGroup: null, // items come from Services group itself
+                    triggerLabel: 'Microservices'
+                },
+                communications: {
+                    title: 'Communications',
+                    icon: '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>',
+                    sourceGroup: 'Communications',
+                    triggerLabel: 'Communications'
+                },
+                gamification: {
+                    title: 'Gamification',
+                    icon: '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>',
+                    sourceGroup: 'Gamification',
+                    triggerLabel: 'Gamification'
+                }
+            };
+
+            function epShowPanel(panel) {
+                // Toggle panel visibility
+                document.querySelectorAll('.ep-secondary-sidebar-panel').forEach(p => {
+                    p.style.display = p.dataset.epPanel === panel ? '' : 'none';
+                });
+                // Update header
+                const cfg = EP_PANELS[panel];
+                if (cfg) {
+                    const iconEl = document.getElementById('ep-secondary-sidebar-icon');
+                    const titleEl = document.getElementById('ep-secondary-sidebar-title');
+                    if (iconEl) iconEl.innerHTML = cfg.icon;
+                    if (titleEl) titleEl.textContent = cfg.title;
+                }
+                epHighlightActiveSecondary();
+            }
 
             function epPositionSecondarySidebar() {
                 const sidebar = document.querySelector('.fi-sidebar');
@@ -176,42 +224,66 @@ class MarketplacePanelProvider extends PanelProvider
                 const servicesGroup = document.querySelector('[data-group-label="Services"]');
                 if (!servicesGroup) return;
 
-                // Clone Services items BEFORE hiding them (must happen first)
+                // Find existing trigger items by label
                 const navItems = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
-                let microservicesItem = null;
+                let triggerItems = {}; // panel -> DOM element
 
                 navItems.forEach(item => {
                     const label = item.querySelector('.fi-sidebar-item-label');
-                    if (label && label.textContent.trim() === 'Microservices') {
-                        microservicesItem = item;
+                    if (!label) return;
+                    const text = label.textContent.trim();
+                    for (const [panel, cfg] of Object.entries(EP_PANELS)) {
+                        if (text === cfg.triggerLabel) {
+                            triggerItems[panel] = item;
+                        }
                     }
                 });
 
-                // Clone other Services group items into secondary sidebar
-                epCloneServicesItems(servicesGroup, microservicesItem);
+                // Clone Services items (non-trigger) into microservices panel
+                epCloneServicesItems(servicesGroup, triggerItems);
 
-                // Mark the Microservices item so CSS can target it
-                if (microservicesItem) {
-                    microservicesItem.setAttribute('data-ep-microservices-trigger', 'true');
+                // Clone Communications and Gamification group items
+                epCloneGroupItems('Communications', 'ep-secondary-sidebar-communications-clone');
+                epCloneGroupItems('Gamification', 'ep-secondary-sidebar-gamification-clone');
 
-                    const btn = microservicesItem.querySelector('a.fi-sidebar-item-btn');
+                // Inject trigger items for Communications and Gamification if they don't exist in Services
+                epInjectTriggerItems(servicesGroup, triggerItems);
+
+                // Re-query trigger items after injection
+                servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item').forEach(item => {
+                    const label = item.querySelector('.fi-sidebar-item-label') || item.querySelector('[data-ep-trigger-label]');
+                    if (!label) return;
+                    const text = (label.textContent || label.getAttribute('data-ep-trigger-label') || '').trim();
+                    for (const [panel, cfg] of Object.entries(EP_PANELS)) {
+                        if (text === cfg.triggerLabel) {
+                            triggerItems[panel] = item;
+                        }
+                    }
+                });
+
+                // Bind click handlers on all trigger items
+                for (const [panel, item] of Object.entries(triggerItems)) {
+                    item.setAttribute('data-ep-sidebar-trigger', panel);
+
+                    const btn = item.querySelector('a.fi-sidebar-item-btn') || item.querySelector('[data-ep-trigger-btn]');
                     if (btn && !btn.dataset.epSecondaryBound) {
                         btn.dataset.epSecondaryBound = 'true';
                         btn.addEventListener('click', (e) => {
                             if (window.matchMedia('(max-width: 63.99rem)').matches) return;
                             e.preventDefault();
                             e.stopPropagation();
-                            Alpine.store('secondarySidebar').toggle();
+                            Alpine.store('secondarySidebar').togglePanel(panel);
                         });
                     }
                 }
 
-                // Now hide other Services items via CSS class on body
+                // Add CSS class to hide non-trigger items and Communications/Gamification groups
                 document.body.classList.add('ep-secondary-sidebar-ready');
 
                 // Close secondary sidebar when clicking any OTHER primary nav item
                 document.querySelectorAll('.fi-sidebar-item a.fi-sidebar-item-btn').forEach(link => {
-                    if (link.closest('.fi-sidebar-item') === microservicesItem) return;
+                    const parentItem = link.closest('.fi-sidebar-item');
+                    if (parentItem && parentItem.hasAttribute('data-ep-sidebar-trigger')) return;
                     if (!link.dataset.epCloseSecondaryBound) {
                         link.dataset.epCloseSecondaryBound = 'true';
                         link.addEventListener('click', () => {
@@ -227,7 +299,7 @@ class MarketplacePanelProvider extends PanelProvider
                 epAutoOpenIfNeeded();
             }
 
-            function epCloneServicesItems(servicesGroup, microservicesItem) {
+            function epCloneServicesItems(servicesGroup, triggerItems) {
                 const targetUl = document.getElementById('ep-secondary-sidebar-services-clone');
                 const section = document.getElementById('ep-secondary-sidebar-services-section');
                 if (!targetUl || !section) return;
@@ -235,27 +307,85 @@ class MarketplacePanelProvider extends PanelProvider
 
                 const items = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
                 let clonedCount = 0;
+                const triggerSet = new Set(Object.values(triggerItems));
 
                 items.forEach(item => {
-                    if (item === microservicesItem) return;
+                    // Skip all trigger items and injected trigger items
+                    if (triggerSet.has(item)) return;
+                    if (item.hasAttribute('data-ep-sidebar-trigger')) return;
+                    if (item.hasAttribute('data-ep-injected-trigger')) return;
                     const clone = item.cloneNode(true);
                     // Make sub-group items always visible with indent
                     clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => {
                         sub.style.display = 'flex';
                         sub.style.paddingInlineStart = '1.5rem';
-                        // Remove x-show/x-collapse that hide sub-items
                         sub.removeAttribute('x-show');
                         sub.removeAttribute('x-collapse');
                         sub.removeAttribute('x-collapse.duration.200ms');
                     });
                     clone.querySelectorAll('[x-data*="dropdown"]').forEach(dd => dd.remove());
-                    // Mark cloned links for auto-open detection
                     clone.querySelectorAll('a').forEach(a => a.setAttribute('data-ep-secondary-link', 'true'));
                     targetUl.appendChild(clone);
                     clonedCount++;
                 });
 
                 section.style.display = clonedCount > 0 ? '' : 'none';
+            }
+
+            function epCloneGroupItems(groupLabel, targetId) {
+                const group = document.querySelector('[data-group-label="' + groupLabel + '"]');
+                const targetUl = document.getElementById(targetId);
+                if (!targetUl) return;
+                targetUl.innerHTML = '';
+
+                if (!group) return;
+
+                const items = group.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
+                items.forEach(item => {
+                    const clone = item.cloneNode(true);
+                    clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => {
+                        sub.style.display = 'flex';
+                        sub.style.paddingInlineStart = '1.5rem';
+                        sub.removeAttribute('x-show');
+                        sub.removeAttribute('x-collapse');
+                        sub.removeAttribute('x-collapse.duration.200ms');
+                    });
+                    clone.querySelectorAll('[x-data*="dropdown"]').forEach(dd => dd.remove());
+                    clone.querySelectorAll('a').forEach(a => a.setAttribute('data-ep-secondary-link', 'true'));
+                    targetUl.appendChild(clone);
+                });
+            }
+
+            function epInjectTriggerItems(servicesGroup, triggerItems) {
+                const itemsContainer = servicesGroup.querySelector(':scope > .fi-sidebar-group-items');
+                if (!itemsContainer) return;
+
+                ['communications', 'gamification'].forEach(panel => {
+                    if (triggerItems[panel]) return; // already exists as a Filament nav item
+                    const sourceGroup = document.querySelector('[data-group-label="' + EP_PANELS[panel].sourceGroup + '"]');
+                    if (!sourceGroup) return; // group doesn't exist, no items to show
+
+                    // Check if already injected
+                    if (itemsContainer.querySelector('[data-ep-injected-trigger="' + panel + '"]')) return;
+
+                    // Find the icon from the source group header
+                    const groupIcon = sourceGroup.querySelector('.fi-sidebar-group-icon');
+                    const iconHtml = groupIcon ? groupIcon.outerHTML : '';
+
+                    // Create a trigger item that looks like a Filament sidebar item
+                    const li = document.createElement('li');
+                    li.classList.add('fi-sidebar-item');
+                    li.setAttribute('data-ep-injected-trigger', panel);
+                    li.setAttribute('data-ep-sidebar-trigger', panel);
+                    li.innerHTML = '<a href="#" class="fi-sidebar-item-btn" data-ep-trigger-btn>' +
+                        '<span data-ep-trigger-label="' + EP_PANELS[panel].triggerLabel + '">' +
+                        (iconHtml ? iconHtml : '') +
+                        '<span class="fi-sidebar-item-label">' + EP_PANELS[panel].triggerLabel + '</span>' +
+                        '</span></a>';
+
+                    itemsContainer.appendChild(li);
+                    triggerItems[panel] = li;
+                });
             }
 
             function epGetPathname(href) {
@@ -274,7 +404,6 @@ class MarketplacePanelProvider extends PanelProvider
                 document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]').forEach(link => {
                     const isActive = epIsActivePath(link.getAttribute('href'));
                     link.classList.toggle('ep-active', isActive);
-                    // Also handle cloned Filament items
                     const parentItem = link.closest('.fi-sidebar-item');
                     if (parentItem) {
                         parentItem.classList.toggle('fi-active', isActive);
@@ -283,27 +412,53 @@ class MarketplacePanelProvider extends PanelProvider
             }
 
             function epAutoOpenIfNeeded() {
-                // Check if current page matches any secondary sidebar link
-                const isSecondaryPage = Array.from(
-                    document.querySelectorAll('#ep-secondary-sidebar [data-ep-secondary-link]')
-                ).some(link => epIsActivePath(link.getAttribute('href')));
+                const store = Alpine.store('secondarySidebar');
+                if (!store) return;
 
-                // Also check if current page was in the Services group (hidden items)
-                if (!isSecondaryPage) {
-                    const servicesGroup = document.querySelector('[data-group-label="Services"]');
-                    if (servicesGroup) {
-                        const isServicePage = Array.from(
-                            servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-microservices-trigger]) a')
-                        ).some(link => epIsActivePath(link.getAttribute('href')));
-                        if (isServicePage && Alpine.store('secondarySidebar')) {
-                            Alpine.store('secondarySidebar').openIfClosed();
-                            return;
-                        }
+                // Check each panel's links to see if current page belongs to it
+                for (const panel of Object.keys(EP_PANELS)) {
+                    const panelEl = document.querySelector('[data-ep-panel="' + panel + '"]');
+                    if (!panelEl) continue;
+                    const hasActive = Array.from(panelEl.querySelectorAll('[data-ep-secondary-link]'))
+                        .some(link => epIsActivePath(link.getAttribute('href')));
+                    if (hasActive) {
+                        store.openPanel(panel);
+                        return;
                     }
                 }
 
-                if (isSecondaryPage && Alpine.store('secondarySidebar')) {
-                    Alpine.store('secondarySidebar').openIfClosed();
+                // Also check hidden primary sidebar items (Services group non-trigger items)
+                const servicesGroup = document.querySelector('[data-group-label="Services"]');
+                if (servicesGroup) {
+                    const isServicePage = Array.from(
+                        servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) a')
+                    ).some(link => epIsActivePath(link.getAttribute('href')));
+                    if (isServicePage) {
+                        store.openPanel('microservices');
+                        return;
+                    }
+                }
+
+                // Check hidden Communications group items
+                const commsGroup = document.querySelector('[data-group-label="Communications"]');
+                if (commsGroup) {
+                    const isCommsPage = Array.from(commsGroup.querySelectorAll('a'))
+                        .some(link => epIsActivePath(link.getAttribute('href')));
+                    if (isCommsPage) {
+                        store.openPanel('communications');
+                        return;
+                    }
+                }
+
+                // Check hidden Gamification group items
+                const gamifGroup = document.querySelector('[data-group-label="Gamification"]');
+                if (gamifGroup) {
+                    const isGamifPage = Array.from(gamifGroup.querySelectorAll('a'))
+                        .some(link => epIsActivePath(link.getAttribute('href')));
+                    if (isGamifPage) {
+                        store.openPanel('gamification');
+                        return;
+                    }
                 }
             }
 
