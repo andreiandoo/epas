@@ -852,71 +852,101 @@ class PublicDataController extends Controller
     public function summary(): JsonResponse
     {
         return $this->cachedJson('api:public:summary', self::DAILY_CACHE_TTL, function () {
-            $venuesWithCoordsCount = Venue::whereNotNull('lat')->whereNotNull('lng')
-                ->where('lat', '!=', 0)->where('lng', '!=', 0)
-                ->count();
-
-            $venueCities = Venue::whereNotNull('lat')->whereNotNull('lng')
-                ->where('lat', '!=', 0)->where('lng', '!=', 0)
-                ->whereNotNull('city')->where('city', '!=', '')
-                ->select('city')->distinct()->pluck('city');
-
-            $upcomingCount = Event::where('event_date', '>=', now())->count();
-            $upcomingThisMonth = Event::where('event_date', '>=', now())
-                ->where('event_date', '<=', now()->endOfMonth())
-                ->count();
-
-            // Revenue calculation (same logic as admin dashboard StatsOverview)
-            $paidStatuses = ['paid', 'confirmed', 'completed'];
-
             try {
-                $eurRon = ExchangeRate::getLatestRate('EUR', 'RON') ?: 1;
+                $venuesWithCoordsCount = Venue::whereNotNull('lat')->whereNotNull('lng')
+                    ->where('lat', '!=', 0)->where('lng', '!=', 0)
+                    ->count();
+
+                $venueCities = Venue::whereNotNull('lat')->whereNotNull('lng')
+                    ->where('lat', '!=', 0)->where('lng', '!=', 0)
+                    ->whereNotNull('city')->where('city', '!=', '')
+                    ->select('city')->distinct()->pluck('city');
+
+                $upcomingCount = Event::where('event_date', '>=', now())->count();
+                $upcomingThisMonth = Event::where('event_date', '>=', now())
+                    ->where('event_date', '<=', now()->endOfMonth())
+                    ->count();
+
+                // Revenue calculation (same logic as admin dashboard StatsOverview)
+                $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+                try {
+                    $eurRon = ExchangeRate::getLatestRate('EUR', 'RON') ?: 1;
+                } catch (\Throwable $e) {
+                    $eurRon = 4.97; // fallback rate
+                }
+
+                $revenueEur = $this->sumRevenueByCurrency($paidStatuses, 'EUR');
+                $revenueRon = $this->sumRevenueByCurrency($paidStatuses, 'RON');
+                $totalRevenueEur = $revenueEur + ($eurRon > 0 ? $revenueRon / $eurRon : 0);
+                $totalRevenueRon = $totalRevenueEur * $eurRon;
+
+                // Safe counts with fallbacks for tables/columns that may not exist
+                $artistsTotal = $this->safeCount(fn () => Artist::count());
+                $artistsActive = $this->safeCount(fn () => Artist::where('is_active', true)->count());
+                $tenantsTotal = $this->safeCount(fn () => Tenant::count());
+                $tenantsActive = $this->safeCount(fn () => Tenant::where('status', 'active')->count());
+                $ordersTotal = $this->safeCount(fn () => Order::count());
+                $ordersPaid = $this->safeCount(fn () => Order::whereIn('status', $paidStatuses)->count());
+                $customersCount = $this->safeCount(fn () => Customer::count());
+                $ticketsSold = $this->safeCount(fn () => Ticket::count());
+
+                return [
+                    'venues' => [
+                        'total' => Venue::count(),
+                        'with_coordinates' => $venuesWithCoordsCount,
+                        'cities_on_map' => $venueCities->count(),
+                        'cities_list' => $venueCities->sort()->values(),
+                    ],
+                    'events' => [
+                        'total' => Event::count(),
+                        'upcoming' => $upcomingCount,
+                        'upcoming_this_month' => $upcomingThisMonth,
+                    ],
+                    'artists' => [
+                        'total' => $artistsTotal,
+                        'active' => $artistsActive,
+                    ],
+                    'tenants' => [
+                        'total' => $tenantsTotal,
+                        'active' => $tenantsActive,
+                    ],
+                    'orders' => [
+                        'total' => $ordersTotal,
+                        'paid' => $ordersPaid,
+                    ],
+                    'customers' => $customersCount,
+                    'tickets_sold' => $ticketsSold,
+                    'revenue' => [
+                        'total_eur' => round($totalRevenueEur, 2),
+                        'total_ron' => round($totalRevenueRon, 2),
+                        'native_eur' => round($revenueEur, 2),
+                        'native_ron' => round($revenueRon, 2),
+                        'exchange_rate_eur_ron' => $eurRon,
+                    ],
+                    'cached_at' => now()->toIso8601String(),
+                    'cache_ttl_hours' => self::DAILY_CACHE_TTL / 3600,
+                ];
             } catch (\Throwable $e) {
-                $eurRon = 4.97; // fallback rate
+                \Illuminate\Support\Facades\Log::error('Summary endpoint error: ' . $e->getMessage());
+                return [
+                    'error' => 'Failed to generate summary',
+                    'cached_at' => now()->toIso8601String(),
+                ];
             }
-
-            $revenueEur = $this->sumRevenueByCurrency($paidStatuses, 'EUR');
-            $revenueRon = $this->sumRevenueByCurrency($paidStatuses, 'RON');
-            $totalRevenueEur = $revenueEur + ($eurRon > 0 ? $revenueRon / $eurRon : 0);
-            $totalRevenueRon = $totalRevenueEur * $eurRon;
-
-            return [
-                'venues' => [
-                    'total' => Venue::count(),
-                    'with_coordinates' => $venuesWithCoordsCount,
-                    'cities_on_map' => $venueCities->count(),
-                    'cities_list' => $venueCities->sort()->values(),
-                ],
-                'events' => [
-                    'total' => Event::count(),
-                    'upcoming' => $upcomingCount,
-                    'upcoming_this_month' => $upcomingThisMonth,
-                ],
-                'artists' => [
-                    'total' => Artist::count(),
-                    'active' => Artist::where('is_active', true)->count(),
-                ],
-                'tenants' => [
-                    'total' => Tenant::count(),
-                    'active' => Tenant::where('is_active', true)->count(),
-                ],
-                'orders' => [
-                    'total' => Order::count(),
-                    'paid' => Order::whereIn('status', $paidStatuses)->count(),
-                ],
-                'customers' => Customer::count(),
-                'tickets_sold' => Ticket::count(),
-                'revenue' => [
-                    'total_eur' => round($totalRevenueEur, 2),
-                    'total_ron' => round($totalRevenueRon, 2),
-                    'native_eur' => round($revenueEur, 2),
-                    'native_ron' => round($revenueRon, 2),
-                    'exchange_rate_eur_ron' => $eurRon,
-                ],
-                'cached_at' => now()->toIso8601String(),
-                'cache_ttl_hours' => self::DAILY_CACHE_TTL / 3600,
-            ];
         });
+    }
+
+    /**
+     * Safe count helper — returns 0 if the query fails (missing table/column).
+     */
+    private function safeCount(callable $query): int
+    {
+        try {
+            return $query();
+        } catch (\Throwable $e) {
+            return 0;
+        }
     }
 
     /**
