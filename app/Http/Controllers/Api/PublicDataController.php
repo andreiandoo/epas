@@ -12,6 +12,7 @@ use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
 use App\Models\ExchangeRate;
+use App\Models\MarketplaceCustomer;
 use App\Models\Microservice;
 use App\Models\Order;
 use App\Models\Tenant;
@@ -888,7 +889,8 @@ class PublicDataController extends Controller
                 $tenantsActive = $this->safeCount(fn () => Tenant::where('status', 'active')->count());
                 $ordersTotal = $this->safeCount(fn () => Order::count());
                 $ordersPaid = $this->safeCount(fn () => Order::whereIn('status', $paidStatuses)->count());
-                $customersCount = $this->safeCount(fn () => Customer::count());
+                $tenantCustomers = $this->safeCount(fn () => Customer::count());
+                $marketplaceCustomers = $this->safeCount(fn () => MarketplaceCustomer::count());
                 $ticketsSold = $this->safeCount(fn () => Ticket::count());
 
                 return [
@@ -915,7 +917,11 @@ class PublicDataController extends Controller
                         'total' => $ordersTotal,
                         'paid' => $ordersPaid,
                     ],
-                    'customers' => $customersCount,
+                    'customers' => [
+                        'total' => $tenantCustomers + $marketplaceCustomers,
+                        'tenant' => $tenantCustomers,
+                        'marketplace' => $marketplaceCustomers,
+                    ],
                     'tickets_sold' => $ticketsSold,
                     'revenue' => [
                         'total_eur' => round($totalRevenueEur, 2),
