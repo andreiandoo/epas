@@ -5736,7 +5736,7 @@ h1.invoice-company-name,
 }
 
 /* Hide non-trigger Tools items from primary sidebar (they appear in secondary) */
-body.ep-secondary-sidebar-ready [data-group-label="Tools"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) {
+body.ep-secondary-sidebar-ready [data-group-label="Tools"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]):not([data-ep-sidebar-keep]) {
 	display: none;
 }
 

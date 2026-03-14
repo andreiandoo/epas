@@ -220,11 +220,14 @@ class MarketplacePanelProvider extends PanelProvider
                 secondary.style.left = sidebar.offsetWidth + 'px';
             }
 
+            // Items that should stay visible in the primary Tools group (not moved to secondary sidebar)
+            const EP_KEEP_IN_TOOLS = ['Media Library', 'Gift Card Designs', 'Template bilete'];
+
             function epSetupSecondarySidebar() {
                 const servicesGroup = document.querySelector('[data-group-label="Tools"]');
                 if (!servicesGroup) return;
 
-                // Find existing trigger items by label
+                // Find existing trigger items by label and mark keep-items
                 const navItems = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
                 let triggerItems = {}; // panel -> DOM element
 
@@ -232,6 +235,10 @@ class MarketplacePanelProvider extends PanelProvider
                     const label = item.querySelector('.fi-sidebar-item-label');
                     if (!label) return;
                     const text = label.textContent.trim();
+                    // Mark items that should stay visible in primary sidebar
+                    if (EP_KEEP_IN_TOOLS.includes(text)) {
+                        item.setAttribute('data-ep-sidebar-keep', 'true');
+                    }
                     for (const [panel, cfg] of Object.entries(EP_PANELS)) {
                         if (text === cfg.triggerLabel) {
                             triggerItems[panel] = item;
@@ -310,10 +317,11 @@ class MarketplacePanelProvider extends PanelProvider
                 const triggerSet = new Set(Object.values(triggerItems));
 
                 items.forEach(item => {
-                    // Skip all trigger items and injected trigger items
+                    // Skip trigger items, injected triggers, and keep-items
                     if (triggerSet.has(item)) return;
                     if (item.hasAttribute('data-ep-sidebar-trigger')) return;
                     if (item.hasAttribute('data-ep-injected-trigger')) return;
+                    if (item.hasAttribute('data-ep-sidebar-keep')) return;
                     const clone = item.cloneNode(true);
                     // Make sub-group items always visible with indent
                     clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => {
