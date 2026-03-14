@@ -28,9 +28,17 @@ body.fi-panel-admin .fi-sidebar-nav {
 	padding-block: calc(var(--spacing) * 6) !important;
 }
 /* ===== END TOPBAR HIDE ===== */
-.fi-page-header-main-ctn {
+/* .fi-page-header-main-ctn {
 	row-gap: calc(var(--spacing) * 6)!important;
     padding-block: calc(var(--spacing) * 6)!important;
+} */
+.fi-page-header-main-ctn {
+	row-gap: 1rem!important;
+    padding-block: 0!important;
+}
+.fi-page-content > .fi-sc-has-gap {
+	gap: 0!important;
+    padding-bottom: 3rem!important;
 }
 
 .fi-custom-topbar {
