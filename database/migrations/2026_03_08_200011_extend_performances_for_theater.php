@@ -32,8 +32,14 @@ return new class extends Migration {
                 ->comment('Override event capacity for this specific performance');
 
             $table->index(['season_id']);
-            $table->index(['event_id', 'starts_at']);
         });
+
+        // Add composite index only if it doesn't already exist
+        if (!Schema::hasIndex('performances', 'performances_event_id_starts_at_index')) {
+            Schema::table('performances', function (Blueprint $table) {
+                $table->index(['event_id', 'starts_at']);
+            });
+        }
     }
 
     public function down(): void
