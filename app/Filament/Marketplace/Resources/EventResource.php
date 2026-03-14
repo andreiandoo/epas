@@ -73,6 +73,10 @@ class EventResource extends Resource
     {
         $today = Carbon::today();
         $marketplace = static::getMarketplaceClient();
+
+        // For past/ended events, remove minDate constraints so all fields can be edited freely
+        $minDateForEvent = fn (?Event $record = null) => static::isEventEnded($record) ? null : $today;
+
         // Inline labels for ticket type fields — set to true for inline, false for stacked
         $il = false;
 
@@ -227,7 +231,7 @@ class EventResource extends Resource
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('postponed_date')
                                         ->label($t('Data nouă', 'New date'))
-                                        ->minDate($today)
+                                        ->minDate($minDateForEvent)
                                         ->native(false),
                                     Forms\Components\TimePicker::make('postponed_start_time')
                                         ->label($t('Ora start', 'Start time'))
@@ -250,7 +254,7 @@ class EventResource extends Resource
 
                                 Forms\Components\DatePicker::make('promoted_until')
                                     ->label($t('Promovat până la', 'Promoted until'))
-                                    ->minDate($today)
+                                    ->minDate($minDateForEvent)
                                     ->native(false)
                                     ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                             ])->columns(1),
@@ -367,7 +371,7 @@ class EventResource extends Resource
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('event_date')
                                         ->label($t('Data', 'Date'))
-                                        ->minDate($today)
+                                        ->minDate($minDateForEvent)
                                         ->native(false),
                                     Forms\Components\TimePicker::make('start_time')
                                         ->label($t('Ora start', 'Start time'))
@@ -388,7 +392,7 @@ class EventResource extends Resource
                                 SC\Grid::make(4)->schema([
                                     Forms\Components\DatePicker::make('range_start_date')
                                         ->label($t('Data început', 'Start date'))
-                                        ->minDate($today)
+                                        ->minDate($minDateForEvent)
                                         ->native(false),
                                     Forms\Components\DatePicker::make('range_end_date')
                                         ->label($t('Data final', 'End date'))
@@ -409,7 +413,7 @@ class EventResource extends Resource
                                     ->schema([
                                         Forms\Components\DatePicker::make('date')
                                             ->label($t('Data', 'Date'))
-                                            ->minDate($today)
+                                            ->minDate($minDateForEvent)
                                             ->native(false)
                                             ->required(),
                                         Forms\Components\TimePicker::make('start_time')
@@ -437,7 +441,7 @@ class EventResource extends Resource
                                         SC\Grid::make(4)->schema([
                                             Forms\Components\DatePicker::make('recurring_start_date')
                                                 ->label($t('Data inițială', 'Initial date'))
-                                                ->minDate(now()->startOfDay())
+                                                ->minDate($minDateForEvent)
                                                 ->native(false)
                                                 ->live()
                                                 ->afterStateUpdated(function ($state, SSet $set) {
@@ -1341,7 +1345,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(today())
+                                                    ->minDate($minDateForEvent)
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                     ->visible(fn (SGet $get) => $get('is_active'))
                                                     ->columnSpan(6),
@@ -1353,7 +1357,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(today())
+                                                    ->minDate($minDateForEvent)
                                                     ->visible(fn (SGet $get) => !$get('is_active'))
                                                     ->columnSpan(4),
                                                 Forms\Components\Toggle::make('autostart_when_previous_sold_out')
@@ -1438,7 +1442,7 @@ class EventResource extends Resource
                                                     ->native(false)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate(today())
+                                                    ->minDate($minDateForEvent)
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set) {
                                                         if (!$state) return;
@@ -2799,6 +2803,34 @@ class EventResource extends Resource
                     ]),
             ]),
         ])->columns(1);
+    }
+
+    /**
+     * Check if an event has already ended (date is in the past).
+     * Used to disable minDate constraints on past events so they can still be edited.
+     */
+    protected static function isEventEnded(?Event $record): bool
+    {
+        if (!$record || !$record->exists) {
+            return false;
+        }
+
+        $eventEndDateTime = null;
+        if ($record->duration_mode === 'single_day' && $record->event_date) {
+            $endTime = $record->end_time ?? '23:59';
+            $eventEndDateTime = Carbon::parse($record->event_date->format('Y-m-d') . ' ' . $endTime);
+        } elseif ($record->duration_mode === 'range' && $record->range_end_date) {
+            $endTime = $record->range_end_time ?? '23:59';
+            $eventEndDateTime = Carbon::parse($record->range_end_date->format('Y-m-d') . ' ' . $endTime);
+        } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+            $lastSlot = collect($record->multi_slots)->sortByDesc('date')->first();
+            if ($lastSlot) {
+                $endTime = $lastSlot['end_time'] ?? '23:59';
+                $eventEndDateTime = Carbon::parse($lastSlot['date'] . ' ' . $endTime);
+            }
+        }
+
+        return $eventEndDateTime && $eventEndDateTime->isPast();
     }
 
     public static function table(Table $table): Table
