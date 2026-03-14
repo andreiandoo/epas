@@ -11,6 +11,7 @@ use App\Models\Customer;
 use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
+use App\Models\ExchangeRate;
 use App\Models\Microservice;
 use App\Models\Order;
 use App\Models\Tenant;
@@ -863,6 +864,15 @@ class PublicDataController extends Controller
 
             $upcomingEvents = Event::where('event_date', '>=', now());
 
+            // Revenue calculation (same logic as admin dashboard StatsOverview)
+            $paidStatuses = ['paid', 'confirmed', 'completed'];
+            $eurRon = ExchangeRate::getLatestRate('EUR', 'RON') ?: 1;
+
+            $revenueEur = $this->sumRevenueByCurrency($paidStatuses, 'EUR');
+            $revenueRon = $this->sumRevenueByCurrency($paidStatuses, 'RON');
+            $totalRevenueEur = $revenueEur + ($eurRon > 0 ? $revenueRon / $eurRon : 0);
+            $totalRevenueRon = $totalRevenueEur * $eurRon;
+
             return [
                 'venues' => [
                     'total' => Venue::count(),
@@ -887,14 +897,37 @@ class PublicDataController extends Controller
                 ],
                 'orders' => [
                     'total' => Order::count(),
-                    'paid' => Order::where('status', 'paid')->count(),
+                    'paid' => Order::whereIn('status', $paidStatuses)->count(),
                 ],
                 'customers' => Customer::count(),
                 'tickets_sold' => Ticket::count(),
+                'revenue' => [
+                    'total_eur' => round($totalRevenueEur, 2),
+                    'total_ron' => round($totalRevenueRon, 2),
+                    'native_eur' => round($revenueEur, 2),
+                    'native_ron' => round($revenueRon, 2),
+                    'exchange_rate_eur_ron' => $eurRon,
+                ],
                 'cached_at' => now()->toIso8601String(),
                 'cache_ttl_hours' => self::DAILY_CACHE_TTL / 3600,
             ];
         });
+    }
+
+    /**
+     * Sum paid order revenue by currency (same logic as StatsOverview widget).
+     */
+    private function sumRevenueByCurrency(array $statuses, string $currency): float
+    {
+        $query = Order::where('currency', $currency)->whereIn('status', $statuses);
+        $total = (float) $query->sum('total');
+
+        // Fallback: try total_cents / 100 if 'total' column is 0
+        if ($total == 0) {
+            $total = (float) (clone $query)->sum('total_cents') / 100;
+        }
+
+        return $total;
     }
 
     /**
