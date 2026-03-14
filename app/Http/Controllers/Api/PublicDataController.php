@@ -852,21 +852,28 @@ class PublicDataController extends Controller
     public function summary(): JsonResponse
     {
         return $this->cachedJson('api:public:summary', self::DAILY_CACHE_TTL, function () {
-            $venuesWithCoords = Venue::whereNotNull('lat')->whereNotNull('lng')
-                ->where('lat', '!=', 0)->where('lng', '!=', 0);
+            $venuesWithCoordsCount = Venue::whereNotNull('lat')->whereNotNull('lng')
+                ->where('lat', '!=', 0)->where('lng', '!=', 0)
+                ->count();
 
-            $venueCities = (clone $venuesWithCoords)
-                ->select('city')
-                ->distinct()
-                ->whereNotNull('city')
-                ->where('city', '!=', '')
-                ->pluck('city');
+            $venueCities = Venue::whereNotNull('lat')->whereNotNull('lng')
+                ->where('lat', '!=', 0)->where('lng', '!=', 0)
+                ->whereNotNull('city')->where('city', '!=', '')
+                ->select('city')->distinct()->pluck('city');
 
-            $upcomingEvents = Event::where('event_date', '>=', now());
+            $upcomingCount = Event::where('event_date', '>=', now())->count();
+            $upcomingThisMonth = Event::where('event_date', '>=', now())
+                ->where('event_date', '<=', now()->endOfMonth())
+                ->count();
 
             // Revenue calculation (same logic as admin dashboard StatsOverview)
             $paidStatuses = ['paid', 'confirmed', 'completed'];
-            $eurRon = ExchangeRate::getLatestRate('EUR', 'RON') ?: 1;
+
+            try {
+                $eurRon = ExchangeRate::getLatestRate('EUR', 'RON') ?: 1;
+            } catch (\Throwable $e) {
+                $eurRon = 4.97; // fallback rate
+            }
 
             $revenueEur = $this->sumRevenueByCurrency($paidStatuses, 'EUR');
             $revenueRon = $this->sumRevenueByCurrency($paidStatuses, 'RON');
@@ -876,16 +883,14 @@ class PublicDataController extends Controller
             return [
                 'venues' => [
                     'total' => Venue::count(),
-                    'with_coordinates' => (clone $venuesWithCoords)->count(),
+                    'with_coordinates' => $venuesWithCoordsCount,
                     'cities_on_map' => $venueCities->count(),
                     'cities_list' => $venueCities->sort()->values(),
                 ],
                 'events' => [
                     'total' => Event::count(),
-                    'upcoming' => (clone $upcomingEvents)->count(),
-                    'upcoming_this_month' => (clone $upcomingEvents)
-                        ->where('event_date', '<=', now()->endOfMonth())
-                        ->count(),
+                    'upcoming' => $upcomingCount,
+                    'upcoming_this_month' => $upcomingThisMonth,
                 ],
                 'artists' => [
                     'total' => Artist::count(),
@@ -919,15 +924,22 @@ class PublicDataController extends Controller
      */
     private function sumRevenueByCurrency(array $statuses, string $currency): float
     {
-        $query = Order::where('currency', $currency)->whereIn('status', $statuses);
-        $total = (float) $query->sum('total');
+        try {
+            $total = (float) Order::where('currency', $currency)
+                ->whereIn('status', $statuses)
+                ->sum('total');
 
-        // Fallback: try total_cents / 100 if 'total' column is 0
-        if ($total == 0) {
-            $total = (float) (clone $query)->sum('total_cents') / 100;
+            // Fallback: try total_cents / 100 if 'total' column is 0
+            if ($total == 0) {
+                $total = (float) Order::where('currency', $currency)
+                    ->whereIn('status', $statuses)
+                    ->sum('total_cents') / 100;
+            }
+
+            return $total;
+        } catch (\Throwable $e) {
+            return 0;
         }
-
-        return $total;
     }
 
     /**
