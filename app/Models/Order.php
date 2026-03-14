@@ -115,6 +115,19 @@ class Order extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function merchOrderItems(): HasMany
+    {
+        return $this->hasMany(MerchOrderItem::class);
+    }
+
+    /**
+     * Check if this order contains merch items.
+     */
+    public function hasMerch(): bool
+    {
+        return $this->merchOrderItems()->exists();
+    }
+
     public function reminders(): HasMany
     {
         return $this->hasMany(OrderReminder::class);
