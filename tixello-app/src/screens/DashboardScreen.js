@@ -950,7 +950,7 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
     endShift,
   } = useApp();
 
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === 'admin' || userRole === 'owner';
 
   // Shift summary modal
   const [showShiftSummary, setShowShiftSummary] = useState(false);

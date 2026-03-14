@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
@@ -93,7 +94,8 @@ function TabIcon({ name, focused, disabled }) {
 }
 
 function MainTabs() {
-  const { userRole } = useAuth();
+  useKeepAwake(); // Prevent screen from sleeping
+  const { userRole, userPermissions } = useAuth();
   const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode } = useEvent();
   const { notifications, markAllRead, shiftStartTime } = useApp();
@@ -111,6 +113,8 @@ function MainTabs() {
   }, []);
 
   const isAdmin = userRole === 'admin' || userRole === 'owner';
+  const isStaff = userRole === 'staff';
+  const hasPermission = (perm) => userPermissions.includes(perm);
 
   return (
     <View style={styles.container}>
@@ -145,18 +149,22 @@ function MainTabs() {
           };
         }}
       >
-        <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Panou' }}>
-          {(props) => (
-            <DashboardScreen
-              {...props}
-              onShowStaff={() => setShowStaff(true)}
-              onShowGuestList={() => setShowGuestList(true)}
-            />
-          )}
-        </Tab.Screen>
+        {(!isStaff || hasPermission('orders')) && (
+          <Tab.Screen name="Dashboard" options={{ tabBarLabel: 'Panou' }}>
+            {(props) => (
+              <DashboardScreen
+                {...props}
+                onShowStaff={() => setShowStaff(true)}
+                onShowGuestList={() => setShowGuestList(true)}
+              />
+            )}
+          </Tab.Screen>
+        )}
         <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
-        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
-        {isAdmin && (
+        {(!isStaff || hasPermission('orders')) && (
+          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
+        )}
+        {isAdmin && hasPermission('reports') && (
           <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Rapoarte' }} />
         )}
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
@@ -164,7 +172,7 @@ function MainTabs() {
             <SettingsScreen
               {...props}
               onShowGateManager={() => setShowGateManager(true)}
-              onShowStaffAssignment={() => setShowStaffAssignment(true)}
+              onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
             />
           )}
         </Tab.Screen>

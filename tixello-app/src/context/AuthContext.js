@@ -9,7 +9,10 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const userRole = user?.role || 'admin'; // 'admin' | 'staff' | 'scanner'
+  // Determine role from team_member info or default to 'owner'
+  const userRole = user?.team_member?.role || 'owner';
+  const userPermissions = user?.team_member?.permissions || ['events', 'orders', 'reports', 'team', 'checkin'];
+  const isTeamMember = !!user?.team_member;
 
   const login = useCallback(async (email, password) => {
     const data = await apiLogin(email, password);
@@ -53,6 +56,8 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       userRole,
+      userPermissions,
+      isTeamMember,
       isLoading,
       isAuthenticated,
       login,

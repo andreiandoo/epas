@@ -129,7 +129,7 @@ function AdminRow({ label, badgeCount, onPress }) {
 }
 
 export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment }) {
-  const { user, userRole, logout } = useAuth();
+  const { user, userRole, isTeamMember, logout } = useAuth();
   const { selectedEvent } = useEvent();
   const {
     vibrationFeedback,
@@ -152,8 +152,9 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     }
   }, [selectedEvent?.id, offlineMode]);
 
-  const staffName = user?.name || user?.public_name || 'Membru Echipă';
-  const staffRole = userRole || 'staff';
+  const staffName = isTeamMember ? (user?.team_member?.name || 'Membru Echipă') : (user?.name || user?.public_name || 'Organizator');
+  const staffRole = isTeamMember ? (user?.team_member?.role || 'staff') : 'owner';
+  const isAdmin = userRole === 'admin' || userRole === 'owner';
   const assignedGate = user?.assigned_gate || '--';
 
   const handleEndShift = async () => {
@@ -232,8 +233,8 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         <StatusBadge label="Imprimantă Bon" connected={false} />
       </View>
 
-      {/* Admin Controls (only for admin role) */}
-      {userRole === 'admin' && (
+      {/* Admin Controls (only for admin/owner role) */}
+      {isAdmin && (
         <>
           <SectionHeader title="Comenzi Admin" />
           <View style={styles.sectionCard}>

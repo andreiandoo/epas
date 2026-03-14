@@ -304,9 +304,11 @@ function TicketTypeCard({ ticket, onAdd, hasSeating }) {
 
 // ─── Recent Sale Item ─────────────────────────────────────────────────────────
 
-function RecentSaleItem({ sale }) {
+function RecentSaleItem({ sale, onShowQR }) {
+  const hasQR = sale.method === 'cash' && !!sale.claimUrl;
+  const Wrapper = hasQR ? TouchableOpacity : View;
   return (
-    <View style={styles.saleItem}>
+    <Wrapper style={styles.saleItem} onPress={hasQR ? () => onShowQR(sale) : undefined} activeOpacity={0.6}>
       <View style={styles.saleIconWrap}>
         {sale.method === 'card' ? (
           <CreditCardIcon size={16} color={colors.purple} />
@@ -320,8 +322,19 @@ function RecentSaleItem({ sale }) {
         </Text>
         <Text style={styles.saleTime}>{sale.time || 'Chiar acum'}</Text>
       </View>
+      {hasQR && (
+        <View style={{ marginRight: 8 }}>
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+            <Rect x="3" y="3" width="7" height="7" stroke={colors.textMuted} strokeWidth={1.5} />
+            <Rect x="14" y="3" width="7" height="7" stroke={colors.textMuted} strokeWidth={1.5} />
+            <Rect x="3" y="14" width="7" height="7" stroke={colors.textMuted} strokeWidth={1.5} />
+            <Rect x="14" y="14" width="3" height="3" fill={colors.textMuted} />
+            <Rect x="18" y="18" width="3" height="3" fill={colors.textMuted} />
+          </Svg>
+        </View>
+      )}
       <Text style={styles.saleAmount}>{formatCurrency(sale.total)}</Text>
-    </View>
+    </Wrapper>
   );
 }
 
@@ -387,6 +400,7 @@ export default function SalesScreen({ navigation }) {
   const [showSeatingMap, setShowSeatingMap] = useState(false);
   const [seatingMapTicketTypeId, setSeatingMapTicketTypeId] = useState(null);
   const [selectedSeatUids, setSelectedSeatUids] = useState([]);
+  const [qrReplaySale, setQrReplaySale] = useState(null); // sale object for QR re-display
 
   // Check if current event has seating
   const hasSeating = selectedEvent?.has_seating === true;
@@ -540,32 +554,36 @@ export default function SalesScreen({ navigation }) {
         setShowPaymentSuccess(true);
         setLastOrderData(orderData);
 
-        // Generate QR claim URL for cash orders and invitations
-        if (method === 'cash' && orderData?.id) {
-          try {
-            const claimResponse = await apiPost(`/orders/${orderData.id}/generate-claim-url`);
-            if (claimResponse.success && claimResponse.data?.claim_url) {
-              setClaimUrl(claimResponse.data.claim_url);
-              setClaimToken(claimResponse.data.token);
-            }
-          } catch (e) {
-            console.warn('Failed to generate claim URL:', e);
-          }
-        }
-
-        // Record the sale locally
+        // Record the sale locally and generate claim URL for cash
         const saleDescription = cartItems
           .map((item) => `${item.quantity}x ${item.name}`)
           .join(', ');
 
-        addSale({
+        // We need to read claimUrl from the response since setState is async
+        const saleRecord = {
           method: method,
           total: cartTotal,
           description: saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        });
+        };
+
+        // For cash sales, attach claim URL if generated
+        if (method === 'cash' && orderData?.id) {
+          try {
+            const claimResponse = await apiPost(`/orders/${orderData.id}/generate-claim-url`);
+            if (claimResponse.success && claimResponse.data?.claim_url) {
+              setClaimUrl(claimResponse.data.claim_url);
+              setClaimToken(claimResponse.data.token);
+              saleRecord.claimUrl = claimResponse.data.claim_url;
+            }
+          } catch (e) {
+            console.warn('Failed to generate claim URL:', e);
+          }
+        }
+
+        addSale(saleRecord);
 
         refreshStats();
         refreshTicketTypes();
@@ -1007,7 +1025,7 @@ export default function SalesScreen({ navigation }) {
             </View>
 
             {recentSales.map((sale, index) => (
-              <RecentSaleItem key={sale.id || index} sale={sale} />
+              <RecentSaleItem key={sale.id || index} sale={sale} onShowQR={setQrReplaySale} />
             ))}
           </View>
         )}
@@ -1050,6 +1068,48 @@ export default function SalesScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Animated.View>
+
+      {/* QR Replay Modal */}
+      <Modal
+        visible={!!qrReplaySale}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setQrReplaySale(null)}
+      >
+        <TouchableWithoutFeedback onPress={() => setQrReplaySale(null)}>
+          <View style={styles.successOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={styles.successContent}>
+                <View style={styles.qrCodeContainer}>
+                  <View style={styles.qrCodeWhiteBg}>
+                    {qrReplaySale?.claimUrl && (
+                      <QRCode
+                        value={qrReplaySale.claimUrl}
+                        size={200}
+                        backgroundColor="#FFFFFF"
+                        color="#000000"
+                      />
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.successTitle}>
+                  {qrReplaySale?.description || 'Vânzare'}
+                </Text>
+                <Text style={styles.qrCodeDescription}>
+                  Clientul scanează codul QR pentru a primi biletele pe email.
+                </Text>
+                <TouchableOpacity
+                  style={styles.sendEmailButton}
+                  onPress={() => setQrReplaySale(null)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.sendEmailButtonText}>Închide</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <SeatingMapScreen
         visible={showSeatingMap}
