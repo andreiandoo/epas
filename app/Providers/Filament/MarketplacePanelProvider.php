@@ -138,6 +138,112 @@ class MarketplacePanelProvider extends PanelProvider
             // Sticky / floating save button for long forms
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
 
+            // Secondary sidebar for Services / Microservices navigation
+            ->renderHook('panels::body.end', fn (): string => view('filament.components.marketplace-secondary-sidebar')->render())
+            ->renderHook('panels::body.end', fn () => <<<'HTML'
+            <script>
+            // Secondary Sidebar – Alpine store & DOM interception
+            document.addEventListener('alpine:init', () => {
+                Alpine.store('secondarySidebar', {
+                    open: false,
+                    toggle() {
+                        this.open = !this.open;
+                        document.body.classList.toggle('ep-secondary-sidebar-open', this.open);
+                    },
+                    close() {
+                        this.open = false;
+                        document.body.classList.remove('ep-secondary-sidebar-open');
+                    }
+                });
+            });
+
+            function epSetupSecondarySidebar() {
+                const servicesGroup = document.querySelector('[data-group-label="Services"]');
+                if (!servicesGroup) return;
+
+                const navItems = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
+                let microservicesItem = null;
+
+                navItems.forEach(item => {
+                    const label = item.querySelector('.fi-sidebar-item-label');
+                    if (label && label.textContent.trim() === 'Microservices') {
+                        microservicesItem = item;
+                    }
+                });
+
+                if (microservicesItem) {
+                    const btn = microservicesItem.querySelector('a.fi-sidebar-item-btn');
+                    if (btn && !btn.dataset.epSecondaryBound) {
+                        btn.dataset.epSecondaryBound = 'true';
+                        btn.addEventListener('click', (e) => {
+                            // On mobile, let normal navigation happen (secondary sidebar is hidden)
+                            if (window.matchMedia('(max-width: 63.99rem)').matches) return;
+                            e.preventDefault();
+                            e.stopPropagation();
+                            Alpine.store('secondarySidebar').toggle();
+                        });
+                    }
+                }
+
+                // Clone other Services group items into secondary sidebar
+                epCloneServicesItems(servicesGroup, microservicesItem);
+
+                // Close secondary sidebar when clicking any OTHER primary nav item
+                document.querySelectorAll('.fi-sidebar-item a.fi-sidebar-item-btn').forEach(link => {
+                    if (link.closest('.fi-sidebar-item') === microservicesItem) return;
+                    if (!link.dataset.epCloseSecondaryBound) {
+                        link.dataset.epCloseSecondaryBound = 'true';
+                        link.addEventListener('click', () => {
+                            if (Alpine.store('secondarySidebar')?.open) {
+                                Alpine.store('secondarySidebar').close();
+                            }
+                        });
+                    }
+                });
+
+                // Highlight active microservice in secondary sidebar
+                epHighlightActiveSecondary();
+            }
+
+            function epCloneServicesItems(servicesGroup, microservicesItem) {
+                const targetUl = document.getElementById('ep-secondary-sidebar-services-clone');
+                const section = document.getElementById('ep-secondary-sidebar-services-section');
+                if (!targetUl || !section) return;
+                targetUl.innerHTML = '';
+
+                const items = servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item');
+                let clonedCount = 0;
+
+                items.forEach(item => {
+                    if (item === microservicesItem) return;
+                    const clone = item.cloneNode(true);
+                    // Remove sub-group items to keep it flat
+                    clone.querySelectorAll('.fi-sidebar-sub-group-items').forEach(sub => sub.remove());
+                    // Remove dropdown elements
+                    clone.querySelectorAll('[x-data*="dropdown"]').forEach(dd => dd.remove());
+                    targetUl.appendChild(clone);
+                    clonedCount++;
+                });
+
+                section.style.display = clonedCount > 0 ? '' : 'none';
+            }
+
+            function epHighlightActiveSecondary() {
+                const currentPath = window.location.pathname;
+                document.querySelectorAll('#ep-secondary-sidebar .ep-secondary-sidebar-item').forEach(link => {
+                    const href = link.getAttribute('href');
+                    link.classList.toggle('ep-active', href && currentPath.startsWith(href));
+                });
+            }
+
+            // Bind on initial load and after Livewire SPA navigation
+            document.addEventListener('DOMContentLoaded', () => epSetupSecondarySidebar());
+            document.addEventListener('livewire:navigated', () => {
+                requestAnimationFrame(() => epSetupSecondarySidebar());
+            });
+            </script>
+            HTML)
+
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
