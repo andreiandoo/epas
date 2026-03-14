@@ -12,7 +12,7 @@ class CrmPage extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'CRM';
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 8;
     protected static ?string $slug = 'crm';
     protected string $view = 'filament.marketplace.pages.crm';

@@ -32,7 +32,7 @@ class MediaLibraryResource extends Resource
     protected static ?string $model = MediaLibrary::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-photo';
-    protected static UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?string $navigationLabel = 'Media Library';
     protected static ?string $modelLabel = 'Media';
     protected static ?string $pluralModelLabel = 'Media Library';

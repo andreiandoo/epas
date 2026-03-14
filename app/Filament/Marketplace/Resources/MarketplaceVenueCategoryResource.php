@@ -27,7 +27,7 @@ class MarketplaceVenueCategoryResource extends Resource
     protected static ?string $navigationLabel = 'Categorii Locații';
     protected static ?string $modelLabel = 'Categorie Locație';
     protected static ?string $pluralModelLabel = 'Categorii Locații';
-    protected static ?string $navigationParentItem = 'Locații';
+    protected static ?string $navigationParentItem = 'Venues';
     protected static ?int $navigationSort = 4;
 
     public static function getEloquentQuery(): Builder
@@ -48,7 +48,6 @@ class MarketplaceVenueCategoryResource extends Resource
             SC\Section::make('Informații categorie')
                 ->schema([
                     SC\Tabs::make('Name Translations')
-                        ->persistTab()
                         ->tabs([
                             SC\Tabs\Tab::make('Română')
                                 ->schema([

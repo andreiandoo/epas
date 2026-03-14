@@ -22,7 +22,7 @@ class ServiceTypeResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
 
     protected static ?int $navigationSort = 1;
 

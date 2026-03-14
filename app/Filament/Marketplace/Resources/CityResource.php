@@ -30,7 +30,7 @@ class CityResource extends Resource
 
     protected static ?string $navigationLabel = 'Cities';
 
-    protected static ?string $navigationParentItem = 'Locații';
+    protected static ?string $navigationParentItem = 'Venues';
 
     protected static ?int $navigationSort = 3;
 
@@ -59,7 +59,6 @@ class CityResource extends Resource
                 SC\Section::make('City Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -210,7 +209,6 @@ class CityResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

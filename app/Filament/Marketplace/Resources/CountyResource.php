@@ -29,7 +29,7 @@ class CountyResource extends Resource
 
     protected static ?string $navigationLabel = 'Counties';
 
-    protected static ?string $navigationParentItem = 'Locații';
+    protected static ?string $navigationParentItem = 'Venues';
 
     protected static ?int $navigationSort = 2;
 
@@ -58,7 +58,6 @@ class CountyResource extends Resource
                 SC\Section::make('County Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -144,7 +143,6 @@ class CountyResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

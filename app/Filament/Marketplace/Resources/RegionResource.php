@@ -28,7 +28,7 @@ class RegionResource extends Resource
 
     protected static ?string $navigationLabel = 'Regions';
 
-    protected static ?string $navigationParentItem = 'Locații';
+    protected static ?string $navigationParentItem = 'Venues';
 
     protected static ?int $navigationSort = 1;
 
@@ -57,7 +57,6 @@ class RegionResource extends Resource
                 SC\Section::make('Region Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -138,7 +137,6 @@ class RegionResource extends Resource
                     ->collapsed()
                     ->schema([
                         SC\Tabs::make('Description Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

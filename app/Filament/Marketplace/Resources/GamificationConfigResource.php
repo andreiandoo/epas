@@ -24,7 +24,7 @@ class GamificationConfigResource extends Resource
 
     protected static ?string $navigationLabel = 'Gamification Settings';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
 
     protected static ?int $navigationSort = 46;
 

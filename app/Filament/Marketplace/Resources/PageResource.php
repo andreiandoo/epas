@@ -55,7 +55,6 @@ class PageResource extends Resource
                 SC\Section::make('Page Details')
                     ->schema([
                         SC\Tabs::make('Title')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -98,7 +97,6 @@ class PageResource extends Resource
                 SC\Section::make('Content')
                     ->schema([
                         SC\Tabs::make('Content')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

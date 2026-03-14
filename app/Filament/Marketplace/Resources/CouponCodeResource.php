@@ -38,7 +38,7 @@ class CouponCodeResource extends Resource
 
     protected static ?string $navigationParentItem = 'Coupon Campaigns';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
 
     protected static ?int $navigationSort = 15;
 

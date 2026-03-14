@@ -163,7 +163,6 @@ class ArtistResource extends Resource
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('Bio Translations')
-                                ->persistTab()
                                 ->tabs([
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([

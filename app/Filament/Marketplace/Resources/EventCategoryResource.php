@@ -29,7 +29,7 @@ class EventCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'Event Categories';
 
-    protected static ?string $navigationParentItem = 'Evenimente';
+    protected static ?string $navigationParentItem = 'Events';
 
     protected static ?int $navigationSort = 4;
 
@@ -58,7 +58,6 @@ class EventCategoryResource extends Resource
                 SC\Section::make('Category Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -82,7 +81,6 @@ class EventCategoryResource extends Resource
                             ])->columnSpanFull(),
 
                         SC\Tabs::make('Description Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
@@ -169,7 +167,6 @@ class EventCategoryResource extends Resource
                             ->columnSpanFull(),
 
                         SC\Tabs::make('SEO Translations')
-                            ->persistTab()
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([

@@ -244,7 +244,6 @@ class VenueResource extends Resource
                             ->columnSpan(2)
                             ->schema([
                                 SC\Tabs::make('Name Translations')
-                                    ->persistTab()
                                     ->tabs([
                                         SC\Tabs\Tab::make('Română')
                                             ->schema([
@@ -432,7 +431,6 @@ class VenueResource extends Resource
                         ->icon('heroicon-o-document-text')
                         ->schema([
                             SC\Tabs::make('Description Translations')
-                                ->persistTab()
                                 ->tabs([
                                     SC\Tabs\Tab::make('Română')
                                         ->schema([

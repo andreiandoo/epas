@@ -3,12 +3,17 @@
 namespace App\Filament\Marketplace\Resources\MarketplaceVenueCategoryResource\Pages;
 
 use App\Filament\Marketplace\Resources\MarketplaceVenueCategoryResource;
-use App\Filament\Marketplace\Concerns\MovesCreateButtonToTable;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListMarketplaceVenueCategories extends ListRecords
 {
-    use MovesCreateButtonToTable;
-
     protected static string $resource = MarketplaceVenueCategoryResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\CreateAction::make(),
+        ];
+    }
 }

@@ -112,7 +112,6 @@ class KbArticleResource extends Resource
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'article')
                                     ->schema([
                                         SC\Tabs::make('Article Languages')
-                                            ->persistTab()
                                             ->tabs([
                                                 SC\Tabs\Tab::make('Română (RO)')
                                                     ->icon('heroicon-o-flag')
@@ -163,7 +162,6 @@ class KbArticleResource extends Resource
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('type') === 'faq')
                                     ->schema([
                                         SC\Tabs::make('FAQ Languages')
-                                            ->persistTab()
                                             ->tabs([
                                                 SC\Tabs\Tab::make('Română (RO)')
                                                     ->icon('heroicon-o-flag')
@@ -205,7 +203,6 @@ class KbArticleResource extends Resource
                                     ->collapsed()
                                     ->schema([
                                         SC\Tabs::make('SEO Languages')
-                                            ->persistTab()
                                             ->tabs([
                                                 SC\Tabs\Tab::make('Română (RO)')
                                                     ->schema([

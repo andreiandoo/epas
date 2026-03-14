@@ -29,7 +29,7 @@ class CouponCampaignResource extends Resource
 
     protected static ?string $navigationLabel = 'Coupon Campaigns';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
 
     protected static ?int $navigationSort = 10;
 

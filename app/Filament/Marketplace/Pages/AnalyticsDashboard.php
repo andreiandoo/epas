@@ -27,7 +27,7 @@ class AnalyticsDashboard extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Analytics';
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.analytics-dashboard';
 

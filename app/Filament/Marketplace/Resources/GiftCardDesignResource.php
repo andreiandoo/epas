@@ -26,7 +26,7 @@ class GiftCardDesignResource extends Resource
 
     protected static ?string $model = MarketplaceGiftCardDesign::class;
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-paint-brush';
-    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 15;
     protected static ?string $navigationLabel = 'Gift Card Designs';
     protected static ?string $modelLabel = 'Gift Card Design';
