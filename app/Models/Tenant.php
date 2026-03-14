@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\TenantType;
+use App\Enums\TheaterSubtype;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,6 +20,11 @@ class Tenant extends Model
         'status',
         'plan',
         'type',
+        'tenant_type',
+        'theater_subtype',
+        'type_settings',
+        'donations_enabled',
+        'donation_settings',
         'due_at',
         'commission_mode',
         'commission_rate',
@@ -77,6 +84,11 @@ class Tenant extends Model
     ];
 
     protected $casts = [
+        'tenant_type' => TenantType::class,
+        'theater_subtype' => TheaterSubtype::class,
+        'type_settings' => 'array',
+        'donations_enabled' => 'boolean',
+        'donation_settings' => 'array',
         'settings' => 'array',
         'payment_credentials' => 'array',
         'features' => 'array',
@@ -453,5 +465,37 @@ class Tenant extends Model
             $settings = json_decode($settings, true);
         }
         return $settings;
+    }
+
+    // ── Tenant Type helpers ──
+
+    public function isTenantArtist(): bool
+    {
+        return $this->tenant_type === TenantType::TenantArtist;
+    }
+
+    public function isAgency(): bool
+    {
+        return $this->tenant_type === TenantType::Agency;
+    }
+
+    public function isTheater(): bool
+    {
+        return $this->tenant_type === TenantType::Theater;
+    }
+
+    public function isOpera(): bool
+    {
+        return $this->isTheater() && $this->theater_subtype === TheaterSubtype::Opera;
+    }
+
+    public function isPhilharmonic(): bool
+    {
+        return $this->isTheater() && $this->theater_subtype === TheaterSubtype::Philharmonic;
+    }
+
+    public function isFestival(): bool
+    {
+        return $this->tenant_type === TenantType::Festival;
     }
 }

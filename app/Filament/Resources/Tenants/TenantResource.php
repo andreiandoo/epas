@@ -77,6 +77,20 @@ class TenantResource extends Resource
                                         ->nullable()
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Client tier for billing/features'),
 
+                                    Forms\Components\Select::make('tenant_type')
+                                        ->label('Tenant Type')
+                                        ->options(\App\Enums\TenantType::class)
+                                        ->nullable()
+                                        ->live()
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Business model: artist, agency, theater, or festival'),
+
+                                    Forms\Components\Select::make('theater_subtype')
+                                        ->label('Theater Subtype')
+                                        ->options(\App\Enums\TheaterSubtype::class)
+                                        ->nullable()
+                                        ->visible(fn (callable $get) => $get('tenant_type') === 'theater')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Specific type of performing arts institution'),
+
                                     Forms\Components\Select::make('locale')
                                         ->label('Language / Locale')
                                         ->options([
@@ -898,6 +912,12 @@ class TenantResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('tenant_type')
+                    ->label('Tenant Type')
+                    ->badge()
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('events_total')
                     ->label('Events (Total)')
                     ->alignCenter()
@@ -958,6 +978,9 @@ class TenantResource extends Resource
                         'large' => 'Large',
                         'premium' => 'Premium',
                     ]),
+                Tables\Filters\SelectFilter::make('tenant_type')
+                    ->label('Tenant Type')
+                    ->options(\App\Enums\TenantType::class),
             ])
             ->actions([])
             ->defaultSort('name');
