@@ -12,7 +12,7 @@ class TicketCustomizerPage extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static ?string $navigationLabel = 'Ticket Customizer';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 5;
     protected static ?string $slug = 'ticket-customizer';
     protected string $view = 'filament.marketplace.pages.ticket-customizer';

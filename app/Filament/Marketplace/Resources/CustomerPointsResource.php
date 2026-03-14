@@ -30,7 +30,7 @@ class CustomerPointsResource extends Resource
 
     protected static ?string $navigationParentItem = 'Gamification Settings';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
 
     protected static ?int $navigationSort = 47;
 

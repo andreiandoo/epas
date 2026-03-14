@@ -36,7 +36,7 @@ class ShopProductResource extends Resource
 
     protected static ?string $navigationLabel = 'Shop';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
 
     protected static ?int $navigationSort = 1;
 

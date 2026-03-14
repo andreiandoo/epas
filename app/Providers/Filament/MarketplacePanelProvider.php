@@ -86,7 +86,7 @@ class MarketplacePanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Sales'),
                 NavigationGroup::make('Organizers'),
-                NavigationGroup::make('Services'),
+                NavigationGroup::make('Tools'),
                 NavigationGroup::make('Shop'),
                 NavigationGroup::make('Content'),
                 NavigationGroup::make('Reports'),
@@ -138,7 +138,7 @@ class MarketplacePanelProvider extends PanelProvider
             // Sticky / floating save button for long forms
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
 
-            // Secondary sidebar for Services / Microservices / Communications / Gamification navigation
+            // Secondary sidebar for Tools / Microservices / Communications / Gamification navigation
             ->renderHook('panels::body.end', fn (): string => view('filament.components.marketplace-secondary-sidebar')->render())
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
@@ -175,12 +175,12 @@ class MarketplacePanelProvider extends PanelProvider
                 });
             });
 
-            // Panel config: label, icon SVG, source group label, trigger label in Services
+            // Panel config: label, icon SVG, source group label, trigger label in Tools
             const EP_PANELS = {
                 microservices: {
                     title: 'Microservices',
                     icon: '<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"/></svg>',
-                    sourceGroup: null, // items come from Services group itself
+                    sourceGroup: null, // items come from Tools group itself
                     triggerLabel: 'Microservices'
                 },
                 communications: {
@@ -221,7 +221,7 @@ class MarketplacePanelProvider extends PanelProvider
             }
 
             function epSetupSecondarySidebar() {
-                const servicesGroup = document.querySelector('[data-group-label="Services"]');
+                const servicesGroup = document.querySelector('[data-group-label="Tools"]');
                 if (!servicesGroup) return;
 
                 // Find existing trigger items by label
@@ -239,14 +239,14 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 });
 
-                // Clone Services items (non-trigger) into microservices panel
+                // Clone Tools items (non-trigger) into microservices panel
                 epCloneServicesItems(servicesGroup, triggerItems);
 
                 // Clone Communications and Gamification group items
                 epCloneGroupItems('Communications', 'ep-secondary-sidebar-communications-clone');
                 epCloneGroupItems('Gamification', 'ep-secondary-sidebar-gamification-clone');
 
-                // Inject trigger items for Communications and Gamification if they don't exist in Services
+                // Inject trigger items for Communications and Gamification if they don't exist in Tools
                 epInjectTriggerItems(servicesGroup, triggerItems);
 
                 // Re-query trigger items after injection
@@ -360,6 +360,12 @@ class MarketplacePanelProvider extends PanelProvider
                 const itemsContainer = servicesGroup.querySelector(':scope > .fi-sidebar-group-items');
                 if (!itemsContainer) return;
 
+                // SVG icons for injected triggers
+                const panelIcons = {
+                    communications: '<svg class="fi-sidebar-item-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>',
+                    gamification: '<svg class="fi-sidebar-item-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>'
+                };
+
                 ['communications', 'gamification'].forEach(panel => {
                     if (triggerItems[panel]) return; // already exists as a Filament nav item
                     const sourceGroup = document.querySelector('[data-group-label="' + EP_PANELS[panel].sourceGroup + '"]');
@@ -368,20 +374,15 @@ class MarketplacePanelProvider extends PanelProvider
                     // Check if already injected
                     if (itemsContainer.querySelector('[data-ep-injected-trigger="' + panel + '"]')) return;
 
-                    // Find the icon from the source group header
-                    const groupIcon = sourceGroup.querySelector('.fi-sidebar-group-icon');
-                    const iconHtml = groupIcon ? groupIcon.outerHTML : '';
-
-                    // Create a trigger item that looks like a Filament sidebar item
+                    // Create a trigger item matching Filament's sidebar item structure
                     const li = document.createElement('li');
                     li.classList.add('fi-sidebar-item');
                     li.setAttribute('data-ep-injected-trigger', panel);
                     li.setAttribute('data-ep-sidebar-trigger', panel);
                     li.innerHTML = '<a href="#" class="fi-sidebar-item-btn" data-ep-trigger-btn>' +
-                        '<span data-ep-trigger-label="' + EP_PANELS[panel].triggerLabel + '">' +
-                        (iconHtml ? iconHtml : '') +
+                        (panelIcons[panel] || '') +
                         '<span class="fi-sidebar-item-label">' + EP_PANELS[panel].triggerLabel + '</span>' +
-                        '</span></a>';
+                        '</a>';
 
                     itemsContainer.appendChild(li);
                     triggerItems[panel] = li;
@@ -427,8 +428,8 @@ class MarketplacePanelProvider extends PanelProvider
                     }
                 }
 
-                // Also check hidden primary sidebar items (Services group non-trigger items)
-                const servicesGroup = document.querySelector('[data-group-label="Services"]');
+                // Also check hidden primary sidebar items (Tools group non-trigger items)
+                const servicesGroup = document.querySelector('[data-group-label="Tools"]');
                 if (servicesGroup) {
                     const isServicePage = Array.from(
                         servicesGroup.querySelectorAll(':scope > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) a')

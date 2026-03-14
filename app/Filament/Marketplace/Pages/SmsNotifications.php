@@ -17,7 +17,7 @@ class SmsNotifications extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'Notificări SMS';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 15;
     protected string $view = 'filament.marketplace.pages.sms-notifications';
 

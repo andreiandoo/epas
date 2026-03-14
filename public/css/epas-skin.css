@@ -5735,8 +5735,8 @@ h1.invoice-company-name,
 	}
 }
 
-/* Hide non-trigger Services items from primary sidebar (they appear in secondary) */
-body.ep-secondary-sidebar-ready [data-group-label="Services"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) {
+/* Hide non-trigger Tools items from primary sidebar (they appear in secondary) */
+body.ep-secondary-sidebar-ready [data-group-label="Tools"] > .fi-sidebar-group-items > .fi-sidebar-item:not([data-ep-sidebar-trigger]) {
 	display: none;
 }
 
@@ -5746,41 +5746,8 @@ body.ep-secondary-sidebar-ready [data-group-label="Gamification"] {
 	display: none !important;
 }
 
-/* Injected trigger items styling */
-[data-ep-injected-trigger] .fi-sidebar-item-btn {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 0.75rem;
-	font-size: 0.875rem;
-	color: #6b7280;
-	text-decoration: none;
-	border-radius: 0.375rem;
-	transition: background-color 150ms, color 150ms;
-	cursor: pointer;
-}
-
-[data-ep-injected-trigger] .fi-sidebar-item-btn > span {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
-[data-ep-injected-trigger] .fi-sidebar-item-btn:hover {
-	background-color: rgba(0,0,0,0.04);
-	color: #111827;
-}
-
-.dark [data-ep-injected-trigger] .fi-sidebar-item-btn {
-	color: #9ca3af;
-}
-
-.dark [data-ep-injected-trigger] .fi-sidebar-item-btn:hover {
-	background-color: rgba(255,255,255,0.06);
-	color: #e5e7eb;
-}
-
-[data-ep-injected-trigger] .fi-sidebar-group-icon {
+/* Injected trigger items — inherit Filament sidebar item styles, just ensure icon sizing */
+[data-ep-injected-trigger] .fi-sidebar-item-icon {
 	width: 1.25rem;
 	height: 1.25rem;
 	flex-shrink: 0;

@@ -31,7 +31,7 @@ class ShopShippingZoneResource extends Resource
 
     protected static ?string $navigationParentItem = 'Shop';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
 
     protected static ?int $navigationSort = 5;
 

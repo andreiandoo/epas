@@ -12,7 +12,7 @@ class GroupBookingPage extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Group Booking';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 7;
     protected static ?string $slug = 'group-booking';
     protected string $view = 'filament.marketplace.pages.group-booking';

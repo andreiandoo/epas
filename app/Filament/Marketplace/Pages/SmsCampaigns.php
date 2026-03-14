@@ -22,7 +22,7 @@ class SmsCampaigns extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-megaphone';
     protected static ?string $navigationLabel = 'Campanii SMS';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?string $navigationParentItem = 'Notificări SMS';
     protected static ?int $navigationSort = 16;
     protected string $view = 'filament.marketplace.pages.sms-campaigns';

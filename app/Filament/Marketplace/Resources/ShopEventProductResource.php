@@ -35,7 +35,7 @@ class ShopEventProductResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Event Products';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
 
     protected static ?string $navigationParentItem = 'Shop';
 
