@@ -9,16 +9,20 @@ return new class extends Migration
     public function up(): void
     {
         // Add contract reference fields to organizers
-        Schema::table('marketplace_organizers', function (Blueprint $table) {
-            $table->string('contract_number_series', 50)->nullable()->after('iban');
-            $table->date('contract_date')->nullable()->after('contract_number_series');
-        });
+        if (!Schema::hasColumn('marketplace_organizers', 'contract_number_series')) {
+            Schema::table('marketplace_organizers', function (Blueprint $table) {
+                $table->string('contract_number_series', 50)->nullable()->after('iban');
+                $table->date('contract_date')->nullable()->after('contract_number_series');
+            });
+        }
 
         // Add payout_id to organizer_documents for linking deconts to payouts
-        Schema::table('organizer_documents', function (Blueprint $table) {
-            $table->foreignId('marketplace_payout_id')->nullable()->after('event_id')
-                ->constrained('marketplace_payouts')->nullOnDelete();
-        });
+        if (!Schema::hasColumn('organizer_documents', 'marketplace_payout_id')) {
+            Schema::table('organizer_documents', function (Blueprint $table) {
+                $table->foreignId('marketplace_payout_id')->nullable()->after('event_id')
+                    ->constrained('marketplace_payouts')->nullOnDelete();
+            });
+        }
     }
 
     public function down(): void

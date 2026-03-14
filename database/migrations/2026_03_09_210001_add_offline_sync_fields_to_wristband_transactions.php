@@ -8,12 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('wristband_transactions', function (Blueprint $table) {
-            $table->string('sync_source', 15)->default('online')->after('meta');
-            $table->string('offline_ref')->nullable()->unique()->after('sync_source');
-            $table->timestamp('offline_transacted_at')->nullable()->after('offline_ref');
-            $table->boolean('is_reconciled')->default(true)->after('offline_transacted_at');
-        });
+        if (!Schema::hasColumn('wristband_transactions', 'sync_source')) {
+            Schema::table('wristband_transactions', function (Blueprint $table) {
+                $table->string('sync_source', 15)->default('online')->after('meta');
+                $table->string('offline_ref')->nullable()->unique()->after('sync_source');
+                $table->timestamp('offline_transacted_at')->nullable()->after('offline_ref');
+                $table->boolean('is_reconciled')->default(true)->after('offline_transacted_at');
+            });
+        }
     }
 
     public function down(): void

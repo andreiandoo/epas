@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('vendor_password_resets')) {
+            return;
+        }
+
         Schema::create('vendor_password_resets', function (Blueprint $table) {
             $table->string('email')->index();
             $table->string('token');
