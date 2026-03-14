@@ -3027,21 +3027,22 @@ class EventResource extends Resource
                             Forms\Components\Select::make('venue_id')
                                 ->label('Venue')
                                 ->searchable()
-                                ->preload()
                                 ->required()
-                                ->options(function () use ($marketplace) {
+                                ->getSearchResultsUsing(function (string $search) {
                                     return Venue::query()
-                                        ->where(fn($q) => $q
-                                            ->whereNull('marketplace_client_id')
-                                            ->orWhere('marketplace_client_id', $marketplace?->id)
-                                            ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
+                                        ->where(function ($q) use ($search) {
+                                            $q->where('name', 'LIKE', "%{$search}%")
+                                              ->orWhere('city', 'LIKE', "%{$search}%");
+                                        })
                                         ->orderBy('name')
+                                        ->limit(50)
                                         ->get()
                                         ->mapWithKeys(fn ($venue) => [
                                             $venue->id => $venue->getTranslation('name', app()->getLocale())
                                                 . ($venue->city ? ' (' . $venue->city . ')' : '')
                                         ]);
-                                }),
+                                })
+                                ->getOptionLabelUsing(fn ($value) => Venue::find($value)?->getTranslation('name', app()->getLocale()) ?? $value),
                         ])
                         ->action(function (Collection $records, array $data) use ($marketplace) {
                             $venue = Venue::find($data['venue_id']);
