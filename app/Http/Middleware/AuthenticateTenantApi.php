@@ -140,9 +140,21 @@ class AuthenticateTenantApi
      */
     protected function getRequiredScope(Request $request): ?string
     {
+        // Check route-name-based scopes first (most specific — financial ops need elevated permissions)
+        $routeName = $request->route()?->getName();
+        $routeScopes = [
+            'api.festival.wristbands.refund'   => 'festival:finance',
+            'api.festival.wristbands.cashout'   => 'festival:finance',
+            'api.festival.wristbands.transfer'  => 'festival:finance',
+            'api.festival.wristbands.disable'   => 'festival:admin',
+        ];
+        if ($routeName && isset($routeScopes[$routeName])) {
+            return $routeScopes[$routeName];
+        }
+
+        // Fall back to path-prefix matching
         $path = $request->path();
 
-        // Map routes to required scopes
         $scopeMap = [
             'api/microservices/whatsapp' => 'whatsapp:send',
             'api/microservices/efactura' => 'efactura:submit',
