@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\WebTemplate;
 use App\Models\WebTemplateCustomization;
+use App\Models\WebTemplateFeedback;
 use App\Services\WebTemplate\DemoDataTransformer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class WebTemplatePreviewController extends Controller
 {
@@ -22,7 +24,10 @@ class WebTemplatePreviewController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $demoData = $this->transformer->transform($template->default_demo_data ?? []);
+        $demoData = $this->getCachedTransformedData(
+            "wt_demo_{$template->id}",
+            $template->default_demo_data ?? []
+        );
 
         return view('web-templates.preview', [
             'template' => $template,
@@ -51,7 +56,7 @@ class WebTemplatePreviewController extends Controller
         if ($customization->hasPassword()) {
             $sessionKey = 'wt_auth_' . $customization->unique_token;
             if (!session($sessionKey)) {
-                if ($request->isMethod('post')) {
+                if ($request->isMethod('post') && $request->has('password')) {
                     if ($customization->checkPassword($request->input('password'))) {
                         session([$sessionKey => true]);
                     } else {
@@ -83,7 +88,10 @@ class WebTemplatePreviewController extends Controller
 
         $customization->recordView(array_filter($utmParams) ?: null);
 
-        $mergedData = $this->transformer->transform($customization->getMergedData());
+        $mergedData = $this->getCachedTransformedData(
+            "wt_custom_{$customization->id}_{$customization->updated_at?->timestamp}",
+            $customization->getMergedData()
+        );
 
         return view('web-templates.preview', [
             'template' => $template,
@@ -117,7 +125,10 @@ class WebTemplatePreviewController extends Controller
                 ->firstOrFail();
 
             $customization->recordView();
-            $demoData = $this->transformer->transform($customization->getMergedData());
+            $demoData = $this->getCachedTransformedData(
+                "wt_api_custom_{$customization->id}_{$customization->updated_at?->timestamp}",
+                $customization->getMergedData()
+            );
             $colorScheme = array_merge(
                 $template->color_scheme ?? [],
                 array_filter([
@@ -127,7 +138,10 @@ class WebTemplatePreviewController extends Controller
                 ])
             );
         } else {
-            $demoData = $this->transformer->transform($template->default_demo_data ?? []);
+            $demoData = $this->getCachedTransformedData(
+                "wt_api_demo_{$template->id}",
+                $template->default_demo_data ?? []
+            );
             $colorScheme = $template->color_scheme ?? [];
         }
 
@@ -183,5 +197,116 @@ class WebTemplatePreviewController extends Controller
         return view('web-templates.compare', [
             'templates' => $templates,
         ]);
+    }
+
+    /**
+     * Submit prospect feedback on a customized preview.
+     */
+    public function submitFeedback(Request $request, string $token)
+    {
+        $customization = WebTemplateCustomization::where('unique_token', $token)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'rating' => 'required|integer|min:1|max:5',
+            'comment' => 'nullable|string|max:1000',
+            'name' => 'nullable|string|max:100',
+            'email' => 'nullable|email|max:255',
+            'company' => 'nullable|string|max:100',
+        ]);
+
+        // Rate limit: 1 feedback per IP per customization per hour
+        $ipHash = substr(md5($request->ip()), 0, 16);
+        $recentFeedback = WebTemplateFeedback::where('web_template_customization_id', $customization->id)
+            ->where('ip_hash', $ipHash)
+            ->where('created_at', '>=', now()->subHour())
+            ->exists();
+
+        if ($recentFeedback) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ai trimis deja feedback recent. Încearcă din nou mai târziu.',
+            ], 429);
+        }
+
+        WebTemplateFeedback::create([
+            'web_template_customization_id' => $customization->id,
+            'rating' => $validated['rating'],
+            'comment' => $validated['comment'] ?? null,
+            'name' => $validated['name'] ?? null,
+            'email' => $validated['email'] ?? null,
+            'company' => $validated['company'] ?? null,
+            'ip_hash' => $ipHash,
+        ]);
+
+        // Notify admins about new feedback
+        $avgRating = $customization->getAverageRating();
+        $feedbackCount = $customization->feedbacks()->count();
+
+        if (in_array($feedbackCount, [1, 5, 10, 25])) {
+            $users = \App\Models\User::all();
+            foreach ($users as $user) {
+                \Filament\Notifications\Notification::make()
+                    ->title("Feedback nou pe „{$customization->label}"")
+                    ->body("{$feedbackCount} feedback-uri primite · Rating mediu: {$avgRating}/5")
+                    ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                    ->iconColor($avgRating >= 4 ? 'success' : ($avgRating >= 3 ? 'warning' : 'danger'))
+                    ->sendToDatabase($user);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mulțumim pentru feedback!',
+            'average_rating' => $avgRating,
+            'feedback_count' => $feedbackCount,
+        ]);
+    }
+
+    /**
+     * Self-service editing portal for clients.
+     */
+    public function selfService(Request $request, string $token)
+    {
+        $customization = WebTemplateCustomization::where('self_service_token', $token)
+            ->where('status', 'active')
+            ->with('template')
+            ->firstOrFail();
+
+        $allowedFields = $customization->getAllowedSelfServiceFields();
+
+        if ($request->isMethod('post')) {
+            $currentData = $customization->customization_data ?? [];
+            $allowedKeys = collect($allowedFields)->pluck('key')->toArray();
+
+            foreach ($request->input('fields', []) as $key => $value) {
+                if (in_array($key, $allowedKeys)) {
+                    $currentData[$key] = $value;
+                }
+            }
+
+            $customization->update(['customization_data' => $currentData]);
+
+            // Bust cache for this customization
+            Cache::forget("wt_custom_{$customization->id}_{$customization->updated_at?->timestamp}");
+
+            return redirect()->back()->with('success', 'Modificările au fost salvate cu succes!');
+        }
+
+        return view('web-templates.self-service', [
+            'customization' => $customization,
+            'template' => $customization->template,
+            'allowedFields' => $allowedFields,
+        ]);
+    }
+
+    /**
+     * Cache transformed demo data for 5 minutes, keyed by day (dates change daily).
+     */
+    private function getCachedTransformedData(string $key, array $rawData): array
+    {
+        $cacheKey = $key . '_' . date('Y-m-d');
+        return Cache::remember($cacheKey, 300, fn () => $this->transformer->transform($rawData));
     }
 }

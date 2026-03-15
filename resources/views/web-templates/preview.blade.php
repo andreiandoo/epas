@@ -469,6 +469,75 @@
         </div>
     </section>
 
+    {{-- PROSPECT FEEDBACK --}}
+    @if(!$is_demo && $customization)
+    <section class="py-12 bg-white border-t" x-data="feedbackWidget()" id="feedback">
+        <div class="max-w-xl mx-auto px-4 text-center">
+            <template x-if="!submitted">
+                <div>
+                    <h3 class="text-xl font-bold mb-2">Ce părere ai despre acest site?</h3>
+                    <p class="text-sm text-gray-500 mb-6">Feedback-ul tău ne ajută să îmbunătățim experiența.</p>
+
+                    {{-- Star rating --}}
+                    <div class="flex justify-center gap-2 mb-6">
+                        <template x-for="star in 5" :key="star">
+                            <button type="button" @click="rating = star" @mouseenter="hoverRating = star" @mouseleave="hoverRating = 0"
+                                    class="focus:outline-none transition-transform hover:scale-110">
+                                <svg class="w-10 h-10 transition-colors" :class="star <= (hoverRating || rating) ? 'text-amber-400' : 'text-gray-200'"
+                                     fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                            </button>
+                        </template>
+                    </div>
+
+                    {{-- Expandable form (shows after rating) --}}
+                    <template x-if="rating > 0">
+                        <div class="space-y-4 text-left" x-transition>
+                            <textarea x-model="comment" rows="3" placeholder="Spune-ne mai multe (opțional)..."
+                                      class="w-full px-4 py-3 border rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"></textarea>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <input type="text" x-model="name" placeholder="Numele tău"
+                                       class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                                <input type="email" x-model="email" placeholder="Email"
+                                       class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                                <input type="text" x-model="company" placeholder="Companie"
+                                       class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                            </div>
+
+                            <div class="text-center">
+                                <button @click="submitFeedback()" :disabled="submitting"
+                                        class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition disabled:opacity-50">
+                                    <span x-show="!submitting">Trimite Feedback</span>
+                                    <span x-show="submitting">Se trimite...</span>
+                                </button>
+                            </div>
+                            <p x-show="error" class="text-red-600 text-sm text-center" x-text="error"></p>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <template x-if="submitted">
+                <div class="py-4" x-transition>
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-1">Mulțumim!</h3>
+                    <p class="text-sm text-gray-500" x-text="responseMessage"></p>
+                    <div x-show="averageRating" class="mt-3 text-sm text-gray-400">
+                        Rating mediu: <span class="font-semibold text-amber-500" x-text="averageRating + '/5'"></span>
+                        (<span x-text="feedbackCount"></span> feedback-uri)
+                    </div>
+                </div>
+            </template>
+        </div>
+    </section>
+    @endif
+
     {{-- FOOTER --}}
     <footer class="py-8 text-center text-sm" style="background-color: {{ $color_scheme['footer_bg'] ?? '#111827' }};">
         <div class="max-w-7xl mx-auto px-4">
@@ -530,6 +599,57 @@
                     this.days = String(Math.floor(diff / 86400000));
                     this.hours = String(Math.floor((diff % 86400000) / 3600000));
                     this.mins = String(Math.floor((diff % 3600000) / 60000));
+                }
+            };
+        }
+
+        function feedbackWidget() {
+            return {
+                rating: 0,
+                hoverRating: 0,
+                comment: '',
+                name: '',
+                email: '',
+                company: '',
+                submitting: false,
+                submitted: false,
+                error: '',
+                responseMessage: '',
+                averageRating: null,
+                feedbackCount: 0,
+
+                async submitFeedback() {
+                    this.submitting = true;
+                    this.error = '';
+                    try {
+                        const res = await fetch('/web-templates/feedback/{{ $customization?->unique_token ?? "" }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                rating: this.rating,
+                                comment: this.comment,
+                                name: this.name,
+                                email: this.email,
+                                company: this.company,
+                            }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            this.submitted = true;
+                            this.responseMessage = data.message;
+                            this.averageRating = data.average_rating;
+                            this.feedbackCount = data.feedback_count;
+                        } else {
+                            this.error = data.message || 'A apărut o eroare.';
+                        }
+                    } catch (e) {
+                        this.error = 'Eroare de rețea. Încearcă din nou.';
+                    }
+                    this.submitting = false;
                 }
             };
         }

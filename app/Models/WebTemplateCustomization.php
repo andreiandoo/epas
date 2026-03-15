@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class WebTemplateCustomization extends Model
@@ -16,6 +17,8 @@ class WebTemplateCustomization extends Model
         'customization_data',
         'demo_data_overrides',
         'preview_password',
+        'self_service_token',
+        'self_service_fields',
         'status',
         'expires_at',
         'viewed_count',
@@ -26,6 +29,7 @@ class WebTemplateCustomization extends Model
     protected $casts = [
         'customization_data' => 'array',
         'demo_data_overrides' => 'array',
+        'self_service_fields' => 'array',
         'utm_data' => 'array',
         'expires_at' => 'datetime',
         'last_viewed_at' => 'datetime',
@@ -50,6 +54,11 @@ class WebTemplateCustomization extends Model
         return $this->belongsTo(Tenant::class);
     }
 
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(WebTemplateFeedback::class, 'web_template_customization_id');
+    }
+
     public function getMergedData(): array
     {
         $demoData = $this->template->default_demo_data ?? [];
@@ -72,6 +81,39 @@ class WebTemplateCustomization extends Model
     public function checkPassword(string $password): bool
     {
         return $this->preview_password === $password;
+    }
+
+    public function generateSelfServiceToken(): string
+    {
+        $this->self_service_token = Str::random(32);
+        $this->save();
+        return $this->self_service_token;
+    }
+
+    public function getSelfServiceUrl(): ?string
+    {
+        if (!$this->self_service_token) {
+            return null;
+        }
+        return route('web-template.self-service', ['token' => $this->self_service_token]);
+    }
+
+    /**
+     * Get the fields the client is allowed to edit in self-service mode.
+     * Falls back to all customizable_fields from the template if not restricted.
+     */
+    public function getAllowedSelfServiceFields(): array
+    {
+        if (!empty($this->self_service_fields)) {
+            return $this->self_service_fields;
+        }
+        return $this->template->customizable_fields ?? [];
+    }
+
+    public function getAverageRating(): ?float
+    {
+        $avg = $this->feedbacks()->avg('rating');
+        return $avg ? round($avg, 1) : null;
     }
 
     public function recordView(?array $utmParams = null): void

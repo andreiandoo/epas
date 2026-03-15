@@ -305,6 +305,43 @@ class WebTemplateResource extends Resource
 
                             return redirect(static::getUrl('edit', ['record' => $clone]));
                         }),
+                    Tables\Actions\Action::make('healthCheck')
+                        ->label('Health Check')
+                        ->icon('heroicon-o-heart')
+                        ->color('gray')
+                        ->modalHeading(fn (WebTemplate $record) => "Health Check: {$record->name}")
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Închide')
+                        ->modalContent(function (WebTemplate $record) {
+                            $checker = new \App\Services\WebTemplate\TemplateHealthCheck();
+                            $result = $checker->check($record);
+
+                            $html = '<div class="space-y-4">';
+
+                            // Score
+                            $scoreColor = $result['score'] >= 80 ? 'text-green-600' : ($result['score'] >= 60 ? 'text-amber-600' : 'text-red-600');
+                            $html .= "<div class=\"text-center py-4\"><div class=\"text-5xl font-bold {$scoreColor}\">{$result['score']}%</div>";
+                            $html .= "<p class=\"text-sm text-gray-500 mt-2\">{$result['summary']}</p></div>";
+
+                            // Issues
+                            if (count($result['issues']) > 0) {
+                                $html .= '<div class="border rounded-lg divide-y">';
+                                foreach ($result['issues'] as $issue) {
+                                    $icon = match ($issue['level']) {
+                                        'error' => '<span class="text-red-500 font-bold">&#10007;</span>',
+                                        'warning' => '<span class="text-amber-500 font-bold">&#9888;</span>',
+                                        default => '<span class="text-blue-500">&#9432;</span>',
+                                    };
+                                    $html .= "<div class=\"px-4 py-3 flex items-start gap-3 text-sm\">{$icon}<div><span class=\"font-medium\">{$issue['field']}</span><br><span class=\"text-gray-500\">{$issue['message']}</span></div></div>";
+                                }
+                                $html .= '</div>';
+                            } else {
+                                $html .= '<p class="text-center text-green-600 font-medium py-4">Nicio problemă detectată!</p>';
+                            }
+
+                            $html .= '</div>';
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
                     Tables\Actions\Action::make('exportJson')
                         ->label('Export JSON')
                         ->icon('heroicon-o-arrow-down-tray')

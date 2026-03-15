@@ -453,6 +453,14 @@ Route::prefix('web-templates')->middleware('throttle:60,1')->group(function () {
     Route::get('/compare', [\App\Http\Controllers\WebTemplatePreviewController::class, 'compare'])
         ->name('web-template.compare');
 
+    Route::post('/feedback/{token}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'submitFeedback'])
+        ->where('token', '[A-Za-z0-9\-]{6,20}')
+        ->name('web-template.feedback');
+
+    Route::match(['get', 'post'], '/self-service/{token}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'selfService'])
+        ->where('token', '[A-Za-z0-9]{20,40}')
+        ->name('web-template.self-service');
+
     Route::get('/{templateSlug}/preview', [\App\Http\Controllers\WebTemplatePreviewController::class, 'preview'])
         ->name('web-template.preview');
 

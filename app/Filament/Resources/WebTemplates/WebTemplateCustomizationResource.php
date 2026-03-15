@@ -227,10 +227,93 @@ class WebTemplateCustomizationResource extends Resource
                             if (!$record || empty($record->utm_data)) return 'Nicio intrare UTM.';
                             $sources = collect($record->utm_data)->groupBy('utm_source')->map->count()->sortDesc()->take(5);
                             $parts = $sources->map(fn ($count, $source) => "{$source}: {$count}")->values()->implode(' · ');
-                            return "Top surse: {$parts} ({" . count($record->utm_data) . "} total)";
+                            return "Top surse: {$parts} (" . count($record->utm_data) . " total)";
                         }),
                 ])
                 ->visible(fn (?WebTemplateCustomization $record) => $record !== null),
+
+            SC\Section::make('Self-Service Client')
+                ->description('Permite clientului să-și editeze singur datele de personalizare printr-un link special')
+                ->schema([
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('generateSelfServiceToken')
+                            ->label('Generează Link Self-Service')
+                            ->icon('heroicon-o-key')
+                            ->color('success')
+                            ->requiresConfirmation()
+                            ->modalDescription('Se va genera un link unic prin care clientul poate edita câmpurile permise.')
+                            ->action(function (WebTemplateCustomization $record) {
+                                $record->generateSelfServiceToken();
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Link self-service generat')
+                                    ->success()
+                                    ->send();
+                            })
+                            ->visible(fn (?WebTemplateCustomization $record) => $record && empty($record->self_service_token)),
+                    ]),
+
+                    Forms\Components\Placeholder::make('self_service_link')
+                        ->label('Link Self-Service')
+                        ->content(function (?WebTemplateCustomization $record) {
+                            if (!$record || !$record->self_service_token) {
+                                return 'Generează un token pentru a crea link-ul self-service.';
+                            }
+                            $url = $record->getSelfServiceUrl();
+                            return new \Illuminate\Support\HtmlString(
+                                "<a href=\"{$url}\" target=\"_blank\" class=\"text-primary-600 hover:underline\">{$url}</a>"
+                            );
+                        }),
+
+                    Forms\Components\CheckboxList::make('self_service_fields')
+                        ->label('Câmpuri permise (lasă gol = toate)')
+                        ->options(function (?WebTemplateCustomization $record) {
+                            if (!$record || !$record->template) return [];
+                            return collect($record->template->customizable_fields ?? [])
+                                ->mapWithKeys(fn ($f) => [$f['key'] => $f['label'] ?? $f['key']])
+                                ->toArray();
+                        })
+                        ->helperText('Selectează ce câmpuri poate edita clientul. Dacă nu selectezi nimic, toate câmpurile sunt disponibile.'),
+                ])
+                ->visible(fn (?WebTemplateCustomization $record) => $record !== null)
+                ->collapsed(),
+
+            SC\Section::make('Feedback Prospecți')
+                ->schema([
+                    Forms\Components\Placeholder::make('feedback_summary')
+                        ->label('Sumar')
+                        ->content(function (?WebTemplateCustomization $record) {
+                            if (!$record) return '-';
+                            $count = $record->feedbacks()->count();
+                            if ($count === 0) return 'Niciun feedback primit încă.';
+                            $avg = $record->getAverageRating();
+                            $stars = str_repeat('★', (int) round($avg)) . str_repeat('☆', 5 - (int) round($avg));
+                            return new \Illuminate\Support\HtmlString(
+                                "<span class=\"text-lg\">{$stars}</span> <span class=\"font-semibold\">{$avg}/5</span> · {$count} feedback-uri"
+                            );
+                        }),
+
+                    Forms\Components\Placeholder::make('feedback_list')
+                        ->label('Ultimele feedback-uri')
+                        ->content(function (?WebTemplateCustomization $record) {
+                            if (!$record) return '-';
+                            $feedbacks = $record->feedbacks()->latest()->take(10)->get();
+                            if ($feedbacks->isEmpty()) return 'Niciun feedback.';
+
+                            $html = '<div class="space-y-3">';
+                            foreach ($feedbacks as $fb) {
+                                $stars = str_repeat('★', $fb->rating) . str_repeat('☆', 5 - $fb->rating);
+                                $name = $fb->name ?: 'Anonim';
+                                $company = $fb->company ? " · {$fb->company}" : '';
+                                $comment = $fb->comment ? "<p class=\"text-sm text-gray-600 mt-1\">" . e($fb->comment) . "</p>" : '';
+                                $date = $fb->created_at->diffForHumans();
+                                $html .= "<div class=\"border rounded-lg p-3\"><div class=\"flex items-center justify-between\"><span class=\"text-amber-500\">{$stars}</span><span class=\"text-xs text-gray-400\">{$date}</span></div><div class=\"text-sm font-medium mt-1\">{$name}{$company}</div>{$comment}</div>";
+                            }
+                            $html .= '</div>';
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+                ])
+                ->visible(fn (?WebTemplateCustomization $record) => $record !== null)
+                ->collapsed(),
         ]);
     }
 
