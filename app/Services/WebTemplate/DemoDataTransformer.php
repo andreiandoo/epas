@@ -71,6 +71,9 @@ class DemoDataTransformer
             $data['hero']['subtitle'] = $this->updateYearReferences($data['hero']['subtitle']);
         }
 
+        // Generate placeholder images for all /demo/ paths
+        $data = $this->generatePlaceholderImages($data);
+
         return $data;
     }
 
@@ -349,5 +352,84 @@ class DemoDataTransformer
         $text = preg_replace('/\b202[0-9]\b/', (string) $currentYear, $text);
 
         return $text;
+    }
+
+    /**
+     * Replace /demo/* placeholder paths with real placeholder image URLs.
+     * Uses picsum.photos for event/hero images and ui-avatars.com for avatars.
+     */
+    private function generatePlaceholderImages(array $data): array
+    {
+        // Seed for consistent images per session (changes daily)
+        $seed = crc32(date('Y-m-d'));
+
+        // Hero background
+        if (isset($data['hero']['background_image']) && str_starts_with($data['hero']['background_image'], '/demo/')) {
+            $data['hero']['background_image'] = "https://picsum.photos/seed/{$seed}hero/1920/800";
+        }
+
+        // Process events
+        foreach (['events', 'featured_events', 'repertoire', 'upcoming_events'] as $key) {
+            if (isset($data[$key]) && is_array($data[$key])) {
+                foreach ($data[$key] as $i => &$event) {
+                    if (isset($event['image']) && str_starts_with($event['image'], '/demo/')) {
+                        $eventSeed = $seed + $i + crc32($event['title'] ?? '');
+                        $event['image'] = "https://picsum.photos/seed/{$eventSeed}/800/450";
+                    }
+                }
+            }
+        }
+
+        // Process artists
+        if (isset($data['artists']) && is_array($data['artists'])) {
+            foreach ($data['artists'] as $i => &$artist) {
+                if (isset($artist['image']) && str_starts_with($artist['image'], '/demo/')) {
+                    $name = urlencode($artist['name'] ?? 'Artist');
+                    $artist['image'] = "https://ui-avatars.com/api/?name={$name}&size=400&background=random&color=fff&bold=true&format=png";
+                }
+            }
+        }
+
+        // Process testimonials
+        if (isset($data['testimonials']) && is_array($data['testimonials'])) {
+            foreach ($data['testimonials'] as $i => &$testimonial) {
+                if (isset($testimonial['avatar']) && str_starts_with($testimonial['avatar'], '/demo/')) {
+                    $name = urlencode($testimonial['name'] ?? 'User');
+                    $testimonial['avatar'] = "https://ui-avatars.com/api/?name={$name}&size=80&background=random&color=fff&rounded=true&format=png";
+                }
+            }
+        }
+
+        // Process team
+        if (isset($data['team']) && is_array($data['team'])) {
+            foreach ($data['team'] as &$member) {
+                if (isset($member['image']) && str_starts_with($member['image'], '/demo/')) {
+                    $name = urlencode($member['name'] ?? 'Team');
+                    $member['image'] = "https://ui-avatars.com/api/?name={$name}&size=200&background=random&color=fff&bold=true&format=png";
+                }
+            }
+        }
+
+        // Process top organizers
+        if (isset($data['top_organizers']) && is_array($data['top_organizers'])) {
+            foreach ($data['top_organizers'] as &$org) {
+                if (isset($org['image']) && str_starts_with($org['image'], '/demo/')) {
+                    $name = urlencode($org['name'] ?? 'Org');
+                    $org['image'] = "https://ui-avatars.com/api/?name={$name}&size=120&background=random&color=fff&bold=true&format=png";
+                }
+            }
+        }
+
+        // Process lineup headliners
+        if (isset($data['lineup']['headliners']) && is_array($data['lineup']['headliners'])) {
+            foreach ($data['lineup']['headliners'] as &$headliner) {
+                if (isset($headliner['image']) && str_starts_with($headliner['image'], '/demo/')) {
+                    $name = urlencode($headliner['name'] ?? 'Artist');
+                    $headliner['image'] = "https://ui-avatars.com/api/?name={$name}&size=400&background=random&color=fff&bold=true&format=png";
+                }
+            }
+        }
+
+        return $data;
     }
 }

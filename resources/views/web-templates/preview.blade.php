@@ -4,6 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $demo_data['site']['name'] ?? $template->name }} — Preview</title>
+
+    {{-- OG Meta Tags for social sharing --}}
+    @php
+        $ogTitle = ($demo_data['site']['name'] ?? $template->name);
+        $ogDescription = $demo_data['site']['tagline'] ?? $template->description ?? 'Template de prezentare powered by Tixello';
+        $ogImage = $template->preview_image
+            ? Storage::url($template->preview_image)
+            : 'https://ui-avatars.com/api/?name=' . urlencode($ogTitle) . '&size=1200&background=' . ltrim($color_scheme['primary'] ?? '6366f1', '#') . '&color=fff&format=png&font-size=0.33';
+        $ogUrl = request()->url();
+    @endphp
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:description" content="{{ $ogDescription }}">
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:url" content="{{ $ogUrl }}">
+    <meta property="og:site_name" content="Tixello">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    <meta name="twitter:description" content="{{ $ogDescription }}">
+    <meta name="twitter:image" content="{{ $ogImage }}">
+    <meta name="description" content="{{ $ogDescription }}">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
@@ -31,18 +53,72 @@
 <body class="min-h-screen" style="background-color: {{ $color_scheme['background'] ?? '#ffffff' }}; color: {{ $color_scheme['text'] ?? '#1f2937' }};"
       x-data="templatePreview()" x-cloak>
 
-    {{-- Demo Banner --}}
-    @if($is_demo)
-    <div class="bg-amber-500 text-amber-900 text-center py-2 text-sm font-medium sticky top-0 z-50">
-        Acesta este un demo al template-ului „{{ $template->name }}".
-        <a href="/admin/web-templates/{{ $template->id }}/edit" class="underline ml-2">Personalizează &rarr;</a>
+    {{-- Demo Banner with Device Toggle & QR --}}
+    <div class="sticky top-0 z-50" x-data="previewToolbar()">
+        @if($is_demo)
+        <div class="bg-amber-500 text-amber-900 py-2 text-sm font-medium flex items-center justify-between px-4">
+            <span>Demo: „{{ $template->name }}"
+                <a href="/admin/web-templates/{{ $template->id }}/edit" class="underline ml-1">Personalizează &rarr;</a>
+            </span>
+            <div class="flex items-center gap-2">
+                {{-- Device toggle --}}
+                <div class="flex bg-amber-600/30 rounded-lg p-0.5">
+                    <button @click="setDevice('mobile')" :class="device === 'mobile' ? 'bg-white text-amber-900' : 'text-amber-800'" class="px-2 py-1 rounded text-xs transition" title="Mobile (375px)">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </button>
+                    <button @click="setDevice('tablet')" :class="device === 'tablet' ? 'bg-white text-amber-900' : 'text-amber-800'" class="px-2 py-1 rounded text-xs transition" title="Tablet (768px)">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </button>
+                    <button @click="setDevice('desktop')" :class="device === 'desktop' ? 'bg-white text-amber-900' : 'text-amber-800'" class="px-2 py-1 rounded text-xs transition" title="Desktop (100%)">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </button>
+                </div>
+                {{-- QR Code button --}}
+                <button @click="showQr = !showQr" class="bg-amber-600/30 hover:bg-amber-600/50 text-amber-800 px-2 py-1 rounded text-xs transition" title="QR Code">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                </button>
+            </div>
+        </div>
+        @else
+        <div class="bg-indigo-600 text-white py-2 text-sm font-medium flex items-center justify-between px-4">
+            <span>Preview: {{ $customization->label ?? $customization->unique_token }}
+                <span class="ml-2 opacity-70">{{ $customization->viewed_count }} vizualizări</span>
+            </span>
+            <div class="flex items-center gap-2">
+                <div class="flex bg-indigo-700/50 rounded-lg p-0.5">
+                    <button @click="setDevice('mobile')" :class="device === 'mobile' ? 'bg-white text-indigo-900' : 'text-indigo-200'" class="px-2 py-1 rounded text-xs transition" title="Mobile">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </button>
+                    <button @click="setDevice('tablet')" :class="device === 'tablet' ? 'bg-white text-indigo-900' : 'text-indigo-200'" class="px-2 py-1 rounded text-xs transition" title="Tablet">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </button>
+                    <button @click="setDevice('desktop')" :class="device === 'desktop' ? 'bg-white text-indigo-900' : 'text-indigo-200'" class="px-2 py-1 rounded text-xs transition" title="Desktop">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </button>
+                </div>
+                <button @click="showQr = !showQr" class="bg-indigo-700/50 hover:bg-indigo-700 text-indigo-200 px-2 py-1 rounded text-xs transition" title="QR Code">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                </button>
+            </div>
+        </div>
+        @endif
+
+        {{-- QR Code popup --}}
+        <div x-show="showQr" x-transition @click.outside="showQr = false"
+             class="absolute right-4 top-full mt-2 bg-white rounded-xl shadow-2xl border p-6 text-center z-50">
+            <p class="text-sm font-medium text-gray-900 mb-3">Scanează pentru preview</p>
+            <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(window.location.href)"
+                 alt="QR Code" class="w-48 h-48 mx-auto rounded-lg">
+            <p class="text-xs text-gray-400 mt-3 max-w-[200px] break-all" x-text="window.location.href"></p>
+            <button @click="navigator.clipboard.writeText(window.location.href); $el.textContent = 'Copiat!'; setTimeout(() => $el.textContent = 'Copiază link', 1500)"
+                    class="mt-3 text-xs bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 transition">
+                Copiază link
+            </button>
+        </div>
     </div>
-    @else
-    <div class="bg-indigo-600 text-white text-center py-2 text-sm font-medium sticky top-0 z-50">
-        Preview personalizat: {{ $customization->label ?? $customization->unique_token }}
-        <span class="ml-4 opacity-70">Vizualizări: {{ $customization->viewed_count }}</span>
-    </div>
-    @endif
+
+    {{-- Device preview wrapper --}}
+    <div id="preview-wrapper" x-data x-ref="wrapper">
 
     {{-- HEADER --}}
     <header class="bg-primary text-white">
@@ -116,10 +192,15 @@
                 <template x-for="(event, idx) in eventsList" :key="idx">
                     <div class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition group cursor-pointer"
                          @click="selectedEvent = event; showEventModal = true">
-                        <div class="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center relative">
-                            <svg class="w-12 h-12 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
-                            </svg>
+                        <div class="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center relative overflow-hidden">
+                            <template x-if="event.image && !event.image.startsWith('/demo/')">
+                                <img :src="event.image" :alt="event.title" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition duration-300">
+                            </template>
+                            <template x-if="!event.image || event.image.startsWith('/demo/')">
+                                <svg class="w-12 h-12 text-primary/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
+                                </svg>
+                            </template>
                             {{-- Seating map indicator --}}
                             <div x-show="event.has_seating_map" class="absolute top-2 right-2 bg-white/90 backdrop-blur text-xs font-medium text-gray-700 px-2 py-1 rounded-md flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
@@ -315,8 +396,13 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <template x-for="(artist, idx) in artistsList" :key="idx">
                         <div class="bg-white rounded-xl shadow-sm border overflow-hidden text-center group hover:shadow-md transition">
-                            <div class="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                                <span class="text-5xl font-bold text-primary/20" x-text="artist.name.charAt(0)"></span>
+                            <div class="aspect-square bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center relative overflow-hidden">
+                                <template x-if="artist.image && !artist.image.startsWith('/demo/')">
+                                    <img :src="artist.image" :alt="artist.name" class="w-full h-full object-cover absolute inset-0 group-hover:scale-105 transition duration-300">
+                                </template>
+                                <template x-if="!artist.image || artist.image.startsWith('/demo/')">
+                                    <span class="text-5xl font-bold text-primary/20" x-text="artist.name.charAt(0)"></span>
+                                </template>
                             </div>
                             <div class="p-5">
                                 <h3 class="font-semibold text-lg" x-text="artist.name"></h3>
@@ -396,7 +482,41 @@
         </div>
     </footer>
 
+    </div> {{-- /preview-wrapper --}}
+
     <script>
+        function previewToolbar() {
+            return {
+                device: 'desktop',
+                showQr: false,
+                setDevice(d) {
+                    this.device = d;
+                    const wrapper = document.getElementById('preview-wrapper');
+                    if (!wrapper) return;
+                    wrapper.style.transition = 'max-width 0.3s ease, margin 0.3s ease';
+                    switch(d) {
+                        case 'mobile':
+                            wrapper.style.maxWidth = '375px';
+                            wrapper.style.margin = '0 auto';
+                            wrapper.style.boxShadow = '0 0 0 1px #e5e7eb, 0 25px 50px -12px rgba(0,0,0,.25)';
+                            wrapper.style.borderRadius = '0 0 24px 24px';
+                            break;
+                        case 'tablet':
+                            wrapper.style.maxWidth = '768px';
+                            wrapper.style.margin = '0 auto';
+                            wrapper.style.boxShadow = '0 0 0 1px #e5e7eb, 0 25px 50px -12px rgba(0,0,0,.25)';
+                            wrapper.style.borderRadius = '0 0 16px 16px';
+                            break;
+                        default:
+                            wrapper.style.maxWidth = 'none';
+                            wrapper.style.margin = '0';
+                            wrapper.style.boxShadow = 'none';
+                            wrapper.style.borderRadius = '0';
+                    }
+                }
+            };
+        }
+
         function countdown(targetDate) {
             return {
                 days: '00', hours: '00', mins: '00',

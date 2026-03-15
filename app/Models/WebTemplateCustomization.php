@@ -65,5 +65,9 @@ class WebTemplateCustomization extends Model
     {
         $this->increment('viewed_count');
         $this->update(['last_viewed_at' => now()]);
+
+        // Check for milestone notifications
+        app(\App\Services\WebTemplate\ProspectViewNotifier::class)
+            ->checkAndNotify($this->fresh());
     }
 }

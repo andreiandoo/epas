@@ -283,6 +283,28 @@ class WebTemplateResource extends Resource
                         ->url(fn (WebTemplate $record) => WebTemplateCustomizationResource::getUrl('create', [
                             'template_id' => $record->id,
                         ])),
+                    Tables\Actions\Action::make('clone')
+                        ->label('Duplică Template')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalHeading('Duplică Template')
+                        ->modalDescription('Se va crea o copie a template-ului cu un slug nou. Personalizările nu vor fi copiate.')
+                        ->action(function (WebTemplate $record) {
+                            $clone = $record->replicate();
+                            $clone->name = $record->name . ' (copie)';
+                            $clone->slug = $record->slug . '-copie-' . now()->format('His');
+                            $clone->is_featured = false;
+                            $clone->save();
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Template duplicat')
+                                ->body("„{$clone->name}" a fost creat cu succes.")
+                                ->success()
+                                ->send();
+
+                            return redirect(static::getUrl('edit', ['record' => $clone]));
+                        }),
                     Tables\Actions\DeleteAction::make(),
                 ]),
             ])

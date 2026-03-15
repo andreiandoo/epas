@@ -446,7 +446,7 @@ Route::middleware(['web', 'auth'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('web-templates')->group(function () {
+Route::prefix('web-templates')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [\App\Http\Controllers\WebTemplatePreviewController::class, 'index'])
         ->name('web-template.index');
 

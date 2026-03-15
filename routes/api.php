@@ -2833,7 +2833,7 @@ Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(f
 | Web Templates — API (public, for Alpine.js / frontend data loading)
 |--------------------------------------------------------------------------
 */
-Route::prefix('web-templates')->group(function () {
+Route::prefix('web-templates')->middleware('throttle:120,1')->group(function () {
     Route::get('/{templateSlug}/data/{token?}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'templateData'])
         ->name('api.web-template.data');
 });
