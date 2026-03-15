@@ -439,3 +439,21 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->where('path', '.*')
         ->name('tenant.preview.proxy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Web Templates — Preview & Demo
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('web-templates')->group(function () {
+    Route::get('/', [\App\Http\Controllers\WebTemplatePreviewController::class, 'index'])
+        ->name('web-template.index');
+
+    Route::get('/{templateSlug}/preview', [\App\Http\Controllers\WebTemplatePreviewController::class, 'preview'])
+        ->name('web-template.preview');
+
+    Route::get('/{templateSlug}/{token}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'customizedPreview'])
+        ->where('token', '[A-Za-z0-9\-]{6,20}')
+        ->name('web-template.customized-preview');
+});

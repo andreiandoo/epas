@@ -2827,3 +2827,13 @@ Route::prefix('festival')->middleware(['throttle:120,1', 'api.tenant'])->group(f
     Route::get('/editions/{edition}/external-tickets', [App\Http\Controllers\Api\Festival\CheckInController::class, 'listExternal'])
         ->name('api.festival.editions.external-tickets.list');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Web Templates — API (public, for Alpine.js / frontend data loading)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('web-templates')->group(function () {
+    Route::get('/{templateSlug}/data/{token?}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'templateData'])
+        ->name('api.web-template.data');
+});
