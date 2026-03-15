@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\WebTemplate;
 use App\Models\WebTemplateCustomization;
+use App\Services\WebTemplate\DemoDataTransformer;
 use Illuminate\Http\Request;
 
 class WebTemplatePreviewController extends Controller
 {
+    public function __construct(
+        private DemoDataTransformer $transformer,
+    ) {}
+
     /**
      * Show the demo preview of a template with default demo data.
-     * URL: /web-templates/{templateSlug}/preview
      */
     public function preview(string $templateSlug)
     {
@@ -18,20 +22,19 @@ class WebTemplatePreviewController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        $data = [
+        $demoData = $this->transformer->transform($template->default_demo_data ?? []);
+
+        return view('web-templates.preview', [
             'template' => $template,
-            'demo_data' => $template->default_demo_data ?? [],
+            'demo_data' => $demoData,
             'customization' => null,
             'color_scheme' => $template->color_scheme ?? [],
             'is_demo' => true,
-        ];
-
-        return view('web-templates.preview', $data);
+        ]);
     }
 
     /**
      * Show a customized preview with merged data.
-     * URL: /web-templates/{templateSlug}/{token}
      */
     public function customizedPreview(string $templateSlug, string $token)
     {
@@ -44,12 +47,13 @@ class WebTemplatePreviewController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        // Record the view
         $customization->recordView();
 
-        $data = [
+        $mergedData = $this->transformer->transform($customization->getMergedData());
+
+        return view('web-templates.preview', [
             'template' => $template,
-            'demo_data' => $customization->getMergedData(),
+            'demo_data' => $mergedData,
             'customization' => $customization,
             'color_scheme' => array_merge(
                 $template->color_scheme ?? [],
@@ -60,14 +64,11 @@ class WebTemplatePreviewController extends Controller
                 ])
             ),
             'is_demo' => false,
-        ];
-
-        return view('web-templates.preview', $data);
+        ]);
     }
 
     /**
      * API endpoint: return the merged data as JSON (for Alpine.js / frontend consumption).
-     * URL: /api/web-templates/{templateSlug}/data/{token?}
      */
     public function templateData(string $templateSlug, ?string $token = null)
     {
@@ -82,7 +83,7 @@ class WebTemplatePreviewController extends Controller
                 ->firstOrFail();
 
             $customization->recordView();
-            $demoData = $customization->getMergedData();
+            $demoData = $this->transformer->transform($customization->getMergedData());
             $colorScheme = array_merge(
                 $template->color_scheme ?? [],
                 array_filter([
@@ -92,7 +93,7 @@ class WebTemplatePreviewController extends Controller
                 ])
             );
         } else {
-            $demoData = $template->default_demo_data ?? [];
+            $demoData = $this->transformer->transform($template->default_demo_data ?? []);
             $colorScheme = $template->color_scheme ?? [];
         }
 
