@@ -450,10 +450,13 @@ Route::prefix('web-templates')->middleware('throttle:60,1')->group(function () {
     Route::get('/', [\App\Http\Controllers\WebTemplatePreviewController::class, 'index'])
         ->name('web-template.index');
 
+    Route::get('/compare', [\App\Http\Controllers\WebTemplatePreviewController::class, 'compare'])
+        ->name('web-template.compare');
+
     Route::get('/{templateSlug}/preview', [\App\Http\Controllers\WebTemplatePreviewController::class, 'preview'])
         ->name('web-template.preview');
 
-    Route::get('/{templateSlug}/{token}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'customizedPreview'])
+    Route::match(['get', 'post'], '/{templateSlug}/{token}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'customizedPreview'])
         ->where('token', '[A-Za-z0-9\-]{6,20}')
         ->name('web-template.customized-preview');
 });

@@ -142,7 +142,7 @@ class WebTemplateResource extends Resource
                                 ]),
 
                             SC\Section::make('Câmpuri Personalizabile')
-                                ->description('Definește ce poate personaliza clientul')
+                                ->description('Definește ce poate personaliza clientul (folosit în wizard-ul de personalizare)')
                                 ->schema([
                                     Forms\Components\Repeater::make('customizable_fields')
                                         ->label('Câmpuri')
@@ -305,12 +305,88 @@ class WebTemplateResource extends Resource
 
                             return redirect(static::getUrl('edit', ['record' => $clone]));
                         }),
+                    Tables\Actions\Action::make('exportJson')
+                        ->label('Export JSON')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('gray')
+                        ->action(function (WebTemplate $record) {
+                            $json = json_encode($record->toExportArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                            $filename = "template-{$record->slug}-" . now()->format('Y-m-d') . '.json';
+
+                            return response()->streamDownload(function () use ($json) {
+                                echo $json;
+                            }, $filename, [
+                                'Content-Type' => 'application/json',
+                            ]);
+                        }),
                     Tables\Actions\DeleteAction::make(),
                 ]),
+            ])
+            ->headerActions([
+                Tables\Actions\Action::make('importJson')
+                    ->label('Import JSON')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('gray')
+                    ->form([
+                        Forms\Components\FileUpload::make('json_file')
+                            ->label('Fișier JSON')
+                            ->acceptedFileTypes(['application/json'])
+                            ->required()
+                            ->directory('web-templates/imports'),
+                        Forms\Components\Toggle::make('overwrite')
+                            ->label('Suprascrie dacă slug-ul există')
+                            ->default(false),
+                    ])
+                    ->action(function (array $data) {
+                        $path = storage_path('app/public/' . $data['json_file']);
+                        if (!file_exists($path)) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Eroare')
+                                ->body('Fișierul nu a fost găsit.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $json = json_decode(file_get_contents($path), true);
+                        if (!$json || !isset($json['name'])) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Eroare')
+                                ->body('Fișierul JSON nu este valid.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        $template = WebTemplate::importFromArray($json, $data['overwrite'] ?? false);
+
+                        // Cleanup uploaded file
+                        @unlink($path);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Template importat')
+                            ->body("„{$template->name}" a fost importat cu succes.")
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\BulkAction::make('exportBulkJson')
+                        ->label('Export Selecție (JSON)')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $export = $records->map(fn ($r) => $r->toExportArray())->values()->toArray();
+                            $json = json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                            $filename = "templates-export-" . now()->format('Y-m-d') . '.json';
+
+                            return response()->streamDownload(function () use ($json) {
+                                echo $json;
+                            }, $filename, [
+                                'Content-Type' => 'application/json',
+                            ]);
+                        }),
                 ]),
             ])
             ->defaultSort('sort_order');

@@ -69,22 +69,106 @@ class WebTemplateCustomizationResource extends Resource
                     Forms\Components\DateTimePicker::make('expires_at')
                         ->label('Expiră la')
                         ->nullable(),
+
+                    Forms\Components\TextInput::make('preview_password')
+                        ->label('Parolă Preview (opțional)')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Lasă gol pentru acces liber')
+                        ->helperText('Dacă este setat, vizitatorii vor trebui să introducă parola pentru a vedea preview-ul.'),
                 ])
                 ->columns(2),
 
-            SC\Section::make('Date de Personalizare')
-                ->description('Adaugă datele personalizate ale clientului (logo, nume, culori, etc.)')
-                ->schema([
-                    Forms\Components\KeyValue::make('customization_data')
-                        ->label('Personalizări')
-                        ->keyLabel('Cheie')
-                        ->valueLabel('Valoare')
-                        ->addActionLabel('Adaugă personalizare')
-                        ->default([]),
-                ]),
+            // Dynamic Customization Wizard — auto-generated from template's customizable_fields
+            SC\Section::make('Wizard Personalizare')
+                ->description('Câmpuri generate automat din definiția template-ului selectat')
+                ->schema(function (\Filament\Schemas\Components\Utilities\Get $get): array {
+                    $templateId = $get('web_template_id');
+                    if (!$templateId) {
+                        return [
+                            Forms\Components\Placeholder::make('wizard_placeholder')
+                                ->content('Selectează un template pentru a vedea câmpurile de personalizare.'),
+                        ];
+                    }
+
+                    $template = WebTemplate::find($templateId);
+                    if (!$template || empty($template->customizable_fields)) {
+                        return [
+                            Forms\Components\Placeholder::make('no_fields_placeholder')
+                                ->content('Acest template nu are câmpuri personalizabile definite.'),
+                        ];
+                    }
+
+                    $fields = [];
+                    $grouped = collect($template->customizable_fields)->groupBy('group');
+
+                    foreach ($grouped as $group => $groupFields) {
+                        if ($group) {
+                            $fields[] = Forms\Components\Placeholder::make('group_' . \Illuminate\Support\Str::slug($group))
+                                ->content(new \Illuminate\Support\HtmlString(
+                                    '<span class="text-sm font-semibold text-gray-700 uppercase tracking-wide">' . e(ucfirst($group)) . '</span>'
+                                ))
+                                ->columnSpanFull();
+                        }
+
+                        foreach ($groupFields as $fieldDef) {
+                            $key = 'customization_data.' . $fieldDef['key'];
+                            $label = $fieldDef['label'] ?? $fieldDef['key'];
+                            $default = $fieldDef['default'] ?? null;
+
+                            $field = match ($fieldDef['type'] ?? 'text') {
+                                'text' => Forms\Components\TextInput::make($key)
+                                    ->label($label)
+                                    ->default($default),
+
+                                'textarea' => Forms\Components\Textarea::make($key)
+                                    ->label($label)
+                                    ->rows(3)
+                                    ->default($default),
+
+                                'color' => Forms\Components\ColorPicker::make($key)
+                                    ->label($label)
+                                    ->default($default),
+
+                                'image' => Forms\Components\FileUpload::make($key)
+                                    ->label($label)
+                                    ->image()
+                                    ->directory('web-templates/customizations'),
+
+                                'url' => Forms\Components\TextInput::make($key)
+                                    ->label($label)
+                                    ->url()
+                                    ->default($default),
+
+                                'select' => Forms\Components\Select::make($key)
+                                    ->label($label)
+                                    ->options(
+                                        is_array($fieldDef['options'] ?? null)
+                                            ? array_combine($fieldDef['options'], $fieldDef['options'])
+                                            : []
+                                    )
+                                    ->default($default),
+
+                                'toggle' => Forms\Components\Toggle::make($key)
+                                    ->label($label)
+                                    ->default((bool) $default),
+
+                                default => Forms\Components\TextInput::make($key)
+                                    ->label($label)
+                                    ->default($default),
+                            };
+
+                            $fields[] = $field;
+                        }
+                    }
+
+                    return $fields;
+                })
+                ->columns(2)
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !empty($get('web_template_id'))),
 
             SC\Section::make('Override-uri Date Demo')
-                ->description('Modificări peste datele demo default ale template-ului')
+                ->description('Modificări manuale peste datele demo default ale template-ului')
                 ->schema([
                     Forms\Components\KeyValue::make('demo_data_overrides')
                         ->label('Override-uri')
@@ -136,6 +220,15 @@ class WebTemplateCustomizationResource extends Resource
                                 : 'niciodată';
                             return "{$record->viewed_count} vizualizări · Ultima: {$lastViewed}";
                         }),
+
+                    Forms\Components\Placeholder::make('utm_stats')
+                        ->label('Surse UTM')
+                        ->content(function (?WebTemplateCustomization $record) {
+                            if (!$record || empty($record->utm_data)) return 'Nicio intrare UTM.';
+                            $sources = collect($record->utm_data)->groupBy('utm_source')->map->count()->sortDesc()->take(5);
+                            $parts = $sources->map(fn ($count, $source) => "{$source}: {$count}")->values()->implode(' · ');
+                            return "Top surse: {$parts} ({" . count($record->utm_data) . "} total)";
+                        }),
                 ])
                 ->visible(fn (?WebTemplateCustomization $record) => $record !== null),
         ]);
@@ -174,6 +267,15 @@ class WebTemplateCustomizationResource extends Resource
                     ->color('gray')
                     ->copyable(),
 
+                Tables\Columns\IconColumn::make('preview_password')
+                    ->label('Protejat')
+                    ->boolean()
+                    ->getStateUsing(fn (WebTemplateCustomization $record) => !empty($record->preview_password))
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->falseIcon('heroicon-o-lock-open')
+                    ->trueColor('warning')
+                    ->falseColor('gray'),
+
                 Tables\Columns\TextColumn::make('tenant.public_name')
                     ->label('Tenant')
                     ->placeholder('-'),
@@ -208,6 +310,13 @@ class WebTemplateCustomizationResource extends Resource
                         'active' => 'Activ',
                         'expired' => 'Expirat',
                     ]),
+
+                Tables\Filters\TernaryFilter::make('has_password')
+                    ->label('Protejat cu parolă')
+                    ->queries(
+                        true: fn ($q) => $q->whereNotNull('preview_password')->where('preview_password', '!=', ''),
+                        false: fn ($q) => $q->where(fn ($q) => $q->whereNull('preview_password')->orWhere('preview_password', '')),
+                    ),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([

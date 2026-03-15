@@ -15,15 +15,18 @@ class WebTemplateCustomization extends Model
         'tenant_id',
         'customization_data',
         'demo_data_overrides',
+        'preview_password',
         'status',
         'expires_at',
         'viewed_count',
         'last_viewed_at',
+        'utm_data',
     ];
 
     protected $casts = [
         'customization_data' => 'array',
         'demo_data_overrides' => 'array',
+        'utm_data' => 'array',
         'expires_at' => 'datetime',
         'last_viewed_at' => 'datetime',
     ];
@@ -61,10 +64,34 @@ class WebTemplateCustomization extends Model
         return $this->template->getPreviewUrl($this, $domain);
     }
 
-    public function recordView(): void
+    public function hasPassword(): bool
+    {
+        return !empty($this->preview_password);
+    }
+
+    public function checkPassword(string $password): bool
+    {
+        return $this->preview_password === $password;
+    }
+
+    public function recordView(?array $utmParams = null): void
     {
         $this->increment('viewed_count');
         $this->update(['last_viewed_at' => now()]);
+
+        // Store UTM data if provided
+        if ($utmParams && array_filter($utmParams)) {
+            $utmLog = $this->utm_data ?? [];
+            $utmLog[] = array_merge($utmParams, [
+                'recorded_at' => now()->toIso8601String(),
+                'ip_hash' => substr(md5(request()->ip()), 0, 8),
+            ]);
+            // Keep last 500 entries
+            if (count($utmLog) > 500) {
+                $utmLog = array_slice($utmLog, -500);
+            }
+            $this->update(['utm_data' => $utmLog]);
+        }
 
         // Check for milestone notifications
         app(\App\Services\WebTemplate\ProspectViewNotifier::class)

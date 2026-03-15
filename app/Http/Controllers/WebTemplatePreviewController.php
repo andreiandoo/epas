@@ -36,7 +36,7 @@ class WebTemplatePreviewController extends Controller
     /**
      * Show a customized preview with merged data.
      */
-    public function customizedPreview(string $templateSlug, string $token)
+    public function customizedPreview(Request $request, string $templateSlug, string $token)
     {
         $template = WebTemplate::where('slug', $templateSlug)
             ->where('is_active', true)
@@ -47,7 +47,41 @@ class WebTemplatePreviewController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        $customization->recordView();
+        // Password protection check
+        if ($customization->hasPassword()) {
+            $sessionKey = 'wt_auth_' . $customization->unique_token;
+            if (!session($sessionKey)) {
+                if ($request->isMethod('post')) {
+                    if ($customization->checkPassword($request->input('password'))) {
+                        session([$sessionKey => true]);
+                    } else {
+                        return view('web-templates.password', [
+                            'template' => $template,
+                            'customization' => $customization,
+                            'error' => 'Parolă incorectă.',
+                        ]);
+                    }
+                } else {
+                    return view('web-templates.password', [
+                        'template' => $template,
+                        'customization' => $customization,
+                        'error' => null,
+                    ]);
+                }
+            }
+        }
+
+        // Capture UTM parameters
+        $utmParams = [
+            'utm_source' => $request->query('utm_source'),
+            'utm_medium' => $request->query('utm_medium'),
+            'utm_campaign' => $request->query('utm_campaign'),
+            'utm_term' => $request->query('utm_term'),
+            'utm_content' => $request->query('utm_content'),
+            'referrer' => $request->header('referer'),
+        ];
+
+        $customization->recordView(array_filter($utmParams) ?: null);
 
         $mergedData = $this->transformer->transform($customization->getMergedData());
 
@@ -112,17 +146,42 @@ class WebTemplatePreviewController extends Controller
     }
 
     /**
-     * List all active templates (for a gallery/showcase page).
+     * List all active templates (gallery page with Alpine.js filtering).
      */
     public function index()
     {
         $templates = WebTemplate::where('is_active', true)
             ->orderBy('sort_order')
-            ->get()
-            ->groupBy(fn ($t) => $t->category->value);
+            ->get();
 
         return view('web-templates.index', [
-            'templatesByCategory' => $templates,
+            'templates' => $templates,
+        ]);
+    }
+
+    /**
+     * Compare 2-3 templates side by side.
+     */
+    public function compare(Request $request)
+    {
+        $slugs = $request->query('templates', '');
+        $slugList = array_filter(explode(',', $slugs));
+
+        if (count($slugList) < 2 || count($slugList) > 3) {
+            return redirect()->route('web-template.index')
+                ->with('error', 'Selectează 2-3 template-uri pentru comparare.');
+        }
+
+        $templates = WebTemplate::where('is_active', true)
+            ->whereIn('slug', $slugList)
+            ->get();
+
+        if ($templates->count() < 2) {
+            return redirect()->route('web-template.index');
+        }
+
+        return view('web-templates.compare', [
+            'templates' => $templates,
         ]);
     }
 }
