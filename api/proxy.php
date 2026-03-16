@@ -1880,6 +1880,19 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.images':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/images';
+        $requiresAuth = true;
+        $isFileUpload = true;
+        break;
+
     case 'organizer.event.submit':
         $eventId = $_GET['event_id'] ?? '';
         if (!$eventId) {
