@@ -419,8 +419,8 @@ async function exportParticipants() {
             return;
         }
 
-        // Fetch CSV with authentication
-        const response = await fetch(`/api/marketplace-client/organizer/participants/export?event_id=${selectedEventId}`, {
+        // Fetch CSV via proxy with authentication
+        const response = await fetch(`/api/proxy.php?action=organizer.participants.export&event_id=${selectedEventId}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${authToken}`,
@@ -461,9 +461,11 @@ async function exportParticipants() {
     }
 }
 
-// Event listeners
-document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
-document.getElementById('search-participant').addEventListener('input', AmbiletUtils.debounce(filterAndRenderParticipants, 300));
+// Event listeners (inside DOMContentLoaded to ensure utils.js is loaded)
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('checkin-filter').addEventListener('change', loadParticipants);
+    document.getElementById('search-participant').addEventListener('input', AmbiletUtils.debounce(filterAndRenderParticipants, 300));
+});
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
