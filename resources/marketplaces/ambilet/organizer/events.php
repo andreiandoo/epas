@@ -1982,6 +1982,7 @@ function collectFormData() {
     const data = {
         name: form.querySelector('[name="name"]').value,
         starts_at: startsAt,
+        duration_mode: durationMode || 'single_day',
         venue_name: form.querySelector('[name="venue_name"]').value,
         venue_city: form.querySelector('[name="venue_city"]').value,
     };

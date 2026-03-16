@@ -106,6 +106,7 @@ class EventsController extends BaseController
             'description' => 'nullable|string|max:10000',
             'ticket_terms' => 'nullable|string|max:10000',
             'short_description' => 'nullable|string|max:500',
+            'duration_mode' => 'nullable|string|in:single_day,range,multi_day',
             'starts_at' => $isDraft ? 'nullable|date' : 'required|date|after:now',
             'ends_at' => 'nullable|date',
             'doors_open_at' => 'nullable|date',
@@ -151,13 +152,33 @@ class EventsController extends BaseController
             $startsAt = $validated['starts_at'] ?? null;
             $endsAt = $validated['ends_at'] ?? null;
             $doorsAt = $validated['doors_open_at'] ?? null;
+            $durationMode = $validated['duration_mode'] ?? 'single_day';
 
-            $eventDate = $startsAt ? Carbon::parse($startsAt)->toDateString() : null;
+            $startDate = $startsAt ? Carbon::parse($startsAt)->toDateString() : null;
             $startTime = $startsAt ? Carbon::parse($startsAt)->format('H:i') : null;
+            $endDate = $endsAt ? Carbon::parse($endsAt)->toDateString() : null;
             $endTime = $endsAt ? Carbon::parse($endsAt)->format('H:i') : null;
             $doorTime = $doorsAt ? Carbon::parse($doorsAt)->format('H:i') : null;
 
-            $event = Event::create([
+            // Build date fields based on duration mode
+            $dateFields = [];
+            if ($durationMode === 'range') {
+                $dateFields = [
+                    'range_start_date' => $startDate,
+                    'range_start_time' => $startTime,
+                    'range_end_date' => $endDate,
+                    'range_end_time' => $endTime,
+                ];
+            } else {
+                $dateFields = [
+                    'event_date' => $startDate,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'door_time' => $doorTime,
+                ];
+            }
+
+            $event = Event::create(array_merge([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
                 'marketplace_organizer_id' => $organizer->id,
                 'title' => ['ro' => $validated['name'], 'en' => $validated['name']],
@@ -165,11 +186,7 @@ class EventsController extends BaseController
                 'description' => ['ro' => $validated['description'] ?? '', 'en' => $validated['description'] ?? ''],
                 'ticket_terms' => ['ro' => $validated['ticket_terms'] ?? '', 'en' => $validated['ticket_terms'] ?? ''],
                 'short_description' => ['ro' => $validated['short_description'] ?? '', 'en' => $validated['short_description'] ?? ''],
-                'duration_mode' => 'single_day',
-                'event_date' => $eventDate,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'door_time' => $doorTime,
+                'duration_mode' => $durationMode,
                 'venue_id' => $validated['venue_id'] ?? null,
                 'suggested_venue_name' => empty($validated['venue_id']) ? ($validated['venue_name'] ?? null) : null,
                 'address' => $validated['venue_address'] ?? null,
@@ -177,7 +194,7 @@ class EventsController extends BaseController
                 'website_url' => $validated['website_url'] ?? null,
                 'facebook_url' => $validated['facebook_url'] ?? null,
                 'is_published' => false,
-            ]);
+            ], $dateFields));
 
             // Create ticket types using TicketType model
             foreach ($validated['ticket_types'] ?? [] as $index => $ticketTypeData) {
@@ -241,6 +258,7 @@ class EventsController extends BaseController
             'description' => 'nullable|string|max:10000',
             'ticket_terms' => 'nullable|string|max:10000',
             'short_description' => 'nullable|string|max:500',
+            'duration_mode' => 'nullable|string|in:single_day,range,multi_day',
             'doors_open_at' => 'nullable|date',
             'marketplace_event_category_id' => 'nullable|integer|exists:marketplace_event_categories,id',
             'genre_ids' => 'nullable|array',
@@ -299,14 +317,48 @@ class EventsController extends BaseController
                 $short = $validated['short_description'] ?? '';
                 $updateData['short_description'] = ['ro' => $short, 'en' => $short];
             }
-            if (isset($validated['starts_at'])) {
-                $startsAt = Carbon::parse($validated['starts_at']);
-                $updateData['event_date'] = $startsAt->toDateString();
-                $updateData['start_time'] = $startsAt->format('H:i');
+            // Duration mode
+            $durationMode = $validated['duration_mode'] ?? $event->duration_mode ?? 'single_day';
+            if (isset($validated['duration_mode'])) {
+                $updateData['duration_mode'] = $durationMode;
             }
-            if (isset($validated['ends_at'])) {
-                $endsAt = Carbon::parse($validated['ends_at']);
-                $updateData['end_time'] = $endsAt->format('H:i');
+
+            // Map dates based on duration mode
+            if (isset($validated['starts_at']) || isset($validated['ends_at'])) {
+                if ($durationMode === 'range') {
+                    // Clear single_day fields
+                    $updateData['event_date'] = null;
+                    $updateData['start_time'] = null;
+                    $updateData['end_time'] = null;
+                    $updateData['door_time'] = null;
+
+                    if (isset($validated['starts_at'])) {
+                        $startsAt = Carbon::parse($validated['starts_at']);
+                        $updateData['range_start_date'] = $startsAt->toDateString();
+                        $updateData['range_start_time'] = $startsAt->format('H:i');
+                    }
+                    if (isset($validated['ends_at'])) {
+                        $endsAt = Carbon::parse($validated['ends_at']);
+                        $updateData['range_end_date'] = $endsAt->toDateString();
+                        $updateData['range_end_time'] = $endsAt->format('H:i');
+                    }
+                } else {
+                    // Clear range fields
+                    $updateData['range_start_date'] = null;
+                    $updateData['range_end_date'] = null;
+                    $updateData['range_start_time'] = null;
+                    $updateData['range_end_time'] = null;
+
+                    if (isset($validated['starts_at'])) {
+                        $startsAt = Carbon::parse($validated['starts_at']);
+                        $updateData['event_date'] = $startsAt->toDateString();
+                        $updateData['start_time'] = $startsAt->format('H:i');
+                    }
+                    if (isset($validated['ends_at'])) {
+                        $endsAt = Carbon::parse($validated['ends_at']);
+                        $updateData['end_time'] = $endsAt->format('H:i');
+                    }
+                }
             }
             if (isset($validated['doors_open_at'])) {
                 $doorsAt = Carbon::parse($validated['doors_open_at']);
