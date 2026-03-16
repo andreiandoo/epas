@@ -349,7 +349,7 @@ class DashboardController extends BaseController
             $handle = fopen('php://output', 'w');
             // BOM for Excel UTF-8 compatibility
             fwrite($handle, "\xEF\xBB\xBF");
-            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Email', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data']);
+            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data']);
 
             foreach ($orders as $order) {
                 $ticketTypes = $order->tickets
@@ -362,7 +362,6 @@ class DashboardController extends BaseController
                     $order->order_number,
                     $order->status,
                     $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-',
-                    $order->marketplaceCustomer?->email ?? $order->customer_email ?? '-',
                     $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-',
                     $ticketTypes ?: '-',
                     $order->tickets->count(),

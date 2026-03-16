@@ -21,7 +21,16 @@ class ListArtists extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->extraAttributes([
+                    'id' => 'create-record-btn',
+                    'x-init' => "\$nextTick(() => {
+                        const toolbar = document.querySelector('.fi-ta-header-toolbar');
+                        if (!toolbar) return;
+                        toolbar.prepend(\$el);
+                        \$el.style.order = '-1';
+                    })",
+                ]),
         ];
     }
 }

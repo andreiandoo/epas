@@ -135,59 +135,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <div id="upcoming-event-content" class="p-5"></div>
                         </div>
 
-                        <!-- Quick Actions -->
-                        <div class="p-5 bg-white border rounded-2xl border-border">
-                            <h2 class="mb-4 font-bold text-secondary">Actiuni rapide</h2>
-                            <div class="space-y-2">
-                                <a href="/organizator/events?new=1" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
-                                    <div class="flex items-center justify-center w-10 h-10 bg-primary/10 rounded-xl">
-                                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-secondary">Creeaza eveniment</p>
-                                        <p class="text-xs text-muted">Adauga un eveniment nou</p>
-                                    </div>
-                                </a>
-                                <a href="/organizator/reports" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
-                                    <div class="flex items-center justify-center w-10 h-10 bg-success/10 rounded-xl">
-                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-secondary">Descarca raport</p>
-                                        <p class="text-xs text-muted">Export vanzari si taxe</p>
-                                    </div>
-                                </a>
-                                <a href="/organizator/promo" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
-                                    <div class="flex items-center justify-center w-10 h-10 bg-accent/10 rounded-xl">
-                                        <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-secondary">Cod promotional</p>
-                                        <p class="text-xs text-muted">Creeaza reduceri</p>
-                                    </div>
-                                </a>
-                                <a href="/organizator/email" class="flex items-center gap-3 p-3 transition-colors rounded-xl hover:bg-surface">
-                                    <div class="flex items-center justify-center w-10 h-10 bg-blue-500/10 rounded-xl">
-                                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-secondary">Trimite email</p>
-                                        <p class="text-xs text-muted">Notifica participantii</p>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-
                         <!-- App Download -->
                         <div class="p-5 bg-white border rounded-2xl border-border">
                             <div class="flex items-center justify-between mb-4">
                                 <h2 class="font-bold text-secondary">Aplicația Staff</h2>
-                                <button onclick="document.getElementById('app-install-modal').classList.remove('hidden');document.getElementById('app-install-modal').classList.add('flex');" class="flex items-center justify-center w-7 h-7 transition-colors rounded-full hover:bg-surface" title="Cum se instalează?">
+                                <button onclick="document.getElementById('app-install-modal').classList.remove('hidden');document.getElementById('app-install-modal').classList.add('flex');" class="flex items-center justify-center transition-colors rounded-full w-7 h-7 hover:bg-surface" title="Cum se instalează?">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </button>
                             </div>
                             <div class="flex flex-col items-center gap-4">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fcore.tixello.com%2Fdownload-android&size=160x160&margin=8" alt="QR Code - Descarcă aplicația" class="w-40 h-40 rounded-lg border border-border" loading="lazy">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fcore.tixello.com%2Fdownload-android&size=160x160&margin=8" alt="QR Code - Descarcă aplicația" class="w-40 h-40 border rounded-lg border-border" loading="lazy">
                                 <div class="text-center">
                                     <p class="text-sm text-muted">Scanează codul QR sau apasă butonul</p>
                                     <p class="mt-1 text-xs text-muted/70">Versiune curentă: <strong>1.2.0</strong></p>

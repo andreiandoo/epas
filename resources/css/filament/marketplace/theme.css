@@ -122,6 +122,24 @@ body {
     display: none !important;
 }
 
+/* ─── Event row status colours ───────────────────────────────────── */
+
+/* Unpublished events: light orange background */
+tr.event-row-unpublished > td {
+    background-color: rgb(255 237 213) !important;     /* orange-100 */
+}
+.dark tr.event-row-unpublished > td {
+    background-color: rgb(124 45 18 / 0.15) !important; /* orange-900/15 */
+}
+
+/* Ended events: subtle gray */
+tr.event-row-ended > td {
+    background-color: rgb(243 244 246) !important;     /* gray-100 */
+}
+.dark tr.event-row-ended > td {
+    background-color: rgb(31 41 55 / 0.5) !important;  /* gray-800/50 */
+}
+
 /* Fix dropdown/select option styling */
 @layer components {
     /* Remove thick borders from select dropdown options */

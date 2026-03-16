@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\OrganizerResource;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Htmlable;
@@ -22,6 +23,22 @@ class ListOrganizers extends ListRecords
     {
         $count = number_format(static::getResource()::getEloquentQuery()->count());
         return new HtmlString("Organizatori <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+    }
+
+    public function getTabsContentComponent(): Component
+    {
+        return parent::getTabsContentComponent()
+            ->extraAttributes([
+                'x-data' => '{}',
+                'x-init' => "\$nextTick(() => {
+                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
+                    if (!toolbar) return;
+                    const nav = \$el.querySelector('.fi-tabs');
+                    if (!nav) return;
+                    toolbar.prepend(nav);
+                    nav.style.order = '-1';
+                })",
+            ]);
     }
 
     protected function getHeaderActions(): array
