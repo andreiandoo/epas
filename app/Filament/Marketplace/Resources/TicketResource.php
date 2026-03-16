@@ -45,6 +45,9 @@ class TicketResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('code')
                     ->label('Cod Bilet')
+                    ->icon(fn ($record) => ($record->meta['has_insurance'] ?? false) ? 'heroicon-o-shield-check' : null)
+                    ->iconColor('success')
+                    ->iconPosition('before')
                     ->searchable()
                     ->sortable()
                     ->copyable()
@@ -78,22 +81,35 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Beneficiar')
                     ->getStateUsing(function ($record) {
-                        // Check if ticket has beneficiary in meta (stored as meta.beneficiary.name)
+                        // Check if ticket has beneficiary in meta
                         $meta = $record->meta ?? [];
                         if (!empty($meta['beneficiary']['name'])) {
                             return $meta['beneficiary']['name'];
                         }
-                        // Also check for legacy format (beneficiary_name directly)
                         if (!empty($meta['beneficiary_name'])) {
                             return $meta['beneficiary_name'];
                         }
-                        // Fall back to customer name from order
-                        $orderMeta = $record->order?->meta ?? [];
-                        return $orderMeta['customer_name'] ?? $record->order?->customer?->full_name ?? '-';
+                        // Check ticket-level attendee fields
+                        if (!empty($record->attendee_name)) {
+                            return $record->attendee_name;
+                        }
+                        // Fall back to customer name from order (direct column, then meta, then customer relation)
+                        $order = $record->order;
+                        if (!$order) return '-';
+                        return $order->customer_name
+                            ?? ($order->meta['customer_name'] ?? null)
+                            ?? $order->marketplaceCustomer?->name
+                            ?? $order->customer?->full_name
+                            ?? $order->customer_email
+                            ?? '-';
                     })
                     ->searchable(query: function ($query, $search) {
-                        $query->whereHas('order', function ($q) use ($search) {
-                            $q->where('meta->customer_name', 'like', "%{$search}%");
+                        $query->where(function ($q) use ($search) {
+                            $q->where('attendee_name', 'like', "%{$search}%")
+                              ->orWhereHas('order', function ($q2) use ($search) {
+                                  $q2->where('customer_name', 'like', "%{$search}%")
+                                    ->orWhere('customer_email', 'like', "%{$search}%");
+                              });
                         });
                     })
                     ->toggleable(),

@@ -221,18 +221,37 @@
                                 </p>
                             </div>
                         @endif
+                        @php
+                            $customerName = $ticket->order->customer_name
+                                ?? ($ticket->order->meta['customer_name'] ?? null)
+                                ?? $ticket->order->marketplaceCustomer?->name
+                                ?? $ticket->order->customer?->full_name
+                                ?? 'N/A';
+                            $customerLink = null;
+                            if ($isMarketplacePanel && $ticket->order->marketplace_customer_id) {
+                                $customerLink = \App\Filament\Marketplace\Resources\MarketplaceCustomerResource::getUrl('edit', ['record' => $ticket->order->marketplace_customer_id]);
+                            } elseif ($isAdminPanel && $ticket->order->customer_id) {
+                                $customerLink = \App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $ticket->order->customer_id]);
+                            }
+                        @endphp
                         <div>
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Client</span>
                             <p class="text-base text-gray-900 dark:text-white">
-                                {{ $ticket->order->meta['customer_name'] ?? $ticket->order->customer_email ?? 'N/A' }}
+                                @if($customerLink)
+                                    <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $customerName }}</a>
+                                @else
+                                    {{ $customerName }}
+                                @endif
                             </p>
                         </div>
                         <div>
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Email</span>
                             <p class="text-base text-gray-900 dark:text-white">
-                                <a href="mailto:{{ $ticket->order->customer_email }}" class="text-primary-600 hover:underline">
-                                    {{ $ticket->order->customer_email }}
-                                </a>
+                                @if($customerLink)
+                                    <a href="{{ $customerLink }}" class="text-primary-600 hover:underline">{{ $ticket->order->customer_email }}</a>
+                                @else
+                                    <a href="mailto:{{ $ticket->order->customer_email }}" class="text-primary-600 hover:underline">{{ $ticket->order->customer_email }}</a>
+                                @endif
                             </p>
                         </div>
                         @if($ticket->order->meta['customer_phone'] ?? null)
