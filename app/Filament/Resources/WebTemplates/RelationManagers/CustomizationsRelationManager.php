@@ -3,6 +3,10 @@
 namespace App\Filament\Resources\WebTemplates\RelationManagers;
 
 use App\Models\WebTemplateCustomization;
+use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -77,8 +81,8 @@ class CustomizationsRelationManager extends RelationManager
                     ->dateTime('d.m.Y'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('openPreview')
+                EditAction::make(),
+                Action::make('openPreview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->url(function (WebTemplateCustomization $record) {
@@ -88,10 +92,10 @@ class CustomizationsRelationManager extends RelationManager
                         ]);
                     })
                     ->openUrlInNewTab(),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->label('Adaugă Personalizare'),
             ]);
     }

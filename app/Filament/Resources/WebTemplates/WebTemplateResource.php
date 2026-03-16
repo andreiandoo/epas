@@ -7,6 +7,11 @@ use App\Models\WebTemplate;
 use App\Models\WebTemplateCustomization;
 use BackedEnum;
 use UnitEnum;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -266,8 +271,8 @@ class WebTemplateResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('preview')
+                EditAction::make(),
+                Action::make('preview')
                     ->label('Preview Demo')
                     ->icon('heroicon-o-eye')
                     ->color('info')
@@ -275,14 +280,14 @@ class WebTemplateResource extends Resource
                         'templateSlug' => $record->slug,
                     ]))
                     ->openUrlInNewTab(),
-                Tables\Actions\Action::make('createCustomization')
+                Action::make('createCustomization')
                     ->label('Creează Personalizare')
                     ->icon('heroicon-o-sparkles')
                     ->color('success')
                     ->url(fn (WebTemplate $record) => WebTemplateCustomizationResource::getUrl('create', [
                         'template_id' => $record->id,
                     ])),
-                Tables\Actions\Action::make('clone')
+                Action::make('clone')
                     ->label('Duplică Template')
                     ->icon('heroicon-o-document-duplicate')
                     ->color('gray')
@@ -304,7 +309,7 @@ class WebTemplateResource extends Resource
 
                         return redirect(static::getUrl('edit', ['record' => $clone]));
                     }),
-                Tables\Actions\Action::make('healthCheck')
+                Action::make('healthCheck')
                     ->label('Health Check')
                     ->icon('heroicon-o-heart')
                     ->color('gray')
@@ -341,7 +346,7 @@ class WebTemplateResource extends Resource
                         $html .= '</div>';
                         return new \Illuminate\Support\HtmlString($html);
                     }),
-                Tables\Actions\Action::make('exportJson')
+                Action::make('exportJson')
                     ->label('Export JSON')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('gray')
@@ -355,10 +360,10 @@ class WebTemplateResource extends Resource
                             'Content-Type' => 'application/json',
                         ]);
                     }),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('importJson')
+                Action::make('importJson')
                     ->label('Import JSON')
                     ->icon('heroicon-o-arrow-up-tray')
                     ->color('gray')
@@ -406,8 +411,8 @@ class WebTemplateResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-                Tables\Actions\BulkAction::make('exportBulkJson')
+                DeleteBulkAction::make(),
+                BulkAction::make('exportBulkJson')
                     ->label('Export Selecție (JSON)')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function (\Illuminate\Database\Eloquent\Collection $records) {

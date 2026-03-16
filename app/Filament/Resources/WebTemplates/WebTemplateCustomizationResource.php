@@ -7,6 +7,10 @@ use App\Models\WebTemplate;
 use App\Models\WebTemplateCustomization;
 use BackedEnum;
 use UnitEnum;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -402,8 +406,8 @@ class WebTemplateCustomizationResource extends Resource
                     ),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('openPreview')
+                EditAction::make(),
+                Action::make('openPreview')
                     ->label('Deschide Preview')
                     ->icon('heroicon-o-eye')
                     ->color('info')
@@ -412,16 +416,16 @@ class WebTemplateCustomizationResource extends Resource
                         'token' => $record->unique_token,
                     ]))
                     ->openUrlInNewTab(),
-                Tables\Actions\Action::make('copyLink')
+                Action::make('copyLink')
                     ->label('Copiază Link')
                     ->icon('heroicon-o-clipboard-document')
                     ->action(function (WebTemplateCustomization $record) {
                         // Handled via JS in frontend
                     }),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                DeleteBulkAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }
