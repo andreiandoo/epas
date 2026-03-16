@@ -2862,6 +2862,7 @@ class EventResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
+                    ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'ro') ?: $record->getTranslation('title', 'en'))
                     ->searchable(query: function ($query, string $search): void {
                         $query->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
                     })
