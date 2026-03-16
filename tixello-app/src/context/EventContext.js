@@ -96,9 +96,7 @@ export function EventProvider({ children }) {
       // Store ALL ticket types for dashboard breakdowns
       setAllTicketTypes(allTypes.map(enrichType));
       // Filter by is_entry_ticket: only show entry tickets in mobile POS
-      // Fallback: if no ticket type has is_entry_ticket=true, show all (backward compat)
-      const entryTypes = allTypes.filter(t => t.is_entry_ticket);
-      const types = entryTypes.length > 0 ? entryTypes : allTypes;
+      const types = allTypes.filter(t => t.is_entry_ticket);
       if (types.length > 0) {
         setTicketTypes(types.map(enrichType));
       } else {
