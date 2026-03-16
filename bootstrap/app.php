@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.client.cors' => \App\Http\Middleware\TenantClientCors::class,
             'marketplace.auth' => \App\Http\Middleware\MarketplaceClientAuth::class,
             'vendor.auth' => \App\Http\Middleware\AuthenticateVendor::class,
+            'web-template.domain' => \App\Http\Middleware\WebTemplateDomainMapping::class,
         ]);
 
         // Add global middleware for API routes
