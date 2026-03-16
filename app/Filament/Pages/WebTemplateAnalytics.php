@@ -4,13 +4,15 @@ namespace App\Filament\Pages;
 
 use App\Models\WebTemplate;
 use App\Models\WebTemplateCustomization;
+use BackedEnum;
+use UnitEnum;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 
 class WebTemplateAnalytics extends Page
 {
-    protected static ?string $navigationGroup = 'Web Templates';
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static UnitEnum|string|null $navigationGroup = 'Web Templates';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Analiză';
     protected static ?string $title = 'Analiză Web Templates';
