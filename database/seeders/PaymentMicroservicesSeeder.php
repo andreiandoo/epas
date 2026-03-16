@@ -80,11 +80,16 @@ class PaymentMicroservicesSeeder extends Seeder
                         ['key' => 'live_merchant_id', 'label' => 'Live Merchant ID (Signature)', 'type' => 'text', 'required' => false, 'section' => 'live'],
                         ['key' => 'live_public_key', 'label' => 'Live Public Key (Certificate)', 'type' => 'textarea', 'required' => false, 'section' => 'live'],
                         ['key' => 'live_private_key', 'label' => 'Live Private Key', 'type' => 'textarea', 'required' => false, 'section' => 'live'],
+
+                        // Cultural card
+                        ['key' => 'cultural_card_enabled', 'label' => 'Activează plata prin Carduri Culturale', 'type' => 'boolean', 'default' => false, 'section' => 'cultural_card'],
+                        ['key' => 'cultural_card_surcharge_percent', 'label' => 'Procent suplimentar card cultural (%)', 'type' => 'number', 'required' => false, 'placeholder' => '4', 'section' => 'cultural_card'],
                     ],
                     'settings_sections' => [
                         'mode' => ['label' => 'Environment', 'description' => 'Select which environment to use'],
                         'test' => ['label' => 'Sandbox Credentials', 'description' => 'Use these credentials for testing in sandbox mode'],
                         'live' => ['label' => 'Live/Production Credentials', 'description' => 'Use these credentials for real transactions'],
+                        'cultural_card' => ['label' => 'Card Cultural', 'description' => 'Setări pentru plata prin carduri culturale (Edenred, Sodexo, Up România). Procesarea se face tot prin Netopia.'],
                     ],
                 ],
             ],

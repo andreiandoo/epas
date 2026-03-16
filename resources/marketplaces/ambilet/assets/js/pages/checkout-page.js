@@ -3,7 +3,8 @@ const CheckoutPage = {
     taxes: [],
     insurance: null,
     insuranceSelected: false,
-    culturalCardSurchargeRate: 4, // % extra for cultural card transactions
+    culturalCardSurchargeRate: 0, // % extra for cultural card transactions (loaded from API)
+    culturalCardEnabled: false,
     totals: { subtotal: 0, tax: 0, discount: 0, insurance: 0, culturalCardSurcharge: 0, total: 0, savings: 0 },
     timerInterval: null,
     endTime: null,
@@ -38,6 +39,13 @@ const CheckoutPage = {
         try {
             const response = await AmbiletAPI.get('/checkout.features');
             if (response.success && response.data) {
+                // Handle cultural card settings
+                if (response.data.cultural_card && response.data.cultural_card.enabled) {
+                    this.culturalCardEnabled = true;
+                    this.culturalCardSurchargeRate = response.data.cultural_card.surcharge_percent || 4;
+                    this.showCulturalCardOption();
+                }
+
                 // Handle ticket insurance
                 if (response.data.ticket_insurance && response.data.ticket_insurance.enabled && response.data.ticket_insurance.show_in_checkout) {
                     this.insurance = response.data.ticket_insurance;
@@ -74,6 +82,22 @@ const CheckoutPage = {
             }
         } catch (error) {
             console.log('Could not load checkout features:', error);
+        }
+    },
+
+    showCulturalCardOption() {
+        const culturalOption = document.getElementById('cultural-card-option');
+        if (culturalOption) {
+            culturalOption.classList.remove('hidden');
+        }
+        // Update surcharge display text
+        const surchargeText = document.getElementById('cultural-card-surcharge-text');
+        if (surchargeText) {
+            surchargeText.innerHTML = `Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>${this.culturalCardSurchargeRate}%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.`;
+        }
+        const surchargeLabel = document.getElementById('cultural-card-surcharge-label');
+        if (surchargeLabel) {
+            surchargeLabel.textContent = `Comision card cultural (${this.culturalCardSurchargeRate}%)`;
         }
     },
 

@@ -209,8 +209,8 @@ require_once __DIR__ . '/includes/header.php';
                                 <input type="radio" name="payment" value="card" class="hidden" checked>
                             </label>
 
-                            <!-- Card Cultural -->
-                            <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl">
+                            <!-- Card Cultural (hidden by default, shown by JS if enabled in payment config) -->
+                            <label id="cultural-card-option" class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl hidden">
                                 <div class="payment-radio"></div>
                                 <div class="flex items-center justify-between flex-1">
                                     <div class="flex items-center gap-3">
@@ -262,7 +262,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <svg class="w-5 h-5 mt-0.5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 <div>
                                     <p class="mb-1 text-sm font-medium text-purple-800">Comision adițional Card Cultural</p>
-                                    <p class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>4%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
+                                    <p id="cultural-card-surcharge-text" class="text-sm text-purple-700">Tranzacțiile cu card cultural au un comision de procesare suplimentar de <strong>4%</strong> din valoarea totală, datorat costurilor mai mari de procesare pentru acest tip de card.</p>
                                     <p class="mt-2 text-xs text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului cultural în siguranță.</p>
                                 </div>
                             </div>
@@ -331,7 +331,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <div id="cultural-card-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-purple-50">
                                     <span class="flex items-center gap-1 text-purple-700">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                                        Comision card cultural (4%)
+                                        <span id="cultural-card-surcharge-label">Comision card cultural (4%)</span>
                                     </span>
                                     <span id="cultural-card-amount" class="font-medium text-purple-700">+0.00 lei</span>
                                 </div>

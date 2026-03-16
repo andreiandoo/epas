@@ -73,6 +73,7 @@ class ConfigController extends BaseController
 
         $features = [
             'ticket_insurance' => $this->getTicketInsuranceSettings($client),
+            'cultural_card' => $this->getCulturalCardSettings($client),
         ];
 
         return $this->success($features);
@@ -229,6 +230,35 @@ ttq.page();
 </script>
 <!-- End TikTok Pixel -->
 HTML;
+    }
+
+    /**
+     * Get cultural card payment settings from Netopia microservice config
+     */
+    protected function getCulturalCardSettings($client): ?array
+    {
+        $pivot = MarketplaceClientMicroservice::where('marketplace_client_id', $client->id)
+            ->whereHas('microservice', fn($q) => $q->where('slug', 'payment-netopia'))
+            ->where('status', 'active')
+            ->first();
+
+        if (!$pivot) {
+            return null;
+        }
+
+        $settings = $pivot->settings ?? [];
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?? [];
+        }
+
+        if (empty($settings['cultural_card_enabled'])) {
+            return null;
+        }
+
+        return [
+            'enabled' => true,
+            'surcharge_percent' => (float) ($settings['cultural_card_surcharge_percent'] ?? 4),
+        ];
     }
 
     /**
