@@ -161,9 +161,7 @@ function MainTabs() {
           </Tab.Screen>
         )}
         <Tab.Screen name="CheckIn" component={CheckInScreen} options={{ tabBarLabel: 'Scanare' }} />
-        {(!isStaff || hasPermission('orders')) && (
-          <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
-        )}
+        <Tab.Screen name="Sales" component={SalesScreen} options={{ tabBarLabel: 'Vânzare' }} />
         {isAdmin && hasPermission('reports') && (
           <Tab.Screen name="Reports" component={ReportsScreen} options={{ tabBarLabel: 'Rapoarte' }} />
         )}
