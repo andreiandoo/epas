@@ -83,6 +83,15 @@ class Dashboard extends Page
             return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $days);
         });
 
+        // Pending review events (not cached — always fresh)
+        $pendingReviewEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', false)
+            ->whereNotNull('submitted_at')
+            ->where('is_cancelled', false)
+            ->with(['marketplaceOrganizer', 'venue'])
+            ->orderBy('submitted_at', 'desc')
+            ->get();
+
         return [
             'marketplace' => $marketplace,
             'stats' => $stats['cards'],
@@ -91,6 +100,7 @@ class Dashboard extends Page
             'chartPeriod' => $this->chartPeriod,
             'topOrganizers' => $stats['topOrganizers'],
             'topLiveEvents' => $stats['topLiveEvents'],
+            'pendingReviewEvents' => $pendingReviewEvents,
         ];
     }
 

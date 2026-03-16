@@ -81,6 +81,10 @@ class ListEvents extends ListRecords
 
         return [
             'all' => Tab::make('Toate'),
+            'unpublished' => Tab::make('Nepublicate')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('is_published', false))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('is_published', false)->count())
+                ->badgeColor('warning'),
             'active' => Tab::make('Active')
                 ->modifyQueryUsing(function (Builder $query) use ($now) {
                     return $query->where(function ($q) use ($now) {

@@ -580,6 +580,16 @@ class EventResource extends Resource
                                             ->openUrlInNewTab(),
                                     ])
                                     ->nullable(),
+                                Forms\Components\TextInput::make('suggested_venue_name')
+                                    ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
+                                    ->disabled()
+                                    ->visible(fn (?Event $record) => $record && !empty($record->suggested_venue_name))
+                                    ->helperText($t(
+                                        'Organizatorul a introdus manual acest nume de locație. Adaugă locația în bibliotecă și selecteaz-o din câmpul de mai sus.',
+                                        'The organizer manually entered this venue name. Add it to the venue library and select it above.'
+                                    ))
+                                    ->prefixIcon('heroicon-o-exclamation-triangle')
+                                    ->extraAttributes(['class' => 'bg-amber-50 dark:bg-amber-900/20']),
                                 Forms\Components\Select::make('seating_layout_id')
                                     ->label($t('Harta de locuri', 'Seating Layout'))
                                     ->searchable()
@@ -3142,6 +3152,10 @@ class EventResource extends Resource
             ])
             ->recordUrl(fn (Event $record) => static::getUrl('edit', ['record' => $record]))
             ->recordClasses(function (Event $record) {
+                if (!$record->is_published) {
+                    return 'event-row-unpublished';
+                }
+
                 $endDate = match ($record->duration_mode) {
                     'range' => $record->range_end_date ?? $record->range_start_date,
                     'multi_day' => !empty($record->multi_slots)

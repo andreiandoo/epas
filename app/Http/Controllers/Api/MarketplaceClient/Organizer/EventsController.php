@@ -171,6 +171,7 @@ class EventsController extends BaseController
                 'end_time' => $endTime,
                 'door_time' => $doorTime,
                 'venue_id' => $validated['venue_id'] ?? null,
+                'suggested_venue_name' => empty($validated['venue_id']) ? ($validated['venue_name'] ?? null) : null,
                 'address' => $validated['venue_address'] ?? null,
                 'marketplace_event_category_id' => $validated['marketplace_event_category_id'] ?? null,
                 'website_url' => $validated['website_url'] ?? null,
@@ -313,6 +314,9 @@ class EventsController extends BaseController
             }
             if (isset($validated['venue_id'])) {
                 $updateData['venue_id'] = $validated['venue_id'];
+                $updateData['suggested_venue_name'] = null; // Clear suggestion when venue is selected
+            } elseif (isset($validated['venue_name'])) {
+                $updateData['suggested_venue_name'] = $validated['venue_name'];
             }
             if (isset($validated['venue_address'])) {
                 $updateData['address'] = $validated['venue_address'];
@@ -389,7 +393,11 @@ class EventsController extends BaseController
         }
 
         if ($event->is_published) {
-            return $this->error('Event is already published', 400);
+            return $this->error('Evenimentul este deja publicat', 400);
+        }
+
+        if ($event->submitted_at) {
+            return $this->error('Evenimentul a fost deja trimis spre aprobare', 400);
         }
 
         // Validate event has required data
@@ -397,11 +405,11 @@ class EventsController extends BaseController
             return $this->error('Event must have at least one ticket type', 400);
         }
 
-        $event->update(['is_published' => true]);
+        $event->update(['submitted_at' => now()]);
 
         return $this->success([
             'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'venue'])),
-        ], 'Event published successfully');
+        ], 'Evenimentul a fost trimis spre aprobare');
     }
 
     /**

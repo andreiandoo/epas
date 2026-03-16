@@ -4155,6 +4155,12 @@ tr.event-row-ended > td {
 .dark tr.event-row-ended > td {
 	background-color: rgba(107, 114, 128, 0.08) !important;
 }
+tr.event-row-unpublished > td {
+	background-color: rgba(245, 158, 11, 0.08) !important;
+}
+.dark tr.event-row-unpublished > td {
+	background-color: rgba(245, 158, 11, 0.12) !important;
+}
 
 .dark .fi-ta-content {
 	background-color: var(--metro-bg-secondary) !important;

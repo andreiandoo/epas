@@ -4,6 +4,56 @@
             <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
         </div>
     @else
+        <!-- Pending Review Events -->
+        @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-amber-300 dark:border-amber-700 mb-5 overflow-hidden">
+            <div class="px-4 py-3 bg-amber-50 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-exclamation-triangle class="w-5 h-5 text-amber-500" />
+                    <h3 class="font-semibold text-amber-800 dark:text-amber-200">Evenimente de revizuit</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-amber-500 rounded-full">{{ $pendingReviewEvents->count() }}</span>
+                </div>
+                <a href="{{ route('filament.marketplace.resources.events.index') }}?tableFilters[is_published][value]=0" class="text-xs text-amber-600 dark:text-amber-400 hover:underline">
+                    Vezi toate
+                </a>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($pendingReviewEvents->take(10) as $event)
+                <div class="px-4 py-3 flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="font-medium text-sm text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate">
+                                {{ $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') }}
+                            </a>
+                            @if($event->suggested_venue_name)
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded">
+                                    <x-heroicon-o-map-pin class="w-3 h-3" /> {{ $event->suggested_venue_name }}
+                                </span>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            @if($event->marketplaceOrganizer)
+                                <span>{{ $event->marketplaceOrganizer->name }}</span>
+                            @endif
+                            @if($event->event_date)
+                                <span>{{ $event->event_date->format('d.m.Y') }}</span>
+                            @endif
+                            @if($event->venue)
+                                <span>{{ $event->venue->getTranslation('name', 'ro') }}</span>
+                            @endif
+                            <span class="text-gray-400">Trimis {{ $event->submitted_at->diffForHumans() }}</span>
+                        </div>
+                    </div>
+                    <a href="{{ route('filament.marketplace.resources.events.edit', $event->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-900/40 dark:hover:bg-amber-900/60 rounded-lg transition-colors">
+                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
+                        Revizuieste
+                    </a>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
         <!-- Welcome -->
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-5">
             <div class="flex items-center justify-between">
