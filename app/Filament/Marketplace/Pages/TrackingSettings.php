@@ -21,7 +21,7 @@ class TrackingSettings extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?string $navigationLabel = 'Tracking & Pixels';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.marketplace.pages.tracking-settings';
 

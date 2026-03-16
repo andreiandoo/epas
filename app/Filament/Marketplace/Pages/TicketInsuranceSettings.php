@@ -21,7 +21,7 @@ class TicketInsuranceSettings extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
     protected static ?string $navigationLabel = 'Taxa de Retur';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 6;
     protected static ?string $slug = 'ticket-insurance';
     protected string $view = 'filament.marketplace.pages.ticket-insurance-settings';

@@ -31,7 +31,7 @@ class Invitations extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Invitations';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.invitations';
 

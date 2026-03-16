@@ -12,7 +12,7 @@ class Microservices extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-puzzle-piece';
     protected static ?string $navigationLabel = 'Microservices';
-    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static \UnitEnum|string|null $navigationGroup = 'Tools';
     protected static ?int $navigationSort = 0;
     protected string $view = 'filament.marketplace.pages.microservices';
 
