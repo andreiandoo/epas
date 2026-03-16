@@ -15,12 +15,18 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Notifications\Notification;
+use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\MarketplaceClient;
 
 class OrganizerResource extends Resource
 {
@@ -685,6 +691,104 @@ class OrganizerResource extends Resource
                         ->action(function ($records): void {
                             $records->each(fn ($record) => $record->update(['status' => 'active']));
                         }),
+
+                    BulkAction::make('send_password_reset')
+                        ->label('Send Password Reset')
+                        ->icon('heroicon-o-key')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Trimite email de resetare parolă')
+                        ->modalDescription('Se va trimite un email de resetare a parolei către toți organizatorii selectați. Sigur vrei să continui?')
+                        ->modalSubmitActionLabel('Trimite')
+                        ->action(function ($records): void {
+                            $sent = 0;
+                            $failed = 0;
+
+                            foreach ($records as $organizer) {
+                                try {
+                                    $client = $organizer->marketplaceClient;
+                                    if (!$client) {
+                                        $failed++;
+                                        continue;
+                                    }
+
+                                    // Delete any existing tokens
+                                    DB::table('marketplace_password_resets')
+                                        ->where('email', $organizer->email)
+                                        ->where('type', 'organizer')
+                                        ->where('marketplace_client_id', $client->id)
+                                        ->delete();
+
+                                    // Create new token
+                                    $token = Str::random(64);
+                                    DB::table('marketplace_password_resets')->insert([
+                                        'email' => $organizer->email,
+                                        'type' => 'organizer',
+                                        'marketplace_client_id' => $client->id,
+                                        'token' => Hash::make($token),
+                                        'created_at' => now(),
+                                    ]);
+
+                                    // Build reset email HTML
+                                    $domain = $client->domain ? rtrim($client->domain, '/') : config('app.url');
+                                    if ($domain && !str_starts_with($domain, 'http')) {
+                                        $domain = 'https://' . $domain;
+                                    }
+
+                                    $resetUrl = $domain . '/organizer/reset-password?' . http_build_query([
+                                        'token' => $token,
+                                        'email' => $organizer->email,
+                                    ]);
+                                    $organizerName = $organizer->name ?: 'Organizator';
+                                    $siteName = $client->name ?? 'bilete.online';
+                                    $expireMinutes = config('auth.passwords.marketplace.expire', 60);
+
+                                    $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;background:#f8fafc">'
+                                        . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+                                        . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+                                        . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+                                        . '<h1 style="color:white;margin:0;font-size:24px">Resetare parolă</h1>'
+                                        . '</div>'
+                                        . '<div style="padding:32px">'
+                                        . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut ' . htmlspecialchars($organizerName) . ',</p>'
+                                        . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Contul tău de organizator a fost migrat pe noua platformă. Te rugăm să îți setezi o parolă nouă folosind butonul de mai jos.</p>'
+                                        . '<div style="text-align:center;margin:24px 0">'
+                                        . '<a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:#A51C30;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px">Setează parola</a>'
+                                        . '</div>'
+                                        . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Linkul expiră în ' . $expireMinutes . ' de minute.</p>'
+                                        . '</div>'
+                                        . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+                                        . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+                                        . '</div>'
+                                        . '</div></div></body></html>';
+
+                                    BaseController::sendViaMarketplace($client, $organizer->email, $organizerName, 'Setează parola - ' . $siteName, $html, [
+                                        'template_slug' => 'organizer_password_reset',
+                                    ]);
+
+                                    $sent++;
+                                } catch (\Throwable $e) {
+                                    $failed++;
+                                    \Illuminate\Support\Facades\Log::channel('marketplace')->error('Bulk password reset failed', [
+                                        'organizer_id' => $organizer->id,
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                            }
+
+                            if ($sent > 0) {
+                                Notification::make()
+                                    ->title("Email-uri trimise: {$sent}" . ($failed > 0 ? " ({$failed} eșuate)" : ''))
+                                    ->success()
+                                    ->send();
+                            } else {
+                                Notification::make()
+                                    ->title("Niciun email trimis ({$failed} eșuate)")
+                                    ->danger()
+                                    ->send();
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
