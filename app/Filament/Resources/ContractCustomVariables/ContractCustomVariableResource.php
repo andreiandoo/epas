@@ -19,7 +19,7 @@ class ContractCustomVariableResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-variable';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static UnitEnum|string|null $navigationGroup = 'Operational';
 
     protected static ?string $navigationLabel = 'Contract Variables';
 

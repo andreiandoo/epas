@@ -14,7 +14,7 @@ class RevenueAnalytics extends Page
 {
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected string $view = 'filament.pages.revenue-analytics';
-    protected static \UnitEnum|string|null $navigationGroup = 'Core';
+    protected static \UnitEnum|string|null $navigationGroup = 'Operational';
     protected static ?int $navigationSort = 10;
     protected static ?string $title = 'Revenue Analytics';
 

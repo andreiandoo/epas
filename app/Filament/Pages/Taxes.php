@@ -14,7 +14,7 @@ class Taxes extends Page
 
     protected static ?string $navigationLabel = 'Taxes';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Operational';
 
     protected static ?int $navigationSort = 50;
 

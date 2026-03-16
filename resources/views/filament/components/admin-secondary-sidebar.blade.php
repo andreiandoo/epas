@@ -57,6 +57,13 @@
             </div>
         </div>
 
+        {{-- PANEL: Operational --}}
+        <div class="ep-secondary-sidebar-panel" data-ep-panel="operational" style="display: none;">
+            <div class="ep-secondary-sidebar-section">
+                <ul id="ep-admin-sidebar-operational-clone"></ul>
+            </div>
+        </div>
+
         {{-- PANEL: Taxonomies --}}
         <div class="ep-secondary-sidebar-panel" data-ep-panel="taxonomies" style="display: none;">
             <div class="ep-secondary-sidebar-section">

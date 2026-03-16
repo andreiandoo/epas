@@ -18,7 +18,7 @@ class ExchangeRates extends Page implements HasForms
     use InteractsWithForms;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-euro';
     protected string $view = 'filament.pages.exchange-rates';
-    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Operational';
     protected static ?int $navigationSort = 60;
     protected static ?string $title = 'Exchange Rates';
 

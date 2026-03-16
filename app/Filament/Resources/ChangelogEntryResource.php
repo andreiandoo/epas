@@ -19,7 +19,7 @@ class ChangelogEntryResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Setări';
+    protected static UnitEnum|string|null $navigationGroup = 'Settings';
 
     protected static ?string $navigationLabel = 'Changelog';
 

@@ -19,7 +19,7 @@ class TaxReports extends Page
 
     protected static ?string $navigationLabel = 'Tax Reports';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Operational';
 
     protected static ?string $navigationParentItem = 'Taxes';
 
