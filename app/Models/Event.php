@@ -18,6 +18,21 @@ class Event extends Model
     use Translatable;
     use LogsActivity;
 
+    /**
+     * Sanitize SEO data to prevent malformed UTF-8 encoding errors.
+     */
+    public function setSeoAttribute($value): void
+    {
+        if (is_array($value)) {
+            array_walk_recursive($value, function (&$item) {
+                if (is_string($item)) {
+                    $item = mb_convert_encoding($item, 'UTF-8', 'UTF-8');
+                }
+            });
+        }
+        $this->attributes['seo'] = is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) : $value;
+    }
+
     public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
 
     protected $fillable = [
