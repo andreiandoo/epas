@@ -117,12 +117,21 @@ class WebTemplateResource extends Resource
                                         ->placeholder('HTML, Alpine.js, Tailwind CSS')
                                         ->suggestions(['HTML', 'Alpine.js', 'Tailwind CSS', 'JavaScript', 'CSS3']),
 
-                                    Forms\Components\TagsInput::make('compatible_microservices')
+                                    Forms\Components\Select::make('compatible_microservices')
                                         ->label('Microservicii Compatibile')
-                                        ->suggestions([
-                                            'analytics', 'crm', 'shop', 'door-sales',
-                                            'affiliate-tracking', 'efactura', 'accounting',
-                                            'ticket-customizer', 'sms', 'whatsapp',
+                                        ->multiple()
+                                        ->searchable()
+                                        ->options([
+                                            'analytics' => 'Analytics',
+                                            'crm' => 'CRM',
+                                            'shop' => 'Shop',
+                                            'door-sales' => 'Door Sales',
+                                            'affiliate-tracking' => 'Affiliate Tracking',
+                                            'efactura' => 'eFactura',
+                                            'accounting' => 'Accounting',
+                                            'ticket-customizer' => 'Ticket Customizer',
+                                            'sms' => 'SMS',
+                                            'whatsapp' => 'WhatsApp',
                                         ]),
                                 ]),
                         ]),

@@ -239,8 +239,8 @@ class WebTemplateCustomizationResource extends Resource
             SC\Section::make('Self-Service Client')
                 ->description('Permite clientului să-și editeze singur datele de personalizare printr-un link special')
                 ->schema([
-                    Forms\Components\Actions::make([
-                        Forms\Components\Actions\Action::make('generateSelfServiceToken')
+                    SC\Actions::make([
+                        Action::make('generateSelfServiceToken')
                             ->label('Generează Link Self-Service')
                             ->icon('heroicon-o-key')
                             ->color('success')
