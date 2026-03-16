@@ -308,6 +308,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
 
         // Organizer orders
+        if (endpoint === '/organizer/orders/export') return 'organizer.orders.export';
         if (endpoint === '/organizer/orders' || endpoint.includes('/organizer/orders?')) return 'organizer.orders';
 
         // Organizer finance

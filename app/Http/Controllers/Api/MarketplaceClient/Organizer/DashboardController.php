@@ -218,6 +218,8 @@ class DashboardController extends BaseController
                 'event:id,title',
                 'marketplaceEvent:id,name',
                 'marketplaceCustomer:id,first_name,last_name,email',
+                'tickets.marketplaceTicketType:id,name',
+                'tickets.ticketType:id,name',
             ]);
 
         // Filters
@@ -253,8 +255,10 @@ class DashboardController extends BaseController
 
         $query->orderByDesc('created_at');
 
-        // Compute aggregate stats from full query (only completed/paid orders)
-        $statsQuery = (clone $query)->whereIn('status', ['completed', 'paid'])
+        // Compute aggregate stats — include all sources (POS, marketplace, etc.)
+        // Exclude only cancelled, refunded, and test orders
+        $statsQuery = (clone $query)
+            ->whereNotIn('status', ['cancelled', 'refunded', 'failed'])
             ->where('source', '!=', 'test_order');
         $stats = [
             'total_revenue' => (float) (clone $statsQuery)->sum('total'),
@@ -286,10 +290,90 @@ class DashboardController extends BaseController
                 'customer_city' => $order->marketplaceCustomer?->city ?? '',
                 'source' => $order->source ?? 'marketplace',
                 'tickets_count' => $order->tickets_count ?? $order->tickets()->count(),
+                'ticket_types' => $order->tickets
+                    ->map(fn ($t) => $t->marketplaceTicketType?->name ?? $t->ticketType?->name ?? null)
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all(),
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ];
         }, $stats);
+    }
+
+    /**
+     * Export orders as CSV
+     */
+    public function exportOrders(Request $request): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $query = Order::where('marketplace_organizer_id', $organizer->id)
+            ->with([
+                'event:id,title',
+                'marketplaceEvent:id,name',
+                'marketplaceCustomer:id,first_name,last_name,email,phone',
+                'tickets.marketplaceTicketType:id,name',
+                'tickets.ticketType:id,name',
+            ]);
+
+        if ($request->has('event_id')) {
+            $eventId = $request->event_id;
+            $query->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                    ->orWhere('marketplace_event_id', $eventId);
+            });
+        }
+
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+
+        if ($request->has('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
+        $orders = $query->orderByDesc('created_at')->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="export.csv"',
+        ];
+
+        return response()->stream(function () use ($orders) {
+            $handle = fopen('php://output', 'w');
+            // BOM for Excel UTF-8 compatibility
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, ['Comanda', 'Status', 'Client', 'Email', 'Telefon', 'Tip bilet', 'Nr bilete', 'Valoare', 'Sursa', 'Data']);
+
+            foreach ($orders as $order) {
+                $ticketTypes = $order->tickets
+                    ->map(fn ($t) => $t->marketplaceTicketType?->name ?? $t->ticketType?->name ?? '-')
+                    ->filter()
+                    ->unique()
+                    ->implode(', ');
+
+                fputcsv($handle, [
+                    $order->order_number,
+                    $order->status,
+                    $order->marketplaceCustomer?->full_name ?? $order->customer_name ?? '-',
+                    $order->marketplaceCustomer?->email ?? $order->customer_email ?? '-',
+                    $order->marketplaceCustomer?->phone ?? $order->customer_phone ?? '-',
+                    $ticketTypes ?: '-',
+                    $order->tickets->count(),
+                    number_format((float) $order->total, 2, '.', ''),
+                    $order->source ?? 'marketplace',
+                    $order->created_at->format('Y-m-d H:i'),
+                ]);
+            }
+
+            fclose($handle);
+        }, 200, $headers);
     }
 
     /**

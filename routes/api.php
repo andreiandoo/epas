@@ -1602,6 +1602,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // Orders
         Route::get('/orders', [OrganizerDashboardController::class, 'orders'])
             ->name('api.marketplace-client.organizer.orders');
+        Route::get('/orders/export', [OrganizerDashboardController::class, 'exportOrders'])
+            ->name('api.marketplace-client.organizer.orders.export');
         Route::get('/orders/{order}', [OrganizerDashboardController::class, 'orderDetail'])
             ->name('api.marketplace-client.organizer.orders.show');
 
