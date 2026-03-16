@@ -299,7 +299,7 @@ class WebTemplateResource extends Resource
 
                             \Filament\Notifications\Notification::make()
                                 ->title('Template duplicat')
-                                ->body("„{$clone->name}" a fost creat cu succes.")
+                                ->body("\u{201E}{$clone->name}\u{201D} a fost creat cu succes.")
                                 ->success()
                                 ->send();
 
@@ -402,7 +402,7 @@ class WebTemplateResource extends Resource
 
                         \Filament\Notifications\Notification::make()
                             ->title('Template importat')
-                            ->body("„{$template->name}" a fost importat cu succes.")
+                            ->body("\u{201E}{$template->name}\u{201D} a fost importat cu succes.")
                             ->success()
                             ->send();
                     }),

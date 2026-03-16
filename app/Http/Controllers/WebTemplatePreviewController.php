@@ -248,7 +248,7 @@ class WebTemplatePreviewController extends Controller
             $users = \App\Models\User::where('role', 'admin')->orWhere('role', 'super-admin')->get();
             foreach ($users as $user) {
                 \Filament\Notifications\Notification::make()
-                    ->title("Feedback nou pe „{$customization->label}"")
+                    ->title("Feedback nou pe \u{201E}{$customization->label}\u{201D}")
                     ->body("{$feedbackCount} feedback-uri primite · Rating mediu: {$avgRating}/5")
                     ->icon('heroicon-o-chat-bubble-left-ellipsis')
                     ->iconColor($avgRating >= 4 ? 'success' : ($avgRating >= 3 ? 'warning' : 'danger'))
