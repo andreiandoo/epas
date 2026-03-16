@@ -338,6 +338,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/payment-methods') return 'organizer.payment-methods';
 
         // Organizer participants (all events)
+        if (endpoint === '/organizer/participants/export') return 'organizer.participants.export';
         if (endpoint === '/organizer/participants' || endpoint.includes('/organizer/participants?')) return 'organizer.participants';
         if (endpoint === '/organizer/participants/checkin') return 'organizer.participants.checkin';
 

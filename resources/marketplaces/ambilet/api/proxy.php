@@ -2421,6 +2421,15 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.participants.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/organizer/participants/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'organizer.participants.checkin':
         $method = 'POST';
         $body = file_get_contents('php://input');

@@ -34,7 +34,7 @@ const ProfileCompletionModal = {
     // ═══════════════════════════════════════════════════════
 
     async init() {
-        if (!AmbiletAuth?.isAuthenticated()) return;
+        if (!AmbiletAuth?.isCustomer()) return;
 
         try {
             const res = await AmbiletAPI.customer.getProfile();
