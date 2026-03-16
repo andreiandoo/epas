@@ -402,30 +402,26 @@ class WebTemplateCustomizationResource extends Resource
                     ),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\Action::make('openPreview')
-                        ->label('Deschide Preview')
-                        ->icon('heroicon-o-eye')
-                        ->color('info')
-                        ->url(fn (WebTemplateCustomization $record) => route('web-template.customized-preview', [
-                            'templateSlug' => $record->template->slug,
-                            'token' => $record->unique_token,
-                        ]))
-                        ->openUrlInNewTab(),
-                    Tables\Actions\Action::make('copyLink')
-                        ->label('Copiază Link')
-                        ->icon('heroicon-o-clipboard-document')
-                        ->action(function (WebTemplateCustomization $record) {
-                            // Handled via JS in frontend
-                        }),
-                    Tables\Actions\DeleteAction::make(),
-                ]),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('openPreview')
+                    ->label('Deschide Preview')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn (WebTemplateCustomization $record) => route('web-template.customized-preview', [
+                        'templateSlug' => $record->template->slug,
+                        'token' => $record->unique_token,
+                    ]))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('copyLink')
+                    ->label('Copiază Link')
+                    ->icon('heroicon-o-clipboard-document')
+                    ->action(function (WebTemplateCustomization $record) {
+                        // Handled via JS in frontend
+                    }),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+                Tables\Actions\DeleteBulkAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }

@@ -266,98 +266,96 @@ class WebTemplateResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\Action::make('preview')
-                        ->label('Preview Demo')
-                        ->icon('heroicon-o-eye')
-                        ->color('info')
-                        ->url(fn (WebTemplate $record) => route('web-template.preview', [
-                            'templateSlug' => $record->slug,
-                        ]))
-                        ->openUrlInNewTab(),
-                    Tables\Actions\Action::make('createCustomization')
-                        ->label('Creează Personalizare')
-                        ->icon('heroicon-o-sparkles')
-                        ->color('success')
-                        ->url(fn (WebTemplate $record) => WebTemplateCustomizationResource::getUrl('create', [
-                            'template_id' => $record->id,
-                        ])),
-                    Tables\Actions\Action::make('clone')
-                        ->label('Duplică Template')
-                        ->icon('heroicon-o-document-duplicate')
-                        ->color('gray')
-                        ->requiresConfirmation()
-                        ->modalHeading('Duplică Template')
-                        ->modalDescription('Se va crea o copie a template-ului cu un slug nou. Personalizările nu vor fi copiate.')
-                        ->action(function (WebTemplate $record) {
-                            $clone = $record->replicate();
-                            $clone->name = $record->name . ' (copie)';
-                            $clone->slug = $record->slug . '-copie-' . now()->format('His');
-                            $clone->is_featured = false;
-                            $clone->save();
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('preview')
+                    ->label('Preview Demo')
+                    ->icon('heroicon-o-eye')
+                    ->color('info')
+                    ->url(fn (WebTemplate $record) => route('web-template.preview', [
+                        'templateSlug' => $record->slug,
+                    ]))
+                    ->openUrlInNewTab(),
+                Tables\Actions\Action::make('createCustomization')
+                    ->label('Creează Personalizare')
+                    ->icon('heroicon-o-sparkles')
+                    ->color('success')
+                    ->url(fn (WebTemplate $record) => WebTemplateCustomizationResource::getUrl('create', [
+                        'template_id' => $record->id,
+                    ])),
+                Tables\Actions\Action::make('clone')
+                    ->label('Duplică Template')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Duplică Template')
+                    ->modalDescription('Se va crea o copie a template-ului cu un slug nou. Personalizările nu vor fi copiate.')
+                    ->action(function (WebTemplate $record) {
+                        $clone = $record->replicate();
+                        $clone->name = $record->name . ' (copie)';
+                        $clone->slug = $record->slug . '-copie-' . now()->format('His');
+                        $clone->is_featured = false;
+                        $clone->save();
 
-                            \Filament\Notifications\Notification::make()
-                                ->title('Template duplicat')
-                                ->body("\u{201E}{$clone->name}\u{201D} a fost creat cu succes.")
-                                ->success()
-                                ->send();
+                        \Filament\Notifications\Notification::make()
+                            ->title('Template duplicat')
+                            ->body("\u{201E}{$clone->name}\u{201D} a fost creat cu succes.")
+                            ->success()
+                            ->send();
 
-                            return redirect(static::getUrl('edit', ['record' => $clone]));
-                        }),
-                    Tables\Actions\Action::make('healthCheck')
-                        ->label('Health Check')
-                        ->icon('heroicon-o-heart')
-                        ->color('gray')
-                        ->modalHeading(fn (WebTemplate $record) => "Health Check: {$record->name}")
-                        ->modalSubmitAction(false)
-                        ->modalCancelActionLabel('Închide')
-                        ->modalContent(function (WebTemplate $record) {
-                            $checker = new \App\Services\WebTemplate\TemplateHealthCheck();
-                            $result = $checker->check($record);
+                        return redirect(static::getUrl('edit', ['record' => $clone]));
+                    }),
+                Tables\Actions\Action::make('healthCheck')
+                    ->label('Health Check')
+                    ->icon('heroicon-o-heart')
+                    ->color('gray')
+                    ->modalHeading(fn (WebTemplate $record) => "Health Check: {$record->name}")
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Închide')
+                    ->modalContent(function (WebTemplate $record) {
+                        $checker = new \App\Services\WebTemplate\TemplateHealthCheck();
+                        $result = $checker->check($record);
 
-                            $html = '<div class="space-y-4">';
+                        $html = '<div class="space-y-4">';
 
-                            // Score
-                            $scoreColor = $result['score'] >= 80 ? 'text-green-600' : ($result['score'] >= 60 ? 'text-amber-600' : 'text-red-600');
-                            $html .= "<div class=\"text-center py-4\"><div class=\"text-5xl font-bold {$scoreColor}\">{$result['score']}%</div>";
-                            $html .= "<p class=\"text-sm text-gray-500 mt-2\">{$result['summary']}</p></div>";
+                        // Score
+                        $scoreColor = $result['score'] >= 80 ? 'text-green-600' : ($result['score'] >= 60 ? 'text-amber-600' : 'text-red-600');
+                        $html .= "<div class=\"text-center py-4\"><div class=\"text-5xl font-bold {$scoreColor}\">{$result['score']}%</div>";
+                        $html .= "<p class=\"text-sm text-gray-500 mt-2\">{$result['summary']}</p></div>";
 
-                            // Issues
-                            if (count($result['issues']) > 0) {
-                                $html .= '<div class="border rounded-lg divide-y">';
-                                foreach ($result['issues'] as $issue) {
-                                    $icon = match ($issue['level']) {
-                                        'error' => '<span class="text-red-500 font-bold">&#10007;</span>',
-                                        'warning' => '<span class="text-amber-500 font-bold">&#9888;</span>',
-                                        default => '<span class="text-blue-500">&#9432;</span>',
-                                    };
-                                    $html .= "<div class=\"px-4 py-3 flex items-start gap-3 text-sm\">{$icon}<div><span class=\"font-medium\">{$issue['field']}</span><br><span class=\"text-gray-500\">{$issue['message']}</span></div></div>";
-                                }
-                                $html .= '</div>';
-                            } else {
-                                $html .= '<p class="text-center text-green-600 font-medium py-4">Nicio problemă detectată!</p>';
+                        // Issues
+                        if (count($result['issues']) > 0) {
+                            $html .= '<div class="border rounded-lg divide-y">';
+                            foreach ($result['issues'] as $issue) {
+                                $icon = match ($issue['level']) {
+                                    'error' => '<span class="text-red-500 font-bold">&#10007;</span>',
+                                    'warning' => '<span class="text-amber-500 font-bold">&#9888;</span>',
+                                    default => '<span class="text-blue-500">&#9432;</span>',
+                                };
+                                $html .= "<div class=\"px-4 py-3 flex items-start gap-3 text-sm\">{$icon}<div><span class=\"font-medium\">{$issue['field']}</span><br><span class=\"text-gray-500\">{$issue['message']}</span></div></div>";
                             }
-
                             $html .= '</div>';
-                            return new \Illuminate\Support\HtmlString($html);
-                        }),
-                    Tables\Actions\Action::make('exportJson')
-                        ->label('Export JSON')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->color('gray')
-                        ->action(function (WebTemplate $record) {
-                            $json = json_encode($record->toExportArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                            $filename = "template-{$record->slug}-" . now()->format('Y-m-d') . '.json';
+                        } else {
+                            $html .= '<p class="text-center text-green-600 font-medium py-4">Nicio problemă detectată!</p>';
+                        }
 
-                            return response()->streamDownload(function () use ($json) {
-                                echo $json;
-                            }, $filename, [
-                                'Content-Type' => 'application/json',
-                            ]);
-                        }),
-                    Tables\Actions\DeleteAction::make(),
-                ]),
+                        $html .= '</div>';
+                        return new \Illuminate\Support\HtmlString($html);
+                    }),
+                Tables\Actions\Action::make('exportJson')
+                    ->label('Export JSON')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->action(function (WebTemplate $record) {
+                        $json = json_encode($record->toExportArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        $filename = "template-{$record->slug}-" . now()->format('Y-m-d') . '.json';
+
+                        return response()->streamDownload(function () use ($json) {
+                            echo $json;
+                        }, $filename, [
+                            'Content-Type' => 'application/json',
+                        ]);
+                    }),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->headerActions([
                 Tables\Actions\Action::make('importJson')
@@ -408,23 +406,21 @@ class WebTemplateResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\BulkAction::make('exportBulkJson')
-                        ->label('Export Selecție (JSON)')
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $export = $records->map(fn ($r) => $r->toExportArray())->values()->toArray();
-                            $json = json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                            $filename = "templates-export-" . now()->format('Y-m-d') . '.json';
+                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkAction::make('exportBulkJson')
+                    ->label('Export Selecție (JSON)')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        $export = $records->map(fn ($r) => $r->toExportArray())->values()->toArray();
+                        $json = json_encode($export, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        $filename = "templates-export-" . now()->format('Y-m-d') . '.json';
 
-                            return response()->streamDownload(function () use ($json) {
-                                echo $json;
-                            }, $filename, [
-                                'Content-Type' => 'application/json',
-                            ]);
-                        }),
-                ]),
+                        return response()->streamDownload(function () use ($json) {
+                            echo $json;
+                        }, $filename, [
+                            'Content-Type' => 'application/json',
+                        ]);
+                    }),
             ])
             ->defaultSort('sort_order');
     }
