@@ -2421,6 +2421,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.orders.export':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['from_date'])) $params['from_date'] = $_GET['from_date'];
+        if (isset($_GET['to_date'])) $params['to_date'] = $_GET['to_date'];
+        $endpoint = '/organizer/orders/export' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'organizer.participants.export':
         $method = 'GET';
         $params = [];

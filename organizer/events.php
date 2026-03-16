@@ -285,6 +285,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                     </div>
                                     <p class="mt-1 text-xs text-muted">Cauta in biblioteca de locatii sau scrie manual</p>
+                                    <div id="venue-suggestion-notice" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                        <div class="flex items-start gap-2">
+                                            <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            <p class="text-sm text-amber-800">Aceasta locatie nu exista in biblioteca noastra. Numele introdus va fi trimis ca sugestie catre administratorul platformei.</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="grid gap-4 md:grid-cols-2">
                                     <div>
@@ -1502,6 +1508,13 @@ function initVenueSearch() {
         clearTimeout(venueSearchTimeout);
         const query = this.value.trim();
         document.getElementById('selected-venue-id').value = '';
+        // Show suggestion notice when typing manually (no venue selected)
+        const notice = document.getElementById('venue-suggestion-notice');
+        if (notice && query.length >= 2) {
+            notice.classList.remove('hidden');
+        } else if (notice) {
+            notice.classList.add('hidden');
+        }
 
         if (query.length < 2) {
             dropdown.classList.add('hidden');
@@ -1529,6 +1542,9 @@ function selectVenue(venue) {
     document.getElementById('venue-address-input').value = venue.address || '';
     document.getElementById('selected-venue-id').value = venue.id;
     document.getElementById('venue-dropdown').classList.add('hidden');
+    // Hide suggestion notice when a library venue is selected
+    const notice = document.getElementById('venue-suggestion-notice');
+    if (notice) notice.classList.add('hidden');
     updateSummaries();
 }
 

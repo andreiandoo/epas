@@ -433,9 +433,15 @@ async function exportParticipants() {
             throw new Error(errorData.message || 'Eroare la export');
         }
 
-        // Get filename from header or use default
+        // Build filename: [event title]-Participanti-[export date].csv
+        const eventItem = eventsList.find(e => String(e.id) === String(selectedEventId));
+        const eventTitle = eventItem ? eventItem.label.split(' - ')[0].trim() : 'Eveniment';
+        const safeTitle = eventTitle.replace(/[^a-zA-Z0-9àáâãäåăîșțâéèêëìíïòóôõöùúûüñç -]/gi, '').replace(/\s+/g, '-');
+        const exportDate = new Date().toISOString().slice(0, 10);
+        let filename = `${safeTitle}-Participanti-${exportDate}.csv`;
+
+        // Override with server-provided filename if available
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = `participanti-${selectedEventId}.csv`;
         if (contentDisposition) {
             const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
             if (match && match[1]) {

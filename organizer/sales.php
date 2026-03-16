@@ -87,7 +87,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <tr>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Comanda</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Participant</th>
-                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Eveniment</th>
+                                <th class="px-4 py-3 text-sm font-semibold text-left text-secondary">Tip bilet</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Bilete</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-right text-secondary">Valoare</th>
                                 <th class="px-4 py-3 text-sm font-semibold text-center text-secondary">Status</th>
@@ -266,7 +266,11 @@ function renderOrders() {
                     </div>
                 </td>
                 <td class="px-4 py-3">
-                    <span class="text-sm text-secondary truncate block max-w-[180px]" title="${escHtml(order.event)}">${escHtml(order.event || '-')}</span>
+                    <div class="flex flex-col gap-0.5 max-w-[200px]">
+                        ${(order.ticket_types && order.ticket_types.length > 0)
+                            ? order.ticket_types.map(tt => `<span class="px-2 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary inline-block">${escHtml(tt)}</span>`).join('')
+                            : '<span class="text-xs text-muted">-</span>'}
+                    </div>
                 </td>
                 <td class="px-4 py-3 text-center">
                     <span class="font-semibold text-secondary">${order.tickets_count || 0}</span>
@@ -338,21 +342,68 @@ function goToPage(page) {
     loadOrders();
 }
 
-function exportSales() {
-    // Build export URL with current filters
-    const params = new URLSearchParams();
-
+async function exportSales() {
     const eventId = document.getElementById('filter-event').value;
-    const status = document.getElementById('filter-status').value;
-    const fromDate = document.getElementById('filter-from').value;
-    const toDate = document.getElementById('filter-to').value;
+    if (!eventId) {
+        AmbiletNotifications.error('Selecteaza un eveniment');
+        return;
+    }
 
-    if (eventId) params.set('event_id', eventId);
-    if (status) params.set('status', status);
-    if (fromDate) params.set('from_date', fromDate);
-    if (toDate) params.set('to_date', toDate);
+    try {
+        AmbiletNotifications.info('Se genereaza exportul...');
 
-    AmbiletNotifications.info('Export in lucru... Functionalitatea va fi disponibila curand.');
+        const authToken = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null);
+        if (!authToken) {
+            AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
+            return;
+        }
+
+        const params = new URLSearchParams();
+        params.set('action', 'organizer.orders.export');
+        params.set('event_id', eventId);
+
+        const status = document.getElementById('filter-status').value;
+        const fromDate = document.getElementById('filter-from').value;
+        const toDate = document.getElementById('filter-to').value;
+        if (status) params.set('status', status);
+        if (fromDate) params.set('from_date', fromDate);
+        if (toDate) params.set('to_date', toDate);
+
+        const response = await fetch(`/api/proxy.php?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Accept': 'text/csv'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Eroare la export');
+        }
+
+        // Build filename: [event name]-Vanzari-[date].csv
+        const selectedEvent = eventsData.find(e => String(e.id) === String(eventId));
+        const eventTitle = selectedEvent ? (selectedEvent.name || selectedEvent.title || 'Eveniment') : 'Eveniment';
+        const safeTitle = eventTitle.replace(/[^a-zA-Z0-9àáâãäåăîșțâéèêëìíïòóôõöùúûüñç -]/gi, '').replace(/\s+/g, '-');
+        const exportDate = new Date().toISOString().slice(0, 10);
+        const filename = `${safeTitle}-Vanzari-${exportDate}.csv`;
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        AmbiletNotifications.success('Exportul a fost descarcat');
+    } catch (error) {
+        console.error('Export error:', error);
+        AmbiletNotifications.error(error.message || 'Eroare la export');
+    }
 }
 </script>
 JS;
