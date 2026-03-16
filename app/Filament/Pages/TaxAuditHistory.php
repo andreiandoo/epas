@@ -22,7 +22,7 @@ class TaxAuditHistory extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Audit History';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Core';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
 
     protected static ?string $navigationParentItem = 'Taxes';
 

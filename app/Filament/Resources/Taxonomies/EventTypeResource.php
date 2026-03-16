@@ -19,8 +19,7 @@ class EventTypeResource extends Resource
     protected static ?string $model = EventType::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static UnitEnum|string|null $navigationGroup = 'Core';
-    protected static ?string $navigationParentItem = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
     protected static ?string $navigationLabel = 'Event Types';
     protected static ?int    $navigationSort  = 20;
 

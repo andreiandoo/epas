@@ -15,6 +15,7 @@ class OrdersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('id')
                     ->label('Order #')
@@ -23,41 +24,74 @@ class OrdersTable
                     ->searchable()
                     ->url(fn ($record) => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $record])),
 
-                TextColumn::make('tenant.public_name')
-                    ->label('Tenant')
-                    ->sortable()
-                    ->searchable()
-                    ->url(fn ($record) => $record->tenant
-                        ? \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $record->tenant])
-                        : null
-                    ),
+                TextColumn::make('source_name')
+                    ->label('Tenant / Marketplace')
+                    ->getStateUsing(function ($record) {
+                        if ($record->tenant) {
+                            return $record->tenant->public_name ?? $record->tenant->name;
+                        }
+                        if ($record->marketplaceClient) {
+                            return $record->marketplaceClient->name;
+                        }
+                        return '-';
+                    })
+                    ->description(function ($record) {
+                        if ($record->marketplace_client_id) {
+                            return 'Marketplace';
+                        }
+                        if ($record->tenant_id) {
+                            return 'Tenant';
+                        }
+                        return null;
+                    })
+                    ->searchable(false)
+                    ->sortable(false),
 
-                // Customer display + link la view Customer
-                TextColumn::make('customer.full_name')
+                TextColumn::make('customer_display')
                     ->label('Customer')
-                    ->formatStateUsing(function ($state, $record) {
-                        // fallback: email dacă nu avem nume
-                        return $state ?: $record->customer?->email ?: $record->customer_email;
+                    ->getStateUsing(function ($record) {
+                        return $record->customer_name
+                            ?? $record->customer?->full_name
+                            ?? (is_array($record->meta) ? ($record->meta['customer_name'] ?? null) : null)
+                            ?? $record->customer?->email
+                            ?? $record->customer_email
+                            ?? '-';
                     })
                     ->url(fn ($record) => $record->customer
                         ? \App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $record->customer])
                         : null
                     )
-                    ->sortable()
-                    ->searchable(),
+                    ->searchable(false),
 
-                TextColumn::make('total_cents')
+                TextColumn::make('order_total')
                     ->label('Total')
-                    ->money('RON', divideBy: 100)
-                    ->sortable(),
+                    ->getStateUsing(function ($record) {
+                        $total = $record->total ?? (($record->total_cents ?? 0) / 100);
+                        $currency = $record->currency ?? 'RON';
+                        return number_format((float) $total, 2) . ' ' . $currency;
+                    })
+                    ->sortable(query: function ($query, string $direction) {
+                        return $query->orderByRaw('COALESCE(total, total_cents / 100.0) ' . $direction);
+                    }),
 
                 BadgeColumn::make('status')
                     ->colors([
                         'warning' => 'pending',
-                        'success' => 'paid',
+                        'success' => fn ($state) => in_array($state, ['paid', 'confirmed', 'completed']),
                         'danger'  => fn ($state) => in_array($state, ['cancelled', 'failed']),
-                        'gray'    => 'refunded',
+                        'gray'    => fn ($state) => in_array($state, ['refunded', 'expired']),
                     ])
+                    ->sortable(),
+
+                TextColumn::make('source')
+                    ->label('Source')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'web' => 'primary',
+                        'pos', 'app' => 'warning',
+                        'api' => 'gray',
+                        default => 'gray',
+                    })
                     ->sortable(),
 
                 TextColumn::make('created_at')
@@ -91,9 +125,18 @@ class OrdersTable
                 Tables\Filters\SelectFilter::make('status')->options([
                     'pending'   => 'Pending',
                     'paid'      => 'Paid',
+                    'confirmed' => 'Confirmed',
+                    'completed' => 'Completed',
                     'cancelled' => 'Cancelled',
                     'refunded'  => 'Refunded',
                     'failed'    => 'Failed',
+                    'expired'   => 'Expired',
+                ]),
+                Tables\Filters\SelectFilter::make('source')->options([
+                    'web' => 'Web',
+                    'pos' => 'POS',
+                    'app' => 'App',
+                    'api' => 'API',
                 ]),
                 Tables\Filters\SelectFilter::make('tenant_id')
                     ->label('Tenant')

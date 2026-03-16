@@ -20,8 +20,7 @@ class MarketplaceTaxTemplateResource extends Resource
     protected static ?string $model = MarketplaceTaxTemplate::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Tax Templates';
-    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
-    protected static ?string $navigationParentItem = 'Marketplaces';
+    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
     protected static ?int $navigationSort = 51;
     protected static ?string $modelLabel = 'Tax Template';
     protected static ?string $pluralModelLabel = 'Tax Templates';

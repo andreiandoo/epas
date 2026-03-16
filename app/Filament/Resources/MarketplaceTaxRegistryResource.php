@@ -23,8 +23,7 @@ class MarketplaceTaxRegistryResource extends Resource
     protected static ?string $model = MarketplaceTaxRegistry::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-library';
     protected static ?string $navigationLabel = 'Tax Registries';
-    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
-    protected static ?string $navigationParentItem = 'Marketplaces';
+    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
     protected static ?int $navigationSort = 50;
     protected static ?string $modelLabel = 'Tax Registry';
     protected static ?string $pluralModelLabel = 'Tax Registries';

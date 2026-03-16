@@ -27,10 +27,10 @@
                 </div>
                 <div>
                     <span class="inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full
-                        @if($order->status === 'paid') bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
+                        @if(in_array($order->status, ['paid', 'confirmed', 'completed'])) bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200
                         @elseif($order->status === 'pending') bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200
                         @elseif(in_array($order->status, ['cancelled', 'failed'])) bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200
-                        @elseif($order->status === 'refunded') bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
+                        @elseif(in_array($order->status, ['refunded', 'expired'])) bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                         @else bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300
                         @endif">
                         {{ ucfirst($order->status) }}
@@ -40,37 +40,56 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div class="p-4 bg-gray-50 rounded-lg dark:bg-gray-900">
-                    <p class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Tenant</p>
+                    <p class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Tenant / Marketplace</p>
                     <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
                         @if($order->tenant)
                             <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $order->tenant]) }}" class="text-primary-600 hover:underline dark:text-primary-400">
-                                {{ $order->tenant->name }}
+                                {{ $order->tenant->public_name ?? $order->tenant->name }}
                             </a>
+                            <span class="text-xs text-gray-400">(Tenant)</span>
+                        @elseif($order->marketplaceClient)
+                            <span>{{ $order->marketplaceClient->name }}</span>
+                            <span class="text-xs text-gray-400">(Marketplace)</span>
                         @else
                             N/A
                         @endif
                     </p>
-                    @if($order->tenant?->domain)
-                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $order->tenant->domain }}</p>
+                    @if($order->source)
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Source: {{ ucfirst($order->source) }}</p>
                     @endif
                 </div>
 
                 <div class="p-4 bg-gray-50 rounded-lg dark:bg-gray-900">
                     <p class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Customer</p>
                     <p class="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                        @php
+                            $customerName = $order->customer_name
+                                ?? $order->customer?->full_name
+                                ?? (is_array($order->meta) ? ($order->meta['customer_name'] ?? null) : null)
+                                ?? $order->customer?->email
+                                ?? $order->customer_email
+                                ?? 'N/A';
+                        @endphp
                         @if($order->customer)
                             <a href="{{ \App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $order->customer]) }}" class="text-primary-600 hover:underline dark:text-primary-400">
-                                {{ $order->customer->full_name ?? $order->customer->email }}
+                                {{ $customerName }}
                             </a>
                         @else
-                            {{ $order->customer_email ?? 'N/A' }}
+                            {{ $customerName }}
                         @endif
                     </p>
+                    @if($order->customer_email)
+                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $order->customer_email }}</p>
+                    @endif
                 </div>
 
                 <div class="p-4 bg-gray-50 rounded-lg dark:bg-gray-900">
                     <p class="text-xs font-medium text-gray-500 uppercase dark:text-gray-400">Total</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format(($order->total_cents ?? 0) / 100, 2) }} RON</p>
+                    @php
+                        $orderTotal = $order->total ?? (($order->total_cents ?? 0) / 100);
+                        $orderCurrency = $order->currency ?? 'RON';
+                    @endphp
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format((float) $orderTotal, 2) }} {{ $orderCurrency }}</p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">{{ $tickets->count() }} {{ $tickets->count() === 1 ? 'ticket' : 'tickets' }}</p>
                 </div>
             </div>

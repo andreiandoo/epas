@@ -19,8 +19,7 @@ class MarketplaceRefundRequestResource extends Resource
     protected static ?string $model = MarketplaceRefundRequest::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-uturn-left';
     protected static ?string $navigationLabel = 'Refund Requests';
-    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
-    protected static ?string $navigationParentItem = 'Marketplaces';
+    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
     protected static ?int $navigationSort = 30;
     protected static ?string $modelLabel = 'Refund Request';
     protected static ?string $pluralModelLabel = 'Refund Requests';
