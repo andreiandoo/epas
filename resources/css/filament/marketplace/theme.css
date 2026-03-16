@@ -78,22 +78,48 @@ body {
 
 /* Header: stack title and actions vertically on edit/view pages with many actions */
 /* Scope to pages that have tabs (edit pages), not list pages */
-.fi-page-edit-record .fi-header,
-.fi-page-view-record .fi-header {
+.fi-resource-edit-record-page .fi-header,
+.fi-resource-view-record-page .fi-header {
     flex-direction: column !important;
     align-items: flex-start !important;
 }
 
-.fi-page-edit-record .fi-header .fi-header-actions-ctn,
-.fi-page-view-record .fi-header .fi-header-actions-ctn {
+.fi-resource-edit-record-page .fi-header .fi-header-actions-ctn,
+.fi-resource-view-record-page .fi-header .fi-header-actions-ctn {
     flex-wrap: wrap;
 }
 
 /* List pages: header row with title left, actions right */
-.fi-page-list-records .fi-header {
+.fi-resource-list-records-page .fi-header {
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
+}
+
+/* ─── Tabs / header actions moved inside table toolbar ──────────── */
+
+/* When tabs are moved inside the toolbar, style them inline */
+.fi-ta-header-toolbar > .fi-tabs {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.fi-ta-header-toolbar > .fi-tabs .fi-tabs-item-button {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+}
+
+/* When header actions are moved inside the toolbar */
+.fi-ta-header-toolbar > .fi-header-actions-ctn {
+    flex-shrink: 0;
+}
+
+/* Hide the empty tabs wrapper left behind after moving .fi-tabs out */
+.fi-resource-list-records-page .fi-sc-tabs:not(:has(.fi-tabs)) {
+    display: none !important;
 }
 
 /* Fix dropdown/select option styling */

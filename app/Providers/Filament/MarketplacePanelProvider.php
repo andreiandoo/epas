@@ -626,6 +626,70 @@ class MarketplacePanelProvider extends PanelProvider
                 });
             });
             </script>
+            HTML)
+
+            // Move tabs / header actions inside the table toolbar on list pages
+            ->renderHook('panels::body.end', fn () => <<<'HTML'
+            <script>
+            (function() {
+                // Pages where tabs should move into the table toolbar
+                const TABS_INSIDE_TABLE = ['/organizers'];
+                // Pages where header "New" button should move into the table toolbar
+                const BUTTON_INSIDE_TABLE = ['/artists', '/venues', '/seating-layouts', '/marketplace-customers', '/gift-cards'];
+
+                function getPath() {
+                    return window.location.pathname.replace(/\/+$/, '');
+                }
+
+                function matchesAny(path, patterns) {
+                    return patterns.some(p => path.endsWith(p));
+                }
+
+                function moveTabsIntoToolbar() {
+                    const path = getPath();
+                    if (!matchesAny(path, TABS_INSIDE_TABLE)) return;
+
+                    const page = document.querySelector('.fi-resource-list-records-page');
+                    if (!page) return;
+
+                    const tabs = page.querySelector('.fi-tabs');
+                    const toolbar = page.querySelector('.fi-ta-header-toolbar');
+                    if (!tabs || !toolbar || tabs.dataset.epMoved) return;
+
+                    tabs.dataset.epMoved = '1';
+                    tabs.style.marginRight = 'auto';
+                    toolbar.prepend(tabs);
+                }
+
+                function moveCreateButtonIntoToolbar() {
+                    const path = getPath();
+                    if (!matchesAny(path, BUTTON_INSIDE_TABLE)) return;
+
+                    const page = document.querySelector('.fi-resource-list-records-page');
+                    if (!page) return;
+
+                    const toolbar = page.querySelector('.fi-ta-header-toolbar');
+                    if (!toolbar) return;
+
+                    const headerActions = page.querySelector('.fi-header .fi-header-actions-ctn');
+                    if (!headerActions || headerActions.dataset.epMoved) return;
+
+                    headerActions.dataset.epMoved = '1';
+                    headerActions.style.marginRight = 'auto';
+                    toolbar.prepend(headerActions);
+                }
+
+                function run() {
+                    requestAnimationFrame(() => {
+                        moveTabsIntoToolbar();
+                        moveCreateButtonIntoToolbar();
+                    });
+                }
+
+                document.addEventListener('DOMContentLoaded', run);
+                document.addEventListener('livewire:navigated', run);
+            })();
+            </script>
             HTML);
     }
 }
