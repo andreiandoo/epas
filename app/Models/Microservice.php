@@ -58,6 +58,18 @@ class Microservice extends Model
         return $this->hasMany(TenantMicroservice::class);
     }
 
+    public function marketplaceClients(): BelongsToMany
+    {
+        return $this->belongsToMany(MarketplaceClient::class, 'marketplace_client_microservices')
+            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings', 'usage_stats', 'is_default', 'sort_order'])
+            ->withTimestamps();
+    }
+
+    public function marketplaceClientMicroservices(): HasMany
+    {
+        return $this->hasMany(MarketplaceClientMicroservice::class);
+    }
+
     /**
      * Scope pentru microservicii active
      */

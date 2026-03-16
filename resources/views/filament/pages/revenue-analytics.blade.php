@@ -274,7 +274,7 @@
                                                 {{ $ms['is_recurring'] ? 'Rec' : 'Once' }}
                                             </span>
                                         </td>
-                                        <td class="py-2 px-2 text-right text-gray-300">{{ $ms['active_tenants'] }}</td>
+                                        <td class="py-2 px-2 text-right text-gray-300" title="Tenants: {{ $ms['active_tenants'] }}, Marketplace: {{ $ms['active_marketplace_clients'] ?? 0 }}">{{ $ms['active_total'] ?? $ms['active_tenants'] }}</td>
                                         <td class="py-2 px-2 text-right font-medium {{ $ms['is_recurring'] ? 'text-green-400' : 'text-amber-400' }}">€{{ number_format($ms['monthly_revenue'], 0) }}</td>
                                     </tr>
                                 @endforeach

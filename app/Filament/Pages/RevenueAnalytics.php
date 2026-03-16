@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\PlatformCost;
 use App\Models\Microservice;
+use App\Models\MarketplaceClientMicroservice;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 use Livewire\Attributes\Url;
@@ -68,16 +69,33 @@ class RevenueAnalytics extends Page
         // === REVENUE FROM ORDERS (Commission) ===
         $currentMonthOrderRevenue = Order::where('status', 'completed')
             ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
-            ->sum('total_cents') / 100;
+            ->sum('total') ?: (Order::where('status', 'completed')
+                ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
+                ->sum('total_cents') / 100);
 
         $lastMonthOrderRevenue = Order::where('status', 'completed')
             ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('total_cents') / 100;
+            ->sum('total') ?: (Order::where('status', 'completed')
+                ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+                ->sum('total_cents') / 100);
 
-        // Calculate commission from orders (average commission rate from tenants)
+        // Use actual commission_amount from orders (falls back to estimated if not available)
+        $currentMonthCommission = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$currentMonthStart, $currentMonthEnd])
+            ->sum('commission_amount');
+
+        $lastMonthCommission = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('commission_amount');
+
+        // If no commission_amount data, fall back to estimated calculation
         $avgCommissionRate = Tenant::where('status', 'active')->avg('commission_rate') ?? 2;
-        $currentMonthCommission = $currentMonthOrderRevenue * ($avgCommissionRate / 100);
-        $lastMonthCommission = $lastMonthOrderRevenue * ($avgCommissionRate / 100);
+        if ($currentMonthCommission == 0 && $currentMonthOrderRevenue > 0) {
+            $currentMonthCommission = $currentMonthOrderRevenue * ($avgCommissionRate / 100);
+        }
+        if ($lastMonthCommission == 0 && $lastMonthOrderRevenue > 0) {
+            $lastMonthCommission = $lastMonthOrderRevenue * ($avgCommissionRate / 100);
+        }
 
         // === MICROSERVICE REVENUE BREAKDOWN ===
         $microserviceData = $this->calculateMicroserviceBreakdown();
@@ -165,9 +183,17 @@ class RevenueAnalytics extends Page
         $microservices = Microservice::where('is_active', true)->get();
 
         foreach ($microservices as $microservice) {
-            $activeCount = $microservice->tenants()
+            // Count active tenants using this microservice
+            $activeTenantCount = $microservice->tenants()
                 ->wherePivot('status', 'active')
                 ->count();
+
+            // Count active marketplace clients using this microservice
+            $activeMarketplaceCount = MarketplaceClientMicroservice::where('microservice_id', $microservice->id)
+                ->where('status', 'active')
+                ->count();
+
+            $activeCount = $activeTenantCount + $activeMarketplaceCount;
 
             $isRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);
 
@@ -190,7 +216,9 @@ class RevenueAnalytics extends Page
                 'name' => $microservice->name,
                 'price' => $microservice->price,
                 'billing_cycle' => $microservice->billing_cycle,
-                'active_tenants' => $activeCount,
+                'active_tenants' => $activeTenantCount,
+                'active_marketplace_clients' => $activeMarketplaceCount,
+                'active_total' => $activeCount,
                 'monthly_revenue' => $monthlyRevenue,
                 'is_recurring' => $isRecurring,
                 'projections' => [
@@ -231,9 +259,18 @@ class RevenueAnalytics extends Page
     {
         $orderRevenue = Order::where('status', 'completed')
             ->whereBetween('created_at', [$start, $end])
-            ->sum('total_cents') / 100;
+            ->sum('total') ?: (Order::where('status', 'completed')
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('total_cents') / 100);
 
-        $commission = $orderRevenue * ($avgCommissionRate / 100);
+        // Use actual commission data, fall back to estimate
+        $commission = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('commission_amount');
+
+        if ($commission == 0 && $orderRevenue > 0) {
+            $commission = $orderRevenue * ($avgCommissionRate / 100);
+        }
 
         // Calculate months in period for recurring revenue
         $monthsInPeriod = $start->diffInMonths($end) + 1;
@@ -251,16 +288,27 @@ class RevenueAnalytics extends Page
 
     protected function calculateMonthlyData(): void
     {
-        $this->monthlyData = collect(range(11, 0))->map(function ($monthsAgo) {
+        $avgCommissionRate = Tenant::where('status', 'active')->avg('commission_rate') ?? 2;
+
+        $this->monthlyData = collect(range(11, 0))->map(function ($monthsAgo) use ($avgCommissionRate) {
             $date = now()->subMonths($monthsAgo);
             $start = $date->copy()->startOfMonth();
             $end = $date->copy()->endOfMonth();
 
             $orderRevenue = Order::where('status', 'completed')
                 ->whereBetween('created_at', [$start, $end])
-                ->sum('total_cents') / 100;
+                ->sum('total') ?: (Order::where('status', 'completed')
+                    ->whereBetween('created_at', [$start, $end])
+                    ->sum('total_cents') / 100);
 
-            $commission = $orderRevenue * 0.02;
+            // Use actual commission amounts, fall back to estimate
+            $commission = Order::where('status', 'completed')
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('commission_amount');
+
+            if ($commission == 0 && $orderRevenue > 0) {
+                $commission = $orderRevenue * ($avgCommissionRate / 100);
+            }
 
             return [
                 'month' => $date->format('M Y'),
