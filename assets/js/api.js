@@ -298,6 +298,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/goals$/)) return 'organizer.event.goals';
         if (endpoint.match(/\/organizer\/events\/\d+\/milestones\/\d+$/)) return 'organizer.event.milestone';
         if (endpoint.match(/\/organizer\/events\/\d+\/milestones$/)) return 'organizer.event.milestones';
+        if (endpoint.match(/\/organizer\/events\/\d+\/images$/)) return 'organizer.event.images';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
         if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
         if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
@@ -541,6 +542,11 @@ const AmbiletAPI = {
         const organizerEventCheckinMatch = endpoint.match(/\/organizer\/events\/(\d+)\/check-in\/(.+)/);
         if (organizerEventCheckinMatch) {
             return `event_id=${encodeURIComponent(organizerEventCheckinMatch[1])}&barcode=${encodeURIComponent(organizerEventCheckinMatch[2])}`;
+        }
+
+        const organizerEventImagesMatch = endpoint.match(/\/organizer\/events\/(\d+)\/images$/);
+        if (organizerEventImagesMatch) {
+            return `event_id=${encodeURIComponent(organizerEventImagesMatch[1])}`;
         }
 
         const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel|status)$/);
@@ -1547,6 +1553,36 @@ const AmbiletAPI = {
          */
         async updateEvent(eventId, data) {
             return AmbiletAPI.put(`/organizer/events/${eventId}`, data);
+        },
+
+        /**
+         * Upload event images (poster and/or cover)
+         */
+        async uploadEventImages(eventId, posterFile, coverFile) {
+            const formData = new FormData();
+            if (posterFile) formData.append('poster', posterFile);
+            if (coverFile) formData.append('cover_image', coverFile);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const params = AmbiletAPI.getProxyParams(`/organizer/events/${eventId}/images`);
+            const url = `${baseUrl}?action=organizer.event.images&${params}`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: formData,
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new APIError(data.message || 'Image upload failed', response.status, data);
+            }
+            return data;
         },
 
         /**

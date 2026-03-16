@@ -1897,6 +1897,24 @@ function initDragDrop() {
 
 // ==================== SAVE EVENT ====================
 
+async function uploadEventImagesIfNeeded(eventId) {
+    const form = document.getElementById('create-event-form');
+    const posterInput = form.querySelector('[name="poster"]');
+    const coverInput = form.querySelector('[name="cover_image"]');
+
+    const posterFile = posterInput?.files?.[0] || null;
+    const coverFile = coverInput?.files?.[0] || null;
+
+    if (!posterFile && !coverFile) return;
+
+    try {
+        await AmbiletAPI.organizer.uploadEventImages(eventId, posterFile, coverFile);
+    } catch (error) {
+        console.error('Image upload error:', error);
+        AmbiletNotifications.error('Evenimentul a fost salvat, dar imaginile nu s-au putut încărca. Încearcă din nou.');
+    }
+}
+
 function collectFormData() {
     const form = document.getElementById('create-event-form');
     const durationMode = form.querySelector('[name="duration_mode"]:checked')?.value;
@@ -2067,6 +2085,9 @@ async function saveEventDraft() {
             const eventId = result.data?.event?.id || result.data?.id || savedEventId;
             if (eventId) {
                 document.getElementById('saved-event-id').value = eventId;
+
+                // Upload images if any were selected
+                await uploadEventImagesIfNeeded(eventId);
             }
 
             saveStatus.textContent = 'Salvat la ' + new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
@@ -2125,6 +2146,11 @@ async function saveAndSubmitEvent() {
             if (eventId) {
                 document.getElementById('saved-event-id').value = eventId;
             }
+        }
+
+        // Upload images before submitting
+        if (eventId) {
+            await uploadEventImagesIfNeeded(eventId);
         }
 
         if (eventId) {

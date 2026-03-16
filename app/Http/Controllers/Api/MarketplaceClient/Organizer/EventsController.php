@@ -634,6 +634,52 @@ class EventsController extends BaseController
     }
 
     /**
+     * Upload images for an event (poster and/or cover)
+     */
+    public function uploadImages(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = Event::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $request->validate([
+            'poster' => 'nullable|image|mimes:jpeg,png,webp|max:10240',
+            'cover_image' => 'nullable|image|mimes:jpeg,png,webp|max:10240',
+        ]);
+
+        $updateData = [];
+
+        if ($request->hasFile('poster')) {
+            $posterPath = $request->file('poster')->store('events/posters', 'public');
+            $updateData['poster_url'] = $posterPath;
+            $updateData['poster_original_filename'] = $request->file('poster')->getClientOriginalName();
+        }
+
+        if ($request->hasFile('cover_image')) {
+            $heroPath = $request->file('cover_image')->store('events/hero', 'public');
+            $updateData['hero_image_url'] = $heroPath;
+            $updateData['hero_image_original_filename'] = $request->file('cover_image')->getClientOriginalName();
+        }
+
+        if (empty($updateData)) {
+            return $this->error('No images provided', 400);
+        }
+
+        $event->update($updateData);
+
+        return $this->success([
+            'event' => $this->formatEventDetailed($event->fresh()->load(['ticketTypes', 'venue'])),
+        ], 'Images uploaded successfully');
+    }
+
+    /**
      * Delete an event (only unpublished events without orders)
      */
     public function destroy(Request $request, int $eventId): JsonResponse

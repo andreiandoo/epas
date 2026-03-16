@@ -88,7 +88,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Email Marketing -->
-                <div class="flex flex-col justify-between overflow-hidden bg-white border rounded-2xl border-border">
+                <div class="flex-col justify-between hidden overflow-hidden bg-white border rounded-2xl border-border">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-gradient-to-br from-accent to-orange-600 rounded-xl">
@@ -142,7 +142,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Ad Campaign Creation -->
-                <div class="flex flex-col justify-between overflow-hidden bg-white border rounded-2xl border-border">
+                <div class="flex-col justify-between hidden overflow-hidden bg-white border rounded-2xl border-border">
                     <div class="p-6">
                         <div class="flex items-start gap-4">
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl">
