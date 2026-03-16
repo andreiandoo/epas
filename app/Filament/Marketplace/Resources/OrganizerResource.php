@@ -102,7 +102,6 @@ class OrganizerResource extends Resource
                                 ->password()
                                 ->required(fn (string $context): bool => $context === 'create')
                                 ->dehydrated(fn ($state) => filled($state))
-                                ->dehydrateStateUsing(fn ($state) => \Illuminate\Support\Facades\Hash::make($state))
                                 ->helperText(fn (string $context): string =>
                                     $context === 'create'
                                         ? 'Parola pentru contul organizatorului'
