@@ -16,7 +16,7 @@ class WebTemplateAnalytics extends Page
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Analiză';
     protected static ?string $title = 'Analiză Web Templates';
-    protected static string $view = 'filament.pages.web-template-analytics';
+    protected string $view = 'filament.pages.web-template-analytics';
 
     public function getViewData(): array
     {
