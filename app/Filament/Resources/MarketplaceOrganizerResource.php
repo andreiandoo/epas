@@ -20,7 +20,8 @@ class MarketplaceOrganizerResource extends Resource
     protected static ?string $model = MarketplaceOrganizer::class;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Organizers';
-    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
+    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
+    protected static ?string $navigationParentItem = 'Marketplaces';
     protected static ?int $navigationSort = 20;
     protected static ?string $modelLabel = 'Marketplace Organizer';
     protected static ?string $pluralModelLabel = 'Marketplace Organizers';

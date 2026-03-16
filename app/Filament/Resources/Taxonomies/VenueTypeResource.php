@@ -22,7 +22,8 @@ class VenueTypeResource extends Resource
     protected static ?string $model = VenueType::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
-    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Taxonomies';
     protected static ?string $navigationLabel = 'Venue Types';
     protected static ?int $navigationSort = 25;
 

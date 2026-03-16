@@ -19,7 +19,8 @@ class ArtistTypeResource extends Resource
     protected static ?string $model = ArtistType::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
-    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Taxonomies';
     protected static ?string $navigationLabel = 'Artist Types';
     protected static ?int $navigationSort = 31;
 

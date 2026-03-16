@@ -28,7 +28,9 @@ class MarketplaceClientResource extends Resource
 
     protected static ?string $navigationLabel = 'Marketplace Clients';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
+    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
+
+    protected static ?string $navigationParentItem = 'Marketplaces';
 
     protected static ?int $navigationSort = 10;
 

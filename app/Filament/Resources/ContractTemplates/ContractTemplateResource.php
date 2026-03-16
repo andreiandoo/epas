@@ -20,7 +20,9 @@ class ContractTemplateResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+
+    protected static ?string $navigationParentItem = 'Settings';
 
     protected static ?string $navigationLabel = 'Contract Templates';
 

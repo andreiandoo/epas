@@ -17,7 +17,8 @@ class ApiKeys extends Page implements HasTable
     use InteractsWithTable;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-key';
-    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Settings';
     protected static ?int $navigationSort = 70;
     protected static ?string $title = 'API Keys';
     protected string $view = 'filament.pages.api-keys';

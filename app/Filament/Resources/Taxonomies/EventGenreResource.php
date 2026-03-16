@@ -21,7 +21,8 @@ class EventGenreResource extends Resource
     protected static ?string $model = EventGenre::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-sparkles';
-    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Taxonomies';
     protected static ?int $navigationSort = 11;
     protected static ?string $modelLabel = 'Event Genre';
 

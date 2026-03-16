@@ -22,7 +22,8 @@ class VenueCategoryResource extends Resource
     protected static ?string $model = VenueCategory::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-squares-2x2';
-    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Taxonomies';
     protected static ?string $navigationLabel = 'Venue Categories';
     protected static ?int $navigationSort = 24;
 

@@ -20,7 +20,8 @@ class ArtistGenreResource extends Resource
     protected static ?string $model = ArtistGenre::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-musical-note';
-    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationParentItem = 'Taxonomies';
     protected static ?string $navigationLabel = 'Artist Genres';
     protected static ?int $navigationSort = 32;
 

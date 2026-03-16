@@ -30,7 +30,8 @@ class CustomerResource extends Resource
     // Filament v4 typing
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Tenant Customers';
-    protected static UnitEnum|string|null $navigationGroup = 'Tenants';
+    protected static UnitEnum|string|null $navigationGroup = 'Tix Users';
+    protected static ?string $navigationParentItem = 'Tenants';
     protected static ?int $navigationSort = 30;
 
     public static function form(Schema $schema): Schema
