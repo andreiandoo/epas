@@ -10,7 +10,8 @@ class FixAmbiletPostImportCommand extends Command
     protected $signature = 'fix:ambilet-post-import
         {files* : Path(s) to orders CSV file(s)}
         {--marketplace=1 : marketplace_client_id}
-        {--dry-run}';
+        {--dry-run}
+        {--skip-used-fix : Skip step 1 (do NOT mark tickets as used — use for 2026/live data)}';
 
     protected $description = 'Post-import fixes: tickets→used, wc-processing→failed, newsletter for registered customers';
 
@@ -34,11 +35,14 @@ class FixAmbiletPostImportCommand extends Command
 
         // =====================================================================
         // STEP 1: Mark all imported tickets as 'used' (events are historical)
+        // Skip with --skip-used-fix for 2026/live data imports
         // =====================================================================
         $this->info('');
         $this->info('=== STEP 1: Tickets valid → used ===');
 
-        if ($dryRun) {
+        if ($this->option('skip-used-fix')) {
+            $this->warn('SKIPPED (--skip-used-fix). Tickets remain as-is.');
+        } elseif ($dryRun) {
             $count = DB::table('tickets')
                 ->where('marketplace_client_id', $clientId)
                 ->where('status', 'valid')

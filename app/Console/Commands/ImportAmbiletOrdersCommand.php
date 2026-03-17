@@ -12,7 +12,8 @@ class ImportAmbiletOrdersCommand extends Command
         {files* : Path(s) to orders CSV file(s) — can pass multiple files}
         {--marketplace=1 : marketplace_client_id}
         {--dry-run}
-        {--fresh : Ignore existing maps and re-process all rows}';
+        {--fresh : Ignore existing maps and re-process all rows}
+        {--status-mapping : Map real WC order statuses instead of hardcoding completed/paid}';
 
     protected $description = 'Import AmBilet orders + customers from CSV into Tixello';
 
@@ -122,6 +123,10 @@ class ImportAmbiletOrdersCommand extends Command
                 // Note: event_id and marketplace_organizer_id are populated
                 // in a post-import step at the end of import:ambilet-tickets,
                 // once we know which tickets (→ events → organizers) belong to each order.
+                [$orderStatus, $paymentStatus] = $this->option('status-mapping')
+                    ? $this->mapWcStatus($data['order_status'])
+                    : ['completed', 'paid'];
+
                 $orderData = [
                     'marketplace_client_id'   => $clientId,
                     'marketplace_customer_id' => $customerId,
@@ -135,11 +140,11 @@ class ImportAmbiletOrdersCommand extends Command
                     'commission_rate'         => 0,
                     'commission_amount'       => 0,
                     'currency'                => 'RON',
-                    'status'                  => 'completed',
-                    'payment_status'          => 'paid',
+                    'status'                  => $orderStatus,
+                    'payment_status'          => $paymentStatus,
                     'payment_processor'       => $this->n($data['payment_method']),
                     'source'                  => 'legacy_import',
-                    'paid_at'                 => $paidAt,
+                    'paid_at'                 => $paymentStatus === 'paid' ? $paidAt : null,
                     'meta'                    => json_encode([
                         'wp_order_id'   => $wpOrderId,
                         'imported_from' => 'ambilet',
@@ -200,6 +205,23 @@ class ImportAmbiletOrdersCommand extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * Map a WooCommerce order status to [tixello_status, payment_status].
+     */
+    private function mapWcStatus(string $wcStatus): array
+    {
+        return match (trim($wcStatus, '"')) {
+            'wc-completed',  'completed'  => ['completed', 'paid'],
+            'wc-processing', 'processing' => ['pending',   'pending'],
+            'wc-on-hold',    'on-hold'    => ['pending',   'pending'],
+            'wc-cancelled',  'cancelled'  => ['cancelled', 'failed'],
+            'wc-refunded',   'refunded'   => ['refunded',  'refunded'],
+            'wc-failed',     'failed'     => ['failed',    'failed'],
+            'wc-pending',    'pending'    => ['pending',   'pending'],
+            default                       => ['completed', 'paid'],
+        };
     }
 
     private function n(?string $v): ?string
