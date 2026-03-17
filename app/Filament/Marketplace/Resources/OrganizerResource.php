@@ -407,16 +407,19 @@ class OrganizerResource extends Resource
                                     Forms\Components\Toggle::make('service_settings.featuring_enabled')
                                         ->label('Promovare Eveniment')
                                         ->default(true)
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->helperText('Permite organizatorului să promoveze evenimente pe platformă'),
 
                                     Forms\Components\Toggle::make('service_settings.email_enabled')
                                         ->label('Email Marketing')
                                         ->default(true)
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->helperText('Permite organizatorului să trimită campanii email'),
 
                                     Forms\Components\Toggle::make('service_settings.tracking_enabled')
                                         ->label('Ad Tracking')
                                         ->default(true)
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->live()
                                         ->helperText('Permite organizatorului să folosească tracking pentru campanii'),
 
@@ -429,12 +432,14 @@ class OrganizerResource extends Resource
                                             'one_time' => 'One-time (plată unică)',
                                         ])
                                         ->default('monthly')
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? 'monthly'))
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
                                         ->helperText('Modelul de pricing aplicat acestui organizator pentru serviciul de tracking'),
 
                                     Forms\Components\Toggle::make('service_settings.campaign_enabled')
                                         ->label('Creare Campanii')
                                         ->default(true)
+                                        ->afterStateHydrated(fn ($component, $state) => $component->state($state ?? true))
                                         ->helperText('Permite organizatorului să comande servicii de creare campanii'),
                                 ])
                                 ->columns(2),
