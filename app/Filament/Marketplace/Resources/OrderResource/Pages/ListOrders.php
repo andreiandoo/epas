@@ -14,6 +14,17 @@ class ListOrders extends ListRecords
 {
     protected static string $resource = OrderResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Apply event_id filter from URL query parameter
+        $eventId = request()->query('event_id');
+        if ($eventId) {
+            $this->tableFilters['event_id']['event_id'] = $eventId;
+        }
+    }
+
     public function getHeading(): string|Htmlable
     {
         $count = number_format(static::getResource()::getEloquentQuery()->count());

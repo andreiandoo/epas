@@ -133,9 +133,7 @@ class EditEvent extends EditRecord
             ->openUrlInNewTab();
 
         // Orders button - link to orders filtered by this event
-        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?' . http_build_query([
-            'tableFilters[event_id][event_id]' => $this->record->id,
-        ]);
+        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $this->record->id;
         $orderCount = \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $this->record->id))
             ->where('marketplace_client_id', $marketplace?->id)
             ->count();
