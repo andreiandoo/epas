@@ -648,6 +648,7 @@ class MarketplaceEventsController extends BaseController
                     'available' => $available,
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'max_per_order' => $tt->max_per_order ?? 10,
+                    'multiplier' => $tt->multiplier ?? 1,
                     'status' => $tt->status,
                     'is_sold_out' => $available <= 0,
                     'has_seating' => !empty($seatingSections),
@@ -804,6 +805,7 @@ class MarketplaceEventsController extends BaseController
                     'available' => $available,
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'max_per_order' => $tt->max_per_order ?? 10,
+                    'multiplier' => $tt->multiplier ?? 1,
                     'status' => $available <= 0 ? 'sold_out' : 'available',
                     'commission' => $ticketCommission,
                 ];

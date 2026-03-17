@@ -685,6 +685,7 @@ const EventPage = {
                     available: available,
                     min_per_order: tt.min_per_order || 1,
                     max_per_order: tt.max_per_order || 10,
+                    multiplier: tt.multiplier || 1,
                     status: tt.status,
                     is_sold_out: available <= 0,
                     has_seating: tt.has_seating || false,
@@ -1619,7 +1620,10 @@ const EventPage = {
         if (!tt) return;
 
         const currentQty = this.quantities[ticketId] || 0;
-        let newQty = currentQty + delta;
+        const multiplier = tt.multiplier || 1;
+        // Apply multiplier: delta is +1 or -1, actual step = multiplier
+        const step = delta * multiplier;
+        let newQty = currentQty + step;
         const minPerOrder = tt.min_per_order || 1;
         const maxPerOrder = Math.min(tt.max_per_order || 10, tt.available);
 
@@ -1627,17 +1631,21 @@ const EventPage = {
         if (delta > 0) {
             // Increasing - check max limit
             if (newQty > maxPerOrder) {
-                if (typeof AmbiletNotifications !== 'undefined') {
-                    AmbiletNotifications.warning('Maxim ' + maxPerOrder + ' bilete de acest tip per comandă');
+                if (currentQty < maxPerOrder) {
+                    newQty = maxPerOrder; // Clamp to max
+                } else {
+                    if (typeof AmbiletNotifications !== 'undefined') {
+                        AmbiletNotifications.warning('Maxim ' + maxPerOrder + ' bilete de acest tip per comandă');
+                    }
+                    return;
                 }
-                return;
             }
-            // If going from 0, jump to min_per_order
+            // If going from 0, jump to at least min_per_order (but respect multiplier)
             if (currentQty === 0 && newQty < minPerOrder) {
-                newQty = minPerOrder;
+                newQty = Math.max(minPerOrder, multiplier);
             }
         } else if (delta < 0) {
-            // Decreasing - if would go below min but not to 0, stop at min
+            // Decreasing - if would go below min but not to 0, drop to 0
             if (newQty > 0 && newQty < minPerOrder) {
                 newQty = 0; // Allow removing completely
             }

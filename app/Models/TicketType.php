@@ -52,6 +52,8 @@ class TicketType extends Model
         'is_entry_ticket',
         // Admin internal notes
         'admin_notes',
+        // Multiplier for quantity increment/decrement step
+        'multiplier',
         // Series fields for ticket numbering
         'series_start',
         'series_end',

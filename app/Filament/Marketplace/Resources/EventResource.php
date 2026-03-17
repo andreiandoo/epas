@@ -1248,7 +1248,7 @@ class EventResource extends Resource
                                         ])->columnSpan(12),
 
                                         // Order quantity limits
-                                        SC\Grid::make(2)->schema([
+                                        SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('min_per_order')
                                                 ->label($t('Min bilete/comandă', 'Min tickets/order'))
                                                 ->inlineLabel($il)
@@ -1263,6 +1263,13 @@ class EventResource extends Resource
                                                 ->minValue(1)
                                                 ->default(10)
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
+                                            Forms\Components\TextInput::make('multiplier')
+                                                ->label($t('Multiplicator', 'Multiplier'))
+                                                ->inlineLabel($il)
+                                                ->numeric()
+                                                ->minValue(1)
+                                                ->default(1)
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
                                         ])->columnSpan(12),
 
                                         // Single-day ticket date (visible only for range events)
