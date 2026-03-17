@@ -61,11 +61,17 @@ class ListOrders extends ListRecords
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'failed')->count())
                 ->badgeColor('danger'),
             'cancelled' => Tab::make('Anulate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'cancelled')->count())
+                ->badgeColor('gray'),
             'refunded' => Tab::make('Rambursate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'refunded')->count())
+                ->badgeColor('gray'),
             'expired' => Tab::make('Expirate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'expired'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'expired')->count())
+                ->badgeColor('gray'),
         ];
     }
 }
