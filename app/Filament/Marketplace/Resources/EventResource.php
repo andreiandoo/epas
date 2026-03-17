@@ -1911,7 +1911,7 @@ class EventResource extends Resource
                                         }
 
                                         return $query->orderBy('name')->get()->mapWithKeys(fn ($tour) => [
-                                            $tour->id => $tour->name ?: ($t('Grupare', 'Grouping') . ' #' . $tour->id),
+                                            $tour->id => $tour->name ?: ('Grupare #' . $tour->id),
                                         ]);
                                     })
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'existing'),
