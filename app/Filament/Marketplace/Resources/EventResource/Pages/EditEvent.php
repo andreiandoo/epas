@@ -132,6 +132,19 @@ class EditEvent extends EditRecord
             ->url($couponUrl)
             ->openUrlInNewTab();
 
+        // Orders button - link to orders filtered by this event
+        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?' . http_build_query([
+            'tableFilters[event_id][event_id]' => $this->record->id,
+        ]);
+        $orderCount = \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $this->record->id))
+            ->where('marketplace_client_id', $marketplace?->id)
+            ->count();
+        $actions[] = Actions\Action::make('orders')
+            ->label('Comenzi' . ($orderCount > 0 ? " ({$orderCount})" : ''))
+            ->icon('heroicon-o-shopping-bag')
+            ->color('gray')
+            ->url($ordersUrl);
+
         // Test order link - generates a signed URL for placing test orders on unpublished events
         $actions[] = Actions\Action::make('test_order_link')
             ->label('Link test comandă')

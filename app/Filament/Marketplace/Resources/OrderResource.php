@@ -262,6 +262,11 @@ class OrderResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('event_names')
                     ->label('Eveniment')
+                    ->searchable(query: function ($query, $search) {
+                        $query->whereHas('tickets.event', function ($q) use ($search) {
+                            $q->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
+                        });
+                    })
                     ->getStateUsing(function ($record) {
                         // Get unique events from tickets with names and dates
                         $events = $record->tickets
@@ -361,6 +366,25 @@ class OrderResource extends Resource
                         'refunded' => 'Rambursată',
                         'failed' => 'Eșuată',
                         'expired' => 'Expirată',
+                    ]),
+                Tables\Filters\Filter::make('event_id')
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['event_id'] ?? null,
+                        fn ($q, $eventId) => $q->whereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId))
+                    ))
+                    ->form([
+                        \Filament\Forms\Components\Select::make('event_id')
+                            ->label('Eveniment')
+                            ->searchable()
+                            ->getSearchResultsUsing(function (string $search) {
+                                $marketplace = static::getMarketplaceClient();
+                                return \App\Models\Event::where('marketplace_client_id', $marketplace?->id)
+                                    ->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%'])
+                                    ->limit(20)
+                                    ->get()
+                                    ->mapWithKeys(fn ($e) => [$e->id => $e->getTranslation('title', 'ro') ?: $e->name]);
+                            })
+                            ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
             ])
             ->defaultSort('created_at', 'desc');
