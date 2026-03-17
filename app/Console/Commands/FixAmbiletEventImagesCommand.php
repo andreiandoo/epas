@@ -153,6 +153,11 @@ class FixAmbiletEventImagesCommand extends Command
             return false;
         }
 
+        // Palette/indexed images must be converted to true color before WebP
+        if (!imageistruecolor($image)) {
+            imagepalettetotruecolor($image);
+        }
+
         // Preserve transparency
         imagesavealpha($image, true);
 
