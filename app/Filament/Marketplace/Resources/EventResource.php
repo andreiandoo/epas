@@ -1207,7 +1207,18 @@ class EventResource extends Resource
                                                 ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
                                                 ->numeric()
                                                 ->minValue(0)
-                                                ->required(),
+                                                ->required()
+                                                ->live(onBlur: true)
+                                                ->hint(function (SGet $get) use ($t) {
+                                                    $targetPrice = (float) ($get('../../target_price') ?: 0);
+                                                    $price = (float) ($get('price_max') ?: 0);
+                                                    if ($targetPrice > 0 && $price > $targetPrice) {
+                                                        return new \Illuminate\Support\HtmlString(
+                                                            '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește prețul la intrare', 'Exceeds door price') . ' (' . number_format($targetPrice, 2) . ')</span>'
+                                                        );
+                                                    }
+                                                    return null;
+                                                }),
                                             Forms\Components\TextInput::make('capacity')
                                                 ->label($t('Stoc bilete', 'Ticket stock'))
                                                 ->inlineLabel($il)
@@ -1215,10 +1226,18 @@ class EventResource extends Resource
                                                 ->numeric()
                                                 ->minValue(0)
                                                 ->required()
-                                                ->hint(function ($record) use ($t) {
-                                                    return $record && $record->quota_sold > 0
-                                                        ? $t('Vândute', 'Sold') . ": {$record->quota_sold}"
-                                                        : null;
+                                                ->live(onBlur: true)
+                                                ->hint(function ($record, SGet $get) use ($t) {
+                                                    $hints = [];
+                                                    if ($record && $record->quota_sold > 0) {
+                                                        $hints[] = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
+                                                    }
+                                                    $generalStock = (int) ($get('../../general_stock') ?: 0);
+                                                    $capacity = (int) ($get('capacity') ?: 0);
+                                                    if ($generalStock > 0 && $capacity > $generalStock) {
+                                                        $hints[] = '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește stocul general', 'Exceeds general stock') . ' (' . $generalStock . ')</span>';
+                                                    }
+                                                    return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
                                                 }),
                                         ])->columnSpan(12),
 
