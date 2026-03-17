@@ -176,7 +176,6 @@ class ImportAmbiletEventsCommand extends Command
 
             if ($dryRun) {
                 $this->line("[DRY RUN] Would create event: {$name} ({$createdAt}) [slug: {$slug}]");
-                $this->map[$wpEventId] = 0;
                 $created++;
                 continue;
             }
@@ -203,10 +202,13 @@ class ImportAmbiletEventsCommand extends Command
         }
 
         fclose($handle);
-        $this->saveMap();
+
+        if (!$dryRun) {
+            $this->saveMap();
+            $this->info("Map saved to: {$this->mapFile}");
+        }
 
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed}");
-        $this->info("Map saved to: {$this->mapFile}");
 
         return 0;
     }
