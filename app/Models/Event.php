@@ -97,6 +97,9 @@ class Event extends Model
         // seo json
         'seo',
 
+        // admin
+        'admin_notes',
+
         // marketplace pricing & tracking
         'target_price',
         'general_stock',

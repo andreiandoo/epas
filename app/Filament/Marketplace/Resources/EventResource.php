@@ -1194,6 +1194,12 @@ class EventResource extends Resource
                                             })
                                             ->columnSpan(12),
 
+                                        Forms\Components\Textarea::make('admin_notes')
+                                            ->label($t('Note interne', 'Internal Notes'))
+                                            ->placeholder($t('Notițe vizibile doar pentru admin...', 'Notes visible only for admin...'))
+                                            ->rows(2)
+                                            ->columnSpan(12),
+
                                         SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('currency')
                                                 ->label($t('Monedă', 'Currency'))
@@ -1917,6 +1923,52 @@ class EventResource extends Resource
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'existing'),
                             ]),
                                     ]), // End Tab 7: Grupare
+
+                                SC\Tabs\Tab::make($t('Observații', 'Notes'))
+                                    ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                                    ->schema([
+                                        SC\Section::make($t('Observații interne eveniment', 'Internal Event Notes'))
+                                            ->schema([
+                                                Forms\Components\Textarea::make('admin_notes')
+                                                    ->label($t('Observații', 'Notes'))
+                                                    ->placeholder($t('Adaugă observații interne despre acest eveniment...', 'Add internal notes about this event...'))
+                                                    ->rows(5)
+                                                    ->columnSpanFull(),
+                                            ]),
+
+                                        SC\Section::make($t('Observații pe tipuri de bilete', 'Ticket Type Notes'))
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('ticket_notes_list')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?Event $record) use ($t) {
+                                                        if (!$record || !$record->exists) {
+                                                            return $t('Salvează evenimentul pentru a vedea observațiile de pe tipurile de bilete.', 'Save the event to see ticket type notes.');
+                                                        }
+
+                                                        $ticketTypes = $record->ticketTypes()->get();
+                                                        $hasNotes = $ticketTypes->filter(fn ($tt) => !empty($tt->admin_notes));
+
+                                                        if ($hasNotes->isEmpty()) {
+                                                            return new \Illuminate\Support\HtmlString(
+                                                                '<p class="text-sm text-gray-500">' . $t('Nicio observație pe tipurile de bilete.', 'No notes on ticket types.') . '</p>'
+                                                            );
+                                                        }
+
+                                                        $html = '<div class="space-y-3">';
+                                                        foreach ($hasNotes as $tt) {
+                                                            $name = e($tt->name);
+                                                            $notes = nl2br(e($tt->admin_notes));
+                                                            $html .= '<div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">';
+                                                            $html .= '<div class="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-1">🎫 ' . $name . '</div>';
+                                                            $html .= '<div class="text-sm text-gray-700 dark:text-gray-300">' . $notes . '</div>';
+                                                            $html .= '</div>';
+                                                        }
+                                                        $html .= '</div>';
+
+                                                        return new \Illuminate\Support\HtmlString($html);
+                                                    }),
+                                            ]),
+                                    ]), // End Tab 8: Observatii
 
                             ]), // End Tabs component
                     ]),

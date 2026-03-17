@@ -443,9 +443,9 @@ class MarketplaceTaxTemplate extends Model
 
             if ($event->ticketTypes) {
                 foreach ($event->ticketTypes as $ticketType) {
-                    $available = (int) ($ticketType->quantity ?? $ticketType->initial_quantity ?? 0);
-                    $sold = (int) ($ticketType->sold_count ?? $ticketType->quantity_sold ?? 0);
-                    $price = (float) ($ticketType->price ?? 0);
+                    $available = (int) ($ticketType->quota_total ?? $ticketType->capacity ?? 0);
+                    $sold = (int) ($ticketType->quota_sold ?? 0);
+                    $price = (float) ($ticketType->display_price ?? $ticketType->price ?? 0);
                     $currency = $ticketType->currency ?? 'RON';
                     $seriesStart = $ticketType->series_start ?? '';
                     $seriesEnd = $ticketType->series_end ?? '';

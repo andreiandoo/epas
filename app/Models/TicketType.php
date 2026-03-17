@@ -50,6 +50,8 @@ class TicketType extends Model
         'is_refundable',
         // Entry ticket flag (for mobile POS filtering)
         'is_entry_ticket',
+        // Admin internal notes
+        'admin_notes',
         // Series fields for ticket numbering
         'series_start',
         'series_end',
