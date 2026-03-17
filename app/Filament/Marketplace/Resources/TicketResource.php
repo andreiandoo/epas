@@ -166,6 +166,25 @@ class TicketResource extends Resource
                         'cancelled' => 'Anulat',
                         'refunded' => 'Rambursat',
                     ]),
+                Tables\Filters\Filter::make('event_id')
+                    ->query(fn ($query, array $data) => $query->when(
+                        $data['event_id'] ?? null,
+                        fn ($q, $eventId) => $q->where('event_id', $eventId)
+                    ))
+                    ->form([
+                        \Filament\Forms\Components\Select::make('event_id')
+                            ->label('Eveniment')
+                            ->searchable()
+                            ->getSearchResultsUsing(function (string $search) {
+                                $marketplace = static::getMarketplaceClient();
+                                return \App\Models\Event::where('marketplace_client_id', $marketplace?->id)
+                                    ->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%'])
+                                    ->limit(20)
+                                    ->get()
+                                    ->mapWithKeys(fn ($e) => [$e->id => $e->getTranslation('title', 'ro') ?: $e->name]);
+                            })
+                            ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
+                    ]),
                 Tables\Filters\TernaryFilter::make('is_invitation')
                     ->label('Tip')
                     ->placeholder('Toate')

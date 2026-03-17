@@ -14,6 +14,16 @@ class ListTickets extends ListRecords
 {
     protected static string $resource = TicketResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        $eventId = request()->query('event_id');
+        if ($eventId) {
+            $this->tableFilters['event_id']['event_id'] = $eventId;
+        }
+    }
+
     public function getHeading(): string|Htmlable
     {
         $count = number_format(static::getResource()::getEloquentQuery()->count());
