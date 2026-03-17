@@ -58,6 +58,11 @@ class ImportAmbiletEventsCommand extends Command
         $created = $skipped = $failed = 0;
 
         while (($row = fgetcsv($handle)) !== false) {
+            if (count($row) !== count($header)) {
+                $this->warn('Skipping malformed row (column count mismatch): ' . implode(',', array_slice($row, 0, 3)));
+                $failed++;
+                continue;
+            }
             $data      = array_combine($header, $row);
             $wpEventId = $data['wp_event_id'];
 
