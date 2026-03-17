@@ -1587,26 +1587,52 @@ class EventResource extends Resource
                     ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: collect($record->title)->first())
                     ->searchable(query: fn (Builder $query, string $search) => $query->where('title', 'like', "%{$search}%"))
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) {$direction}"))
+                    ->limit(40)
                     ->url(fn (Event $record) => static::getUrl('edit', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('tenant.name')
-                    ->label('Tenant')
+                Tables\Columns\TextColumn::make('tenant_display')
+                    ->label('Tenant / Marketplace')
                     ->getStateUsing(function (Event $record) {
-                        if ($record->tenant?->name) {
-                            return $record->tenant->name;
-                        }
-                        if ($record->marketplaceClient?->name) {
-                            return $record->marketplaceClient->name;
-                        }
-                        return '-';
+                        return $record->tenant?->public_name
+                            ?? $record->tenant?->name
+                            ?? $record->marketplaceClient?->name
+                            ?? '-';
                     })
-                    ->sortable()
+                    ->description(function (Event $record) {
+                        if ($record->marketplace_client_id) return 'Marketplace';
+                        if ($record->tenant_id) return 'Tenant';
+                        return null;
+                    })
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('start_date')
+                Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
-                    ->date('d M Y')
-                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("COALESCE(event_date, range_start_date, starts_at) {$direction}"))
+                    ->getStateUsing(function (Event $record) {
+                        if ($record->duration_mode === 'range') {
+                            $start = $record->range_start_date;
+                            $end = $record->range_end_date;
+                            if ($start && $end) {
+                                if ($start->format('m Y') === $end->format('m Y')) {
+                                    return $start->format('d') . '-' . $end->format('d M Y');
+                                }
+                                return $start->format('d M') . ' - ' . $end->format('d M Y');
+                            }
+                            return $start?->format('d M Y') ?? '-';
+                        }
+                        if ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+                            $slots = collect($record->multi_slots)->pluck('date')->filter()->sort();
+                            if ($slots->count() > 1) {
+                                $first = Carbon::parse($slots->first());
+                                $last = Carbon::parse($slots->last());
+                                return $first->format('d M') . ' - ' . $last->format('d M Y');
+                            }
+                            return $slots->count() ? Carbon::parse($slots->first())->format('d M Y') : '-';
+                        }
+                        return $record->event_date?->format('d M Y')
+                            ?? $record->range_start_date?->format('d M Y')
+                            ?? '-';
+                    })
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("COALESCE(event_date, range_start_date) {$direction}"))
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('venue.name')
@@ -1620,15 +1646,46 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('venue.country')
-                    ->label('Country')
-                    ->sortable()
+                Tables\Columns\IconColumn::make('is_published')
+                    ->boolean()
+                    ->label('Published')
+                    ->trueIcon('heroicon-o-eye')
+                    ->falseIcon('heroicon-o-eye-slash')
+                    ->trueColor('success')
+                    ->falseColor('danger')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('status')
+                Tables\Columns\IconColumn::make('is_cancelled')
+                    ->boolean()
+                    ->label('Cancelled')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\IconColumn::make('is_sold_out')
+                    ->boolean()
+                    ->label('Sold Out')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\BadgeColumn::make('status_display')
                     ->label('Status')
-                    ->badge()
-                    ->sortable(),
+                    ->getStateUsing(function (Event $record) {
+                        $endDate = match ($record->duration_mode) {
+                            'range' => $record->range_end_date ?? $record->range_start_date,
+                            'multi_day' => !empty($record->multi_slots)
+                                ? (($last = collect($record->multi_slots)->pluck('date')->filter()->sort()->last()) ? Carbon::parse($last) : null)
+                                : null,
+                            default => $record->event_date,
+                        };
+                        if ($record->is_cancelled) return 'Cancelled';
+                        if (!$endDate) return 'No Date';
+                        return $endDate->isPast() ? 'Ended' : 'Active';
+                    })
+                    ->colors([
+                        'success' => 'Active',
+                        'gray' => 'Ended',
+                        'danger' => 'Cancelled',
+                        'warning' => 'No Date',
+                    ])
+                    ->sortable(false),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created')
@@ -1643,14 +1700,20 @@ class EventResource extends Resource
                         'published' => 'Published',
                         'archived'  => 'Archived',
                     ]),
-                Tables\Filters\Filter::make('upcoming')
-                    ->label('Upcoming only')
-                    ->query(fn ($q) => $q->where(function ($query) {
-                        $now = now()->toDateString();
-                        $query->where('event_date', '>=', $now)
-                            ->orWhere('range_start_date', '>=', $now)
-                            ->orWhere('range_end_date', '>=', $now);
-                    })),
+                Tables\Filters\TernaryFilter::make('is_published')
+                    ->label('Published')
+                    ->placeholder('All')
+                    ->trueLabel('Published')
+                    ->falseLabel('Unpublished'),
+                Tables\Filters\TernaryFilter::make('is_cancelled')
+                    ->label('Cancelled'),
+                Tables\Filters\TernaryFilter::make('is_sold_out')
+                    ->label('Sold Out'),
+                Tables\Filters\SelectFilter::make('tenant_id')
+                    ->label('Tenant')
+                    ->relationship('tenant', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->defaultSort('created_at', 'desc');
     }

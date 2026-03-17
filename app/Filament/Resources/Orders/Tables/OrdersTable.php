@@ -12,6 +12,48 @@ use Filament\Actions\DeleteBulkAction;
 
 class OrdersTable
 {
+    /**
+     * Resolve event from an order through multiple paths:
+     * 1. Ticket → TicketType → Event (web orders)
+     * 2. Order → event_id direct (POS/app orders)
+     * 3. Order → marketplace_event_id (marketplace app orders)
+     * 4. Ticket → event_id direct (fallback)
+     */
+    protected static function resolveOrderEvent($record): ?\App\Models\Event
+    {
+        // 1. Via ticket → ticketType → event (standard web flow)
+        $firstTicket = $record->tickets()->with(['ticketType.event'])->first();
+        if ($firstTicket?->ticketType?->event) {
+            return $firstTicket->ticketType->event;
+        }
+
+        // 2. Direct event_id on order
+        if ($record->event_id) {
+            $event = \App\Models\Event::find($record->event_id);
+            if ($event) return $event;
+        }
+
+        // 3. Marketplace event_id on order
+        if ($record->marketplace_event_id) {
+            $event = \App\Models\Event::find($record->marketplace_event_id);
+            if ($event) return $event;
+        }
+
+        // 4. Direct event_id on ticket (POS/app may set event_id on ticket without ticketType)
+        if ($firstTicket?->event_id) {
+            $event = \App\Models\Event::find($firstTicket->event_id);
+            if ($event) return $event;
+        }
+
+        // 5. Marketplace event_id on ticket
+        if ($firstTicket?->marketplace_event_id) {
+            $event = \App\Models\Event::find($firstTicket->marketplace_event_id);
+            if ($event) return $event;
+        }
+
+        return null;
+    }
+
     public static function configure(Table $table): Table
     {
         return $table
@@ -27,17 +69,21 @@ class OrdersTable
                 TextColumn::make('source_name')
                     ->label('Tenant / Marketplace')
                     ->getStateUsing(function ($record) {
+                        // If order has a marketplace_client_id, always show the marketplace name
+                        if ($record->marketplace_client_id && $record->marketplaceClient) {
+                            return $record->marketplaceClient->name;
+                        }
+                        // Otherwise show the tenant
                         if ($record->tenant) {
                             return $record->tenant->public_name ?? $record->tenant->name;
-                        }
-                        if ($record->marketplaceClient) {
-                            return $record->marketplaceClient->name;
                         }
                         return '-';
                     })
                     ->description(function ($record) {
                         if ($record->marketplace_client_id) {
-                            return 'Marketplace';
+                            // Show organizer/tenant as sub-label for marketplace orders
+                            $organizer = $record->marketplaceOrganizer?->name ?? $record->tenant?->public_name ?? $record->tenant?->name;
+                            return $organizer ? "Marketplace · {$organizer}" : 'Marketplace';
                         }
                         if ($record->tenant_id) {
                             return 'Tenant';
@@ -99,24 +145,19 @@ class OrdersTable
                     ->dateTime('Y-m-d H:i')
                     ->sortable(),
 
-                // Event column (via tickets relationship)
+                // Event column (multiple resolution paths for web, POS, app orders)
                 TextColumn::make('event_name')
                     ->label('Event')
                     ->getStateUsing(function ($record) {
-                        $firstTicket = $record->tickets()->with('ticketType.event')->first();
-                        if ($firstTicket && $firstTicket->ticketType && $firstTicket->ticketType->event) {
-                            $event = $firstTicket->ticketType->event;
-                            $title = is_array($event->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : $event->title;
-                            return $title;
-                        }
-                        return '-';
+                        $event = static::resolveOrderEvent($record);
+                        if (!$event) return '-';
+                        $title = is_array($event->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : $event->title;
+                        return $title ?: '-';
                     })
                     ->url(function ($record) {
-                        $firstTicket = $record->tickets()->with('ticketType.event')->first();
-                        if ($firstTicket && $firstTicket->ticketType && $firstTicket->ticketType->event) {
-                            return \App\Filament\Resources\Events\EventResource::getUrl('edit', ['record' => $firstTicket->ticketType->event]);
-                        }
-                        return null;
+                        $event = static::resolveOrderEvent($record);
+                        if (!$event) return null;
+                        return \App\Filament\Resources\Events\EventResource::getUrl('edit', ['record' => $event]);
                     })
                     ->searchable(false)
                     ->sortable(false),
