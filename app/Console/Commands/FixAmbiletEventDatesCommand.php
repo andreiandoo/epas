@@ -114,8 +114,8 @@ class FixAmbiletEventDatesCommand extends Command
             if (!$this->option('skip-archive')) {
                 $expiry = $this->parseDateTime($data['expirare_eveniment'] ?? null);
                 if ($expiry && $expiry < $now) {
-                    $fields['status']       = 'archived';
-                    $fields['is_published'] = 0;
+                    $fields['status'] = 'archived';
+                    // is_published stays as-is — archived events remain publicly visible (past events)
                     $archived++;
                 }
             }

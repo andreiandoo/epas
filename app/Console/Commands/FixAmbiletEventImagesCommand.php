@@ -166,7 +166,7 @@ class FixAmbiletEventImagesCommand extends Command
             return false;
         }
 
-        Storage::disk('public')->makeDirectory($directory);
+        // Storage::put() creates intermediate directories automatically
         Storage::disk('public')->put($localPath, $webpData);
 
         return $localPath;
