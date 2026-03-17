@@ -138,50 +138,35 @@ class ServiceTypeResource extends Resource
                 // Ad Tracking Pricing
                 Section::make('Ad Tracking Pricing')
                     ->icon('heroicon-o-chart-bar')
-                    ->description('Prices for ad platform tracking integration')
+                    ->description('Multiple pricing tiers for ad tracking integration')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.per_platform_monthly')
-                            ->label('Per Platform Monthly (RON)')
+                        Forms\Components\TextInput::make('pricing.monthly')
+                            ->label('Cost lunar (RON)')
                             ->numeric()
                             ->step(0.01)
                             ->default(49)
-                            ->helperText('Monthly price per tracking platform (Facebook, Google, TikTok)')
-                            ->columnSpanFull(),
+                            ->helperText('Preț per lună, facturat lunar'),
 
-                        Forms\Components\Placeholder::make('discounts_label')
-                            ->label('')
-                            ->content('Volume Discounts (by duration)')
-                            ->columnSpanFull(),
-
-                        Forms\Components\TextInput::make('pricing.discounts.1')
-                            ->label('1 Month Discount')
+                        Forms\Components\TextInput::make('pricing.biannual')
+                            ->label('Cost bianual (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(0)
-                            ->suffix('%')
-                            ->helperText('0 = no discount'),
+                            ->default(249)
+                            ->helperText('Preț total pentru 6 luni'),
 
-                        Forms\Components\TextInput::make('pricing.discounts.3')
-                            ->label('3 Months Discount')
+                        Forms\Components\TextInput::make('pricing.annual')
+                            ->label('Cost anual (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(0.10)
-                            ->suffix('%')
-                            ->helperText('0.10 = 10%'),
+                            ->default(449)
+                            ->helperText('Preț total pentru 12 luni'),
 
-                        Forms\Components\TextInput::make('pricing.discounts.6')
-                            ->label('6 Months Discount')
+                        Forms\Components\TextInput::make('pricing.one_time')
+                            ->label('Cost one-time (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(0.15)
-                            ->suffix('%'),
-
-                        Forms\Components\TextInput::make('pricing.discounts.12')
-                            ->label('12 Months Discount')
-                            ->numeric()
-                            ->step(0.01)
-                            ->default(0.25)
-                            ->suffix('%'),
+                            ->default(999)
+                            ->helperText('Plată unică, acces permanent'),
                     ])
                     ->columns(4)
                     ->visible(fn ($record) => $record?->code === 'tracking'),
@@ -255,8 +240,11 @@ class ServiceTypeResource extends Resource
                                 $pricing['marketplace_per_email'] ?? 0
                             ),
                             'tracking' => sprintf(
-                                '%d RON/platform/month',
-                                $pricing['per_platform_monthly'] ?? 0
+                                'Lunar: %d, Bianual: %d, Anual: %d, One-time: %d RON',
+                                $pricing['monthly'] ?? $pricing['per_platform_monthly'] ?? 0,
+                                $pricing['biannual'] ?? 0,
+                                $pricing['annual'] ?? 0,
+                                $pricing['one_time'] ?? 0
                             ),
                             'campaign' => sprintf(
                                 'Basic: %d RON, Premium: %d RON',

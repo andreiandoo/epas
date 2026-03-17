@@ -43,13 +43,10 @@ class ServiceType extends Model
                 'minimum' => 100,
             ],
             'tracking' => [
-                'per_platform_monthly' => 49,
-                'discounts' => [
-                    '1' => 0,
-                    '3' => 0.10,
-                    '6' => 0.15,
-                    '12' => 0.25,
-                ],
+                'monthly' => 49,
+                'biannual' => 249,
+                'annual' => 449,
+                'one_time' => 999,
             ],
             'campaign' => [
                 'basic' => 499,

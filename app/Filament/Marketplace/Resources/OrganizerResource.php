@@ -399,6 +399,45 @@ class OrganizerResource extends Resource
                                         ->helperText('Allow this organizer to create and manage event invitations'),
                                 ])
                                 ->columns(2),
+
+                            Section::make('Extra Servicii')
+                                ->icon('heroicon-o-puzzle-piece')
+                                ->description('Activare/dezactivare servicii extra și model de pricing per organizator')
+                                ->schema([
+                                    Forms\Components\Toggle::make('service_settings.featuring_enabled')
+                                        ->label('Promovare Eveniment')
+                                        ->default(true)
+                                        ->helperText('Permite organizatorului să promoveze evenimente pe platformă'),
+
+                                    Forms\Components\Toggle::make('service_settings.email_enabled')
+                                        ->label('Email Marketing')
+                                        ->default(true)
+                                        ->helperText('Permite organizatorului să trimită campanii email'),
+
+                                    Forms\Components\Toggle::make('service_settings.tracking_enabled')
+                                        ->label('Ad Tracking')
+                                        ->default(true)
+                                        ->live()
+                                        ->helperText('Permite organizatorului să folosească tracking pentru campanii'),
+
+                                    Forms\Components\Select::make('service_settings.tracking_pricing_model')
+                                        ->label('Model pricing Tracking')
+                                        ->options([
+                                            'monthly' => 'Lunar',
+                                            'biannual' => 'Bianual (6 luni)',
+                                            'annual' => 'Anual (12 luni)',
+                                            'one_time' => 'One-time (plată unică)',
+                                        ])
+                                        ->default('monthly')
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
+                                        ->helperText('Modelul de pricing aplicat acestui organizator pentru serviciul de tracking'),
+
+                                    Forms\Components\Toggle::make('service_settings.campaign_enabled')
+                                        ->label('Creare Campanii')
+                                        ->default(true)
+                                        ->helperText('Permite organizatorului să comande servicii de creare campanii'),
+                                ])
+                                ->columns(2),
                         ]),
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
