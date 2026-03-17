@@ -155,7 +155,6 @@ class ImportAmbiletOrdersCommand extends Command
 
                 if ($dryRun) {
                     $this->line("[DRY RUN] Order AMB-{$wpOrderId} for {$email} ({$createdAt})");
-                    $ordersMap[$wpOrderId] = 0;
                     $created++;
                     continue;
                 }

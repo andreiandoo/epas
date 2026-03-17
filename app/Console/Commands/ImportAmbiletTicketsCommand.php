@@ -138,7 +138,6 @@ class ImportAmbiletTicketsCommand extends Command
 
             if ($dryRun) {
                 $this->line("[DRY RUN] Ticket: {$data['ticket_code']} | event: {$tixelloEventId} | order: {$tixelloOrderId} | checkin: {$checkedInAt}");
-                $ticketsMap[$wpTicketId] = 0;
                 $created++;
                 continue;
             }
@@ -159,10 +158,13 @@ class ImportAmbiletTicketsCommand extends Command
         }
 
         fclose($handle);
-        file_put_contents($ticketsMapFile, json_encode($ticketsMap, JSON_PRETTY_PRINT));
+
+        if (!$dryRun) {
+            file_put_contents($ticketsMapFile, json_encode($ticketsMap, JSON_PRETTY_PRINT));
+            $this->info("Map saved to: {$ticketsMapFile}");
+        }
 
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed} | No order link: {$noOrder}");
-        $this->info("Map saved to: {$ticketsMapFile}");
 
         if ($dryRun) {
             return 0;

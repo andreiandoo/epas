@@ -101,7 +101,6 @@ class ImportAmbiletTicketTypesCommand extends Command
 
             if ($dryRun) {
                 $this->line("[DRY RUN] Would create ticket type: {$data['name']} ({$priceCents} bani) for event #{$tixelloEventId}");
-                $map[$wpProductId] = 0;
                 $created++;
                 continue;
             }
@@ -122,10 +121,13 @@ class ImportAmbiletTicketTypesCommand extends Command
         }
 
         fclose($handle);
-        file_put_contents($mapFile, json_encode($map, JSON_PRETTY_PRINT));
+
+        if (!$dryRun) {
+            file_put_contents($mapFile, json_encode($map, JSON_PRETTY_PRINT));
+            $this->info("Map saved to: {$mapFile}");
+        }
 
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed}");
-        $this->info("Map saved to: {$mapFile}");
 
         return 0;
     }
