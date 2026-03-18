@@ -296,6 +296,10 @@ class ListOrganizerDocuments extends ListRecords
             }
 
             foreach ($event->ticketTypes as $ticketType) {
+                // Skip non-declarable ticket types
+                if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
+                    continue;
+                }
                 $available = (int) ($ticketType->quota_total ?? $ticketType->capacity ?? 0);
                 $sold = (int) ($ticketType->quota_sold ?? 0);
                 $price = (float) ($ticketType->display_price ?? $ticketType->price ?? 0);

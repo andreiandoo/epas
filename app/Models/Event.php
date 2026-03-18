@@ -61,7 +61,7 @@ class Event extends Model
         'repertoire_id',
 
         // flags
-        'is_sold_out', 'is_cancelled', 'cancel_reason',
+        'is_sold_out', 'is_cancelled', 'is_ended', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
         'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
         'is_homepage_featured', 'is_general_featured', 'is_category_featured', 'is_city_featured', 'is_published', 'submitted_at', 'access_password',
@@ -89,7 +89,7 @@ class Event extends Model
         // location & links
         'suggested_venue_name',
         'address', 'website_url', 'facebook_url', 'event_website_url',
-        'marketplace_city_id', 'marketplace_event_category_id',
+        'marketplace_city_id', 'marketplace_event_category_id', 'manifestation_type',
 
         // content
         'short_description', 'description', 'ticket_terms',
@@ -126,6 +126,7 @@ class Event extends Model
         // flags
         'is_sold_out'       => 'bool',
         'is_cancelled'      => 'bool',
+        'is_ended'          => 'bool',
         'is_postponed'      => 'bool',
         'door_sales_only'   => 'bool',
         'is_promoted'       => 'bool',

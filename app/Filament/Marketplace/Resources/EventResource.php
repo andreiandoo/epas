@@ -763,6 +763,17 @@ class EventResource extends Resource
                                     })
                                     ->nullable(),
 
+                                Forms\Components\Select::make('manifestation_type')
+                                    ->label($t('Tip manifestare', 'Manifestation Type'))
+                                    ->options([
+                                        'muzicala' => $t('Muzicală', 'Musical'),
+                                        'artistica' => $t('Artistică', 'Artistic'),
+                                        'sportiva' => $t('Sportivă', 'Sports'),
+                                        'altele' => $t('Altele', 'Other'),
+                                    ])
+                                    ->placeholder($t('Selectează tipul', 'Select type'))
+                                    ->nullable(),
+
                                 Forms\Components\Select::make('eventTypes')
                                     ->label($t('Tipuri eveniment', 'Event types'))
                                     ->relationship(
@@ -1175,7 +1186,12 @@ class EventResource extends Resource
                                             ->label($t('Bilet pentru aplicație', 'App Ticket'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
                                             ->default(false)
-                                            ->columnSpan(3),
+                                            ->columnSpan(2),
+                                        Forms\Components\Toggle::make('is_declarable')
+                                            ->label($t('Declarabil', 'Declarable'))
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
+                                            ->default(true)
+                                            ->columnSpan(1),
                                         Forms\Components\ColorPicker::make('color')
                                             ->label($t('Culoare pe hartă', 'Map color'))
                                             ->hexColor()

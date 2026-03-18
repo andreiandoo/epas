@@ -8,6 +8,11 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
+// Mark events as ended when their effective end datetime has passed (every 5 minutes)
+Schedule::command('events:mark-ended')
+    ->everyFiveMinutes()
+    ->timezone('Europe/Bucharest');
+
 // Expire ticket type sale discounts when sales_end_at passes (every minute)
 Schedule::command('ticket-types:expire-sales')
     ->everyMinute()

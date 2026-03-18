@@ -456,6 +456,10 @@ class MarketplaceTaxTemplate extends Model
 
             if ($event->ticketTypes) {
                 foreach ($event->ticketTypes as $ticketType) {
+                    // Skip non-declarable ticket types for document generation
+                    if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
+                        continue;
+                    }
                     $available = (int) ($ticketType->quota_total ?? $ticketType->capacity ?? 0);
                     $sold = (int) ($ticketType->quota_sold ?? 0);
                     $price = (float) ($ticketType->display_price ?? $ticketType->price ?? 0);

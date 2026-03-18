@@ -52,6 +52,8 @@ class TicketType extends Model
         'is_entry_ticket',
         // Admin internal notes
         'admin_notes',
+        // Declarable flag - included in cerere avizare documents
+        'is_declarable',
         // Multiplier for quantity increment/decrement step
         'multiplier',
         // Series fields for ticket numbering
@@ -76,6 +78,7 @@ class TicketType extends Model
         'autostart_when_previous_sold_out' => 'boolean',
         'is_refundable'  => 'boolean',
         'is_entry_ticket' => 'boolean',
+        'is_declarable' => 'boolean',
         'valid_date'     => 'date',
         'min_per_order'    => 'integer',
         'max_per_order'    => 'integer',
