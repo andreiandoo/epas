@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Marketplace\Resources\ArtistResource;
 use App\Filament\Marketplace\Resources\VenueResource;
+use App\Models\Artist;
 use App\Models\Event;
 use App\Models\Tour;
 use App\Models\EventGenre;
@@ -712,7 +713,7 @@ class EventResource extends Resource
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->poster_url);
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Poster' class='rounded-lg shadow max-h-48' />"
+                                            "<img src='{$url}' alt='Poster' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
                                         );
                                     }),
                                 Forms\Components\Placeholder::make('hero_preview')
@@ -3227,6 +3228,132 @@ class EventResource extends Resource
                             $records->each(fn ($record) => $record->update([
                                 'marketplace_organizer_id' => $data['marketplace_organizer_id'],
                             ]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('assign_category')
+                        ->label('Setează categorie')
+                        ->icon('heroicon-o-tag')
+                        ->form([
+                            Forms\Components\Select::make('marketplace_event_category_id')
+                                ->label('Categorie eveniment')
+                                ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                    return MarketplaceEventCategory::query()
+                                        ->where('marketplace_client_id', $marketplace?->id)
+                                        ->where('is_visible', true)
+                                        ->with('parent')
+                                        ->orderBy('sort_order')
+                                        ->get()
+                                        ->mapWithKeys(fn ($cat) => [
+                                            $cat->id => ($cat->icon_emoji ? $cat->icon_emoji . ' ' : '')
+                                                . ($cat->parent ? ($cat->parent->name[$marketplaceLanguage] ?? $cat->parent->name['ro'] ?? '') . ' > ' : '')
+                                                . ($cat->name[$marketplaceLanguage] ?? $cat->name['ro'] ?? 'Unnamed')
+                                        ]);
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->required(),
+
+                            Forms\Components\Select::make('event_types')
+                                ->label('Tipuri eveniment (opțional, override)')
+                                ->options(function () {
+                                    return EventType::whereNotNull('parent_id')
+                                        ->orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(fn ($t) => [$t->id => $t->getTranslation('name', app()->getLocale())]);
+                                })
+                                ->multiple()
+                                ->preload()
+                                ->searchable()
+                                ->helperText('Lasă gol pentru a folosi tipurile din categorie'),
+
+                            Forms\Components\Select::make('event_genres')
+                                ->label('Genuri eveniment (opțional)')
+                                ->options(function () {
+                                    return EventGenre::orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())]);
+                                })
+                                ->multiple()
+                                ->preload()
+                                ->searchable(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $categoryId = $data['marketplace_event_category_id'];
+                            $category = MarketplaceEventCategory::find($categoryId);
+
+                            // Determine event types: from form override or from category
+                            $eventTypeIds = !empty($data['event_types'])
+                                ? $data['event_types']
+                                : ($category?->event_type_ids ?? []);
+
+                            $genreIds = $data['event_genres'] ?? [];
+
+                            foreach ($records as $record) {
+                                $record->update(['marketplace_event_category_id' => $categoryId]);
+
+                                if (!empty($eventTypeIds)) {
+                                    $record->eventTypes()->sync($eventTypeIds);
+                                }
+
+                                if (!empty($genreIds)) {
+                                    $record->eventGenres()->sync($genreIds);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('assign_artists')
+                        ->label('Setează artiști')
+                        ->icon('heroicon-o-musical-note')
+                        ->form([
+                            Forms\Components\Select::make('artist_ids')
+                                ->label('Artiști')
+                                ->options(function () {
+                                    return Artist::orderBy('name')
+                                        ->limit(500)
+                                        ->pluck('name', 'id');
+                                })
+                                ->multiple()
+                                ->preload()
+                                ->searchable()
+                                ->required(),
+
+                            Forms\Components\Toggle::make('append')
+                                ->label('Adaugă la artiștii existenți')
+                                ->helperText('Dacă e dezactivat, înlocuiește artiștii existenți')
+                                ->default(true),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $artistIds = $data['artist_ids'];
+                            $append = $data['append'] ?? true;
+
+                            foreach ($records as $record) {
+                                if ($append) {
+                                    $existing = $record->artists()->pluck('artist_id')->toArray();
+                                    $newIds = array_diff($artistIds, $existing);
+                                    if (!empty($newIds)) {
+                                        $maxSort = DB::table('event_artist')
+                                            ->where('event_id', $record->id)
+                                            ->max('sort_order') ?? 0;
+
+                                        $pivotData = [];
+                                        foreach ($newIds as $id) {
+                                            $maxSort++;
+                                            $pivotData[$id] = ['sort_order' => $maxSort];
+                                        }
+                                        $record->artists()->attach($pivotData);
+                                    }
+                                } else {
+                                    $pivotData = [];
+                                    $sort = 0;
+                                    foreach ($artistIds as $id) {
+                                        $sort++;
+                                        $pivotData[$id] = ['sort_order' => $sort];
+                                    }
+                                    $record->artists()->sync($pivotData);
+                                }
+                            }
                         })
                         ->deselectRecordsAfterCompletion(),
 
