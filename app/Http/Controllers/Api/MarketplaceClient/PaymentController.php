@@ -568,6 +568,7 @@ class PaymentController extends BaseController
                 $ticketTypeName = $ticket->marketplaceTicketType?->name ?? '';
                 $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
                 $seatDetails = $ticket->getSeatDetails();
+                $ticketSeries = $ticket->meta['ticket_series'] ?? null;
 
                 $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
                     'size' => '180x180',
@@ -584,6 +585,9 @@ class PaymentController extends BaseController
                 $ticketsHtml .= '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">';
                 $ticketsHtml .= '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />';
                 $ticketsHtml .= '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>';
+                if ($ticketSeries) {
+                    $ticketsHtml .= '<p style="margin:2px 0 0;font-size:11px;color:#888;font-family:monospace;">Serie: ' . e($ticketSeries) . '</p>';
+                }
                 $ticketsHtml .= '</td>';
 
                 // Right: ticket details
@@ -595,6 +599,10 @@ class PaymentController extends BaseController
 
                 $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Beneficiar:</td><td style="padding:3px 0;font-weight:600;">' . e($attendeeName) . '</td></tr>';
                 $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Preț:</td><td style="padding:3px 0;">' . $ticketPrice . '</td></tr>';
+
+                if ($ticketSeries) {
+                    $ticketsHtml .= '<tr><td style="padding:3px 12px 3px 0;color:#888;">Serie:</td><td style="padding:3px 0;font-weight:600;font-family:monospace;">' . e($ticketSeries) . '</td></tr>';
+                }
 
                 if ($seatDetails) {
                     $seatParts = [];
@@ -775,6 +783,7 @@ class PaymentController extends BaseController
             $attendeeName = $ticket->attendee_name ?? 'Participant';
             $ticketTypeName = $ticket->marketplaceTicketType?->name ?? 'Bilet';
             $ticketCode = $ticket->code ?? $ticket->barcode ?? '';
+            $ticketSeries = $ticket->meta['ticket_series'] ?? null;
             $seatDetails = $ticket->getSeatDetails();
 
             $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
@@ -810,6 +819,13 @@ class PaymentController extends BaseController
                 }
             }
 
+            $seriesLine = '';
+            if ($ticketSeries) {
+                $seriesLine = '<tr><td style="padding:3px 12px 3px 0;color:#888;">Serie:</td><td style="padding:3px 0;font-weight:600;font-family:monospace;">' . e($ticketSeries) . '</td></tr>';
+            }
+
+            $seriesQrLine = $ticketSeries ? '<p style="margin:2px 0 0;font-size:11px;color:#888;font-family:monospace;">Serie: ' . e($ticketSeries) . '</p>' : '';
+
             $html = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>'
                 . '<body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">'
                 . '<div style="max-width:640px;margin:0 auto;padding:24px 16px;">'
@@ -827,11 +843,13 @@ class PaymentController extends BaseController
                 . '<td style="padding:20px 20px 20px 24px;width:170px;vertical-align:top;text-align:center;">'
                 . '<img src="' . $qrUrl . '" alt="QR Code" width="150" height="150" style="display:block;border:1px solid #eee;border-radius:8px;" />'
                 . '<p style="margin:6px 0 0;font-size:12px;color:#666;font-family:monospace;">' . e($ticketCode) . '</p>'
+                . $seriesQrLine
                 . '</td>'
                 . '<td style="padding:20px 24px 20px 0;vertical-align:top;">'
                 . '<p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#1a1a2e;">' . e($ticketTypeName) . '</p>'
                 . '<table style="border-collapse:collapse;font-size:14px;color:#333;" cellpadding="0" cellspacing="0">'
                 . '<tr><td style="padding:3px 12px 3px 0;color:#888;">Beneficiar:</td><td style="padding:3px 0;font-weight:600;">' . e($attendeeName) . '</td></tr>'
+                . $seriesLine
                 . $seatLine
                 . '</table>'
                 . '</td>'

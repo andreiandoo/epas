@@ -583,6 +583,7 @@ const ThankYouPage = {
                         ${(ticket.code || ticket.barcode) ? `<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(ticket.code || ticket.barcode)}" style="width: 150px; height: 150px;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
                         <div style="display:none;padding:10px;border:2px solid #1E293B;border-radius:8px;font-family:monospace;font-size:14px;font-weight:bold;word-break:break-all">${ticket.code || ticket.barcode}</div>` : '<div style="padding:10px;color:#94A3B8;font-size:12px;">Cod indisponibil</div>'}
                         <div style="font-family: monospace; font-size: 11px; color: #64748B; margin-top: 6px;">${ticket.code || ticket.barcode || ''}</div>
+                        ${ticket.ticket_series ? `<div style="font-family: monospace; font-size: 10px; color: #94A3B8; margin-top: 2px;">Serie: ${ticket.ticket_series}</div>` : ''}
                     </div>
                 </div>
             `;
@@ -794,6 +795,7 @@ const ThankYouPage = {
 
                     <div class="ticket-barcode">${barcodeLines}</div>
                     <p class="text-center text-[10px] text-muted mt-2">${ticket.code || ticket.barcode || ''}</p>
+                    ${ticket.ticket_series ? `<p class="text-center text-[10px] text-muted">Serie: ${ticket.ticket_series}</p>` : ''}
                 </div>
             </div>
         `;

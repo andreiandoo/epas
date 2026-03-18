@@ -184,8 +184,37 @@ class OrdersController extends BaseController
                     'total' => $item['total'],
                 ]);
 
+                // Resolve ticket series prefix and next number from series_start
+                $ticketType = $item['ticket_type'];
+                $seriesPrefix = null;
+                $seriesPadLength = 5;
+                $nextSeriesNum = null;
+
+                if ($ticketType->series_start) {
+                    // Extract prefix and starting number from series_start (e.g. "AMB-5-GA-00001")
+                    if (preg_match('/^(.+?)(\d+)$/', $ticketType->series_start, $m)) {
+                        $seriesPrefix = $m[1]; // e.g. "AMB-5-GA-"
+                        $seriesPadLength = strlen($m[2]); // e.g. 5
+                        $startNum = (int) $m[2]; // e.g. 1
+
+                        // Count existing tickets for this ticket_type to determine next number
+                        $existingCount = Ticket::where('ticket_type_id', $ticketType->id)
+                            ->whereNotNull('meta->ticket_series')
+                            ->count();
+                        $nextSeriesNum = $startNum + $existingCount;
+                    }
+                }
+
                 // Create pending tickets
                 for ($i = 0; $i < $item['quantity']; $i++) {
+                    $ticketMeta = [];
+
+                    // Generate ticket series number
+                    if ($seriesPrefix !== null && $nextSeriesNum !== null) {
+                        $ticketMeta['ticket_series'] = $seriesPrefix . str_pad($nextSeriesNum, $seriesPadLength, '0', STR_PAD_LEFT);
+                        $nextSeriesNum++;
+                    }
+
                     Ticket::create([
                         'tenant_id' => $tenantId,
                         'order_id' => $order->id,
@@ -197,6 +226,7 @@ class OrdersController extends BaseController
                         'barcode' => Str::uuid()->toString(),
                         'status' => 'pending',
                         'price' => $item['unit_price'],
+                        'meta' => !empty($ticketMeta) ? $ticketMeta : null,
                     ]);
                 }
             }
@@ -341,6 +371,7 @@ class OrdersController extends BaseController
                     'code' => $t->code,
                     'ticket_type' => $t->ticketType?->name,
                     'status' => $t->status,
+                    'ticket_series' => $t->meta['ticket_series'] ?? null,
                 ]);
             }
 
@@ -485,6 +516,7 @@ class OrdersController extends BaseController
                         'attendee_name' => $ticket->attendee_name,
                         'seat' => $seatData,
                         'has_insurance' => (bool) ($ticket->meta['has_insurance'] ?? false),
+                        'ticket_series' => $ticket->meta['ticket_series'] ?? null,
                     ];
                 }),
                 'customer_email' => $order->customer_email,
@@ -864,7 +896,9 @@ class OrdersController extends BaseController
         foreach ($order->tickets as $ticket) {
             $typeName = $ticket->ticketType?->name ?? 'Bilet';
             $code = $ticket->code;
-            $ticketRows .= "<tr><td style='padding:8px;border-bottom:1px solid #eee;'>{$typeName}</td><td style='padding:8px;border-bottom:1px solid #eee;font-family:monospace;'>{$code}</td></tr>";
+            $series = $ticket->meta['ticket_series'] ?? '';
+            $seriesCell = $series ? "<br><span style='font-size:11px;color:#666;'>Serie: {$series}</span>" : '';
+            $ticketRows .= "<tr><td style='padding:8px;border-bottom:1px solid #eee;'>{$typeName}</td><td style='padding:8px;border-bottom:1px solid #eee;font-family:monospace;'>{$code}{$seriesCell}</td></tr>";
         }
 
         $totalFormatted = number_format($order->total, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');

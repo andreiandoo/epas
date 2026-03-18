@@ -535,6 +535,7 @@ class AccountController extends BaseController
                         'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                         'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
                         'has_insurance' => (bool) ($ticket->meta['has_insurance'] ?? false),
+                        'ticket_series' => $ticket->meta['ticket_series'] ?? null,
                     ];
                 }),
                 'customer_email' => $order->customer_email,
@@ -579,6 +580,7 @@ class AccountController extends BaseController
                     'type' => $ticket->marketplaceTicketType?->name,
                     'status' => $ticket->status,
                     'order_number' => $order->order_number,
+                    'ticket_series' => $ticket->meta['ticket_series'] ?? null,
                     'event' => [
                         'id' => $order->marketplaceEvent->id,
                         'name' => $order->marketplaceEvent->name,
@@ -677,6 +679,7 @@ class AccountController extends BaseController
                 ],
                 'ticket_index' => $ticketPosition . ' din ' . $totalTicketsInOrder,
                 'qr_data' => $ticket->barcode, // For QR code generation
+                'ticket_series' => $ticket->meta['ticket_series'] ?? null,
             ],
         ]);
     }
@@ -738,6 +741,7 @@ class AccountController extends BaseController
                         'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'seat_label' => $ticket->seat_label,
                         'seat' => $seatDetails,
+                        'ticket_series' => $ticket->meta['ticket_series'] ?? null,
                         'event' => [
                             'id' => $event->id,
                             'name' => $event->name,
@@ -778,6 +782,7 @@ class AccountController extends BaseController
                         'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'seat_label' => $ticket->seat_label,
                         'seat' => $seatDetails,
+                        'ticket_series' => $ticket->meta['ticket_series'] ?? null,
                         'event' => [
                             'id' => $event->id,
                             'name' => $eventTitle,

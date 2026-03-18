@@ -200,7 +200,7 @@ const UserTickets = {
                         <div class="tickets-collapsible${tickets.length > 2 ? ' mobile-collapsed' : ''}" data-event-idx="${idx}">
                             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
                                 ${tickets.map((t, i) => `
-                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}', '${(self.formatSeatInfo(t.seat) || '').replace(/'/g, "\\'")}')">
+                                <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}', '${(self.formatSeatInfo(t.seat) || '').replace(/'/g, "\\'")}', '${(t.ticket_series || '').replace(/'/g, "\\'")}')">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-xs text-muted">#${i + 1}</span>
                                         <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
@@ -210,6 +210,7 @@ const UserTickets = {
                                     </div>
                                     ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
                                     <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
+                                    ${t.ticket_series ? `<p class="text-[10px] text-muted font-mono truncate">Serie: ${t.ticket_series}</p>` : ''}
                                     <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
                                     ${t.seat ? `<p class="mt-1 px-1.5 py-0.5 bg-primary/5 text-primary text-[11px] font-medium rounded inline-block">${[t.seat.section_name, t.seat.row_label ? 'R' + t.seat.row_label : '', t.seat.seat_number ? 'Loc ' + t.seat.seat_number : ''].filter(Boolean).join(' / ')}</p>` : ''}
                                 </div>
@@ -322,7 +323,7 @@ const UserTickets = {
     },
 
     // Show QR Modal
-    async showQRModal(code, type, attendeeName, eventName, seatInfo) {
+    async showQRModal(code, type, attendeeName, eventName, seatInfo, ticketSeries) {
         const backdrop = document.getElementById('qr-modal-backdrop');
         document.getElementById('qr-modal-title').textContent = eventName;
         document.getElementById('qr-modal-attendee').textContent = attendeeName || '';
@@ -332,6 +333,21 @@ const UserTickets = {
         if (seatEl) {
             seatEl.textContent = seatInfo || '';
             seatEl.style.display = seatInfo ? 'block' : 'none';
+        }
+        // Show ticket series below the code
+        let seriesEl = document.getElementById('qr-modal-series');
+        if (!seriesEl) {
+            const codeEl = document.getElementById('qr-modal-code');
+            if (codeEl) {
+                seriesEl = document.createElement('p');
+                seriesEl.id = 'qr-modal-series';
+                seriesEl.style.cssText = 'font-family:monospace;font-size:12px;color:#6b7280;margin-top:4px;';
+                codeEl.parentNode.insertBefore(seriesEl, codeEl.nextSibling);
+            }
+        }
+        if (seriesEl) {
+            seriesEl.textContent = ticketSeries ? 'Serie: ' + ticketSeries : '';
+            seriesEl.style.display = ticketSeries ? 'block' : 'none';
         }
 
         const qrContainer = document.getElementById('qr-modal-qr');
@@ -617,6 +633,7 @@ ${tickets.map((t, i) => {
             <div class="qr-section">
                 <img src="${qrDataUrls[t.code] || ''}" alt="QR Code">
                 <div class="ticket-code">${t.code}</div>
+                ${t.ticket_series ? `<div style="font-family:monospace;font-size:12px;color:#6b7280;margin-top:2px;">Serie: ${t.ticket_series}</div>` : ''}
             </div>
             <div class="ticket-info">
                 <div class="ticket-type">${t.type || 'Bilet Standard'}</div>

@@ -682,8 +682,12 @@ const AmbiletAPI = {
     /**
      * DELETE request
      */
-    async delete(endpoint) {
-        return this.request(endpoint, { method: 'DELETE' });
+    async delete(endpoint, data = null) {
+        const options = { method: 'DELETE' };
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+        return this.request(endpoint, options);
     },
 
     // ==================== PUBLIC ENDPOINTS ====================

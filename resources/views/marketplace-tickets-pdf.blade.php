@@ -168,6 +168,7 @@
             $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
             $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
             $verifyUrl = method_exists($ticket, 'getVerifyUrl') ? $ticket->getVerifyUrl() : $ticketCode;
+            $ticketSeries = $ticket->meta['ticket_series'] ?? null;
         @endphp
 
         <div class="ticket">
@@ -203,6 +204,9 @@
 
                 <div class="ticket-code-box">
                     <p class="ticket-code">{{ $ticketCode }}</p>
+                    @if($ticketSeries)
+                        <p style="font-family: DejaVu Sans Mono, monospace; font-size: 12px; color: #6b7280; margin: 4px 0 0 0; letter-spacing: 1px;">Serie: {{ $ticketSeries }}</p>
+                    @endif
                 </div>
 
                 <div class="ticket-info">
