@@ -22,8 +22,8 @@ class RecentEventsTable extends BaseWidget
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->label('Event')
-                    ->limit(30)
-                    ->searchable(),
+                    ->getStateUsing(fn ($record) => $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: collect($record->title)->first())
+                    ->limit(30),
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Date')
                     ->date()
@@ -36,6 +36,7 @@ class RecentEventsTable extends BaseWidget
                         'info' => 'postponed',
                     ]),
             ])
+            ->searchable(false)
             ->paginated(false);
     }
 }

@@ -14,12 +14,15 @@ class TicketSalesChart extends ChartWidget
 
     protected function getData(): array
     {
-        $data = collect(range(29, 0))->map(function ($daysAgo) {
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        $data = collect(range(29, 0))->map(function ($daysAgo) use ($paidStatuses) {
             $date = now()->subDays($daysAgo);
 
             return [
                 'day' => $date->format('d M'),
-                'count' => Ticket::where('status', 'sold')
+                'count' => Ticket::where('status', 'valid')
+                    ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
                     ->whereDate('created_at', $date->toDateString())
                     ->count(),
             ];

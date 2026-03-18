@@ -26,8 +26,7 @@ class TopTenantsTable extends BaseWidget
                 Tables\Columns\TextColumn::make('public_name')
                     ->label('Tenant')
                     ->default(fn ($record) => $record->name)
-                    ->limit(25)
-                    ->searchable(),
+                    ->limit(25),
                 Tables\Columns\TextColumn::make('events_count')
                     ->label('Events')
                     ->sortable(),
@@ -38,6 +37,7 @@ class TopTenantsTable extends BaseWidget
                         'danger' => 'suspended',
                     ]),
             ])
+            ->searchable(false)
             ->paginated(false);
     }
 }
