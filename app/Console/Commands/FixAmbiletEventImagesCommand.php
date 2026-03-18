@@ -14,7 +14,8 @@ class FixAmbiletEventImagesCommand extends Command
         {--force : Re-download even if local file already exists}
         {--hero-only : Only process hero images}
         {--poster-only : Only process poster images}
-        {--quality=82 : WebP quality (1-100)}';
+        {--quality=82 : WebP quality (1-100)}
+        {--fix-paths : Only fix DB paths — no downloads, just resolve external URLs to existing local files}';
 
     protected $description = 'Download external AmBilet event images, convert to WebP and store locally';
 
@@ -26,6 +27,11 @@ class FixAmbiletEventImagesCommand extends Command
         $quality    = (int) $this->option('quality');
         $heroOnly   = $this->option('hero-only');
         $posterOnly = $this->option('poster-only');
+        $fixPaths   = $this->option('fix-paths');
+
+        if ($fixPaths) {
+            return $this->handleFixPaths($clientId, $dryRun);
+        }
 
         if (!extension_loaded('gd')) {
             $this->error('GD extension is required for WebP conversion.');
@@ -181,5 +187,68 @@ class FixAmbiletEventImagesCommand extends Command
         Storage::disk('public')->put($localPath, $webpData);
 
         return $localPath;
+    }
+
+    /**
+     * Fix DB paths only — resolve external URLs to existing local WebP files.
+     * No downloads, no conversions. Just checks if the local file exists by md5 hash.
+     * If local file exists → update DB. If not → set to NULL.
+     */
+    private function handleFixPaths(int $clientId, bool $dryRun): int
+    {
+        $events = DB::table('events')
+            ->where('marketplace_client_id', $clientId)
+            ->where(function ($q) {
+                $q->where('hero_image_url', 'like', 'http%')
+                  ->orWhere('poster_url', 'like', 'http%');
+            })
+            ->select('id', 'hero_image_url', 'poster_url')
+            ->get();
+
+        $this->info("Found {$events->count()} events with external URLs in DB.");
+
+        $fixed = $cleared = $alreadyLocal = 0;
+
+        foreach ($events as $event) {
+            $updates = [];
+
+            // Hero image
+            if ($event->hero_image_url && str_starts_with($event->hero_image_url, 'http')) {
+                $localPath = 'events/hero/' . md5($event->hero_image_url) . '.webp';
+                if (Storage::disk('public')->exists($localPath)) {
+                    $updates['hero_image_url'] = $localPath;
+                    $fixed++;
+                    $this->line("  [HERO FIX] #{$event->id} → {$localPath}");
+                } else {
+                    $updates['hero_image_url'] = null;
+                    $cleared++;
+                    $this->warn("  [HERO CLEAR] #{$event->id} — local file not found");
+                }
+            }
+
+            // Poster
+            if ($event->poster_url && str_starts_with($event->poster_url, 'http')) {
+                $localPath = 'events/posters/' . md5($event->poster_url) . '.webp';
+                if (Storage::disk('public')->exists($localPath)) {
+                    $updates['poster_url'] = $localPath;
+                    $fixed++;
+                    $this->line("  [POSTER FIX] #{$event->id} → {$localPath}");
+                } else {
+                    $updates['poster_url'] = null;
+                    $cleared++;
+                    $this->warn("  [POSTER CLEAR] #{$event->id} — local file not found");
+                }
+            }
+
+            if (!$dryRun && !empty($updates)) {
+                $updates['updated_at'] = now();
+                DB::table('events')->where('id', $event->id)->update($updates);
+            }
+        }
+
+        $prefix = $dryRun ? '[DRY RUN] Would fix' : 'Fixed';
+        $this->info("{$prefix}: {$fixed} paths | Cleared (no local file): {$cleared}");
+
+        return 0;
     }
 }
