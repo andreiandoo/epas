@@ -73,7 +73,9 @@ class ListOrganizerDocuments extends ListRecords
 
                             return Event::where('marketplace_organizer_id', $organizerId)
                                 ->where('is_published', true)
-                                ->whereNull('cancelled_at')
+                                ->where(function ($q) {
+                                    $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
+                                })
                                 ->orderBy('event_date', 'desc')
                                 ->get()
                                 ->mapWithKeys(function ($event) {
