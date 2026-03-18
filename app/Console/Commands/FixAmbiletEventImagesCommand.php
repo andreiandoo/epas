@@ -132,18 +132,24 @@ class FixAmbiletEventImagesCommand extends Command
             return $localPath;
         }
 
-        // Download
-        $context = stream_context_create([
-            'http' => [
-                'timeout'         => 20,
-                'follow_location' => true,
-                'user_agent'      => 'Mozilla/5.0 (compatible; Tixello/1.0)',
-            ],
-            'ssl' => ['verify_peer' => false],
-        ]);
+        // Download (using Laravel HTTP client for proper redirect following)
+        try {
+            $response = \Illuminate\Support\Facades\Http::withOptions([
+                'verify'  => false,
+                'timeout' => 30,
+            ])->withUserAgent('Mozilla/5.0 (compatible; Tixello/1.0)')
+              ->get($externalUrl);
 
-        $raw = @file_get_contents($externalUrl, false, $context);
-        if ($raw === false || strlen($raw) < 512) {
+            if (! $response->successful()) {
+                return false;
+            }
+
+            $raw = $response->body();
+        } catch (\Exception $e) {
+            return false;
+        }
+
+        if (strlen($raw) < 512) {
             return false;
         }
 
