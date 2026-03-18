@@ -134,8 +134,9 @@ class EditEvent extends EditRecord
 
         // Tickets button - link to tickets filtered by this event
         $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $this->record->id;
-        $ticketCount = \App\Models\Ticket::where('event_id', $this->record->id)
-            ->where('marketplace_client_id', $marketplace?->id)
+        $eventId = $this->record->id;
+        $ticketCount = \App\Models\Ticket::where('marketplace_client_id', $marketplace?->id)
+            ->where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->count();
         $actions[] = Actions\Action::make('tickets')
             ->label('Bilete' . ($ticketCount > 0 ? " ({$ticketCount})" : ''))
@@ -145,7 +146,7 @@ class EditEvent extends EditRecord
 
         // Orders button - link to orders filtered by this event
         $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $this->record->id;
-        $orderCount = \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $this->record->id))
+        $orderCount = \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->where('marketplace_client_id', $marketplace?->id)
             ->count();
         $actions[] = Actions\Action::make('orders')
