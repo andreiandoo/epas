@@ -724,7 +724,7 @@ class EventResource extends Resource
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->hero_image_url);
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Hero' class='rounded-lg shadow max-h-48' />"
+                                            "<img src='{$url}' alt='Hero' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
                                         );
                                     }),
                             ])->columns(2),
