@@ -133,10 +133,10 @@ class EditEvent extends EditRecord
             ->openUrlInNewTab();
 
         // Tickets button - link to tickets filtered by this event
+        // Count ALL tickets for this event: web (marketplace_client_id set) + POS/app (marketplace_client_id null, event_id set)
         $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $this->record->id;
         $eventId = $this->record->id;
-        $ticketCount = \App\Models\Ticket::where('marketplace_client_id', $marketplace?->id)
-            ->where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+        $ticketCount = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->count();
         $actions[] = Actions\Action::make('tickets')
             ->label('Bilete' . ($ticketCount > 0 ? " ({$ticketCount})" : ''))
@@ -146,9 +146,10 @@ class EditEvent extends EditRecord
 
         // Orders button - link to orders filtered by this event
         $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $this->record->id;
-        $orderCount = \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-            ->where('marketplace_client_id', $marketplace?->id)
-            ->count();
+        $orderCount = \App\Models\Order::where(fn ($q) => $q
+                ->where('event_id', $eventId)
+                ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+            )->count();
         $actions[] = Actions\Action::make('orders')
             ->label('Comenzi' . ($orderCount > 0 ? " ({$orderCount})" : ''))
             ->icon('heroicon-o-shopping-bag')
