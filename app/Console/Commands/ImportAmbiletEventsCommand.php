@@ -13,7 +13,8 @@ class ImportAmbiletEventsCommand extends Command
         {file : Path to events.csv}
         {--marketplace=1 : marketplace_client_id}
         {--dry-run : Simulate without writing to DB}
-        {--fresh : Ignore existing map and re-process all rows}';
+        {--fresh : Ignore existing map and re-process all rows}
+        {--fallback-organizer= : Organizer ID to use when email is missing/null}';
 
     protected $description = 'Import AmBilet events from CSV into Tixello events table';
 
@@ -47,11 +48,23 @@ class ImportAmbiletEventsCommand extends Command
             $this->info('Deleted existing events map (--fresh).');
         }
 
+        $fallbackOrganizer = $this->option('fallback-organizer') ? (int) $this->option('fallback-organizer') : null;
+
         // Build organizer lookup: email => id
         $organizers = MarketplaceOrganizer::where('marketplace_client_id', $clientId)
             ->pluck('id', 'email')
             ->all();
+
+        // Email redirects: map old emails to existing organizer emails
+        $emailRedirects = [
+            'mihnea.grecu@xlab.ro'    => 'contact@grimus.ro',
+            'mariusstoicea@gmail.com' => 'contact@grimus.ro',
+        ];
+
         $this->info('Loaded ' . count($organizers) . ' organizers for marketplace ' . $clientId . '.');
+        if ($fallbackOrganizer) {
+            $this->info("Fallback organizer ID: {$fallbackOrganizer}");
+        }
 
         $handle  = fopen($file, 'r');
         $header  = fgetcsv($handle);
@@ -72,7 +85,17 @@ class ImportAmbiletEventsCommand extends Command
             }
 
             $organizerEmail = strtolower(trim($data['organizer_email'] ?? ''));
-            $organizerId    = $organizers[$organizerEmail] ?? null;
+
+            // Apply email redirects
+            if (isset($emailRedirects[$organizerEmail])) {
+                $organizerEmail = $emailRedirects[$organizerEmail];
+            }
+
+            $organizerId = $organizers[$organizerEmail] ?? null;
+
+            if (!$organizerId && $fallbackOrganizer) {
+                $organizerId = $fallbackOrganizer;
+            }
 
             if (!$organizerId) {
                 $this->warn("No organizer for '{$organizerEmail}' (event: {$data['name']}) — skipping.");
