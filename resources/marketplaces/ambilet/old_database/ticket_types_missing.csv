@@ -1,4 +1,4 @@
-"wp_ticket_id","wp_event_id","name","price","stock_qty"
+"wp_product_id","wp_event_id","name","price","stock_qty"
 "780122","780114","Bilet Donatie","130","91"
 "785512","785161","Categoria III","40",NULL
 "785516","785161","Categoria II","50",NULL
