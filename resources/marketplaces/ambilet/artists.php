@@ -83,7 +83,7 @@ require_once __DIR__ . '/includes/head.php';
     </section>
 
     <!-- Trending Section -->
-    <section class="p-8 mb-12 bg-white border mobile:p-4 rounded-3xl border-border" id="trendingSection">
+    <section class="hidden p-8 mb-12 bg-white border mobile:p-4 rounded-3xl border-border" id="trendingSection">
         <div class="flex items-center gap-4 mb-6">
             <div class="flex items-center justify-center w-12 h-12 text-white rounded-xl bg-primary">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
