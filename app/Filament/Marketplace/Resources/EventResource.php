@@ -2941,6 +2941,8 @@ class EventResource extends Resource
     public static function table(Table $table): Table
     {
         $marketplace = static::getMarketplaceClient();
+        $lang = $marketplace?->settings['default_language'] ?? null;
+        $marketplaceLanguage = (!empty($lang)) ? $lang : 'ro';
 
         return $table
             ->columns([
