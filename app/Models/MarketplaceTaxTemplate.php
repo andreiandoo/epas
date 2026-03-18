@@ -372,7 +372,7 @@ class MarketplaceTaxTemplate extends Model
             $vatRate = $taxSettings['vat_rate'] ?? ($marketplace?->settings['tax']['vat_rate'] ?? 19);
             $variables['organizer_vat_status'] = $isVatPayer
                 ? "plătitor TVA bilete (cota {$vatRate}%)"
-                : "neplătitor TVA bilete";
+                : "TVA 0%";
 
             // Work mode (exclusiv/neexclusiv)
             $workMode = $organizer->work_mode ?? '';
@@ -405,18 +405,31 @@ class MarketplaceTaxTemplate extends Model
 
         // Event variables
         if ($event) {
-            $variables['event_name'] = $event->title ?? $event->name ?? '';
-            $variables['event_date'] = $event->start_date ? $event->start_date->format('d.m.Y H:i') : '';
+            // Handle translatable title
+            $title = $event->title ?? $event->name ?? '';
+            if (is_array($title)) {
+                $title = $title['ro'] ?? $title['en'] ?? reset($title) ?: '';
+            }
+            $variables['event_name'] = $title;
+
+            // Event date (date only, no time)
+            $variables['event_date'] = $event->start_date
+                ? $event->start_date->format('d.m.Y')
+                : ($event->event_date ? $event->event_date->format('d.m.Y') : '');
 
             // Event city (from venue)
             $variables['event_city'] = $event->venue?->city ?? $event->venue_city ?? '';
 
-            // Venue info
+            // Venue info - handle translatable names
             if ($event->venue) {
-                $variables['venue_name'] = $event->venue->name ?? '';
+                $venueName = $event->venue->name ?? '';
+                if (is_array($venueName)) {
+                    $venueName = $venueName['ro'] ?? $venueName['en'] ?? reset($venueName) ?: '';
+                }
+                $variables['venue_name'] = $venueName;
                 $variables['venue_address'] = $event->venue->address ?? '';
             } else {
-                $variables['venue_name'] = $event->venue_name ?? '';
+                $variables['venue_name'] = $event->suggested_venue_name ?? $event->venue_name ?? '';
                 $variables['venue_address'] = $event->venue_address ?? '';
             }
 
