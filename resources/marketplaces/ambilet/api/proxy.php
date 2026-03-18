@@ -415,9 +415,10 @@ function fetchEventsForShareLink($eventIds, $storedTicketData = []) {
                 $ttId = $tt['id'] ?? null;
                 $stored = $storedTT[$ttId] ?? [];
 
-                $available = (int)($tt['available'] ?? 0);
-                // Use stored totals (from organizer endpoint at creation time)
-                $total = (int)($stored['total'] ?? $tt['quantity'] ?? $tt['total'] ?? $tt['quota_total'] ?? 0);
+                $rawTotal = $stored['total'] ?? $tt['quantity'] ?? $tt['total'] ?? $tt['quota_total'] ?? 0;
+                $isUnlimited = (int)$rawTotal < 0;
+                $available = $isUnlimited ? PHP_INT_MAX : (int)($tt['available'] ?? 0);
+                $total = $isUnlimited ? -1 : (int)$rawTotal;
                 $sold = 0;
 
                 if ($total > 0) {

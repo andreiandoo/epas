@@ -64,7 +64,7 @@ class AccountController extends Controller
                     ] : null,
                     'price_from' => $event->ticketTypes->min('display_price'),
                     'currency' => $event->ticketTypes->first()->currency ?? 'EUR',
-                    'is_sold_out' => $event->ticketTypes->sum('quota_total') <= $event->ticketTypes->sum('quota_sold'),
+                    'is_sold_out' => $event->ticketTypes->contains(fn ($tt) => $tt->quota_total < 0) ? false : $event->ticketTypes->sum('quota_total') <= $event->ticketTypes->sum('quota_sold'),
                 ];
             });
 

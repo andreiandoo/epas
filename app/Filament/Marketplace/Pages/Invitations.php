@@ -606,7 +606,7 @@ class Invitations extends Page
                 [
                     'price_cents' => 0,
                     'currency' => 'RON',
-                    'quota_total' => 0, // Unlimited for invitations
+                    'quota_total' => -1, // Unlimited for invitations
                     'quota_sold' => 0,
                     'status' => 'active',
                     'meta' => ['is_invitation' => true],

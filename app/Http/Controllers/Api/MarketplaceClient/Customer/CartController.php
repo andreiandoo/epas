@@ -598,7 +598,7 @@ class CartController extends BaseController
      */
     protected function getAvailableQuantity(TicketType $ticketType): int
     {
-        if ($ticketType->quota_total === null) {
+        if ($ticketType->quota_total === null || $ticketType->quota_total < 0) {
             return PHP_INT_MAX;
         }
 

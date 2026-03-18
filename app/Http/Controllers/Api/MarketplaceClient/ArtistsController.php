@@ -285,7 +285,7 @@ class ArtistsController extends BaseController
                     'price_from' => $minPrice,
                     'currency' => $currency,
                     'image' => $event->main_image_url ?? $event->poster_url,
-                    'is_sold_out' => $event->ticketTypes->every(fn ($tt) => ($tt->quota_total ?? 0) <= ($tt->quota_sold ?? 0)),
+                    'is_sold_out' => $event->ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0)),
                     'category' => $categoryName ? ['name' => $categoryName] : null,
                     'commission_mode' => $commissionMode,
                     'commission_rate' => $commissionRate,
@@ -433,7 +433,7 @@ class ArtistsController extends BaseController
                 'min_price' => $minPrice,
                 'currency' => $currency,
                 'image' => $event->main_image_url ?? $event->poster_url,
-                'is_sold_out' => $event->ticketTypes->every(fn ($tt) => ($tt->quota_total ?? 0) <= ($tt->quota_sold ?? 0)),
+                'is_sold_out' => $event->ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0)),
             ];
         });
 

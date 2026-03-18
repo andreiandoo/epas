@@ -250,7 +250,7 @@ class CheckoutController extends BaseController
                             $mktTicketType->update(['status' => 'sold_out']);
                         }
                     } elseif ($ticketType) {
-                        $available = $ticketType->quota_total === null
+                        $available = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
                             ? PHP_INT_MAX
                             : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
 
@@ -258,7 +258,7 @@ class CheckoutController extends BaseController
                             throw new \Exception("Not enough tickets for {$ticketType->name}");
                         }
 
-                        if ($ticketType->quota_total !== null) {
+                        if ($ticketType->quota_total !== null && $ticketType->quota_total >= 0) {
                             $ticketType->increment('quota_sold', $quantity);
                         }
                     }
@@ -735,7 +735,7 @@ class CheckoutController extends BaseController
                 continue;
             }
 
-            $available = $ticketType->quota_total === null
+            $available = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
                 ? PHP_INT_MAX
                 : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
 

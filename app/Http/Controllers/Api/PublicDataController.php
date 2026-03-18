@@ -705,8 +705,8 @@ class PublicDataController extends Controller
                             ? round((($ticket->price_cents - $ticket->sale_price_cents) / $ticket->price_cents) * 100)
                             : null,
                         'currency' => $ticket->currency,
-                        'available' => max(0, ($ticket->quota_total ?? 0) - ($ticket->quota_sold ?? 0)),
-                        'capacity' => $ticket->quota_total,
+                        'available' => $ticket->quota_total < 0 ? PHP_INT_MAX : max(0, $ticket->quota_total - ($ticket->quota_sold ?? 0)),
+                        'capacity' => $ticket->quota_total < 0 ? -1 : $ticket->quota_total,
                         'status' => $ticket->status,
                         'sales_start_at' => $ticket->sales_start_at,
                         'sales_end_at' => $ticket->sales_end_at,

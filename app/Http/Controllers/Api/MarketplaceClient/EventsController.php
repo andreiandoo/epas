@@ -188,7 +188,10 @@ class EventsController extends BaseController
         if ($request->boolean('available_only', false)) {
             $query->whereHas('ticketTypes', function ($q) {
                 $q->where('status', 'active')
-                    ->whereRaw('(quota_total - COALESCE(quota_sold, 0)) > 0');
+                    ->where(function ($q2) {
+                        $q2->where('quota_total', '<', 0)
+                            ->orWhereRaw('(quota_total - COALESCE(quota_sold, 0)) > 0');
+                    });
             });
         }
 
@@ -259,7 +262,7 @@ class EventsController extends BaseController
 
             // Calculate total available tickets
             $totalAvailable = $event->ticketTypes->sum(function ($tt) {
-                return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                return ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
             });
 
             // Include minimal ticket type price data for client-side filtering
@@ -464,7 +467,7 @@ class EventsController extends BaseController
                     'original_price' => $originalPrice,
                     'discount_percent' => $hasDiscount ? round((1 - $salePriceCents / $priceCents) * 100) : null,
                     'price_formatted' => number_format($displayPrice, 2) . ' ' . ($tt->currency ?? 'RON'),
-                    'available_quantity' => max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0)),
+                    'available_quantity' => ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0))),
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'sale_starts_at' => $tt->sales_start_at,
@@ -591,7 +594,7 @@ class EventsController extends BaseController
 
                 // Calculate total available tickets
                 $totalAvailable = $event->ticketTypes->sum(function ($tt) {
-                    return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                    return ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 });
 
                 // Get venue name (handle translatable JSON field)
@@ -743,7 +746,7 @@ class EventsController extends BaseController
             ->orderBy('sort_order')
             ->get()
             ->map(function ($tt) {
-                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,

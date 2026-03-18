@@ -715,7 +715,10 @@ class Event extends Model
             return $this->capacity;
         }
 
-        // Otherwise sum from ticket types
+        // Otherwise sum from ticket types (-1 means unlimited)
+        if ($this->ticketTypes()->where('quota_total', '<', 0)->exists()) {
+            return -1;
+        }
         return $this->ticketTypes()->sum('quota_total') ?: 0;
     }
 

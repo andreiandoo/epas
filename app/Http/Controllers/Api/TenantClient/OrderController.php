@@ -114,7 +114,7 @@ class OrderController extends Controller
                     }
 
                     // Check availability
-                    $availableQty = $ticketType->quota_total - $ticketType->quota_sold;
+                    $availableQty = $ticketType->quota_total < 0 ? PHP_INT_MAX : ($ticketType->quota_total - $ticketType->quota_sold);
                     if ($cartItem['quantity'] > $availableQty) {
                         throw new \Exception("Not enough tickets available for {$ticketType->name}");
                     }

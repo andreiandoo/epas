@@ -70,8 +70,8 @@ class EventStatistics extends Page
                 'price' => number_format(($type->sale_price_cents ?? $type->price_cents) / 100, 2),
                 'currency' => $type->currency ?? 'RON',
                 'sold' => $type->quota_sold ?? 0,
-                'total' => $type->quota_total ?? 0,
-                'available' => ($type->quota_total ?? 0) - ($type->quota_sold ?? 0),
+                'total' => $type->quota_total < 0 ? '∞' : $type->quota_total,
+                'available' => $type->quota_total < 0 ? '∞' : max(0, $type->quota_total - ($type->quota_sold ?? 0)),
                 'percentage' => $type->quota_total > 0
                     ? round(($type->quota_sold / $type->quota_total) * 100, 1)
                     : 0,

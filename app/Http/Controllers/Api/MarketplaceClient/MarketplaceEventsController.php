@@ -576,7 +576,7 @@ class MarketplaceEventsController extends BaseController
                     . ' | seatingSections count=' . ($tt->relationLoaded('seatingSections') ? $tt->seatingSections->count() : 'N/A')
                 );
 
-                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $basePrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
 
                 // Calculate original_price:
@@ -784,7 +784,7 @@ class MarketplaceEventsController extends BaseController
             })
             ->get()
             ->map(function ($tt) {
-                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
 
                 // Per-ticket commission if set

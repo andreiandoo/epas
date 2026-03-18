@@ -300,7 +300,7 @@ class TicketType extends Model
 
     public function setCapacityAttribute($value)
     {
-        $this->attributes['quota_total'] = $value ?? 0;
+        $this->attributes['quota_total'] = ($value === null || $value === '') ? -1 : (int) $value;
     }
 
     public function setIsActiveAttribute($value)
@@ -309,11 +309,20 @@ class TicketType extends Model
     }
 
     // Accessor for available_quantity (computed from quota_total - quota_sold)
+    // quota_total = -1 means unlimited
     protected function availableQuantity(): Attribute
     {
         return Attribute::make(
-            get: fn () => max(0, ($this->quota_total ?? 0) - ($this->quota_sold ?? 0))
+            get: fn () => $this->quota_total < 0 ? PHP_INT_MAX : max(0, $this->quota_total - ($this->quota_sold ?? 0))
         );
+    }
+
+    /**
+     * Check if this ticket type has unlimited stock (-1 = unlimited)
+     */
+    public function isUnlimited(): bool
+    {
+        return $this->quota_total < 0;
     }
 
     /**

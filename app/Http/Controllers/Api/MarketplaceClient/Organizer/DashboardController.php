@@ -59,7 +59,7 @@ class DashboardController extends BaseController
                     'venue' => $event->venue_name,
                     'venue_city' => $venueCity,
                     'tickets_sold' => $event->tickets_sold ?? 0,
-                    'tickets_total' => $event->ticketTypes()->sum('quota_total') ?: 100,
+                    'tickets_total' => $event->ticketTypes()->where('quota_total', '<', 0)->exists() ? -1 : ($event->ticketTypes()->sum('quota_total') ?: 100),
                     'status' => $event->is_published ? 'published' : 'draft',
                 ];
             });

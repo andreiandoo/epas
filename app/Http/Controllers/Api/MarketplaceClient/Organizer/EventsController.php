@@ -204,7 +204,7 @@ class EventsController extends BaseController
                     'description' => $ticketTypeData['description'] ?? null,
                     'price_cents' => (int) ($ticketTypeData['price'] * 100),
                     'currency' => 'RON',
-                    'quota_total' => $ticketTypeData['quantity'] ?? 0,
+                    'quota_total' => isset($ticketTypeData['quantity']) ? (int) $ticketTypeData['quantity'] : -1,
                     'quota_sold' => 0,
                     'status' => 'active',
                 ]);
@@ -399,7 +399,7 @@ class EventsController extends BaseController
                         'description' => $ticketTypeData['description'] ?? null,
                         'price_cents' => (int) ($ticketTypeData['price'] * 100),
                         'currency' => 'RON',
-                        'quota_total' => $ticketTypeData['quantity'] ?? 0,
+                        'quota_total' => isset($ticketTypeData['quantity']) ? (int) $ticketTypeData['quantity'] : -1,
                         'quota_sold' => 0,
                         'status' => 'active',
                     ]);

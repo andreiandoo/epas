@@ -73,7 +73,7 @@ class CartService
         }
 
         // Check availability
-        $available = $ticketType->quota_total - $ticketType->quota_sold;
+        $available = $ticketType->quota_total < 0 ? PHP_INT_MAX : ($ticketType->quota_total - $ticketType->quota_sold);
         if ($available < $quantity) {
             return [
                 'success' => false,
@@ -160,7 +160,7 @@ class CartService
         // Check availability
         $ticketType = TicketType::find($cart['items'][$index]['ticket_type_id']);
         if ($ticketType) {
-            $available = $ticketType->quota_total - $ticketType->quota_sold;
+            $available = $ticketType->quota_total < 0 ? PHP_INT_MAX : ($ticketType->quota_total - $ticketType->quota_sold);
             if ($available < $quantity) {
                 return [
                     'success' => false,

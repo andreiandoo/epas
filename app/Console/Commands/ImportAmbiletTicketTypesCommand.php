@@ -75,9 +75,9 @@ class ImportAmbiletTicketTypesCommand extends Command
 
             $price     = is_numeric($data['price']) ? (float) $data['price'] : 0.0;
             $priceCents = (int) round($price * 100);
-            $qty       = ($data['stock_qty'] !== 'NULL' && is_numeric($data['stock_qty']))
+            $qty       = ($data['stock_qty'] !== 'NULL' && is_numeric($data['stock_qty']) && (int) $data['stock_qty'] > 0)
                 ? (int) $data['stock_qty']
-                : 0;
+                : -1;
 
             $now = now()->toDateTimeString();
 
