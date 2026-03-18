@@ -1171,7 +1171,7 @@ class EventResource extends Resource
                                             ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                             ->required()
                                             ->inlineLabel($il)
-                                            ->columnSpan(5)
+                                            ->columnSpan(4)
                                             ->live(onBlur: true)
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                 if ($get('sku')) return;
@@ -1181,17 +1181,17 @@ class EventResource extends Resource
                                             ->label('SKU')
                                             ->inlineLabel($il)
                                             ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
-                                            ->columnSpan(4),
+                                            ->columnSpan(3),
                                         Forms\Components\Toggle::make('is_entry_ticket')
                                             ->label($t('Bilet pentru aplicație', 'App Ticket'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
                                             ->default(false)
-                                            ->columnSpan(2),
+                                            ->columnSpan(3),
                                         Forms\Components\Toggle::make('is_declarable')
                                             ->label($t('Declarabil', 'Declarable'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
                                             ->default(true)
-                                            ->columnSpan(1),
+                                            ->columnSpan(2),
                                         Forms\Components\ColorPicker::make('color')
                                             ->label($t('Culoare pe hartă', 'Map color'))
                                             ->hexColor()

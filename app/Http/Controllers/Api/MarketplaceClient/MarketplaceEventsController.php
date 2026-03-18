@@ -567,7 +567,7 @@ class MarketplaceEventsController extends BaseController
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket)->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
+            'ticket_types' => $event->ticketTypes->sortBy('sort_order')->filter(fn ($tt) => $tt->status === 'active' && !$tt->is_entry_ticket && !($tt->meta['is_invitation'] ?? false))->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 // Debug: log ticket type color and seating row data
                 \Log::info('[MarketplaceEventsController] TicketType #' . $tt->id . ' "' . $tt->name . '"'
                     . ' | color=' . var_export($tt->color, true)
@@ -783,6 +783,7 @@ class MarketplaceEventsController extends BaseController
                 $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
             })
             ->get()
+            ->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))
             ->map(function ($tt) {
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
@@ -1195,7 +1196,9 @@ class MarketplaceEventsController extends BaseController
         // Skip 0-price tickets when paid tickets also exist
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
-            $allPrices = $event->ticketTypes->map(function ($ticket) {
+            // Exclude invitation ticket types from price calculations
+            $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+            $allPrices = $publicTickets->map(function ($ticket) {
                 if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                     return $ticket->sale_price_cents;
                 }
@@ -1240,7 +1243,7 @@ class MarketplaceEventsController extends BaseController
             'is_postponed' => (bool) ($event->is_postponed ?? false),
             'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,
             'price_from' => $minPrice,
-            'ticket_types_count' => $event->relationLoaded('ticketTypes') ? $event->ticketTypes->count() : null,
+            'ticket_types_count' => $event->relationLoaded('ticketTypes') ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))->count() : null,
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,
             'organizer' => $organizer ? [
