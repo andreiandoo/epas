@@ -9,7 +9,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->boolean('is_ended')->default(false)->after('is_cancelled');
             $table->string('manifestation_type')->nullable()->after('marketplace_event_category_id');
         });
     }
@@ -17,7 +16,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('events', function (Blueprint $table) {
-            $table->dropColumn(['is_ended', 'manifestation_type']);
+            $table->dropColumn(['manifestation_type']);
         });
     }
 };
