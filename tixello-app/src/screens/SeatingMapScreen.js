@@ -21,31 +21,17 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 function ArrowLeftIcon({ size = 24, color = colors.white }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M19 12H5M12 19l-7-7 7-7"
-        stroke={color}
-        strokeWidth={1.8}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <Path d="M19 12H5M12 19l-7-7 7-7" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
-
 function CheckIcon({ size = 20, color = colors.white }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <Path
-        d="M20 6L9 17l-5-5"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <Path d="M20 6L9 17l-5-5" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
   );
 }
-
 function ZoomInIcon({ size = 18, color = colors.white }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -53,7 +39,6 @@ function ZoomInIcon({ size = 18, color = colors.white }) {
     </Svg>
   );
 }
-
 function ZoomOutIcon({ size = 18, color = colors.white }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -64,19 +49,10 @@ function ZoomOutIcon({ size = 18, color = colors.white }) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getDistance(touches) {
-  const [t1, t2] = touches;
+function getDistance(t1, t2) {
   const dx = t1.pageX - t2.pageX;
   const dy = t1.pageY - t2.pageY;
   return Math.sqrt(dx * dx + dy * dy);
-}
-
-function getMidpoint(touches) {
-  const [t1, t2] = touches;
-  return {
-    x: (t1.pageX + t2.pageX) / 2,
-    y: (t1.pageY + t2.pageY) / 2,
-  };
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -87,32 +63,21 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
   const [mapData, setMapData] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [mapSize, setMapSize] = useState({ width: SCREEN_WIDTH, height: 500 });
-  // viewBox state: what portion of the canvas is visible
   const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 1000, h: 800 });
 
-  // Gesture tracking refs
-  const gestureRef = useRef({
-    isPinching: false,
-    isPanning: false,
-    startDist: 0,
-    startMid: { x: 0, y: 0 },
-    startVB: { x: 0, y: 0, w: 0, h: 0 },
-    lastTouchTime: 0,
-    touchStartPos: { x: 0, y: 0 },
-    // Map container position on screen
-    containerOffset: { x: 0, y: 0 },
-  });
-
-  const containerRef = useRef(null);
+  // ALL mutable values accessed in PanResponder go through refs
+  const vbRef = useRef({ x: 0, y: 0, w: 1000, h: 800 });
+  const sizeRef = useRef({ width: SCREEN_WIDTH, height: 500 });
+  const canvasRef = useRef({ width: 1000, height: 800 });
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const seatsRef = useRef([]);
+  const selectedRef = useRef(new Set());
+  const toggleRef = useRef(null);
+  const lastTapRef = useRef(0); // debounce taps
 
   useEffect(() => {
-    if (visible && eventId) {
-      loadSeatingMap();
-    }
-    if (!visible) {
-      setSelectedSeats([]);
-      setError(null);
-    }
+    if (visible && eventId) loadSeatingMap();
+    if (!visible) { setSelectedSeats([]); setError(null); }
   }, [visible, eventId]);
 
   const loadSeatingMap = async () => {
@@ -120,120 +85,116 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
     setError(null);
     try {
       const response = await apiGet(`/organizer/events/${eventId}/seating-map`);
-      if (response.success && response.data) {
-        setMapData(response.data);
-      } else {
-        setError(response.message || 'Nu s-a putut incarca harta');
-      }
+      if (response.success && response.data) setMapData(response.data);
+      else setError(response.message || 'Nu s-a putut incarca harta');
     } catch (e) {
-      console.error('Failed to load seating map:', e);
       setError(e.message || 'Eroare la incarcarea hartii');
     }
     setLoading(false);
   };
 
   const canvas = mapData?.canvas || { width: 1000, height: 800 };
+  useEffect(() => { canvasRef.current = canvas; }, [canvas.width, canvas.height]);
 
-  // Calculate initial viewBox to fit canvas in map area
-  const fitViewBox = useCallback((size) => {
-    const w = size?.width || mapSize.width;
-    const h = size?.height || mapSize.height;
-    const canvasAspect = canvas.width / canvas.height;
-    const screenAspect = w / h;
-
+  // Compute viewBox that fits the canvas while matching container aspect ratio
+  const computeFitVB = useCallback((cv, sz) => {
+    const cw = cv?.width || canvasRef.current.width;
+    const ch = cv?.height || canvasRef.current.height;
+    const sw = sz?.width || sizeRef.current.width;
+    const sh = sz?.height || sizeRef.current.height;
+    const canvasAR = cw / ch;
+    const screenAR = sw / sh;
     let vbW, vbH;
-    if (canvasAspect > screenAspect) {
-      // Canvas is wider — fit by width
-      vbW = canvas.width;
-      vbH = canvas.width / screenAspect;
+    if (canvasAR > screenAR) {
+      vbW = cw;
+      vbH = cw / screenAR;
     } else {
-      // Canvas is taller — fit by height
-      vbH = canvas.height;
-      vbW = canvas.height * screenAspect;
+      vbH = ch;
+      vbW = ch * screenAR;
     }
-    const vbX = (canvas.width - vbW) / 2;
-    const vbY = (canvas.height - vbH) / 2;
-    return { x: vbX, y: vbY, w: vbW, h: vbH };
-  }, [canvas.width, canvas.height, mapSize]);
+    return { x: (cw - vbW) / 2, y: (ch - vbH) / 2, w: vbW, h: vbH };
+  }, []);
 
-  // Set initial viewBox when map loads or size changes
+  // Set initial viewBox on load / size change
   useEffect(() => {
     if (mapData && mapSize.width > 0 && mapSize.height > 0) {
-      setViewBox(fitViewBox());
+      const vb = computeFitVB(canvas, mapSize);
+      vbRef.current = vb;
+      setViewBox(vb);
     }
   }, [mapData, mapSize]);
 
   const onMapLayout = useCallback((e) => {
     const { width, height } = e.nativeEvent.layout;
     if (width > 0 && height > 0) {
+      sizeRef.current = { width, height };
       setMapSize({ width, height });
     }
-    // Measure container position on screen
-    e.target.measureInWindow((x, y) => {
-      gestureRef.current.containerOffset = { x: x || 0, y: y || 0 };
-    });
+    // Measure absolute position on screen for coordinate conversion
+    if (e.target?.measureInWindow) {
+      e.target.measureInWindow((x, y) => {
+        offsetRef.current = { x: x || 0, y: y || 0 };
+      });
+    }
   }, []);
 
-  // Process seats from geometry + statuses
+  // Process seats
   const processedData = useMemo(() => {
     if (!mapData) return { seats: [], rowLabels: [], sections: [] };
     const { sections, seats } = mapData;
-    const seatStatusMap = {};
-    (seats || []).forEach(s => { seatStatusMap[s.seat_uid] = s; });
-
+    const statusMap = {};
+    (seats || []).forEach(s => { statusMap[s.seat_uid] = s; });
     const seatList = [];
     const rowLabelList = [];
 
     (sections || []).forEach(section => {
-      const sectionX = section.x_position || section.x || 0;
-      const sectionY = section.y_position || section.y || 0;
-      const sectionMeta = section.metadata || {};
-      const seatSize = parseInt(sectionMeta.seat_size) || 15;
+      const sx = section.x_position || section.x || 0;
+      const sy = section.y_position || section.y || 0;
+      const meta = section.metadata || {};
+      const seatSize = parseInt(meta.seat_size) || 15;
       const seatRadius = seatSize / 2;
 
       (section.rows || []).forEach(row => {
-        const firstSeat = row.seats?.[0];
-        if (firstSeat) {
+        const first = row.seats?.[0];
+        if (first) {
           rowLabelList.push({
             key: `${section.name}-${row.label}`,
-            x: sectionX + (firstSeat.x || 0) - seatRadius - 6,
-            y: sectionY + (firstSeat.y || 0) + seatRadius * 0.35,
+            x: sx + (first.x || 0) - seatRadius - 6,
+            y: sy + (first.y || 0) + seatRadius * 0.35,
             label: row.label,
             fontSize: Math.max(seatRadius * 0.85, 7),
           });
         }
-
         (row.seats || []).forEach(seat => {
-          const cx = sectionX + (seat.x || 0);
-          const cy = sectionY + (seat.y || 0);
-          const seatUid = seat.seat_uid || seat.uid;
-          const seatInfo = seatStatusMap[seatUid] || {};
-          const seatTicketTypeId = seatInfo.ticket_type_id;
-          const isAllowed = !ticketTypeId || seatTicketTypeId == ticketTypeId;
-
+          const uid = seat.seat_uid || seat.uid;
+          const info = statusMap[uid] || {};
+          const ttId = info.ticket_type_id;
           seatList.push({
-            seat_uid: seatUid,
-            cx, cy, seatSize, seatRadius,
-            status: seatInfo.status || 'available',
-            section_name: seatInfo.section_name || section.name || '',
-            row_label: seatInfo.row_label || row.label || '',
-            seat_label: seatInfo.seat_label || seat.label || '',
-            ticket_type_id: seatTicketTypeId,
-            ticket_type_name: seatInfo.ticket_type_name,
-            price: seatInfo.price || 0,
-            color: seatInfo.color || '#10B981',
-            isAllowed,
+            seat_uid: uid,
+            cx: sx + (seat.x || 0),
+            cy: sy + (seat.y || 0),
+            seatSize, seatRadius,
+            status: info.status || 'available',
+            section_name: info.section_name || section.name || '',
+            row_label: info.row_label || row.label || '',
+            seat_label: info.seat_label || seat.label || '',
+            ticket_type_id: ttId,
+            ticket_type_name: info.ticket_type_name,
+            price: info.price || 0,
+            color: info.color || '#10B981',
+            isAllowed: !ticketTypeId || ttId == ticketTypeId,
           });
         });
       });
     });
+    seatsRef.current = seatList;
     return { seats: seatList, rowLabels: rowLabelList, sections: sections || [] };
   }, [mapData, ticketTypeId]);
 
-  // Selected seats set
   const selectedUids = useMemo(() => {
     const set = new Set();
     selectedSeats.forEach(s => set.add(s.seat_uid));
+    selectedRef.current = set;
     return set;
   }, [selectedSeats]);
 
@@ -245,218 +206,185 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
       return [...prev, seat];
     });
   }, []);
+  useEffect(() => { toggleRef.current = toggleSeat; }, [toggleSeat]);
 
-  // Convert screen tap position to canvas coordinates using current viewBox
-  const screenToCanvas = useCallback((screenX, screenY) => {
-    const offset = gestureRef.current.containerOffset;
-    const localX = screenX - offset.x;
-    const localY = screenY - offset.y;
-    return {
-      x: viewBox.x + (localX / mapSize.width) * viewBox.w,
-      y: viewBox.y + (localY / mapSize.height) * viewBox.h,
-    };
-  }, [viewBox, mapSize]);
+  // ─── PanResponder ──────────────────────────────────────────────────────────
+  // Recreated via useMemo so closure never goes stale (refs always fresh)
 
-  // Find seat at canvas coordinates
-  const findSeatAt = useCallback((canvasX, canvasY) => {
-    const seats = processedData.seats;
-    let bestSeat = null;
-    let bestDist = Infinity;
+  const panResponder = useMemo(() => {
+    // Local gesture state
+    let isPinching = false;
+    let startDist = 0;
+    let startMidX = 0, startMidY = 0;
+    let startVB = { x: 0, y: 0, w: 0, h: 0 };
+    let touchStart = { x: 0, y: 0, time: 0 };
+    let moved = false;
 
-    // Hit radius in canvas units — scale-aware
-    const currentZoom = canvas.width / viewBox.w;
-
-    for (let i = 0; i < seats.length; i++) {
-      const s = seats[i];
-      const isAvailable = s.status === 'available';
-      const isSelected = selectedUids.has(s.seat_uid);
-      const isClickable = (isAvailable && s.isAllowed) || isSelected;
-      if (!isClickable) continue;
-
-      const dx = canvasX - s.cx;
-      const dy = canvasY - s.cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      // Hit radius adapts to zoom level
-      const hitRadius = Math.max(s.seatRadius * 2.5, 20 / currentZoom);
-
-      if (dist < hitRadius && dist < bestDist) {
-        bestDist = dist;
-        bestSeat = s;
-      }
+    function applyVB(vb) {
+      vbRef.current = vb;
+      setViewBox(vb);
     }
-    return bestSeat;
-  }, [processedData.seats, selectedUids, viewBox.w, canvas.width]);
 
-  // ─── PanResponder for gestures (replaces RNGH) ──────────────────────────────
-
-  const panResponder = useRef(
-    PanResponder.create({
+    return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+      // Capture phase — grab gestures before children
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
+
       onPanResponderGrant: (evt) => {
-        const touches = evt.nativeEvent.touches;
-        const g = gestureRef.current;
+        const t = evt.nativeEvent.touches;
+        touchStart = { x: t[0].pageX, y: t[0].pageY, time: Date.now() };
+        startVB = { ...vbRef.current };
+        moved = false;
 
-        g.lastTouchTime = Date.now();
-        g.touchStartPos = { x: touches[0].pageX, y: touches[0].pageY };
-        g.startVB = { ...viewBoxRef.current };
-
-        if (touches.length === 2) {
-          g.isPinching = true;
-          g.startDist = getDistance(touches);
-          g.startMid = getMidpoint(touches);
+        if (t.length >= 2) {
+          isPinching = true;
+          startDist = getDistance(t[0], t[1]);
+          startMidX = (t[0].pageX + t[1].pageX) / 2;
+          startMidY = (t[0].pageY + t[1].pageY) / 2;
         } else {
-          g.isPinching = false;
+          isPinching = false;
         }
-        g.isPanning = false;
       },
-      onPanResponderMove: (evt, gestureState) => {
-        const touches = evt.nativeEvent.touches;
-        const g = gestureRef.current;
-        const vb = g.startVB;
 
-        if (touches.length >= 2) {
-          // ── Pinch zoom + pan ──
-          g.isPinching = true;
-          const newDist = getDistance(touches);
-          const newMid = getMidpoint(touches);
-          const scaleRatio = g.startDist / newDist; // > 1 = zoom out
+      onPanResponderMove: (evt) => {
+        const t = evt.nativeEvent.touches;
+        if (!t || t.length === 0) return;
 
-          // New viewBox size
-          const newW = Math.max(canvas.width * 0.1, Math.min(canvas.width * 3, vb.w * scaleRatio));
-          const newH = Math.max(canvas.height * 0.1, Math.min(canvas.height * 3, vb.h * scaleRatio));
+        if (t.length >= 2) {
+          // ── PINCH ZOOM + PAN ──
+          isPinching = true;
+          moved = true;
+          const newDist = getDistance(t[0], t[1]);
+          if (newDist < 10) return; // fingers too close
+          const scaleRatio = startDist / newDist; // >1 = zoom out
+
+          const sz = sizeRef.current;
+          const cv = canvasRef.current;
+          const vb = startVB;
+
+          // New viewBox size (maintain aspect ratio of container)
+          const aspect = sz.width / sz.height;
+          let newW = vb.w * scaleRatio;
+          // Clamp: max zoom out = 2x canvas, max zoom in = 10% canvas
+          newW = Math.max(cv.width * 0.1, Math.min(cv.width * 2.5, newW));
+          const newH = newW / aspect;
 
           // Canvas point under original midpoint
-          const offset = gestureRef.current.containerOffset;
-          const midLocalX = g.startMid.x - offset.x;
-          const midLocalY = g.startMid.y - offset.y;
-          const canvasMidX = vb.x + (midLocalX / mapSizeRef.current.width) * vb.w;
-          const canvasMidY = vb.y + (midLocalY / mapSizeRef.current.height) * vb.h;
+          const off = offsetRef.current;
+          const localMidX = startMidX - off.x;
+          const localMidY = startMidY - off.y;
+          const canvasMidX = vb.x + (localMidX / sz.width) * vb.w;
+          const canvasMidY = vb.y + (localMidY / sz.height) * vb.h;
 
-          // New midpoint position on screen
-          const newMidLocalX = newMid.x - offset.x;
-          const newMidLocalY = newMid.y - offset.y;
+          // Current midpoint
+          const curMidX = (t[0].pageX + t[1].pageX) / 2;
+          const curMidY = (t[0].pageY + t[1].pageY) / 2;
+          const curLocalX = curMidX - off.x;
+          const curLocalY = curMidY - off.y;
 
-          // Adjust viewBox so canvas point stays under new midpoint
-          const newX = canvasMidX - (newMidLocalX / mapSizeRef.current.width) * newW;
-          const newY = canvasMidY - (newMidLocalY / mapSizeRef.current.height) * newH;
+          // Adjust so canvas point under old mid moves to new mid
+          const newX = canvasMidX - (curLocalX / sz.width) * newW;
+          const newY = canvasMidY - (curLocalY / sz.height) * newH;
 
-          const newVB = { x: newX, y: newY, w: newW, h: newH };
-          viewBoxRef.current = newVB;
-          setViewBox(newVB);
-        } else if (touches.length === 1 && !g.isPinching) {
-          // ── Single finger pan ──
-          g.isPanning = true;
-          const dx = gestureState.dx;
-          const dy = gestureState.dy;
+          applyVB({ x: newX, y: newY, w: newW, h: newH });
+        } else if (!isPinching) {
+          // ── SINGLE FINGER PAN ──
+          const dx = t[0].pageX - touchStart.x;
+          const dy = t[0].pageY - touchStart.y;
+          if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved = true;
 
-          // Convert screen pixels to canvas units
-          const canvasDx = -(dx / mapSizeRef.current.width) * vb.w;
-          const canvasDy = -(dy / mapSizeRef.current.height) * vb.h;
+          const sz = sizeRef.current;
+          const vb = startVB;
+          const canvasDx = -(dx / sz.width) * vb.w;
+          const canvasDy = -(dy / sz.height) * vb.h;
 
-          const newVB = { x: vb.x + canvasDx, y: vb.y + canvasDy, w: vb.w, h: vb.h };
-          viewBoxRef.current = newVB;
-          setViewBox(newVB);
+          applyVB({ x: vb.x + canvasDx, y: vb.y + canvasDy, w: vb.w, h: vb.h });
         }
       },
+
       onPanResponderRelease: (evt) => {
-        const g = gestureRef.current;
+        if (isPinching || moved) {
+          isPinching = false;
+          return;
+        }
 
-        // Detect tap (short duration, small movement)
-        const elapsed = Date.now() - g.lastTouchTime;
-        const touch = evt.nativeEvent.changedTouches[0];
-        const dx = touch.pageX - g.touchStartPos.x;
-        const dy = touch.pageY - g.touchStartPos.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        // ── TAP DETECTION ──
+        const elapsed = Date.now() - touchStart.time;
+        if (elapsed > 500) return; // too slow
 
-        if (elapsed < 300 && dist < 15 && !g.isPinching) {
-          // It's a tap — find seat
-          const offset = g.containerOffset;
-          const localX = touch.pageX - offset.x;
-          const localY = touch.pageY - offset.y;
-          const vb = viewBoxRef.current;
-          const canvasX = vb.x + (localX / mapSizeRef.current.width) * vb.w;
-          const canvasY = vb.y + (localY / mapSizeRef.current.height) * vb.h;
+        // Debounce: ignore taps within 400ms of each other
+        const now = Date.now();
+        if (now - lastTapRef.current < 400) return;
+        lastTapRef.current = now;
 
-          // Find nearest seat
-          const seats = processedDataRef.current.seats;
-          const uids = selectedUidsRef.current;
-          const currentZoom = canvas.width / vb.w;
-          let bestSeat = null;
-          let bestDistSq = Infinity;
+        const touch = evt.nativeEvent.changedTouches?.[0] || evt.nativeEvent;
+        const off = offsetRef.current;
+        const sz = sizeRef.current;
+        const vb = vbRef.current;
 
-          for (let i = 0; i < seats.length; i++) {
-            const s = seats[i];
-            const isAvailable = s.status === 'available';
-            const isSelected = uids.has(s.seat_uid);
-            const isClickable = (isAvailable && s.isAllowed) || isSelected;
-            if (!isClickable) continue;
+        const localX = (touch.pageX || touchStart.x) - off.x;
+        const localY = (touch.pageY || touchStart.y) - off.y;
+        const canvasX = vb.x + (localX / sz.width) * vb.w;
+        const canvasY = vb.y + (localY / sz.height) * vb.h;
 
-            const sdx = canvasX - s.cx;
-            const sdy = canvasY - s.cy;
-            const distSq = sdx * sdx + sdy * sdy;
-            const hitRadius = Math.max(s.seatRadius * 2.5, 20 / currentZoom);
+        // Find nearest clickable seat
+        const seats = seatsRef.current;
+        const uids = selectedRef.current;
+        const zoom = canvasRef.current.width / vb.w;
+        let best = null;
+        let bestD = Infinity;
 
-            if (distSq < hitRadius * hitRadius && distSq < bestDistSq) {
-              bestDistSq = distSq;
-              bestSeat = s;
-            }
-          }
-
-          if (bestSeat) {
-            toggleSeatRef.current(bestSeat);
+        for (let i = 0; i < seats.length; i++) {
+          const s = seats[i];
+          const clickable = ((s.status === 'available') && s.isAllowed) || uids.has(s.seat_uid);
+          if (!clickable) continue;
+          const dx = canvasX - s.cx;
+          const dy = canvasY - s.cy;
+          const d = dx * dx + dy * dy;
+          const hr = Math.max(s.seatRadius * 2.5, 18 / zoom);
+          if (d < hr * hr && d < bestD) {
+            bestD = d;
+            best = s;
           }
         }
 
-        g.isPinching = false;
-        g.isPanning = false;
-      },
-    })
-  ).current;
+        if (best && toggleRef.current) {
+          toggleRef.current(best);
+        }
 
-  // Refs to avoid stale closures in PanResponder
-  const viewBoxRef = useRef(viewBox);
-  useEffect(() => { viewBoxRef.current = viewBox; }, [viewBox]);
-  const mapSizeRef = useRef(mapSize);
-  useEffect(() => { mapSizeRef.current = mapSize; }, [mapSize]);
-  const processedDataRef = useRef(processedData);
-  useEffect(() => { processedDataRef.current = processedData; }, [processedData]);
-  const selectedUidsRef = useRef(selectedUids);
-  useEffect(() => { selectedUidsRef.current = selectedUids; }, [selectedUids]);
-  const toggleSeatRef = useRef(toggleSeat);
-  useEffect(() => { toggleSeatRef.current = toggleSeat; }, [toggleSeat]);
+        isPinching = false;
+      },
+
+      onPanResponderTerminate: () => {
+        isPinching = false;
+      },
+    });
+  }, []); // No deps — all values accessed via refs
 
   // ─── Zoom controls ──────────────────────────────────────────────────────────
 
   const resetView = useCallback(() => {
-    const vb = fitViewBox();
-    viewBoxRef.current = vb;
+    const vb = computeFitVB();
+    vbRef.current = vb;
     setViewBox(vb);
-  }, [fitViewBox]);
+  }, [computeFitVB]);
 
-  const zoomIn = useCallback(() => {
-    setViewBox(prev => {
-      const newW = prev.w / 1.5;
-      const newH = prev.h / 1.5;
-      const newX = prev.x + (prev.w - newW) / 2;
-      const newY = prev.y + (prev.h - newH) / 2;
-      const vb = { x: newX, y: newY, w: newW, h: newH };
-      viewBoxRef.current = vb;
-      return vb;
-    });
+  const zoomCenter = useCallback((factor) => {
+    const vb = vbRef.current;
+    const sz = sizeRef.current;
+    const aspect = sz.width / sz.height;
+    const cv = canvasRef.current;
+    let newW = vb.w * factor;
+    newW = Math.max(cv.width * 0.1, Math.min(cv.width * 2.5, newW));
+    const newH = newW / aspect;
+    const newX = vb.x + (vb.w - newW) / 2;
+    const newY = vb.y + (vb.h - newH) / 2;
+    const newVB = { x: newX, y: newY, w: newW, h: newH };
+    vbRef.current = newVB;
+    setViewBox(newVB);
   }, []);
-
-  const zoomOut = useCallback(() => {
-    setViewBox(prev => {
-      const newW = Math.min(prev.w * 1.5, canvas.width * 3);
-      const newH = Math.min(prev.h * 1.5, canvas.height * 3);
-      const newX = prev.x + (prev.w - newW) / 2;
-      const newY = prev.y + (prev.h - newH) / 2;
-      const vb = { x: newX, y: newY, w: newW, h: newH };
-      viewBoxRef.current = vb;
-      return vb;
-    });
-  }, [canvas.width, canvas.height]);
 
   const selectedTotal = useMemo(
     () => selectedSeats.reduce((sum, s) => sum + (s.price || 0), 0),
@@ -477,12 +405,12 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 
   const handleConfirm = () => {
     if (selectedSeats.length === 0) return;
-    const cartItems = selectedByType.map(group => ({
-      id: group.ticket_type_id, name: group.name, price: group.price, color: group.color, quantity: group.seats.length,
+    const cartItems = selectedByType.map(g => ({
+      id: g.ticket_type_id, name: g.name, price: g.price, color: g.color, quantity: g.seats.length,
     }));
-    const seatUids = selectedSeats.map(s => s.seat_uid);
     onConfirm({
-      cartItems, seatUids,
+      cartItems,
+      seatUids: selectedSeats.map(s => s.seat_uid),
       selectedSeats: selectedSeats.map(s => ({
         seat_uid: s.seat_uid, section_name: s.section_name, row_label: s.row_label,
         seat_label: s.seat_label, ticket_type_id: s.ticket_type_id, price: s.price,
@@ -490,9 +418,17 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
     });
   };
 
-  const ticketTypeLegend = mapData?.ticket_types || [];
+  // Filter legend: only show ticket types that have seats with is_entry_ticket
+  const ticketTypeLegend = useMemo(() => {
+    const types = mapData?.ticket_types || [];
+    // If ticketTypeId is set, only show that type; otherwise show all from API
+    if (ticketTypeId) return types.filter(t => t.id == ticketTypeId);
+    return types;
+  }, [mapData, ticketTypeId]);
 
   // ─── Render ──────────────────────────────────────────────────────
+
+  if (!visible) return null;
 
   const renderContent = () => {
     if (loading) {
@@ -503,7 +439,6 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
         </View>
       );
     }
-
     if (error) {
       return (
         <View style={styles.loadingContainer}>
@@ -521,10 +456,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
         <View style={styles.legendContainer}>
           <View style={styles.legendScroll}>
             {ticketTypeLegend.map(tt => (
-              <View key={tt.id} style={[
-                styles.legendItem,
-                ticketTypeId && tt.id == ticketTypeId && styles.legendItemActive,
-              ]}>
+              <View key={tt.id} style={[styles.legendItem, ticketTypeId && tt.id == ticketTypeId && styles.legendItemActive]}>
                 <View style={[styles.legendDot, { backgroundColor: tt.color || '#10B981' }]} />
                 <Text style={styles.legendText} numberOfLines={1}>{tt.name}</Text>
                 <Text style={styles.legendPrice}>{formatCurrency(tt.price)}</Text>
@@ -541,20 +473,15 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
           </View>
         </View>
 
-        {/* Map with PanResponder gestures */}
-        <View
-          ref={containerRef}
-          style={styles.mapContainer}
-          onLayout={onMapLayout}
-          {...panResponder.panHandlers}
-        >
+        {/* Map */}
+        <View style={styles.mapContainer} onLayout={onMapLayout} {...panResponder.panHandlers}>
           <Svg
-            width="100%"
-            height="100%"
+            width={mapSize.width}
+            height={mapSize.height}
             viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
           >
-            {/* Background */}
+            <Rect x={viewBox.x} y={viewBox.y} width={viewBox.w} height={viewBox.h} fill="#0f0f1a" />
             <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
 
             {/* Section labels */}
@@ -562,25 +489,13 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
               const sx = section.x_position || section.x || 0;
               const sy = section.y_position || section.y || 0;
               const rotation = section.rotation || 0;
-              const sectionW = section.width || 100;
-              const sectionH = section.height || 100;
-              const rcx = sx + sectionW / 2;
-              const rcy = sy + sectionH / 2;
-              const transform = rotation !== 0
-                ? `rotate(${rotation} ${rcx} ${rcy})`
-                : undefined;
-
+              const sW = section.width || 100;
+              const sH = section.height || 100;
+              const rcx = sx + sW / 2;
+              const rcy = sy + sH / 2;
+              const transform = rotation !== 0 ? `rotate(${rotation} ${rcx} ${rcy})` : undefined;
               return (
-                <SvgText
-                  key={`sl-${idx}`}
-                  x={sx + sectionW / 2}
-                  y={sy - 12}
-                  fill="rgba(255,255,255,0.5)"
-                  fontSize={12}
-                  fontWeight="700"
-                  textAnchor="middle"
-                  transform={transform}
-                >
+                <SvgText key={`sl-${idx}`} x={sx + sW / 2} y={sy - 12} fill="rgba(255,255,255,0.5)" fontSize={12} fontWeight="700" textAnchor="middle" transform={transform}>
                   {section.name || ''}
                 </SvgText>
               );
@@ -588,15 +503,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 
             {/* Row labels */}
             {processedData.rowLabels.map(rl => (
-              <SvgText
-                key={rl.key}
-                x={rl.x}
-                y={rl.y}
-                textAnchor="end"
-                fontSize={rl.fontSize}
-                fontWeight="500"
-                fill="rgba(255,255,255,0.45)"
-              >
+              <SvgText key={rl.key} x={rl.x} y={rl.y} textAnchor="end" fontSize={rl.fontSize} fontWeight="500" fill="rgba(255,255,255,0.45)">
                 {rl.label}
               </SvgText>
             ))}
@@ -604,55 +511,20 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
             {/* Seats */}
             {processedData.seats.map(seat => {
               const isSelected = selectedUids.has(seat.seat_uid);
-              const seatRadius = seat.seatRadius;
-              const isAvailable = seat.status === 'available';
-
-              let fillColor, strokeColor, strokeWidth, opacity;
-
-              if (isSelected) {
-                fillColor = '#a51c30';
-                strokeColor = '#7a141f';
-                strokeWidth = 1.5;
-                opacity = 1;
-              } else if (isAvailable && seat.isAllowed) {
-                fillColor = seat.color;
-                strokeColor = '#ffffff';
-                strokeWidth = 0.8;
-                opacity = 1;
-              } else if (isAvailable && !seat.isAllowed) {
-                fillColor = '#2D2D3D';
-                strokeColor = 'rgba(255,255,255,0.1)';
-                strokeWidth = 0.5;
-                opacity = 0.4;
-              } else {
-                fillColor = '#9CA3AF';
-                strokeColor = 'rgba(255,255,255,0.15)';
-                strokeWidth = 0.5;
-                opacity = seat.status === 'disabled' ? 0.25 : 0.45;
-              }
-
-              const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
-              const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
-
+              const r = seat.seatRadius;
+              const avail = seat.status === 'available';
+              let fill, stroke, sw, op;
+              if (isSelected) { fill = '#a51c30'; stroke = '#7a141f'; sw = 1.5; op = 1; }
+              else if (avail && seat.isAllowed) { fill = seat.color; stroke = '#ffffff'; sw = 0.8; op = 1; }
+              else if (avail && !seat.isAllowed) { fill = '#2D2D3D'; stroke = 'rgba(255,255,255,0.1)'; sw = 0.5; op = 0.4; }
+              else { fill = '#9CA3AF'; stroke = 'rgba(255,255,255,0.15)'; sw = 0.5; op = seat.status === 'disabled' ? 0.25 : 0.45; }
+              const dr = isSelected ? r * 1.4 : r;
+              const fs = Math.round(r * 0.85 * 10) / 10;
               return (
                 <G key={seat.seat_uid}>
-                  <Circle
-                    cx={seat.cx} cy={seat.cy} r={drawRadius}
-                    fill={fillColor}
-                    stroke={strokeColor}
-                    strokeWidth={strokeWidth}
-                    opacity={opacity}
-                  />
-                  {seatRadius >= 5 && (
-                    <SvgText
-                      x={seat.cx}
-                      y={seat.cy + fontSize * 0.35}
-                      textAnchor="middle"
-                      fontSize={fontSize}
-                      fontWeight="700"
-                      fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
-                      opacity={opacity}
-                    >
+                  <Circle cx={seat.cx} cy={seat.cy} r={dr} fill={fill} stroke={stroke} strokeWidth={sw} opacity={op} />
+                  {r >= 5 && (
+                    <SvgText x={seat.cx} y={seat.cy + fs * 0.35} textAnchor="middle" fontSize={fs} fontWeight="700" fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'} opacity={op}>
                       {seat.seat_label}
                     </SvgText>
                   )}
@@ -662,11 +534,11 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
           </Svg>
 
           {/* Zoom controls */}
-          <View style={styles.zoomControls} pointerEvents="box-none">
-            <TouchableOpacity style={styles.zoomButton} onPress={zoomIn} activeOpacity={0.7}>
+          <View style={styles.zoomControls}>
+            <TouchableOpacity style={styles.zoomButton} onPress={() => zoomCenter(1 / 1.5)} activeOpacity={0.7}>
               <ZoomInIcon size={18} color={colors.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.zoomButton} onPress={zoomOut} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.zoomButton} onPress={() => zoomCenter(1.5)} activeOpacity={0.7}>
               <ZoomOutIcon size={18} color={colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.zoomButton} onPress={resetView} activeOpacity={0.7}>
@@ -679,9 +551,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
         {selectedSeats.length > 0 && (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarInfo}>
-              <Text style={styles.bottomBarCount}>
-                {selectedSeats.length} {selectedSeats.length === 1 ? 'loc' : 'locuri'}
-              </Text>
+              <Text style={styles.bottomBarCount}>{selectedSeats.length} {selectedSeats.length === 1 ? 'loc' : 'locuri'}</Text>
               <Text style={styles.bottomBarTotal}>{formatCurrency(selectedTotal)}</Text>
               <View style={styles.seatLabelsRow}>
                 {selectedSeats.map(s => (
@@ -702,27 +572,16 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      statusBarTranslucent
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
             <ArrowLeftIcon size={20} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {loading ? 'Harta Locurilor' : 'Selecteaza Locuri'}
-          </Text>
+          <Text style={styles.headerTitle}>{loading ? 'Harta Locurilor' : 'Selecteaza Locuri'}</Text>
           {selectedSeats.length > 0 ? (
-            <View style={styles.selectedBadge}>
-              <Text style={styles.selectedBadgeText}>{selectedSeats.length}</Text>
-            </View>
-          ) : (
-            <View style={{ width: 40 }} />
-          )}
+            <View style={styles.selectedBadge}><Text style={styles.selectedBadgeText}>{selectedSeats.length}</Text></View>
+          ) : <View style={{ width: 40 }} />}
         </View>
         {renderContent()}
       </View>

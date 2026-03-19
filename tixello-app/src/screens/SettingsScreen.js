@@ -286,7 +286,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>Tixello Staff v1.3.8</Text>
+      <Text style={styles.versionText}>Tixello Staff v1.3.9</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
