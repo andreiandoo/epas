@@ -365,11 +365,13 @@ const AmbiletCart = {
             if (response.success) {
                 // Use the backend-calculated discount amount (respects ticket type restrictions)
                 const discountData = response.data.discount || {};
+                const promoCode = response.data.promo_code || {};
                 const promoData = {
                     code: code,
-                    type: response.data.discount_type || response.data.promo_code?.type,
-                    value: response.data.discount_value || response.data.promo_code?.value,
+                    type: response.data.discount_type || promoCode.type,
+                    value: response.data.discount_value || promoCode.value,
                     discountAmount: discountData.amount || response.data.discount_amount || 0,
+                    appliedToLabel: promoCode.applied_to_label || null,
                     appliedAt: new Date().toISOString()
                 };
 

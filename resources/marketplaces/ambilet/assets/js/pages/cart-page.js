@@ -622,7 +622,10 @@ const CartPage = {
             const label = promo.type === 'percentage'
                 ? `-${promo.value}% reducere`
                 : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
-            messageEl.innerHTML = `✓ Cod aplicat! ${label}`;
+            const appliedTo = promo.appliedToLabel
+                ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
+                : '';
+            messageEl.innerHTML = `✓ Cod aplicat! ${label}${appliedTo}`;
             messageEl.className = 'mt-2 text-sm text-success';
             messageEl.classList.remove('hidden');
 
@@ -649,7 +652,10 @@ const CartPage = {
             const label = promo.type === 'percentage'
                 ? `-${promo.value}% reducere`
                 : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
-            messageEl.innerHTML = `✓ Cod aplicat: ${promo.code} (${label})`;
+            const appliedTo = promo.appliedToLabel
+                ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
+                : '';
+            messageEl.innerHTML = `✓ Cod aplicat: ${promo.code} (${label})${appliedTo}`;
             messageEl.className = 'mt-2 text-sm text-success';
             messageEl.classList.remove('hidden');
         }

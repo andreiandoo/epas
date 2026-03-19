@@ -73,6 +73,9 @@ class PromoCodeController extends BaseController
 
         $calculation = $promoCode->calculateDiscount($cart);
 
+        // Build applied_to label with event name and ticket type names
+        $appliedToLabel = $this->buildAppliedToLabel($promoCode->applies_to, $promoCode->event, $promoCode->ticketType);
+
         return $this->success([
             'valid' => true,
             'promo_code' => [
@@ -82,6 +85,7 @@ class PromoCodeController extends BaseController
                 'value' => (float) $promoCode->value,
                 'formatted_discount' => $promoCode->getFormattedDiscount(),
                 'description' => $promoCode->description,
+                'applied_to_label' => $appliedToLabel,
             ],
             'discount' => [
                 'amount' => $calculation['discount_amount'],
@@ -194,6 +198,9 @@ class PromoCodeController extends BaseController
             ? "{$couponCode->discount_value}%"
             : number_format($couponCode->discount_value, 2) . ' RON';
 
+        // Build applied_to label from coupon targeting
+        $appliedToLabel = $this->buildCouponAppliedToLabel($couponCode);
+
         return $this->success([
             'valid' => true,
             // Flat fields for cart.js compatibility
@@ -208,6 +215,7 @@ class PromoCodeController extends BaseController
                 'value' => (float) $couponCode->discount_value,
                 'formatted_discount' => $formattedDiscount,
                 'description' => null,
+                'applied_to_label' => $appliedToLabel,
             ],
             'discount' => [
                 'amount' => $discount,
@@ -245,5 +253,52 @@ class PromoCodeController extends BaseController
                 ];
             }),
         ]);
+    }
+
+    /**
+     * Build a human-readable label for what the organizer promo code applies to
+     */
+    protected function buildAppliedToLabel(string $appliesTo, $event, $ticketType): ?string
+    {
+        if ($appliesTo === 'ticket_type' && $ticketType) {
+            $eventName = $event?->name ?? '';
+            $ttName = $ticketType->name ?? '';
+            $parts = array_filter([$ttName, $eventName]);
+            return implode(' — ', $parts) ?: null;
+        }
+
+        if ($appliesTo === 'specific_event' && $event) {
+            return $event->name ?? null;
+        }
+
+        return null; // all_events — no specific label needed
+    }
+
+    /**
+     * Build a human-readable label for what the coupon code applies to
+     */
+    protected function buildCouponAppliedToLabel(CouponCode $coupon): ?string
+    {
+        $parts = [];
+
+        // Ticket type names
+        if (!empty($coupon->applicable_ticket_types)) {
+            $ttIds = array_map('intval', $coupon->applicable_ticket_types);
+            $ttNames = \App\Models\MarketplaceTicketType::whereIn('id', $ttIds)->pluck('name')->toArray();
+            if ($ttNames) {
+                $parts[] = implode(', ', $ttNames);
+            }
+        }
+
+        // Event names
+        if (!empty($coupon->applicable_events)) {
+            $eventIds = array_map('intval', $coupon->applicable_events);
+            $eventNames = \App\Models\MarketplaceEvent::whereIn('id', $eventIds)->pluck('name')->toArray();
+            if ($eventNames) {
+                $parts[] = implode(', ', $eventNames);
+            }
+        }
+
+        return !empty($parts) ? implode(' — ', $parts) : null;
     }
 }
