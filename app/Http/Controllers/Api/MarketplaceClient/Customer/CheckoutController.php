@@ -349,12 +349,14 @@ class CheckoutController extends BaseController
 
                 // Build cart data for validation
                 $promoCartData = [
-                    'event_id' => $primaryMarketplaceEvent?->id ?? $primaryEvent?->id,
+                    'event_id' => $primaryEvent?->id ?? $primaryMarketplaceEvent?->id,
                     'total' => $subtotal,
                     'ticket_count' => collect($processedItems)->sum('quantity'),
                     'items' => collect($processedItems)->map(fn ($pi) => [
-                        'event_id' => $pi['marketplace_event']?->id ?? $pi['event']?->id,
-                        'ticket_type_id' => $pi['marketplace_ticket_type']?->id ?? $pi['ticket_type']?->id,
+                        'event_id' => $pi['event']?->id ?? $pi['marketplace_event']?->id,
+                        // CouponCodes use TicketType IDs, organizer promos use MarketplaceTicketType IDs
+                        'ticket_type_id' => $pi['ticket_type']?->id ?? $pi['marketplace_ticket_type']?->id,
+                        'marketplace_ticket_type_id' => $pi['marketplace_ticket_type']?->id,
                         'quantity' => $pi['quantity'],
                         'total' => $pi['total'],
                     ])->all(),

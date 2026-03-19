@@ -83,7 +83,7 @@ class MarketplaceOrganizerPromoCode extends Model
 
     public function ticketType(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceTicketType::class);
+        return $this->belongsTo(MarketplaceTicketType::class, 'ticket_type_id');
     }
 
     public function usage(): HasMany

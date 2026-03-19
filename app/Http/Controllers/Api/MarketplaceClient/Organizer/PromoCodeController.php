@@ -49,7 +49,8 @@ class PromoCodeController extends BaseController
         $ownCodes = $query->get()->map(fn ($code) => $this->formatPromoCode($code));
 
         // 2. Get admin-created CouponCodes that apply to this organizer's events
-        $organizerEventIds = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
+        // CouponCodes store Event IDs (from events table), not MarketplaceEvent IDs
+        $organizerEventIds = \App\Models\Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id')
             ->toArray();
@@ -598,7 +599,7 @@ class PromoCodeController extends BaseController
         if (!empty($coupon->applicable_ticket_types)) {
             $appliesTo = 'ticket_type';
             $firstTtId = (int) $coupon->applicable_ticket_types[0];
-            $tt = \App\Models\MarketplaceTicketType::find($firstTtId);
+            $tt = \App\Models\TicketType::find($firstTtId);
             if ($tt) {
                 $ticketTypeData = ['id' => $tt->id, 'name' => $tt->name];
             }
@@ -609,9 +610,11 @@ class PromoCodeController extends BaseController
                 $appliesTo = 'specific_event';
             }
             $firstEventId = (int) $coupon->applicable_events[0];
-            $event = MarketplaceEvent::find($firstEventId);
+            $event = \App\Models\Event::find($firstEventId);
             if ($event) {
-                $eventData = ['id' => $event->id, 'name' => $event->name, 'slug' => $event->slug];
+                $title = $event->title;
+                $eventName = is_array($title) ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: '') : ($title ?? '');
+                $eventData = ['id' => $event->id, 'name' => $eventName, 'slug' => $event->slug];
             }
         }
 

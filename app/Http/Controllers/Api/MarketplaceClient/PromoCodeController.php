@@ -281,19 +281,23 @@ class PromoCodeController extends BaseController
     {
         $parts = [];
 
-        // Ticket type names
+        // Ticket type names (CouponCode stores TicketType IDs from ticket_types table)
         if (!empty($coupon->applicable_ticket_types)) {
             $ttIds = array_map('intval', $coupon->applicable_ticket_types);
-            $ttNames = \App\Models\MarketplaceTicketType::whereIn('id', $ttIds)->pluck('name')->toArray();
+            $ttNames = \App\Models\TicketType::whereIn('id', $ttIds)->pluck('name')->toArray();
             if ($ttNames) {
                 $parts[] = implode(', ', $ttNames);
             }
         }
 
-        // Event names
+        // Event names (CouponCode stores Event IDs from events table)
         if (!empty($coupon->applicable_events)) {
             $eventIds = array_map('intval', $coupon->applicable_events);
-            $eventNames = \App\Models\MarketplaceEvent::whereIn('id', $eventIds)->pluck('name')->toArray();
+            $events = \App\Models\Event::whereIn('id', $eventIds)->get();
+            $eventNames = $events->map(function ($event) {
+                $title = $event->title;
+                return is_array($title) ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: '') : ($title ?? '');
+            })->filter()->toArray();
             if ($eventNames) {
                 $parts[] = implode(', ', $eventNames);
             }
