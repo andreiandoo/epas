@@ -316,16 +316,8 @@ class Event extends Model
             'artist_id'
         );
 
-        // Only add pivot columns and ordering if the migration has been run
-        // Check if sort_order column exists in event_artist table
-        try {
-            if (\Schema::hasColumn('event_artist', 'sort_order')) {
-                $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
-                         ->orderByPivot('sort_order');
-            }
-        } catch (\Exception $e) {
-            // Silently ignore if schema check fails
-        }
+        $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+                 ->orderByPivot('sort_order');
 
         return $relation;
     }

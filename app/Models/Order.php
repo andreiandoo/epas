@@ -150,7 +150,9 @@ class Order extends Model
         static::saving(function (Order $order) {
             // sincronizare email <-> customer (cum ți-am dat anterior)
             if ($order->customer_id && empty($order->customer_email)) {
-                $email = $order->customer?->email;
+                $email = $order->relationLoaded('customer')
+                    ? $order->customer?->email
+                    : Customer::where('id', $order->customer_id)->value('email');
                 if ($email) {
                     $order->customer_email = $email;
                 }
@@ -171,6 +173,9 @@ class Order extends Model
         static::saved(function (Order $order) {
             // asigură membership în pivot pt. tenantul comenzii
             if ($order->customer_id && $order->tenant_id) {
+                if (!$order->relationLoaded('customer')) {
+                    $order->load('customer');
+                }
                 $customer = $order->customer;
                 if ($customer && !$customer->tenants()->where('tenants.id', $order->tenant_id)->exists()) {
                     $customer->tenants()->attach($order->tenant_id);
@@ -244,11 +249,15 @@ class Order extends Model
             }
 
             // 2. Restore stock for ticket types
-            $this->load('items');
+            if (!$this->relationLoaded('items')) {
+                $this->load('items');
+            }
+            $ticketTypeIds = $this->items->pluck('ticket_type_id')->unique()->toArray();
+            $marketplaceTicketTypes = MarketplaceTicketType::whereIn('id', $ticketTypeIds)->get()->keyBy('id');
+
             foreach ($this->items as $orderItem) {
                 if ($orderItem->quantity > 0) {
-                    // Try MarketplaceTicketType first
-                    $mtt = MarketplaceTicketType::find($orderItem->ticket_type_id);
+                    $mtt = $marketplaceTicketTypes->get($orderItem->ticket_type_id);
                     if ($mtt) {
                         $mtt->decrement('quantity_sold', min($orderItem->quantity, $mtt->quantity_sold ?? 0));
                         if ($mtt->status === 'sold_out' && $mtt->quantity_sold < ($mtt->quantity ?? PHP_INT_MAX)) {

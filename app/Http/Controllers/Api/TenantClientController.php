@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class TenantClientController extends Controller
@@ -24,9 +25,14 @@ class TenantClientController extends Controller
         $tenantId = $request->query('tenant');
 
         if ($hostname) {
-            $domain = Domain::where('domain', $hostname)
-                ->where('is_active', true)
-                ->first();
+            $domain = Cache::remember(
+                "domain_tenant_{$hostname}",
+                now()->addMinutes(30),
+                fn () => Domain::with('tenant')
+                    ->where('domain', $hostname)
+                    ->where('is_active', true)
+                    ->first()
+            );
 
             if (!$domain) {
                 return null;
@@ -39,7 +45,12 @@ class TenantClientController extends Controller
         }
 
         if ($tenantId) {
-            $tenant = Tenant::find($tenantId);
+            $tenant = Cache::remember(
+                "tenant_{$tenantId}",
+                now()->addMinutes(30),
+                fn () => Tenant::find($tenantId)
+            );
+
             if (!$tenant) {
                 return null;
             }
@@ -161,15 +172,14 @@ class TenantClientController extends Controller
 
         $total = $query->count();
 
-        // Determine order column
-        $orderColumn = 'created_at';
-        if (\Schema::hasColumn('events', 'start_date')) {
-            $orderColumn = 'start_date';
-        } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $orderColumn = 'event_date';
-        }
+        $orderColumn = 'event_date';
 
-        $events = $query->with(['venue', 'eventTypes', 'artists', 'ticketTypes'])
+        $events = $query->with([
+                'venue:id,name,city',
+                'eventTypes',
+                'artists:id,name,main_image',
+                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+            ])
             ->orderBy($orderColumn, 'asc')
             ->skip($offset)
             ->take($limit)
@@ -213,18 +223,15 @@ class TenantClientController extends Controller
             });
         }
 
-        // Check if is_featured column exists, otherwise just return latest events
-        if (\Schema::hasColumn('events', 'is_featured')) {
-            $query->where('is_featured', true);
-        }
+        $query->where('is_featured', true);
 
-        // Determine order column
-        $orderColumn = 'event_date';
-        if (\Schema::hasColumn('events', 'range_start_date')) {
-            $orderColumn = 'range_start_date';
-        }
+        $orderColumn = 'range_start_date';
 
-        $events = $query->with(['venue', 'eventTypes', 'ticketTypes'])
+        $events = $query->with([
+                'venue:id,name,city',
+                'eventTypes',
+                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+            ])
             ->orderBy($orderColumn, 'asc')
             ->take($limit)
             ->get();
@@ -249,7 +256,13 @@ class TenantClientController extends Controller
 
         $event = Event::where('tenant_id', $tenantId)
             ->where('slug', $slug)
-            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes'])
+            ->with([
+                'venue',
+                'eventTypes',
+                'eventGenres',
+                'artists:id,name,main_image',
+                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+            ])
             ->first();
 
         if (!$event) {
@@ -277,9 +290,7 @@ class TenantClientController extends Controller
         // Get event types that have events for this tenant
         $types = EventType::whereHas('events', function ($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
-            if (\Schema::hasColumn('events', 'is_active')) {
-                $q->where('is_active', true);
-            }
+            $q->where('status', 'published');
         })->get();
 
         return response()->json([

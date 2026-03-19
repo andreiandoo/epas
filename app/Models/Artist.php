@@ -158,16 +158,14 @@ class Artist extends Model
         if (! method_exists($this, 'events')) return 0;
         $since = Carbon::now()->subYear();
         return $this->events()
-            ->when(Schema::hasColumn('events', 'event_date'), fn($q) => $q->where('event_date', '>=', $since->toDateString()))
+            ->where('event_date', '>=', $since->toDateString())
             ->count();
     }
 
     public function eventsCountBetween(Carbon $from, Carbon $to): int
     {
         return $this->events()
-            ->when(Schema::hasColumn('events', 'event_date'), fn($q) =>
-                $q->whereBetween('event_date', [$from->toDateString(), $to->toDateString()])
-            )
+            ->whereBetween('event_date', [$from->toDateString(), $to->toDateString()])
             ->count();
     }
 
@@ -238,9 +236,7 @@ class Artist extends Model
             ->join('events', 'events.id', '=', 'ticket_types.event_id')
             ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
             ->where('event_artist.artist_id', $this->id)
-            ->when(Schema::hasColumn('events', 'event_date'), function ($q) use ($from, $to) {
-                $q->whereBetween('events.event_date', [$from->toDateString(), $to->toDateString()]);
-            })
+            ->whereBetween('events.event_date', [$from->toDateString(), $to->toDateString()])
             ->count();
 
         // 2) Bilete listate (stoc publicat) – detectăm coloana potrivită pe ticket_types
@@ -266,9 +262,7 @@ class Artist extends Model
         $eventsCount = DB::table('events')
             ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
             ->where('event_artist.artist_id', $this->id)
-            ->when(Schema::hasColumn('events', 'event_date'), function ($q) use ($from, $to) {
-                $q->whereBetween('events.event_date', [$from->toDateString(), $to->toDateString()]);
-            })
+            ->whereBetween('events.event_date', [$from->toDateString(), $to->toDateString()])
             ->count();
 
         $avgPerEvent = $eventsCount ? round($sold / $eventsCount, 2) : 0;

@@ -23,19 +23,24 @@ class EventsController extends Controller
         $tenantId = $request->query('tenant');
 
         if ($hostname) {
-            $domain = Domain::where('domain', $hostname)
-                ->where('is_active', true)
-                ->first();
+            $domain = Cache::remember(
+                "domain_tenant_{$hostname}",
+                now()->addMinutes(30),
+                fn () => Domain::with('tenant')
+                    ->where('domain', $hostname)
+                    ->where('is_active', true)
+                    ->first()
+            );
 
-            if (!$domain) {
-                return null;
-            }
-
-            return $domain->tenant;
+            return $domain?->tenant;
         }
 
         if ($tenantId) {
-            return Tenant::find($tenantId);
+            return Cache::remember(
+                "tenant_{$tenantId}",
+                now()->addMinutes(30),
+                fn () => Tenant::find($tenantId)
+            );
         }
 
         return null;
@@ -119,13 +124,18 @@ class EventsController extends Controller
 
         $total = $query->count();
 
-        // Order by start_date
-        $orderColumn = 'created_at';
-        if (\Schema::hasColumn('events', 'start_date')) {
-            $orderColumn = 'start_date';
-        }
+        // Order by event_date (start_date is a model accessor, not a DB column)
+        $orderColumn = 'event_date';
 
-        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'ticketTypes', 'tenant'])
+        $events = $query->with([
+                'venue:id,name,city,slug',
+                'eventTypes',
+                'eventGenres',
+                'artists:id,name,main_image',
+                'tags',
+                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+                'tenant:id,name,public_name,slug',
+            ])
             ->orderBy($orderColumn, 'asc')
             ->skip(($page - 1) * $perPage)
             ->take($perPage)
@@ -283,7 +293,15 @@ class EventsController extends Controller
                     $q->orWhereIn('venue_id', $ownedVenueIds);
                 }
             })
-            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes', 'tags', 'tenant'])
+            ->with([
+                'venue',
+                'eventTypes',
+                'eventGenres',
+                'artists',
+                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+                'tags',
+                'tenant:id,name,public_name,slug,company_name,website',
+            ])
             ->first();
 
         if (!$event) {

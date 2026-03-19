@@ -303,10 +303,16 @@ class CartService
      */
     protected function validateCartItems(array $items, int $tenantId): array
     {
+        $ticketTypeIds = collect($items)->pluck('ticket_type_id')->unique()->toArray();
+        $ticketTypes = TicketType::with('event')
+            ->whereIn('id', $ticketTypeIds)
+            ->get()
+            ->keyBy('id');
+
         $validItems = [];
 
         foreach ($items as $item) {
-            $ticketType = TicketType::with('event')->find($item['ticket_type_id']);
+            $ticketType = $ticketTypes->get($item['ticket_type_id']);
 
             if (!$ticketType || !$ticketType->event || $ticketType->event->tenant_id !== $tenantId) {
                 continue; // Remove invalid items
