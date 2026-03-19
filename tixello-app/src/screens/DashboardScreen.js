@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -951,6 +951,15 @@ export default function DashboardScreen({ navigation, onShowStaff, onShowGuestLi
   } = useApp();
 
   const isAdmin = userRole === 'admin' || userRole === 'owner';
+
+  // Auto-refresh stats every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStats();
+      refreshTicketTypes();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [refreshStats, refreshTicketTypes]);
 
   // Shift summary modal
   const [showShiftSummary, setShowShiftSummary] = useState(false);

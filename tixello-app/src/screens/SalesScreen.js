@@ -381,7 +381,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls }) {
 export default function SalesScreen({ navigation }) {
   const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
   const { user } = useAuth();
-  const { recentSales, addSale } = useApp();
+  const { recentSales, addSale, addScan, loadSaleHistory } = useApp();
 
   // State
   const [showTicketList, setShowTicketList] = useState(false);
@@ -404,6 +404,13 @@ export default function SalesScreen({ navigation }) {
 
   // Check if current event has seating
   const hasSeating = selectedEvent?.has_seating === true;
+
+  // Load persisted sale history when event changes
+  useEffect(() => {
+    if (selectedEvent?.id) {
+      loadSaleHistory(selectedEvent.id);
+    }
+  }, [selectedEvent?.id]);
 
   // Auto-close QR overlay: 30s timeout + poll claim status every 5s
   useEffect(() => {
@@ -561,12 +568,14 @@ export default function SalesScreen({ navigation }) {
 
         // We need to read claimUrl from the response since setState is async
         const saleRecord = {
+          id: Date.now(),
           method: method,
           total: cartTotal,
           description: saleDescription,
           qty: cartCount,
           type: cartItems.length === 1 ? cartItems[0].name : 'Mixt',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          eventId: selectedEvent?.id,
         };
 
         // For cash sales, attach claim URL if generated
@@ -584,6 +593,24 @@ export default function SalesScreen({ navigation }) {
         }
 
         addSale(saleRecord);
+
+        // Cash sales are auto-checked-in — add them to scan history too
+        if (method === 'cash') {
+          cartItems.forEach((item) => {
+            for (let i = 0; i < item.quantity; i++) {
+              addScan({
+                id: Date.now() + Math.random(),
+                type: 'valid',
+                name: `POS Numerar`,
+                ticketType: item.name,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                code: `pos-cash-${orderData?.id || Date.now()}-${i}`,
+                eventId: selectedEvent?.id,
+                source: 'pos_cash',
+              });
+            }
+          });
+        }
 
         refreshStats();
         refreshTicketTypes();
