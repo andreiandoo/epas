@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Vertically center items in grid rows */
+.fi-sc.fi-sc-has-gap.fi-grid[class*="fi-grid-cols"] {
+    align-items: center;
+}
+
 /* Reduce main content padding on wide screens */
 @media (min-width: 64rem) {
     .fi-main {
