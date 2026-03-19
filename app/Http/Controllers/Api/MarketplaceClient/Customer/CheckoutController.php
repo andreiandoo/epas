@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Coupon\CouponCode;
 use App\Models\MarketplaceCart;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceEvent;
+use App\Models\MarketplaceOrganizerPromoCode;
 use App\Models\MarketplaceTicketType;
 use App\Models\MarketplacePromoCode;
 use App\Models\Order;
@@ -46,6 +48,7 @@ class CheckoutController extends BaseController
             'items.*.quantity' => 'required_with:items|integer|min:1',
             'payment_method' => 'nullable|string|in:card,card_cultural,cash,transfer',
             'accept_terms' => 'required|accepted',
+            'promo_code' => 'nullable|string|max:50',
             'ticket_insurance' => 'nullable|boolean',
             'ticket_insurance_amount' => 'nullable|numeric|min:0',
             'cultural_card_surcharge' => 'nullable|numeric|min:0',
@@ -338,8 +341,77 @@ class CheckoutController extends BaseController
 
             // Apply discount from promo code
             $discount = 0;
-            $promoCode = isset($cart) ? $cart->promo_code : null;
-            if ($promoCode && isset($cart)) {
+            $promoCode = null;
+            $promoCodeInput = $request->input('promo_code');
+
+            if ($promoCodeInput) {
+                $promoCodeInput = strtoupper(trim($promoCodeInput));
+
+                // Build cart data for validation
+                $promoCartData = [
+                    'event_id' => $primaryMarketplaceEvent?->id ?? $primaryEvent?->id,
+                    'total' => $subtotal,
+                    'ticket_count' => collect($processedItems)->sum('quantity'),
+                    'items' => collect($processedItems)->map(fn ($pi) => [
+                        'event_id' => $pi['marketplace_event']?->id ?? $pi['event']?->id,
+                        'ticket_type_id' => $pi['marketplace_ticket_type']?->id ?? $pi['ticket_type']?->id,
+                        'quantity' => $pi['quantity'],
+                        'total' => $pi['total'],
+                    ])->all(),
+                ];
+
+                // 1. Try organizer promo codes (mkt_promo_codes)
+                $orgPromo = MarketplaceOrganizerPromoCode::where('marketplace_client_id', $client->id)
+                    ->where('code', $promoCodeInput)
+                    ->first();
+
+                if ($orgPromo) {
+                    $validation = $orgPromo->validateForCart($promoCartData, $customer->email);
+                    if ($validation['valid']) {
+                        $calculation = $orgPromo->calculateDiscount($promoCartData);
+                        $discount = $calculation['discount_amount'];
+                        $promoCode = [
+                            'code' => $orgPromo->code,
+                            'type' => $orgPromo->type,
+                            'value' => (float) $orgPromo->value,
+                            'source' => 'organizer',
+                            'id' => $orgPromo->id,
+                        ];
+                    }
+                }
+
+                // 2. Try coupon codes (coupon_codes) if no organizer promo matched
+                if (!$promoCode) {
+                    $coupon = CouponCode::where('marketplace_client_id', $client->id)
+                        ->where('code', $promoCodeInput)
+                        ->first();
+
+                    if ($coupon && $coupon->isValid()) {
+                        // Calculate discount base filtered by applicable ticket types
+                        $discountBase = $subtotal;
+                        $applicableTicketTypes = $coupon->applicable_ticket_types ?? [];
+                        if (!empty($applicableTicketTypes)) {
+                            $discountBase = 0;
+                            foreach ($promoCartData['items'] as $item) {
+                                $ttId = (int) ($item['ticket_type_id'] ?? 0);
+                                if (in_array($ttId, array_map('intval', $applicableTicketTypes))) {
+                                    $discountBase += (float) ($item['total'] ?? 0);
+                                }
+                            }
+                        }
+                        $discount = $coupon->calculateDiscount($discountBase);
+                        $promoCode = [
+                            'code' => $coupon->code,
+                            'type' => $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed',
+                            'value' => (float) $coupon->discount_value,
+                            'source' => 'coupon',
+                            'id' => $coupon->id,
+                        ];
+                    }
+                }
+            } elseif (isset($cart) && $cart->promo_code) {
+                // Fallback: read from database cart (legacy)
+                $promoCode = $cart->promo_code;
                 $discount = (float) ($cart->discount ?? 0);
             }
 
@@ -526,7 +598,18 @@ class CheckoutController extends BaseController
 
             // Increment promo code usage
             if ($promoCode && isset($promoCode['code'])) {
-                MarketplacePromoCode::where('code', $promoCode['code'])->increment('times_used');
+                $promoSource = $promoCode['source'] ?? null;
+                if ($promoSource === 'organizer' && !empty($promoCode['id'])) {
+                    $orgPromoModel = MarketplaceOrganizerPromoCode::find($promoCode['id']);
+                    if ($orgPromoModel) {
+                        $orgPromoModel->recordUsage($order, $discount, $customer, $request->ip());
+                    }
+                } elseif ($promoSource === 'coupon' && !empty($promoCode['id'])) {
+                    CouponCode::where('id', $promoCode['id'])->increment('current_uses');
+                } else {
+                    // Legacy fallback
+                    MarketplacePromoCode::where('code', $promoCode['code'])->increment('times_used');
+                }
             }
 
             // Extend seat holds to match order expiration
