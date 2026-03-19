@@ -470,7 +470,7 @@ class PaymentController extends BaseController
     public function sendOrderConfirmationEmail(Order $order): void
     {
         $marketplace = $order->marketplaceClient;
-        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'marketplaceEvent']);
+        $order->load(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'tickets.ticketType', 'marketplaceEvent']);
 
         $customerName = $order->customer_name ?? 'Client';
         $customerEmail = $order->customer_email;
@@ -504,14 +504,33 @@ class PaymentController extends BaseController
                     if ($mke) {
                         return $mke;
                     }
-                    // Return event data as a stdClass with expected fields
+                    // Build starts_at from event_date + start_time
+                    $startsAt = null;
+                    $eventDate = $event->event_date ?? $event->range_start_date;
+                    $startTime = $event->start_time ?? $event->range_start_time ?? '00:00';
+                    if ($eventDate) {
+                        $dateStr = $eventDate instanceof \Carbon\Carbon ? $eventDate->format('Y-m-d') : $eventDate;
+                        $startsAt = \Carbon\Carbon::parse($dateStr . ' ' . $startTime);
+                    }
+                    $doorsOpenAt = null;
+                    if ($eventDate && $event->door_time) {
+                        $dateStr = $eventDate instanceof \Carbon\Carbon ? $eventDate->format('Y-m-d') : $eventDate;
+                        $doorsOpenAt = \Carbon\Carbon::parse($dateStr . ' ' . $event->door_time);
+                    }
+
+                    $venueName = '';
+                    if ($event->venue) {
+                        $vName = $event->venue->name;
+                        $venueName = is_array($vName) ? ($vName['ro'] ?? $vName['en'] ?? reset($vName) ?: '') : ($vName ?? '');
+                    }
+
                     return (object) [
                         'name' => is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title)) : ($event->title ?? $event->name ?? 'Eveniment'),
-                        'starts_at' => $event->starts_at,
-                        'ends_at' => $event->ends_at,
-                        'doors_open_at' => $event->doors_open_at ?? null,
-                        'venue_name' => $event->venue?->getTranslation('name') ?? $event->venue_name ?? '',
-                        'venue_city' => $event->venue?->city ?? $event->venue_city ?? '',
+                        'starts_at' => $startsAt,
+                        'ends_at' => $event->ends_at ?? null,
+                        'doors_open_at' => $doorsOpenAt,
+                        'venue_name' => $venueName,
+                        'venue_city' => $event->venue?->city ?? '',
                     ];
                 }
             }
@@ -565,7 +584,8 @@ class PaymentController extends BaseController
             foreach ($group['tickets'] as $ticket) {
                 $ticketCode = $ticket->code ?? $ticket->barcode ?? '';
                 $attendeeName = $ticket->attendee_name ?? $customerName;
-                $ticketTypeName = $ticket->marketplaceTicketType?->name ?? '';
+                $ttName = $ticket->marketplaceTicketType?->name ?? $ticket->ticketType?->name ?? '';
+                $ticketTypeName = is_array($ttName) ? ($ttName['ro'] ?? $ttName['en'] ?? reset($ttName) ?: '') : ($ttName ?: 'Bilet');
                 $ticketPrice = number_format($ticket->price ?? 0, 2, ',', '.') . ' ' . ($order->currency ?? 'RON');
                 $seatDetails = $ticket->getSeatDetails();
                 $ticketSeries = $ticket->meta['ticket_series'] ?? null;
@@ -684,16 +704,64 @@ class PaymentController extends BaseController
             $html .= '</div>';
         }
 
-        // Order summary
+        // Order details section
+        $discountAmount = (float) ($order->discount_amount ?? 0);
+        $promoCodeMeta = $order->meta['promo_code'] ?? null;
+        $commissionAmount = (float) ($order->commission_amount ?? 0);
+        $commissionMode = $order->meta['commission_mode'] ?? 'included';
+        $subtotalFormatted = number_format((float) $order->subtotal, 2, ',', '.') . ' ' . $currency;
+        $orderDate = $order->paid_at ?? $order->created_at;
+
         $html .= '<div style="background:#ffffff;border-radius:12px;padding:20px 24px;margin-top:20px;">';
+        $html .= '<h3 style="margin:0 0 12px;font-size:16px;font-weight:700;color:#1a1a2e;">Detalii comandă</h3>';
         $html .= '<table style="width:100%;border-collapse:collapse;font-size:14px;" cellpadding="0" cellspacing="0">';
-        $html .= '<tr><td style="padding:6px 0;color:#888;">Comandă:</td><td style="padding:6px 0;text-align:right;font-weight:600;">#' . e($orderNumber) . '</td></tr>';
-        $html .= '<tr><td style="padding:6px 0;color:#888;">Bilete:</td><td style="padding:6px 0;text-align:right;">' . $ticketCount . '</td></tr>';
+        $html .= '<tr><td style="padding:6px 0;color:#888;width:150px;">Nr. comandă:</td><td style="padding:6px 0;font-weight:600;">#' . e($orderNumber) . '</td></tr>';
+        $html .= '<tr><td style="padding:6px 0;color:#888;">Data comenzii:</td><td style="padding:6px 0;">' . $orderDate->format('d.m.Y H:i') . '</td></tr>';
+        $html .= '<tr><td style="padding:6px 0;color:#888;">Nr. bilete:</td><td style="padding:6px 0;">' . $ticketCount . '</td></tr>';
+
+        // Items breakdown
+        $commissionDetails = $order->meta['commission_details'] ?? [];
+        if (!empty($commissionDetails)) {
+            $html .= '<tr><td colspan="2" style="padding:10px 0 4px;"><hr style="border:none;border-top:1px solid #eee;margin:0;"></td></tr>';
+            foreach ($commissionDetails as $detail) {
+                $itemName = $detail['ticket_type'] ?? 'Bilet';
+                $itemQty = $detail['quantity'] ?? 1;
+                $itemTotal = number_format($detail['total'] ?? 0, 2, ',', '.') . ' ' . $currency;
+                $html .= '<tr><td style="padding:3px 0;color:#555;">' . e($itemName) . ' × ' . $itemQty . '</td><td style="padding:3px 0;text-align:right;">' . $itemTotal . '</td></tr>';
+            }
+        }
+
+        $html .= '<tr><td colspan="2" style="padding:10px 0 4px;"><hr style="border:none;border-top:1px solid #eee;margin:0;"></td></tr>';
+        $html .= '<tr><td style="padding:4px 0;color:#888;">Subtotal:</td><td style="padding:4px 0;text-align:right;">' . $subtotalFormatted . '</td></tr>';
+
+        // Commission
+        if ($commissionAmount > 0 && $commissionMode !== 'included') {
+            $commissionFormatted = number_format($commissionAmount, 2, ',', '.') . ' ' . $currency;
+            $html .= '<tr><td style="padding:4px 0;color:#888;">Comision serviciu:</td><td style="padding:4px 0;text-align:right;">' . $commissionFormatted . '</td></tr>';
+        }
+
+        // Insurance
         if ($insuranceAmount > 0) {
             $insuranceFormatted = number_format($insuranceAmount, 2, ',', '.') . ' ' . $currency;
-            $html .= '<tr><td style="padding:6px 0;color:#888;">Asigurare retur:</td><td style="padding:6px 0;text-align:right;">' . $insuranceFormatted . '</td></tr>';
+            $html .= '<tr><td style="padding:4px 0;color:#888;">Asigurare retur:</td><td style="padding:4px 0;text-align:right;">' . $insuranceFormatted . '</td></tr>';
         }
-        $html .= '<tr style="border-top:1px solid #eee;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
+
+        // Discount
+        if ($discountAmount > 0) {
+            $discountFormatted = '-' . number_format($discountAmount, 2, ',', '.') . ' ' . $currency;
+            $discountLabel = 'Reducere';
+            if ($promoCodeMeta && isset($promoCodeMeta['code'])) {
+                $promoValue = '';
+                if (($promoCodeMeta['type'] ?? '') === 'percentage') {
+                    $promoValue = ' (' . ((float) ($promoCodeMeta['value'] ?? 0)) . '%)';
+                }
+                $discountLabel = 'Reducere cod ' . e($promoCodeMeta['code']) . $promoValue;
+            }
+            $html .= '<tr><td style="padding:4px 0;color:#16a34a;">' . $discountLabel . '</td><td style="padding:4px 0;text-align:right;color:#16a34a;">' . $discountFormatted . '</td></tr>';
+        }
+
+        // Total
+        $html .= '<tr style="border-top:2px solid #1a1a2e;"><td style="padding:10px 0 6px;font-weight:700;font-size:16px;">Total plătit:</td><td style="padding:10px 0 6px;text-align:right;font-weight:700;font-size:16px;color:#1a1a2e;">' . $totalAmount . '</td></tr>';
         $html .= '</table>';
         $html .= '</div>';
 
