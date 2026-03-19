@@ -2000,14 +2000,54 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
-                        SC\Grid::make(1)->schema([
+                        SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
                                 ->label($t('Publicat', 'Published'))
                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.', 'When enabled, the event will be visible on the marketplace site. When disabled, the event will not appear anywhere.'))
                                 ->onIcon('heroicon-m-eye')
                                 ->offIcon('heroicon-m-eye-slash')
                                 ->default(false)
-                                ->live(),
+                                ->live()
+                                ->columnSpan(1),
+                            Forms\Components\Placeholder::make('event_status_badge_inline')
+                                ->hiddenLabel()
+                                ->columnSpan(1)
+                                ->visible(fn (?Event $record) => $record && $record->exists)
+                                ->content(function (?Event $record) {
+                                    if (!$record || !$record->exists) {
+                                        return null;
+                                    }
+
+                                    if ($record->is_cancelled) {
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 ring-1 ring-inset ring-red-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>ANULAT</span>');
+                                    }
+
+                                    if ($record->is_postponed) {
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>AMÂNAT</span>');
+                                    }
+
+                                    $eventEndDateTime = null;
+                                    if ($record->duration_mode === 'single_day' && $record->event_date) {
+                                        $endTime = $record->end_time ?? '23:59';
+                                        $eventEndDateTime = Carbon::parse($record->event_date->format('Y-m-d') . ' ' . $endTime);
+                                    } elseif ($record->duration_mode === 'range' && $record->range_end_date) {
+                                        $endTime = $record->range_end_time ?? '23:59';
+                                        $eventEndDateTime = Carbon::parse($record->range_end_date->format('Y-m-d') . ' ' . $endTime);
+                                    } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+                                        $slots = collect($record->multi_slots);
+                                        $lastSlot = $slots->sortByDesc('date')->first();
+                                        if ($lastSlot) {
+                                            $endTime = $lastSlot['end_time'] ?? '23:59';
+                                            $eventEndDateTime = Carbon::parse($lastSlot['date'] . ' ' . $endTime);
+                                        }
+                                    }
+
+                                    if ($eventEndDateTime && $eventEndDateTime->isPast()) {
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>ÎNCHEIAT</span>');
+                                    }
+
+                                    return null;
+                                }),
                             Forms\Components\Placeholder::make('preview_link')
                                 ->hiddenLabel()
                                 ->content(function (?Event $record) use ($marketplace, $t) {
@@ -2054,7 +2094,7 @@ class EventResource extends Resource
                                     $url = "{$protocol}://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
 
                                     return new \Illuminate\Support\HtmlString(
-                                        '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test comandă', 'Test order link') . '\', 2000);" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-semibold text-amber-300 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 transition-colors cursor-pointer">' .
+                                        '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test comandă', 'Test order link') . '\', 2000);" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold text-amber-200 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 transition-colors cursor-pointer no-underline">' .
                                             '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>' .
                                             '<span>' . $t('Link test comandă', 'Test order link') . '</span>' .
                                         '</button>'
@@ -2071,70 +2111,6 @@ class EventResource extends Resource
                                 ->prefixIcon('heroicon-o-lock-closed')
                                 ->columnSpanFull(),
                         ]),
-
-                        // Event Status Badge (Încheiat/Amânat/Anulat)
-                        Forms\Components\Placeholder::make('event_status_badge')
-                            ->hiddenLabel()
-                            ->visible(fn (?Event $record) => $record && $record->exists)
-                            ->content(function (?Event $record) {
-                                if (!$record || !$record->exists) {
-                                    return null;
-                                }
-
-                                // Check if cancelled
-                                if ($record->is_cancelled) {
-                                    return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-red-500/10 border-red-500/20">
-                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-500/20 text-red-400 ring-1 ring-inset ring-red-500/30">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                                ANULAT
-                                            </span>
-                                        </div>
-                                    ');
-                                }
-
-                                // Check if postponed
-                                if ($record->is_postponed) {
-                                    return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-amber-500/10 border-amber-500/20">
-                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                AMÂNAT
-                                            </span>
-                                        </div>
-                                    ');
-                                }
-
-                                // Check if event has ended
-                                $eventEndDateTime = null;
-                                if ($record->duration_mode === 'single_day' && $record->event_date) {
-                                    $endTime = $record->end_time ?? '23:59';
-                                    $eventEndDateTime = Carbon::parse($record->event_date->format('Y-m-d') . ' ' . $endTime);
-                                } elseif ($record->duration_mode === 'range' && $record->range_end_date) {
-                                    $endTime = $record->range_end_time ?? '23:59';
-                                    $eventEndDateTime = Carbon::parse($record->range_end_date->format('Y-m-d') . ' ' . $endTime);
-                                } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
-                                    $slots = collect($record->multi_slots);
-                                    $lastSlot = $slots->sortByDesc('date')->first();
-                                    if ($lastSlot) {
-                                        $endTime = $lastSlot['end_time'] ?? '23:59';
-                                        $eventEndDateTime = Carbon::parse($lastSlot['date'] . ' ' . $endTime);
-                                    }
-                                }
-
-                                if ($eventEndDateTime && $eventEndDateTime->isPast()) {
-                                    return new HtmlString('
-                                        <div class="flex items-center justify-center p-3 border rounded-lg bg-gray-500/10 border-gray-500/20">
-                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                ÎNCHEIAT
-                                            </span>
-                                        </div>
-                                    ');
-                                }
-
-                                return null;
-                            }),
 
                         // 1. Quick Stats Card - Vânzări LIVE
                         SC\Section::make(fn () => new HtmlString($t('Vânzări', 'Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
@@ -2176,6 +2152,20 @@ class EventResource extends Resource
                                         $statisticsLabel = $t('Statistici', 'Statistics');
                                         $analyticsLabel = $t('Analiză', 'Analytics');
 
+                                        // Tickets & Orders counts and URLs
+                                        $eventId = $record->id;
+                                        $ticketCount = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))->count();
+                                        $orderCount = \App\Models\Order::where(fn ($q) => $q
+                                            ->where('event_id', $eventId)
+                                            ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                        )->count();
+                                        $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
+                                        $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
+                                        $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCount > 0 ? " ({$ticketCount})" : '');
+                                        $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCount > 0 ? " ({$orderCount})" : '');
+
+                                        $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors no-underline';
+
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
@@ -2205,11 +2195,21 @@ class EventResource extends Resource
                                                 <span class='text-white'>" . number_format($views) . "</span>
                                             </div>
                                             <div class='grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-700'>
-                                                <a href='{$statisticsUrl}' class='inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-blue-300 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 transition-colors'>
+                                                <a href='{$ticketsUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'/></svg>
+                                                    {$ticketsBtnLabel}
+                                                </a>
+                                                <a href='{$ordersUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'/></svg>
+                                                    {$ordersBtnLabel}
+                                                </a>
+                                            </div>
+                                            <div class='grid grid-cols-2 gap-2 mt-2'>
+                                                <a href='{$statisticsUrl}' class='{$btnClass} text-blue-200 bg-blue-600/30 hover:bg-blue-600/50'>
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/></svg>
                                                     {$statisticsLabel}
                                                 </a>
-                                                <a href='{$analyticsUrl}' class='inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors'>
+                                                <a href='{$analyticsUrl}' class='{$btnClass} text-emerald-200 bg-emerald-600/30 hover:bg-emerald-600/50'>
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
                                                     {$analyticsLabel}
                                                 </a>

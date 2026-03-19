@@ -145,6 +145,12 @@ tr.event-row-ended > td {
     align-items: center;
 }
 
+/* Prevent underline on sidebar action buttons */
+.fi-section-sales-live a.no-underline:hover,
+.fi-section-sales-live button.no-underline:hover {
+    text-decoration: none !important;
+}
+
 /* Fix dropdown/select option styling */
 @layer components {
     /* Remove thick borders from select dropdown options */
