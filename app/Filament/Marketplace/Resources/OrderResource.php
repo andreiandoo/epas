@@ -909,61 +909,172 @@ class OrderResource extends Resource
     protected static function renderCommissionDetails(Order $record): HtmlString
     {
         $currency = $record->currency ?? 'RON';
-        
-        // Get commission from EVENT
+        $meta = $record->meta ?? [];
+
+        // Use stored commission details if available (new orders)
+        $commissionDetails = $meta['commission_details'] ?? [];
+
+        if (!empty($commissionDetails)) {
+            return static::renderPerItemCommission($commissionDetails, $record, $currency);
+        }
+
+        // Legacy fallback: calculate from event/organizer rates
         $event = $record->event;
         $commissionRate = $event?->commission_rate
             ?? $event?->marketplaceOrganizer?->commission_rate
             ?? 0;
-        $commissionMode = $event?->commission_mode
+        $commissionMode = $meta['commission_mode']
+            ?? $event?->commission_mode
             ?? $event?->marketplaceOrganizer?->default_commission_mode
             ?? $record->marketplaceClient?->commission_mode
             ?? 'included';
 
-        // Calculate values
-        $ticketsValue = $record->tickets->sum('price');
-        $commission = $ticketsValue * ($commissionRate / 100);
-        $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
+        // Try to use per-ticket-type commission from TicketType model
+        $tickets = $record->tickets;
+        $totalCommission = 0;
+        $totalOnTop = 0;
+        $totalValue = 0;
+        $hasPerTicketCommission = false;
+        $itemBreakdown = [];
 
-        if ($commission <= 0 && $commissionRate <= 0) {
+        foreach ($tickets->groupBy(fn ($t) => $t->ticket_type_id ?? ('mkt-' . $t->marketplace_ticket_type_id)) as $groupKey => $groupTickets) {
+            $firstTicket = $groupTickets->first();
+            $ticketType = $firstTicket->ticketType;
+            $groupTotal = $groupTickets->sum('price');
+            $totalValue += $groupTotal;
+            $qty = $groupTickets->count();
+
+            if ($ticketType && $ticketType->commission_type) {
+                $hasPerTicketCommission = true;
+                $effective = $ticketType->getEffectiveCommission($commissionRate, $commissionMode);
+                $itemCommission = $ticketType->calculateCommission((float) $firstTicket->price, $commissionRate, $commissionMode) * $qty;
+                $itemMode = $effective['mode'];
+                $itemRate = $effective['rate'];
+                $itemFixed = $effective['fixed'];
+                $itemType = $effective['type'];
+            } else {
+                $itemCommission = round($groupTotal * ($commissionRate / 100), 2);
+                $itemMode = $commissionMode;
+                $itemRate = $commissionRate;
+                $itemFixed = 0;
+                $itemType = 'percentage';
+            }
+
+            $isOnTop = in_array($itemMode, ['on_top', 'add_on_top', 'added_on_top']);
+            if ($isOnTop) {
+                $totalOnTop += $itemCommission;
+            }
+            $totalCommission += $itemCommission;
+
+            $ttName = $firstTicket->marketplaceTicketType?->name ?? $ticketType?->name ?? 'Bilet';
+            if (is_array($ttName)) {
+                $ttName = $ttName['ro'] ?? $ttName['en'] ?? reset($ttName) ?: 'Bilet';
+            }
+
+            $rateLabel = match ($itemType) {
+                'fixed' => number_format($itemFixed, 2) . ' ' . $currency . ' fix',
+                'both' => number_format($itemRate, 2) . '% + ' . number_format($itemFixed, 2) . ' ' . $currency,
+                default => number_format($itemRate, 2) . '%',
+            };
+
+            $itemBreakdown[] = [
+                'name' => $ttName,
+                'qty' => $qty,
+                'commission' => $itemCommission,
+                'rate_label' => $rateLabel,
+                'mode' => $isOnTop ? 'peste preț' : 'inclus',
+            ];
+        }
+
+        if ($totalCommission <= 0 && $commissionRate <= 0 && !$hasPerTicketCommission) {
             return new HtmlString('<p style="color: #64748B; text-align: center;">Fără comision</p>');
         }
 
-        // Calculate organizer revenue
-        $organizerRevenue = $isOnTop ? $ticketsValue : ($ticketsValue - $commission);
-        $modeLabel = $isOnTop ? 'Adăugat peste preț' : 'Inclus în preț';
+        $organizerRevenue = $totalValue - $totalCommission + $totalOnTop;
 
-        return new HtmlString("
-            <div>
-                <!-- Commission Stats Grid -->
-                <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;'>
-                    <div style='text-align: center; padding: 12px; border-radius: 8px;'>
-                        <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($commissionRate, 2) . "%</div>
-                        <div style='font-size: 10px; color: #64748B; text-transform: uppercase; margin-top: 2px;'>Rată</div>
-                    </div>
-                    <div style='text-align: center; padding: 12px; border-radius: 8px;'>
-                        <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($commission, 2) . " {$currency}</div>
-                        <div style='font-size: 10px; color: #64748B; text-transform: uppercase; margin-top: 2px;'>Valoare</div>
-                    </div>
-                </div>
-                
-                <!-- Commission Mode -->
-                <div style='padding: 12px; border-radius: 8px; margin-bottom: 12px;'>
-                    <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <span style='font-size: 13px; color: #94A3B8;'>Mod comision</span>
-                        <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>{$modeLabel}</span>
-                    </div>
-                </div>
-                
-                <!-- Organizer Revenue -->
-                <div style='padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);'>
-                    <div style='display: flex; justify-content: space-between; align-items: center;'>
-                        <span style='font-size: 13px; color: #94A3B8;'>Organizator primește</span>
-                        <span style='font-size: 16px; font-weight: 700; color: #10B981;'>" . number_format($organizerRevenue, 2) . " {$currency}</span>
-                    </div>
-                </div>
-            </div>
-        ");
+        return static::buildCommissionHtml($itemBreakdown, $totalCommission, $organizerRevenue, $currency);
+    }
+
+    protected static function renderPerItemCommission(array $commissionDetails, Order $record, string $currency): HtmlString
+    {
+        $totalCommission = 0;
+        $totalOnTop = 0;
+        $totalValue = 0;
+        $itemBreakdown = [];
+
+        foreach ($commissionDetails as $detail) {
+            $name = $detail['ticket_type'] ?? 'Bilet';
+            if (is_array($name)) {
+                $name = $name['ro'] ?? $name['en'] ?? reset($name) ?: 'Bilet';
+            }
+            $total = (float) ($detail['total'] ?? 0);
+            $commission = (float) ($detail['commission_amount'] ?? 0);
+            $rate = (float) ($detail['commission_rate'] ?? 0);
+            $mode = $detail['commission_mode'] ?? 'included';
+            $qty = (int) ($detail['quantity'] ?? 1);
+
+            $totalValue += $total;
+            $totalCommission += $commission;
+
+            $isOnTop = in_array($mode, ['on_top', 'add_on_top', 'added_on_top']);
+            if ($isOnTop) {
+                $totalOnTop += $commission;
+            }
+
+            $itemBreakdown[] = [
+                'name' => $name,
+                'qty' => $qty,
+                'commission' => $commission,
+                'rate_label' => number_format($rate, 2) . '%',
+                'mode' => $isOnTop ? 'peste preț' : 'inclus',
+            ];
+        }
+
+        if ($totalCommission <= 0) {
+            return new HtmlString('<p style="color: #64748B; text-align: center;">Fără comision</p>');
+        }
+
+        $organizerRevenue = $totalValue - $totalCommission + $totalOnTop;
+
+        return static::buildCommissionHtml($itemBreakdown, $totalCommission, $organizerRevenue, $currency);
+    }
+
+    protected static function buildCommissionHtml(array $itemBreakdown, float $totalCommission, float $organizerRevenue, string $currency): HtmlString
+    {
+        $html = '<div>';
+
+        // Per-item breakdown
+        if (count($itemBreakdown) > 0) {
+            foreach ($itemBreakdown as $item) {
+                $html .= "
+                    <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid rgba(148,163,184,0.1);'>
+                        <div>
+                            <span style='font-size: 13px; color: #E2E8F0;'>" . e($item['name']) . "</span>
+                            <span style='font-size: 11px; color: #64748B;'> x{$item['qty']}</span>
+                            <span style='font-size: 11px; color: #94A3B8; margin-left: 8px;'>({$item['rate_label']}, {$item['mode']})</span>
+                        </div>
+                        <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>" . number_format($item['commission'], 2) . " {$currency}</span>
+                    </div>";
+            }
+        }
+
+        // Total commission
+        $html .= "
+            <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-top: 8px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);'>
+                <span style='font-size: 13px; color: #94A3B8;'>Total comision</span>
+                <span style='font-size: 16px; font-weight: 700; color: #EF4444;'>" . number_format($totalCommission, 2) . " {$currency}</span>
+            </div>";
+
+        // Organizer revenue
+        $html .= "
+            <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-top: 8px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);'>
+                <span style='font-size: 13px; color: #94A3B8;'>Organizator primește</span>
+                <span style='font-size: 16px; font-weight: 700; color: #10B981;'>" . number_format($organizerRevenue, 2) . " {$currency}</span>
+            </div>";
+
+        $html .= '</div>';
+
+        return new HtmlString($html);
     }
 
     protected static function renderBeneficiaries(Order $record): HtmlString

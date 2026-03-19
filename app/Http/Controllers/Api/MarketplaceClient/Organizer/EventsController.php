@@ -2785,12 +2785,6 @@ class EventsController extends BaseController
             return $this->error('No published seating layout found', 404);
         }
 
-        // Get geometry
-        $geometry = $layout->json_geometry;
-        if (is_string($geometry)) {
-            $geometry = json_decode($geometry, true);
-        }
-
         // Get all event seats with their statuses
         $eventSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
             ->get();
@@ -2815,20 +2809,61 @@ class EventsController extends BaseController
             }
         }
 
-        // Load seating layout structure to map row_label → row_id and section_name → section_id
-        $seatingLayout = \App\Models\Seating\SeatingLayout::with(['sections.rows'])
+        // Load seating layout structure with full geometry (sections, rows, seats)
+        // Build geometry directly from DB models (like the marketplace web does)
+        // to include section positions, dimensions, rotation, and metadata
+        $seatingLayout = \App\Models\Seating\SeatingLayout::with(['sections.rows.seats'])
             ->find($eventModel->seating_layout_id);
 
         $rowLabelToId = [];
         $sectionNameToId = [];
+        $sectionsData = [];
+        $canvas = ['width' => 1000, 'height' => 800];
+
         if ($seatingLayout) {
+            $canvas = [
+                'width' => $seatingLayout->canvas_w ?? 1000,
+                'height' => $seatingLayout->canvas_h ?? 800,
+            ];
+
             foreach ($seatingLayout->sections as $section) {
                 $sectionNameToId[$section->name] = $section->id;
+                $rows = [];
+
                 foreach ($section->rows as $row) {
-                    // Key: "section_name|row_label" for uniqueness
                     $key = $section->name . '|' . $row->label;
                     $rowLabelToId[$key] = $row->id;
+
+                    $seats = [];
+                    foreach ($row->seats as $seat) {
+                        $seats[] = [
+                            'seat_uid' => $seat->seat_uid,
+                            'label' => $seat->label,
+                            'x' => (float) $seat->x,
+                            'y' => (float) $seat->y,
+                        ];
+                    }
+
+                    $rows[] = [
+                        'label' => $row->label,
+                        'seats' => $seats,
+                    ];
                 }
+
+                $sectionsData[] = [
+                    'name' => $section->name,
+                    'x' => $section->x_position,
+                    'y' => $section->y_position,
+                    'width' => $section->width,
+                    'height' => $section->height,
+                    'rotation' => $section->rotation,
+                    'metadata' => $section->metadata ?? [
+                        'seat_size' => 18,
+                        'seat_spacing' => 20,
+                        'row_spacing' => 25,
+                    ],
+                    'rows' => $rows,
+                ];
             }
         }
 
@@ -2878,8 +2913,8 @@ class EventsController extends BaseController
 
         return $this->success([
             'event_seating_id' => $layout->id,
-            'canvas' => $geometry['canvas'] ?? ['width' => 1000, 'height' => 800],
-            'sections' => $geometry['sections'] ?? [],
+            'canvas' => $canvas,
+            'sections' => $sectionsData,
             'seats' => $seatsData,
             'ticket_types' => $ticketTypesData,
         ]);

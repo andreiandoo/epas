@@ -179,6 +179,7 @@ class CheckoutController extends BaseController
             // Process all cart items into a single order (supports multi-event carts)
             $subtotal = 0;
             $totalCommission = 0;
+            $totalOnTopCommission = 0;
             $processedItems = [];
             $seatedItemsMeta = [];
             $eventIds = [];
@@ -277,13 +278,38 @@ class CheckoutController extends BaseController
                 $subtotal += $itemTotal;
 
                 // Calculate per-item commission
-                $itemCommissionRate = $event?->commission_rate
+                // Fallback rate from event > organizer > tenant > client
+                $defaultCommissionRate = $event?->commission_rate
                     ?? $event?->marketplaceOrganizer?->commission_rate
                     ?? $event?->tenant?->commission_rate
                     ?? $client->commission_rate
                     ?? 5;
-                $itemCommission = round($itemTotal * ($itemCommissionRate / 100), 2);
+                $defaultCommissionMode = $event?->commission_mode
+                    ?? $event?->marketplaceOrganizer?->default_commission_mode
+                    ?? $client->commission_mode
+                    ?? 'included';
+
+                // Use ticket-type commission override if available
+                $itemCommission = 0;
+                $itemCommissionMode = $defaultCommissionMode;
+                $itemCommissionRate = $defaultCommissionRate;
+
+                if ($ticketType && $ticketType->commission_type) {
+                    // Ticket type has its own commission settings
+                    $itemCommission = $ticketType->calculateCommission($unitPrice, $defaultCommissionRate, $defaultCommissionMode) * $quantity;
+                    $effective = $ticketType->getEffectiveCommission($defaultCommissionRate, $defaultCommissionMode);
+                    $itemCommissionRate = $effective['rate'];
+                    $itemCommissionMode = $effective['mode'];
+                } else {
+                    // Use default rate
+                    $itemCommission = round($itemTotal * ($defaultCommissionRate / 100), 2);
+                }
                 $totalCommission += $itemCommission;
+
+                // Track on-top commission per item
+                if (in_array($itemCommissionMode, ['on_top', 'added_on_top'])) {
+                    $totalOnTopCommission += $itemCommission;
+                }
 
                 $processedItems[] = [
                     'event' => $event,
@@ -293,6 +319,9 @@ class CheckoutController extends BaseController
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total' => $itemTotal,
+                    'commission_amount' => $itemCommission,
+                    'commission_rate' => $itemCommissionRate,
+                    'commission_mode' => $itemCommissionMode,
                     'seat_uids' => $item['seat_uids'] ?? [],
                     'seats' => $item['seats'] ?? [],
                     'event_seating_id' => $item['event_seating_id'] ?? null,
@@ -314,25 +343,24 @@ class CheckoutController extends BaseController
                 $discount = (float) ($cart->discount ?? 0);
             }
 
-            // Determine commission mode from primary event
+            // Determine primary commission mode (for order-level meta)
             $commissionMode = $primaryEvent?->commission_mode
                 ?? $primaryEvent?->marketplaceOrganizer?->default_commission_mode
                 ?? $client->commission_mode
                 ?? 'included';
-            $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']);
 
             // Calculate weighted average commission rate
             $avgCommissionRate = $subtotal > 0 ? round(($totalCommission / $subtotal) * 100, 2) : 0;
 
             $netAmount = $subtotal - $discount;
 
-            // Final order total
+            // Final order total — add only the on-top portion of commission
             $orderTotal = $netAmount;
             if ($hasInsurance && $insuranceAmount > 0) {
                 $orderTotal += $insuranceAmount;
             }
-            if ($isOnTop) {
-                $orderTotal += $totalCommission;
+            if ($totalOnTopCommission > 0) {
+                $orderTotal += $totalOnTopCommission;
             }
 
             // Cultural card surcharge
@@ -379,6 +407,15 @@ class CheckoutController extends BaseController
                     'cultural_card_surcharge' => $culturalCardSurcharge > 0 ? $culturalCardSurcharge : null,
                     'payment_method' => $isTestOrder ? 'test' : $request->input('payment_method', 'card'),
                     'commission_mode' => $commissionMode,
+                    'commission_details' => collect($processedItems)->map(fn ($pi) => [
+                        'ticket_type' => ($pi['marketplace_ticket_type']?->name ?? $pi['ticket_type']?->name ?? 'Bilet'),
+                        'quantity' => $pi['quantity'],
+                        'unit_price' => $pi['unit_price'],
+                        'total' => $pi['total'],
+                        'commission_rate' => $pi['commission_rate'],
+                        'commission_amount' => $pi['commission_amount'],
+                        'commission_mode' => $pi['commission_mode'],
+                    ])->all(),
                     'multi_event' => $isMultiEvent,
                     'event_ids' => array_keys($eventIds),
                     'seated_items' => $seatedItemsMeta,
