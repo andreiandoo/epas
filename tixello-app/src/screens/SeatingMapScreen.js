@@ -6,11 +6,10 @@ import {
   StyleSheet,
   ActivityIndicator,
   Dimensions,
-  Animated,
   Modal,
+  PanResponder,
 } from 'react-native';
 import Svg, { Circle, Rect, G, Text as SvgText, Path } from 'react-native-svg';
-import { GestureHandlerRootView, GestureDetector, Gesture, ScrollView } from 'react-native-gesture-handler';
 import { colors } from '../theme/colors';
 import { formatCurrency } from '../utils/formatCurrency';
 import { apiGet } from '../api/client';
@@ -63,6 +62,23 @@ function ZoomOutIcon({ size = 18, color = colors.white }) {
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getDistance(touches) {
+  const [t1, t2] = touches;
+  const dx = t1.pageX - t2.pageX;
+  const dy = t1.pageY - t2.pageY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getMidpoint(touches) {
+  const [t1, t2] = touches;
+  return {
+    x: (t1.pageX + t2.pageX) / 2,
+    y: (t1.pageY + t2.pageY) / 2,
+  };
+}
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onConfirm, onClose }) {
@@ -70,18 +86,24 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
   const [error, setError] = useState(null);
   const [mapData, setMapData] = useState(null);
   const [selectedSeats, setSelectedSeats] = useState([]);
-  // Dynamically measured map area size
   const [mapSize, setMapSize] = useState({ width: SCREEN_WIDTH, height: 500 });
+  // viewBox state: what portion of the canvas is visible
+  const [viewBox, setViewBox] = useState({ x: 0, y: 0, w: 1000, h: 800 });
 
-  // Gesture values
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const translateXAnim = useRef(new Animated.Value(0)).current;
-  const translateYAnim = useRef(new Animated.Value(0)).current;
-  const gestureState = useRef({ scale: 1, savedScale: 1, tx: 0, ty: 0, savedTx: 0, savedTy: 0 });
+  // Gesture tracking refs
+  const gestureRef = useRef({
+    isPinching: false,
+    isPanning: false,
+    startDist: 0,
+    startMid: { x: 0, y: 0 },
+    startVB: { x: 0, y: 0, w: 0, h: 0 },
+    lastTouchTime: 0,
+    touchStartPos: { x: 0, y: 0 },
+    // Map container position on screen
+    containerOffset: { x: 0, y: 0 },
+  });
 
-  // Refs for gesture callbacks (avoid stale closures)
-  const processedDataRef = useRef({ seats: [], rowLabels: [], sections: [] });
-  const selectedUidsRef = useRef(new Set());
+  const containerRef = useRef(null);
 
   useEffect(() => {
     if (visible && eventId) {
@@ -112,16 +134,45 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
 
   const canvas = mapData?.canvas || { width: 1000, height: 800 };
 
-  // Fit zoom based on dynamically measured map area
-  const fitZoom = useMemo(() => {
-    const padX = 20;
-    const padY = 20;
-    const availW = mapSize.width - padX;
-    const availH = mapSize.height - padY;
-    const zoomW = availW / canvas.width;
-    const zoomH = availH / canvas.height;
-    return Math.min(zoomW, zoomH);
-  }, [canvas.width, canvas.height, mapSize.width, mapSize.height]);
+  // Calculate initial viewBox to fit canvas in map area
+  const fitViewBox = useCallback((size) => {
+    const w = size?.width || mapSize.width;
+    const h = size?.height || mapSize.height;
+    const canvasAspect = canvas.width / canvas.height;
+    const screenAspect = w / h;
+
+    let vbW, vbH;
+    if (canvasAspect > screenAspect) {
+      // Canvas is wider — fit by width
+      vbW = canvas.width;
+      vbH = canvas.width / screenAspect;
+    } else {
+      // Canvas is taller — fit by height
+      vbH = canvas.height;
+      vbW = canvas.height * screenAspect;
+    }
+    const vbX = (canvas.width - vbW) / 2;
+    const vbY = (canvas.height - vbH) / 2;
+    return { x: vbX, y: vbY, w: vbW, h: vbH };
+  }, [canvas.width, canvas.height, mapSize]);
+
+  // Set initial viewBox when map loads or size changes
+  useEffect(() => {
+    if (mapData && mapSize.width > 0 && mapSize.height > 0) {
+      setViewBox(fitViewBox());
+    }
+  }, [mapData, mapSize]);
+
+  const onMapLayout = useCallback((e) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0) {
+      setMapSize({ width, height });
+    }
+    // Measure container position on screen
+    e.target.measureInWindow((x, y) => {
+      gestureRef.current.containerOffset = { x: x || 0, y: y || 0 };
+    });
+  }, []);
 
   // Process seats from geometry + statuses
   const processedData = useMemo(() => {
@@ -176,48 +227,13 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
         });
       });
     });
-    const result = { seats: seatList, rowLabels: rowLabelList, sections: sections || [] };
-    processedDataRef.current = result;
-    return result;
+    return { seats: seatList, rowLabels: rowLabelList, sections: sections || [] };
   }, [mapData, ticketTypeId]);
 
-  // Centering helper
-  const getCenterPan = useCallback((zoom, size) => {
-    const w = size?.width || mapSize.width;
-    const h = size?.height || mapSize.height;
-    return {
-      panX: (w - canvas.width * zoom) / 2,
-      panY: (h - canvas.height * zoom) / 2,
-    };
-  }, [canvas.width, canvas.height, mapSize]);
-
-  // Center map on load and when mapSize changes
-  useEffect(() => {
-    if (mapData && mapSize.width > 0 && mapSize.height > 0) {
-      const { panX, panY } = getCenterPan(fitZoom);
-      scaleAnim.setValue(fitZoom);
-      translateXAnim.setValue(panX);
-      translateYAnim.setValue(panY);
-      gestureState.current = {
-        scale: fitZoom, savedScale: fitZoom,
-        tx: panX, ty: panY, savedTx: panX, savedTy: panY,
-      };
-    }
-  }, [mapData, fitZoom, mapSize]);
-
-  // Measure actual map container size
-  const onMapLayout = useCallback((e) => {
-    const { width, height } = e.nativeEvent.layout;
-    if (width > 0 && height > 0) {
-      setMapSize({ width, height });
-    }
-  }, []);
-
-  // Selected seats set for O(1) lookup
+  // Selected seats set
   const selectedUids = useMemo(() => {
     const set = new Set();
     selectedSeats.forEach(s => set.add(s.seat_uid));
-    selectedUidsRef.current = set;
     return set;
   }, [selectedSeats]);
 
@@ -230,115 +246,217 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
     });
   }, []);
 
-  // Ref for toggleSeat so gesture callbacks always have the latest
+  // Convert screen tap position to canvas coordinates using current viewBox
+  const screenToCanvas = useCallback((screenX, screenY) => {
+    const offset = gestureRef.current.containerOffset;
+    const localX = screenX - offset.x;
+    const localY = screenY - offset.y;
+    return {
+      x: viewBox.x + (localX / mapSize.width) * viewBox.w,
+      y: viewBox.y + (localY / mapSize.height) * viewBox.h,
+    };
+  }, [viewBox, mapSize]);
+
+  // Find seat at canvas coordinates
+  const findSeatAt = useCallback((canvasX, canvasY) => {
+    const seats = processedData.seats;
+    let bestSeat = null;
+    let bestDist = Infinity;
+
+    // Hit radius in canvas units — scale-aware
+    const currentZoom = canvas.width / viewBox.w;
+
+    for (let i = 0; i < seats.length; i++) {
+      const s = seats[i];
+      const isAvailable = s.status === 'available';
+      const isSelected = selectedUids.has(s.seat_uid);
+      const isClickable = (isAvailable && s.isAllowed) || isSelected;
+      if (!isClickable) continue;
+
+      const dx = canvasX - s.cx;
+      const dy = canvasY - s.cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Hit radius adapts to zoom level
+      const hitRadius = Math.max(s.seatRadius * 2.5, 20 / currentZoom);
+
+      if (dist < hitRadius && dist < bestDist) {
+        bestDist = dist;
+        bestSeat = s;
+      }
+    }
+    return bestSeat;
+  }, [processedData.seats, selectedUids, viewBox.w, canvas.width]);
+
+  // ─── PanResponder for gestures (replaces RNGH) ──────────────────────────────
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (evt) => {
+        const touches = evt.nativeEvent.touches;
+        const g = gestureRef.current;
+
+        g.lastTouchTime = Date.now();
+        g.touchStartPos = { x: touches[0].pageX, y: touches[0].pageY };
+        g.startVB = { ...viewBoxRef.current };
+
+        if (touches.length === 2) {
+          g.isPinching = true;
+          g.startDist = getDistance(touches);
+          g.startMid = getMidpoint(touches);
+        } else {
+          g.isPinching = false;
+        }
+        g.isPanning = false;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        const touches = evt.nativeEvent.touches;
+        const g = gestureRef.current;
+        const vb = g.startVB;
+
+        if (touches.length >= 2) {
+          // ── Pinch zoom + pan ──
+          g.isPinching = true;
+          const newDist = getDistance(touches);
+          const newMid = getMidpoint(touches);
+          const scaleRatio = g.startDist / newDist; // > 1 = zoom out
+
+          // New viewBox size
+          const newW = Math.max(canvas.width * 0.1, Math.min(canvas.width * 3, vb.w * scaleRatio));
+          const newH = Math.max(canvas.height * 0.1, Math.min(canvas.height * 3, vb.h * scaleRatio));
+
+          // Canvas point under original midpoint
+          const offset = gestureRef.current.containerOffset;
+          const midLocalX = g.startMid.x - offset.x;
+          const midLocalY = g.startMid.y - offset.y;
+          const canvasMidX = vb.x + (midLocalX / mapSizeRef.current.width) * vb.w;
+          const canvasMidY = vb.y + (midLocalY / mapSizeRef.current.height) * vb.h;
+
+          // New midpoint position on screen
+          const newMidLocalX = newMid.x - offset.x;
+          const newMidLocalY = newMid.y - offset.y;
+
+          // Adjust viewBox so canvas point stays under new midpoint
+          const newX = canvasMidX - (newMidLocalX / mapSizeRef.current.width) * newW;
+          const newY = canvasMidY - (newMidLocalY / mapSizeRef.current.height) * newH;
+
+          const newVB = { x: newX, y: newY, w: newW, h: newH };
+          viewBoxRef.current = newVB;
+          setViewBox(newVB);
+        } else if (touches.length === 1 && !g.isPinching) {
+          // ── Single finger pan ──
+          g.isPanning = true;
+          const dx = gestureState.dx;
+          const dy = gestureState.dy;
+
+          // Convert screen pixels to canvas units
+          const canvasDx = -(dx / mapSizeRef.current.width) * vb.w;
+          const canvasDy = -(dy / mapSizeRef.current.height) * vb.h;
+
+          const newVB = { x: vb.x + canvasDx, y: vb.y + canvasDy, w: vb.w, h: vb.h };
+          viewBoxRef.current = newVB;
+          setViewBox(newVB);
+        }
+      },
+      onPanResponderRelease: (evt) => {
+        const g = gestureRef.current;
+
+        // Detect tap (short duration, small movement)
+        const elapsed = Date.now() - g.lastTouchTime;
+        const touch = evt.nativeEvent.changedTouches[0];
+        const dx = touch.pageX - g.touchStartPos.x;
+        const dy = touch.pageY - g.touchStartPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (elapsed < 300 && dist < 15 && !g.isPinching) {
+          // It's a tap — find seat
+          const offset = g.containerOffset;
+          const localX = touch.pageX - offset.x;
+          const localY = touch.pageY - offset.y;
+          const vb = viewBoxRef.current;
+          const canvasX = vb.x + (localX / mapSizeRef.current.width) * vb.w;
+          const canvasY = vb.y + (localY / mapSizeRef.current.height) * vb.h;
+
+          // Find nearest seat
+          const seats = processedDataRef.current.seats;
+          const uids = selectedUidsRef.current;
+          const currentZoom = canvas.width / vb.w;
+          let bestSeat = null;
+          let bestDistSq = Infinity;
+
+          for (let i = 0; i < seats.length; i++) {
+            const s = seats[i];
+            const isAvailable = s.status === 'available';
+            const isSelected = uids.has(s.seat_uid);
+            const isClickable = (isAvailable && s.isAllowed) || isSelected;
+            if (!isClickable) continue;
+
+            const sdx = canvasX - s.cx;
+            const sdy = canvasY - s.cy;
+            const distSq = sdx * sdx + sdy * sdy;
+            const hitRadius = Math.max(s.seatRadius * 2.5, 20 / currentZoom);
+
+            if (distSq < hitRadius * hitRadius && distSq < bestDistSq) {
+              bestDistSq = distSq;
+              bestSeat = s;
+            }
+          }
+
+          if (bestSeat) {
+            toggleSeatRef.current(bestSeat);
+          }
+        }
+
+        g.isPinching = false;
+        g.isPanning = false;
+      },
+    })
+  ).current;
+
+  // Refs to avoid stale closures in PanResponder
+  const viewBoxRef = useRef(viewBox);
+  useEffect(() => { viewBoxRef.current = viewBox; }, [viewBox]);
+  const mapSizeRef = useRef(mapSize);
+  useEffect(() => { mapSizeRef.current = mapSize; }, [mapSize]);
+  const processedDataRef = useRef(processedData);
+  useEffect(() => { processedDataRef.current = processedData; }, [processedData]);
+  const selectedUidsRef = useRef(selectedUids);
+  useEffect(() => { selectedUidsRef.current = selectedUids; }, [selectedUids]);
   const toggleSeatRef = useRef(toggleSeat);
   useEffect(() => { toggleSeatRef.current = toggleSeat; }, [toggleSeat]);
 
-  // ─── Gesture handlers ──────────────────────────────────────────────────────
+  // ─── Zoom controls ──────────────────────────────────────────────────────────
 
-  // Tap gesture: convert screen coords → canvas coords → find seat
-  const tapGesture = Gesture.Tap()
-    .maxDuration(300)
-    .maxDistance(10)
-    .onEnd((e) => {
-      const gs = gestureState.current;
-      // Convert tap position (in mapContainer coords) to canvas coords
-      const canvasX = (e.x - gs.tx) / gs.scale;
-      const canvasY = (e.y - gs.ty) / gs.scale;
+  const resetView = useCallback(() => {
+    const vb = fitViewBox();
+    viewBoxRef.current = vb;
+    setViewBox(vb);
+  }, [fitViewBox]);
 
-      // Find nearest clickable seat
-      const seats = processedDataRef.current.seats;
-      const uids = selectedUidsRef.current;
-      let bestSeat = null;
-      let bestDist = Infinity;
-
-      for (let i = 0; i < seats.length; i++) {
-        const s = seats[i];
-        const isAvailable = s.status === 'available';
-        const isSelected = uids.has(s.seat_uid);
-        const isClickable = (isAvailable && s.isAllowed) || isSelected;
-        if (!isClickable) continue;
-
-        const dx = canvasX - s.cx;
-        const dy = canvasY - s.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const hitRadius = Math.max(s.seatRadius * 2, 14);
-
-        if (dist < hitRadius && dist < bestDist) {
-          bestDist = dist;
-          bestSeat = s;
-        }
-      }
-
-      if (bestSeat) {
-        toggleSeatRef.current(bestSeat);
-      }
+  const zoomIn = useCallback(() => {
+    setViewBox(prev => {
+      const newW = prev.w / 1.5;
+      const newH = prev.h / 1.5;
+      const newX = prev.x + (prev.w - newW) / 2;
+      const newY = prev.y + (prev.h - newH) / 2;
+      const vb = { x: newX, y: newY, w: newW, h: newH };
+      viewBoxRef.current = vb;
+      return vb;
     });
+  }, []);
 
-  // Pinch gesture: zoom toward focal point
-  const pinchGesture = Gesture.Pinch()
-    .onStart((e) => {
-      const gs = gestureState.current;
-      gs.savedScale = gs.scale;
-      gs.savedTx = gs.tx;
-      gs.savedTy = gs.ty;
-      gs.pinchFocalX = e.focalX;
-      gs.pinchFocalY = e.focalY;
-    })
-    .onUpdate((e) => {
-      const gs = gestureState.current;
-      const minScale = fitZoom * 0.5;
-      const maxScale = fitZoom * 8;
-      const newScale = Math.min(Math.max(gs.savedScale * e.scale, minScale), maxScale);
-
-      // Zoom toward focal point:
-      // The canvas point under the initial focal should move to the current focal
-      const scaleRatio = newScale / gs.savedScale;
-      const newTx = e.focalX - (gs.pinchFocalX - gs.savedTx) * scaleRatio;
-      const newTy = e.focalY - (gs.pinchFocalY - gs.savedTy) * scaleRatio;
-
-      gs.scale = newScale;
-      gs.tx = newTx;
-      gs.ty = newTy;
-      scaleAnim.setValue(newScale);
-      translateXAnim.setValue(newTx);
-      translateYAnim.setValue(newTy);
-    })
-    .onEnd(() => {
-      const gs = gestureState.current;
-      gs.savedScale = gs.scale;
-      gs.savedTx = gs.tx;
-      gs.savedTy = gs.ty;
+  const zoomOut = useCallback(() => {
+    setViewBox(prev => {
+      const newW = Math.min(prev.w * 1.5, canvas.width * 3);
+      const newH = Math.min(prev.h * 1.5, canvas.height * 3);
+      const newX = prev.x + (prev.w - newW) / 2;
+      const newY = prev.y + (prev.h - newH) / 2;
+      const vb = { x: newX, y: newY, w: newW, h: newH };
+      viewBoxRef.current = vb;
+      return vb;
     });
-
-  // Pan gesture: 1-finger drag only
-  const panGesture = Gesture.Pan()
-    .minPointers(1)
-    .maxPointers(1)
-    .minDistance(10)
-    .onStart(() => {
-      const gs = gestureState.current;
-      gs.savedTx = gs.tx;
-      gs.savedTy = gs.ty;
-    })
-    .onUpdate((e) => {
-      const gs = gestureState.current;
-      gs.tx = gs.savedTx + e.translationX;
-      gs.ty = gs.savedTy + e.translationY;
-      translateXAnim.setValue(gs.tx);
-      translateYAnim.setValue(gs.ty);
-    })
-    .onEnd(() => {
-      const gs = gestureState.current;
-      gs.savedTx = gs.tx;
-      gs.savedTy = gs.ty;
-    });
-
-  // Compose: pinch runs independently; 1-finger is Race(pan, tap)
-  const composedGesture = Gesture.Simultaneous(
-    pinchGesture,
-    Gesture.Race(panGesture, tapGesture)
-  );
+  }, [canvas.width, canvas.height]);
 
   const selectedTotal = useMemo(
     () => selectedSeats.reduce((sum, s) => sum + (s.price || 0), 0),
@@ -372,52 +490,6 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
     });
   };
 
-  // Zoom toward center of screen
-  const zoomToCenter = useCallback((newScale) => {
-    const gs = gestureState.current;
-    const centerX = mapSize.width / 2;
-    const centerY = mapSize.height / 2;
-    const scaleRatio = newScale / gs.scale;
-    const newTx = centerX - (centerX - gs.tx) * scaleRatio;
-    const newTy = centerY - (centerY - gs.ty) * scaleRatio;
-
-    gs.scale = newScale;
-    gs.savedScale = newScale;
-    gs.tx = newTx;
-    gs.ty = newTy;
-    gs.savedTx = newTx;
-    gs.savedTy = newTy;
-
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: newScale, useNativeDriver: true }),
-      Animated.spring(translateXAnim, { toValue: newTx, useNativeDriver: true }),
-      Animated.spring(translateYAnim, { toValue: newTy, useNativeDriver: true }),
-    ]).start();
-  }, [mapSize]);
-
-  const resetView = useCallback(() => {
-    const { panX, panY } = getCenterPan(fitZoom);
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: fitZoom, useNativeDriver: true }),
-      Animated.spring(translateXAnim, { toValue: panX, useNativeDriver: true }),
-      Animated.spring(translateYAnim, { toValue: panY, useNativeDriver: true }),
-    ]).start();
-    gestureState.current = {
-      scale: fitZoom, savedScale: fitZoom,
-      tx: panX, ty: panY, savedTx: panX, savedTy: panY,
-    };
-  }, [fitZoom, getCenterPan]);
-
-  const zoomIn = useCallback(() => {
-    const newScale = Math.min(gestureState.current.scale * 1.5, fitZoom * 8);
-    zoomToCenter(newScale);
-  }, [fitZoom, zoomToCenter]);
-
-  const zoomOut = useCallback(() => {
-    const newScale = Math.max(gestureState.current.scale / 1.5, fitZoom * 0.5);
-    zoomToCenter(newScale);
-  }, [fitZoom, zoomToCenter]);
-
   const ticketTypeLegend = mapData?.ticket_types || [];
 
   // ─── Render ──────────────────────────────────────────────────────
@@ -447,7 +519,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
       <>
         {/* Legend */}
         <View style={styles.legendContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.legendScroll}>
+          <View style={styles.legendScroll}>
             {ticketTypeLegend.map(tt => (
               <View key={tt.id} style={[
                 styles.legendItem,
@@ -466,142 +538,130 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
               <View style={[styles.legendDot, { backgroundColor: '#a51c30' }]} />
               <Text style={styles.legendText}>Selectat</Text>
             </View>
-          </ScrollView>
+          </View>
         </View>
 
-        {/* Map — GestureDetector on a stable container, not the animated view */}
-        <View style={styles.mapContainer} onLayout={onMapLayout}>
-          <GestureDetector gesture={composedGesture}>
-            <View style={styles.gestureArea}>
-              <Animated.View style={[
-                styles.mapAnimatedView,
-                {
-                  transform: [
-                    { translateX: translateXAnim },
-                    { translateY: translateYAnim },
-                    { scale: scaleAnim },
-                  ],
-                },
-              ]}>
-                {/* SVG at FULL canvas resolution — stays crisp at any zoom */}
-                <Svg
-                  width={canvas.width}
-                  height={canvas.height}
-                  viewBox={`0 0 ${canvas.width} ${canvas.height}`}
+        {/* Map with PanResponder gestures */}
+        <View
+          ref={containerRef}
+          style={styles.mapContainer}
+          onLayout={onMapLayout}
+          {...panResponder.panHandlers}
+        >
+          <Svg
+            width="100%"
+            height="100%"
+            viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+            preserveAspectRatio="xMidYMid meet"
+          >
+            {/* Background */}
+            <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
+
+            {/* Section labels */}
+            {processedData.sections.map((section, idx) => {
+              const sx = section.x_position || section.x || 0;
+              const sy = section.y_position || section.y || 0;
+              const rotation = section.rotation || 0;
+              const sectionW = section.width || 100;
+              const sectionH = section.height || 100;
+              const rcx = sx + sectionW / 2;
+              const rcy = sy + sectionH / 2;
+              const transform = rotation !== 0
+                ? `rotate(${rotation} ${rcx} ${rcy})`
+                : undefined;
+
+              return (
+                <SvgText
+                  key={`sl-${idx}`}
+                  x={sx + sectionW / 2}
+                  y={sy - 12}
+                  fill="rgba(255,255,255,0.5)"
+                  fontSize={12}
+                  fontWeight="700"
+                  textAnchor="middle"
+                  transform={transform}
                 >
-                  {/* Background */}
-                  <Rect x={0} y={0} width={canvas.width} height={canvas.height} fill="#0f0f1a" rx={8} />
+                  {section.name || ''}
+                </SvgText>
+              );
+            })}
 
-                  {/* Section labels */}
-                  {processedData.sections.map((section, idx) => {
-                    const sx = section.x_position || section.x || 0;
-                    const sy = section.y_position || section.y || 0;
-                    const rotation = section.rotation || 0;
-                    const sectionW = section.width || 100;
-                    const sectionH = section.height || 100;
-                    const rcx = sx + sectionW / 2;
-                    const rcy = sy + sectionH / 2;
-                    const transform = rotation !== 0
-                      ? `rotate(${rotation} ${rcx} ${rcy})`
-                      : undefined;
+            {/* Row labels */}
+            {processedData.rowLabels.map(rl => (
+              <SvgText
+                key={rl.key}
+                x={rl.x}
+                y={rl.y}
+                textAnchor="end"
+                fontSize={rl.fontSize}
+                fontWeight="500"
+                fill="rgba(255,255,255,0.45)"
+              >
+                {rl.label}
+              </SvgText>
+            ))}
 
-                    return (
-                      <SvgText
-                        key={`sl-${idx}`}
-                        x={sx + sectionW / 2}
-                        y={sy - 12}
-                        fill="rgba(255,255,255,0.5)"
-                        fontSize={12}
-                        fontWeight="700"
-                        textAnchor="middle"
-                        transform={transform}
-                      >
-                        {section.name || ''}
-                      </SvgText>
-                    );
-                  })}
+            {/* Seats */}
+            {processedData.seats.map(seat => {
+              const isSelected = selectedUids.has(seat.seat_uid);
+              const seatRadius = seat.seatRadius;
+              const isAvailable = seat.status === 'available';
 
-                  {/* Row labels */}
-                  {processedData.rowLabels.map(rl => (
+              let fillColor, strokeColor, strokeWidth, opacity;
+
+              if (isSelected) {
+                fillColor = '#a51c30';
+                strokeColor = '#7a141f';
+                strokeWidth = 1.5;
+                opacity = 1;
+              } else if (isAvailable && seat.isAllowed) {
+                fillColor = seat.color;
+                strokeColor = '#ffffff';
+                strokeWidth = 0.8;
+                opacity = 1;
+              } else if (isAvailable && !seat.isAllowed) {
+                fillColor = '#2D2D3D';
+                strokeColor = 'rgba(255,255,255,0.1)';
+                strokeWidth = 0.5;
+                opacity = 0.4;
+              } else {
+                fillColor = '#9CA3AF';
+                strokeColor = 'rgba(255,255,255,0.15)';
+                strokeWidth = 0.5;
+                opacity = seat.status === 'disabled' ? 0.25 : 0.45;
+              }
+
+              const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
+              const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
+
+              return (
+                <G key={seat.seat_uid}>
+                  <Circle
+                    cx={seat.cx} cy={seat.cy} r={drawRadius}
+                    fill={fillColor}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    opacity={opacity}
+                  />
+                  {seatRadius >= 5 && (
                     <SvgText
-                      key={rl.key}
-                      x={rl.x}
-                      y={rl.y}
-                      textAnchor="end"
-                      fontSize={rl.fontSize}
-                      fontWeight="500"
-                      fill="rgba(255,255,255,0.45)"
+                      x={seat.cx}
+                      y={seat.cy + fontSize * 0.35}
+                      textAnchor="middle"
+                      fontSize={fontSize}
+                      fontWeight="700"
+                      fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
+                      opacity={opacity}
                     >
-                      {rl.label}
+                      {seat.seat_label}
                     </SvgText>
-                  ))}
+                  )}
+                </G>
+              );
+            })}
+          </Svg>
 
-                  {/* Seats — NO onPress, taps handled via gesture system */}
-                  {processedData.seats.map(seat => {
-                    const isSelected = selectedUids.has(seat.seat_uid);
-                    const seatRadius = seat.seatRadius;
-                    const isAvailable = seat.status === 'available';
-
-                    let fillColor, strokeColor, strokeWidth, opacity;
-
-                    if (isSelected) {
-                      fillColor = '#a51c30';
-                      strokeColor = '#7a141f';
-                      strokeWidth = 1.5;
-                      opacity = 1;
-                    } else if (isAvailable && seat.isAllowed) {
-                      fillColor = seat.color;
-                      strokeColor = '#ffffff';
-                      strokeWidth = 0.8;
-                      opacity = 1;
-                    } else if (isAvailable && !seat.isAllowed) {
-                      fillColor = '#2D2D3D';
-                      strokeColor = 'rgba(255,255,255,0.1)';
-                      strokeWidth = 0.5;
-                      opacity = 0.4;
-                    } else {
-                      fillColor = '#9CA3AF';
-                      strokeColor = 'rgba(255,255,255,0.15)';
-                      strokeWidth = 0.5;
-                      opacity = seat.status === 'disabled' ? 0.25 : 0.45;
-                    }
-
-                    const drawRadius = isSelected ? seatRadius * 1.4 : seatRadius;
-                    const fontSize = Math.round(seatRadius * 0.85 * 10) / 10;
-
-                    return (
-                      <G key={seat.seat_uid}>
-                        {/* Visible seat */}
-                        <Circle
-                          cx={seat.cx} cy={seat.cy} r={drawRadius}
-                          fill={fillColor}
-                          stroke={strokeColor}
-                          strokeWidth={strokeWidth}
-                          opacity={opacity}
-                        />
-                        {/* Seat label */}
-                        {seatRadius >= 5 && (
-                          <SvgText
-                            x={seat.cx}
-                            y={seat.cy + fontSize * 0.35}
-                            textAnchor="middle"
-                            fontSize={fontSize}
-                            fontWeight="700"
-                            fill={isSelected ? '#ffffff' : 'rgba(255,255,255,0.85)'}
-                            opacity={opacity}
-                          >
-                            {seat.seat_label}
-                          </SvgText>
-                        )}
-                      </G>
-                    );
-                  })}
-                </Svg>
-              </Animated.View>
-            </View>
-          </GestureDetector>
-
-          {/* Zoom controls — outside GestureDetector so they stay tappable */}
+          {/* Zoom controls */}
           <View style={styles.zoomControls} pointerEvents="box-none">
             <TouchableOpacity style={styles.zoomButton} onPress={zoomIn} activeOpacity={0.7}>
               <ZoomInIcon size={18} color={colors.textPrimary} />
@@ -623,13 +683,13 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
                 {selectedSeats.length} {selectedSeats.length === 1 ? 'loc' : 'locuri'}
               </Text>
               <Text style={styles.bottomBarTotal}>{formatCurrency(selectedTotal)}</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.seatLabelsScroll}>
+              <View style={styles.seatLabelsRow}>
                 {selectedSeats.map(s => (
                   <View key={s.seat_uid} style={styles.seatLabelChip}>
                     <Text style={styles.seatLabelChipText}>R{s.row_label}-{s.seat_label}</Text>
                   </View>
                 ))}
-              </ScrollView>
+              </View>
             </View>
             <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm} activeOpacity={0.8}>
               <CheckIcon size={20} color={colors.white} />
@@ -648,7 +708,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <GestureHandlerRootView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose} activeOpacity={0.7}>
             <ArrowLeftIcon size={20} color={colors.textPrimary} />
@@ -665,7 +725,7 @@ export default function SeatingMapScreen({ visible, eventId, ticketTypeId, onCon
           )}
         </View>
         {renderContent()}
-      </GestureHandlerRootView>
+      </View>
     </Modal>
   );
 }
@@ -682,16 +742,14 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 15, color: colors.red, textAlign: 'center', marginBottom: 16 },
   retryButton: { backgroundColor: colors.purple, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
   retryButtonText: { fontSize: 15, fontWeight: '600', color: colors.white },
-  legendContainer: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 8 },
-  legendScroll: { paddingHorizontal: 16, gap: 12 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5, marginRight: 4 },
+  legendContainer: { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 8, paddingHorizontal: 16 },
+  legendScroll: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendItemActive: { backgroundColor: colors.purpleBg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: colors.purpleBorder },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 11, color: colors.textSecondary },
   legendPrice: { fontSize: 11, fontWeight: '600', color: colors.textTertiary },
-  mapContainer: { flex: 1, overflow: 'hidden' },
-  gestureArea: { flex: 1 },
-  mapAnimatedView: { transformOrigin: '0% 0%' },
+  mapContainer: { flex: 1, backgroundColor: '#0f0f1a' },
   zoomControls: { position: 'absolute', right: 12, top: 12, gap: 6 },
   zoomButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(10,10,15,0.9)', borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   resetLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary },
@@ -699,8 +757,8 @@ const styles = StyleSheet.create({
   bottomBarInfo: { flex: 1 },
   bottomBarCount: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   bottomBarTotal: { fontSize: 18, fontWeight: '700', color: '#a51c30', marginBottom: 4 },
-  seatLabelsScroll: { flexGrow: 0, maxHeight: 28 },
-  seatLabelChip: { backgroundColor: 'rgba(165,28,48,0.15)', borderWidth: 1, borderColor: 'rgba(165,28,48,0.3)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginRight: 4 },
+  seatLabelsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  seatLabelChip: { backgroundColor: 'rgba(165,28,48,0.15)', borderWidth: 1, borderColor: 'rgba(165,28,48,0.3)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   seatLabelChipText: { fontSize: 11, fontWeight: '600', color: '#a51c30' },
   confirmButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#a51c30', paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12, gap: 8 },
   confirmButtonText: { fontSize: 16, fontWeight: '700', color: colors.white },
