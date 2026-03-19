@@ -344,20 +344,32 @@ const AmbiletCart = {
             const subtotal = this.getSubtotal();
             const ticketCount = this.getItemCount();
 
+            // Build cart items with ticket_type_id for ticket-type-specific discounts
+            const items = cart.items.map(item => ({
+                event_id: item.eventId,
+                ticket_type_id: item.ticketTypeId,
+                quantity: item.quantity,
+                unit_price: item.ticketType?.price || 0,
+                total: (item.ticketType?.price || 0) * item.quantity
+            }));
+
             const response = await AmbiletAPI.validatePromoCode(
                 code,
                 eventId,
                 subtotal,
                 ticketCount,
-                AmbiletAuth.getCustomerData()?.email
+                AmbiletAuth.getCustomerData()?.email,
+                items
             );
 
             if (response.success) {
+                // Use the backend-calculated discount amount (respects ticket type restrictions)
+                const discountData = response.data.discount || {};
                 const promoData = {
                     code: code,
-                    type: response.data.discount_type,
-                    value: response.data.discount_value,
-                    discountAmount: response.data.discount_amount,
+                    type: response.data.discount_type || response.data.promo_code?.type,
+                    value: response.data.discount_value || response.data.promo_code?.value,
+                    discountAmount: discountData.amount || response.data.discount_amount || 0,
                     appliedAt: new Date().toISOString()
                 };
 
@@ -397,12 +409,16 @@ const AmbiletCart = {
         const promo = this.getPromoCode();
         if (!promo) return 0;
 
-        const subtotal = this.getSubtotal();
+        // Use the backend-calculated discount amount (respects ticket type restrictions)
+        if (promo.discountAmount !== undefined && promo.discountAmount !== null) {
+            return parseFloat(promo.discountAmount) || 0;
+        }
 
+        // Fallback: recalculate (only for old stored promos without discountAmount)
+        const subtotal = this.getSubtotal();
         if (promo.type === 'percentage') {
             return subtotal * (promo.value / 100);
         }
-
         return Math.min(promo.value, subtotal);
     },
 

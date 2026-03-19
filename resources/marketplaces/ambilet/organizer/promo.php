@@ -179,8 +179,8 @@ async function loadPromoCodes() {
     try {
         const response = await AmbiletAPI.get('/organizer/promo-codes');
         if (response.success) {
-            // API returns array directly in response.data, not response.data.promo_codes
-            allPromoCodes = Array.isArray(response.data) ? response.data : (response.data.promo_codes || []);
+            // API may return data as array, response.data.data (merged), or response.data.promo_codes
+            allPromoCodes = Array.isArray(response.data) ? response.data : (response.data.data || response.data.promo_codes || []);
             promoCodes = [...allPromoCodes];
             renderPromoCodes();
             document.getElementById('active-codes').textContent = allPromoCodes.filter(c => c.status === 'active').length;
@@ -257,8 +257,11 @@ function renderPromoCodes() {
                             ${statusBadge}
                         </div>
                     </div>
+                    ${c.source === 'admin' ? `
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">Admin</span>
+                    ` : `
                     <div class="relative">
-                        <button onclick="togglePromoMenu(${c.id})" class="p-2 rounded-lg hover:bg-surface">
+                        <button onclick="togglePromoMenu('${c.id}')" class="p-2 rounded-lg hover:bg-surface">
                             <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                         </button>
                         <div id="promo-menu-${c.id}" class="absolute right-0 z-10 hidden mt-1 bg-white border rounded-lg shadow-lg w-36 border-border">
@@ -272,6 +275,7 @@ function renderPromoCodes() {
                             </button>
                         </div>
                     </div>
+                    `}
                 </div>
 
                 <div class="flex items-center gap-2 mb-3">

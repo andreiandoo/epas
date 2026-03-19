@@ -927,14 +927,18 @@ const AmbiletAPI = {
     /**
      * Validate promo code
      */
-    async validatePromoCode(code, eventId, cartTotal, ticketCount, customerEmail = null) {
-        return this.post('/promo-codes/validate', {
+    async validatePromoCode(code, eventId, cartTotal, ticketCount, customerEmail = null, items = null) {
+        const payload = {
             code,
             event_id: eventId,
             cart_total: cartTotal,
             ticket_count: ticketCount,
             customer_email: customerEmail
-        });
+        };
+        if (items && items.length > 0) {
+            payload.items = items;
+        }
+        return this.post('/promo-codes/validate', payload);
     },
 
     // ==================== CUSTOMER ENDPOINTS ====================

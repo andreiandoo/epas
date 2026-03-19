@@ -154,9 +154,16 @@ class PromoCodeController extends BaseController
 
         // Check ticket type targeting (applicable_ticket_types)
         $applicableTicketTypes = $couponCode->applicable_ticket_types;
-        if (!empty($applicableTicketTypes) && !empty($validated['items'])) {
+        $items = $validated['items'] ?? [];
+
+        if (!empty($applicableTicketTypes)) {
+            if (empty($items)) {
+                // Items not provided but code requires specific ticket types - reject
+                return $this->error('Promo code is not valid for selected ticket types', 400);
+            }
+
             $hasApplicableTicket = false;
-            foreach ($validated['items'] as $item) {
+            foreach ($items as $item) {
                 $ticketTypeId = (int) ($item['ticket_type_id'] ?? 0);
                 if (in_array($ticketTypeId, array_map('intval', $applicableTicketTypes))) {
                     $hasApplicableTicket = true;
@@ -168,8 +175,19 @@ class PromoCodeController extends BaseController
             }
         }
 
-        // Calculate discount
-        $discount = $couponCode->calculateDiscount($cartTotal);
+        // Calculate discount - filter by applicable ticket types if set
+        $discountBase = $cartTotal;
+        if (!empty($applicableTicketTypes) && !empty($items)) {
+            $discountBase = 0;
+            foreach ($items as $item) {
+                $ticketTypeId = (int) ($item['ticket_type_id'] ?? 0);
+                if (in_array($ticketTypeId, array_map('intval', $applicableTicketTypes))) {
+                    $discountBase += (float) ($item['total'] ?? 0);
+                }
+            }
+        }
+
+        $discount = $couponCode->calculateDiscount($discountBase);
 
         // Build formatted discount string
         $formattedDiscount = $couponCode->discount_type === 'percentage'

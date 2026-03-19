@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Coupon\CouponCode;
+use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerPromoCode;
 use Illuminate\Http\Request;
@@ -12,7 +14,7 @@ use Illuminate\Support\Str;
 class PromoCodeController extends BaseController
 {
     /**
-     * List organizer's promo codes
+     * List organizer's promo codes (from both mkt_promo_codes and coupon_codes tables)
      */
     public function index(Request $request): JsonResponse
     {
@@ -22,6 +24,7 @@ class PromoCodeController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
+        // 1. Get organizer's own promo codes (mkt_promo_codes)
         $query = MarketplaceOrganizerPromoCode::forOrganizer($organizer->id)
             ->with(['event:id,name,slug', 'ticketType:id,name'])
             ->orderBy('created_at', 'desc');
@@ -43,12 +46,54 @@ class PromoCodeController extends BaseController
             });
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
-        $promoCodes = $query->paginate($perPage);
+        $ownCodes = $query->get()->map(fn ($code) => $this->formatPromoCode($code));
 
-        return $this->paginated($promoCodes, function ($promoCode) {
-            return $this->formatPromoCode($promoCode);
-        });
+        // 2. Get admin-created CouponCodes that apply to this organizer's events
+        $organizerEventIds = MarketplaceEvent::where('marketplace_organizer_id', $organizer->id)
+            ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->pluck('id')
+            ->toArray();
+
+        $adminCodes = collect();
+        if (!empty($organizerEventIds)) {
+            $couponQuery = CouponCode::where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->where('status', '!=', 'deleted')
+                ->where(function ($q) use ($organizerEventIds) {
+                    // CouponCodes with applicable_events containing organizer's events
+                    foreach ($organizerEventIds as $eventId) {
+                        $q->orWhereJsonContains('applicable_events', $eventId)
+                          ->orWhereJsonContains('applicable_events', (string) $eventId);
+                    }
+                })
+                ->orderBy('created_at', 'desc');
+
+            if ($request->has('status')) {
+                $couponQuery->where('status', $request->status);
+            }
+
+            if ($request->has('search')) {
+                $search = $request->search;
+                $couponQuery->where(function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%");
+                });
+            }
+
+            // Exclude codes already in mkt_promo_codes (same code for this client)
+            $ownCodesValues = $ownCodes->pluck('code')->toArray();
+            if (!empty($ownCodesValues)) {
+                $couponQuery->whereNotIn('code', $ownCodesValues);
+            }
+
+            $adminCodes = $couponQuery->get()->map(fn ($coupon) => $this->formatCouponCode($coupon, $organizerEventIds));
+        }
+
+        // Merge results, own codes first
+        $allCodes = $ownCodes->concat($adminCodes)->sortByDesc('created_at')->values();
+
+        return $this->success([
+            'data' => $allCodes,
+            'total' => $allCodes->count(),
+        ]);
     }
 
     /**
@@ -151,6 +196,42 @@ class PromoCodeController extends BaseController
             'is_public' => $validated['is_public'] ?? false,
             'status' => 'active',
         ]);
+
+        // Mirror to coupon_codes table so admin sees it in Coupon Codes list
+        try {
+            $couponData = [
+                'marketplace_client_id' => $organizer->marketplace_client_id,
+                'code' => $code,
+                'discount_type' => $validated['type'] === 'percentage' ? 'percentage' : 'fixed_amount',
+                'discount_value' => $validated['value'],
+                'max_discount_amount' => $validated['max_discount_amount'] ?? null,
+                'min_purchase_amount' => $validated['min_purchase_amount'] ?? null,
+                'min_quantity' => $validated['min_tickets'] ?? null,
+                'max_uses_total' => $validated['usage_limit'] ?? null,
+                'max_uses_per_user' => $validated['usage_limit_per_customer'] ?? null,
+                'starts_at' => $validated['starts_at'] ?? null,
+                'expires_at' => $validated['expires_at'] ?? null,
+                'status' => 'active',
+                'is_public' => $validated['is_public'] ?? false,
+                'source' => 'organizer',
+            ];
+
+            // Set applicable_events / applicable_ticket_types based on applies_to
+            if (!empty($validated['event_id'])) {
+                $couponData['applicable_events'] = [(int) $validated['event_id']];
+            }
+            if (!empty($validated['ticket_type_id'])) {
+                $couponData['applicable_ticket_types'] = [(int) $validated['ticket_type_id']];
+            }
+
+            CouponCode::create($couponData);
+        } catch (\Throwable $e) {
+            // Don't fail the main operation if mirror fails
+            \Illuminate\Support\Facades\Log::warning('Failed to mirror promo code to coupon_codes', [
+                'code' => $code,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->success([
             'promo_code' => $this->formatPromoCode($promoCode->load(['event:id,name,slug', 'ticketType:id,name'])),
@@ -499,7 +580,75 @@ class PromoCodeController extends BaseController
             'status' => $promoCode->status,
             'is_public' => $promoCode->is_public,
             'is_valid' => $promoCode->isValid(),
+            'source' => 'organizer',
             'created_at' => $promoCode->created_at->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Format a CouponCode (admin-created) in the same shape as organizer promo codes
+     */
+    protected function formatCouponCode(CouponCode $coupon, array $organizerEventIds): array
+    {
+        // Determine applies_to from coupon structure
+        $appliesTo = 'all_events';
+        $eventData = null;
+        $ticketTypeData = null;
+
+        if (!empty($coupon->applicable_ticket_types)) {
+            $appliesTo = 'ticket_type';
+            $firstTtId = (int) $coupon->applicable_ticket_types[0];
+            $tt = \App\Models\MarketplaceTicketType::find($firstTtId);
+            if ($tt) {
+                $ticketTypeData = ['id' => $tt->id, 'name' => $tt->name];
+            }
+        }
+
+        if (!empty($coupon->applicable_events)) {
+            if ($appliesTo !== 'ticket_type') {
+                $appliesTo = 'specific_event';
+            }
+            $firstEventId = (int) $coupon->applicable_events[0];
+            $event = MarketplaceEvent::find($firstEventId);
+            if ($event) {
+                $eventData = ['id' => $event->id, 'name' => $event->name, 'slug' => $event->slug];
+            }
+        }
+
+        $type = $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed';
+        $value = (float) $coupon->discount_value;
+        $formattedDiscount = $type === 'percentage'
+            ? "{$value}%"
+            : number_format($value, 2) . ' RON';
+
+        return [
+            'id' => 'coupon_' . $coupon->id,
+            'code' => $coupon->code,
+            'name' => $coupon->code,
+            'description' => null,
+            'type' => $type,
+            'value' => $value,
+            'formatted_discount' => $formattedDiscount,
+            'applies_to' => $appliesTo,
+            'event' => $eventData,
+            'ticket_type' => $ticketTypeData,
+            'min_purchase_amount' => $coupon->min_purchase_amount ? (float) $coupon->min_purchase_amount : null,
+            'max_discount_amount' => $coupon->max_discount_amount ? (float) $coupon->max_discount_amount : null,
+            'min_tickets' => $coupon->min_quantity,
+            'usage_limit' => $coupon->max_uses_total,
+            'usage_limit_per_customer' => $coupon->max_uses_per_user,
+            'usage_count' => $coupon->current_uses ?? 0,
+            'remaining_uses' => $coupon->max_uses_total
+                ? max(0, $coupon->max_uses_total - ($coupon->current_uses ?? 0))
+                : null,
+            'starts_at' => $coupon->starts_at?->toIso8601String(),
+            'expires_at' => $coupon->expires_at?->toIso8601String(),
+            'status' => $coupon->status,
+            'is_public' => $coupon->is_public ?? false,
+            'is_valid' => $coupon->isValid(),
+            'source' => 'admin',
+            'readonly' => true,
+            'created_at' => $coupon->created_at->toIso8601String(),
         ];
     }
 }
