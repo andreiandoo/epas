@@ -82,27 +82,6 @@ class EditEvent extends EditRecord
 
         $actions = [];
 
-        // Statistics button - always visible
-        $actions[] = Actions\Action::make('statistics')
-            ->label('Statistics')
-            ->icon('heroicon-o-chart-bar')
-            ->color('info')
-            ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
-
-        // Analytics Dashboard button
-        $actions[] = Actions\Action::make('analytics')
-            ->label('Analytics Dashboard')
-            ->icon('heroicon-o-presentation-chart-line')
-            ->color('success')
-            ->url(fn () => EventResource::getUrl('analytics', ['record' => $this->record]));
-
-        // Activity Log button - always visible
-        $actions[] = Actions\Action::make('activity_log')
-            ->label('Activity Log')
-            ->icon('heroicon-o-clock')
-            ->color('gray')
-            ->url(fn () => EventResource::getUrl('activity-log', ['record' => $this->record]));
-
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
                 ->label('Create Invitations')
@@ -155,32 +134,6 @@ class EditEvent extends EditRecord
             ->icon('heroicon-o-shopping-bag')
             ->color('gray')
             ->url($ordersUrl);
-
-        // Test order link - generates a signed URL for placing test orders on unpublished events
-        $actions[] = Actions\Action::make('test_order_link')
-            ->label('Link test comandă')
-            ->icon('heroicon-o-beaker')
-            ->color('warning')
-            ->action(function () use ($marketplace) {
-                $event = $this->record;
-                $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
-                $slug = $event->slug ?? $event->id;
-
-                $token = BaseController::generatePreviewToken($event->id, auth()->id());
-                $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
-                $domain = preg_replace('#^https?://#', '', rtrim($domain, '/'));
-                $url = "https://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
-
-                // Copy to clipboard via JS
-                $this->js("navigator.clipboard.writeText('{$url}')");
-
-                Notification::make()
-                    ->success()
-                    ->title('Link copiat în clipboard!')
-                    ->body("Valid 24h. Comenzile plasate vor fi gratuite și marcate ca test.\n{$url}")
-                    ->persistent()
-                    ->send();
-            });
 
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();

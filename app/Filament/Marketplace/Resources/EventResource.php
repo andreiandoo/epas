@@ -2039,6 +2039,27 @@ class EventResource extends Resource
                                         '</a>'
                                     );
                                 }),
+                            Forms\Components\Placeholder::make('test_order_link')
+                                ->hiddenLabel()
+                                ->visible(fn (?Event $record) => $record && $record->exists)
+                                ->content(function (?Event $record) use ($marketplace, $t) {
+                                    if (!$record || !$record->exists || !$marketplace) {
+                                        return null;
+                                    }
+                                    $slug = $record->slug ?? $record->id;
+                                    $domain = $marketplace->domain ?? $marketplace->primary_domain ?? 'localhost';
+                                    $domain = preg_replace('#^https?://#', '', rtrim($domain, '/'));
+                                    $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                    $token = \App\Http\Controllers\Api\MarketplaceClient\BaseController::generatePreviewToken($record->id, auth()->id());
+                                    $url = "{$protocol}://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test comandă', 'Test order link') . '\', 2000);" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-semibold text-amber-300 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 transition-colors cursor-pointer">' .
+                                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>' .
+                                            '<span>' . $t('Link test comandă', 'Test order link') . '</span>' .
+                                        '</button>'
+                                    );
+                                }),
                             Forms\Components\TextInput::make('access_password')
                                 ->label($t('Parolă acces eveniment', 'Event access password'))
                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă setezi o parolă, pagina evenimentului va fi accesibilă doar după introducerea parolei. Lasă gol pentru acces liber.', 'If you set a password, the event page will only be accessible after entering the password. Leave empty for open access.'))
@@ -2150,6 +2171,11 @@ class EventResource extends Resource
                                         $conversionLabel = $t('Conversie', 'Conversion');
                                         $viewsLabel = $t('Vizualizări', 'Views');
 
+                                        $statisticsUrl = static::getUrl('statistics', ['record' => $record]);
+                                        $analyticsUrl = static::getUrl('analytics', ['record' => $record]);
+                                        $statisticsLabel = $t('Statistici', 'Statistics');
+                                        $analyticsLabel = $t('Analiză', 'Analytics');
+
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
@@ -2177,6 +2203,16 @@ class EventResource extends Resource
                                             <div class='flex justify-between mt-1 text-xs'>
                                                 <span class='text-gray-400'>{$viewsLabel}</span>
                                                 <span class='text-white'>" . number_format($views) . "</span>
+                                            </div>
+                                            <div class='grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-700'>
+                                                <a href='{$statisticsUrl}' class='inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-blue-300 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 transition-colors'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/></svg>
+                                                    {$statisticsLabel}
+                                                </a>
+                                                <a href='{$analyticsUrl}' class='inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 transition-colors'>
+                                                    <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
+                                                    {$analyticsLabel}
+                                                </a>
                                             </div>
                                         ");
                                     }),
