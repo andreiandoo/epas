@@ -674,9 +674,7 @@ class ArtistResource extends Resource
                     ->preload()
                     ->multiple(),
             ])
-            ->actions([
-                EditAction::make(),
-            ])
+            ->actions([])
             ->bulkActions([]);
     }
 
