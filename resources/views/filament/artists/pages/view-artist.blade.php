@@ -539,7 +539,7 @@ canvas{width:100% !important; height:240px !important;}
                 </a>
             </div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                @foreach(['overview' => 'Overview', 'audience' => 'Audience', 'geographic' => 'Geographic', 'performance' => 'Performance', 'sales' => 'Sales', 'expansion' => 'Expansion'] as $tabKey => $tabLabel)
+                @foreach(['overview' => 'Overview', 'audience' => 'Audience', 'geographic' => 'Geographic', 'performance' => 'Performance', 'sales' => 'Sales', 'upcoming' => 'Upcoming', 'expansion' => 'Expansion'] as $tabKey => $tabLabel)
                     <button @click="activeTab = '{{ $tabKey }}'" :class="activeTab === '{{ $tabKey }}' ? 'active' : ''" class="filter-chip" style="font-size:12px;padding:6px 12px;cursor:pointer;border:none;">{{ $tabLabel }}</button>
                 @endforeach
             </div>
