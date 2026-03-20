@@ -129,10 +129,6 @@ function renderEvents(events) {
     }
 
     tbody.innerHTML = events.map(e => {
-        const commissionModeIcon = e.commission_mode === 'added_on_top'
-            ? '<span class="inline-flex items-center justify-center w-4 h-4 text-amber-500" title="Comision adaugat la pret"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z"/></svg></span>'
-            : '<span class="inline-flex items-center justify-center w-4 h-4 text-green-500" title="Comision inclus in pret"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></span>';
-
         const statusBadge = e.is_past
             ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Incheiat</span>'
             : '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Activ</span>';
@@ -163,11 +159,7 @@ function renderEvents(events) {
                 </td>
                 <td class="px-6 py-4 font-medium text-right">${AmbiletUtils.formatCurrency(e.gross_revenue)}</td>
                 <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end gap-1">
-                        <span class="text-amber-600">${AmbiletUtils.formatCurrency(e.commission_amount)}</span>
-                        <span class="text-xs text-muted">(${e.commission_rate}%)</span>
-                        ${commissionModeIcon}
-                    </div>
+                    <span class="text-amber-600">${AmbiletUtils.formatCurrency(e.commission_amount)}</span>
                 </td>
                 <td class="px-6 py-4 font-semibold text-right text-success">${AmbiletUtils.formatCurrency(e.net_revenue)}</td>
                 <td class="px-6 py-4 text-right text-muted">${AmbiletUtils.formatCurrency(e.total_paid_out)}</td>
