@@ -1,8 +1,17 @@
 <x-filament-panels::page>
     @php
         $layout = $this->seatingLayout;
-        $sections = $layout->sections()->where('section_type', 'standard')->orderBy('display_order')->with('rows.seats')->get();
-        $textLayers = $layout->sections()->where('section_type', 'decorative')->get()->filter(fn ($s) => ($s->metadata['shape'] ?? '') === 'text');
+        $sections = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
+            ->where('layout_id', $layout->id)
+            ->where('section_type', 'standard')
+            ->orderBy('display_order')
+            ->with('rows.seats')
+            ->get();
+        $textLayers = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
+            ->where('layout_id', $layout->id)
+            ->where('section_type', 'decorative')
+            ->get()
+            ->filter(fn ($s) => ($s->metadata['shape'] ?? '') === 'text');
         $canvasW = $layout->canvas_w ?? 1920;
         $canvasH = $layout->canvas_h ?? 1080;
 
