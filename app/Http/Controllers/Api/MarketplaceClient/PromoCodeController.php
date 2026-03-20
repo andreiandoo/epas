@@ -47,7 +47,7 @@ class PromoCodeController extends BaseController
             return $this->validateCouponCode($couponCode, $validated);
         }
 
-        return $this->error('Invalid promo code', 404);
+        return $this->error('Cod promoțional invalid', 404);
     }
 
     /**
@@ -105,33 +105,33 @@ class PromoCodeController extends BaseController
 
         // Check status
         if ($couponCode->status !== 'active') {
-            return $this->error('Promo code is not active (status: ' . $couponCode->status . ')', 400);
+            return $this->error('Codul promoțional nu este activ', 400);
         }
 
         // Check start date — dates are stored as local time (Europe/Bucharest) but cast as UTC
         $now = now('Europe/Bucharest');
         if ($couponCode->starts_at && $couponCode->starts_at->shiftTimezone('Europe/Bucharest')->isAfter($now)) {
-            return $this->error('Promo code has not started yet', 400);
+            return $this->error('Codul promoțional nu este încă valid', 400);
         }
 
         // Check expiry date
         if ($couponCode->expires_at && $couponCode->expires_at->shiftTimezone('Europe/Bucharest')->isBefore($now)) {
-            return $this->error('Promo code has expired', 400);
+            return $this->error('Codul promoțional a expirat', 400);
         }
 
         // Check usage limits
         if ($couponCode->max_uses_total && $couponCode->current_uses >= $couponCode->max_uses_total) {
-            return $this->error('Promo code has reached its usage limit', 400);
+            return $this->error('Codul promoțional a atins limita de utilizări', 400);
         }
 
         // Check time restrictions (day of week, hours)
         if (!$couponCode->isValidAtTime()) {
-            return $this->error('Promo code is not valid at this time', 400);
+            return $this->error('Codul promoțional nu este valid în acest moment', 400);
         }
 
         // Check minimum purchase amount
         if (!$couponCode->isValidForAmount($cartTotal)) {
-            return $this->error("Minimum purchase of {$couponCode->min_purchase_amount} required", 400);
+            return $this->error("Suma minimă de achiziție este {$couponCode->min_purchase_amount}", 400);
         }
 
         // Check per-user usage limit (direct query, avoid isValidForUser which re-runs isValid with wrong timezone)
@@ -145,7 +145,7 @@ class PromoCodeController extends BaseController
                     ->where('status', '!=', 'cancelled')
                     ->count();
                 if ($userUsages >= $couponCode->max_uses_per_user) {
-                    return $this->error('You have already used this promo code the maximum number of times', 400);
+                    return $this->error('Ai folosit deja acest cod promoțional de numărul maxim de ori', 400);
                 }
             }
         }
@@ -153,7 +153,7 @@ class PromoCodeController extends BaseController
         // Check event targeting (applicable_events)
         $applicableEvents = $couponCode->applicable_events;
         if (!empty($applicableEvents) && !in_array($eventId, array_map('intval', $applicableEvents))) {
-            return $this->error('Promo code is not valid for this event', 400);
+            return $this->error('Codul promoțional nu este valid pentru acest eveniment', 400);
         }
 
         // Check ticket type targeting (applicable_ticket_types)
@@ -163,7 +163,7 @@ class PromoCodeController extends BaseController
         if (!empty($applicableTicketTypes)) {
             if (empty($items)) {
                 // Items not provided but code requires specific ticket types - reject
-                return $this->error('Promo code is not valid for selected ticket types', 400);
+                return $this->error('Codul promoțional nu este valid pentru tipurile de bilete selectate', 400);
             }
 
             $hasApplicableTicket = false;
@@ -175,7 +175,7 @@ class PromoCodeController extends BaseController
                 }
             }
             if (!$hasApplicableTicket) {
-                return $this->error('Promo code is not valid for selected ticket types', 400);
+                return $this->error('Codul promoțional nu este valid pentru tipurile de bilete selectate', 400);
             }
         }
 

@@ -162,7 +162,7 @@ class MarketplaceOrganizerPromoCode extends Model
     {
         // Check basic validity
         if (!$this->isValid()) {
-            return ['valid' => false, 'reason' => 'Promo code is not active'];
+            return ['valid' => false, 'reason' => 'Codul promoțional nu este activ'];
         }
 
         // Check minimum purchase amount
@@ -170,7 +170,7 @@ class MarketplaceOrganizerPromoCode extends Model
         if ($this->min_purchase_amount && $cartTotal < (float) $this->min_purchase_amount) {
             return [
                 'valid' => false,
-                'reason' => "Minimum purchase amount is {$this->min_purchase_amount}",
+                'reason' => "Suma minimă de achiziție este {$this->min_purchase_amount}",
             ];
         }
 
@@ -179,7 +179,7 @@ class MarketplaceOrganizerPromoCode extends Model
         if ($this->min_tickets && $ticketCount < $this->min_tickets) {
             return [
                 'valid' => false,
-                'reason' => "Minimum {$this->min_tickets} tickets required",
+                'reason' => "Sunt necesare minim {$this->min_tickets} bilete",
             ];
         }
 
@@ -190,7 +190,7 @@ class MarketplaceOrganizerPromoCode extends Model
                 ->count();
 
             if ($customerUsageCount >= $this->usage_limit_per_customer) {
-                return ['valid' => false, 'reason' => 'You have already used this promo code'];
+                return ['valid' => false, 'reason' => 'Ai folosit deja acest cod promoțional'];
             }
         }
 
@@ -198,7 +198,7 @@ class MarketplaceOrganizerPromoCode extends Model
         if ($this->applies_to === 'specific_event' && $this->marketplace_event_id) {
             $eventId = $cart['event_id'] ?? null;
             if ($eventId && $eventId != $this->marketplace_event_id) {
-                return ['valid' => false, 'reason' => 'Promo code is not valid for this event'];
+                return ['valid' => false, 'reason' => 'Codul promoțional nu este valid pentru acest eveniment'];
             }
         }
 
@@ -213,7 +213,7 @@ class MarketplaceOrganizerPromoCode extends Model
             }
 
             if (!$hasApplicableTicket) {
-                return ['valid' => false, 'reason' => 'Promo code is not valid for selected ticket types'];
+                return ['valid' => false, 'reason' => 'Codul promoțional nu este valid pentru tipurile de bilete selectate'];
             }
         }
 
