@@ -3,6 +3,12 @@
     {{-- CoreCustomer form schema (Segmentation, Purchase, Engagement, etc.) --}}
     {{ $this->form }}
 
+    {{-- Event Timeline (tracking data: views, clicks, purchases) --}}
+    @livewire(\App\Filament\Resources\CoreCustomerResource\RelationManagers\EventsRelationManager::class, [
+        'ownerRecord' => $this->record,
+        'pageClass' => static::class,
+    ], key('events-relation-manager'))
+
     @if($this->hasMarketplaceData)
         {{-- Separator --}}
         <div class="pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
