@@ -565,6 +565,7 @@ class SeatingLayoutResource extends Resource
             'create' => Pages\CreateSeatingLayout::route('/create'),
             'edit' => Pages\EditSeatingLayout::route('/{record}/edit'),
             'designer' => Pages\DesignerSeatingLayout::route('/{record}/designer'),
+            'preview' => Pages\PreviewSeatingLayout::route('/{record}/preview'),
         ];
     }
 }

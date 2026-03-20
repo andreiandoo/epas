@@ -5,6 +5,7 @@
 
     $layout = null;
     $sections = collect();
+    $textLayers = collect();
     $canvasW = 1920;
     $canvasH = 1080;
     $bgImage = '';
@@ -22,6 +23,13 @@
 
         if ($layout) {
             $sections = $layout->sections;
+
+            // Load text layers (decorative sections with shape=text)
+            $textLayers = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
+                ->where('layout_id', $layout->id)
+                ->where('section_type', 'decorative')
+                ->get()
+                ->filter(fn ($s) => ($s->metadata['shape'] ?? '') === 'text');
             $canvasW = $layout->canvas_w ?? 1920;
             $canvasH = $layout->canvas_h ?? 1080;
 
@@ -605,6 +613,26 @@
                         </g>
                     @endforeach
                 </g>
+            @endforeach
+
+            {{-- Text layers --}}
+            @foreach($textLayers as $tl)
+                @php
+                    $tlX = $tl->x_position ?? 0;
+                    $tlY = $tl->y_position ?? 0;
+                    $tlMeta = $tl->metadata ?? [];
+                    $tlText = $tlMeta['text'] ?? '';
+                    $tlFontSize = $tlMeta['fontSize'] ?? 16;
+                    $tlFontFamily = $tlMeta['fontFamily'] ?? 'Arial';
+                    $tlFontWeight = $tlMeta['fontWeight'] ?? 'normal';
+                    $tlColor = $tl->background_color ?? '#000000';
+                    $tlRot = $tl->rotation ?? 0;
+                @endphp
+                <text x="{{ $tlX }}" y="{{ $tlY + $tlFontSize }}"
+                      font-size="{{ $tlFontSize }}" font-family="{{ $tlFontFamily }}"
+                      font-weight="{{ $tlFontWeight }}" fill="{{ $tlColor }}"
+                      @if($tlRot != 0) transform="rotate({{ $tlRot }} {{ $tlX }} {{ $tlY }})" @endif
+                      class="pointer-events-none select-none">{{ $tlText }}</text>
             @endforeach
         </svg>
 

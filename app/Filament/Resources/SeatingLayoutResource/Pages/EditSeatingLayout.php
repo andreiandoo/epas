@@ -19,6 +19,12 @@ class EditSeatingLayout extends EditRecord
                 ->color('primary')
                 ->url(fn () => static::getResource()::getUrl('designer', ['record' => $this->getRecord()])),
 
+            Actions\Action::make('preview')
+                ->label('Preview')
+                ->icon('heroicon-o-eye')
+                ->color('info')
+                ->url(fn () => static::getResource()::getUrl('preview', ['record' => $this->getRecord()])),
+
             Actions\DeleteAction::make(),
         ];
     }

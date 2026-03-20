@@ -450,6 +450,13 @@ class DesignerSeatingLayout extends Page
             // Note: manageRows, editSection, and manageSeatStatus actions removed
             // These functions are now handled directly in the canvas UI
 
+            Actions\Action::make('preview')
+                ->label('Preview')
+                ->icon('heroicon-o-eye')
+                ->color('info')
+                ->url(fn () => static::getResource()::getUrl('preview', ['record' => $this->seatingLayout]))
+                ->openUrlInNewTab(),
+
             Actions\Action::make('backToEdit')
                 ->label('Layout Settings')
                 ->icon('heroicon-o-cog-6-tooth')
