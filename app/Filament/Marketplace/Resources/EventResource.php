@@ -2097,7 +2097,7 @@ class EventResource extends Resource
                                     return new \Illuminate\Support\HtmlString(
                                         '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test', 'Test link') . '\', 2000);" class="inline-flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold no-underline transition-colors rounded-lg cursor-pointer text-amber-200 bg-amber-600/30 hover:bg-amber-600/50">' .
                                             '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>' .
-                                            '<span>' . $t('Link test comandă', 'Test order link') . '</span>' .
+                                            '<span>' . $t('Link test', 'Test link') . '</span>' .
                                         '</button>'
                                     );
                                 }),

@@ -4102,6 +4102,26 @@ html.dark {
 .dark .fi-ta-table {
 	background-color: var(--metro-bg-secondary) !important;
 }
+.dark .fi-ta-table > thead{
+	position: sticky;
+    top: 0;
+    background: #13111c;
+    border: 0;
+}
+.dark .fi-ta-content-ctn .fi-ta-table {
+	max-height: 65vh;
+    overflow-y: scroll;
+    display: block;
+}
+.dark .fi-ta-content-ctn .fi-ta-table .fi-ta-cell.fi-ta-selection-cell:first-of-type {
+	padding-inline-start: calc(var(--spacing) * 4);
+}
+.dark .fi-ta-ctn .fi-ta-header-toolbar {
+	padding-inline: calc(var(--spacing)*2);
+}
+.dark nav.fi-tabs button.fi-tabs-item {
+    border-radius: 0;
+}
 
 .dark .fi-ta-ctn {
 	background-color: var(--metro-bg-secondary) !important;
@@ -4319,6 +4339,7 @@ tr.event-row-unpublished > td {
 	background-color: transparent !important;
 	border-color: var(--metro-border) !important;
 	margin:0;
+	gap:0;
 }
 
 .dark .fi-tabs-tab {
