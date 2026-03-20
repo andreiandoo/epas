@@ -3005,41 +3005,13 @@ class EventResource extends Resource
                     })
                     ->sortable()
                     ->toggleable()
-                    ->action(
-                        Tables\Actions\Action::make('editTitle')
-                            ->label('Edit title')
-                            ->icon('heroicon-o-pencil-square')
-                            ->modalHeading('Editează titlul')
-                            ->modalWidth('md')
-                            ->modalSubmitActionLabel('Salvează')
-                            ->fillForm(fn (Event $record) => [
-                                'title_ro' => $record->getTranslation('title', 'ro'),
-                                'title_en' => $record->getTranslation('title', 'en'),
-                            ])
-                            ->form([
-                                Forms\Components\TextInput::make('title_ro')
-                                    ->label('Titlu (RO)')
-                                    ->required()
-                                    ->maxLength(255),
-                                Forms\Components\TextInput::make('title_en')
-                                    ->label('Title (EN)')
-                                    ->maxLength(255),
-                            ])
-                            ->action(function (Event $record, array $data): void {
-                                if (!empty($data['title_ro'])) {
-                                    $record->setTranslation('title', 'ro', $data['title_ro']);
-                                }
-                                if (!empty($data['title_en'])) {
-                                    $record->setTranslation('title', 'en', $data['title_en']);
-                                }
-                                $record->save();
-
-                                \Filament\Notifications\Notification::make()
-                                    ->success()
-                                    ->title('Titlu actualizat')
-                                    ->send();
-                            })
-                    ),
+                    ->extraAttributes(['class' => 'group/title'])
+                    ->formatStateUsing(fn ($state, Event $record) => new HtmlString(
+                        e($state) .
+                        '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="inline-flex items-center ml-1.5 opacity-0 group-hover/title:opacity-100 transition-opacity text-gray-400 hover:text-primary-400" title="Editează titlul">' .
+                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
+                        '</button>'
+                    )),
                 Tables\Columns\IconColumn::make('seating_layout_id')
                     ->label('Seating')
                     ->boolean()
@@ -3214,6 +3186,40 @@ class EventResource extends Resource
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
+                Action::make('editTitle')
+                    ->label('Editează titlul')
+                    ->icon('heroicon-o-pencil-square')
+                    ->modalHeading('Editează titlul')
+                    ->modalWidth('md')
+                    ->modalSubmitActionLabel('Salvează')
+                    ->hidden()
+                    ->fillForm(fn (Event $record) => [
+                        'title_ro' => $record->getTranslation('title', 'ro'),
+                        'title_en' => $record->getTranslation('title', 'en'),
+                    ])
+                    ->form([
+                        Forms\Components\TextInput::make('title_ro')
+                            ->label('Titlu (RO)')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('title_en')
+                            ->label('Title (EN)')
+                            ->maxLength(255),
+                    ])
+                    ->action(function (Event $record, array $data): void {
+                        if (!empty($data['title_ro'])) {
+                            $record->setTranslation('title', 'ro', $data['title_ro']);
+                        }
+                        if (!empty($data['title_en'])) {
+                            $record->setTranslation('title', 'en', $data['title_en']);
+                        }
+                        $record->save();
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Titlu actualizat')
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
