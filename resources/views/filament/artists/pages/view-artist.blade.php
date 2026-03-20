@@ -399,9 +399,10 @@ canvas{width:100%!important;}
         {{-- Top venues/cities/counties from ticket sales --}}
         @if(count($topVenues) || count($topCities) || count($topCounties))
         <div class="g3" style="margin-top:14px;">
-            @if(count($topVenues))<div class="card"><div class="card-h">Top Venues by Sales</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>Venue</th><th>Tickets</th></tr></thead><tbody>@foreach($topVenues as $i=>$r)<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td></tr>@endforeach</tbody></table></div></div>@endif
-            @if(count($topCities))<div class="card"><div class="card-h">Top Cities</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>City</th><th>Tickets</th></tr></thead><tbody>@foreach($topCities as $i=>$r)<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td></tr>@endforeach</tbody></table></div></div>@endif
-            @if(count($topCounties))<div class="card"><div class="card-h">Top Counties</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>County</th><th>Tickets</th></tr></thead><tbody>@foreach($topCounties as $i=>$r)<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td></tr>@endforeach</tbody></table></div></div>@endif
+            @if(count($topVenues))<div class="card"><div class="card-h">Top Venues by Sales</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>Venue</th><th>Tickets</th></tr></thead><tbody>@foreach($topVenues as $i=>$r)@php $vn=$r->name; if($vn && str_starts_with($vn,'{')){$d=json_decode($vn,true);$vn=$d['en']??$d['ro']??reset($d)?:$vn;} @endphp<tr><td>{{ $i+1 }}</td><td>{{ $vn }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td></tr>@endforeach</tbody></table></div></div>@endif
+            @php $geoByCity = collect($geoData)->keyBy('city'); @endphp
+            @if(count($topCities))<div class="card"><div class="card-h">Top Cities</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>City</th><th>Tickets</th><th>Fans</th></tr></thead><tbody>@foreach($topCities as $i=>$r)@php $fans=$geoByCity->get($r->name); @endphp<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td><td>{{ $fans ? number_format($fans['fans_count']) : '—' }}</td></tr>@endforeach</tbody></table></div></div>@endif
+            @if(count($topCounties))<div class="card"><div class="card-h">Top Counties</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>County</th><th>Tickets</th><th>Fans</th></tr></thead><tbody>@foreach($topCounties as $i=>$r)@php $fans=$geoByCity->get($r->name); @endphp<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td><td>{{ $fans ? number_format($fans['fans_count']) : '—' }}</td></tr>@endforeach</tbody></table></div></div>@endif
         </div>
         @endif
 
@@ -660,7 +661,7 @@ canvas{width:100%!important;}
         <div class="card">
             <div class="card-h">YouTube Videos</div>
             <div class="card-b">
-                <div class="g2">
+                <div class="g3">
                     @foreach($videos as $videoUrl)
                         <div style="position:relative;width:100%;aspect-ratio:16/9;border-radius:10px;overflow:hidden;border:1px solid var(--ring);">
                             <iframe src="{{ $videoUrl }}" title="Video" frameborder="0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture;web-share" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;"></iframe>
