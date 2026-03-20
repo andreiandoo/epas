@@ -264,12 +264,37 @@
             </div>
 
             {{-- Event Timeline --}}
-            <div class="mt-4">
-                @livewire(\App\Filament\Resources\CoreCustomerResource\RelationManagers\EventsRelationManager::class, [
-                    'ownerRecord' => $c,
-                    'pageClass' => static::class,
-                ], key('events-relation-manager'))
-            </div>
+            @php
+                $events = $c->events()->orderBy('created_at', 'desc')->limit(50)->get();
+            @endphp
+            @if($events->isNotEmpty())
+                <div class="p-4 mt-4 rounded-xl bg-gray-800/40">
+                    <h3 class="mb-3 text-sm font-semibold text-gray-300">Event Timeline (last 50)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead><tr class="text-gray-500 border-b border-gray-700">
+                                <th class="px-2 py-1.5 text-left">Time</th>
+                                <th class="px-2 py-1.5 text-left">Event</th>
+                                <th class="px-2 py-1.5 text-left">Page</th>
+                                <th class="px-2 py-1.5 text-right">Value</th>
+                            </tr></thead>
+                            <tbody>
+                                @foreach($events as $ev)
+                                    <tr class="border-b border-gray-800/50">
+                                        <td class="px-2 py-1.5 text-gray-400 whitespace-nowrap">{{ $ev->created_at->format('d M H:i:s') }}</td>
+                                        <td class="px-2 py-1.5">
+                                            @php $evColor = match($ev->event_type) { 'purchase' => 'green', 'add_to_cart' => 'yellow', 'begin_checkout' => 'blue', 'page_view' => 'gray', 'view_item' => 'gray', default => 'gray' }; @endphp
+                                            <span class="px-1.5 py-0.5 rounded text-{{ $evColor }}-400 bg-{{ $evColor }}-500/20">{{ $ev->event_type }}</span>
+                                        </td>
+                                        <td class="px-2 py-1.5 text-gray-400 max-w-[200px] truncate">{{ $ev->page_url ?? $ev->page_path ?? '—' }}</td>
+                                        <td class="px-2 py-1.5 text-right text-gray-300">{{ $ev->conversion_value ? number_format((float) $ev->conversion_value, 2) : '' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- ══════════════════════════════════════════════════════════
