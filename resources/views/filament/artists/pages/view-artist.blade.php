@@ -507,6 +507,284 @@ canvas{width:100% !important; height:240px !important;}
         </div>
     </div>
 
+    {{-- ═══════════════════════════════════════════════════════════════
+         ARTIST 360 ANALYTICS — New sections below existing content
+         ═══════════════════════════════════════════════════════════════ --}}
+    <div class="av-container" style="margin-top:48px;">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#22d3ee" stroke-width="1.6"/><path d="M12 7v5l3 3" stroke="#22d3ee" stroke-width="1.6" stroke-linecap="round"/></svg>
+                <span style="font-size:24px;font-weight:700;letter-spacing:.3px;color:#e9eefb;">Artist 360 Analytics</span>
+            </div>
+            <a class="btn btn-elegant" href="{{ request()->fullUrlWithQuery(['refresh_analytics' => 1]) }}" style="font-size:13px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14M1 10l4.64 4.36A9 9 0 0 0 20.49 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Refresh
+            </a>
+        </div>
+
+        {{-- ──── SECTION 1: AUDIENCE DNA ──── --}}
+        @php $personas = $audiencePersonas['personas'] ?? []; $aTotals = $audiencePersonas['totals'] ?? []; @endphp
+        <div class="av-card" style="margin-bottom:24px;">
+            <div class="av-card-header" style="font-size:16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="#7aa2ff" stroke-width="1.6"/><circle cx="9" cy="7" r="4" stroke="#7aa2ff" stroke-width="1.6"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke="#7aa2ff" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Audience DNA
+                @if(($aTotals['total_customers'] ?? 0) > 0)
+                    <span class="badge" style="margin-left:8px;">{{ number_format($aTotals['total_customers']) }} customers</span>
+                @endif
+            </div>
+            <div class="av-card-body">
+                @if(empty($personas))
+                    <div style="color:var(--muted);text-align:center;padding:24px;">No customer data available for persona analysis.</div>
+                @else
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+                        @foreach($personas as $persona)
+                        <div class="kpi" style="position:relative;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                                <span style="font-size:14px;font-weight:700;color:#e9eefb;">{{ $persona['label'] }}</span>
+                                <span class="badge" style="background:rgba(122,162,255,.15);border-color:rgba(122,162,255,.25);">{{ $persona['percentage'] }}%</span>
+                            </div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Age: <strong style="color:#e9eefb;">{{ $persona['age_group'] }}</strong></div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Gender: <strong style="color:#e9eefb;">{{ ucfirst($persona['gender']) }}</strong></div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:4px;">Avg Spend: <strong style="color:#22c55e;">{{ number_format($persona['avg_spend'], 2) }} RON</strong></div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Avg Orders: <strong style="color:#e9eefb;">{{ $persona['avg_orders'] }}</strong></div>
+                            @if(!empty($persona['top_cities']))
+                                <div style="font-size:12px;color:var(--muted);">Top cities:</div>
+                                @foreach($persona['top_cities'] as $cityName => $cityCount)
+                                    <span class="av-chip" style="margin-top:4px;">{{ $cityName }} ({{ $cityCount }})</span>
+                                @endforeach
+                            @endif
+                        </div>
+                        @endforeach
+                    </div>
+
+                    {{-- Demographics charts --}}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <div style="height:220px;"><canvas id="ageDistChart"></canvas></div>
+                        <div style="height:220px;"><canvas id="genderChart"></canvas></div>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- ──── SECTION 2: GEOGRAPHIC INTELLIGENCE ──── --}}
+        @php $geoData = $geoIntelligence ?? []; @endphp
+        <div class="av-card" style="margin-bottom:24px;">
+            <div class="av-card-header" style="font-size:16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M12 21s-7-5.33-7-11a7 7 0 1 1 14 0c0 5.67-7 11-7 11Z" stroke="#22c55e" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="#22c55e" stroke-width="1.6"/></svg>
+                Geographic Intelligence
+            </div>
+            <div class="av-card-body">
+                @if(empty($geoData))
+                    <div style="color:var(--muted);text-align:center;padding:24px;">No geographic data available.</div>
+                @else
+                    <table class="tbl">
+                        <thead><tr>
+                            <th>City</th><th>Country</th><th>Fans</th><th>Favorites</th><th>Potential</th><th>Revenue</th><th>Best Venue</th><th>Capacity</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($geoData as $geo)
+                            <tr>
+                                <td><strong>{{ $geo['city'] }}</strong></td>
+                                <td>{{ $geo['country'] }}</td>
+                                <td><span class="badge">{{ $geo['fans_count'] }}</span></td>
+                                <td>{{ $geo['favorites_count'] }}</td>
+                                <td><span class="badge" style="background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.25);">{{ $geo['potential_buyers'] }}</span></td>
+                                <td>{{ number_format($geo['total_revenue'], 0) }} RON</td>
+                                <td>{{ $geo['recommended_venue'] ?? '—' }}</td>
+                                <td>{{ $geo['recommended_capacity'] ? number_format($geo['recommended_capacity']) : '—' }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+        {{-- ──── SECTION 3: PERFORMANCE DEEP-DIVE ──── --}}
+        @php $perf = $performanceDeepDive ?? []; $perfEvents = $perf['events'] ?? []; $loyalty = $perf['customer_loyalty'] ?? []; $roleComp = $perf['role_comparison'] ?? []; @endphp
+        <div class="av-card" style="margin-bottom:24px;">
+            <div class="av-card-header" style="font-size:16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="#fbbf24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Performance Deep-Dive
+            </div>
+            <div class="av-card-body">
+                @if(empty($perfEvents))
+                    <div style="color:var(--muted);text-align:center;padding:24px;">No performance data available.</div>
+                @else
+                    {{-- KPI row --}}
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+                        <div class="kpi"><div class="label">Avg Sell-Through</div><div class="value">{{ $perf['avg_sell_through'] ?? 0 }}%</div></div>
+                        <div class="kpi"><div class="label">Avg Check-in Rate</div><div class="value">{{ $perf['avg_checkin_rate'] ?? 0 }}%</div></div>
+                        <div class="kpi"><div class="label">Repeat Rate</div><div class="value">{{ $loyalty['repeat_rate'] ?? 0 }}%</div></div>
+                        <div class="kpi"><div class="label">Superfans</div><div class="value" style="color:#fbbf24;">{{ $loyalty['superfan'] ?? 0 }}</div></div>
+                    </div>
+
+                    {{-- Role comparison --}}
+                    @if(!empty($roleComp))
+                    <div style="display:grid;grid-template-columns:repeat({{ count($roleComp) }},1fr);gap:12px;margin-bottom:24px;">
+                        @foreach($roleComp as $role => $data)
+                        <div class="kpi">
+                            <div class="label">{{ $role }}</div>
+                            <div style="margin-top:8px;font-size:13px;color:#dbe6ff;">
+                                {{ $data['events'] }} events · {{ $data['avg_sold'] }} avg sold<br>
+                                <span style="color:#22c55e;">{{ $data['avg_sell_through'] }}% sell-through</span> ·
+                                <span style="color:#7aa2ff;">{{ $data['avg_checkin_rate'] }}% check-in</span>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                    @endif
+
+                    {{-- Customer loyalty doughnut --}}
+                    <div style="display:grid;grid-template-columns:200px 1fr;gap:16px;margin-bottom:24px;align-items:start;">
+                        <div style="height:200px;"><canvas id="loyaltyChart"></canvas></div>
+                        <div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">Customer Loyalty ({{ $loyalty['total'] ?? 0 }} buyers)</div>
+                            <div style="display:flex;gap:16px;flex-wrap:wrap;">
+                                <div><span style="color:#94a3b8;font-size:24px;font-weight:700;">{{ $loyalty['one_time'] ?? 0 }}</span> <span style="color:var(--muted);font-size:12px;">One-time</span></div>
+                                <div><span style="color:#7aa2ff;font-size:24px;font-weight:700;">{{ $loyalty['repeat'] ?? 0 }}</span> <span style="color:var(--muted);font-size:12px;">Repeat (2x)</span></div>
+                                <div><span style="color:#fbbf24;font-size:24px;font-weight:700;">{{ $loyalty['superfan'] ?? 0 }}</span> <span style="color:var(--muted);font-size:12px;">Superfan (3x+)</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Events performance table --}}
+                    <table class="tbl">
+                        <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Sold / Cap</th><th>Sell-Through</th><th>Check-in</th><th>Role</th></tr></thead>
+                        <tbody>
+                            @foreach(array_slice($perfEvents, 0, 25) as $pe)
+                            <tr>
+                                <td>{{ $pe['date'] ? \Carbon\Carbon::parse($pe['date'])->format('d M Y') : '—' }}</td>
+                                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $pe['title'] ?? '—' }}</td>
+                                <td>{{ $pe['venue'] ?? '—' }}</td>
+                                <td>{{ number_format($pe['sold']) }} / {{ $pe['capacity'] ?: '—' }}</td>
+                                <td>
+                                    @if($pe['sell_through'] !== null)
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <div style="flex:1;height:6px;background:rgba(122,162,255,.12);border-radius:3px;overflow:hidden;">
+                                                <div style="height:100%;width:{{ min($pe['sell_through'], 100) }}%;background:{{ $pe['sell_through'] >= 80 ? '#22c55e' : ($pe['sell_through'] >= 50 ? '#fbbf24' : '#ef4444') }};border-radius:3px;"></div>
+                                            </div>
+                                            <span style="font-size:12px;">{{ $pe['sell_through'] }}%</span>
+                                        </div>
+                                    @else — @endif
+                                </td>
+                                <td>
+                                    @if($pe['checkin_rate'] !== null)
+                                        <span style="font-size:12px;">{{ $pe['checkin_rate'] }}%</span>
+                                    @else — @endif
+                                </td>
+                                <td>
+                                    @if($pe['is_headliner']) <span class="av-chip" style="background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#fbbf24;">Headliner</span>
+                                    @elseif($pe['is_co_headliner']) <span class="av-chip">Co-Head</span>
+                                    @else <span class="av-chip gray">Support</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+        {{-- ──── SECTION 4: SALES INTELLIGENCE ──── --}}
+        @php $sales = $salesIntelligence ?? []; $channels = (array)($sales['channels'] ?? []); $timing = $sales['purchase_timing'] ?? []; $priceSens = $sales['price_sensitivity'] ?? []; $velocity = $sales['velocity_curves'] ?? []; @endphp
+        <div class="av-card" style="margin-bottom:24px;">
+            <div class="av-card-header" style="font-size:16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="#c084fc" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Sales Intelligence
+                @if(($sales['avg_lead_days'] ?? 0) > 0)
+                    <span style="margin-left:12px;color:var(--muted);font-size:13px;font-weight:400;">Avg {{ $sales['avg_lead_days'] }} days before event</span>
+                @endif
+            </div>
+            <div class="av-card-body">
+                @if(empty($channels) && empty($timing))
+                    <div style="color:var(--muted);text-align:center;padding:24px;">No sales data available.</div>
+                @else
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+                        {{-- Channel breakdown --}}
+                        <div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sales Channels</div>
+                            <div style="height:200px;"><canvas id="channelChart"></canvas></div>
+                        </div>
+                        {{-- Purchase timing --}}
+                        <div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Purchase Timing</div>
+                            <div style="height:200px;"><canvas id="timingChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                        {{-- Price sensitivity --}}
+                        @if(!empty($priceSens))
+                        <div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Price Sensitivity (RON)</div>
+                            <div style="height:220px;"><canvas id="priceChart"></canvas></div>
+                        </div>
+                        @endif
+                        {{-- Sales velocity --}}
+                        @if(!empty($velocity))
+                        <div>
+                            <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Sales Velocity (last {{ count($velocity) }} events)</div>
+                            <div style="height:220px;"><canvas id="velocityChart"></canvas></div>
+                        </div>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- ──── SECTION 5: CITY EXPANSION PLANNER ──── --}}
+        @php $expansion = $expansionPlanner ?? []; @endphp
+        <div class="av-card" style="margin-bottom:24px;">
+            <div class="av-card-header" style="font-size:16px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:inline;vertical-align:middle;margin-right:6px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z" stroke="#22d3ee" stroke-width="1.6"/><circle cx="12" cy="10" r="3" stroke="#22d3ee" stroke-width="1.6"/></svg>
+                City Expansion Planner
+                <span style="margin-left:8px;color:var(--muted);font-size:13px;font-weight:400;">Cities where the artist hasn't performed yet</span>
+            </div>
+            <div class="av-card-body">
+                @if(empty($expansion))
+                    <div style="color:var(--muted);text-align:center;padding:24px;">No expansion opportunities found (artist may have performed in all cities with known fans).</div>
+                @else
+                    <table class="tbl">
+                        <thead><tr>
+                            <th>City</th><th>Country</th><th>Known Fans</th><th>Est. Demand</th><th>Best Venue (cap)</th><th>Similar Artists</th><th>Confidence</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($expansion as $exp)
+                            <tr>
+                                <td><strong>{{ $exp['city'] }}</strong></td>
+                                <td>{{ $exp['country'] }}</td>
+                                <td><span class="badge">{{ $exp['fan_count'] }}</span></td>
+                                <td>{{ $exp['estimated_demand'] }}</td>
+                                <td>
+                                    @if(!empty($exp['venues']))
+                                        {{ $exp['venues'][0]['name'] ?? '—' }}
+                                        @if(($exp['venues'][0]['capacity'] ?? 0) > 0)
+                                            <span style="color:var(--muted);font-size:12px;">({{ number_format($exp['venues'][0]['capacity']) }})</span>
+                                        @endif
+                                    @else — @endif
+                                </td>
+                                <td>
+                                    @if($exp['similar_events'] > 0)
+                                        {{ $exp['similar_events'] }} events · {{ $exp['similar_avg_attendance'] }} avg · {{ $exp['similar_sell_through'] }}%
+                                    @else <span style="color:var(--muted);">No data</span> @endif
+                                </td>
+                                <td>
+                                    @php $confColor = match($exp['confidence']) { 'high' => '#22c55e', 'medium' => '#fbbf24', default => '#ef4444' }; @endphp
+                                    <span class="av-chip" style="background:{{ $confColor }}22;border-color:{{ $confColor }}44;color:{{ $confColor }};">{{ ucfirst($exp['confidence']) }}</span>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+
+    </div>{{-- /av-container analytics --}}
+
     <div class="av-footer">
         <a class="btn btn-ghost" href="{{ \App\Filament\Resources\Artists\ArtistResource::getUrl('index') }}">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M10 19l-7-7 7-7M3 12h18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -554,6 +832,144 @@ canvas{width:100% !important; height:240px !important;}
     mkLine('eventsChart',  'Events / month',  events,  '#22d3ee');
     mkLine('ticketsChart', 'Tickets / month', tickets, '#7aa2ff');
     mkLine('revenueChart','Revenue / month (RON)', revenue, '#22c55e');
+
+    // ═══════ ARTIST 360 CHARTS ═══════
+
+    const chartDefaults = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#cdd7f6', font: { size: 11 } } } },
+        scales: {
+            x: { ticks: { color: '#a7b0c3' }, grid: { color: 'rgba(122,162,255,.08)' } },
+            y: { beginAtZero: true, ticks: { color: '#a7b0c3' }, grid: { color: 'rgba(122,162,255,.08)' } }
+        }
+    };
+
+    // Age Distribution Doughnut
+    const ageDist = @js($aTotals['age_distribution'] ?? []);
+    if (Object.keys(ageDist).length && document.getElementById('ageDistChart')) {
+        new Chart(document.getElementById('ageDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(ageDist),
+                datasets: [{ data: Object.values(ageDist), backgroundColor: ['#22d3ee','#7aa2ff','#c084fc','#fbbf24','#22c55e','#ef4444'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cdd7f6', font: { size: 11 } } }, title: { display: true, text: 'Age Distribution', color: '#cdd7f6' } } }
+        });
+    }
+
+    // Gender Chart
+    const genderData = @js($aTotals['gender_overall'] ?? []);
+    if (Object.keys(genderData).length && document.getElementById('genderChart')) {
+        new Chart(document.getElementById('genderChart'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(genderData).map(g => g.charAt(0).toUpperCase() + g.slice(1)),
+                datasets: [{ label: 'Customers', data: Object.values(genderData), backgroundColor: ['#7aa2ff','#c084fc','#22d3ee','#fbbf24'], borderWidth: 0, borderRadius: 6 }]
+            },
+            options: { ...chartDefaults, indexAxis: 'y', plugins: { ...chartDefaults.plugins, title: { display: true, text: 'Gender Distribution', color: '#cdd7f6' } } }
+        });
+    }
+
+    // Loyalty Doughnut
+    const loyalty = @js($loyalty ?? []);
+    if ((loyalty.one_time || loyalty.repeat || loyalty.superfan) && document.getElementById('loyaltyChart')) {
+        new Chart(document.getElementById('loyaltyChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['One-time', 'Repeat', 'Superfan'],
+                datasets: [{ data: [loyalty.one_time||0, loyalty.repeat||0, loyalty.superfan||0], backgroundColor: ['#94a3b8','#7aa2ff','#fbbf24'], borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+    }
+
+    // Channel Doughnut
+    const channels360 = @js($channels ?? []);
+    const chLabels = [], chData = [], chColors = {'web':'#7aa2ff','pos':'#fbbf24','app':'#22d3ee','pos_app':'#c084fc','api':'#94a3b8','marketplace':'#22c55e'};
+    for (const [src, info] of Object.entries(channels360)) {
+        chLabels.push(src.toUpperCase());
+        chData.push(info.orders_count || 0);
+    }
+    if (chData.length && document.getElementById('channelChart')) {
+        new Chart(document.getElementById('channelChart'), {
+            type: 'doughnut',
+            data: {
+                labels: chLabels,
+                datasets: [{ data: chData, backgroundColor: Object.keys(channels360).map(s => chColors[s] || '#94a3b8'), borderWidth: 0 }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#cdd7f6', font: { size: 11 } } } } }
+        });
+    }
+
+    // Purchase Timing Bar
+    const timing = @js($timing ?? []);
+    if (Object.values(timing).some(v => v > 0) && document.getElementById('timingChart')) {
+        new Chart(document.getElementById('timingChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Last minute (0-1d)', 'Last week (2-7d)', 'Last month (8-30d)', 'Early bird (31-90d)', 'Super early (90d+)'],
+                datasets: [{ label: '% of purchases', data: [timing.last_minute||0, timing.last_week||0, timing.last_month||0, timing.early_bird||0, timing.super_early||0], backgroundColor: ['#ef4444','#fbbf24','#22c55e','#7aa2ff','#c084fc'], borderWidth: 0, borderRadius: 6 }]
+            },
+            options: { ...chartDefaults, indexAxis: 'y', plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+        });
+    }
+
+    // Price Sensitivity Bar
+    const priceSens = @js($priceSens ?? []);
+    if (priceSens.length && document.getElementById('priceChart')) {
+        new Chart(document.getElementById('priceChart'), {
+            type: 'bar',
+            data: {
+                labels: priceSens.map(p => p.range + ' RON'),
+                datasets: [
+                    { label: 'Tickets Sold', data: priceSens.map(p => p.tickets), backgroundColor: '#7aa2ff88', borderColor: '#7aa2ff', borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+                    { label: 'Sell-Through %', data: priceSens.map(p => p.sell_through), type: 'line', borderColor: '#22c55e', backgroundColor: '#22c55e33', tension: .3, pointRadius: 4, borderWidth: 2, yAxisID: 'y1' }
+                ]
+            },
+            options: {
+                ...chartDefaults,
+                scales: {
+                    ...chartDefaults.scales,
+                    y1: { position: 'right', beginAtZero: true, max: 100, ticks: { color: '#22c55e', callback: v => v + '%' }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Sales Velocity Multi-line
+    const velocity = @js($velocity ?? []);
+    if (velocity.length && document.getElementById('velocityChart')) {
+        const vColors = ['#7aa2ff','#22d3ee','#c084fc','#fbbf24','#22c55e'];
+        const maxDays = Math.max(...velocity.flatMap(v => v.points.map(p => p.days)), 30);
+        const labels = [];
+        for (let d = maxDays; d >= 0; d -= Math.max(1, Math.floor(maxDays/15))) labels.push(d + 'd');
+        labels.reverse();
+
+        const datasets = velocity.map((v, i) => ({
+            label: v.event_name,
+            data: labels.map(l => {
+                const day = parseInt(l);
+                const closest = v.points.filter(p => p.days >= day).sort((a,b) => a.days - b.days)[0];
+                return closest ? closest.pct : (v.points.length ? v.points[v.points.length-1].pct : 0);
+            }),
+            borderColor: vColors[i % vColors.length],
+            backgroundColor: vColors[i % vColors.length] + '22',
+            tension: .3, pointRadius: 2, borderWidth: 2, fill: false
+        }));
+
+        new Chart(document.getElementById('velocityChart'), {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                ...chartDefaults,
+                plugins: { ...chartDefaults.plugins, legend: { position: 'bottom', labels: { color: '#cdd7f6', font: { size: 10 } } } },
+                scales: {
+                    x: { ...chartDefaults.scales.x, title: { display: true, text: 'Days before event', color: '#a7b0c3' } },
+                    y: { ...chartDefaults.scales.y, max: 100, ticks: { ...chartDefaults.scales.y.ticks, callback: v => v + '%' }, title: { display: true, text: 'Cumulative %', color: '#a7b0c3' } }
+                }
+            }
+        });
+    }
 })();
 </script>
 @endpush
