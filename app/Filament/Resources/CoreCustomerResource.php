@@ -49,49 +49,75 @@ class CoreCustomerResource extends Resource
     {
         return $schema
             ->schema([
-                // ===== IDENTITY =====
-                SC\Section::make('Customer Identity')
-                    ->icon('heroicon-o-identification')
-                    ->schema([
-                        Forms\Components\Placeholder::make('display_email')
-                            ->label('Email')
-                            ->content(fn ($record) => $record?->email ?? '-'),
+                SC\Grid::make(4)->schema([
+                    // ========== LEFT COLUMN (3/4) ==========
+                    SC\Group::make()->columnSpan(3)->schema([
+                        SC\Tabs::make('CustomerTabs')->tabs([
 
-                        Forms\Components\Placeholder::make('display_name')
-                            ->label('Full Name')
-                            ->content(fn ($record) => $record?->full_name ?? '-'),
+                            // TAB 1: SINTEZĂ (Overview)
+                            SC\Tabs\Tab::make('Sinteză')
+                                ->icon('heroicon-o-chart-bar')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('overview_synthesis')
+                                        ->hiddenLabel()
+                                        ->content(function (?CoreCustomer $record) {
+                                            if (!$record) return '';
 
-                        Forms\Components\Placeholder::make('display_phone')
-                            ->label('Phone')
-                            ->content(fn ($record) => $record?->phone ?? '-'),
+                                            $stat = fn ($label, $value, $color = '#E2E8F0') =>
+                                                "<div style='text-align:center;padding:14px;background:rgba(30,41,59,0.5);border-radius:10px;'>
+                                                    <div style='font-size:22px;font-weight:700;color:{$color};'>{$value}</div>
+                                                    <div style='font-size:10px;color:#64748B;margin-top:3px;'>{$label}</div>
+                                                </div>";
 
-                        Forms\Components\Placeholder::make('display_uuid')
-                            ->label('UUID')
-                            ->content(fn ($record) => $record?->uuid ?? '-'),
+                                            $row = fn ($label, $value) =>
+                                                "<div style='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(51,65,85,0.3);'>
+                                                    <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                                    <span style='font-size:12px;font-weight:600;color:#E2E8F0;'>{$value}</span>
+                                                </div>";
 
-                        Forms\Components\Placeholder::make('display_country')
-                            ->label('Location')
-                            ->content(fn ($record) => implode(', ', array_filter([
-                                $record?->city,
-                                $record?->region,
-                                $record?->country_code,
-                            ])) ?: '-'),
+                                            $totalSpent = number_format((float) ($record->total_spent ?? 0), 2) . ' ' . ($record->currency ?? 'EUR');
+                                            $aov = number_format((float) ($record->average_order_value ?? 0), 2) . ' ' . ($record->currency ?? 'EUR');
+                                            $ltv = number_format((float) ($record->lifetime_value ?? 0), 2) . ' ' . ($record->currency ?? 'EUR');
+                                            $location = implode(', ', array_filter([$record->city, $record->region, $record->country_code])) ?: '—';
+                                            $segment = $record->customer_segment ?? '—';
+                                            $rfm = $record->rfm_segment ?? '—';
 
-                        Forms\Components\Placeholder::make('display_language')
-                            ->label('Language')
-                            ->content(fn ($record) => strtoupper($record?->language ?? '-')),
+                                            return new HtmlString("
+                                                <div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;'>
+                                                    {$stat('Orders', $record->total_orders ?? 0, '#60A5FA')}
+                                                    {$stat('Tickets', $record->total_tickets ?? 0, '#34D399')}
+                                                    {$stat('Total Spent', $totalSpent, '#F59E0B')}
+                                                    {$stat('Avg Order', $aov, '#A78BFA')}
+                                                    {$stat('LTV', $ltv, '#F472B6')}
+                                                </div>
+                                                <div style='display:grid;grid-template-columns:1fr 1fr;gap:20px;'>
+                                                    <div>
+                                                        {$row('Email', e($record->email ?? '—'))}
+                                                        {$row('Name', e($record->full_name ?? '—'))}
+                                                        {$row('Phone', e($record->phone ?? '—'))}
+                                                        {$row('Location', e($location))}
+                                                        {$row('Language', strtoupper($record->language ?? '—'))}
+                                                        {$row('Gender', ucfirst($record->gender ?? '—'))}
+                                                        {$row('Age Range', e($record->age_range ?? '—'))}
+                                                    </div>
+                                                    <div>
+                                                        {$row('Segment', e($segment))}
+                                                        {$row('RFM Segment', e($rfm))}
+                                                        {$row('Engagement Score', ($record->engagement_score ?? '—') . '/100')}
+                                                        {$row('Health Score', ($record->health_score ?? '—') . '/100')}
+                                                        {$row('Churn Risk', ($record->churn_risk_score ?? '—') . '/100')}
+                                                        {$row('First Purchase', $record->first_purchase_at?->format('d M Y') ?? '—')}
+                                                        {$row('Last Purchase', $record->last_purchase_at?->format('d M Y') ?? '—')}
+                                                    </div>
+                                                </div>
+                                            ");
+                                        }),
+                                ]),
 
-                        Forms\Components\Placeholder::make('display_gender')
-                            ->label('Gender')
-                            ->content(fn ($record) => ucfirst($record?->gender ?? '-')),
-
-                        Forms\Components\Placeholder::make('display_age')
-                            ->label('Age Range')
-                            ->content(fn ($record) => $record?->age_range ?? '-'),
-                    ])
-                    ->columns(4),
-
-                // ===== SEGMENTATION & SCORING =====
+                            // TAB 2: SEGMENTATION & SCORING
+                            SC\Tabs\Tab::make('Segmentation')
+                                ->icon('heroicon-o-chart-pie')
+                                ->schema([
                 SC\Section::make('Segmentation & Scoring')
                     ->icon('heroicon-o-chart-pie')
                     ->schema([
@@ -144,8 +170,12 @@ class CoreCustomerResource extends Resource
                                 : '-'),
                     ])
                     ->columns(4),
+                                ]),
 
-                // ===== PURCHASE BEHAVIOR =====
+                            // TAB 3: PURCHASE BEHAVIOR
+                            SC\Tabs\Tab::make('Purchase')
+                                ->icon('heroicon-o-shopping-cart')
+                                ->schema([
                 SC\Section::make('Purchase Behavior')
                     ->icon('heroicon-o-shopping-cart')
                     ->schema([
@@ -200,8 +230,12 @@ class CoreCustomerResource extends Resource
                                 : 'No'),
                     ])
                     ->columns(5),
+                                ]),
 
-                // ===== ENGAGEMENT =====
+                            // TAB 4: ENGAGEMENT
+                            SC\Tabs\Tab::make('Engagement')
+                                ->icon('heroicon-o-cursor-arrow-rays')
+                                ->schema([
                 SC\Section::make('Engagement Metrics')
                     ->icon('heroicon-o-cursor-arrow-rays')
                     ->collapsed()
@@ -258,8 +292,12 @@ class CoreCustomerResource extends Resource
                             ->content(fn ($record) => $record?->total_events_attended ?? 0),
                     ])
                     ->columns(5),
+                                ]),
 
-                // ===== ATTRIBUTION =====
+                            // TAB 5: ATTRIBUTION
+                            SC\Tabs\Tab::make('Attribution')
+                                ->icon('heroicon-o-arrow-trending-up')
+                                ->schema([
                 SC\Section::make('Attribution')
                     ->icon('heroicon-o-arrow-trending-up')
                     ->collapsed()
@@ -351,7 +389,12 @@ class CoreCustomerResource extends Resource
                             ->columns(4),
                     ]),
 
-                // ===== CROSS-TENANT, MARKETPLACE & DEVICE =====
+                                ]),
+
+                            // TAB 6: PLATFORM & DEVICE
+                            SC\Tabs\Tab::make('Platform')
+                                ->icon('heroicon-o-device-phone-mobile')
+                                ->schema([
                 SC\Section::make('Cross-Tenant, Marketplace & Device')
                     ->icon('heroicon-o-device-phone-mobile')
                     ->collapsed()
@@ -427,7 +470,12 @@ class CoreCustomerResource extends Resource
                             ->columns(5),
                     ]),
 
-                // ===== EMAIL ENGAGEMENT =====
+                                ]),
+
+                            // TAB 7: EMAIL & CONSENT
+                            SC\Tabs\Tab::make('Email & Privacy')
+                                ->icon('heroicon-o-envelope')
+                                ->schema([
                 SC\Section::make('Email Engagement')
                     ->icon('heroicon-o-envelope')
                     ->collapsed()
@@ -468,7 +516,6 @@ class CoreCustomerResource extends Resource
                     ])
                     ->columns(4),
 
-                // ===== CONSENT =====
                 SC\Section::make('Consent & Privacy')
                     ->icon('heroicon-o-shield-check')
                     ->collapsed()
@@ -501,7 +548,12 @@ class CoreCustomerResource extends Resource
                     ])
                     ->columns(3),
 
-                // ===== EXTERNAL IDS =====
+                                ]),
+
+                            // TAB 8: INTEGRATIONS & TAGS
+                            SC\Tabs\Tab::make('Integrations')
+                                ->icon('heroicon-o-link')
+                                ->schema([
                 SC\Section::make('External Integrations')
                     ->icon('heroicon-o-link')
                     ->collapsed()
@@ -539,6 +591,123 @@ class CoreCustomerResource extends Resource
                             ->label('Notes')
                             ->rows(3),
                     ]),
+                                ]),
+                        ]), // end Tabs
+                    ]), // end Left Column Group
+
+                    // ========== RIGHT SIDEBAR (1/4) ==========
+                    SC\Group::make()->columnSpan(1)->schema([
+                        // Customer Card
+                        SC\Section::make('')->compact()->schema([
+                            Forms\Components\Placeholder::make('customer_card')
+                                ->hiddenLabel()
+                                ->content(function (?CoreCustomer $record) {
+                                    if (!$record) return '';
+                                    $name = $record->full_name ?? 'Customer';
+                                    $initials = collect(explode(' ', $name))->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->take(2)->join('');
+                                    $segment = $record->customer_segment;
+                                    $segBadge = $segment
+                                        ? '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;' . self::getSegmentStyle($segment) . '">' . e($segment) . '</span>'
+                                        : '';
+                                    $rfm = $record->rfm_segment;
+                                    $rfmBadge = $rfm
+                                        ? '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;' . self::getRfmStyle($rfm) . '">' . e($rfm) . '</span>'
+                                        : '';
+
+                                    return new HtmlString("
+                                        <div style='display:flex;gap:10px;align-items:center;'>
+                                            <div style='width:48px;height:48px;border-radius:50%;background:#334155;display:flex;align-items:center;justify-content:center;font-weight:700;color:#E2E8F0;font-size:16px;'>{$initials}</div>
+                                            <div>
+                                                <div style='font-size:15px;font-weight:700;color:white;'>" . e($name) . "</div>
+                                                <div style='font-size:11px;color:#64748B;'>" . e($record->email ?? '') . "</div>
+                                            </div>
+                                        </div>
+                                        <div style='margin-top:8px;display:flex;flex-wrap:wrap;gap:4px;'>{$segBadge} {$rfmBadge}</div>
+                                    ");
+                                }),
+                        ]),
+
+                        // Key Metrics
+                        SC\Section::make('Key Metrics')
+                            ->icon('heroicon-o-chart-bar')
+                            ->compact()
+                            ->schema([
+                                Forms\Components\Placeholder::make('sidebar_metrics')
+                                    ->hiddenLabel()
+                                    ->content(function (?CoreCustomer $record) {
+                                        if (!$record) return '';
+                                        $row = fn ($label, $value, $color = '#E2E8F0') =>
+                                            "<div style='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                <span style='font-size:11px;color:#64748B;'>{$label}</span>
+                                                <span style='font-size:11px;font-weight:600;color:{$color};'>{$value}</span>
+                                            </div>";
+                                        return new HtmlString(
+                                            $row('Orders', $record->total_orders ?? 0, '#60A5FA') .
+                                            $row('Tickets', $record->total_tickets ?? 0, '#34D399') .
+                                            $row('Total Spent', number_format((float) ($record->total_spent ?? 0), 2), '#F59E0B') .
+                                            $row('Engagement', ($record->engagement_score ?? 0) . '/100') .
+                                            $row('Health', ($record->health_score ?? 0) . '/100') .
+                                            $row('Churn Risk', ($record->churn_risk_score ?? 0) . '/100', '#EF4444')
+                                        );
+                                    }),
+                            ]),
+
+                        // Source
+                        SC\Section::make('Source')
+                            ->icon('heroicon-o-globe-alt')
+                            ->compact()
+                            ->schema([
+                                Forms\Components\Placeholder::make('sidebar_source')
+                                    ->hiddenLabel()
+                                    ->content(function (?CoreCustomer $record) {
+                                        if (!$record) return '';
+                                        $row = fn ($label, $value) =>
+                                            "<div style='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                <span style='font-size:11px;color:#64748B;'>{$label}</span>
+                                                <span style='font-size:11px;font-weight:600;color:#E2E8F0;'>{$value}</span>
+                                            </div>";
+
+                                        $marketplace = $record->primary_marketplace_client_id
+                                            ? (MarketplaceClient::find($record->primary_marketplace_client_id)?->name ?? 'ID: ' . $record->primary_marketplace_client_id)
+                                            : '—';
+                                        $tenant = $record->primary_tenant_id
+                                            ? (Tenant::find($record->primary_tenant_id)?->public_name ?? Tenant::find($record->primary_tenant_id)?->name ?? 'ID: ' . $record->primary_tenant_id)
+                                            : '—';
+
+                                        return new HtmlString(
+                                            $row('Marketplace', e($marketplace)) .
+                                            $row('Tenant', e($tenant)) .
+                                            $row('First Source', e($record->first_source ?? '—')) .
+                                            $row('First Medium', e($record->first_medium ?? '—'))
+                                        );
+                                    }),
+                            ]),
+
+                        // Info
+                        SC\Section::make('Info')
+                            ->icon('heroicon-o-information-circle')
+                            ->compact()
+                            ->schema([
+                                Forms\Components\Placeholder::make('sidebar_info')
+                                    ->hiddenLabel()
+                                    ->content(function (?CoreCustomer $record) {
+                                        if (!$record) return '';
+                                        $row = fn ($label, $value) =>
+                                            "<div style='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                <span style='font-size:11px;color:#64748B;'>{$label}</span>
+                                                <span style='font-size:11px;font-weight:600;color:#E2E8F0;'>{$value}</span>
+                                            </div>";
+                                        return new HtmlString(
+                                            $row('First Seen', $record->first_seen_at?->format('d M Y') ?? '—') .
+                                            $row('Last Seen', $record->last_seen_at?->diffForHumans() ?? '—') .
+                                            $row('Device', ucfirst($record->device_type ?? $record->primary_device ?? '—')) .
+                                            $row('Browser', e($record->browser ?? $record->primary_browser ?? '—')) .
+                                            $row('UUID', "<span style='font-family:monospace;font-size:9px;color:#64748B;'>" . e(substr($record->uuid ?? '', 0, 12)) . "...</span>")
+                                        );
+                                    }),
+                            ]),
+                    ]), // end Sidebar Group
+                ]), // end Grid
             ]);
     }
 
