@@ -523,6 +523,12 @@ class EventResource extends Resource
                                                     . ($venue->city ? ' (' . $venue->city . ')' : '')
                                             ]);
                                     })
+                                    ->getOptionLabelUsing(function ($value) {
+                                        $venue = Venue::find($value);
+                                        if (!$venue) return $value;
+                                        return $venue->getTranslation('name', app()->getLocale())
+                                            . ($venue->city ? ' (' . $venue->city . ')' : '');
+                                    })
                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
                                         if ($state) {
                                             $venue = Venue::find($state);
