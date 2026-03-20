@@ -3210,12 +3210,12 @@ class EventResource extends Resource
                     })
                     ->openUrlInNewTab(),
                 Action::make('editTitle')
-                    ->label('Editează titlul')
+                    ->label('')
                     ->icon('heroicon-o-pencil-square')
                     ->modalHeading('Editează titlul')
                     ->modalWidth('md')
                     ->modalSubmitActionLabel('Salvează')
-                    ->hidden()
+                    ->extraAttributes(['class' => '!hidden'])
                     ->fillForm(fn (Event $record) => [
                         'title_ro' => $record->getTranslation('title', 'ro'),
                         'title_en' => $record->getTranslation('title', 'en'),
