@@ -526,6 +526,27 @@
                     $seatRadius = (($section->metadata['seat_size'] ?? 15) / 2);
                     $seatFontSize = round($seatRadius * 0.95, 1);
                     $xOff = round($seatRadius * 0.5, 1);
+
+                    // Compute section-wide seat X bounds and gap for aligned row labels
+                    $allSeatXs = [];
+                    $seatGap = $seatRadius * 3; // fallback
+                    foreach ($section->rows as $_r) {
+                        foreach ($_r->seats as $_s) {
+                            $allSeatXs[] = $_s->x ?? 0;
+                        }
+                        // Compute gap from first row with 2+ seats
+                        if ($seatGap === $seatRadius * 3) {
+                            $sortedXs = $_r->seats->pluck('x')->sort()->values();
+                            if ($sortedXs->count() >= 2) {
+                                $seatGap = abs($sortedXs[1] - $sortedXs[0]);
+                            }
+                        }
+                    }
+                    $secMinX = !empty($allSeatXs) ? min($allSeatXs) : 0;
+                    $secMaxX = !empty($allSeatXs) ? max($allSeatXs) : 0;
+                    $leftLabelX = $sX + $secMinX - $seatGap;
+                    $rightLabelX = $sX + $secMaxX + $seatGap;
+                    $rowLabelSize = max(10, round($seatFontSize * 1.1, 1));
                 @endphp
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
@@ -567,13 +588,19 @@
 
                             @php
                                 $firstSeat = $row->seats->first();
-                                $labelX = $firstSeat ? $sX + ($firstSeat->x ?? 0) - $seatRadius - 8 : $sX;
-                                $labelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) : $sY;
+                                $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
                             @endphp
-                            <text x="{{ $labelX }}" y="{{ $labelY + 4 }}"
-                                  font-size="10" text-anchor="end"
+                            {{-- Left row label --}}
+                            <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
+                                  font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
                                   class="pointer-events-none select-none"
-                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.85)'"
+                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
+                            >{{ $row->label }}</text>
+                            {{-- Right row label --}}
+                            <text x="{{ $rightLabelX }}" y="{{ $rowLabelY }}"
+                                  font-size="{{ $rowLabelSize }}" text-anchor="start" font-weight="600"
+                                  class="pointer-events-none select-none"
+                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
                             >{{ $row->label }}</text>
                         </g>
                     @endforeach
