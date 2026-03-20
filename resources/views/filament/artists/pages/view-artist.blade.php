@@ -186,7 +186,7 @@ canvas{width:100%!important;}
     </div>
 
     {{-- ═══════ TAB: OVERVIEW ═══════ --}}
-    <div x-show="tab === 'overview'" x-cloak>
+    <div x-show="tab === 'overview'">
         {{-- Hero KPIs --}}
         <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px;">
             <div class="kpi"><div class="l">Events (12m)</div><div class="v">{{ $totalEvents }}</div></div>
