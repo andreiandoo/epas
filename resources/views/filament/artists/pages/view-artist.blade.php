@@ -525,6 +525,7 @@ canvas{width:100% !important; height:240px !important;}
         $priceSens = $sales['price_sensitivity'] ?? [];
         $velocity = $sales['velocity_curves'] ?? [];
         $expansion = $expansionPlanner ?? [];
+        $upcomingEvents = $upcomingAnalysis ?? [];
     @endphp
 
     <div class="av-container" style="margin-top:48px;" x-data="{ activeTab: 'overview' }">
@@ -726,6 +727,64 @@ canvas{width:100% !important; height:240px !important;}
                     <div class="av-card"><div class="av-card-header">Sales Velocity (last {{ count($velocity) }} events)</div><div class="av-card-body"><div style="height:240px;"><canvas id="velocityChart"></canvas></div></div></div>
                     @endif
                 </div>
+            @endif
+        </div>
+
+        {{-- ════════ TAB: UPCOMING ════════ --}}
+        <div x-show="activeTab === 'upcoming'" x-cloak>
+            @if(empty($upcomingEvents))
+                <div class="av-card"><div class="av-card-body" style="color:var(--muted);text-align:center;padding:32px;">No upcoming events found for this artist.</div></div>
+            @else
+                <div class="av-card"><div class="av-card-body" style="overflow-x:auto;">
+                    <table class="tbl">
+                        <thead><tr>
+                            <th>Date</th><th>Event</th><th>Venue</th><th>City</th>
+                            <th>Sold / Cap</th><th>Sell-Through</th><th>Revenue</th>
+                            <th>Days Left</th><th>Hist. Avg</th><th>Forecast</th>
+                        </tr></thead>
+                        <tbody>
+                            @foreach($upcomingEvents as $ue)
+                            <tr>
+                                <td style="white-space:nowrap;">{{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '—' }}</td>
+                                <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                    {{ $ue['title'] }}
+                                    @if($ue['is_headliner']) <span class="av-chip" style="background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.3);color:#fbbf24;font-size:10px;padding:2px 6px;">H</span> @endif
+                                </td>
+                                <td>{{ $ue['venue'] ?? '—' }}</td>
+                                <td>{{ $ue['city'] ?? '—' }}</td>
+                                <td>{{ number_format($ue['sold']) }} / {{ $ue['capacity'] ?: '?' }}</td>
+                                <td>
+                                    @if($ue['sell_through'] !== null)
+                                        <div style="display:flex;align-items:center;gap:6px;">
+                                            <div style="flex:1;height:5px;background:rgba(122,162,255,.12);border-radius:3px;overflow:hidden;min-width:40px;">
+                                                <div style="height:100%;width:{{ min($ue['sell_through'],100) }}%;background:{{ $ue['sell_through']>=80?'#22c55e':($ue['sell_through']>=50?'#fbbf24':'#ef4444') }};border-radius:3px;"></div>
+                                            </div>
+                                            <span style="font-size:11px;">{{ $ue['sell_through'] }}%</span>
+                                        </div>
+                                    @else — @endif
+                                </td>
+                                <td style="color:#22c55e;">{{ number_format($ue['revenue_sold'], 0) }} RON</td>
+                                <td>
+                                    @if($ue['days_until'] !== null)
+                                        <span class="badge" style="{{ $ue['days_until'] <= 7 ? 'background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);color:#ef4444;' : '' }}">{{ $ue['days_until'] }}d</span>
+                                    @else — @endif
+                                </td>
+                                <td style="font-size:12px;color:var(--muted);">
+                                    {{ $ue['hist_avg_sold'] }} avg · {{ $ue['hist_avg_sell_through'] }}%
+                                </td>
+                                <td>
+                                    @if($ue['forecast_sold'] !== null)
+                                        <strong style="color:#22d3ee;">~{{ number_format($ue['forecast_sold']) }}</strong>
+                                        @if($ue['capacity'] > 0)
+                                            <span style="font-size:11px;color:var(--muted);">({{ round($ue['forecast_sold'] / $ue['capacity'] * 100) }}%)</span>
+                                        @endif
+                                    @else — @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div></div>
             @endif
         </div>
 
