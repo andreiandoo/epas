@@ -83,8 +83,8 @@
 a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 img{display:block;max-width:100%}
 
-.db{max-width:1280px;margin:0 auto;padding:0 20px;}
-.db-header{position:sticky;top:64px;z-index:30;background:linear-gradient(180deg,rgba(11,16,32,.97),rgba(11,16,32,.85));backdrop-filter:blur(8px);border-bottom:1px solid var(--ring);padding:12px 0;}
+.db{max-width:100%;margin:0 auto;padding:0;}
+.db-header{position:sticky;top:0px;z-index:30;background:linear-gradient(180deg,rgba(11,16,32,.97),rgba(11,16,32,.85));backdrop-filter:blur(8px);border-bottom:1px solid var(--ring);padding:12px 0;}
 .db-header-inner{max-width:1280px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
 .db-title{font-size:22px;font-weight:700;letter-spacing:.2px;}
 .db-sub{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
