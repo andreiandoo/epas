@@ -1,3 +1,3 @@
-<x-filament-panels::page>
+<div>
     @include('filament.marketplace-customers.pages.view-marketplace-customer-content')
-</x-filament-panels::page>
+</div>

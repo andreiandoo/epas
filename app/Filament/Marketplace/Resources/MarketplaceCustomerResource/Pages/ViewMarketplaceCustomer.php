@@ -46,7 +46,7 @@ class ViewMarketplaceCustomer extends Page
 
     public function mount($record): void
     {
-        $this->record = MarketplaceCustomer::findOrFail($record);
+        $this->record = $record instanceof MarketplaceCustomer ? $record : MarketplaceCustomer::findOrFail($record);
 
         /** @var MarketplaceCustomer $customer */
         $customer = $this->record;

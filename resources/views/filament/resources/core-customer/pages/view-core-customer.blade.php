@@ -1,4 +1,4 @@
-<x-filament-panels::page>
+<div>
     @php
         $c = $this->record; // CoreCustomer
         $m = $this->linkedMarketplaceCustomer; // MarketplaceCustomer or null
@@ -414,4 +414,4 @@
         </div>
 
     </div>
-</x-filament-panels::page>
+</div>

@@ -64,7 +64,7 @@ class ViewCoreCustomer extends Page
 
     public function mount($record): void
     {
-        $this->recordId = (int) $record;
+        $this->recordId = $record instanceof CoreCustomer ? $record->id : (int) $record;
         $coreCustomer = $this->record;
 
         // Try to find linked MarketplaceCustomer via email
