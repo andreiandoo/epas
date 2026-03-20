@@ -2785,137 +2785,129 @@ class EventsController extends BaseController
             return $this->error('No published seating layout found', 404);
         }
 
-        // Get all event seats with their statuses
-        $eventSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
-            ->get();
+        // Use pre-computed json_geometry (instant, no DB tree traversal)
+        $geometry = $layout->json_geometry;
+        if (is_string($geometry)) {
+            $geometry = json_decode($geometry, true);
+        }
 
-        // Build row → ticket_type mapping
-        // Load ticket types with their seating rows
+        $canvas = $geometry['canvas'] ?? ['width' => 1000, 'height' => 800];
+        $sections = $geometry['sections'] ?? [];
+
+        // If geometry is missing section positions (old snapshot), fall back to DB
+        if (!empty($sections) && !isset($sections[0]['x'])) {
+            $seatingLayout = \App\Models\Seating\SeatingLayout::with(['sections'])->find($eventModel->seating_layout_id);
+            if ($seatingLayout) {
+                $canvas = ['width' => $seatingLayout->canvas_w ?? 1000, 'height' => $seatingLayout->canvas_h ?? 800];
+                $sectionPositions = [];
+                foreach ($seatingLayout->sections as $s) {
+                    $sectionPositions[$s->name] = [
+                        'x' => (int) $s->x_position, 'y' => (int) $s->y_position,
+                        'width' => (int) $s->width, 'height' => (int) $s->height,
+                        'rotation' => (float) ($s->rotation ?? 0),
+                        'metadata' => $s->metadata ?? [],
+                    ];
+                }
+                foreach ($sections as &$sec) {
+                    $pos = $sectionPositions[$sec['name']] ?? null;
+                    if ($pos) {
+                        $sec['x'] = $pos['x'];
+                        $sec['y'] = $pos['y'];
+                        $sec['width'] = $pos['width'];
+                        $sec['height'] = $pos['height'];
+                        $sec['rotation'] = $pos['rotation'];
+                        $sec['metadata'] = $pos['metadata'];
+                    }
+                }
+                unset($sec);
+            }
+        }
+
+        // Get event seat statuses (1 query)
+        $eventSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $layout->id)
+            ->get()
+            ->keyBy('seat_uid');
+
+        // Get ticket types with seating assignments (1 query + 2 eager loads)
         $ticketTypes = TicketType::where('event_id', $eventModel->id)
             ->whereIn('status', ['active', 'on_sale', 'published'])
             ->with(['seatingRows', 'seatingSections'])
             ->get();
 
-        // Build row_id → ticket_type map (row-level assignment takes priority)
-        $rowIdToTicketType = [];
-        $sectionIdToTicketType = [];
+        // Build lookup maps for ticket type assignment
+        $rowIdToTT = [];
+        $sectionNameToTT = [];
+        $sectionNameToId = [];
+
+        // Load section/row IDs for mapping
+        $seatingLayout = $seatingLayout ?? \App\Models\Seating\SeatingLayout::with(['sections.rows'])->find($eventModel->seating_layout_id);
+        if ($seatingLayout) {
+            $rowIdMap = []; // "sectionName|rowLabel" => row_id
+            foreach ($seatingLayout->sections as $s) {
+                $sectionNameToId[$s->name] = $s->id;
+                foreach ($s->rows as $r) {
+                    $rowIdMap[$s->name . '|' . $r->label] = $r->id;
+                }
+            }
+        }
 
         foreach ($ticketTypes as $tt) {
             foreach ($tt->seatingRows as $row) {
-                $rowIdToTicketType[$row->id] = $tt;
+                $rowIdToTT[$row->id] = $tt;
             }
             foreach ($tt->seatingSections as $section) {
-                $sectionIdToTicketType[$section->id] = $tt;
+                $sectionNameToTT[$section->name] = $tt;
             }
         }
 
-        // Load seating layout structure with full geometry (sections, rows, seats)
-        // Build geometry directly from DB models (like the marketplace web does)
-        // to include section positions, dimensions, rotation, and metadata
-        $seatingLayout = \App\Models\Seating\SeatingLayout::with(['sections.rows.seats'])
-            ->find($eventModel->seating_layout_id);
+        // Merge status + ticket type info directly into geometry seats
+        foreach ($sections as &$sec) {
+            foreach ($sec['rows'] as &$row) {
+                foreach ($row['seats'] as &$seat) {
+                    $uid = $seat['seat_uid'];
+                    $eventSeat = $eventSeats->get($uid);
+                    $seat['status'] = $eventSeat->status ?? 'available';
 
-        $rowLabelToId = [];
-        $sectionNameToId = [];
-        $sectionsData = [];
-        $canvas = ['width' => 1000, 'height' => 800];
-
-        if ($seatingLayout) {
-            $canvas = [
-                'width' => $seatingLayout->canvas_w ?? 1000,
-                'height' => $seatingLayout->canvas_h ?? 800,
-            ];
-
-            foreach ($seatingLayout->sections as $section) {
-                $sectionNameToId[$section->name] = $section->id;
-                $rows = [];
-
-                foreach ($section->rows as $row) {
-                    $key = $section->name . '|' . $row->label;
-                    $rowLabelToId[$key] = $row->id;
-
-                    $seats = [];
-                    foreach ($row->seats as $seat) {
-                        $seats[] = [
-                            'seat_uid' => $seat->seat_uid,
-                            'label' => $seat->label,
-                            'x' => (float) $seat->x,
-                            'y' => (float) $seat->y,
-                        ];
+                    // Resolve ticket type: row-level first, then section-level
+                    $tt = null;
+                    $rowKey = $sec['name'] . '|' . $row['label'];
+                    if (isset($rowIdMap[$rowKey]) && isset($rowIdToTT[$rowIdMap[$rowKey]])) {
+                        $tt = $rowIdToTT[$rowIdMap[$rowKey]];
+                    }
+                    if (!$tt && isset($sectionNameToId[$sec['name']])) {
+                        $secId = $sectionNameToId[$sec['name']];
+                        // Check seatingSections pivot
+                        foreach ($ticketTypes as $candidate) {
+                            if ($candidate->seatingSections->contains('id', $secId)) {
+                                $tt = $candidate;
+                                break;
+                            }
+                        }
                     }
 
-                    $rows[] = [
-                        'label' => $row->label,
-                        'seats' => $seats,
-                    ];
+                    $seat['ticket_type_id'] = $tt?->id;
+                    $seat['ticket_type_name'] = $tt?->name;
+                    $seat['price'] = $tt ? (float) $tt->display_price : 0;
+                    $seat['color'] = $tt?->color ?? '#8B5CF6';
                 }
-
-                $sectionsData[] = [
-                    'name' => $section->name,
-                    'x' => $section->x_position,
-                    'y' => $section->y_position,
-                    'width' => $section->width,
-                    'height' => $section->height,
-                    'rotation' => $section->rotation,
-                    'metadata' => $section->metadata ?? [
-                        'seat_size' => 18,
-                        'seat_spacing' => 20,
-                        'row_spacing' => 25,
-                    ],
-                    'rows' => $rows,
-                ];
             }
         }
+        unset($sec, $row, $seat);
 
-        // Build seat data with ticket_type info
-        $seatsData = [];
-        foreach ($eventSeats as $seat) {
-            $ticketType = null;
-
-            // Try row-level mapping first
-            $rowKey = $seat->section_name . '|' . $seat->row_label;
-            if (isset($rowLabelToId[$rowKey])) {
-                $rowId = $rowLabelToId[$rowKey];
-                if (isset($rowIdToTicketType[$rowId])) {
-                    $ticketType = $rowIdToTicketType[$rowId];
-                }
-            }
-
-            // Fallback: section-level mapping
-            if (!$ticketType && isset($sectionNameToId[$seat->section_name])) {
-                $sectionId = $sectionNameToId[$seat->section_name];
-                if (isset($sectionIdToTicketType[$sectionId])) {
-                    $ticketType = $sectionIdToTicketType[$sectionId];
-                }
-            }
-
-            $seatsData[] = [
-                'seat_uid' => $seat->seat_uid,
-                'section_name' => $seat->section_name,
-                'row_label' => $seat->row_label,
-                'seat_label' => $seat->seat_label,
-                'status' => $seat->status,
-                'ticket_type_id' => $ticketType?->id,
-                'ticket_type_name' => $ticketType?->name,
-                'price' => $ticketType ? (float) $ticketType->display_price : 0,
-                'color' => $ticketType?->color ?? '#8B5CF6',
-            ];
-        }
-
-        // Format ticket types for legend
+        // Format ticket types for legend (with is_entry_ticket)
         $ticketTypesData = $ticketTypes->map(fn($tt) => [
             'id' => $tt->id,
             'name' => $tt->name,
             'price' => (float) $tt->display_price,
             'color' => $tt->color ?? '#8B5CF6',
             'currency' => $tt->currency ?? 'RON',
+            'is_entry_ticket' => (bool) $tt->is_entry_ticket,
         ]);
 
         return $this->success([
             'event_seating_id' => $layout->id,
             'canvas' => $canvas,
-            'sections' => $sectionsData,
-            'seats' => $seatsData,
+            'sections' => $sections,
             'ticket_types' => $ticketTypesData,
         ]);
     }

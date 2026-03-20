@@ -131,6 +131,12 @@ class GeometryStorage
             $sections[] = [
                 'name' => $section->name,
                 'color' => $section->color_hex,
+                'x' => (int) $section->x_position,
+                'y' => (int) $section->y_position,
+                'width' => (int) $section->width,
+                'height' => (int) $section->height,
+                'rotation' => (float) ($section->rotation ?? 0),
+                'metadata' => $section->metadata ?? [],
                 'rows' => $rows,
                 'meta' => $section->meta,
             ];
