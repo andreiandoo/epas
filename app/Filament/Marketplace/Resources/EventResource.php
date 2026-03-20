@@ -1982,8 +1982,8 @@ class EventResource extends Resource
                                                         foreach ($hasNotes as $tt) {
                                                             $name = e($tt->name);
                                                             $notes = nl2br(e($tt->admin_notes));
-                                                            $html .= '<div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">';
-                                                            $html .= '<div class="text-xs font-semibold text-primary-600 dark:text-primary-400 mb-1">🎫 ' . $name . '</div>';
+                                                            $html .= '<div class="p-3 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">';
+                                                            $html .= '<div class="mb-1 text-xs font-semibold text-primary-600 dark:text-primary-400">🎫 ' . $name . '</div>';
                                                             $html .= '<div class="text-sm text-gray-700 dark:text-gray-300">' . $notes . '</div>';
                                                             $html .= '</div>';
                                                         }
@@ -2019,11 +2019,11 @@ class EventResource extends Resource
                                     }
 
                                     if ($record->is_cancelled) {
-                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 ring-1 ring-inset ring-red-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>ANULAT</span>');
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-400 rounded-full bg-red-500/20 ring-1 ring-inset ring-red-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>ANULAT</span>');
                                     }
 
                                     if ($record->is_postponed) {
-                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>AMÂNAT</span>');
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>AMÂNAT</span>');
                                     }
 
                                     $eventEndDateTime = null;
@@ -2043,7 +2043,7 @@ class EventResource extends Resource
                                     }
 
                                     if ($eventEndDateTime && $eventEndDateTime->isPast()) {
-                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>ÎNCHEIAT</span>');
+                                        return new HtmlString('<span class="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-400 rounded-full bg-gray-500/20 ring-1 ring-inset ring-gray-500/30"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>ÎNCHEIAT</span>');
                                     }
 
                                     return null;
@@ -2074,8 +2074,7 @@ class EventResource extends Resource
                                     return new \Illuminate\Support\HtmlString(
                                         '<a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-500 transition-colors shadow-sm">' .
                                             '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
-                                            $t('Previzualizare pe site', 'Preview on site') .
-                                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
+                                            $t('Previzualizare', 'Preview') .
                                         '</a>'
                                     );
                                 }),
@@ -2094,7 +2093,7 @@ class EventResource extends Resource
                                     $url = "{$protocol}://{$domain}/bilete/{$slug}?preview=1&preview_token={$token}";
 
                                     return new \Illuminate\Support\HtmlString(
-                                        '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test comandă', 'Test order link') . '\', 2000);" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-semibold text-amber-200 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 transition-colors cursor-pointer no-underline">' .
+                                        '<button type="button" onclick="navigator.clipboard.writeText(\'' . e($url) . '\'); this.querySelector(\'span\').textContent=\'' . $t('Copiat!', 'Copied!') . '\'; setTimeout(() => this.querySelector(\'span\').textContent=\'' . $t('Link test', 'Test link') . '\', 2000);" class="inline-flex items-center justify-center w-full gap-2 px-4 py-2 text-sm font-semibold no-underline transition-colors rounded-lg cursor-pointer text-amber-200 bg-amber-600/30 hover:bg-amber-600/50">' .
                                             '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>' .
                                             '<span>' . $t('Link test comandă', 'Test order link') . '</span>' .
                                         '</button>'
@@ -2105,7 +2104,7 @@ class EventResource extends Resource
                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă setezi o parolă, pagina evenimentului va fi accesibilă doar după introducerea parolei. Lasă gol pentru acces liber.', 'If you set a password, the event page will only be accessible after entering the password. Leave empty for open access.'))
                                 ->placeholder($t('Lasă gol pentru acces liber', 'Leave empty for open access'))
                                 ->helperText(fn (?Event $record) => $record?->access_password
-                                    ? new \Illuminate\Support\HtmlString('<span class="text-warning-600 font-medium">' . $t('🔒 Evenimentul este protejat cu parolă', '🔒 Event is password protected') . '</span>')
+                                    ? new \Illuminate\Support\HtmlString('<span class="font-medium text-warning-600">' . $t('🔒 Evenimentul este protejat cu parolă', '🔒 Event is password protected') . '</span>')
                                     : null
                                 )
                                 ->prefixIcon('heroicon-o-lock-closed')
@@ -2164,7 +2163,7 @@ class EventResource extends Resource
                                         $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCount > 0 ? " ({$ticketCount})" : '');
                                         $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCount > 0 ? " ({$orderCount})" : '');
 
-                                        $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors no-underline';
+                                        $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors no-underline';
 
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
@@ -2194,7 +2193,7 @@ class EventResource extends Resource
                                                 <span class='text-gray-400'>{$viewsLabel}</span>
                                                 <span class='text-white'>" . number_format($views) . "</span>
                                             </div>
-                                            <div class='grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-gray-700'>
+                                            <div class='grid grid-cols-2 gap-2 pt-3 mt-4 border-t border-gray-700'>
                                                 <a href='{$ticketsUrl}' class='{$btnClass} text-gray-200 bg-gray-700 hover:bg-gray-600'>
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z'/></svg>
                                                     {$ticketsBtnLabel}
@@ -2205,11 +2204,11 @@ class EventResource extends Resource
                                                 </a>
                                             </div>
                                             <div class='grid grid-cols-2 gap-2 mt-2'>
-                                                <a href='{$statisticsUrl}' class='{$btnClass} text-blue-200 bg-blue-600/30 hover:bg-blue-600/50'>
+                                                <a href='{$statisticsUrl}' class='{$btnClass} text-white bg-blue-600 hover:bg-blue-800'>
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'/></svg>
                                                     {$statisticsLabel}
                                                 </a>
-                                                <a href='{$analyticsUrl}' class='{$btnClass} text-emerald-200 bg-emerald-600/30 hover:bg-emerald-600/50'>
+                                                <a href='{$analyticsUrl}' class='{$btnClass} text-white bg-emerald-600 hover:bg-emerald-800'>
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
                                                     {$analyticsLabel}
                                                 </a>

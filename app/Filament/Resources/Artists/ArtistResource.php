@@ -180,42 +180,48 @@ class ArtistResource extends Resource
                             ->columns(1),
                     ]),
 
-                    // === CONTACT ===
-                    SC\Section::make('Contact & Management')->compact()->collapsible()->collapsed()->schema([
-                        SC\Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
-                            Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(190)->prefixIcon('heroicon-m-envelope'),
-                        ]),
-                        SC\Section::make('Manager contact')->compact()->collapsible()->schema([
-                            SC\Grid::make(3)->schema([
+                    // === CONTACT + MANAGER (side by side) ===
+                    SC\Grid::make(2)->schema([
+                        SC\Section::make('Contact')
+                            ->icon('heroicon-o-envelope')
+                            ->collapsible()->collapsed()->persistCollapsed()
+                            ->schema([
+                                Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(190)->prefixIcon('heroicon-o-envelope'),
+                                Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-o-phone'),
+                            ])->columns(2),
+                        SC\Section::make('Manager')
+                            ->icon('heroicon-o-user')
+                            ->collapsible()->collapsed()->persistCollapsed()
+                            ->schema([
                                 Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
                                 Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
                                 Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
-                            ]),
-                            SC\Grid::make(2)->schema([
-                                Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
-                                Forms\Components\TextInput::make('manager_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
-                            ]),
-                        ]),
-                        SC\Section::make('Booking agent contact')->compact()->collapsible()->schema([
-                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120),
+                                Forms\Components\TextInput::make('manager_website')->label('Website')->url()->rule('url')->maxLength(255),
+                            ])->columns(2),
+                    ]),
+
+                    // === AGENT + AGENCY (side by side) ===
+                    SC\Grid::make(2)->schema([
+                        SC\Section::make('Booking Agent')
+                            ->icon('heroicon-o-briefcase')
+                            ->collapsible()->collapsed()->persistCollapsed()
+                            ->schema([
                                 Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
                                 Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
                                 Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
-                            ]),
-                            SC\Grid::make(2)->schema([
-                                Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
-                                Forms\Components\TextInput::make('agent_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
-                            ]),
-                        ]),
-                        SC\Section::make('Booking Agency')->compact()->collapsible()->collapsed()->schema([
-                            SC\Grid::make(4)->schema([
+                                Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120),
+                                Forms\Components\TextInput::make('agent_website')->label('Website')->url()->rule('url')->maxLength(255),
+                            ])->columns(2),
+                        SC\Section::make('Booking Agency')
+                            ->icon('heroicon-o-building-office')
+                            ->collapsible()->collapsed()->persistCollapsed()
+                            ->schema([
                                 Forms\Components\TextInput::make('booking_agency.name')->label('Agency Name')->placeholder('e.g. Universal Music Romania'),
                                 Forms\Components\TextInput::make('booking_agency.email')->label('Email')->email()->placeholder('booking@agency.com'),
                                 Forms\Components\TextInput::make('booking_agency.phone')->label('Phone')->placeholder('+40 ...'),
                                 Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url()->placeholder('https://...'),
-                            ]),
-                        ]),
+                            ])->columns(2),
                     ]),
                 ]),
 
