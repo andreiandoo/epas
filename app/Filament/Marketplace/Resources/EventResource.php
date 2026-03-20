@@ -1185,11 +1185,13 @@ class EventResource extends Resource
                                         Forms\Components\Toggle::make('is_entry_ticket')
                                             ->label($t('Bilet pentru aplicație', 'App Ticket'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
+                                            ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
                                             ->default(false)
                                             ->columnSpan(3),
                                         Forms\Components\Toggle::make('is_declarable')
                                             ->label($t('Declarabil', 'Declarable'))
                                             ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
+                                            ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
                                             ->default(true)
                                             ->columnSpan(2),
                                         Forms\Components\ColorPicker::make('color')
