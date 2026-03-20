@@ -30,7 +30,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Reservation Timer -->
-    <div id="timer-bar" class="border-b bg-warning/10 border-warning/20">
+    <div id="timer-bar" class="border-b bg-warning/10 border-warning/20 mobile:sticky mobile:top-18 mobile:bg-warning mobile:z-20">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-2 text-sm">
                 <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

@@ -44,411 +44,335 @@ class ArtistResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            // === BASICS (flat, fără container) ===
-            SC\Group::make()
-                ->extraAttributes(['id' => 'artist-basics','data-ep-section'=>'basics'])
-                ->schema([
-                    Forms\Components\TextInput::make('name')
-                        ->label('Artist name')
-                        ->required()
-                        ->maxLength(190)
-                        ->placeholder('Type the artist name…')
-                        ->extraAttributes(['class' => 'ep-title']) // titlu mare (ai deja CSS-ul global)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, Set $set) {
-                            if ($state) $set('slug', Str::slug($state));
-                        }),
+            SC\Grid::make(4)->schema([
+                // ========== LEFT COLUMN (3/4) ==========
+                SC\Group::make()->columnSpan(3)->schema([
 
+                    // === BASICS ===
                     SC\Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
-                            ->helperText('Editable URL slug.')
-                            ->maxLength(190)
-                            ->rule('alpha_dash')
-                            ->unique(ignoreRecord: true)
-                            ->prefixIcon('heroicon-m-link'),
+                        SC\Group::make()->schema([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Artist name')
+                                ->required()
+                                ->maxLength(190)
+                                ->placeholder('Type the artist name…')
+                                ->extraAttributes(['class' => 'ep-title'])
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, Set $set) {
+                                    if ($state) $set('slug', Str::slug($state));
+                                }),
+                            Forms\Components\TextInput::make('slug')
+                                ->label('Slug')
+                                ->helperText('Editable URL slug.')
+                                ->maxLength(190)
+                                ->rule('alpha_dash')
+                                ->unique(ignoreRecord: true)
+                                ->prefixIcon('heroicon-m-link'),
+                        ]),
+                        SC\Section::make('Media')->compact()->schema([
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\FileUpload::make('main_image_url')
+                                    ->label('Main (horiz.)')
+                                    ->image()
+                                    ->directory('artists/hero')
+                                    ->disk('public')->visibility('public')
+                                    ->maxSize(4096)
+                                    ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=1600,min_height=900'])
+                                    ->helperText('1600×900+')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
+                                Forms\Components\FileUpload::make('logo_url')
+                                    ->label('Logo (horiz.)')
+                                    ->image()
+                                    ->directory('artists/logo')
+                                    ->disk('public')->visibility('public')
+                                    ->maxSize(2048)
+                                    ->rules(['image','mimes:png,webp,jpg,jpeg','dimensions:min_width=800,min_height=300'])
+                                    ->helperText('800×300+')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
+                                Forms\Components\FileUpload::make('portrait_url')
+                                    ->label('Portrait (vert.)')
+                                    ->image()
+                                    ->directory('artists/portrait')
+                                    ->disk('public')->visibility('public')
+                                    ->maxSize(4096)
+                                    ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=900,min_height=1200'])
+                                    ->helperText('900×1200+')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
+                            ]),
+                        ]),
+                    ]),
 
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
-                            ->default(true),
+                    // === CONTENT ===
+                    SC\Section::make('Content')->compact()->schema([
+                        TranslatableField::richEditor('bio_html', 'Bio')->columnSpanFull(),
+                    ])->columns(1),
+
+                    // === TAXONOMIES + LOCATION ===
+                    SC\Grid::make(2)->schema([
+                        SC\Section::make('Taxonomies')->compact()->schema([
+                            Forms\Components\Select::make('artistTypes')
+                                ->label('Artist types')
+                                ->relationship('artistTypes', 'name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                                ->multiple()->preload()->searchable()->live(),
+                            Forms\Components\Select::make('artistGenres')
+                                ->label('Artist genres')
+                                ->relationship('artistGenres', 'name')
+                                ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                                ->multiple()->preload()->searchable()
+                                ->visible(fn (Get $get) => filled($get('artistTypes'))),
+                        ]),
+                        SC\Section::make('Location')->compact()->schema([
+                            Forms\Components\Select::make('country')
+                                ->label('Country')
+                                ->options(Locations::countries())
+                                ->searchable()->live()->preload(false),
+                            Forms\Components\Select::make('state')
+                                ->label('State / County')
+                                ->options(fn (Get $get) => $get('country') ? Locations::states($get('country')) : [])
+                                ->searchable()->live()->preload(false),
+                            Forms\Components\Select::make('city')
+                                ->label('City')
+                                ->options(fn (Get $get) => ($get('country') && $get('state')) ? Locations::cityOptions($get('country'), $get('state')) : [])
+                                ->searchable()->preload(false),
+                        ]),
+                    ]),
+
+                    // === SOCIAL & IDs ===
+                    SC\Section::make('Social & IDs')->compact()->collapsible()->collapsed()->schema([
+                        Forms\Components\TextInput::make('website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt')->placeholder('https://example.com'),
+                        Forms\Components\TextInput::make('facebook_url')->label('Facebook')->default('https://www.facebook.com/')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('instagram_url')->label('Instagram')->default('https://www.instagram.com/')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('tiktok_url')->label('TikTok')->default('https://www.tiktok.com/@')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('youtube_url')->label('YouTube')->default('https://www.youtube.com/')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('youtube_id')->label('YouTube ID')->maxLength(190)->helperText('Used to fetch channel stats & videos.'),
+                        Forms\Components\TextInput::make('spotify_url')->label('Spotify')->default('https://open.spotify.com/artist/')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('spotify_id')->label('Spotify ID')->maxLength(190)->helperText('Used to fetch Spotify stats & show playlist.'),
+                        Forms\Components\TextInput::make('twitter_url')->label('Twitter / X')->default('https://x.com/')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('wiki_url')->label('Wikipedia')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('lastfm_url')->label('Last.fm')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('itunes_url')->label('Apple Music')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                        Forms\Components\TextInput::make('musicbrainz_url')->label('MusicBrainz')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-link'),
+                    ])->columns(2),
+
+                    // === SOCIAL STATS (editable) ===
+                    SC\Section::make('Social Stats (editable)')->compact()->collapsible()->collapsed()->schema([
+                        Forms\Components\TextInput::make('followers_youtube')->label('YouTube Subscribers')->numeric()->minValue(0)->disabled()->dehydrated(),
+                        Forms\Components\TextInput::make('youtube_total_views')->label('YouTube Total Views')->numeric()->minValue(0)->disabled()->dehydrated(),
+                        Forms\Components\TextInput::make('spotify_monthly_listeners')->label('Spotify Followers')->numeric()->minValue(0)->disabled()->dehydrated(),
+                        Forms\Components\TextInput::make('spotify_popularity')->label('Spotify Popularity (0-100)')->numeric()->minValue(0)->maxValue(100)->disabled()->dehydrated(),
+                        Forms\Components\TextInput::make('twitter_followers')->label('Twitter / X Followers')->numeric()->minValue(0)->helperText('Manual entry'),
+                        Forms\Components\TextInput::make('followers_facebook')->label('Facebook Followers')->numeric()->minValue(0)->helperText('Manual entry'),
+                        Forms\Components\TextInput::make('followers_instagram')->label('Instagram Followers')->numeric()->minValue(0)->helperText('Manual entry'),
+                        Forms\Components\TextInput::make('followers_tiktok')->label('TikTok Followers')->numeric()->minValue(0)->helperText('Manual entry'),
+                    ])->columns(4),
+
+                    // === YOUTUBE VIDEOS ===
+                    SC\Section::make('YouTube videos')->compact()->collapsible()->collapsed()->schema([
+                        Forms\Components\Repeater::make('youtube_videos')
+                            ->label('Video URLs')
+                            ->addActionLabel('Add video')
+                            ->schema([
+                                Forms\Components\TextInput::make('url')->label('YouTube URL')->placeholder('https://www.youtube.com/watch?v=...')->url()->rule('url')->required(),
+                            ])
+                            ->default([])
+                            ->collapsed()
+                            ->columns(1),
+                    ]),
+
+                    // === CONTACT ===
+                    SC\Section::make('Contact & Management')->compact()->collapsible()->collapsed()->schema([
+                        SC\Grid::make(2)->schema([
+                            Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
+                            Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(190)->prefixIcon('heroicon-m-envelope'),
+                        ]),
+                        SC\Section::make('Manager contact')->compact()->collapsible()->schema([
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
+                                Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
+                                Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
+                            ]),
+                            SC\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
+                                Forms\Components\TextInput::make('manager_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
+                            ]),
+                        ]),
+                        SC\Section::make('Booking agent contact')->compact()->collapsible()->schema([
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
+                                Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
+                                Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
+                            ]),
+                            SC\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
+                                Forms\Components\TextInput::make('agent_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
+                            ]),
+                        ]),
+                        SC\Section::make('Booking Agency')->compact()->collapsible()->collapsed()->schema([
+                            SC\Grid::make(4)->schema([
+                                Forms\Components\TextInput::make('booking_agency.name')->label('Agency Name')->placeholder('e.g. Universal Music Romania'),
+                                Forms\Components\TextInput::make('booking_agency.email')->label('Email')->email()->placeholder('booking@agency.com'),
+                                Forms\Components\TextInput::make('booking_agency.phone')->label('Phone')->placeholder('+40 ...'),
+                                Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url()->placeholder('https://...'),
+                            ]),
+                        ]),
                     ]),
                 ]),
 
-            // === CONTENT ===
-            SC\Section::make('Content')
-                ->extraAttributes(['id' => 'artist-content'])
-                ->schema([
-                    TranslatableField::richEditor('bio_html', 'Bio')
-                        ->columnSpanFull(),
-                ])
-                ->columns(1),
+                // ========== RIGHT SIDEBAR (1/4) ==========
+                SC\Group::make()->columnSpan(1)->schema([
 
-            // === SOCIAL & IDs ===
-            SC\Section::make('Social & IDs')
-                ->extraAttributes(['id' => 'artist-social'])
-                ->schema([
-                    Forms\Components\TextInput::make('website')
-                        ->label('Website')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-globe-alt')
-                        ->placeholder('https://example.com'),
+                    // Artist Preview Card
+                    SC\Section::make('')->compact()->schema([
+                        Forms\Components\Placeholder::make('artist_preview')
+                            ->hiddenLabel()
+                            ->content(function (?Artist $record) {
+                                if (!$record || !$record->exists) return '';
+                                $image = $record->main_image_url
+                                    ? asset('storage/' . $record->main_image_url)
+                                    : 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=7F9CF5&background=EBF4FF';
+                                $location = collect([$record->city, $record->country])->filter()->join(', ') ?: '—';
+                                $badges = '';
+                                if ($record->is_active) {
+                                    $badges .= '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.15);color:#10B981;margin-right:4px;">✓ Active</span>';
+                                }
+                                $types = $record->artistTypes->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->filter();
+                                foreach ($types as $type) {
+                                    $badges .= '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#334155;color:#E2E8F0;margin-right:4px;">' . e($type) . '</span>';
+                                }
+                                return new \Illuminate\Support\HtmlString("
+                                    <div style='display:flex;gap:10px;align-items:center;'>
+                                        <img src='{$image}' alt='" . e($record->name) . "' style='width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #334155;'>
+                                        <div>
+                                            <div style='font-size:16px;font-weight:700;color:white;'>" . e($record->name) . "</div>
+                                            <div style='font-size:12px;color:#64748B;'>{$location}</div>
+                                        </div>
+                                    </div>
+                                    <div style='margin-top:10px;display:flex;flex-wrap:wrap;gap:4px;'>{$badges}</div>
+                                ");
+                            }),
 
-                    Forms\Components\TextInput::make('facebook_url')
-                        ->label('Facebook profile')
-                        ->default('https://www.facebook.com/')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
+                        Forms\Components\Toggle::make('is_active')
+                            ->label('Active')
+                            ->default(true)
+                            ->onColor('success')
+                            ->offColor('gray'),
+                    ]),
 
-                    Forms\Components\TextInput::make('instagram_url')
-                        ->label('Instagram profile')
-                        ->default('https://www.instagram.com/')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
-
-                    Forms\Components\TextInput::make('tiktok_url')
-                        ->label('TikTok profile')
-                        ->default('https://www.tiktok.com/@')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
-
-                    Forms\Components\TextInput::make('youtube_url')
-                        ->label('YouTube channel/page')
-                        ->default('https://www.youtube.com/')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
-
-                    Forms\Components\TextInput::make('youtube_id')
-                        ->label('YouTube ID')
-                        ->maxLength(190)
-                        ->helperText('Used to fetch channel stats & videos.'),
-
-                    Forms\Components\TextInput::make('spotify_url')
-                        ->label('Spotify profile')
-                        ->default('https://open.spotify.com/artist/')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
-
-                    Forms\Components\TextInput::make('spotify_id')
-                        ->label('Spotify ID')
-                        ->maxLength(190)
-                        ->helperText('Used to fetch Spotify stats & show playlist.'),
-
-                    Forms\Components\TextInput::make('twitter_url')
-                        ->label('Twitter / X profile')
-                        ->default('https://x.com/')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link'),
-
-                    Forms\Components\TextInput::make('wiki_url')
-                        ->label('Wikipedia page')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link')
-                        ->placeholder('https://en.wikipedia.org/wiki/...'),
-
-                    Forms\Components\TextInput::make('lastfm_url')
-                        ->label('Last.fm profile')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link')
-                        ->placeholder('https://www.last.fm/music/...'),
-
-                    Forms\Components\TextInput::make('itunes_url')
-                        ->label('iTunes / Apple Music')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link')
-                        ->placeholder('https://music.apple.com/...'),
-
-                    Forms\Components\TextInput::make('musicbrainz_url')
-                        ->label('MusicBrainz page')
-                        ->url()->rule('url')->maxLength(255)
-                        ->prefixIcon('heroicon-m-link')
-                        ->placeholder('https://musicbrainz.org/artist/...'),
-                ])
-                ->columns(2),
-
-            // === SOCIAL STATS ===
-            SC\Section::make('Social Stats')
-                ->extraAttributes(['id' => 'artist-social-stats'])
-                ->description('Stats are auto-fetched when YouTube ID or Spotify ID is saved')
-                ->schema([
-                    // YouTube Stats
-                    Forms\Components\TextInput::make('followers_youtube')
-                        ->label('YouTube Subscribers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->disabled()
-                        ->dehydrated(),
-
-                    Forms\Components\TextInput::make('youtube_total_views')
-                        ->label('YouTube Total Views')
-                        ->numeric()
-                        ->minValue(0)
-                        ->disabled()
-                        ->dehydrated(),
-
-                    // Spotify Stats
-                    Forms\Components\TextInput::make('spotify_monthly_listeners')
-                        ->label('Spotify Followers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->disabled()
-                        ->dehydrated(),
-
-                    Forms\Components\TextInput::make('spotify_popularity')
-                        ->label('Spotify Popularity')
-                        ->numeric()
-                        ->minValue(0)
-                        ->maxValue(100)
-                        ->disabled()
-                        ->dehydrated()
-                        ->helperText('0-100 score'),
-
-                    // Manual entry fields
-                    Forms\Components\TextInput::make('twitter_followers')
-                        ->label('Twitter / X Followers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->helperText('Manual entry'),
-
-                    Forms\Components\TextInput::make('followers_facebook')
-                        ->label('Facebook Followers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->helperText('Manual entry'),
-
-                    Forms\Components\TextInput::make('followers_instagram')
-                        ->label('Instagram Followers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->helperText('Manual entry'),
-
-                    Forms\Components\TextInput::make('followers_tiktok')
-                        ->label('TikTok Followers')
-                        ->numeric()
-                        ->minValue(0)
-                        ->helperText('Manual entry'),
-                ])
-                ->columns(4)
-                ->collapsible(),
-
-            // === MEDIA (cu validare dimensiuni minime) ===
-            SC\Section::make('Media')
-                ->extraAttributes(['id' => 'artist-media'])
-                ->schema([
-                    Forms\Components\FileUpload::make('main_image_url')
-                        ->label('Main image (horizontal)')
-                        ->image()
-                        ->directory('artists/hero')
-                        ->disk('public')->visibility('public')
-                        ->maxSize(4096)
-                        ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=1600,min_height=900'])
-                        ->helperText('Min 1600×900 px (JPG/PNG/WebP).')
-                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
-
-                    Forms\Components\FileUpload::make('logo_url')
-                        ->label('Logo (horizontal)')
-                        ->image()
-                        ->directory('artists/logo')
-                        ->disk('public')->visibility('public')
-                        ->maxSize(2048)
-                        ->rules(['image','mimes:png,webp,jpg,jpeg','dimensions:min_width=800,min_height=300'])
-                        ->helperText('Min 800×300 px (PNG/JPG/WebP).')
-                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
-
-                    Forms\Components\FileUpload::make('portrait_url')
-                        ->label('Portrait (vertical)')
-                        ->image()
-                        ->directory('artists/portrait')
-                        ->disk('public')->visibility('public')
-                        ->maxSize(4096)
-                        ->rules(['image','mimes:jpg,jpeg,png,webp','dimensions:min_width=900,min_height=1200'])
-                        ->helperText('Min 900×1200 px (JPG/PNG/WebP).')
-                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
-                ])
-                ->columns(3),
-
-            // === VIDEOS ===
-            SC\Section::make('YouTube videos')
-                ->extraAttributes(['id' => 'artist-videos'])
-                ->schema([
-                    Forms\Components\Repeater::make('youtube_videos')
-                        ->label('Video URLs')
-                        ->addActionLabel('Add video')
+                    // Artist Stats
+                    SC\Section::make('Artist Stats')
+                        ->icon('heroicon-o-chart-bar')
+                        ->compact()
+                        ->visible(fn (?Artist $record) => $record?->exists)
                         ->schema([
-                            Forms\Components\TextInput::make('url')
-                                ->label('YouTube URL')
-                                ->placeholder('https://www.youtube.com/watch?v=...')
-                                ->url()->rule('url')->required(),
-                        ])
-                        ->default([])
+                            Forms\Components\Placeholder::make('artist_stats_sidebar')
+                                ->hiddenLabel()
+                                ->content(function (?Artist $record) {
+                                    if (!$record) return '';
+                                    $eventsCount = $record->eventsLastYearCount();
+                                    $tickets = $record->ticketsSoldLastYear();
+                                    $sold = (int) ($tickets['sold'] ?? 0);
+                                    $listed = (int) ($tickets['listed'] ?? 0);
+                                    $avg = $tickets['avg_per_event'] ?? 0;
+                                    $price = ($tickets['avg_price'] !== null) ? number_format($tickets['avg_price'], 2) : '—';
+
+                                    $row = fn ($label, $value, $color = '#E2E8F0') => "
+                                        <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                            <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                            <span style='font-size:12px;font-weight:600;color:{$color};'>{$value}</span>
+                                        </div>";
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        $row('Events (12 months)', $eventsCount) .
+                                        $row('Tickets sold / listed', "{$sold} / {$listed}") .
+                                        $row('Avg per event', $avg) .
+                                        $row('Avg price', $price)
+                                    );
+                                }),
+                        ]),
+
+                    // Social Stats (visual)
+                    SC\Section::make('Social Stats')
+                        ->icon('heroicon-o-signal')
+                        ->compact()
                         ->collapsed()
-                        ->columns(1),
-                ])
-                ->columns(1),
-
-            // === TAXONOMIES (Type -> filtered Genres) ===
-            SC\Section::make('Taxonomies')
-                ->extraAttributes(['id' => 'artist-taxonomies'])
-                ->schema([
-                    Forms\Components\Select::make('artistTypes')
-                        ->label('Artist types')
-                        ->relationship('artistTypes', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->live()
-                        ->helperText('Select one or more types. Genres list will follow.'),
-
-                    Forms\Components\Select::make('artistGenres')
-                        ->label('Artist genres')
-                        ->relationship('artistGenres', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->helperText('Genres are filtered by selected types.')
-                        ->visible(fn (Get $get) => filled($get('artistTypes'))),
-                ])
-                ->columns(2),
-
-
-            // === OTHER DATA (locații în cascadă + contacte) ===
-            SC\Section::make('Other data')
-                ->extraAttributes(['id' => 'artist-other'])
-                ->schema([
-                    SC\Grid::make(3)->schema([
-                        Forms\Components\Select::make('country')
-                            ->label('Country')
-                            ->options(Locations::countries())
-                            ->searchable()
-                            ->live()
-                            ->preload(false),
-
-                        // State / County (dependent de country)
-                        Forms\Components\Select::make('state')
-                            ->label('State / County')
-                            ->options(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('country')
-                                ? Locations::states($get('country'))
-                                : [])
-                            ->searchable()
-                            ->live()
-                            ->preload(false),
-
-                        // City (dependent de country + state)
-                        Forms\Components\Select::make('city')
-                            ->label('City')
-                            ->options(fn (\Filament\Schemas\Components\Utilities\Get $get) =>
-                                ($get('country') && $get('state'))
-                                    ? Locations::cityOptions($get('country'), $get('state'))
-                                    : []
-                            )
-                            ->searchable()
-                            ->preload(false),
-                    ]),
-
-                    // Phone + Email pe un rând
-                    SC\Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('phone')
-                            ->label('Phone')
-                            ->maxLength(120)
-                            ->prefixIcon('heroicon-m-phone'),
-
-                        Forms\Components\TextInput::make('email')
-                            ->label('Email')
-                            ->email()
-                            ->maxLength(190)
-                            ->prefixIcon('heroicon-m-envelope'),
-                    ]),
-
-                    // Manager
-                    SC\Section::make("Manager contact")->schema([
-                        SC\Grid::make(3)->schema([
-                            Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
-                            Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
-                            Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
+                        ->visible(fn (?Artist $record) => $record?->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('social_stats_visual')
+                                ->hiddenLabel()
+                                ->content(function (?Artist $record) {
+                                    if (!$record) return '';
+                                    $fmt = fn (?int $n) => (!$n) ? '-' : ($n >= 1000000 ? round($n/1000000,1).'M' : ($n >= 1000 ? round($n/1000,1).'K' : (string)$n));
+                                    $stats = [
+                                        ['bg' => '#1DB954', 'value' => $record->spotify_monthly_listeners, 'label' => 'Spotify'],
+                                        ['bg' => '#FF0000', 'value' => $record->followers_youtube, 'label' => 'YouTube'],
+                                        ['bg' => '#E4405F', 'value' => $record->instagram_followers, 'label' => 'Instagram'],
+                                        ['bg' => '#1877F2', 'value' => $record->facebook_followers, 'label' => 'Facebook'],
+                                        ['bg' => '#000000', 'value' => $record->tiktok_followers, 'label' => 'TikTok'],
+                                    ];
+                                    $html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;'>";
+                                    foreach ($stats as $s) {
+                                        $v = $fmt($s['value']);
+                                        $html .= "<div style='text-align:center;'><div style='width:22px;height:22px;margin:0 auto 4px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:{$s['bg']};'><span style='font-size:10px;color:white;font-weight:700;'>" . strtoupper(mb_substr($s['label'], 0, 1)) . "</span></div><div style='font-size:13px;font-weight:700;color:white;'>{$v}</div><div style='font-size:10px;color:#64748B;'>{$s['label']}</div></div>";
+                                    }
+                                    $html .= "</div>";
+                                    return new \Illuminate\Support\HtmlString($html);
+                                }),
                         ]),
-                        SC\Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
-                            Forms\Components\TextInput::make('manager_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
+
+                    // Evenimente
+                    SC\Section::make('Evenimente')
+                        ->icon('heroicon-o-calendar')
+                        ->compact()
+                        ->visible(fn (?Artist $record) => $record?->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('events_stats')
+                                ->hiddenLabel()
+                                ->content(function (?Artist $record) {
+                                    if (!$record) return '';
+                                    $total = $record->events()->count();
+                                    $upcoming = $record->events()->where('event_date', '>=', now())->count();
+                                    $past = $record->events()->where('event_date', '<', now())->count();
+                                    $row = fn ($label, $value, $color = '#E2E8F0') => "
+                                        <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                            <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                            <span style='font-size:12px;font-weight:600;color:{$color};'>{$value}</span>
+                                        </div>";
+                                    return new \Illuminate\Support\HtmlString(
+                                        $row('Total', $total) .
+                                        $row('Upcoming', $upcoming, '#10B981') .
+                                        $row('Past', $past, '#64748B')
+                                    );
+                                }),
                         ]),
-                    ])->collapsible(),
 
-                    // Agent
-                    SC\Section::make("Booking agent contact")->schema([
-                        SC\Grid::make(3)->schema([
-                            Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
-                            Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
-                            Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
+                    // Informații
+                    SC\Section::make('Info')
+                        ->icon('heroicon-o-information-circle')
+                        ->compact()
+                        ->visible(fn (?Artist $record) => $record?->exists)
+                        ->schema([
+                            Forms\Components\Placeholder::make('meta_info')
+                                ->hiddenLabel()
+                                ->content(function (?Artist $record) {
+                                    if (!$record) return '';
+                                    $created = $record->created_at->format('d M Y');
+                                    $updated = $record->updated_at->diffForHumans();
+                                    $row = fn ($label, $value) => "
+                                        <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                            <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                            <span style='font-size:12px;font-weight:600;color:#E2E8F0;'>{$value}</span>
+                                        </div>";
+                                    return new \Illuminate\Support\HtmlString(
+                                        $row('Created', $created) .
+                                        $row('Modified', $updated) .
+                                        $row('ID', "<span style='font-family:monospace;color:#64748B;'>{$record->id}</span>")
+                                    );
+                                }),
                         ]),
-                        SC\Grid::make(2)->schema([
-                            Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120)->prefixIcon('heroicon-m-phone'),
-                            Forms\Components\TextInput::make('agent_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
-                        ]),
-                    ])->collapsible(),
-
-                    // Booking Agency (JSON)
-                    SC\Section::make("Booking Agency")->schema([
-                        SC\Grid::make(4)->schema([
-                            Forms\Components\TextInput::make('booking_agency.name')
-                                ->label('Agency Name')
-                                ->placeholder('e.g. Universal Music Romania'),
-                            Forms\Components\TextInput::make('booking_agency.email')
-                                ->label('Email')
-                                ->email()
-                                ->placeholder('booking@agency.com'),
-                            Forms\Components\TextInput::make('booking_agency.phone')
-                                ->label('Phone')
-                                ->placeholder('+40 ...'),
-                            Forms\Components\TextInput::make('booking_agency.website')
-                                ->label('Website')
-                                ->url()
-                                ->placeholder('https://...'),
-                        ]),
-                    ])->collapsible()
-                      ->collapsed(),
-                ])
-                ->columns(1),
-
-            // === STATS (read-only, followers separate pe canal) ===
-            SC\Section::make('Artist stats (read-only)')
-                ->extraAttributes(['id' => 'artist-stats'])
-                ->schema([
-                    Forms\Components\Placeholder::make('stats_events_last_year')
-                        ->label('Events in last 12 months')
-                        ->content(fn (?Artist $record) => $record ? (string) $record->eventsLastYearCount() : '—'),
-
-                    Forms\Components\Placeholder::make('stats_tickets')
-                        ->label('Tickets sold vs listed (last 12 months)')
-                        ->content(function (?Artist $record) {
-                            if (! $record) return '—';
-                            $row = $record->ticketsSoldLastYear();
-                            if (! $row) return '—';
-                            $sold   = (int) ($row['sold']   ?? 0);
-                            $listed = (int) ($row['listed'] ?? 0);
-                            return "{$sold} sold / {$listed} listed";
-                        }),
-
-                    Forms\Components\Placeholder::make('stats_avg')
-                        ->label('Avg tickets per event / Avg price')
-                        ->content(function (?Artist $record) {
-                            if (! $record) return '—';
-                            $row = $record->ticketsSoldLastYear();
-                            if (! $row) return '—';
-                            $avg = $row['avg_per_event'] ?? 0;
-                            $price = $row['avg_price'] !== null ? number_format($row['avg_price'], 2) : '—';
-                            return "{$avg} / {$price}";
-                        }),
-
-                    SC\Grid::make(5)->schema([
-                        Forms\Components\Placeholder::make('followers_fb')->label('Facebook followers')->content(fn($r)=>$r? (string)($r->facebook_followers ?? '—') : '—'),
-                        Forms\Components\Placeholder::make('followers_ig')->label('Instagram followers')->content(fn($r)=>$r? (string)($r->instagram_followers ?? '—') : '—'),
-                        Forms\Components\Placeholder::make('followers_tt')->label('TikTok followers')->content(fn($r)=>$r? (string)($r->tiktok_followers ?? '—') : '—'),
-                        Forms\Components\Placeholder::make('followers_sp')->label('Spotify listeners')->content(fn($r)=>$r? (string)($r->spotify_followers ?? '—') : '—'),
-                        Forms\Components\Placeholder::make('followers_yt')->label('YouTube subscribers')->content(fn($r)=>$r? (string)($r->youtube_followers ?? '—') : '—'),
-                    ]),
-                ])
-                ->columns(1),
-        ])->columns(1);
+                ]),
+            ]),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -459,7 +383,7 @@ class ArtistResource extends Resource
                     ->label('Name')
                     ->searchable()
                     ->sortable()
-                    ->url(fn (Artist $record) => static::getUrl('view', ['record' => $record->getKey()])),
+                    ->url(fn (Artist $record) => static::getUrl('edit', ['record' => $record->getKey()])),
 
                 Tables\Columns\TextColumn::make('completeness')
                     ->label('Info %')

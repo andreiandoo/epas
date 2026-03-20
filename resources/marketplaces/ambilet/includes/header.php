@@ -199,7 +199,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
-                <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo mobile:hidden <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                 
                 <svg class="hidden w-8 h-8" viewBox="0 0 48 48" fill="none">
                     <defs>
@@ -213,7 +213,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
                     <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
                 </svg>
-                <div class="text-[22px] font-extrabold flex">
+                <div class="text-[22px] font-extrabold flex mobile:hidden">
                     <span id="logoTextAm" class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
                     <span id="logoTextBilet" class="<?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
                 </div>

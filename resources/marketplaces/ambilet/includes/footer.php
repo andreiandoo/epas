@@ -80,21 +80,10 @@ $currentYear = date('Y');
             <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
                 <!-- Brand Column -->
                 <div class="text-center lg:col-span-1 lg:text-left">
-                    <a href="/" class="hidden items-center gap-2.5 mb-4">
-                        <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="w-auto h-10 brightness-0 invert">
-                    </a>
-                    <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8">
-                        <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
-                        <svg class="hidden w-10 h-10 mobile:h-12 mobile:w-12" viewBox="0 0 48 48" fill="none">
-                            <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
-                            <line x1="17" y1="15" x2="31" y2="15" stroke="#151f31" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
-                            <line x1="15" y1="19" x2="33" y2="19" stroke="#151f31" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
-                            <rect x="20" y="27" width="8" height="8" rx="1.5" fill="#151f31"></rect>
-                        </svg>
-                        <div class="text-[22px] font-extrabold flex mobile:text-[30px]">
-                            <span class="text-white/85">Am</span>
-                            <span class="text-white">Bilet</span>
-                        </div>
+                    <div class="items-center hidden gap-4 mobile:flex">
+                        <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8">
+                            <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                        </a>
                         <div class="hidden mobile:flex gap-2.5 justify-center lg:justify-start">
                             <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
                                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -120,7 +109,7 @@ $currentYear = date('Y');
                                 </svg>
                             </a>
                         </div>
-                    </a>
+                    </div>
                     <p class="mb-6 text-sm leading-relaxed text-white/90 mobile:px-6">
                         Platforma ta de încredere pentru bilete la evenimente. Descoperă concerte, festivaluri, spectacole și experiențe unice în toată România.
                     </p>
