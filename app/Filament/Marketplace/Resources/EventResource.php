@@ -3088,22 +3088,38 @@ class EventResource extends Resource
                         $query->orderByRaw('COALESCE(event_date, range_start_date) ' . $direction);
                     })
                     ->toggleable(),
-                Tables\Columns\IconColumn::make('is_published')
-                    ->boolean()
-                    ->label('Publicat')
-                    ->trueIcon('heroicon-o-eye')
-                    ->falseIcon('heroicon-o-eye-slash')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->toggleable(),
-                Tables\Columns\IconColumn::make('is_cancelled')
-                    ->boolean()
-                    ->label('Cancelled')
-                    ->toggleable(),
-                Tables\Columns\IconColumn::make('is_sold_out')
-                    ->boolean()
-                    ->label('Sold Out')
-                    ->toggleable(),
+                Tables\Columns\TextColumn::make('eventTypes_display')
+                    ->label('Categorie')
+                    ->badge()
+                    ->getStateUsing(fn (Event $record) => $record->eventTypes->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->implode(', '))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('eventGenres_display')
+                    ->label('Gen')
+                    ->badge()
+                    ->color('info')
+                    ->getStateUsing(fn (Event $record) => $record->eventGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\BadgeColumn::make('manifestation_type')
+                    ->label('Tip manifestare')
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'muzicala' => 'Muzicală',
+                        'artistica' => 'Artistică',
+                        'sportiva' => 'Sportivă',
+                        'altele' => 'Altele',
+                        default => '-',
+                    })
+                    ->colors([
+                        'primary' => 'muzicala',
+                        'success' => 'artistica',
+                        'warning' => 'sportiva',
+                        'gray' => 'altele',
+                    ])
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('artists_display')
+                    ->label('Artiști')
+                    ->getStateUsing(fn (Event $record) => $record->artists->pluck('name')->implode(', ') ?: '-')
+                    ->wrap()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status_display')
                     ->label('Status')
                     ->getStateUsing(function ($record) {
@@ -3135,6 +3151,22 @@ class EventResource extends Resource
                         'success' => 'active',
                         'gray' => 'ended',
                     ])
+                    ->toggleable(),
+                Tables\Columns\IconColumn::make('is_published')
+                    ->boolean()
+                    ->label('Publicat')
+                    ->trueIcon('heroicon-o-eye')
+                    ->falseIcon('heroicon-o-eye-slash')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->toggleable(),
+                Tables\Columns\IconColumn::make('is_cancelled')
+                    ->boolean()
+                    ->label('Cancelled')
+                    ->toggleable(),
+                Tables\Columns\IconColumn::make('is_sold_out')
+                    ->boolean()
+                    ->label('Sold Out')
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -3177,16 +3209,6 @@ class EventResource extends Resource
                         return $url;
                     })
                     ->openUrlInNewTab(),
-                Action::make('analytics')
-                    ->label('Analytics')
-                    ->icon('heroicon-o-presentation-chart-line')
-                    ->color('success')
-                    ->url(fn (Event $record) => static::getUrl('analytics', ['record' => $record])),
-                Action::make('statistics')
-                    ->label('')
-                    ->icon('heroicon-o-chart-bar')
-                    ->color('info')
-                    ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
                 Action::make('editTitle')
                     ->label('Editează titlul')
                     ->icon('heroicon-o-pencil-square')
@@ -3393,6 +3415,62 @@ class EventResource extends Resource
                                 }
 
                                 if (!empty($genreIds)) {
+                                    $record->eventGenres()->sync($genreIds);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('assign_manifestation_type')
+                        ->label('Setează tip manifestare')
+                        ->icon('heroicon-o-sparkles')
+                        ->form([
+                            Forms\Components\Select::make('manifestation_type')
+                                ->label('Tip manifestare')
+                                ->options([
+                                    'muzicala' => 'Muzicală',
+                                    'artistica' => 'Artistică',
+                                    'sportiva' => 'Sportivă',
+                                    'altele' => 'Altele',
+                                ])
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $record) {
+                                $record->update(['manifestation_type' => $data['manifestation_type']]);
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('assign_genres')
+                        ->label('Setează genuri eveniment')
+                        ->icon('heroicon-o-puzzle-piece')
+                        ->form([
+                            Forms\Components\Select::make('genre_ids')
+                                ->label('Genuri eveniment')
+                                ->options(function () {
+                                    return EventGenre::orderBy('name')
+                                        ->get()
+                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())]);
+                                })
+                                ->multiple()
+                                ->preload()
+                                ->searchable()
+                                ->required(),
+
+                            Forms\Components\Toggle::make('append')
+                                ->label('Adaugă la genurile existente')
+                                ->helperText('Dacă e dezactivat, înlocuiește genurile existente')
+                                ->default(true),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            $genreIds = $data['genre_ids'];
+                            $append = $data['append'] ?? true;
+
+                            foreach ($records as $record) {
+                                if ($append) {
+                                    $record->eventGenres()->syncWithoutDetaching($genreIds);
+                                } else {
                                     $record->eventGenres()->sync($genreIds);
                                 }
                             }

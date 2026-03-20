@@ -437,7 +437,7 @@
     class="space-y-3"
 >
     {{-- Toolbar --}}
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 px-3 pt-3">
         <button type="button" x-show="mode==='view'" x-on:click="enterAssign()"
             class="px-4 py-2 text-sm font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-200 border border-gray-600 transition-all">
             <svg class="w-4 h-4 inline -mt-0.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
@@ -457,7 +457,7 @@
     </div>
 
     {{-- Ticket type selector (assign mode only) --}}
-    <div x-show="mode==='assign'" x-cloak>
+    <div x-show="mode==='assign'" x-cloak class="px-3">
         <div class="flex flex-wrap items-center gap-2 p-3 bg-gray-800/60 border border-gray-700 rounded-lg">
             <span class="text-xs text-gray-400 mr-1">Selecteaz&#259; tip bilet, apoi click pe r&#226;nduri:</span>
             <template x-for="tt in TT" :key="tt.id">
@@ -476,7 +476,7 @@
     </div>
 
     {{-- Block seats toolbar (block mode only) --}}
-    <div x-show="mode==='block'" x-cloak>
+    <div x-show="mode==='block'" x-cloak class="px-3">
         <div class="flex flex-wrap items-center gap-3 p-3 bg-red-900/20 border border-red-800/40 rounded-lg">
             <span class="text-xs text-gray-300">Click pe locuri individuale pentru a le selecta:</span>
             <select x-model="blockAction" class="text-sm bg-gray-700 text-white border border-gray-600 rounded-lg px-3 py-1.5 focus:ring-1 focus:ring-red-500 focus:border-red-500">
@@ -502,7 +502,7 @@
     </div>
 
     {{-- SVG Map --}}
-    <div class="border rounded-lg overflow-hidden relative" style="background-color:#ffffff;border-color:#d1d5db">
+    <div class="border overflow-hidden relative" style="background-color:#ffffff;border-color:#d1d5db;border-radius:0">
         <svg x-ref="svg"
             viewBox="0 0 {{ $canvasW }} {{ $canvasH }}"
             preserveAspectRatio="xMidYMid meet"
@@ -589,7 +589,7 @@
     </div>
 
     {{-- Legend --}}
-    <div class="flex flex-wrap gap-2 text-xs">
+    <div class="flex flex-wrap gap-2 text-xs px-3">
         <template x-for="tt in TT" :key="'l'+tt.id">
             <span class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-gray-800 border border-gray-700">
                 <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="`background:${tt.color}`"></span>
@@ -627,7 +627,7 @@
     </div>
 
     {{-- Assignment summary --}}
-    <div class="border border-gray-700 rounded-lg overflow-hidden">
+    <div class="border border-gray-700 rounded-lg overflow-hidden mx-3">
         <div class="bg-gray-800/50 px-4 py-2 border-b border-gray-700">
             <span class="text-sm font-medium text-gray-300">R&#226;nduri asignate per tip bilet</span>
         </div>
@@ -657,7 +657,7 @@
     </div>
 
     {{-- Blocked seats summary --}}
-    <div class="border border-gray-700 rounded-lg overflow-hidden" x-show="blockedSummary.total > 0">
+    <div class="border border-gray-700 rounded-lg overflow-hidden mx-3" x-show="blockedSummary.total > 0">
         <div class="bg-gray-800/50 px-4 py-2 border-b border-gray-700 flex items-center justify-between">
             <span class="text-sm font-medium text-gray-300">Locuri blocate</span>
             <span class="text-xs text-gray-500" x-text="blockedSummary.total + ' locuri'"></span>
