@@ -386,7 +386,31 @@
              TAB 8: NOTES
              ══════════════════════════════════════════════════════════ --}}
         <div x-show="tab === 'notes'" x-cloak>
-            {{ $this->form }}
+            <div class="p-4 rounded-xl bg-gray-800/40">
+                <h3 class="mb-3 text-sm font-semibold text-gray-300">Tags & Notes</h3>
+                <div class="mb-3">
+                    <label class="block mb-1 text-xs font-medium text-gray-400">Tags</label>
+                    <div class="text-sm text-gray-200">
+                        @if(!empty($c->tags))
+                            @foreach((array) $c->tags as $tag)
+                                <span class="inline-block px-2 py-0.5 mr-1 mb-1 text-xs rounded bg-primary-500/20 text-primary-300">{{ e($tag) }}</span>
+                            @endforeach
+                        @else
+                            <span class="text-gray-500">—</span>
+                        @endif
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-1 text-xs font-medium text-gray-400">Notes</label>
+                    <div class="text-sm text-gray-200 whitespace-pre-wrap">{{ e($c->notes ?? '') ?: '—' }}</div>
+                </div>
+                <div class="mt-4">
+                    <a href="{{ \App\Filament\Resources\CoreCustomerResource::getUrl('edit', ['record' => $c]) }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 transition-colors">
+                        <x-filament::icon icon="heroicon-o-pencil-square" class="w-3.5 h-3.5" />
+                        Edit Tags & Notes
+                    </a>
+                </div>
+            </div>
         </div>
 
     </div>

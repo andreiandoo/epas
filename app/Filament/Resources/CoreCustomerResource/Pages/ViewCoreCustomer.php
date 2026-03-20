@@ -7,13 +7,17 @@ use App\Models\MarketplaceCustomer;
 use App\Models\Platform\CoreCustomer;
 use App\Services\CustomerInsightsService;
 use Filament\Actions;
-use Filament\Resources\Pages\ViewRecord;
+use Filament\Resources\Pages\Page;
 
-class ViewCoreCustomer extends ViewRecord
+class ViewCoreCustomer extends Page
 {
     protected static string $resource = CoreCustomerResource::class;
 
-    // MarketplaceCustomer insights data (loaded if linked customer found)
+    protected string $view = 'filament.resources.core-customer.pages.view-core-customer';
+
+    public CoreCustomer $record;
+
+    // MarketplaceCustomer insights data
     public ?MarketplaceCustomer $linkedMarketplaceCustomer = null;
     public array $lifetimeStats = [];
     public array $priceRange = [];
@@ -48,13 +52,10 @@ class ViewCoreCustomer extends ViewRecord
 
     public function mount($record): void
     {
-        parent::mount($record);
-
-        /** @var CoreCustomer $coreCustomer */
-        $coreCustomer = $this->record;
+        $this->record = CoreCustomer::findOrFail($record);
 
         // Try to find linked MarketplaceCustomer via email
-        $email = $coreCustomer->email;
+        $email = $this->record->email;
         if ($email) {
             $this->linkedMarketplaceCustomer = MarketplaceCustomer::where('email', strtolower(trim($email)))->first();
         }
@@ -107,11 +108,6 @@ class ViewCoreCustomer extends ViewRecord
         }
     }
 
-    public function getView(): string
-    {
-        return 'filament.resources.core-customer.pages.view-core-customer';
-    }
-
     public function getTitle(): string
     {
         $name = $this->record->full_name ?? '';
@@ -122,8 +118,10 @@ class ViewCoreCustomer extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\EditAction::make()
-                ->label('Edit Tags'),
+            Actions\Action::make('edit')
+                ->label('Edit Tags & Notes')
+                ->icon('heroicon-o-pencil-square')
+                ->url(fn () => CoreCustomerResource::getUrl('edit', ['record' => $this->record])),
         ];
     }
 }
