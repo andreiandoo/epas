@@ -233,6 +233,7 @@ class MarketplaceCustomerAdminResource extends Resource
     {
         return [
             'index' => \App\Filament\Resources\MarketplaceCustomerAdminResource\Pages\ListMarketplaceCustomers::route('/'),
+            'view' => \App\Filament\Resources\MarketplaceCustomerAdminResource\Pages\ViewMarketplaceCustomer::route('/{record}'),
             'edit' => \App\Filament\Resources\MarketplaceCustomerAdminResource\Pages\EditMarketplaceCustomer::route('/{record}/edit'),
         ];
     }

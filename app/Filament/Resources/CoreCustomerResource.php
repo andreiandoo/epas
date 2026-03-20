@@ -238,7 +238,7 @@ class CoreCustomerResource extends Resource
                                 ->schema([
                 SC\Section::make('Engagement Metrics')
                     ->icon('heroicon-o-cursor-arrow-rays')
-                    ->collapsed()
+                    
                     ->schema([
                         Forms\Components\Placeholder::make('display_first_seen')
                             ->label('First Seen')
@@ -300,7 +300,7 @@ class CoreCustomerResource extends Resource
                                 ->schema([
                 SC\Section::make('Attribution')
                     ->icon('heroicon-o-arrow-trending-up')
-                    ->collapsed()
+                    
                     ->schema([
                         SC\Fieldset::make('First Touch')
                             ->schema([
@@ -397,7 +397,7 @@ class CoreCustomerResource extends Resource
                                 ->schema([
                 SC\Section::make('Cross-Tenant, Marketplace & Device')
                     ->icon('heroicon-o-device-phone-mobile')
-                    ->collapsed()
+                    
                     ->schema([
                         SC\Fieldset::make('Marketplace Clients')
                             ->schema([
@@ -478,7 +478,7 @@ class CoreCustomerResource extends Resource
                                 ->schema([
                 SC\Section::make('Email Engagement')
                     ->icon('heroicon-o-envelope')
-                    ->collapsed()
+                    
                     ->schema([
                         Forms\Components\Placeholder::make('display_email_subscribed')
                             ->label('Subscribed')
@@ -518,7 +518,7 @@ class CoreCustomerResource extends Resource
 
                 SC\Section::make('Consent & Privacy')
                     ->icon('heroicon-o-shield-check')
-                    ->collapsed()
+                    
                     ->schema([
                         Forms\Components\Placeholder::make('display_marketing_consent')
                             ->label('Marketing Consent')
@@ -556,7 +556,7 @@ class CoreCustomerResource extends Resource
                                 ->schema([
                 SC\Section::make('External Integrations')
                     ->icon('heroicon-o-link')
-                    ->collapsed()
+                    
                     ->schema([
                         Forms\Components\Placeholder::make('display_stripe_id')
                             ->label('Stripe Customer ID')
@@ -708,7 +708,7 @@ class CoreCustomerResource extends Resource
                             ]),
                     ]), // end Sidebar Group
                 ]), // end Grid
-            ]);
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table
