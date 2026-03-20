@@ -766,7 +766,7 @@ canvas{width:100% !important; height:240px !important;}
                                 <td style="color:#22c55e;">{{ number_format($ue['revenue_sold'], 0) }} RON</td>
                                 <td>
                                     @if($ue['days_until'] !== null)
-                                        <span class="badge" style="{{ $ue['days_until'] <= 7 ? 'background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);color:#ef4444;' : '' }}">{{ $ue['days_until'] }}d</span>
+                                        <span class="badge" style="{{ $ue['days_until'] <= 7 ? 'background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);color:#ef4444;' : '' }}">{{ round($ue['days_until']) }}d</span>
                                     @else — @endif
                                 </td>
                                 <td style="font-size:12px;color:var(--muted);">

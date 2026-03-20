@@ -113,7 +113,7 @@ class ViewArtist extends Page
             ->get();
 
         // === ARTIST 360 ANALYTICS (cached 5 min) ===
-        $cacheKey = "artist_360_{$this->record->id}";
+        $cacheKey = "artist_360_v2_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }

@@ -251,26 +251,19 @@ class ArtistResource extends Resource
                                 ->label('Avg Revenue per Concert (calculated)')
                                 ->content(function (?Artist $record) {
                                     if (!$record || !$record->exists) return '—';
-                                    $avg = \Illuminate\Support\Facades\DB::table('orders as o')
+                                    $perEvent = \Illuminate\Support\Facades\DB::table('orders as o')
                                         ->join('tickets as t', 't.order_id', '=', 'o.id')
-                                        ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-                                        ->join('event_artist as ea', 'ea.event_id', '=', 'tt.event_id')
+                                        ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                                        ->join('event_artist as ea', function ($join) {
+                                            $join->on('ea.event_id', '=', \Illuminate\Support\Facades\DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'));
+                                        })
                                         ->where('ea.artist_id', $record->id)
                                         ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-                                        ->select(\Illuminate\Support\Facades\DB::raw('AVG(event_total) as avg_revenue'))
-                                        ->fromSub(
-                                            \Illuminate\Support\Facades\DB::table('orders as o2')
-                                                ->join('tickets as t2', 't2.order_id', '=', 'o2.id')
-                                                ->join('ticket_types as tt2', 'tt2.id', '=', 't2.ticket_type_id')
-                                                ->join('event_artist as ea2', 'ea2.event_id', '=', 'tt2.event_id')
-                                                ->where('ea2.artist_id', $record->id)
-                                                ->whereIn('o2.status', ['paid', 'confirmed', 'completed'])
-                                                ->select('ea2.event_id', \Illuminate\Support\Facades\DB::raw('SUM(o2.total) as event_total'))
-                                                ->groupBy('ea2.event_id'),
-                                            'per_event'
-                                        )
-                                        ->value('avg_revenue');
-                                    if (!$avg) return '—';
+                                        ->select('ea.event_id', \Illuminate\Support\Facades\DB::raw('SUM(o.total) as event_total'))
+                                        ->groupBy('ea.event_id')
+                                        ->get();
+                                    if ($perEvent->isEmpty()) return '—';
+                                    $avg = $perEvent->avg('event_total');
                                     return new \Illuminate\Support\HtmlString(
                                         '<span style="font-size:18px;font-weight:700;color:#22c55e;">' . number_format((float)$avg, 2) . ' RON</span>'
                                     );
