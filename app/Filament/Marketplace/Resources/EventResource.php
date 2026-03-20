@@ -3461,21 +3461,11 @@ class EventResource extends Resource
                                 ->searchable()
                                 ->required(),
 
-                            Forms\Components\Toggle::make('append')
-                                ->label('Adaugă la genurile existente')
-                                ->helperText('Dacă e dezactivat, înlocuiește genurile existente')
-                                ->default(true),
                         ])
                         ->action(function (Collection $records, array $data) {
                             $genreIds = $data['genre_ids'];
-                            $append = $data['append'] ?? true;
-
                             foreach ($records as $record) {
-                                if ($append) {
-                                    $record->eventGenres()->syncWithoutDetaching($genreIds);
-                                } else {
-                                    $record->eventGenres()->sync($genreIds);
-                                }
+                                $record->eventGenres()->syncWithoutDetaching($genreIds);
                             }
                         })
                         ->deselectRecordsAfterCompletion(),
@@ -3497,39 +3487,24 @@ class EventResource extends Resource
                                 ->searchable()
                                 ->required(),
 
-                            Forms\Components\Toggle::make('append')
-                                ->label('Adaugă la artiștii existenți')
-                                ->helperText('Dacă e dezactivat, înlocuiește artiștii existenți')
-                                ->default(true),
                         ])
                         ->action(function (Collection $records, array $data) {
                             $artistIds = $data['artist_ids'];
-                            $append = $data['append'] ?? true;
 
                             foreach ($records as $record) {
-                                if ($append) {
-                                    $existing = $record->artists()->pluck('artist_id')->toArray();
-                                    $newIds = array_diff($artistIds, $existing);
-                                    if (!empty($newIds)) {
-                                        $maxSort = DB::table('event_artist')
-                                            ->where('event_id', $record->id)
-                                            ->max('sort_order') ?? 0;
+                                $existing = $record->artists()->pluck('artist_id')->toArray();
+                                $newIds = array_diff($artistIds, $existing);
+                                if (!empty($newIds)) {
+                                    $maxSort = DB::table('event_artist')
+                                        ->where('event_id', $record->id)
+                                        ->max('sort_order') ?? 0;
 
-                                        $pivotData = [];
-                                        foreach ($newIds as $id) {
-                                            $maxSort++;
-                                            $pivotData[$id] = ['sort_order' => $maxSort];
-                                        }
-                                        $record->artists()->attach($pivotData);
-                                    }
-                                } else {
                                     $pivotData = [];
-                                    $sort = 0;
-                                    foreach ($artistIds as $id) {
-                                        $sort++;
-                                        $pivotData[$id] = ['sort_order' => $sort];
+                                    foreach ($newIds as $id) {
+                                        $maxSort++;
+                                        $pivotData[$id] = ['sort_order' => $maxSort];
                                     }
-                                    $record->artists()->sync($pivotData);
+                                    $record->artists()->attach($pivotData);
                                 }
                             }
                         })
