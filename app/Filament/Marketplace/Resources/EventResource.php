@@ -3329,6 +3329,27 @@ class EventResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
 
+                    BulkAction::make('bulk_cancel')
+                        ->label('Marchează ca anulate')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription('Evenimentele selectate vor fi marcate ca anulate.')
+                        ->action(function (Collection $records) {
+                            $records->each(fn ($record) => $record->update(['is_cancelled' => true, 'cancelled_at' => now()]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
+                    BulkAction::make('bulk_uncancel')
+                        ->label('Anulează marcarea de anulat')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $records->each(fn ($record) => $record->update(['is_cancelled' => false, 'cancelled_at' => null]));
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     BulkAction::make('change_organizer')
                         ->label('Schimbă organizator')
                         ->icon('heroicon-o-user-group')
@@ -3491,7 +3512,34 @@ class EventResource extends Resource
                         ->action(function (Collection $records, array $data) {
                             $artistIds = $data['artist_ids'];
 
+                            // Collect genre IDs from all selected artists
+                            $artistGenreIds = \App\Models\ArtistGenre::withoutGlobalScopes()
+                                ->whereHas('artists', fn ($q) => $q->whereIn('artists.id', $artistIds))
+                                ->pluck('id')
+                                ->toArray();
+
+                            // Map artist genres to event genres by slug/name matching
+                            $eventGenreIds = [];
+                            if (!empty($artistGenreIds)) {
+                                $artistGenres = \App\Models\ArtistGenre::withoutGlobalScopes()
+                                    ->whereIn('id', $artistGenreIds)
+                                    ->get();
+                                foreach ($artistGenres as $ag) {
+                                    $agName = $ag->getTranslation('name', 'en') ?: $ag->getTranslation('name', 'ro');
+                                    $agSlug = $ag->slug;
+                                    // Find matching event genre by slug or name
+                                    $match = EventGenre::where('slug', $agSlug)
+                                        ->orWhereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($agName) . '%'])
+                                        ->first();
+                                    if ($match) {
+                                        $eventGenreIds[] = $match->id;
+                                    }
+                                }
+                                $eventGenreIds = array_unique($eventGenreIds);
+                            }
+
                             foreach ($records as $record) {
+                                // Attach artists
                                 $existing = $record->artists()->pluck('artist_id')->toArray();
                                 $newIds = array_diff($artistIds, $existing);
                                 if (!empty($newIds)) {
@@ -3506,6 +3554,11 @@ class EventResource extends Resource
                                     }
                                     $record->artists()->attach($pivotData);
                                 }
+
+                                // Copy artist genres to event genres
+                                if (!empty($eventGenreIds)) {
+                                    $record->eventGenres()->syncWithoutDetaching($eventGenreIds);
+                                }
                             }
                         })
                         ->deselectRecordsAfterCompletion(),
@@ -3515,6 +3568,10 @@ class EventResource extends Resource
             ])
             ->recordUrl(null)
             ->recordClasses(function (Event $record) {
+                if ($record->is_cancelled) {
+                    return 'event-row-cancelled';
+                }
+
                 if (!$record->is_published) {
                     return 'event-row-unpublished';
                 }

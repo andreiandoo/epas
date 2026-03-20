@@ -17,8 +17,28 @@ class ListEvents extends ListRecords
 
     public function getHeading(): string|Htmlable
     {
-        $count = number_format(static::getResource()::getEloquentQuery()->count());
+        $query = static::getResource()::getEloquentQuery();
+        $count = number_format($query->count());
         return new HtmlString("Evenimente <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
+    }
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        $query = static::getResource()::getEloquentQuery();
+        $noVenue = $query->clone()->whereNull('venue_id')->count();
+        $noArtists = $query->clone()->whereDoesntHave('artists')->count();
+        $noCategory = $query->clone()->whereNull('marketplace_event_category_id')->count();
+        $noGenre = $query->clone()->whereDoesntHave('eventGenres')->count();
+
+        $warnings = [];
+        if ($noVenue > 0) $warnings[] = "<span class='text-amber-500'>{$noVenue} fără venue</span>";
+        if ($noArtists > 0) $warnings[] = "<span class='text-amber-500'>{$noArtists} fără artiști</span>";
+        if ($noCategory > 0) $warnings[] = "<span class='text-amber-500'>{$noCategory} fără categorie</span>";
+        if ($noGenre > 0) $warnings[] = "<span class='text-amber-500'>{$noGenre} fără gen</span>";
+
+        if (empty($warnings)) return null;
+
+        return new HtmlString('<span class="text-xs">' . implode(' · ', $warnings) . '</span>');
     }
 
     public function mount(): void
