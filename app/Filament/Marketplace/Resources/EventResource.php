@@ -3487,8 +3487,9 @@ class EventResource extends Resource
                             Forms\Components\Select::make('artist_ids')
                                 ->label('Artiști')
                                 ->options(function () {
-                                    return Artist::orderBy('name')
-                                        ->limit(500)
+                                    return Artist::withoutGlobalScopes()
+                                        ->where('is_active', true)
+                                        ->orderBy('name')
                                         ->pluck('name', 'id');
                                 })
                                 ->multiple()
