@@ -275,12 +275,12 @@
 
     {{-- Chart.js for Monthly Orders --}}
     @if(!empty($monthlyChart['labels']))
-        @push('scripts')
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 const ctx = document.getElementById('mpProfileMonthlyChart');
                 if (!ctx) return;
+                if (typeof Chart === 'undefined') return;
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -320,5 +320,4 @@
                 });
             });
         </script>
-        @endpush
     @endif

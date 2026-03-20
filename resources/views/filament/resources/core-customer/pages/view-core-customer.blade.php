@@ -9,7 +9,7 @@
         $fmtInt = fn ($v) => number_format((int) ($v ?? 0));
     @endphp
 
-    <div x-data="{ tab: 'overview' }" class="space-y-6">
+    <div x-data="{ tab: 'overview' }" class="space-y-6" wire:ignore.self>
         {{-- UNIFIED TAB NAVIGATION --}}
         <div class="flex flex-wrap gap-1 pb-1 border-b border-gray-700">
             @foreach([
