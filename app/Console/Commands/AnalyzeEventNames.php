@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 
 class AnalyzeEventNames extends Command
 {
-    protected $signature = 'events:analyze-names {--type=both : venues, artists, or both}';
+    protected $signature = 'events:analyze-names {--type=both : venues, artists, or both} {--export : Export results to CSV files in storage/app}';
     protected $description = 'Analyze event titles for venue/artist names';
 
     public function handle(): int
@@ -100,6 +100,11 @@ class AnalyzeEventNames extends Command
             $this->info('Total venue names found: ' . count($results));
             $totalMatches = array_sum(array_column($results, 'matches'));
             $this->info("Total event-venue matches: {$totalMatches}");
+
+            if ($this->option('export')) {
+                $this->exportCsv('venues_in_events.csv', ['Venue Name', 'Venue ID', 'Events Matched'],
+                    array_map(fn ($r) => [$r['name'], $r['venue_id'], $r['matches']], $results));
+            }
         }
 
         // Also find @ patterns
@@ -129,6 +134,10 @@ class AnalyzeEventNames extends Command
             }
             $this->table(['Location after @', 'Count'], $rows);
             $this->info('Unique locations after @: ' . count($atPatterns));
+
+            if ($this->option('export')) {
+                $this->exportCsv('locations_after_at.csv', ['Location after @', 'Count'], $rows);
+            }
         }
     }
 
@@ -183,6 +192,23 @@ class AnalyzeEventNames extends Command
             $this->info('Total artist names found: ' . count($results));
             $totalMatches = array_sum(array_column($results, 'matches'));
             $this->info("Total event-artist matches: {$totalMatches}");
+
+            if ($this->option('export')) {
+                $this->exportCsv('artists_in_events.csv', ['Artist Name', 'Artist ID', 'Events Matched'],
+                    array_map(fn ($r) => [$r['name'], $r['artist_id'], $r['matches']], $results));
+            }
         }
+    }
+
+    private function exportCsv(string $filename, array $headers, array $rows): void
+    {
+        $path = storage_path("app/{$filename}");
+        $fp = fopen($path, 'w');
+        fputcsv($fp, $headers);
+        foreach ($rows as $row) {
+            fputcsv($fp, $row);
+        }
+        fclose($fp);
+        $this->info("Exported to: {$path}");
     }
 }
