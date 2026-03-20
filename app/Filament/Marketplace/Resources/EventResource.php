@@ -3027,7 +3027,10 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->searchable()
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->url(fn (Event $record) => $record->marketplace_organizer_id
+                        ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
+                        : null),
                 Tables\Columns\TextColumn::make('venue_id')
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
