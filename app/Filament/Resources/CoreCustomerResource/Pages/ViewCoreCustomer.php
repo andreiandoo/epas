@@ -132,11 +132,6 @@ class ViewCoreCustomer extends Page
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\Action::make('edit')
-                ->label('Edit Tags & Notes')
-                ->icon('heroicon-o-pencil-square')
-                ->url(fn () => CoreCustomerResource::getUrl('edit', ['record' => $this->recordId])),
-        ];
+        return [];
     }
 }
