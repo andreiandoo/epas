@@ -1,6 +1,15 @@
 /* EPAS Admin Panel Custom Styles */
 
 /* Quick Edit pencil icon on event title hover */
+.ep-title-cell .ep-title-link {
+    font-weight: 600;
+    text-decoration: none;
+    color: inherit;
+}
+.ep-title-cell .ep-title-link:hover {
+    color: var(--primary-400, #60a5fa);
+    text-decoration: none;
+}
 .ep-title-cell .ep-title-edit {
     display: inline-flex;
     align-items: center;
