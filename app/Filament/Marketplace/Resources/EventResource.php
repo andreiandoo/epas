@@ -3004,7 +3004,42 @@ class EventResource extends Resource
                         $query->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
                     })
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->action(
+                        Tables\Actions\Action::make('editTitle')
+                            ->label('Edit title')
+                            ->icon('heroicon-o-pencil-square')
+                            ->modalHeading('Editează titlul')
+                            ->modalWidth('md')
+                            ->modalSubmitActionLabel('Salvează')
+                            ->fillForm(fn (Event $record) => [
+                                'title_ro' => $record->getTranslation('title', 'ro'),
+                                'title_en' => $record->getTranslation('title', 'en'),
+                            ])
+                            ->form([
+                                Forms\Components\TextInput::make('title_ro')
+                                    ->label('Titlu (RO)')
+                                    ->required()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('title_en')
+                                    ->label('Title (EN)')
+                                    ->maxLength(255),
+                            ])
+                            ->action(function (Event $record, array $data): void {
+                                if (!empty($data['title_ro'])) {
+                                    $record->setTranslation('title', 'ro', $data['title_ro']);
+                                }
+                                if (!empty($data['title_en'])) {
+                                    $record->setTranslation('title', 'en', $data['title_en']);
+                                }
+                                $record->save();
+
+                                \Filament\Notifications\Notification::make()
+                                    ->success()
+                                    ->title('Titlu actualizat')
+                                    ->send();
+                            })
+                    ),
                 Tables\Columns\IconColumn::make('seating_layout_id')
                     ->label('Seating')
                     ->boolean()
