@@ -3330,24 +3330,27 @@ class EventResource extends Resource
                         })
                         ->deselectRecordsAfterCompletion(),
 
-                    BulkAction::make('bulk_cancel')
-                        ->label('Marchează ca anulate')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('danger')
-                        ->requiresConfirmation()
-                        ->modalDescription('Evenimentele selectate vor fi marcate ca anulate.')
-                        ->action(function (Collection $records) {
-                            $records->each(fn ($record) => $record->update(['is_cancelled' => true, 'cancelled_at' => now()]));
-                        })
-                        ->deselectRecordsAfterCompletion(),
-
-                    BulkAction::make('bulk_uncancel')
-                        ->label('Anulează marcarea de anulat')
-                        ->icon('heroicon-o-arrow-uturn-left')
-                        ->color('gray')
-                        ->requiresConfirmation()
-                        ->action(function (Collection $records) {
-                            $records->each(fn ($record) => $record->update(['is_cancelled' => false, 'cancelled_at' => null]));
+                    BulkAction::make('change_status')
+                        ->label('Schimbă status')
+                        ->icon('heroicon-o-arrow-path')
+                        ->form([
+                            Forms\Components\Select::make('status')
+                                ->label('Status')
+                                ->options([
+                                    'active' => 'Activ',
+                                    'cancelled' => 'Anulat',
+                                    'ended' => 'Încheiat',
+                                ])
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $record) {
+                                match ($data['status']) {
+                                    'cancelled' => $record->update(['is_cancelled' => true, 'cancelled_at' => now()]),
+                                    'ended' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'archived']),
+                                    'active' => $record->update(['is_cancelled' => false, 'cancelled_at' => null, 'status' => 'active']),
+                                };
+                            }
                         })
                         ->deselectRecordsAfterCompletion(),
 
