@@ -517,7 +517,9 @@ const ArtistPage = {
 
         var bioRo = translations?.ro || '';
         var bioEn = translations?.en || '';
-        var hasBoth = bioRo && bioEn;
+        // Strip HTML tags and whitespace to check for actual content
+        var stripHtml = function(html) { var tmp = document.createElement('div'); tmp.innerHTML = html; return (tmp.textContent || tmp.innerText || '').trim(); };
+        var hasBoth = stripHtml(bioRo) && stripHtml(bioEn);
 
         if (hasBoth) {
             // Tabbed layout with RO and EN
