@@ -5,11 +5,13 @@ namespace App\Filament\Marketplace\Resources\MarketplaceCustomerResource\Pages;
 use App\Filament\Marketplace\Resources\MarketplaceCustomerResource;
 use App\Models\MarketplaceCustomer;
 use App\Services\CustomerInsightsService;
-use Filament\Resources\Pages\ViewRecord;
+use Filament\Resources\Pages\Page;
 
-class ViewMarketplaceCustomer extends ViewRecord
+class ViewMarketplaceCustomer extends Page
 {
     protected static string $resource = MarketplaceCustomerResource::class;
+
+    public MarketplaceCustomer $record;
 
     // ─── Data exposed to blade ────────────────────────────────────
     public array $lifetimeStats = [];
@@ -44,7 +46,7 @@ class ViewMarketplaceCustomer extends ViewRecord
 
     public function mount($record): void
     {
-        parent::mount($record);
+        $this->record = MarketplaceCustomer::findOrFail($record);
 
         /** @var MarketplaceCustomer $customer */
         $customer = $this->record;

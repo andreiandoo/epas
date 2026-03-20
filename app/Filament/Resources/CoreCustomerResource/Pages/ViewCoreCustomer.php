@@ -15,10 +15,10 @@ class ViewCoreCustomer extends Page
 
     protected string $view = 'filament.resources.core-customer.pages.view-core-customer';
 
-    public CoreCustomer $record;
+    public int $recordId;
 
     // MarketplaceCustomer insights data
-    public ?MarketplaceCustomer $linkedMarketplaceCustomer = null;
+    public ?int $linkedMarketplaceCustomerId = null;
     public array $lifetimeStats = [];
     public array $priceRange = [];
     public array $orderStatusBreakdown = [];
@@ -50,17 +50,31 @@ class ViewCoreCustomer extends Page
     public bool $acceptsMarketingDisplay = false;
     public bool $hasMarketplaceData = false;
 
+    public function getRecordProperty(): CoreCustomer
+    {
+        return CoreCustomer::findOrFail($this->recordId);
+    }
+
+    public function getLinkedMarketplaceCustomerProperty(): ?MarketplaceCustomer
+    {
+        return $this->linkedMarketplaceCustomerId
+            ? MarketplaceCustomer::find($this->linkedMarketplaceCustomerId)
+            : null;
+    }
+
     public function mount($record): void
     {
-        $this->record = CoreCustomer::findOrFail($record);
+        $this->recordId = (int) $record;
+        $coreCustomer = $this->record;
 
         // Try to find linked MarketplaceCustomer via email
-        $email = $this->record->email;
-        if ($email) {
-            $this->linkedMarketplaceCustomer = MarketplaceCustomer::where('email', strtolower(trim($email)))->first();
+        $email = $coreCustomer->email;
+        if ($email && is_string($email)) {
+            $mkCustomer = MarketplaceCustomer::where('email', strtolower(trim($email)))->first();
+            $this->linkedMarketplaceCustomerId = $mkCustomer?->id;
         }
 
-        if ($this->linkedMarketplaceCustomer) {
+        if ($this->linkedMarketplaceCustomerId) {
             $this->hasMarketplaceData = true;
             $customer = $this->linkedMarketplaceCustomer;
 
@@ -110,8 +124,9 @@ class ViewCoreCustomer extends Page
 
     public function getTitle(): string
     {
-        $name = $this->record->full_name ?? '';
-        $label = $name !== '' ? $name : ($this->record->email ?? 'Customer');
+        $c = $this->record;
+        $name = $c->full_name ?? '';
+        $label = $name !== '' ? $name : ($c->email ?? 'Customer');
         return "Customer: {$label}";
     }
 
@@ -121,7 +136,7 @@ class ViewCoreCustomer extends Page
             Actions\Action::make('edit')
                 ->label('Edit Tags & Notes')
                 ->icon('heroicon-o-pencil-square')
-                ->url(fn () => CoreCustomerResource::getUrl('edit', ['record' => $this->record])),
+                ->url(fn () => CoreCustomerResource::getUrl('edit', ['record' => $this->recordId])),
         ];
     }
 }
