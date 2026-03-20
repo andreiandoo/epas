@@ -78,7 +78,13 @@ const ArtistPage = {
                     return;
                 }
                 this.artistData = response.data;
+                this.artistTypes = response.data.types || [];
                 this.render(this.transformApiData(response.data));
+
+                // Apply type-specific layout overrides
+                if (typeof TheaterLayout !== 'undefined' && TheaterLayout.isTheater(this.artistTypes)) {
+                    TheaterLayout.apply(this.transformApiData(response.data), response.data);
+                }
             } else {
                 console.error('Artist not found');
                 this.showNotFound();

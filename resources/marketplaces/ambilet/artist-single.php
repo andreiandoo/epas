@@ -139,7 +139,7 @@ require_once __DIR__ . '/includes/header.php';
                 <section class="mb-10">
                     <div class="flex items-center justify-between mb-5">
                         <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                            Concerte viitoare
+                            Evenimente viitoare
                         </h2>
                         <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                             Vezi toate
@@ -329,7 +329,8 @@ require_once __DIR__ . '/includes/footer.php';
 echo '<script>window.ARTIST_SLUG = ' . json_encode($artistSlug) . ';</script>';
 
 // Load external artist page controller
-$scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single.js') . '"></script>
+$scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single-theater.js') . '"></script>
+<script src="' . asset('assets/js/pages/artist-single.js') . '"></script>
 <script>document.addEventListener(\'DOMContentLoaded\', () => ArtistPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';

@@ -78,7 +78,13 @@ const ArtistPage = {
                     return;
                 }
                 this.artistData = response.data;
+                this.artistTypes = response.data.types || [];
                 this.render(this.transformApiData(response.data));
+
+                // Apply type-specific layout overrides
+                if (typeof TheaterLayout !== 'undefined' && TheaterLayout.isTheater(this.artistTypes)) {
+                    TheaterLayout.apply(this.transformApiData(response.data), response.data);
+                }
             } else {
                 console.error('Artist not found');
                 this.showNotFound();
@@ -517,14 +523,14 @@ const ArtistPage = {
             // Tabbed layout with RO and EN
             container.innerHTML =
                 '<div class="flex gap-1 p-1 mb-5 bg-gray-100 rounded-xl justify-center" id="aboutTabs">' +
-                    '<button onclick="ArtistPage.switchAboutTab(\'ro\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm" data-tab="ro">' +
+                    '<button onclick="ArtistPage.switchAboutTab(\'ro\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-white text-gray-900 shadow-sm" data-tab="ro" aria-label="Română">' +
                         '<span class="inline-block w-5 h-3.5 mr-1.5 align-middle rounded-sm overflow-hidden relative" style="top:-1px">' +
                             '<span class="absolute inset-x-0 top-0 h-1/3 bg-[#002B7F]"></span>' +
                             '<span class="absolute inset-x-0 top-1/3 h-1/3 bg-[#FCD116]"></span>' +
                             '<span class="absolute inset-x-0 bottom-0 h-1/3 bg-[#CE1126]"></span>' +
                         '</span>Română' +
                     '</button>' +
-                    '<button onclick="ArtistPage.switchAboutTab(\'en\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700" data-tab="en">' +
+                    '<button onclick="ArtistPage.switchAboutTab(\'en\')" class="about-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-gray-500 hover:text-gray-700" data-tab="en" aria-label="English">' +
                         '<span class="inline-block w-5 h-3.5 mr-1.5 align-middle rounded-sm overflow-hidden relative" style="top:-1px">' +
                             '<svg viewBox="0 0 60 30" class="w-full h-full"><clipPath id="t"><rect width="60" height="30"/></clipPath><g clip-path="url(#t)"><rect width="60" height="30" fill="#00247D"/><path d="M0 0l60 30M60 0L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30M60 0L0 30" clip-path="url(#t)" stroke="#CF142B" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#CF142B" stroke-width="6"/></g></svg>' +
                         '</span>English' +
