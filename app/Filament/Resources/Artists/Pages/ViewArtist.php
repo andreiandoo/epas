@@ -71,7 +71,7 @@ class ViewArtist extends Page
             $to = now()->endOfDay();
 
             $kpis = $this->record->computeKpis($from, $to);
-            [$months, $events, $tickets, $revenue] = $this->record->buildYearlySeries();
+            [$months, $events, $tickets, $revenue] = $this->buildYearlySeriesOptimized();
 
             $artistEvents = $this->record->events()
                 ->with(['venue', 'tenant'])
@@ -320,6 +320,54 @@ class ViewArtist extends Page
             'venue_avg_fill' => round((float) ($venueStats?->avg_fill_rate ?? 0) * 100, 1),
             'forecast' => $forecast,
         ];
+    }
+
+    // ─── OPTIMIZED YEARLY SERIES (3 queries instead of 36) ─────────
+
+    private function buildYearlySeriesOptimized(): array
+    {
+        $artistId = $this->record->id;
+        $startDate = now()->startOfMonth()->subMonths(11)->toDateString();
+        $endDate = now()->endOfMonth()->toDateString();
+
+        // 1. Events per month (1 query)
+        $eventsRaw = DB::table('events')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->where('event_artist.artist_id', $artistId)
+            ->whereBetween('events.event_date', [$startDate, $endDate])
+            ->select(DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"), DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ym')
+            ->pluck('cnt', 'ym');
+
+        // 2. Tickets + revenue per month (1 query)
+        $ticketsRaw = DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->join('events', 'events.id', '=', 'ticket_types.event_id')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->where('event_artist.artist_id', $artistId)
+            ->whereBetween('events.event_date', [$startDate, $endDate])
+            ->select(
+                DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"),
+                DB::raw('COUNT(tickets.id) as ticket_count'),
+                DB::raw('COALESCE(SUM(tickets.price), 0) as revenue')
+            )
+            ->groupBy('ym')
+            ->get()
+            ->keyBy('ym');
+
+        // Build arrays
+        $months = []; $events = []; $tickets = []; $revenue = [];
+        $start = now()->startOfMonth()->subMonths(11);
+        for ($i = 0; $i < 12; $i++) {
+            $d = (clone $start)->addMonths($i);
+            $ym = $d->format('Y-m');
+            $months[] = $d->format('M Y');
+            $events[] = (int) ($eventsRaw[$ym] ?? 0);
+            $tickets[] = (int) ($ticketsRaw[$ym]?->ticket_count ?? 0);
+            $revenue[] = round((float) ($ticketsRaw[$ym]?->revenue ?? 0), 2);
+        }
+
+        return [$months, $events, $tickets, $revenue];
     }
 
     // ─── AUDIENCE DNA ────────────────────────────────────────────────

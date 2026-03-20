@@ -775,9 +775,6 @@ canvas{width:100%!important;}
     const ps = @js($priceSens ?? []);
     if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[{label:'Tickets',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff88',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},{label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e33',tension:.3,pointRadius:4,borderWidth:2,yAxisID:'y1'}]},options:{...opts,scales:{...opts.scales,y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#22c55e',callback:v=>v+'%'},grid:{display:false}}}}});}
 
-    // Velocity
-    const vel = @js($velocity ?? []);
-    if(vel.length&&document.getElementById('velocityChart')){const vc=['#7aa2ff','#22d3ee','#c084fc','#fbbf24','#22c55e'];const mx=Math.max(...vel.flatMap(v=>v.points.map(p=>p.days)),30);const lb=[];for(let d=mx;d>=0;d-=Math.max(1,Math.floor(mx/15)))lb.push(d+'d');lb.reverse();const ds=vel.map((v,i)=>({label:v.event_name,data:lb.map(l=>{const day=parseInt(l);const c=v.points.filter(p=>p.days>=day).sort((a,b)=>a.days-b.days)[0];return c?c.pct:(v.points.length?v.points[v.points.length-1].pct:0);}),borderColor:vc[i%vc.length],tension:.3,pointRadius:2,borderWidth:2,fill:false}));new Chart(document.getElementById('velocityChart'),{type:'line',data:{labels:lb,datasets:ds},options:{...opts,plugins:{legend:{position:'bottom',labels:{color:'#cdd7f6',font:{size:10}}}}}});}
 })();
 </script>
 @endpush
