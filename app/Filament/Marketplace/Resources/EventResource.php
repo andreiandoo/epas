@@ -3258,10 +3258,11 @@ class EventResource extends Resource
                                 ->searchable()
                                 ->required()
                                 ->getSearchResultsUsing(function (string $search) {
+                                    $term = mb_strtolower($search);
                                     return Venue::query()
-                                        ->where(function ($q) use ($search) {
-                                            $q->where('name', 'LIKE', "%{$search}%")
-                                              ->orWhere('city', 'LIKE', "%{$search}%");
+                                        ->where(function ($q) use ($term) {
+                                            $q->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
+                                              ->orWhereRaw('LOWER(city) LIKE ?', ["%{$term}%"]);
                                         })
                                         ->orderBy('name')
                                         ->limit(50)
