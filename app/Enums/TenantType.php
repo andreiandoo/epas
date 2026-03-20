@@ -4,16 +4,20 @@ namespace App\Enums;
 
 enum TenantType: string
 {
-    case TenantArtist = 'tenant-artist';
+    case TenantArtist = 'tenant-artist'; // Base tenant type (renamed from "Artist / Band")
+    case Artist = 'artist';
     case Agency = 'agency';
+    case Venue = 'venue';
     case Theater = 'theater';
     case Festival = 'festival';
 
     public function label(): string
     {
         return match ($this) {
-            self::TenantArtist => 'Artist / Band',
+            self::TenantArtist => 'Tenant',
+            self::Artist => 'Artist / Band',
             self::Agency => 'Agency',
+            self::Venue => 'Venue',
             self::Theater => 'Theater / Opera / Philharmonic',
             self::Festival => 'Festival',
         };
@@ -31,11 +35,23 @@ enum TenantType: string
                 'shop',
                 'affiliate-tracking',
             ],
+            self::Artist => [
+                'analytics',
+                'crm',
+                'shop',
+                'affiliate-tracking',
+            ],
             self::Agency => [
                 'analytics',
                 'crm',
                 'efactura',
                 'accounting',
+            ],
+            self::Venue => [
+                'analytics',
+                'crm',
+                'door-sales',
+                'ticket-customizer',
             ],
             self::Theater => [
                 'analytics',
