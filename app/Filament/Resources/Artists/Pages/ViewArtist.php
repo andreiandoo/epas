@@ -212,10 +212,15 @@ class ViewArtist extends Page
 
     // ─── VENUE FORECAST (Livewire action) ────────────────────────────
 
-    public function searchVenues(): array
+    public array $venueResults = [];
+
+    public function updatedVenueSearch(): void
     {
-        if (mb_strlen($this->venueSearch) < 2) return [];
-        return \App\Models\Venue::where('name', 'LIKE', "%{$this->venueSearch}%")
+        if (mb_strlen($this->venueSearch) < 2) {
+            $this->venueResults = [];
+            return;
+        }
+        $this->venueResults = \App\Models\Venue::where('name', 'LIKE', "%{$this->venueSearch}%")
             ->select('id', 'name', 'city', 'capacity', 'capacity_total')
             ->orderBy('name')
             ->limit(15)

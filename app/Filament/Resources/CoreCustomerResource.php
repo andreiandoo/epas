@@ -705,6 +705,130 @@ class CoreCustomerResource extends Resource
                             ]),
                     ]), // end Sidebar Group
                 ]), // end Grid
+
+                // ===== MARKETPLACE CUSTOMER DATA =====
+                Forms\Components\Placeholder::make('marketplace_data')
+                    ->hiddenLabel()
+                    ->columnSpanFull()
+                    ->visible(fn (?CoreCustomer $record) => $record && $record->exists)
+                    ->content(function (?CoreCustomer $record) {
+                        if (!$record) return '';
+
+                        $email = $record->email;
+                        if (!$email || !is_string($email)) {
+                            return new HtmlString('<div style="padding:24px;text-align:center;border:1px dashed rgba(100,116,139,0.3);border-radius:12px;margin-top:16px;"><span style="color:#64748B;font-size:13px;">Nu a fost găsit un cont de marketplace asociat (email lipsă).</span></div>');
+                        }
+
+                        $mkCustomer = \App\Models\MarketplaceCustomer::where('email', strtolower(trim($email)))->first();
+                        if (!$mkCustomer) {
+                            return new HtmlString('<div style="padding:24px;text-align:center;border:1px dashed rgba(100,116,139,0.3);border-radius:12px;margin-top:16px;"><span style="color:#64748B;font-size:13px;">Nu a fost găsit un cont de marketplace asociat acestui email.</span></div>');
+                        }
+
+                        $service = \App\Services\CustomerInsightsService::forMarketplaceCustomer($mkCustomer);
+                        $stats = $service->lifetimeStats();
+                        $orders = $service->ordersList();
+                        $tickets = $service->ticketsList();
+                        $emails = $service->emailLogs();
+                        $gamification = $service->gamificationData();
+                        $narrative = $service->generateProfileNarrative();
+                        $topArtists = $service->topArtists();
+                        $insights = [
+                            'eventTypes' => $service->eventTypes(),
+                            'eventGenres' => $service->eventGenres(),
+                            'artistGenres' => $service->artistGenres(),
+                            'preferredCities' => $service->preferredCities(),
+                            'preferredDays' => $service->preferredDays(),
+                        ];
+
+                        $mktName = $mkCustomer->marketplaceClient?->name ?? 'Marketplace';
+                        $html = "<div style='margin-top:24px;border-top:1px solid rgba(100,116,139,0.3);padding-top:24px;'>";
+                        $html .= "<h2 style='font-size:16px;font-weight:700;color:#E2E8F0;margin-bottom:16px;display:flex;align-items:center;gap:8px;'>";
+                        $html .= "<span style='display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,0.2);'><svg style='width:16px;height:16px;color:#818CF8;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'/></svg></span>";
+                        $html .= "Marketplace Customer Data <span style='font-size:11px;font-weight:400;color:#64748B;'>(via " . e($mktName) . ")</span></h2>";
+
+                        // Narrative
+                        if ($narrative) {
+                            $html .= "<div style='padding:12px;border-radius:10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);margin-bottom:16px;'>";
+                            $html .= "<p style='font-size:13px;color:#C7D2FE;line-height:1.6;'>" . e($narrative) . "</p></div>";
+                        }
+
+                        // Stats row
+                        $html .= "<div style='display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;'>";
+                        foreach ([
+                            ['Lifetime Value', number_format($stats['lifetime_value'] ?? 0, 2) . ' RON', '#34D399'],
+                            ['Comenzi', $stats['total_orders'] ?? 0, '#60A5FA'],
+                            ['Bilete', $stats['total_tickets'] ?? 0, '#A78BFA'],
+                            ['Evenimente', $stats['total_events'] ?? 0, '#F472B6'],
+                            ['Client din', ($stats['customer_since'] ?? '—') . ' (' . ($stats['lifetime_days'] ?? 0) . ' zile)', '#F59E0B'],
+                        ] as [$label, $value, $color]) {
+                            $html .= "<div style='text-align:center;padding:12px;background:rgba(30,41,59,0.5);border-radius:10px;'>";
+                            $html .= "<div style='font-size:18px;font-weight:700;color:{$color};'>{$value}</div>";
+                            $html .= "<div style='font-size:10px;color:#64748B;margin-top:3px;'>{$label}</div></div>";
+                        }
+                        $html .= "</div>";
+
+                        // Orders
+                        if (!empty($orders)) {
+                            $html .= "<div style='margin-bottom:16px;'><h3 style='font-size:13px;font-weight:600;color:#94A3B8;margin-bottom:8px;'>Comenzi (" . count($orders) . ")</h3>";
+                            $html .= "<div style='overflow-x:auto;'><table style='width:100%;font-size:12px;border-collapse:collapse;'>";
+                            $html .= "<thead><tr style='border-bottom:1px solid rgba(51,65,85,0.5);'><th style='padding:6px 8px;text-align:left;color:#64748B;'>Comandă</th><th style='padding:6px 8px;text-align:left;color:#64748B;'>Eveniment</th><th style='padding:6px 8px;text-align:right;color:#64748B;'>Total</th><th style='padding:6px 8px;text-align:left;color:#64748B;'>Status</th><th style='padding:6px 8px;text-align:left;color:#64748B;'>Data</th></tr></thead><tbody>";
+                            foreach (array_slice($orders, 0, 15) as $o) {
+                                $html .= "<tr style='border-bottom:1px solid rgba(51,65,85,0.3);'>";
+                                $html .= "<td style='padding:5px 8px;color:#E2E8F0;'>" . e($o->order_number ?? '#' . $o->id) . "</td>";
+                                $html .= "<td style='padding:5px 8px;color:#94A3B8;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>" . e($o->event_title ?? '—') . "</td>";
+                                $html .= "<td style='padding:5px 8px;text-align:right;color:#E2E8F0;font-weight:600;'>" . number_format(($o->total_cents ?? 0) / 100, 2) . " " . ($o->currency ?? 'RON') . "</td>";
+                                $html .= "<td style='padding:5px 8px;'><span style='padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(100,116,139,0.2);color:#94A3B8;'>" . e($o->status ?? '—') . "</span></td>";
+                                $html .= "<td style='padding:5px 8px;color:#64748B;'>" . ($o->created_at ? \Carbon\Carbon::parse($o->created_at)->format('d.m.Y') : '—') . "</td>";
+                                $html .= "</tr>";
+                            }
+                            $html .= "</tbody></table></div></div>";
+                        }
+
+                        // Top insights
+                        $insightItems = [];
+                        foreach ($insights as $key => $items) {
+                            if (!empty($items)) {
+                                $label = match($key) { 'eventTypes' => 'Tip Eveniment', 'eventGenres' => 'Gen Eveniment', 'artistGenres' => 'Gen Muzical', 'preferredCities' => 'Oraș', 'preferredDays' => 'Zi', default => $key };
+                                $insightItems[] = ['label' => $label, 'top' => $items[0]['label'] ?? '—', 'pct' => $items[0]['percentage'] ?? 0];
+                            }
+                        }
+                        if (!empty($insightItems)) {
+                            $html .= "<div style='margin-bottom:16px;'><h3 style='font-size:13px;font-weight:600;color:#94A3B8;margin-bottom:8px;'>Top Preferințe</h3>";
+                            $html .= "<div style='display:grid;grid-template-columns:repeat(" . count($insightItems) . ",1fr);gap:8px;'>";
+                            foreach ($insightItems as $item) {
+                                $html .= "<div style='padding:10px;background:rgba(30,41,59,0.5);border-radius:8px;text-align:center;'>";
+                                $html .= "<div style='font-size:10px;color:#64748B;margin-bottom:4px;'>" . e($item['label']) . "</div>";
+                                $html .= "<div style='font-size:13px;font-weight:600;color:#E2E8F0;'>" . e($item['top']) . "</div>";
+                                $html .= "<div style='font-size:10px;color:#818CF8;'>" . $item['pct'] . "%</div></div>";
+                            }
+                            $html .= "</div></div>";
+                        }
+
+                        // Gamification summary
+                        $pts = $gamification['points'] ?? null;
+                        if ($pts) {
+                            $html .= "<div style='margin-bottom:16px;'><h3 style='font-size:13px;font-weight:600;color:#94A3B8;margin-bottom:8px;'>Gamification</h3>";
+                            $html .= "<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:8px;'>";
+                            foreach ([
+                                ['Sold Puncte', number_format($pts->current_balance ?? 0), '#F59E0B'],
+                                ['Câștigate', '+' . number_format($pts->total_earned ?? 0), '#34D399'],
+                                ['Cheltuite', '-' . number_format($pts->total_spent ?? 0), '#EF4444'],
+                            ] as [$gl, $gv, $gc]) {
+                                $html .= "<div style='padding:10px;background:rgba(30,41,59,0.5);border-radius:8px;text-align:center;'>";
+                                $html .= "<div style='font-size:16px;font-weight:700;color:{$gc};'>{$gv}</div>";
+                                $html .= "<div style='font-size:10px;color:#64748B;margin-top:2px;'>{$gl}</div></div>";
+                            }
+                            $html .= "</div></div>";
+                        }
+
+                        // Email logs count
+                        if (!empty($emails)) {
+                            $html .= "<div><h3 style='font-size:13px;font-weight:600;color:#94A3B8;margin-bottom:4px;'>Email-uri trimise: " . count($emails) . "</h3></div>";
+                        }
+
+                        $html .= "</div>";
+                        return new HtmlString($html);
+                    }),
             ]) ->columns(1);
     }
 

@@ -145,6 +145,7 @@ canvas{width:100%!important;}
 
 .progress{height:5px;background:rgba(122,162,255,.1);border-radius:3px;overflow:hidden;flex:1;min-width:40px;}
 .progress-fill{height:100%;border-radius:3px;}
+.db>[x-show]{padding-bottom:60px;}
 </style>
 @endpush
 
@@ -330,7 +331,41 @@ canvas{width:100%!important;}
             </div>
             <div class="g2">
                 @if(!empty($priceSens))<div class="card"><div class="card-h">Price Sensitivity</div><div class="card-b"><div style="height:230px;"><canvas id="priceChart"></canvas></div></div></div>@endif
-                @if(!empty($velocity))<div class="card"><div class="card-h">Sales Velocity (last {{ count($velocity) }})</div><div class="card-b"><div style="height:230px;"><canvas id="velocityChart"></canvas></div></div></div>@endif
+                @if(!empty($velocity))
+                <div class="card">
+                    <div class="card-h">Sales Pace — How fast tickets sold (last {{ count($velocity) }} events)</div>
+                    <div class="card-b">
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Shows % of tickets sold at key milestones before each event</div>
+                        <table class="tbl">
+                            <thead><tr><th>Event</th><th>Total</th><th>90d before</th><th>60d</th><th>30d</th><th>7d</th><th>1d</th></tr></thead>
+                            <tbody>
+                                @foreach($velocity as $vc)
+                                @php
+                                    $pts = collect($vc['points']);
+                                    $pctAt = function($days) use ($pts) {
+                                        $match = $pts->where('days', '>=', $days)->sortBy('days')->first();
+                                        return $match ? $match['pct'] : ($pts->isNotEmpty() ? $pts->last()['pct'] : 0);
+                                    };
+                                @endphp
+                                <tr>
+                                    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $vc['event_name'] }}</td>
+                                    <td><span class="badge">{{ $vc['total_tickets'] }}</span></td>
+                                    @foreach([90, 60, 30, 7, 1] as $d)
+                                    @php $pct = $pctAt($d); @endphp
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:4px;">
+                                            <div class="progress" style="width:50px;"><div class="progress-fill" style="width:{{ min($pct,100) }}%;background:{{ $pct>=80?'var(--success)':($pct>=50?'var(--warn)':'var(--primary)') }};"></div></div>
+                                            <span style="font-size:11px;">{{ round($pct) }}%</span>
+                                        </div>
+                                    </td>
+                                    @endforeach
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
             </div>
         @endif
     </div>
@@ -378,15 +413,12 @@ canvas{width:100%!important;}
                     <input type="text" wire:model.live.debounce.300ms="venueSearch" placeholder="Search venue by name..." style="flex:1;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
                 </div>
 
-                @if(mb_strlen($venueSearch) >= 2)
-                @php $venueResults = $this->searchVenues(); @endphp
                 @if(!empty($venueResults))
                 <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
                     @foreach($venueResults as $vr)
                         <button wire:click="analyzeVenue({{ $vr['id'] }})" class="chip {{ $selectedVenueId == $vr['id'] ? 'chip-green' : 'chip-blue' }}" style="cursor:pointer;border:1px solid var(--ring);background:{{ $selectedVenueId == $vr['id'] ? 'rgba(34,197,94,.15)' : 'rgba(122,162,255,.1)' }};">{{ $vr['label'] }}</button>
                     @endforeach
                 </div>
-                @endif
                 @endif
 
                 @if($venueAnalysis)
