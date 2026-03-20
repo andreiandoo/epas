@@ -15,11 +15,16 @@ class PreviewSeatingLayout extends Page
 
     protected static ?string $title = 'Preview';
 
-    public SeatingLayout $seatingLayout;
+    public int $layoutId;
 
-    public function mount(SeatingLayout $record): void
+    public function mount($record): void
     {
-        $this->seatingLayout = $record;
+        $this->layoutId = (int) $record;
+    }
+
+    public function getSeatingLayoutProperty(): SeatingLayout
+    {
+        return SeatingLayout::withoutGlobalScopes()->findOrFail($this->layoutId);
     }
 
     protected function getHeaderActions(): array
@@ -29,12 +34,12 @@ class PreviewSeatingLayout extends Page
                 ->label('Open Designer')
                 ->icon('heroicon-o-pencil-square')
                 ->color('primary')
-                ->url(fn () => SeatingLayoutResource::getUrl('designer', ['record' => $this->seatingLayout])),
+                ->url(fn () => SeatingLayoutResource::getUrl('designer', ['record' => $this->layoutId])),
             Actions\Action::make('edit')
                 ->label('Edit')
                 ->icon('heroicon-o-cog-6-tooth')
                 ->color('gray')
-                ->url(fn () => SeatingLayoutResource::getUrl('edit', ['record' => $this->seatingLayout])),
+                ->url(fn () => SeatingLayoutResource::getUrl('edit', ['record' => $this->layoutId])),
         ];
     }
 }

@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     @php
-        $layout = $this->seatingLayout;
+        $layout = $this->seatingLayout ?? \App\Models\Seating\SeatingLayout::withoutGlobalScopes()->findOrFail($this->layoutId);
         $sections = \App\Models\Seating\SeatingSection::withoutGlobalScopes()
             ->where('layout_id', $layout->id)
             ->where('section_type', 'standard')
