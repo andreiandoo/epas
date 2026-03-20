@@ -223,6 +223,59 @@ class ArtistResource extends Resource
                                 Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url()->placeholder('https://...'),
                             ])->columns(2),
                     ]),
+
+                    // === PRICING ===
+                    SC\Section::make('Pricing')
+                        ->icon('heroicon-o-banknotes')
+                        ->collapsible()->collapsed()->persistCollapsed()
+                        ->schema([
+                            SC\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('min_fee_concert')
+                                    ->label('Min Fee Concert (€)')
+                                    ->numeric()->minValue(0)->step(100)
+                                    ->placeholder('e.g. 5000'),
+                                Forms\Components\TextInput::make('max_fee_concert')
+                                    ->label('Max Fee Concert (€)')
+                                    ->numeric()->minValue(0)->step(100)
+                                    ->placeholder('e.g. 15000'),
+                                Forms\Components\TextInput::make('min_fee_festival')
+                                    ->label('Min Fee Festival (€)')
+                                    ->numeric()->minValue(0)->step(100)
+                                    ->placeholder('e.g. 8000'),
+                                Forms\Components\TextInput::make('max_fee_festival')
+                                    ->label('Max Fee Festival (€)')
+                                    ->numeric()->minValue(0)->step(100)
+                                    ->placeholder('e.g. 25000'),
+                            ]),
+                            Forms\Components\Placeholder::make('avg_revenue_per_concert')
+                                ->label('Avg Revenue per Concert (calculated)')
+                                ->content(function (?Artist $record) {
+                                    if (!$record || !$record->exists) return '—';
+                                    $avg = \Illuminate\Support\Facades\DB::table('orders as o')
+                                        ->join('tickets as t', 't.order_id', '=', 'o.id')
+                                        ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                                        ->join('event_artist as ea', 'ea.event_id', '=', 'tt.event_id')
+                                        ->where('ea.artist_id', $record->id)
+                                        ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+                                        ->select(\Illuminate\Support\Facades\DB::raw('AVG(event_total) as avg_revenue'))
+                                        ->fromSub(
+                                            \Illuminate\Support\Facades\DB::table('orders as o2')
+                                                ->join('tickets as t2', 't2.order_id', '=', 'o2.id')
+                                                ->join('ticket_types as tt2', 'tt2.id', '=', 't2.ticket_type_id')
+                                                ->join('event_artist as ea2', 'ea2.event_id', '=', 'tt2.event_id')
+                                                ->where('ea2.artist_id', $record->id)
+                                                ->whereIn('o2.status', ['paid', 'confirmed', 'completed'])
+                                                ->select('ea2.event_id', \Illuminate\Support\Facades\DB::raw('SUM(o2.total) as event_total'))
+                                                ->groupBy('ea2.event_id'),
+                                            'per_event'
+                                        )
+                                        ->value('avg_revenue');
+                                    if (!$avg) return '—';
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<span style="font-size:18px;font-weight:700;color:#22c55e;">' . number_format((float)$avg, 2) . ' RON</span>'
+                                    );
+                                }),
+                        ]),
                 ]),
 
                 // ========== RIGHT SIDEBAR (1/4) ==========

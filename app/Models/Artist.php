@@ -44,6 +44,7 @@ class Artist extends Model
         'manager_first_name','manager_last_name','manager_email','manager_phone','manager_website',
         'agent_first_name','agent_last_name','agent_email','agent_phone','agent_website',
         'booking_agency',
+        'min_fee_concert', 'max_fee_concert', 'min_fee_festival', 'max_fee_festival',
         'is_active',
         'twitter_followers',
         'facebook_followers','instagram_followers','tiktok_followers','spotify_followers','youtube_followers',
