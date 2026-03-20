@@ -1,5 +1,23 @@
 /* EPAS Admin Panel Custom Styles */
 
+/* Quick Edit pencil icon on event title hover */
+.ep-title-cell .ep-title-edit {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    color: #9ca3af;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.ep-title-cell .ep-title-edit:hover {
+    color: var(--primary-400, #60a5fa);
+}
+.ep-title-cell:hover .ep-title-edit {
+    opacity: 1;
+}
+
 /* ===== HIDE DEFAULT FILAMENT TOPBAR (both admin and marketplace panels) ===== */
 body.fi-panel-marketplace .fi-topbar-ctn,
 body.fi-panel-marketplace .fi-topbar,
