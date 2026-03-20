@@ -116,6 +116,11 @@ class ViewCoreCustomer extends ViewRecord
         return "Customer: {$label}";
     }
 
+    public function getView(): string
+    {
+        return 'filament.resources.core-customer.pages.view-core-customer';
+    }
+
     protected function getHeaderActions(): array
     {
         return [
