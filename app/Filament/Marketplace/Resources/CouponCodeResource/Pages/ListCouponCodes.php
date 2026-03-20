@@ -19,6 +19,7 @@ class ListCouponCodes extends ListRecords
     public function mount(): void
     {
         parent::mount();
+        $this->autoExpireAndExhaustCodes();
         $this->syncOrganizerCodesToCouponCodes();
     }
 
@@ -27,6 +28,44 @@ class ListCouponCodes extends ListRecords
         return [
             Actions\CreateAction::make(),
         ];
+    }
+
+    /**
+     * Auto-expire codes past their expiry date and exhaust codes that reached usage limit.
+     */
+    protected function autoExpireAndExhaustCodes(): void
+    {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
+            return;
+        }
+
+        // Expire codes past their expiry date
+        CouponCode::where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+
+        // Exhaust codes that reached usage limit
+        CouponCode::where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'active')
+            ->whereNotNull('max_uses_total')
+            ->whereColumn('current_uses', '>=', 'max_uses_total')
+            ->update(['status' => 'exhausted']);
+
+        // Also update organizer promo codes (mkt_promo_codes)
+        MarketplaceOrganizerPromoCode::where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+
+        MarketplaceOrganizerPromoCode::where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'active')
+            ->whereNotNull('usage_limit')
+            ->whereColumn('usage_count', '>=', 'usage_limit')
+            ->update(['status' => 'exhausted']);
     }
 
     /**

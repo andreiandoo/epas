@@ -269,13 +269,47 @@ class CouponCodeResource extends Resource
                     ->weight('bold')
                     ->copyable(),
 
-                Tables\Columns\TextColumn::make('campaign.name')
-                    ->label('Campaign')
-                    ->getStateUsing(fn ($record) => $record->campaign?->getTranslation('name', app()->getLocale()) ?? ($record->campaign?->name[app()->getLocale()] ?? ($record->campaign?->name['en'] ?? null)))
-                    ->searchable()
-                    ->sortable()
-                    ->limit(20)
-                    ->placeholder('No campaign'),
+                Tables\Columns\TextColumn::make('event_name')
+                    ->label('Eveniment')
+                    ->getStateUsing(function ($record) {
+                        $eventIds = $record->applicable_events ?? [];
+                        if (empty($eventIds)) {
+                            return 'Toate';
+                        }
+                        $events = Event::whereIn('id', array_map('intval', $eventIds))->get();
+                        return $events->map(fn ($e) => is_array($e->title)
+                            ? ($e->title['ro'] ?? $e->title['en'] ?? reset($e->title) ?: '')
+                            : ($e->title ?? '')
+                        )->filter()->implode(', ');
+                    })
+                    ->limit(30)
+                    ->tooltip(function ($record) {
+                        $eventIds = $record->applicable_events ?? [];
+                        if (empty($eventIds)) return null;
+                        $events = Event::whereIn('id', array_map('intval', $eventIds))->get();
+                        return $events->map(fn ($e) => is_array($e->title)
+                            ? ($e->title['ro'] ?? $e->title['en'] ?? reset($e->title) ?: '')
+                            : ($e->title ?? '')
+                        )->filter()->implode(', ');
+                    })
+                    ->placeholder('Toate evenimentele'),
+
+                Tables\Columns\TextColumn::make('organizer_name')
+                    ->label('Organizator')
+                    ->getStateUsing(function ($record) {
+                        $eventIds = $record->applicable_events ?? [];
+                        if (empty($eventIds)) {
+                            return null;
+                        }
+                        $organizerIds = Event::whereIn('id', array_map('intval', $eventIds))
+                            ->pluck('marketplace_organizer_id')
+                            ->filter()
+                            ->unique();
+                        return MarketplaceOrganizer::whereIn('id', $organizerIds)
+                            ->pluck('name')
+                            ->implode(', ');
+                    })
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('discount_display')
                     ->label('Discount')
@@ -284,7 +318,7 @@ class CouponCodeResource extends Resource
                             return $record->discount_value . '%';
                         }
                         if ($record->discount_type === 'fixed_amount') {
-                            return '€' . number_format($record->discount_value, 2);
+                            return number_format($record->discount_value, 2) . ' RON';
                         }
                         return 'Free Shipping';
                     }),
@@ -305,9 +339,16 @@ class CouponCodeResource extends Resource
 
                 Tables\Columns\TextColumn::make('expires_at')
                     ->label('Expires')
-                    ->dateTime('M d, Y')
+                    ->dateTime('d M Y')
                     ->sortable()
                     ->placeholder('Never'),
+
+                Tables\Columns\TextColumn::make('source')
+                    ->label('Sursa')
+                    ->badge()
+                    ->getStateUsing(fn ($record) => $record->source === 'organizer' ? 'Organizator' : 'Admin')
+                    ->color(fn ($state) => $state === 'Organizator' ? 'info' : 'gray')
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_public')
                     ->label('Public')
@@ -316,7 +357,7 @@ class CouponCodeResource extends Resource
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created')
-                    ->dateTime('M d, Y')
+                    ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -328,24 +369,19 @@ class CouponCodeResource extends Resource
                         'exhausted' => 'Exhausted',
                         'expired' => 'Expired',
                     ]),
-                Tables\Filters\SelectFilter::make('campaign_id')
-                    ->label('Campaign')
-                    ->relationship(
-                        'campaign',
-                        'name',
-                        modifyQueryUsing: fn ($query) => $query->where('marketplace_client_id', static::getMarketplaceClientId())
-                    )
-                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
-                    ->searchable()
-                    ->preload(),
                 Tables\Filters\SelectFilter::make('discount_type')
                     ->options([
                         'percentage' => 'Percentage',
                         'fixed_amount' => 'Fixed Amount',
-                        'free_shipping' => 'Free Shipping',
                     ]),
                 Tables\Filters\TernaryFilter::make('is_public')
                     ->label('Public'),
+                Tables\Filters\SelectFilter::make('source')
+                    ->label('Sursa')
+                    ->options([
+                        'organizer' => 'Organizator',
+                        'admin' => 'Admin',
+                    ]),
             ])
             ->recordActions([
                 ViewAction::make(),
