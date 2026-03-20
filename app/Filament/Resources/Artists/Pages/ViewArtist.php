@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v4_{$this->record->id}";
+        $cacheKey = "artist_full_v5_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -95,12 +95,24 @@ class ViewArtist extends Page
                 ->orderByDesc('tickets_count')->limit(10)->get();
 
             $topCities = $ticketBase()->whereNotNull('venues.city')
-                ->select('venues.city as name', DB::raw('COUNT(tickets.id) as tickets_count'))
+                ->join('orders', 'orders.id', '=', 'tickets.order_id')
+                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
+                ->select(
+                    'venues.city as name',
+                    DB::raw('COUNT(tickets.id) as tickets_count'),
+                    DB::raw('COUNT(DISTINCT COALESCE(orders.marketplace_customer_id, orders.customer_id)) as fans_count')
+                )
                 ->groupBy('venues.city')
                 ->orderByDesc('tickets_count')->limit(10)->get();
 
             $topCounties = $ticketBase()->whereNotNull('venues.state')
-                ->select('venues.state as name', DB::raw('COUNT(tickets.id) as tickets_count'))
+                ->join('orders', 'orders.id', '=', 'tickets.order_id')
+                ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
+                ->select(
+                    'venues.state as name',
+                    DB::raw('COUNT(tickets.id) as tickets_count'),
+                    DB::raw('COUNT(DISTINCT COALESCE(orders.marketplace_customer_id, orders.customer_id)) as fans_count')
+                )
                 ->groupBy('venues.state')
                 ->orderByDesc('tickets_count')->limit(10)->get();
 
