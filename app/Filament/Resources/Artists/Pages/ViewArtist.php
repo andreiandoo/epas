@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v3_{$this->record->id}";
+        $cacheKey = "artist_full_v4_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -220,15 +220,23 @@ class ViewArtist extends Page
             $this->venueResults = [];
             return;
         }
-        $this->venueResults = \App\Models\Venue::where('name', 'LIKE', "%{$this->venueSearch}%")
+        $search = $this->venueSearch;
+        $this->venueResults = \App\Models\Venue::where(function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
+                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
+                    ->orWhere('city', 'LIKE', "%{$search}%");
+            })
             ->select('id', 'name', 'city', 'capacity', 'capacity_total')
             ->orderBy('name')
             ->limit(15)
             ->get()
             ->map(function ($v) {
-                $name = $v->getTranslation('name', 'en') ?: $v->getTranslation('name', 'ro') ?: $v->name;
+                $name = is_array($v->name)
+                    ? ($v->name['en'] ?? $v->name['ro'] ?? reset($v->name) ?: '')
+                    : ($v->getTranslation('name', 'en') ?: $v->getTranslation('name', 'ro') ?: $v->name);
                 $cap = $v->capacity ?: $v->capacity_total ?: 0;
-                return ['id' => $v->id, 'label' => "{$name} ({$v->city}, cap {$cap})", 'name' => $name, 'city' => $v->city, 'capacity' => (int) $cap];
+                return ['id' => $v->id, 'label' => "{$name} ({$v->city})", 'name' => $name, 'city' => $v->city, 'capacity' => (int) $cap];
             })->toArray();
     }
 
