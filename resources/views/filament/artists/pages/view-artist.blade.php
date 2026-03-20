@@ -369,6 +369,82 @@ canvas{width:100%!important;}
             @if(count($topCounties))<div class="card"><div class="card-h">Top Counties</div><div class="card-b"><table class="tbl"><thead><tr><th>#</th><th>County</th><th>Tickets</th></tr></thead><tbody>@foreach($topCounties as $i=>$r)<tr><td>{{ $i+1 }}</td><td>{{ $r->name }}</td><td><span class="badge">{{ number_format($r->tickets_count) }}</span></td></tr>@endforeach</tbody></table></div></div>@endif
         </div>
         @endif
+
+        {{-- Venue Forecast Tool --}}
+        <div class="card" style="margin-top:14px;">
+            <div class="card-h">Venue Forecast — Analyze artist × venue potential</div>
+            <div class="card-b">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" wire:model.live.debounce.300ms="venueSearch" placeholder="Search venue by name..." style="flex:1;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                </div>
+
+                @if(mb_strlen($venueSearch) >= 2)
+                @php $venueResults = $this->searchVenues(); @endphp
+                @if(!empty($venueResults))
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+                    @foreach($venueResults as $vr)
+                        <button wire:click="analyzeVenue({{ $vr['id'] }})" class="chip {{ $selectedVenueId == $vr['id'] ? 'chip-green' : 'chip-blue' }}" style="cursor:pointer;border:1px solid var(--ring);background:{{ $selectedVenueId == $vr['id'] ? 'rgba(34,197,94,.15)' : 'rgba(122,162,255,.1)' }};">{{ $vr['label'] }}</button>
+                    @endforeach
+                </div>
+                @endif
+                @endif
+
+                @if($venueAnalysis)
+                <div style="margin-top:16px;">
+                    <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
+                        <div class="kpi"><div class="l">{{ $venueAnalysis['venue_name'] }}</div><div class="v" style="font-size:14px;">{{ $venueAnalysis['city'] }}</div></div>
+                        <div class="kpi"><div class="l">Venue Capacity</div><div class="v">{{ number_format($venueAnalysis['capacity']) }}</div></div>
+                        <div class="kpi"><div class="l">Venue Avg Fill</div><div class="v">{{ $venueAnalysis['venue_avg_fill'] }}%</div></div>
+                        <div class="kpi"><div class="l">Total Events at Venue</div><div class="v">{{ $venueAnalysis['venue_total_events'] }}</div></div>
+                    </div>
+
+                    @if($venueAnalysis['has_history'])
+                        {{-- Artist HAS performed here --}}
+                        <div class="card" style="margin-bottom:14px;border-color:rgba(34,197,94,.2);">
+                            <div class="card-h" style="color:var(--success);">Artist History at this Venue ({{ count($venueAnalysis['history']) }} events)</div>
+                            <div class="card-b">
+                                <div class="g2" style="margin-bottom:12px;">
+                                    <div class="kpi"><div class="l">Avg Sell-Through</div><div class="v" style="color:var(--success);">{{ $venueAnalysis['history_avg_st'] }}%</div></div>
+                                    <div class="kpi"><div class="l">Avg Revenue</div><div class="v" style="color:var(--success);">{{ number_format($venueAnalysis['history_avg_revenue']) }} RON</div></div>
+                                </div>
+                                <table class="tbl">
+                                    <thead><tr><th>Date</th><th>Event</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
+                                    <tbody>
+                                        @foreach($venueAnalysis['history'] as $h)
+                                        <tr>
+                                            <td style="white-space:nowrap;">{{ $h['date'] ? \Carbon\Carbon::parse($h['date'])->format('d M Y') : '—' }}</td>
+                                            <td>{{ $h['title'] }}</td>
+                                            <td>{{ number_format($h['sold']) }}/{{ $h['capacity'] ?: '?' }}</td>
+                                            <td>@if($h['sell_through'] !== null)<div style="display:flex;align-items:center;gap:5px;"><div class="progress"><div class="progress-fill" style="width:{{ min($h['sell_through'],100) }}%;background:{{ $h['sell_through']>=80?'var(--success)':($h['sell_through']>=50?'var(--warn)':'var(--danger)') }};"></div></div><span style="font-size:11px;">{{ $h['sell_through'] }}%</span></div>@else — @endif</td>
+                                            <td>{{ number_format($h['revenue']) }} RON</td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @else
+                        {{-- Artist has NOT performed here — Forecast --}}
+                        @php $fc = $venueAnalysis['forecast']; @endphp
+                        <div class="card" style="border-color:rgba(34,211,238,.2);">
+                            <div class="card-h" style="color:var(--accent);">Forecast — Artist has not performed here</div>
+                            <div class="card-b">
+                                <div class="kpi-grid kpi-grid-4" style="margin-bottom:12px;">
+                                    <div class="kpi"><div class="l">Fans in {{ $venueAnalysis['city'] }}</div><div class="v">{{ $fc['fans_in_city'] }}</div></div>
+                                    <div class="kpi"><div class="l">Est. Demand</div><div class="v" style="color:var(--accent);">{{ $fc['estimated_demand'] }}</div></div>
+                                    <div class="kpi"><div class="l">Similar Artists</div><div class="v">{{ $fc['similar_events'] }} events</div></div>
+                                    <div class="kpi"><div class="l">Capacity Utilization</div><div class="v">{{ $fc['capacity_utilization'] }}%</div></div>
+                                </div>
+                                @if($fc['similar_events'] > 0)
+                                <div style="font-size:12px;color:var(--muted);">Similar artists averaged <strong style="color:var(--text);">{{ $fc['similar_avg_sold'] }}</strong> tickets sold ({{ $fc['similar_avg_st'] }}% sell-through) at this venue.</div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                </div>
+                @endif
+            </div>
+        </div>
     </div>
 
     {{-- ═══════ TAB: UPCOMING ═══════ --}}
@@ -397,6 +473,72 @@ canvas{width:100%!important;}
                     </tbody>
                 </table>
             </div></div>
+        @endif
+
+        {{-- Event Analyzer --}}
+        @if(!empty($upcomingEvents))
+        <div class="card" style="margin-top:14px;">
+            <div class="card-h">Event Analyzer — Select an event for deep analysis</div>
+            <div class="card-b">
+                <select wire:change="analyzeEvent($event.target.value)" style="width:100%;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                    <option value="">Choose an upcoming event...</option>
+                    @foreach($upcomingEvents as $ue)
+                        <option value="{{ $ue['id'] }}" {{ $selectedEventId == $ue['id'] ? 'selected' : '' }}>{{ $ue['title'] }} — {{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '' }} ({{ $ue['venue'] ?? '' }})</option>
+                    @endforeach
+                </select>
+
+                @if($eventAnalysis)
+                <div style="margin-top:16px;">
+                    <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px;">
+                        <div class="kpi"><div class="l">Current Sold</div><div class="v">{{ number_format($eventAnalysis['sold']) }}</div></div>
+                        <div class="kpi"><div class="l">Capacity</div><div class="v">{{ $eventAnalysis['capacity'] ?: '?' }}</div></div>
+                        <div class="kpi"><div class="l">Sell-Through</div><div class="v">{{ $eventAnalysis['sell_through'] ?? 0 }}%</div></div>
+                        <div class="kpi"><div class="l">Revenue</div><div class="v" style="color:var(--success);">{{ number_format($eventAnalysis['revenue']) }} RON</div></div>
+                        <div class="kpi"><div class="l">Days Left</div><div class="v">{{ $eventAnalysis['days_until'] ?? '?' }}d</div></div>
+                    </div>
+
+                    {{-- Prediction --}}
+                    @if(!empty($eventAnalysis['prediction']['avg_sell_through']))
+                    <div class="card" style="margin-bottom:14px;border-color:rgba(34,211,238,.2);">
+                        <div class="card-h" style="color:var(--accent);">Prediction (based on {{ count($eventAnalysis['comparables']) }} comparable events)</div>
+                        <div class="card-b">
+                            <div class="kpi-grid kpi-grid-4">
+                                <div class="kpi"><div class="l">Min Scenario</div><div class="v" style="color:var(--danger);">{{ $eventAnalysis['prediction']['min_sell_through'] }}%</div></div>
+                                <div class="kpi"><div class="l">Avg Scenario</div><div class="v" style="color:var(--warn);">{{ $eventAnalysis['prediction']['avg_sell_through'] }}%</div></div>
+                                <div class="kpi"><div class="l">Max Scenario</div><div class="v" style="color:var(--success);">{{ $eventAnalysis['prediction']['max_sell_through'] }}%</div></div>
+                                <div class="kpi"><div class="l">Pace Forecast</div><div class="v" style="color:var(--accent);">~{{ number_format($eventAnalysis['prediction']['pace_forecast'] ?? 0) }}</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Comparable events --}}
+                    @if(!empty($eventAnalysis['comparables']))
+                    <div class="card">
+                        <div class="card-h">Comparable Past Events</div>
+                        <div class="card-b" style="overflow-x:auto;">
+                            <table class="tbl">
+                                <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
+                                <tbody>
+                                    @foreach($eventAnalysis['comparables'] as $comp)
+                                    <tr>
+                                        <td style="white-space:nowrap;">{{ $comp['date'] ? \Carbon\Carbon::parse($comp['date'])->format('d M Y') : '—' }}</td>
+                                        <td>{{ $comp['title'] }}</td>
+                                        <td>{{ $comp['venue'] ?? '—' }} <span style="color:var(--muted);font-size:10px;">{{ $comp['city'] ?? '' }}</span></td>
+                                        <td>{{ number_format($comp['sold']) }}/{{ $comp['capacity'] ?: '?' }}</td>
+                                        <td>@if($comp['sell_through'] !== null)<div style="display:flex;align-items:center;gap:5px;"><div class="progress"><div class="progress-fill" style="width:{{ min($comp['sell_through'],100) }}%;background:{{ $comp['sell_through']>=80?'var(--success)':($comp['sell_through']>=50?'var(--warn)':'var(--danger)') }};"></div></div><span style="font-size:11px;">{{ $comp['sell_through'] }}%</span></div>@else — @endif</td>
+                                        <td>{{ number_format($comp['revenue']) }} RON</td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+                @endif
+            </div>
+        </div>
         @endif
     </div>
 

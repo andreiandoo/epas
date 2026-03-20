@@ -47,24 +47,6 @@ class CoreCustomerResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        // When rendered via the custom view page blade, this form only shows
-        // the Tags & Notes fields. All other data is rendered directly in blade.
-        return $schema
-            ->schema([
-                Forms\Components\TagsInput::make('tags')
-                    ->label('Tags'),
-                Forms\Components\Textarea::make('notes')
-                    ->label('Notes')
-                    ->rows(4),
-            ]);
-    }
-
-    /**
-     * Original form method preserved for edit page (tags only).
-     * All display sections moved to the custom view blade template.
-     */
-    public static function formLegacy(Schema $schema): Schema
-    {
         return $schema
             ->schema([
                 SC\Grid::make(4)->schema([

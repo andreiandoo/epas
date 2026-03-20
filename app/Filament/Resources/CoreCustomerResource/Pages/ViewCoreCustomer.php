@@ -6,19 +6,13 @@ use App\Filament\Resources\CoreCustomerResource;
 use App\Models\MarketplaceCustomer;
 use App\Models\Platform\CoreCustomer;
 use App\Services\CustomerInsightsService;
-use Filament\Actions;
-use Filament\Resources\Pages\Page;
+use Filament\Resources\Pages\ViewRecord;
 
-class ViewCoreCustomer extends Page
+class ViewCoreCustomer extends ViewRecord
 {
     protected static string $resource = CoreCustomerResource::class;
 
-    protected string $view = 'filament.resources.core-customer.pages.view-core-customer';
-
-    public int $recordId;
-
     // MarketplaceCustomer insights data
-    public ?int $linkedMarketplaceCustomerId = null;
     public array $lifetimeStats = [];
     public array $priceRange = [];
     public array $orderStatusBreakdown = [];
@@ -49,89 +43,84 @@ class ViewCoreCustomer extends Page
     public ?string $emailVerifiedDisplay = null;
     public bool $acceptsMarketingDisplay = false;
     public bool $hasMarketplaceData = false;
-
-    public function getRecordProperty(): CoreCustomer
-    {
-        return CoreCustomer::findOrFail($this->recordId);
-    }
-
-    public function getLinkedMarketplaceCustomerProperty(): ?MarketplaceCustomer
-    {
-        return $this->linkedMarketplaceCustomerId
-            ? MarketplaceCustomer::find($this->linkedMarketplaceCustomerId)
-            : null;
-    }
+    public ?int $linkedMktCustomerId = null;
 
     public function mount($record): void
     {
-        $this->recordId = $record instanceof CoreCustomer ? $record->id : (int) $record;
+        parent::mount($record);
+
+        /** @var CoreCustomer $coreCustomer */
         $coreCustomer = $this->record;
 
         // Try to find linked MarketplaceCustomer via email
         $email = $coreCustomer->email;
         if ($email && is_string($email)) {
             $mkCustomer = MarketplaceCustomer::where('email', strtolower(trim($email)))->first();
-            $this->linkedMarketplaceCustomerId = $mkCustomer?->id;
+            if ($mkCustomer) {
+                $this->linkedMktCustomerId = $mkCustomer->id;
+                $this->hasMarketplaceData = true;
+                $this->loadMarketplaceData($mkCustomer);
+            }
         }
+    }
 
-        if ($this->linkedMarketplaceCustomerId) {
-            $this->hasMarketplaceData = true;
-            $customer = $this->linkedMarketplaceCustomer;
+    protected function loadMarketplaceData(MarketplaceCustomer $customer): void
+    {
+        $this->emailVerifiedDisplay = $customer->email_verified_at
+            ? 'Da (' . $customer->email_verified_at->format('d.m.Y') . ')' : 'Nu';
+        $this->acceptsMarketingDisplay = (bool) $customer->accepts_marketing;
 
-            $this->emailVerifiedDisplay = $customer->email_verified_at
-                ? 'Da (' . $customer->email_verified_at->format('d.m.Y') . ')' : 'Nu';
-            $this->acceptsMarketingDisplay = (bool) $customer->accepts_marketing;
+        $prefs = $customer->settings['notification_preferences'] ?? [];
+        $this->notificationPreferences = [
+            'Event Reminders' => $prefs['reminders'] ?? false,
+            'Newsletter & Offers' => $prefs['newsletter'] ?? false,
+            'Favorite Updates' => $prefs['favorites'] ?? false,
+            'Browsing History' => $prefs['history'] ?? false,
+            'Marketing Cookies' => $prefs['marketing'] ?? false,
+        ];
 
-            $prefs = $customer->settings['notification_preferences'] ?? [];
-            $this->notificationPreferences = [
-                'Event Reminders' => $prefs['reminders'] ?? false,
-                'Newsletter & Offers' => $prefs['newsletter'] ?? false,
-                'Favorite Updates' => $prefs['favorites'] ?? false,
-                'Browsing History' => $prefs['history'] ?? false,
-                'Marketing Cookies' => $prefs['marketing'] ?? false,
-            ];
+        $service = CustomerInsightsService::forMarketplaceCustomer($customer);
 
-            $service = CustomerInsightsService::forMarketplaceCustomer($customer);
-
-            $this->profileNarrative = $service->generateProfileNarrative();
-            $this->lifetimeStats = $service->lifetimeStats();
-            $this->priceRange = $service->priceRange();
-            $this->orderStatusBreakdown = $service->orderStatusBreakdown();
-            $this->venueTypes = $service->venueTypes();
-            $this->artistGenres = $service->artistGenres();
-            $this->eventTypes = $service->eventTypes();
-            $this->eventGenres = $service->eventGenres();
-            $this->eventTags = $service->eventTags();
-            $this->preferredDays = $service->preferredDays();
-            $this->preferredCities = $service->preferredCities();
-            $this->preferredStartTimes = $service->preferredStartTimes();
-            $this->preferredMonths = $service->preferredMonths();
-            $this->preferredMonthPeriods = $service->preferredMonthPeriods();
-            $this->favoritesProfile = $service->favoritesProfile();
-            $this->weightedProfileData = $service->weightedProfile();
-            $this->ordersList = $service->ordersList();
-            $this->ticketsList = $service->ticketsList();
-            $this->attendees = $service->attendees();
-            $this->emailLogs = $service->emailLogs();
-            $this->gamification = $service->gamificationData();
-            $this->monthlyChart = $service->monthlyOrdersCurrentYear();
-            $this->monthlyOrders = $service->monthlyOrders();
-            $this->recentEvents = $service->recentEvents();
-            $this->topArtists = $service->topArtists();
-            $this->tenantsList = $service->tenantsList();
-        }
+        $this->profileNarrative = $service->generateProfileNarrative();
+        $this->lifetimeStats = $service->lifetimeStats();
+        $this->priceRange = $service->priceRange();
+        $this->orderStatusBreakdown = $service->orderStatusBreakdown();
+        $this->venueTypes = $service->venueTypes();
+        $this->artistGenres = $service->artistGenres();
+        $this->eventTypes = $service->eventTypes();
+        $this->eventGenres = $service->eventGenres();
+        $this->eventTags = $service->eventTags();
+        $this->preferredDays = $service->preferredDays();
+        $this->preferredCities = $service->preferredCities();
+        $this->preferredStartTimes = $service->preferredStartTimes();
+        $this->preferredMonths = $service->preferredMonths();
+        $this->preferredMonthPeriods = $service->preferredMonthPeriods();
+        $this->favoritesProfile = $service->favoritesProfile();
+        $this->weightedProfileData = $service->weightedProfile();
+        $this->ordersList = $service->ordersList();
+        $this->ticketsList = $service->ticketsList();
+        $this->attendees = $service->attendees();
+        $this->emailLogs = $service->emailLogs();
+        $this->gamification = $service->gamificationData();
+        $this->monthlyChart = $service->monthlyOrdersCurrentYear();
+        $this->monthlyOrders = $service->monthlyOrders();
+        $this->recentEvents = $service->recentEvents();
+        $this->topArtists = $service->topArtists();
+        $this->tenantsList = $service->tenantsList();
     }
 
     public function getTitle(): string
     {
-        $c = $this->record;
-        $name = $c->full_name ?? '';
-        $label = $name !== '' ? $name : ($c->email ?? 'Customer');
+        $name = $this->record->full_name ?? '';
+        $label = $name !== '' ? $name : ($this->record->email ?? 'Customer');
         return "Customer: {$label}";
     }
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            \Filament\Actions\EditAction::make()
+                ->label('Edit Tags'),
+        ];
     }
 }
