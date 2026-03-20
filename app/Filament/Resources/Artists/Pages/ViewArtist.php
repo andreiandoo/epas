@@ -144,7 +144,7 @@ class ViewArtist extends Page
                 DB::raw('SUM(o.total) as total_spent'),
                 DB::raw('COUNT(DISTINCT o.id) as order_count')
             )
-            ->groupBy('buyer_id', 'birth_date', 'mc.gender', DB::raw('COALESCE(mc.city, c.city)'), DB::raw('COALESCE(mc.country, c.country)'))
+            ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw('COALESCE(mc.birth_date, c.date_of_birth)'), 'mc.gender', DB::raw('COALESCE(mc.city, c.city)'), DB::raw('COALESCE(mc.country, c.country)'))
             ->get();
 
         if ($buyers->isEmpty()) {
@@ -466,7 +466,7 @@ class ViewArtist extends Page
                 DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'),
                 DB::raw('COUNT(DISTINCT ea.event_id) as events_attended')
             )
-            ->groupBy('buyer_id')
+            ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))
             ->get();
 
         $loyalty = [
