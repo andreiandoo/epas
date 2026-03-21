@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v7_{$this->record->id}";
+        $cacheKey = "artist_full_v8_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -424,6 +424,8 @@ class ViewArtist extends Page
             return ['personas' => [], 'totals' => ['total_customers' => 0, 'with_demographics' => 0, 'age_distribution' => [], 'gender_overall' => []]];
         }
 
+        // Deduplicate by buyer_id (GROUP BY may create duplicates due to multiple columns)
+        $buyers = $buyers->unique('buyer_id')->values();
         $totalCustomers = $buyers->count();
 
         $withAge = $buyers->map(function ($b) {
@@ -808,9 +810,9 @@ class ViewArtist extends Page
                 if (!$ev || !$ev->event_date) continue;
                 $title = $ev->title;
                 if ($title && str_starts_with($title, '{')) { $d = json_decode($title, true); $title = $d['en'] ?? $d['ro'] ?? reset($d) ?: $title; }
-                $eventDate = Carbon::parse($ev->event_date);
+                $evDateStr = Carbon::parse($ev->event_date)->toDateString();
 
-                // Get all order dates for this event
+                // Get ticket counts grouped by days_before (using raw date string, not binding)
                 $orderDates = DB::table('orders as o')
                     ->join('tickets as t', 't.order_id', '=', 'o.id')
                     ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
@@ -818,20 +820,33 @@ class ViewArtist extends Page
                         $q->where('tt.event_id', $evId)->orWhere('t.event_id', $evId)->orWhere('t.marketplace_event_id', $evId);
                     })
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-                    ->select(DB::raw('DATEDIFF(?, COALESCE(o.paid_at, o.created_at)) as days_before'), DB::raw('COUNT(t.id) as cnt'))
-                    ->addBinding($ev->event_date, 'select')
+                    ->selectRaw("GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
                     ->groupBy('days_before')
-                    ->orderByDesc('days_before')
+                    ->orderBy('days_before')
                     ->get();
 
                 $total = $orderDates->sum('cnt');
                 if ($total === 0) continue;
-                $cum = 0; $points = [];
-                foreach ($orderDates->sortByDesc('days_before') as $r) {
-                    $cum += $r->cnt;
-                    $db = max(0, (int) $r->days_before);
-                    $points[] = ['days' => $db, 'pct' => round($cum / $total * 100, 1)];
+
+                // For each milestone, calculate: % of tickets sold WHERE days_before <= milestone
+                // i.e., "by 30d before event, X% of tickets had been purchased"
+                $milestones = [90, 60, 30, 7, 1];
+                $points = [];
+                foreach ($milestones as $m) {
+                    $soldByMilestone = $orderDates->where('days_before', '>=', $m)->sum('cnt');
+                    $points[] = ['days' => $m, 'pct' => round(($total - $soldByMilestone) / $total * 100, 1)];
                 }
+                // Reverse: "at 90d before, only X% sold" = total - tickets with days_before >= 90
+                // Actually: tickets sold BY milestone = tickets where days_before > milestone (bought earlier)
+                // Let me recalculate correctly:
+                // days_before = 0 means bought on event day, 90 means bought 90 days before
+                // "90d before" milestone: what % was sold by then = tickets with days_before >= 90 / total
+                $points = [];
+                foreach ($milestones as $m) {
+                    $soldByThen = $orderDates->where('days_before', '>=', $m)->sum('cnt');
+                    $points[] = ['days' => $m, 'pct' => round($soldByThen / $total * 100, 1)];
+                }
+
                 $velocityCurves[] = ['event_name' => mb_substr($title, 0, 30), 'total_tickets' => $total, 'points' => $points];
             }
         }

@@ -393,23 +393,17 @@ canvas{width:100%!important;}
                 <div class="card">
                     <div class="card-h">Sales Pace — How fast tickets sold (last {{ count($velocity) }} events)</div>
                     <div class="card-b">
-                        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Shows % of tickets sold at key milestones before each event</div>
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">% of tickets already sold at each milestone before event day</div>
                         <table class="tbl">
                             <thead><tr><th>Event</th><th>Total</th><th>90d before</th><th>60d</th><th>30d</th><th>7d</th><th>1d</th></tr></thead>
                             <tbody>
                                 @foreach($velocity as $vc)
-                                @php
-                                    $pts = collect($vc['points']);
-                                    $pctAt = function($days) use ($pts) {
-                                        $match = $pts->where('days', '>=', $days)->sortBy('days')->first();
-                                        return $match ? $match['pct'] : ($pts->isNotEmpty() ? $pts->last()['pct'] : 0);
-                                    };
-                                @endphp
+                                @php $pts = collect($vc['points'])->keyBy('days'); @endphp
                                 <tr>
                                     <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $vc['event_name'] }}</td>
                                     <td><span class="badge">{{ $vc['total_tickets'] }}</span></td>
                                     @foreach([90, 60, 30, 7, 1] as $d)
-                                    @php $pct = $pctAt($d); @endphp
+                                    @php $pct = $pts->get($d)['pct'] ?? 0; @endphp
                                     <td>
                                         <div style="display:flex;align-items:center;gap:4px;">
                                             <div class="progress" style="width:50px;"><div class="progress-fill" style="width:{{ min($pct,100) }}%;background:{{ $pct>=80?'var(--success)':($pct>=50?'var(--warn)':'var(--primary)') }};"></div></div>
@@ -849,32 +843,39 @@ canvas{width:100%!important;}
     const ps = @js($priceSens ?? []);
     if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[{label:'Tickets',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff88',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},{label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e33',tension:.3,pointRadius:4,borderWidth:2,yAxisID:'y1'}]},options:{...opts,scales:{...opts.scales,y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#22c55e',callback:v=>v+'%'},grid:{display:false}}}}});}
 
-    // Leaflet geographic map with heat circles
+    // Leaflet geographic map — init when Geographic tab is shown (Leaflet needs visible container)
     const geoPoints = @js(collect($geoData)->filter(fn($g) => ($g['lat'] ?? 0) != 0 && ($g['lng'] ?? 0) != 0)->values()->toArray());
-    const mapEl = document.getElementById('artistGeoMap');
-    if (mapEl && typeof L !== 'undefined' && geoPoints.length) {
-        setTimeout(() => {
-            const map = L.map(mapEl, { center: [46, 15], zoom: 5, zoomControl: true, attributionControl: false });
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
-            const maxTickets = Math.max(...geoPoints.map(p => p.tickets_sold), 1);
-            const bounds = [];
-            geoPoints.forEach(p => {
-                const intensity = p.tickets_sold / maxTickets;
-                const r = Math.max(15, Math.min(50, intensity * 50 + 10));
-                // Inner glow (large, transparent)
-                L.circle([p.lat, p.lng], { radius: r * 800, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.08 + intensity * 0.12 }).addTo(map);
-                // Mid glow
-                L.circle([p.lat, p.lng], { radius: r * 400, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.12 + intensity * 0.18 }).addTo(map);
-                // Core
-                L.circleMarker([p.lat, p.lng], { radius: Math.max(6, r * 0.4), fillColor: '#22d3ee', color: '#fff', weight: 1, opacity: 0.9, fillOpacity: 0.7 + intensity * 0.3 })
-                    .bindPopup('<b>' + p.city + '</b><br>Tickets: ' + p.tickets_sold.toLocaleString() + '<br>Events: ' + p.events_count + '<br>Revenue: ' + Math.round(p.total_revenue).toLocaleString() + ' RON')
-                    .addTo(map);
-                bounds.push([p.lat, p.lng]);
-            });
-            if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
-            else if (bounds.length === 1) map.setView(bounds[0], 6);
-        }, 500);
+    let geoMapInit = false;
+    function initGeoMap() {
+        if (geoMapInit) return;
+        const mapEl = document.getElementById('artistGeoMap');
+        if (!mapEl || typeof L === 'undefined' || !geoPoints.length) return;
+        if (mapEl.offsetWidth === 0) return; // not visible yet
+        geoMapInit = true;
+        const map = L.map(mapEl, { center: [46, 15], zoom: 5, zoomControl: true, attributionControl: false });
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+        const maxTickets = Math.max(...geoPoints.map(p => p.tickets_sold), 1);
+        const bounds = [];
+        geoPoints.forEach(p => {
+            const intensity = p.tickets_sold / maxTickets;
+            const r = Math.max(15, Math.min(50, intensity * 50 + 10));
+            L.circle([p.lat, p.lng], { radius: r * 800, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.08 + intensity * 0.12 }).addTo(map);
+            L.circle([p.lat, p.lng], { radius: r * 400, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.12 + intensity * 0.18 }).addTo(map);
+            L.circleMarker([p.lat, p.lng], { radius: Math.max(6, r * 0.4), fillColor: '#22d3ee', color: '#fff', weight: 1, opacity: 0.9, fillOpacity: 0.7 + intensity * 0.3 })
+                .bindPopup('<b>' + p.city + '</b><br>Tickets: ' + p.tickets_sold.toLocaleString() + '<br>Events: ' + p.events_count + '<br>Revenue: ' + Math.round(p.total_revenue).toLocaleString() + ' RON')
+                .addTo(map);
+            bounds.push([p.lat, p.lng]);
+        });
+        if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
+        else if (bounds.length === 1) map.setView(bounds[0], 6);
     }
+    // Try init on page load (if geographic tab is default), and on tab click
+    setTimeout(initGeoMap, 500);
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[\\@click*="geographic"]') || e.target.textContent?.trim() === 'Geographic') {
+            setTimeout(initGeoMap, 200);
+        }
+    });
 })();
 </script>
 @endpush
