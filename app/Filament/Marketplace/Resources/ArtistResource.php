@@ -108,12 +108,11 @@ class ArtistResource extends Resource
                                                     . '✓ Partener — Editează</a>'
                                                     . '</div>';
                                             } else {
-                                                // Available to add as partner
-                                                $partnerUrl = \App\Filament\Marketplace\Pages\PartnerArtists::getUrl();
+                                                // Available to add as partner — button triggers wire:click
                                                 $html .= '<div class="flex items-center justify-between gap-2 px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">'
                                                     . '<span class="text-xs"><strong>' . e($artist->name) . '</strong>' . $city . '</span>'
-                                                    . '<a href="' . $partnerUrl . '?tableSearch=' . urlencode($artist->name) . '" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded hover:bg-amber-200">'
-                                                    . '+ Adaugă partener</a>'
+                                                    . '<button type="button" wire:click="addArtistAsPartner(' . $artist->id . ')" class="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-amber-700 bg-amber-100 rounded hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-800 dark:hover:bg-amber-700">'
+                                                    . '+ Adaugă partener</button>'
                                                     . '</div>';
                                             }
                                         }
