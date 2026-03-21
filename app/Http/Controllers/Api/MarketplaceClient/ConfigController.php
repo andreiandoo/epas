@@ -7,6 +7,7 @@ use App\Models\Setting;
 use App\Models\TrackingIntegration;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class ConfigController extends BaseController
 {
@@ -16,27 +17,32 @@ class ConfigController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
-        $settings = Setting::current();
 
-        return $this->success([
-            'client' => [
-                'id' => $client->id,
-                'name' => $client->name,
-                'slug' => $client->slug,
-                'domain' => $client->domain,
-            ],
-            'contact' => [
-                'email' => $client->contact_email,
-                'phone' => $client->contact_phone,
-                'operating_hours' => $client->operating_hours,
-            ],
-            'platform' => [
-                'name' => $settings->company_name ?? 'Tixello',
-                'url' => config('app.url'),
-            ],
-            'settings' => $client->settings ?? [],
-            'allowed_tenants' => $client->allowed_tenants,
-        ]);
+        $data = Cache::remember("mp_config:{$client->id}", 300, function () use ($client) {
+            $settings = Setting::current();
+
+            return [
+                'client' => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'slug' => $client->slug,
+                    'domain' => $client->domain,
+                ],
+                'contact' => [
+                    'email' => $client->contact_email,
+                    'phone' => $client->contact_phone,
+                    'operating_hours' => $client->operating_hours,
+                ],
+                'platform' => [
+                    'name' => $settings->company_name ?? 'Tixello',
+                    'url' => config('app.url'),
+                ],
+                'settings' => $client->settings ?? [],
+                'allowed_tenants' => $client->allowed_tenants,
+            ];
+        });
+
+        return $this->success($data);
     }
 
     /**
@@ -46,20 +52,27 @@ class ConfigController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $tenants = $client->activeTenants()
-            ->select(['tenants.id', 'tenants.name', 'tenants.public_name', 'tenants.slug', 'tenants.domain'])
-            ->where('tenants.status', 'active')
-            ->get()
-            ->map(function ($tenant) use ($client) {
-                return [
-                    'id' => $tenant->id,
-                    'name' => $tenant->name,
-                    'public_name' => $tenant->public_name,
-                    'slug' => $tenant->slug,
-                    'domain' => $tenant->domain,
-                    'commission_rate' => $client->getCommissionForTenant($tenant->id),
-                ];
-            });
+        $tenants = Cache::remember("mp_tenants:{$client->id}", 300, function () use ($client) {
+            return $client->activeTenants()
+                ->select(['tenants.id', 'tenants.name', 'tenants.public_name', 'tenants.slug', 'tenants.domain'])
+                ->where('tenants.status', 'active')
+                ->get()
+                ->map(function ($tenant) use ($client) {
+                    // Use pivot data directly instead of N+1 query per tenant
+                    $commissionOverride = $tenant->pivot->commission_override ?? null;
+
+                    return [
+                        'id' => $tenant->id,
+                        'name' => $tenant->name,
+                        'public_name' => $tenant->public_name,
+                        'slug' => $tenant->slug,
+                        'domain' => $tenant->domain,
+                        'commission_rate' => $commissionOverride !== null
+                            ? (float) $commissionOverride
+                            : (float) $client->commission_rate,
+                    ];
+                });
+        });
 
         return $this->success($tenants);
     }
@@ -71,10 +84,12 @@ class ConfigController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $features = [
-            'ticket_insurance' => $this->getTicketInsuranceSettings($client),
-            'cultural_card' => $this->getCulturalCardSettings($client),
-        ];
+        $features = Cache::remember("mp_checkout_features:{$client->id}", 300, function () use ($client) {
+            return [
+                'ticket_insurance' => $this->getTicketInsuranceSettings($client),
+                'cultural_card' => $this->getCulturalCardSettings($client),
+            ];
+        });
 
         return $this->success($features);
     }
@@ -86,12 +101,16 @@ class ConfigController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $integrations = TrackingIntegration::where('marketplace_client_id', $client->id)
-            ->whereNull('marketplace_organizer_id')
-            ->where('enabled', true)
-            ->get();
+        $data = Cache::remember("mp_tracking:{$client->id}", 300, function () use ($client) {
+            $integrations = TrackingIntegration::where('marketplace_client_id', $client->id)
+                ->whereNull('marketplace_organizer_id')
+                ->where('enabled', true)
+                ->get();
 
-        return $this->success($this->buildScriptResponse($integrations));
+            return $this->buildScriptResponse($integrations);
+        });
+
+        return $this->success($data);
     }
 
     /**

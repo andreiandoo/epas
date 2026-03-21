@@ -12,6 +12,7 @@ use App\Services\Analytics\RedisAnalyticsService;
 use App\Services\GeoIpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -29,6 +30,8 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
+        $today = now()->toDateString();
+
         $query = Event::where('marketplace_client_id', $client->id)
             ->where('is_published', true)
             ->where(function ($q) {
@@ -44,6 +47,11 @@ class MarketplaceEventsController extends BaseController
                         ->where(function ($q) {
                             $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
                         });
+                },
+                'activeFeaturingOrders' => function ($query) use ($today) {
+                    $query->where('service_start_date', '<=', $today)
+                        ->where('service_end_date', '>=', $today)
+                        ->select('id', 'marketplace_event_id');
                 },
             ]);
 
@@ -347,6 +355,8 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        $today = now()->toDateString();
+
         $events = $query->with([
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
@@ -357,6 +367,11 @@ class MarketplaceEventsController extends BaseController
                         ->where(function ($q) {
                             $q->where('is_entry_ticket', false)->orWhereNull('is_entry_ticket');
                         });
+                },
+                'activeFeaturingOrders' => function ($query) use ($today) {
+                    $query->where('service_start_date', '<=', $today)
+                        ->where('service_end_date', '>=', $today)
+                        ->select('id', 'marketplace_event_id');
                 },
             ])
             ->orderBy('event_date')
@@ -827,30 +842,32 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
-        // Get categories that have published events
-        $catQuery = Event::where('marketplace_client_id', $client->id)
-            ->where('is_published', true)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            });
+        $categories = Cache::remember("mp_categories:{$client->id}:{$language}", 120, function () use ($client, $language) {
+            // Get categories that have published events
+            $catQuery = Event::where('marketplace_client_id', $client->id)
+                ->where('is_published', true)
+                ->where(function ($q) {
+                    $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                });
 
-        $this->applyUpcomingFilter($catQuery);
+            $this->applyUpcomingFilter($catQuery);
 
-        $categoryIds = $catQuery->whereNotNull('marketplace_event_category_id')
-            ->selectRaw('marketplace_event_category_id, COUNT(*) as event_count')
-            ->groupBy('marketplace_event_category_id')
-            ->pluck('event_count', 'marketplace_event_category_id');
+            $categoryIds = $catQuery->whereNotNull('marketplace_event_category_id')
+                ->selectRaw('marketplace_event_category_id, COUNT(*) as event_count')
+                ->groupBy('marketplace_event_category_id')
+                ->pluck('event_count', 'marketplace_event_category_id');
 
-        $categories = MarketplaceEventCategory::whereIn('id', $categoryIds->keys())
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn ($cat) => [
-                'id' => $cat->id,
-                'name' => $cat->getTranslation('name', $language),
-                'slug' => $cat->slug,
-                'icon' => $cat->icon,
-                'event_count' => $categoryIds[$cat->id] ?? 0,
-            ]);
+            return MarketplaceEventCategory::whereIn('id', $categoryIds->keys())
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn ($cat) => [
+                    'id' => $cat->id,
+                    'name' => $cat->getTranslation('name', $language),
+                    'slug' => $cat->slug,
+                    'icon' => $cat->icon,
+                    'event_count' => $categoryIds[$cat->id] ?? 0,
+                ]);
+        });
 
         return $this->success(['categories' => $categories]);
     }
@@ -863,43 +880,44 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
-        // Get cities from venues of events
-        $query = Event::where('marketplace_client_id', $client->id)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            });
+        $genre = $request->get('genre');
+        $category = $request->get('category');
+        $cacheKey = "mp_cities:{$client->id}:" . md5("{$genre}:{$category}");
 
-        $this->applyUpcomingFilter($query);
+        $cities = Cache::remember($cacheKey, 120, function () use ($client, $genre, $category) {
+            // Get cities from venues of events
+            $query = Event::where('marketplace_client_id', $client->id)
+                ->where(function ($q) {
+                    $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                });
 
-        // Filter by genre if provided
-        if ($request->has('genre')) {
-            $genreSlug = $request->genre;
-            $query->whereHas('eventGenres', function ($q) use ($genreSlug) {
-                $q->where('slug', $genreSlug);
-            });
-        }
+            $this->applyUpcomingFilter($query);
 
-        // Filter by category if provided
-        if ($request->has('category')) {
-            $categorySlug = $request->category;
-            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
-                $q->where('slug', $categorySlug);
-            });
-        }
+            if ($genre) {
+                $query->whereHas('eventGenres', function ($q) use ($genre) {
+                    $q->where('slug', $genre);
+                });
+            }
 
-        $cities = $query->with('venue:id,city')
-            ->get()
-            ->filter(fn ($e) => $e->venue?->city)
-            ->groupBy(fn ($e) => strtolower(trim($e->venue->city))) // Normalize city names
-            ->map(function ($group, $cityKey) {
-                // Use the first occurrence's original city name for display
-                return [
-                    'name' => $group->first()->venue->city,
-                    'event_count' => $group->count(),
-                ];
-            })
-            ->sortByDesc('event_count')
-            ->values();
+            if ($category) {
+                $query->whereHas('marketplaceEventCategory', function ($q) use ($category) {
+                    $q->where('slug', $category);
+                });
+            }
+
+            return $query->with('venue:id,city')
+                ->get(['id', 'venue_id'])
+                ->filter(fn ($e) => $e->venue?->city)
+                ->groupBy(fn ($e) => strtolower(trim($e->venue->city)))
+                ->map(function ($group, $cityKey) {
+                    return [
+                        'name' => $group->first()->venue->city,
+                        'event_count' => $group->count(),
+                    ];
+                })
+                ->sortByDesc('event_count')
+                ->values();
+        });
 
         return $this->success(['cities' => $cities]);
     }
@@ -1600,6 +1618,16 @@ class MarketplaceEventsController extends BaseController
      */
     protected function hasActivePaidPromotion(Event $event): bool
     {
+        // Use eager-loaded relation when available to avoid N+1 queries
+        if ($event->relationLoaded('activeFeaturingOrders')) {
+            $today = now()->toDateString();
+            return $event->activeFeaturingOrders
+                ->where('service_start_date', '<=', $today)
+                ->where('service_end_date', '>=', $today)
+                ->isNotEmpty();
+        }
+
+        // Fallback for single-event contexts (e.g. show())
         $today = now()->toDateString();
 
         return ServiceOrder::where('marketplace_event_id', $event->id)
