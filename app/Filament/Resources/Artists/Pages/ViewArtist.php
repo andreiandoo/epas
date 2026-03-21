@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v9_{$this->record->id}";
+        $cacheKey = "artist_full_v10_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -121,10 +121,34 @@ class ViewArtist extends Page
             $paidStatuses = ['paid', 'confirmed', 'completed'];
             $orderIds = $this->artistOrderIds($eventIds, $paidStatuses);
 
+            // Core stats — single source of truth for tickets and buyers
+            $coreStats = ['total_tickets' => 0, 'unique_buyers' => 0, 'total_revenue' => 0];
+            if (!empty($orderIds)) {
+                $cs = DB::table('orders as o')
+                    ->join('tickets as t', 't.order_id', '=', 'o.id')
+                    ->whereIn('o.id', $orderIds)
+                    ->select(
+                        DB::raw('COUNT(t.id) as total_tickets'),
+                        DB::raw('COUNT(DISTINCT COALESCE(o.marketplace_customer_id, o.customer_id)) as unique_buyers'),
+                        DB::raw('SUM(DISTINCT o.total) as total_revenue')
+                    )
+                    ->first();
+                // SUM(DISTINCT o.total) may overcount if multiple tickets per order
+                // Use a subquery for accurate revenue
+                $accurateRevenue = DB::table('orders')
+                    ->whereIn('id', $orderIds)
+                    ->sum('total');
+                $coreStats = [
+                    'total_tickets' => (int) ($cs->total_tickets ?? 0),
+                    'unique_buyers' => (int) ($cs->unique_buyers ?? 0),
+                    'total_revenue' => round((float) $accurateRevenue, 2),
+                ];
+            }
+
             return array_merge(
                 compact('kpis', 'months', 'events', 'tickets', 'revenue', 'from', 'to',
                     'artistEvents', 'artistVenues', 'artistTenants',
-                    'topVenues', 'topCities', 'topCounties'),
+                    'topVenues', 'topCities', 'topCounties', 'coreStats'),
                 [
                     'audiencePersonas' => $this->buildAudiencePersonas($orderIds),
                     'geoIntelligence' => $this->buildGeographicIntelligence($orderIds),
@@ -723,21 +747,20 @@ class ViewArtist extends Page
         $totalChannelOrders = collect($channels)->sum('orders_count');
         foreach ($channels as &$ch) { $ch->pct = $totalChannelOrders > 0 ? round($ch->orders_count / $totalChannelOrders * 100, 1) : 0; }
 
-        // Per-event revenue + attendees — use ticket_types for accurate revenue (not order totals which duplicate per ticket row)
-        $perEventRevenue = DB::table('ticket_types as tt')
-            ->whereIn('tt.event_id', $eventIds)
-            ->select(
-                'tt.event_id',
-                DB::raw('SUM(tt.quota_sold * tt.price_cents) / 100 as revenue'),
-                DB::raw('SUM(tt.quota_sold) as tickets_sold')
-            )
-            ->groupBy('tt.event_id')
+        // Per-event revenue — use orders grouped by event (deduplicated)
+        $perEventRevenue = DB::table('orders')
+            ->whereIn('id', $orderIds)
+            ->whereNotNull('event_id')
+            ->select('event_id', DB::raw('SUM(total) as revenue'), DB::raw('COUNT(id) as order_count'))
+            ->groupBy('event_id')
             ->get();
 
-        $avgRevenuePerEvent = $perEventRevenue->isNotEmpty() ? round($perEventRevenue->avg('revenue'), 2) : 0;
-        $totalTicketsSold = $perEventRevenue->sum('tickets_sold');
-        $totalRevenue = $perEventRevenue->sum('revenue');
-        $revenuePerAttendee = $totalTicketsSold > 0 ? round($totalRevenue / $totalTicketsSold, 2) : 0;
+        $totalOrders = DB::table('orders')->whereIn('id', $orderIds)->count();
+        $totalRevenue = DB::table('orders')->whereIn('id', $orderIds)->sum('total');
+        $totalEvents = $perEventRevenue->count() ?: count($eventIds);
+        $avgRevenuePerEvent = $totalEvents > 0 ? round($totalRevenue / $totalEvents, 2) : 0;
+        // Revenue per ticket uses coreStats (will be passed to blade separately)
+        $revenuePerAttendee = 0; // calculated in blade from coreStats
 
         // Fee comparison (from artist model)
         $artist = $this->record;
@@ -856,8 +879,9 @@ class ViewArtist extends Page
             'channels' => $channels, 'purchase_timing' => $purchaseTiming,
             'avg_lead_days' => round($leadTimes->avg() ?? 0, 1),
             'price_sensitivity' => $priceSensitivity, 'velocity_curves' => $velocityCurves,
-            'avg_revenue_per_event' => $avgRevenuePerEvent, 'revenue_per_attendee' => $revenuePerAttendee,
-            'total_tickets_sold' => $totalTicketsSold, 'fee_comparison' => $feeComparison,
+            'avg_revenue_per_event' => $avgRevenuePerEvent,
+            'total_revenue' => $totalRevenue,
+            'fee_comparison' => $feeComparison,
         ];
     }
 

@@ -45,8 +45,12 @@
     }
 
     $totalEvents  = is_array($events)  ? array_sum($events)  : 0;
-    $totalTickets = is_array($tickets) ? array_sum($tickets) : 0;
-    $totalRevenue = is_array($revenue) ? array_sum($revenue) : 0.0;
+
+    // coreStats = single source of truth for tickets/buyers/revenue
+    $cs = $coreStats ?? ['total_tickets' => 0, 'unique_buyers' => 0, 'total_revenue' => 0];
+    $totalTickets = $cs['total_tickets'];
+    $uniqueBuyers = $cs['unique_buyers'];
+    $totalRevenue = $cs['total_revenue'];
     $avgTicketsPerEvent = $totalEvents > 0 ? round($totalTickets / $totalEvents, 1) : 0;
     $avgTicketPrice     = $totalTickets > 0 ? round($totalRevenue / $totalTickets, 2) : 0.00;
 
@@ -209,7 +213,7 @@ canvas{width:100%!important;}
         </div>
 
         <div class="kpi-grid kpi-grid-6" style="margin-bottom:14px;">
-            <div class="kpi"><div class="l">Unique Buyers</div><div class="v">{{ number_format($aTotals['total_customers'] ?? 0) }}</div></div>
+            <div class="kpi"><div class="l">Unique Buyers</div><div class="v">{{ number_format($uniqueBuyers) }}</div></div>
             <div class="kpi"><div class="l">Sell-Through</div><div class="v">{{ $perf['avg_sell_through'] ?? 0 }}%</div></div>
             <div class="kpi"><div class="l">Check-in</div><div class="v">{{ $perf['avg_checkin_rate'] ?? 0 }}%</div></div>
             <div class="kpi"><div class="l">Repeat Rate</div><div class="v">{{ $loyalty['repeat_rate'] ?? 0 }}%</div></div>
@@ -518,8 +522,8 @@ canvas{width:100%!important;}
             {{-- Revenue KPIs --}}
             <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
                 <div class="kpi"><div class="l">Avg Revenue / Event</div><div class="v" style="color:var(--success);">{{ number_format($sales['avg_revenue_per_event'] ?? 0, 0) }} RON</div></div>
-                <div class="kpi"><div class="l">Revenue / Attendee</div><div class="v">{{ number_format($sales['revenue_per_attendee'] ?? 0, 0) }} RON</div></div>
-                <div class="kpi"><div class="l">Total Tickets Sold</div><div class="v">{{ number_format($sales['total_tickets_sold'] ?? 0) }}</div></div>
+                <div class="kpi"><div class="l">Revenue / Ticket</div><div class="v">{{ $totalTickets > 0 ? number_format($totalRevenue / $totalTickets, 0) : 0 }} RON</div></div>
+                <div class="kpi"><div class="l">Total Tickets</div><div class="v">{{ number_format($totalTickets) }}</div></div>
                 <div class="kpi"><div class="l">Avg Lead Time</div><div class="v">{{ $sales['avg_lead_days'] ?? 0 }}d</div></div>
             </div>
 
