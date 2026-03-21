@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v8_{$this->record->id}";
+        $cacheKey = "artist_full_v9_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -1013,6 +1013,215 @@ class ViewArtist extends Page
                 'forecast_sold' => $forecastSold,
             ];
         })->toArray();
+    }
+
+    // ─── OPPORTUNITIES (AI-style recommendations) ──────────────────
+
+    private function buildOpportunities(array $eventIds, array $orderIds): array
+    {
+        if (empty($eventIds)) return [];
+        $artistId = $this->record->id;
+
+        // 1. Best day of week — analyze which weekdays had highest sell-through
+        $dayPerformance = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)
+            ->whereNotNull('e.event_date')
+            ->select(
+                DB::raw('DAYOFWEEK(e.event_date) as dow'),
+                DB::raw('DAYNAME(e.event_date) as day_name'),
+                DB::raw('COUNT(DISTINCT e.id) as events'),
+                DB::raw('AVG(ts.sold) as avg_sold'),
+                DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'),
+                DB::raw('AVG(ts.sold * (SELECT AVG(tt2.price_cents) FROM ticket_types tt2 WHERE tt2.event_id = e.id) / 100) as avg_revenue')
+            )
+            ->groupBy('dow', 'day_name')
+            ->orderByDesc('avg_st')
+            ->get();
+
+        // 2. Best months — which months perform best
+        $monthPerformance = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)
+            ->whereNotNull('e.event_date')
+            ->select(
+                DB::raw('MONTH(e.event_date) as month_num'),
+                DB::raw('MONTHNAME(e.event_date) as month_name'),
+                DB::raw('COUNT(DISTINCT e.id) as events'),
+                DB::raw('AVG(ts.sold) as avg_sold'),
+                DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
+            )
+            ->groupBy('month_num', 'month_name')
+            ->orderByDesc('avg_st')
+            ->get();
+
+        // 3. Optimal ticket price — find sweet spot (highest sell-through by price bucket)
+        $pricePerformance = DB::table('ticket_types as tt')
+            ->whereIn('tt.event_id', $eventIds)
+            ->where('tt.quota_total', '>', 0)
+            ->where('tt.price_cents', '>', 0)
+            ->select(
+                DB::raw('CASE
+                    WHEN tt.price_cents/100 < 50 THEN "0-50"
+                    WHEN tt.price_cents/100 < 100 THEN "50-100"
+                    WHEN tt.price_cents/100 < 150 THEN "100-150"
+                    WHEN tt.price_cents/100 < 200 THEN "150-200"
+                    WHEN tt.price_cents/100 < 300 THEN "200-300"
+                    ELSE "300+" END as price_range'),
+                DB::raw('AVG(tt.price_cents/100) as avg_price'),
+                DB::raw('SUM(tt.quota_sold) as total_sold'),
+                DB::raw('SUM(tt.quota_total) as total_cap'),
+                DB::raw('AVG(LEAST(tt.quota_sold * 1.0 / tt.quota_total, 1.0)) as avg_st')
+            )
+            ->groupBy('price_range')
+            ->orderByDesc('avg_st')
+            ->get();
+
+        // 4. Lead time analysis — when to start promoting
+        $leadTimeStats = [];
+        if (!empty($orderIds)) {
+            $leadTimes = DB::table('orders as o')
+                ->join('tickets as t', 't.order_id', '=', 'o.id')
+                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->join('events as e', function ($join) {
+                    $join->on('e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'));
+                })
+                ->whereIn('o.id', array_slice($orderIds, 0, 5000))
+                ->whereNotNull('e.event_date')
+                ->selectRaw('GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
+                ->get()
+                ->pluck('days_before')
+                ->filter(fn ($d) => $d >= 0);
+
+            if ($leadTimes->isNotEmpty()) {
+                $leadTimeStats = [
+                    'median' => round($leadTimes->median(), 0),
+                    'p75' => round($leadTimes->percentile(75), 0),
+                    'p90' => round($leadTimes->percentile(90), 0),
+                    'avg' => round($leadTimes->avg(), 0),
+                    'first_sale_avg' => round($leadTimes->max(), 0), // earliest purchase
+                ];
+            }
+        }
+
+        // 5. Optimal venue capacity — what size venue works best
+        $venueCapPerf = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->join('venues as v', 'v.id', '=', 'e.venue_id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)
+            ->where('v.capacity', '>', 0)
+            ->select(
+                DB::raw('CASE
+                    WHEN v.capacity < 200 THEN "< 200"
+                    WHEN v.capacity < 500 THEN "200-500"
+                    WHEN v.capacity < 1000 THEN "500-1000"
+                    WHEN v.capacity < 2000 THEN "1000-2000"
+                    WHEN v.capacity < 5000 THEN "2000-5000"
+                    ELSE "5000+" END as cap_range'),
+                DB::raw('COUNT(DISTINCT e.id) as events'),
+                DB::raw('AVG(ts.sold) as avg_sold'),
+                DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
+            )
+            ->groupBy('cap_range')
+            ->orderByDesc('avg_st')
+            ->get();
+
+        // Build recommendations
+        $recommendations = [];
+
+        // Best day
+        $bestDay = $dayPerformance->first();
+        $worstDay = $dayPerformance->last();
+        if ($bestDay && $dayPerformance->count() >= 2) {
+            $recommendations[] = [
+                'icon' => '📅', 'category' => 'Scheduling',
+                'title' => "Best day: {$bestDay->day_name}",
+                'detail' => round((float) $bestDay->avg_st, 1) . "% avg sell-through across {$bestDay->events} events" . ($worstDay ? ". Avoid {$worstDay->day_name} (" . round((float) $worstDay->avg_st, 1) . "%)" : ''),
+                'confidence' => $bestDay->events >= 3 ? 'high' : ($bestDay->events >= 2 ? 'medium' : 'low'),
+            ];
+        }
+
+        // Best months
+        $bestMonths = $monthPerformance->take(3);
+        if ($bestMonths->isNotEmpty()) {
+            $monthNames = $bestMonths->pluck('month_name')->join(', ');
+            $recommendations[] = [
+                'icon' => '🗓️', 'category' => 'Seasonality',
+                'title' => "Best months: {$monthNames}",
+                'detail' => 'Top sell-through months: ' . $bestMonths->map(fn ($m) => $m->month_name . ' (' . round((float) $m->avg_st, 1) . '%)')->join(', '),
+                'confidence' => $bestMonths->sum('events') >= 5 ? 'high' : 'medium',
+            ];
+        }
+
+        // Optimal price
+        $bestPrice = $pricePerformance->first();
+        if ($bestPrice && $pricePerformance->count() >= 2) {
+            $recommendations[] = [
+                'icon' => '💰', 'category' => 'Pricing',
+                'title' => "Sweet spot: {$bestPrice->price_range} RON",
+                'detail' => round((float) $bestPrice->avg_st * 100, 1) . "% sell-through at avg " . round((float) $bestPrice->avg_price, 0) . " RON. Sold {$bestPrice->total_sold} tickets in this range.",
+                'confidence' => $bestPrice->total_sold >= 50 ? 'high' : ($bestPrice->total_sold >= 20 ? 'medium' : 'low'),
+            ];
+        }
+
+        // Promotion lead time
+        if (!empty($leadTimeStats)) {
+            $startPromo = $leadTimeStats['p90'] ?? $leadTimeStats['avg'] ?? 30;
+            $recommendations[] = [
+                'icon' => '📢', 'category' => 'Promotion',
+                'title' => "Start promoting {$startPromo} days before",
+                'detail' => "90% of ticket purchases happen within {$startPromo} days of event. Median purchase: {$leadTimeStats['median']}d before. Earliest purchases: {$leadTimeStats['first_sale_avg']}d out.",
+                'confidence' => 'high',
+            ];
+        }
+
+        // Venue capacity
+        $bestVenueCap = $venueCapPerf->first();
+        if ($bestVenueCap && $venueCapPerf->count() >= 2) {
+            $recommendations[] = [
+                'icon' => '🏟️', 'category' => 'Venue Size',
+                'title' => "Optimal capacity: {$bestVenueCap->cap_range}",
+                'detail' => round((float) $bestVenueCap->avg_st, 1) . "% avg sell-through in venues with capacity {$bestVenueCap->cap_range}. Avg attendance: " . round((float) $bestVenueCap->avg_sold) . " per event.",
+                'confidence' => $bestVenueCap->events >= 3 ? 'high' : 'medium',
+            ];
+        }
+
+        // Customer persona recommendation (from audience data)
+        $personas = $this->buildAudiencePersonas($orderIds);
+        $topPersona = $personas['personas'][0] ?? null;
+        if ($topPersona) {
+            $topCity = !empty($topPersona['top_cities']) ? array_key_first($topPersona['top_cities']) : null;
+            $recommendations[] = [
+                'icon' => '🎯', 'category' => 'Target Audience',
+                'title' => "Primary: {$topPersona['age_group']}, {$topPersona['gender']} ({$topPersona['percentage']}%)",
+                'detail' => "Avg spend: " . number_format($topPersona['avg_spend'], 0) . " RON, {$topPersona['avg_orders']} orders" . ($topCity ? ". Top city: {$topCity}" : ''),
+                'confidence' => $topPersona['count'] >= 50 ? 'high' : ($topPersona['count'] >= 20 ? 'medium' : 'low'),
+            ];
+        }
+
+        return [
+            'recommendations' => $recommendations,
+            'day_performance' => $dayPerformance->map(fn ($d) => [
+                'day' => $d->day_name, 'events' => (int) $d->events,
+                'avg_sold' => round((float) $d->avg_sold), 'avg_st' => round((float) ($d->avg_st ?? 0), 1),
+            ])->values()->toArray(),
+            'month_performance' => $monthPerformance->map(fn ($m) => [
+                'month' => $m->month_name, 'events' => (int) $m->events,
+                'avg_sold' => round((float) $m->avg_sold), 'avg_st' => round((float) ($m->avg_st ?? 0), 1),
+            ])->values()->toArray(),
+            'price_performance' => $pricePerformance->map(fn ($p) => [
+                'range' => $p->price_range, 'avg_price' => round((float) $p->avg_price, 0),
+                'total_sold' => (int) $p->total_sold, 'avg_st' => round((float) ($p->avg_st ?? 0) * 100, 1),
+            ])->values()->toArray(),
+            'venue_cap_performance' => $venueCapPerf->map(fn ($v) => [
+                'range' => $v->cap_range, 'events' => (int) $v->events,
+                'avg_sold' => round((float) $v->avg_sold), 'avg_st' => round((float) ($v->avg_st ?? 0), 1),
+            ])->values()->toArray(),
+            'lead_time' => $leadTimeStats,
+        ];
     }
 
     /** Serii pentru chart-uri (ultimele 12 luni) */

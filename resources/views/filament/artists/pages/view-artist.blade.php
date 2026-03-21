@@ -180,9 +180,9 @@ canvas{width:100%!important;}
     {{-- ═══════ TABS ═══════ --}}
     <div class="tabs" style="margin-top:16px;">
         @foreach([
-            'overview' => 'Overview', 'performance' => 'Performance', 'audience' => 'Audience',
-            'sales' => 'Sales', 'geographic' => 'Geographic', 'upcoming' => 'Upcoming',
-            'expansion' => 'Expansion', 'media' => 'Media & Social', 'history' => 'Events History',
+            'overview' => 'Overview', 'opportunities' => 'Opportunities', 'performance' => 'Performance',
+            'audience' => 'Audience', 'sales' => 'Sales', 'geographic' => 'Geographic',
+            'upcoming' => 'Upcoming', 'expansion' => 'Expansion', 'media' => 'Media & Social', 'history' => 'Events History',
         ] as $tabKey => $tabLabel)
             <button @click="tab = '{{ $tabKey }}'" :class="tab === '{{ $tabKey }}' ? 'active' : ''" class="tab">{{ $tabLabel }}</button>
         @endforeach
@@ -259,6 +259,160 @@ canvas{width:100%!important;}
             <div class="kpi"><div class="l">{{ $role }}</div><div style="margin-top:4px;font-size:13px;color:#dbe6ff;">{{ $data['events'] }} ev · {{ $data['avg_sold'] }} avg · <span style="color:var(--success);">{{ $data['avg_sell_through'] }}%</span></div></div>
             @endforeach
         </div>
+        @endif
+    </div>
+
+    {{-- ═══════ TAB: OPPORTUNITIES ═══════ --}}
+    @php $opps = $opportunities ?? []; $recs = $opps['recommendations'] ?? []; @endphp
+    <div x-show="tab === 'opportunities'" x-cloak>
+        @if(empty($recs))
+            <div class="card"><div class="card-b" style="color:var(--muted);text-align:center;padding:32px;">Not enough data to generate recommendations.</div></div>
+        @else
+            {{-- Recommendation cards --}}
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+                @foreach($recs as $rec)
+                <div class="card">
+                    <div class="card-b">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <span style="font-size:20px;">{{ $rec['icon'] }}</span>
+                            <span style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);">{{ $rec['category'] }}</span>
+                            @php $cc = match($rec['confidence']) { 'high' => 'green', 'medium' => 'yellow', default => 'red' }; @endphp
+                            <span class="chip chip-{{ $cc }}" style="margin-left:auto;font-size:10px;">{{ $rec['confidence'] }}</span>
+                        </div>
+                        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">{{ $rec['title'] }}</div>
+                        <div style="font-size:12px;color:var(--muted);line-height:1.6;">{{ $rec['detail'] }}</div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+
+            {{-- Detailed breakdowns --}}
+            <div class="g2" style="margin-bottom:14px;">
+                {{-- Day of week performance --}}
+                @if(!empty($opps['day_performance']))
+                <div class="card">
+                    <div class="card-h">Performance by Day of Week</div>
+                    <div class="card-b">
+                        <table class="tbl">
+                            <thead><tr><th>Day</th><th>Events</th><th>Avg Sold</th><th>Sell-Through</th></tr></thead>
+                            <tbody>
+                                @foreach($opps['day_performance'] as $dp)
+                                <tr>
+                                    <td><strong>{{ $dp['day'] }}</strong></td>
+                                    <td>{{ $dp['events'] }}</td>
+                                    <td>{{ $dp['avg_sold'] }}</td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:5px;">
+                                            <div class="progress" style="width:60px;"><div class="progress-fill" style="width:{{ min($dp['avg_st'],100) }}%;background:{{ $dp['avg_st']>=80?'var(--success)':($dp['avg_st']>=50?'var(--warn)':'var(--danger)') }};"></div></div>
+                                            <span style="font-size:11px;">{{ $dp['avg_st'] }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Month performance --}}
+                @if(!empty($opps['month_performance']))
+                <div class="card">
+                    <div class="card-h">Performance by Month</div>
+                    <div class="card-b">
+                        <table class="tbl">
+                            <thead><tr><th>Month</th><th>Events</th><th>Avg Sold</th><th>Sell-Through</th></tr></thead>
+                            <tbody>
+                                @foreach($opps['month_performance'] as $mp)
+                                <tr>
+                                    <td><strong>{{ $mp['month'] }}</strong></td>
+                                    <td>{{ $mp['events'] }}</td>
+                                    <td>{{ $mp['avg_sold'] }}</td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:5px;">
+                                            <div class="progress" style="width:60px;"><div class="progress-fill" style="width:{{ min($mp['avg_st'],100) }}%;background:{{ $mp['avg_st']>=80?'var(--success)':($mp['avg_st']>=50?'var(--warn)':'var(--danger)') }};"></div></div>
+                                            <span style="font-size:11px;">{{ $mp['avg_st'] }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+            </div>
+
+            <div class="g2">
+                {{-- Price performance --}}
+                @if(!empty($opps['price_performance']))
+                <div class="card">
+                    <div class="card-h">Performance by Ticket Price</div>
+                    <div class="card-b">
+                        <table class="tbl">
+                            <thead><tr><th>Price Range</th><th>Avg Price</th><th>Tickets Sold</th><th>Sell-Through</th></tr></thead>
+                            <tbody>
+                                @foreach($opps['price_performance'] as $pp)
+                                <tr>
+                                    <td><strong>{{ $pp['range'] }} RON</strong></td>
+                                    <td>{{ $pp['avg_price'] }} RON</td>
+                                    <td>{{ number_format($pp['total_sold']) }}</td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:5px;">
+                                            <div class="progress" style="width:60px;"><div class="progress-fill" style="width:{{ min($pp['avg_st'],100) }}%;background:{{ $pp['avg_st']>=80?'var(--success)':($pp['avg_st']>=50?'var(--warn)':'var(--danger)') }};"></div></div>
+                                            <span style="font-size:11px;">{{ $pp['avg_st'] }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Venue capacity performance --}}
+                @if(!empty($opps['venue_cap_performance']))
+                <div class="card">
+                    <div class="card-h">Performance by Venue Size</div>
+                    <div class="card-b">
+                        <table class="tbl">
+                            <thead><tr><th>Capacity</th><th>Events</th><th>Avg Sold</th><th>Sell-Through</th></tr></thead>
+                            <tbody>
+                                @foreach($opps['venue_cap_performance'] as $vp)
+                                <tr>
+                                    <td><strong>{{ $vp['range'] }}</strong></td>
+                                    <td>{{ $vp['events'] }}</td>
+                                    <td>{{ $vp['avg_sold'] }}</td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:5px;">
+                                            <div class="progress" style="width:60px;"><div class="progress-fill" style="width:{{ min($vp['avg_st'],100) }}%;background:{{ $vp['avg_st']>=80?'var(--success)':($vp['avg_st']>=50?'var(--warn)':'var(--danger)') }};"></div></div>
+                                            <span style="font-size:11px;">{{ $vp['avg_st'] }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+            </div>
+
+            {{-- Promotion timing --}}
+            @if(!empty($opps['lead_time']))
+            <div class="card" style="margin-top:14px;">
+                <div class="card-h">Promotion Timing Analysis</div>
+                <div class="card-b">
+                    <div class="kpi-grid kpi-grid-4">
+                        <div class="kpi"><div class="l">Start Promoting</div><div class="v" style="color:var(--accent);">{{ $opps['lead_time']['p90'] ?? '?' }}d before</div></div>
+                        <div class="kpi"><div class="l">Median Purchase</div><div class="v">{{ $opps['lead_time']['median'] ?? '?' }}d before</div></div>
+                        <div class="kpi"><div class="l">Avg Purchase</div><div class="v">{{ $opps['lead_time']['avg'] ?? '?' }}d before</div></div>
+                        <div class="kpi"><div class="l">Earliest Purchase</div><div class="v">{{ $opps['lead_time']['first_sale_avg'] ?? '?' }}d out</div></div>
+                    </div>
+                </div>
+            </div>
+            @endif
         @endif
     </div>
 
