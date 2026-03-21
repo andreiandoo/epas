@@ -61,7 +61,7 @@ class ViewArtist extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "artist_full_v6_{$this->record->id}";
+        $cacheKey = "artist_full_v7_{$this->record->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -720,23 +720,21 @@ class ViewArtist extends Page
         $totalChannelOrders = collect($channels)->sum('orders_count');
         foreach ($channels as &$ch) { $ch->pct = $totalChannelOrders > 0 ? round($ch->orders_count / $totalChannelOrders * 100, 1) : 0; }
 
-        // Per-event revenue + attendees (for avg revenue per event + revenue per attendee)
-        $perEventRevenue = DB::table('orders as o')
-            ->join('tickets as t', 't.order_id', '=', 'o.id')
-            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-            ->whereIn('o.id', $orderIds)
+        // Per-event revenue + attendees — use ticket_types for accurate revenue (not order totals which duplicate per ticket row)
+        $perEventRevenue = DB::table('ticket_types as tt')
+            ->whereIn('tt.event_id', $eventIds)
             ->select(
-                DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) as event_id'),
-                DB::raw('SUM(o.total) as revenue'),
-                DB::raw('COUNT(DISTINCT COALESCE(o.marketplace_customer_id, o.customer_id)) as attendees')
+                'tt.event_id',
+                DB::raw('SUM(tt.quota_sold * tt.price_cents) / 100 as revenue'),
+                DB::raw('SUM(tt.quota_sold) as tickets_sold')
             )
-            ->groupBy(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
+            ->groupBy('tt.event_id')
             ->get();
 
         $avgRevenuePerEvent = $perEventRevenue->isNotEmpty() ? round($perEventRevenue->avg('revenue'), 2) : 0;
-        $totalAttendees = $perEventRevenue->sum('attendees');
+        $totalTicketsSold = $perEventRevenue->sum('tickets_sold');
         $totalRevenue = $perEventRevenue->sum('revenue');
-        $revenuePerAttendee = $totalAttendees > 0 ? round($totalRevenue / $totalAttendees, 2) : 0;
+        $revenuePerAttendee = $totalTicketsSold > 0 ? round($totalRevenue / $totalTicketsSold, 2) : 0;
 
         // Fee comparison (from artist model)
         $artist = $this->record;
@@ -751,14 +749,16 @@ class ViewArtist extends Page
             ];
         }
 
-        // Purchase lead time — use created_at as fallback when paid_at is null
+        // Purchase lead time — join directly to events table for event_date
         $leadTimes = DB::table('orders as o')
             ->join('tickets as t', 't.order_id', '=', 'o.id')
             ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-            ->whereIn('o.id', $orderIds)
-            ->whereNotNull(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
-            ->whereRaw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) IN (SELECT id FROM events WHERE event_date IS NOT NULL)')
-            ->select(DB::raw('DATEDIFF((SELECT event_date FROM events WHERE id = COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) LIMIT 1), COALESCE(o.paid_at, o.created_at)) as days_before'))
+            ->join('events as e', function ($join) {
+                $join->on('e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'));
+            })
+            ->whereIn('o.id', array_slice($orderIds, 0, 5000)) // limit for performance
+            ->whereNotNull('e.event_date')
+            ->select(DB::raw('DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
             ->get()
             ->pluck('days_before')
             ->filter(fn ($d) => $d !== null && $d >= 0);
@@ -841,7 +841,7 @@ class ViewArtist extends Page
             'avg_lead_days' => round($leadTimes->avg() ?? 0, 1),
             'price_sensitivity' => $priceSensitivity, 'velocity_curves' => $velocityCurves,
             'avg_revenue_per_event' => $avgRevenuePerEvent, 'revenue_per_attendee' => $revenuePerAttendee,
-            'total_attendees' => $totalAttendees, 'fee_comparison' => $feeComparison,
+            'total_tickets_sold' => $totalTicketsSold, 'fee_comparison' => $feeComparison,
         ];
     }
 

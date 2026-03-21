@@ -194,8 +194,8 @@ canvas{width:100%!important;}
         @if($record->main_image_full_url ?? $record->portrait_full_url ?? null)
         <div class="card" style="margin-bottom:14px;overflow:hidden;">
             <div style="position:relative;">
-                <img src="{{ $record->main_image_full_url ?: $record->portrait_full_url }}" alt="{{ $record->name }}" style="width:100%;max-height:280px;object-fit:cover;">
-                @if($bioHtml)<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 20px;background:linear-gradient(transparent,rgba(11,16,32,.9));"><div style="font-size:13px;color:#dbe6ff;line-height:1.6;max-height:60px;overflow:hidden;">{!! strip_tags($bioHtml, '<b><i><strong><em>') !!}</div></div>@endif
+                <img src="{{ $record->main_image_full_url ?: $record->portrait_full_url }}" alt="{{ $record->name }}" style="width:100%;max-height:430px;object-fit:cover;">
+                @if($bioHtml)<div style="position:absolute;bottom:0;left:0;right:0;padding:200px 20px 20px;background:linear-gradient(transparent, rgba(11, 16, 32, 1));"><div style="font-size:13px;color:#dbe6ff;line-height:1.6;max-height:80px;overflow:hidden;">{!! strip_tags($bioHtml, '<b><i><strong><em>') !!}</div></div>@endif
             </div>
         </div>
         @endif
@@ -365,7 +365,7 @@ canvas{width:100%!important;}
             <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
                 <div class="kpi"><div class="l">Avg Revenue / Event</div><div class="v" style="color:var(--success);">{{ number_format($sales['avg_revenue_per_event'] ?? 0, 0) }} RON</div></div>
                 <div class="kpi"><div class="l">Revenue / Attendee</div><div class="v">{{ number_format($sales['revenue_per_attendee'] ?? 0, 0) }} RON</div></div>
-                <div class="kpi"><div class="l">Total Attendees</div><div class="v">{{ number_format($sales['total_attendees'] ?? 0) }}</div></div>
+                <div class="kpi"><div class="l">Total Tickets Sold</div><div class="v">{{ number_format($sales['total_tickets_sold'] ?? 0) }}</div></div>
                 <div class="kpi"><div class="l">Avg Lead Time</div><div class="v">{{ $sales['avg_lead_days'] ?? 0 }}d</div></div>
             </div>
 
@@ -849,24 +849,31 @@ canvas{width:100%!important;}
     const ps = @js($priceSens ?? []);
     if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[{label:'Tickets',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff88',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},{label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e33',tension:.3,pointRadius:4,borderWidth:2,yAxisID:'y1'}]},options:{...opts,scales:{...opts.scales,y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#22c55e',callback:v=>v+'%'},grid:{display:false}}}}});}
 
-    // Leaflet geographic heatmap
+    // Leaflet geographic map with heat circles
     const geoPoints = @js(collect($geoData)->filter(fn($g) => ($g['lat'] ?? 0) != 0 && ($g['lng'] ?? 0) != 0)->values()->toArray());
     const mapEl = document.getElementById('artistGeoMap');
     if (mapEl && typeof L !== 'undefined' && geoPoints.length) {
         setTimeout(() => {
-            const map = L.map(mapEl, { center: [46, 25], zoom: 6, zoomControl: true, attributionControl: false });
+            const map = L.map(mapEl, { center: [46, 15], zoom: 5, zoomControl: true, attributionControl: false });
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+            const maxTickets = Math.max(...geoPoints.map(p => p.tickets_sold), 1);
             const bounds = [];
             geoPoints.forEach(p => {
-                const r = Math.max(8, Math.min(30, Math.sqrt(p.tickets_sold) * 1.5));
-                L.circleMarker([p.lat, p.lng], { radius: r, fillColor: '#22d3ee', color: '#fff', weight: 1, opacity: 0.8, fillOpacity: 0.6 })
+                const intensity = p.tickets_sold / maxTickets;
+                const r = Math.max(15, Math.min(50, intensity * 50 + 10));
+                // Inner glow (large, transparent)
+                L.circle([p.lat, p.lng], { radius: r * 800, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.08 + intensity * 0.12 }).addTo(map);
+                // Mid glow
+                L.circle([p.lat, p.lng], { radius: r * 400, fillColor: '#22d3ee', color: 'transparent', fillOpacity: 0.12 + intensity * 0.18 }).addTo(map);
+                // Core
+                L.circleMarker([p.lat, p.lng], { radius: Math.max(6, r * 0.4), fillColor: '#22d3ee', color: '#fff', weight: 1, opacity: 0.9, fillOpacity: 0.7 + intensity * 0.3 })
                     .bindPopup('<b>' + p.city + '</b><br>Tickets: ' + p.tickets_sold.toLocaleString() + '<br>Events: ' + p.events_count + '<br>Revenue: ' + Math.round(p.total_revenue).toLocaleString() + ' RON')
                     .addTo(map);
                 bounds.push([p.lat, p.lng]);
             });
-            if (bounds.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
-            else if (bounds.length === 1) map.setView(bounds[0], 8);
-        }, 300);
+            if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
+            else if (bounds.length === 1) map.setView(bounds[0], 6);
+        }, 500);
     }
 })();
 </script>
