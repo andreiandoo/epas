@@ -289,7 +289,16 @@ class PlatformAudienceResource extends Resource
                         PlatformAudience::STATUS_ERROR => 'danger',
                         PlatformAudience::STATUS_PAUSED => 'warning',
                         default => 'gray',
-                    }),
+                    })
+                    ->tooltip(fn ($record) => $record->status === PlatformAudience::STATUS_ERROR ? $record->error_message : null),
+
+                Tables\Columns\TextColumn::make('error_message')
+                    ->label('Error')
+                    ->limit(50)
+                    ->tooltip(fn ($state) => $state)
+                    ->placeholder('—')
+                    ->toggleable()
+                    ->visible(fn () => PlatformAudience::where('status', 'error')->exists()),
 
                 Tables\Columns\IconColumn::make('is_auto_sync')
                     ->label('Auto')
