@@ -31,10 +31,11 @@ class ListEvents extends ListRecords
         $noGenre = $query->clone()->whereDoesntHave('eventGenres')->count();
 
         $warnings = [];
-        if ($noVenue > 0) $warnings[] = "<span class='text-amber-500'>{$noVenue} fără venue</span>";
-        if ($noArtists > 0) $warnings[] = "<span class='text-amber-500'>{$noArtists} fără artiști</span>";
-        if ($noCategory > 0) $warnings[] = "<span class='text-amber-500'>{$noCategory} fără categorie</span>";
-        if ($noGenre > 0) $warnings[] = "<span class='text-amber-500'>{$noGenre} fără gen</span>";
+        $base = static::getResource()::getUrl('index');
+        if ($noVenue > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_venue\" class='text-amber-500 hover:underline'>{$noVenue} fără venue</a>";
+        if ($noArtists > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_artists\" class='text-amber-500 hover:underline'>{$noArtists} fără artiști</a>";
+        if ($noCategory > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_category\" class='text-amber-500 hover:underline'>{$noCategory} fără categorie</a>";
+        if ($noGenre > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_genre\" class='text-amber-500 hover:underline'>{$noGenre} fără gen</a>";
 
         if (empty($warnings)) return null;
 
