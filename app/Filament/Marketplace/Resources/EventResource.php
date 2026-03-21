@@ -557,10 +557,21 @@ class EventResource extends Resource
                                                         $set('marketplace_city_id', $matchedCity->id);
                                                     } else {
                                                         // City doesn't exist in marketplace — auto-create it
+                                                        // Normalize country to ISO 2-letter code
+                                                        $countryRaw = $venue->country ?? 'RO';
+                                                        $countryCode = mb_strlen($countryRaw) === 2 ? strtoupper($countryRaw) : (collect([
+                                                            'Romania' => 'RO', 'Germany' => 'DE', 'France' => 'FR', 'Spain' => 'ES',
+                                                            'Italy' => 'IT', 'Austria' => 'AT', 'Hungary' => 'HU', 'Bulgaria' => 'BG',
+                                                            'Moldova' => 'MD', 'Serbia' => 'RS', 'Croatia' => 'HR', 'Greece' => 'GR',
+                                                            'Poland' => 'PL', 'Czech Republic' => 'CZ', 'Slovakia' => 'SK',
+                                                            'United Kingdom' => 'GB', 'Netherlands' => 'NL', 'Belgium' => 'BE',
+                                                            'Switzerland' => 'CH', 'Portugal' => 'PT', 'Sweden' => 'SE',
+                                                            'România' => 'RO', 'Deutschland' => 'DE',
+                                                        ])->get($countryRaw, strtoupper(mb_substr($countryRaw, 0, 2))));
                                                         $newCity = MarketplaceCity::create([
                                                             'marketplace_client_id' => $marketplace?->id,
                                                             'name' => ['ro' => $venue->city, 'en' => $venue->city],
-                                                            'country' => $venue->country ?? 'RO',
+                                                            'country' => $countryCode,
                                                             'latitude' => $venue->lat,
                                                             'longitude' => $venue->lng,
                                                             'is_visible' => true,
