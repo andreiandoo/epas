@@ -291,11 +291,7 @@ return new class extends Migration
      */
     protected function indexExists(string $table, string $index): bool
     {
-        $result = DB::select(
-            "SHOW INDEX FROM `{$table}` WHERE Key_name = ?",
-            [$index]
-        );
-
-        return count($result) > 0;
+        return collect(Schema::getIndexes($table))
+            ->contains(fn ($idx) => $idx['name'] === $index);
     }
 };

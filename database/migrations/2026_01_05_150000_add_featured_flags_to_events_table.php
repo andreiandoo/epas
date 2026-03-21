@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         $columnsToAdd = [];
@@ -27,20 +24,20 @@ return new class extends Migration
         if (!empty($columnsToAdd)) {
             Schema::table('events', function (Blueprint $table) use ($columnsToAdd) {
                 if (in_array('is_homepage_featured', $columnsToAdd)) {
-                    $table->boolean('is_homepage_featured')->default(false)->after('is_promoted');
+                    $table->boolean('is_homepage_featured')->default(false);
                 }
                 if (in_array('is_general_featured', $columnsToAdd)) {
-                    $table->boolean('is_general_featured')->default(false)->after('is_homepage_featured');
+                    $table->boolean('is_general_featured')->default(false);
                 }
                 if (in_array('is_category_featured', $columnsToAdd)) {
-                    $table->boolean('is_category_featured')->default(false)->after('is_general_featured');
+                    $table->boolean('is_category_featured')->default(false);
                 }
             });
         }
 
         // Add indexes if they don't exist
         try {
-            $indexNames = collect(DB::select("SHOW INDEX FROM events"))->pluck('Key_name')->unique()->toArray();
+            $indexNames = collect(Schema::getIndexes('events'))->pluck('name')->toArray();
 
             Schema::table('events', function (Blueprint $table) use ($indexNames) {
                 if (!in_array('events_mp_homepage_featured_idx', $indexNames) && Schema::hasColumn('events', 'is_homepage_featured')) {
@@ -58,9 +55,6 @@ return new class extends Migration
         }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('events', function (Blueprint $table) {

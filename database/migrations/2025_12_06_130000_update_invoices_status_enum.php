@@ -7,21 +7,20 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        // Alter the ENUM to include all needed statuses
-        DB::statement("ALTER TABLE invoices MODIFY COLUMN status ENUM('new', 'pending', 'outstanding', 'overdue', 'paid', 'cancelled') NOT NULL DEFAULT 'new'");
+        if (DB::getDriverName() === 'pgsql') {
+            // PostgreSQL: status is already a varchar, just update the check constraint if needed
+            // On fresh PG install the column is string type, no ENUM to modify
+        } else {
+            DB::statement("ALTER TABLE invoices MODIFY COLUMN status ENUM('new', 'pending', 'outstanding', 'overdue', 'paid', 'cancelled') NOT NULL DEFAULT 'new'");
+        }
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        // Revert to original ENUM (only if no records use the new values)
-        DB::statement("ALTER TABLE invoices MODIFY COLUMN status ENUM('outstanding', 'paid', 'cancelled') NOT NULL DEFAULT 'outstanding'");
+        if (DB::getDriverName() !== 'pgsql') {
+            DB::statement("ALTER TABLE invoices MODIFY COLUMN status ENUM('outstanding', 'paid', 'cancelled') NOT NULL DEFAULT 'outstanding'");
+        }
     }
 };

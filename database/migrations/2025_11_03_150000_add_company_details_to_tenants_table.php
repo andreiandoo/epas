@@ -96,7 +96,7 @@ return new class extends Migration
 
         // Add indexes if columns exist and indexes don't
         try {
-            $indexNames = collect(DB::select("SHOW INDEX FROM tenants"))->pluck('Key_name')->unique()->toArray();
+            $indexNames = collect(Schema::getIndexes('tenants'))->pluck('name')->toArray();
 
             Schema::table('tenants', function (Blueprint $table) use ($indexNames) {
                 if (Schema::hasColumn('tenants', 'cui') && !in_array('tenants_cui_index', $indexNames)) {

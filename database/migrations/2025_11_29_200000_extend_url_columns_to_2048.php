@@ -40,7 +40,11 @@ return new class extends Migration
     {
         foreach ($columns as $column) {
             if (Schema::hasColumn($table, $column)) {
-                DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` TEXT NULL");
+                if (DB::getDriverName() === 'pgsql') {
+                    DB::statement("ALTER TABLE \"{$table}\" ALTER COLUMN \"{$column}\" TYPE TEXT");
+                } else {
+                    DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` TEXT NULL");
+                }
             }
         }
     }
