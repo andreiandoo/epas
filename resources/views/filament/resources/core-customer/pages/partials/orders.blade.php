@@ -1,4 +1,4 @@
-        <div x-show="activeTab === 'orders'" x-cloak>
+
 
             {{-- Orders Table --}}
             <x-filament::section>

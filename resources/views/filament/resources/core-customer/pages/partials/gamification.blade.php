@@ -1,4 +1,4 @@
-        <div x-show="activeTab === 'gamification'" x-cloak>
+
             @php
                 $pts = $gamification['points'] ?? null;
                 $xp = $gamification['experience'] ?? null;

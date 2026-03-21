@@ -132,6 +132,7 @@ class ViewArtist extends Page
                     'salesIntelligence' => $this->buildSalesIntelligence($eventIds, $orderIds),
                     'expansionPlanner' => $this->buildCityExpansionPlanner($eventIds, $orderIds),
                     'upcomingAnalysis' => $this->buildUpcomingEventsAnalysis($eventIds),
+                    'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
                 ]
             );
         });
