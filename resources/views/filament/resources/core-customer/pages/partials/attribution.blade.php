@@ -44,35 +44,4 @@
     </x-filament::section>
 </div>
 
-{{-- Event Timeline --}}
-@php $events = $c->events()->orderBy('created_at', 'desc')->limit(50)->get(); @endphp
-@if($events->isNotEmpty())
-    <div class="mt-4">
-        <x-filament::section>
-            <x-slot name="heading">Event Timeline (last 50)</x-slot>
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead class="bg-gray-50 dark:bg-gray-800"><tr>
-                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Time</th>
-                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Event</th>
-                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Page</th>
-                        <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Value</th>
-                    </tr></thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @foreach($events as $ev)
-                            <tr>
-                                <td class="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ $ev->created_at->format('d M H:i:s') }}</td>
-                                <td class="px-3 py-2">
-                                    <span class="px-2 py-0.5 rounded text-xs font-medium
-                                        {{ match($ev->event_type) { 'purchase' => 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300', 'add_to_cart' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300', 'begin_checkout' => 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300', default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300' } }}">{{ $ev->event_type }}</span>
-                                </td>
-                                <td class="max-w-xs px-3 py-2 text-gray-600 truncate dark:text-gray-400">{{ $ev->page_url ?? $ev->page_path ?? '—' }}</td>
-                                <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-200">{{ $ev->conversion_value ? number_format((float)$ev->conversion_value, 2) : '' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </x-filament::section>
-    </div>
-@endif
+{{-- Event Timeline moved to dedicated "Engagement Tracking" tab --}}

@@ -18,6 +18,7 @@
                 'gamification' => ['Gamification', 'heroicon-o-star'],
                 'orders' => ['Comenzi & Bilete', 'heroicon-o-receipt-percent'],
                 'emails' => ['Istoric Email-uri', 'heroicon-o-envelope'],
+                'tracking' => ['Engagement Tracking', 'heroicon-o-cursor-arrow-rays'],
                 'attribution' => ['Attribution & Platform', 'heroicon-o-arrow-trending-up'],
                 'integrations' => ['Integrations', 'heroicon-o-link'],
                 'notes' => ['Notes', 'heroicon-o-pencil-square'],
@@ -179,7 +180,54 @@
             @include('filament.resources.core-customer.pages.partials.emails')
         </div>
 
-        {{-- ═══ TAB 7: ATTRIBUTION & PLATFORM ═══ --}}
+        {{-- ═══ TAB: ENGAGEMENT TRACKING ═══ --}}
+        <div x-show="tab === 'tracking'" x-cloak>
+            @php $trackingEvents = $c->events()->orderBy('created_at', 'desc')->limit(100)->get(); @endphp
+            <x-filament::section>
+                <x-slot name="heading">Event Timeline ({{ $trackingEvents->count() }} cele mai recente)</x-slot>
+                @if($trackingEvents->isNotEmpty())
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-800"><tr>
+                                <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Time</th>
+                                <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Event</th>
+                                <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Category</th>
+                                <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Page</th>
+                                <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Content</th>
+                                <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Value</th>
+                            </tr></thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach($trackingEvents as $ev)
+                                    <tr>
+                                        <td class="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">{{ $ev->created_at->format('d M Y H:i:s') }}</td>
+                                        <td class="px-3 py-2">
+                                            <span class="px-2 py-0.5 rounded text-xs font-medium
+                                                {{ match($ev->event_type) {
+                                                    'purchase' => 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+                                                    'add_to_cart' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
+                                                    'begin_checkout' => 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+                                                    'page_view' => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                                    'view_item' => 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+                                                    'sign_up', 'login' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300',
+                                                    default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+                                                } }}">{{ $ev->event_type }}</span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $ev->event_category ?? '—' }}</td>
+                                        <td class="max-w-xs px-3 py-2 text-gray-600 truncate dark:text-gray-400" title="{{ $ev->page_url ?? '' }}">{{ $ev->page_path ?? $ev->page_url ?? '—' }}</td>
+                                        <td class="px-3 py-2 text-gray-600 dark:text-gray-400">{{ $ev->content_name ?? $ev->content_type ?? '—' }}</td>
+                                        <td class="px-3 py-2 text-right text-gray-800 dark:text-gray-200">{{ $ev->conversion_value ? number_format((float)$ev->conversion_value, 2) : ($ev->event_value ?? '') }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">Nu există date de tracking pentru acest client.</p>
+                @endif
+            </x-filament::section>
+        </div>
+
+        {{-- ═══ TAB: ATTRIBUTION & PLATFORM ═══ --}}
         <div x-show="tab === 'attribution'" x-cloak>
             @include('filament.resources.core-customer.pages.partials.attribution')
         </div>
