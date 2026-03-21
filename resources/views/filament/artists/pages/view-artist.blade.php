@@ -146,6 +146,8 @@ canvas{width:100%!important;}
 .progress{height:5px;background:rgba(122,162,255,.1);border-radius:3px;overflow:hidden;flex:1;min-width:40px;}
 .progress-fill{height:100%;border-radius:3px;}
 .db>[x-show]{padding-bottom:60px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#artistGeoMap{z-index:1;}
 </style>
 @endpush
 
@@ -188,6 +190,15 @@ canvas{width:100%!important;}
 
     {{-- ═══════ TAB: OVERVIEW ═══════ --}}
     <div x-show="tab === 'overview'">
+        {{-- Artist hero image --}}
+        @if($record->main_image_full_url ?? $record->portrait_full_url ?? null)
+        <div class="card" style="margin-bottom:14px;overflow:hidden;">
+            <div style="position:relative;">
+                <img src="{{ $record->main_image_full_url ?: $record->portrait_full_url }}" alt="{{ $record->name }}" style="width:100%;max-height:280px;object-fit:cover;">
+                @if($bioHtml)<div style="position:absolute;bottom:0;left:0;right:0;padding:16px 20px;background:linear-gradient(transparent,rgba(11,16,32,.9));"><div style="font-size:13px;color:#dbe6ff;line-height:1.6;max-height:60px;overflow:hidden;">{!! strip_tags($bioHtml, '<b><i><strong><em>') !!}</div></div>@endif
+            </div>
+        </div>
+        @endif
         {{-- Hero KPIs --}}
         <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px;">
             <div class="kpi"><div class="l">Events (12m)</div><div class="v">{{ $totalEvents }}</div></div>
@@ -288,6 +299,31 @@ canvas{width:100%!important;}
                     </tbody>
                 </table>
             </div></div>
+
+                {{-- Superfan details --}}
+                @php $superfans = $perf['superfan_details'] ?? []; @endphp
+                @if(!empty($superfans))
+                <div class="card" style="margin-top:14px;">
+                    <div class="card-h" style="color:var(--warn);">Superfans — Customers who attended 3+ events ({{ count($superfans) }})</div>
+                    <div class="card-b" style="overflow-x:auto;">
+                        <table class="tbl">
+                            <thead><tr><th>Name</th><th>Email</th><th>City</th><th>Events</th><th>Orders</th><th>Total Spent</th></tr></thead>
+                            <tbody>
+                                @foreach($superfans as $sf)
+                                <tr>
+                                    <td><strong>{{ $sf['name'] }}</strong></td>
+                                    <td style="font-size:12px;">{{ $sf['email'] }}</td>
+                                    <td>{{ $sf['city'] }}</td>
+                                    <td><span class="chip chip-yellow">{{ $sf['events'] }}x</span></td>
+                                    <td>{{ $sf['orders'] }}</td>
+                                    <td style="color:var(--success);">{{ number_format($sf['total_spent'], 0) }} RON</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
         @endif
     </div>
 
@@ -325,6 +361,28 @@ canvas{width:100%!important;}
         @if(empty($channels) && empty($timing))
             <div class="card"><div class="card-b" style="color:var(--muted);text-align:center;padding:32px;">No sales data.</div></div>
         @else
+            {{-- Revenue KPIs --}}
+            <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
+                <div class="kpi"><div class="l">Avg Revenue / Event</div><div class="v" style="color:var(--success);">{{ number_format($sales['avg_revenue_per_event'] ?? 0, 0) }} RON</div></div>
+                <div class="kpi"><div class="l">Revenue / Attendee</div><div class="v">{{ number_format($sales['revenue_per_attendee'] ?? 0, 0) }} RON</div></div>
+                <div class="kpi"><div class="l">Total Attendees</div><div class="v">{{ number_format($sales['total_attendees'] ?? 0) }}</div></div>
+                <div class="kpi"><div class="l">Avg Lead Time</div><div class="v">{{ $sales['avg_lead_days'] ?? 0 }}d</div></div>
+            </div>
+
+            {{-- Fee comparison --}}
+            @if($sales['fee_comparison'] ?? null)
+            @php $fc = $sales['fee_comparison']; @endphp
+            <div class="card" style="margin-bottom:14px;border-color:{{ $fc['in_range'] ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.3)' }};">
+                <div class="card-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <span style="font-size:13px;color:var(--muted);">Fee Range:</span>
+                    <span style="font-weight:700;">{{ number_format($fc['min_fee'] ?? 0, 0) }} – {{ number_format($fc['max_fee'] ?? 0, 0) }} €</span>
+                    <span style="font-size:13px;color:var(--muted);">vs Avg Revenue:</span>
+                    <span style="font-weight:700;color:var(--success);">{{ number_format($fc['avg_revenue'], 0) }} RON</span>
+                    <span class="chip {{ $fc['in_range'] ? 'chip-green' : 'chip-red' }}">{{ $fc['in_range'] ? 'In range' : 'Out of range' }}</span>
+                </div>
+            </div>
+            @endif
+
             <div class="g2" style="margin-bottom:14px;">
                 <div class="card"><div class="card-h">Sales Channels</div><div class="card-b"><div style="height:220px;"><canvas id="channelChart"></canvas></div></div></div>
                 <div class="card"><div class="card-h">Purchase Timing</div><div class="card-b"><div style="height:220px;"><canvas id="timingChart"></canvas></div></div></div>
@@ -375,17 +433,22 @@ canvas{width:100%!important;}
         @if(empty($geoData))
             <div class="card"><div class="card-b" style="color:var(--muted);text-align:center;padding:32px;">No geographic data.</div></div>
         @else
+            {{-- Leaflet Heatmap --}}
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-h">Sales Heatmap</div>
+                <div class="card-b" style="padding:0;"><div id="artistGeoMap" style="height:350px;border-radius:0 0 12px 12px;"></div></div>
+            </div>
+
             <div class="card"><div class="card-b" style="overflow-x:auto;">
                 <table class="tbl">
-                    <thead><tr><th>City</th><th>Country</th><th>Fans</th><th>Favorites</th><th>Potential</th><th>Revenue</th><th>Best Venue</th><th>Capacity</th></tr></thead>
+                    <thead><tr><th>City</th><th>Country</th><th>Events</th><th>Tickets Sold</th><th>Revenue</th><th>Best Venue</th><th>Capacity</th></tr></thead>
                     <tbody>
                         @foreach($geoData as $geo)
                         <tr>
                             <td><strong>{{ $geo['city'] }}</strong></td>
                             <td>{{ $geo['country'] }}</td>
-                            <td><span class="badge">{{ $geo['fans_count'] }}</span></td>
-                            <td>{{ $geo['favorites_count'] }}</td>
-                            <td><span class="chip chip-green">{{ $geo['potential_buyers'] }}</span></td>
+                            <td>{{ $geo['events_count'] }}</td>
+                            <td><span class="badge">{{ number_format($geo['tickets_sold']) }}</span></td>
                             <td>{{ number_format($geo['total_revenue'], 0) }} RON</td>
                             <td>{{ $geo['recommended_venue'] ?? '—' }}</td>
                             <td>{{ $geo['recommended_capacity'] ? number_format($geo['recommended_capacity']) : '—' }}</td>
@@ -512,13 +575,19 @@ canvas{width:100%!important;}
         <div class="card" style="margin-top:14px;">
             <div class="card-h">Event Analyzer — Select an event for deep analysis</div>
             <div class="card-b">
-                <select wire:change="analyzeEvent($event.target.value)" style="width:100%;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                <div style="position:relative;">
+                <select wire:change="analyzeEvent($event.target.value)" wire:loading.attr="disabled" style="width:100%;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
                     <option value="">Choose an upcoming event...</option>
                     @foreach($upcomingEvents as $ue)
                         <option value="{{ $ue['id'] }}" {{ $selectedEventId == $ue['id'] ? 'selected' : '' }}>{{ $ue['title'] }} — {{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '' }} ({{ $ue['venue'] ?? '' }})</option>
                     @endforeach
                 </select>
 
+                <div wire:loading wire:target="analyzeEvent" style="padding:16px;text-align:center;color:var(--accent);">
+                    <svg style="display:inline;animation:spin 1s linear infinite;" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="32" stroke-linecap="round"/></svg>
+                    Loading analysis...
+                </div>
+                </div>
                 @if($eventAnalysis)
                 <div style="margin-top:16px;">
                     <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px;">
@@ -696,7 +765,7 @@ canvas{width:100%!important;}
                             <td>{{ $event->getTranslation('title', app()->getLocale()) ?? '—' }}</td>
                             <td>{{ $event->venue ? ($event->venue->getTranslation('name', app()->getLocale()) ?? (is_array($event->venue->name) ? ($event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '—') : ($event->venue->name ?? '—'))) : '—' }}</td>
                             <td>{{ $event->venue?->city ?? '—' }}</td>
-                            <td>{{ $event->tenant?->public_name ?? $event->tenant?->name ?? '—' }}</td>
+                            <td>{{ $event->tenant?->public_name ?? $event->tenant?->name ?? $event->marketplaceClient?->name ?? '—' }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -739,7 +808,12 @@ canvas{width:100%!important;}
     $revenueSafe = is_array($revenue) ? array_values($revenue) : [];
 @endphp
 
+@push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+@endpush
+
 @push('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script>
 (function () {
@@ -775,6 +849,25 @@ canvas{width:100%!important;}
     const ps = @js($priceSens ?? []);
     if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[{label:'Tickets',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff88',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},{label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e33',tension:.3,pointRadius:4,borderWidth:2,yAxisID:'y1'}]},options:{...opts,scales:{...opts.scales,y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#22c55e',callback:v=>v+'%'},grid:{display:false}}}}});}
 
+    // Leaflet geographic heatmap
+    const geoPoints = @js(collect($geoData)->filter(fn($g) => ($g['lat'] ?? 0) != 0 && ($g['lng'] ?? 0) != 0)->values()->toArray());
+    const mapEl = document.getElementById('artistGeoMap');
+    if (mapEl && typeof L !== 'undefined' && geoPoints.length) {
+        setTimeout(() => {
+            const map = L.map(mapEl, { center: [46, 25], zoom: 6, zoomControl: true, attributionControl: false });
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+            const bounds = [];
+            geoPoints.forEach(p => {
+                const r = Math.max(8, Math.min(30, Math.sqrt(p.tickets_sold) * 1.5));
+                L.circleMarker([p.lat, p.lng], { radius: r, fillColor: '#22d3ee', color: '#fff', weight: 1, opacity: 0.8, fillOpacity: 0.6 })
+                    .bindPopup('<b>' + p.city + '</b><br>Tickets: ' + p.tickets_sold.toLocaleString() + '<br>Events: ' + p.events_count + '<br>Revenue: ' + Math.round(p.total_revenue).toLocaleString() + ' RON')
+                    .addTo(map);
+                bounds.push([p.lat, p.lng]);
+            });
+            if (bounds.length > 1) map.fitBounds(bounds, { padding: [30, 30] });
+            else if (bounds.length === 1) map.setView(bounds[0], 8);
+        }, 300);
+    }
 })();
 </script>
 @endpush
