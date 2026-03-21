@@ -1255,8 +1255,9 @@ class EventResource extends Resource
                                                 ->inlineLabel($il)
                                                 ->placeholder($t('obligatoriu', 'required'))
                                                 ->numeric()
-                                                ->minValue(0)
+                                                ->minValue(-1)
                                                 ->required()
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                 ->live(onBlur: true)
                                                 ->hint(function ($record, SGet $get) use ($t) {
                                                     $hints = [];
