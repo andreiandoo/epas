@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlatformAudienceMember extends Model
 {
+    public $timestamps = false;
+
     protected $fillable = [
         'platform_audience_id',
         'core_customer_id',
