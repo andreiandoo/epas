@@ -1096,12 +1096,16 @@ class ViewArtist extends Page
                 ->filter(fn ($d) => $d >= 0);
 
             if ($leadTimes->isNotEmpty()) {
+                $sorted = $leadTimes->sort()->values();
+                $cnt = $sorted->count();
+                $p75 = $sorted[(int) floor($cnt * 0.75)] ?? $sorted->last();
+                $p90 = $sorted[(int) floor($cnt * 0.90)] ?? $sorted->last();
                 $leadTimeStats = [
                     'median' => round($leadTimes->median(), 0),
-                    'p75' => round($leadTimes->percentile(75), 0),
-                    'p90' => round($leadTimes->percentile(90), 0),
+                    'p75' => round((float) $p75, 0),
+                    'p90' => round((float) $p90, 0),
                     'avg' => round($leadTimes->avg(), 0),
-                    'first_sale_avg' => round($leadTimes->max(), 0), // earliest purchase
+                    'first_sale_avg' => round($leadTimes->max(), 0),
                 ];
             }
         }
