@@ -32,10 +32,10 @@ class ListEvents extends ListRecords
 
         $warnings = [];
         $base = static::getResource()::getUrl('index');
-        if ($noVenue > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_venue\" class='text-amber-500 hover:underline'>{$noVenue} fără venue</a>";
-        if ($noArtists > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_artists\" class='text-amber-500 hover:underline'>{$noArtists} fără artiști</a>";
-        if ($noCategory > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_category\" class='text-amber-500 hover:underline'>{$noCategory} fără categorie</a>";
-        if ($noGenre > 0) $warnings[] = "<a href=\"{$base}?tableFilters[missing_data][value]=no_genre\" class='text-amber-500 hover:underline'>{$noGenre} fără gen</a>";
+        if ($noVenue > 0) $warnings[] = "<a href=\"{$base}?tab=no_venue\" class='text-amber-500 hover:underline'>{$noVenue} fără venue</a>";
+        if ($noArtists > 0) $warnings[] = "<a href=\"{$base}?tab=no_artists\" class='text-amber-500 hover:underline'>{$noArtists} fără artiști</a>";
+        if ($noCategory > 0) $warnings[] = "<a href=\"{$base}?tab=no_category\" class='text-amber-500 hover:underline'>{$noCategory} fără categorie</a>";
+        if ($noGenre > 0) $warnings[] = "<a href=\"{$base}?tab=no_genre\" class='text-amber-500 hover:underline'>{$noGenre} fără gen</a>";
 
         if (empty($warnings)) return null;
 
@@ -219,6 +219,22 @@ class ListEvents extends ListRecords
                         ->count();
                 })
                 ->badgeColor('gray'),
+            'no_venue' => Tab::make('Fără venue')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('venue_id'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereNull('venue_id')->count())
+                ->badgeColor('danger'),
+            'no_artists' => Tab::make('Fără artiști')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereDoesntHave('artists'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereDoesntHave('artists')->count())
+                ->badgeColor('danger'),
+            'no_category' => Tab::make('Fără categorie')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('marketplace_event_category_id'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereNull('marketplace_event_category_id')->count())
+                ->badgeColor('danger'),
+            'no_genre' => Tab::make('Fără gen')
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereDoesntHave('eventGenres'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereDoesntHave('eventGenres')->count())
+                ->badgeColor('danger'),
         ];
     }
 }

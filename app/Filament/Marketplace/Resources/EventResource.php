@@ -3202,23 +3202,6 @@ class EventResource extends Resource
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
-                Tables\Filters\SelectFilter::make('missing_data')
-                    ->label('Date lipsă')
-                    ->options([
-                        'no_venue' => 'Fără venue',
-                        'no_artists' => 'Fără artiști',
-                        'no_category' => 'Fără categorie',
-                        'no_genre' => 'Fără gen',
-                    ])
-                    ->query(function ($query, array $data) {
-                        return match ($data['value'] ?? null) {
-                            'no_venue' => $query->whereNull('venue_id'),
-                            'no_artists' => $query->whereDoesntHave('artists'),
-                            'no_category' => $query->whereNull('marketplace_event_category_id'),
-                            'no_genre' => $query->whereDoesntHave('eventGenres'),
-                            default => $query,
-                        };
-                    }),
             ])
             ->actions([
                 Action::make('view_on_site')
