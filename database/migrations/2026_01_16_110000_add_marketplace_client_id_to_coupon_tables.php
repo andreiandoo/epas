@@ -90,8 +90,13 @@ return new class extends Migration
     private function dropIndexIfExists(string $table, string $indexName): void
     {
         if ($this->indexExists($table, $indexName)) {
-            Schema::table($table, function (Blueprint $table) use ($indexName) {
-                $table->dropIndex($indexName);
+            $index = collect(Schema::getIndexes($table))->first(fn ($idx) => $idx['name'] === $indexName);
+            Schema::table($table, function (Blueprint $table) use ($indexName, $index) {
+                if (!empty($index['unique'])) {
+                    $table->dropUnique($indexName);
+                } else {
+                    $table->dropIndex($indexName);
+                }
             });
         }
     }
