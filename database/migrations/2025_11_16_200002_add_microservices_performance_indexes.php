@@ -207,30 +207,40 @@ return new class extends Migration
     public function down(): void
     {
         // Drop indexes in reverse order
-        Schema::table('ti_policies', function (Blueprint $table) {
-            $table->dropIndex('idx_policies_expires');
-            $table->dropIndex('idx_policies_tenant_status');
-        });
+        if (Schema::hasTable('ti_policies')) {
+            Schema::table('ti_policies', function (Blueprint $table) {
+                $table->dropIndex('idx_policies_expires');
+                $table->dropIndex('idx_policies_tenant_status');
+            });
+        }
 
-        Schema::table('acc_jobs', function (Blueprint $table) {
-            $table->dropIndex('idx_acc_jobs_connector');
-            $table->dropIndex('idx_acc_jobs_status');
-        });
+        if (Schema::hasTable('acc_jobs')) {
+            Schema::table('acc_jobs', function (Blueprint $table) {
+                $table->dropIndex('idx_acc_jobs_connector');
+                $table->dropIndex('idx_acc_jobs_status');
+            });
+        }
 
-        Schema::table('acc_connectors', function (Blueprint $table) {
-            $table->dropIndex('idx_acc_tenant_active');
-        });
+        if (Schema::hasTable('acc_connectors')) {
+            Schema::table('acc_connectors', function (Blueprint $table) {
+                $table->dropIndex('idx_acc_tenant_active');
+            });
+        }
 
-        Schema::table('inv_invites', function (Blueprint $table) {
-            $table->dropIndex('idx_invites_code');
-            $table->dropIndex('idx_invites_email_status');
-            $table->dropIndex('idx_invites_batch_status');
-        });
+        if (Schema::hasTable('inv_invites')) {
+            Schema::table('inv_invites', function (Blueprint $table) {
+                $table->dropIndex('idx_invites_code');
+                $table->dropIndex('idx_invites_email_status');
+                $table->dropIndex('idx_invites_batch_status');
+            });
+        }
 
-        Schema::table('inv_batches', function (Blueprint $table) {
-            $table->dropIndex('idx_batches_event');
-            $table->dropIndex('idx_batches_tenant_status');
-        });
+        if (Schema::hasTable('inv_batches')) {
+            Schema::table('inv_batches', function (Blueprint $table) {
+                $table->dropIndex('idx_batches_event');
+                $table->dropIndex('idx_batches_tenant_status');
+            });
+        }
 
         if (Schema::hasTable('whatsapp_messages')) {
             Schema::table('whatsapp_messages', function (Blueprint $table) {
@@ -275,11 +285,13 @@ return new class extends Migration
             });
         }
 
-        Schema::table('tenant_microservices', function (Blueprint $table) {
-            $table->dropIndex('idx_tenant_microservices_microservice_status');
-            $table->dropIndex('idx_tenant_microservices_tenant_status');
-            $table->dropIndex('idx_tenant_microservices_status_expires');
-        });
+        if (Schema::hasTable('tenant_microservices')) {
+            Schema::table('tenant_microservices', function (Blueprint $table) {
+                $table->dropIndex('idx_tenant_microservices_microservice_status');
+                $table->dropIndex('idx_tenant_microservices_tenant_status');
+                $table->dropIndex('idx_tenant_microservices_status_expires');
+            });
+        }
     }
 
     /**
