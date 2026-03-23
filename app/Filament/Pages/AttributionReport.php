@@ -92,10 +92,13 @@ class AttributionReport extends Page
             return $query;
         };
 
+        // Scope helpers per model type
+        $scopeCustomer = fn($q) => $marketplaceId ? $q->whereJsonContains('marketplace_client_ids', $marketplaceId) : ($tenantId ? $q->fromTenant($tenantId) : $q);
+        $scopeEvent = fn($q) => $marketplaceId ? $q->where('marketplace_client_id', $marketplaceId) : ($tenantId ? $q->forTenant($tenantId) : $q);
+
         // Get all conversions in the period
         $conversions = CoreCustomerEvent::purchases()
-            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
+            ->when($tenantId || $marketplaceId, fn($q) => $scopeEvent($q))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -105,8 +108,7 @@ class AttributionReport extends Page
         // === FIRST-TOUCH ATTRIBUTION ===
         // Credits the first interaction that brought the customer
         $this->firstTouchAttribution = CoreCustomer::purchasers()
-            ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
+            ->when($tenantId || $marketplaceId, fn($q) => $scopeCustomer($q))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->selectRaw("
                 CASE
@@ -129,8 +131,7 @@ class AttributionReport extends Page
         // === LAST-TOUCH ATTRIBUTION ===
         // Credits the last interaction before conversion
         $this->lastTouchAttribution = CoreCustomerEvent::purchases()
-            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
+            ->when($tenantId || $marketplaceId, fn($q) => $scopeEvent($q))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("
                 CASE
