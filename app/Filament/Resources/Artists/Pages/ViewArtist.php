@@ -1091,13 +1091,13 @@ class ViewArtist extends Page
             ->where('tt.quota_total', '>', 0)
             ->where('tt.price_cents', '>', 0)
             ->select(
-                DB::raw('CASE
-                    WHEN tt.price_cents/100 < 50 THEN "0-50"
-                    WHEN tt.price_cents/100 < 100 THEN "50-100"
-                    WHEN tt.price_cents/100 < 150 THEN "100-150"
-                    WHEN tt.price_cents/100 < 200 THEN "150-200"
-                    WHEN tt.price_cents/100 < 300 THEN "200-300"
-                    ELSE "300+" END as price_range'),
+                DB::raw("CASE
+                    WHEN tt.price_cents/100 < 50 THEN '0-50'
+                    WHEN tt.price_cents/100 < 100 THEN '50-100'
+                    WHEN tt.price_cents/100 < 150 THEN '100-150'
+                    WHEN tt.price_cents/100 < 200 THEN '150-200'
+                    WHEN tt.price_cents/100 < 300 THEN '200-300'
+                    ELSE '300+' END as price_range"),
                 DB::raw('AVG(tt.price_cents/100) as avg_price'),
                 DB::raw('SUM(tt.quota_sold) as total_sold'),
                 DB::raw('SUM(tt.quota_total) as total_cap'),
@@ -1148,13 +1148,13 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->where('v.capacity', '>', 0)
             ->select(
-                DB::raw('CASE
-                    WHEN v.capacity < 200 THEN "< 200"
-                    WHEN v.capacity < 500 THEN "200-500"
-                    WHEN v.capacity < 1000 THEN "500-1000"
-                    WHEN v.capacity < 2000 THEN "1000-2000"
-                    WHEN v.capacity < 5000 THEN "2000-5000"
-                    ELSE "5000+" END as cap_range'),
+                DB::raw("CASE
+                    WHEN v.capacity < 200 THEN '< 200'
+                    WHEN v.capacity < 500 THEN '200-500'
+                    WHEN v.capacity < 1000 THEN '500-1000'
+                    WHEN v.capacity < 2000 THEN '1000-2000'
+                    WHEN v.capacity < 5000 THEN '2000-5000'
+                    ELSE '5000+' END as cap_range"),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
