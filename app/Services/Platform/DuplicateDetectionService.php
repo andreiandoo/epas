@@ -435,7 +435,7 @@ class DuplicateDetectionService
 
         // Find customers with same name + location but different email
         $nameClusters = DB::table('core_customers')
-            ->select(DB::raw('LOWER(CONCAT(COALESCE(first_name, ""), " ", COALESCE(last_name, ""))) as full_name'), 'city', 'country_code')
+            ->select(DB::raw("LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) as full_name"), 'city', 'country_code')
             ->whereNull('deleted_at')
             ->where('is_merged', false)
             ->where('is_anonymized', false)
@@ -449,7 +449,7 @@ class DuplicateDetectionService
             if (empty(trim($cluster->full_name))) continue;
 
             $customers = CoreCustomer::query()
-                ->whereRaw('LOWER(CONCAT(COALESCE(first_name, ""), " ", COALESCE(last_name, ""))) = ?', [$cluster->full_name])
+                ->whereRaw("LOWER(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))) = ?", [$cluster->full_name])
                 ->where('city', $cluster->city)
                 ->where('country_code', $cluster->country_code)
                 ->notMerged()

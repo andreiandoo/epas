@@ -693,14 +693,14 @@ class ViewArtist extends Page
                 ->whereIn('o.id', $orderIds)
                 ->select(
                     DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'),
-                    DB::raw('COALESCE(mc.first_name, c.first_name, "") as first_name'),
-                    DB::raw('COALESCE(mc.last_name, c.last_name, "") as last_name'),
+                    DB::raw("COALESCE(mc.first_name, c.first_name, '') as first_name"),
+                    DB::raw("COALESCE(mc.last_name, c.last_name, '') as last_name"),
                     DB::raw('COALESCE(mc.email, c.email, o.customer_email) as email'),
                     DB::raw('COALESCE(mc.city, c.city) as city'),
                     DB::raw('SUM(o.total) as total_spent'),
                     DB::raw('COUNT(DISTINCT o.id) as orders')
                 )
-                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw('COALESCE(mc.first_name, c.first_name, "")'), DB::raw('COALESCE(mc.last_name, c.last_name, "")'), DB::raw('COALESCE(mc.email, c.email, o.customer_email)'), DB::raw('COALESCE(mc.city, c.city)'))
+                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw("COALESCE(mc.first_name, c.first_name, '')"), DB::raw("COALESCE(mc.last_name, c.last_name, '')"), DB::raw('COALESCE(mc.email, c.email, o.customer_email)'), DB::raw('COALESCE(mc.city, c.city)'))
                 ->orderByDesc('total_spent')
                 ->limit(20)
                 ->get()
