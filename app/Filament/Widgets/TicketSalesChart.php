@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Ticket;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class TicketSalesChart extends ChartWidget
 {
@@ -14,19 +15,23 @@ class TicketSalesChart extends ChartWidget
 
     protected function getData(): array
     {
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $data = Cache::remember('widget.ticket_sales.' . now()->format('Y-m-d-H'), 300, function () {
+            $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        $data = collect(range(29, 0))->map(function ($daysAgo) use ($paidStatuses) {
-            $date = now()->subDays($daysAgo);
+            return collect(range(29, 0))->map(function ($daysAgo) use ($paidStatuses) {
+                $date = now()->subDays($daysAgo);
 
-            return [
-                'day' => $date->format('d M'),
-                'count' => Ticket::where('status', 'valid')
-                    ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
-                    ->whereDate('created_at', $date->toDateString())
-                    ->count(),
-            ];
+                return [
+                    'day' => $date->format('d M'),
+                    'count' => Ticket::where('status', 'valid')
+                        ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
+                        ->whereDate('created_at', $date->toDateString())
+                        ->count(),
+                ];
+            })->toArray();
         });
+
+        $data = collect($data);
 
         return [
             'datasets' => [

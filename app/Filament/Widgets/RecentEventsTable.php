@@ -6,6 +6,7 @@ use App\Models\Event;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Facades\Cache;
 
 class RecentEventsTable extends BaseWidget
 {
@@ -17,7 +18,11 @@ class RecentEventsTable extends BaseWidget
     {
         return $table
             ->query(
-                Event::query()->latest()->limit(10)
+                Event::query()
+                    ->whereIn('id', Cache::remember('widget.recent_events.' . now()->format('Y-m-d-H'), 300, function () {
+                        return Event::query()->latest()->limit(10)->pluck('id')->toArray();
+                    }))
+                    ->latest()
             )
             ->columns([
                 Tables\Columns\TextColumn::make('title')
