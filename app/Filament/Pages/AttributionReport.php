@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Response;
 use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -150,7 +151,18 @@ class AttributionReport extends Page
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->whereNotNull('first_seen_at')
             ->whereNotNull('first_purchase_at')
-            ->selectRaw("
+            ->selectRaw(DB::getDriverName() === 'pgsql'
+                ? "
+                CASE
+                    WHEN EXTRACT(EPOCH FROM (first_purchase_at::timestamp - first_seen_at::timestamp)) / 3600 < 1 THEN 'Same Session'
+                    WHEN (first_purchase_at::date - first_seen_at::date) < 1 THEN 'Same Day'
+                    WHEN (first_purchase_at::date - first_seen_at::date) < 7 THEN '1-7 Days'
+                    WHEN (first_purchase_at::date - first_seen_at::date) < 30 THEN '7-30 Days'
+                    ELSE '30+ Days'
+                END as time_range,
+                COUNT(*) as count
+                "
+                : "
                 CASE
                     WHEN TIMESTAMPDIFF(HOUR, first_seen_at, first_purchase_at) < 1 THEN 'Same Session'
                     WHEN TIMESTAMPDIFF(DAY, first_seen_at, first_purchase_at) < 1 THEN 'Same Day'
@@ -159,9 +171,13 @@ class AttributionReport extends Page
                     ELSE '30+ Days'
                 END as time_range,
                 COUNT(*) as count
-            ")
+                "
+            )
             ->groupBy('time_range')
-            ->orderByRaw("FIELD(time_range, 'Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days')")
+            ->orderByRaw(DB::getDriverName() === 'pgsql'
+                ? "ARRAY_POSITION(ARRAY['Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days'], time_range)"
+                : "FIELD(time_range, 'Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days')"
+            )
             ->get()
             ->toArray();
 

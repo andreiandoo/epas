@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class MarketplaceContactList extends Model
 {
@@ -177,17 +178,32 @@ class MarketplaceContactList extends Model
 
             case 'age_less_than':
                 $query->whereNotNull('birth_date')
-                    ->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < ?', [(int) $value]);
+                    ->whereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? 'EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) < ?'
+                            : 'TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) < ?',
+                        [(int) $value]
+                    );
                 break;
 
             case 'age_equals':
                 $query->whereNotNull('birth_date')
-                    ->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) = ?', [(int) $value]);
+                    ->whereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? 'EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) = ?'
+                            : 'TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) = ?',
+                        [(int) $value]
+                    );
                 break;
 
             case 'age_greater_than':
                 $query->whereNotNull('birth_date')
-                    ->whereRaw('TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) > ?', [(int) $value]);
+                    ->whereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? 'EXTRACT(YEAR FROM AGE(CURRENT_DATE, birth_date)) > ?'
+                            : 'TIMESTAMPDIFF(YEAR, birth_date, CURDATE()) > ?',
+                        [(int) $value]
+                    );
                 break;
         }
     }
