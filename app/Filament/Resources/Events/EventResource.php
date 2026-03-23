@@ -284,11 +284,11 @@ class EventResource extends Resource
                         SC\Section::make('Location & Links')
                             ->schema([
                                 Forms\Components\Select::make('venue_id')->label('Venue')->searchable()->preload()
-                                    ->relationship(name: 'venue', modifyQueryUsing: function (Builder $query, SGet $get) {
+                                    ->relationship(name: 'venue', titleAttribute: 'name', modifyQueryUsing: function (Builder $query, SGet $get) {
                                         $tenantId = $get('tenant_id');
-                                        return $query->when($tenantId, fn($q) => $q->where(fn($qq) => $qq->whereNull('tenant_id')->orWhere('tenant_id', $tenantId)))->orderBy('name');
+                                        return $query->when($tenantId, fn($q) => $q->where(fn($qq) => $qq->whereNull('tenant_id')->orWhere('tenant_id', $tenantId)));
                                     })
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'en'))
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => ($record->getTranslation('name', 'en') ?: $record->getTranslation('name', 'ro') ?: $record->name) . ($record->city ? " ({$record->city})" : ''))
                                     ->helperText('Shows only venues without an owner or belonging to this event\'s Tenant.')
                                     ->live()->nullable()
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {

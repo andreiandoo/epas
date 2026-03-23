@@ -65,9 +65,6 @@ json_columns = [
     'type_settings', 'donation_settings', 'payment_credentials',
     'stripe_connect_meta', 'config_snapshot', 'options',
     'failed_job_ids', 'custom_fields', 'extra_data',
-    # Translatable columns used with ->> operator in queries
-    'name', 'description', 'slug', 'title', 'short_description',
-    'content', 'ticket_terms',
 ]
 
 c.execute("""

@@ -8,8 +8,30 @@ use Illuminate\Support\Str;
 
 class EditEvent extends EditRecord
 {
-
     protected static string $resource = EventResource::class;
+
+    public function getTitle(): string
+    {
+        $record = $this->record;
+        if (!$record) return 'Edit Event';
+
+        $title = $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: 'Edit Event';
+        $parts = [$title];
+
+        if ($record->venue) {
+            $venueName = $record->venue->getTranslation('name', 'en') ?: $record->venue->getTranslation('name', 'ro') ?: $record->venue->name;
+            $city = $record->venue->city;
+            $venueStr = $venueName;
+            if ($city) $venueStr .= ", {$city}";
+            $parts[] = $venueStr;
+        }
+
+        if ($record->event_date) {
+            $parts[] = $record->event_date->format('d M Y');
+        }
+
+        return $parts[0] . (count($parts) > 1 ? ' (' . implode(' · ', array_slice($parts, 1)) . ')' : '');
+    }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
