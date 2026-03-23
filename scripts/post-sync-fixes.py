@@ -136,5 +136,40 @@ for table in taxonomy_tables:
             pg.autocommit = True
             print(f"  {table}.{col}: SKIP ({str(e)[:60]})")
 
+# 5. Ensure admin user exists (users table is created by migrations but not populated by MySQL sync)
+try:
+    c.execute("SELECT COUNT(*) FROM users WHERE email = 'nastase.ai@gmail.com'")
+    if c.fetchone()[0] == 0:
+        c.execute("""
+            INSERT INTO users (name, email, password, email_verified_at, role, created_at, updated_at)
+            VALUES ('Admin', 'nastase.ai@gmail.com',
+                    '$2y$12$defaulthashedpasswordplaceholdervalue000000000000000000',
+                    NOW(), 'super-admin', NOW(), NOW())
+        """)
+        print("  Admin user created (password needs reset via tinker)")
+    else:
+        # Ensure role is set
+        c.execute("UPDATE users SET role = 'super-admin' WHERE email = 'nastase.ai@gmail.com' AND (role IS NULL OR role = '')")
+        print("  Admin user exists, role verified")
+except Exception as e:
+    print(f"  Admin user: {e}")
+
+# 6. Ensure Spatie roles table has super-admin
+try:
+    c.execute("SELECT COUNT(*) FROM roles WHERE name = 'super-admin'")
+    if c.fetchone()[0] == 0:
+        c.execute("INSERT INTO roles (name, guard_name, created_at, updated_at) VALUES ('super-admin', 'web', NOW(), NOW())")
+    # Assign role to admin user
+    c.execute("""
+        INSERT INTO model_has_roles (role_id, model_type, model_id)
+        SELECT r.id, 'App\\Models\\User', u.id
+        FROM roles r, users u
+        WHERE r.name = 'super-admin' AND u.email = 'nastase.ai@gmail.com'
+        ON CONFLICT DO NOTHING
+    """)
+    print("  Roles configured OK")
+except Exception as e:
+    print(f"  Roles: {e}")
+
 print("Post-sync fixes complete!")
 pg.close()
