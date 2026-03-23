@@ -136,7 +136,32 @@ for table in taxonomy_tables:
             pg.autocommit = True
             print(f"  {table}.{col}: SKIP ({str(e)[:60]})")
 
-# 5. Ensure admin user exists (users table is created by migrations but not populated by MySQL sync)
+# 5. Create Spatie permission tables if missing (not created by migrate when vendor migrations unpublished)
+spatie_tables = [
+    """CREATE TABLE IF NOT EXISTS roles (
+        id BIGSERIAL PRIMARY KEY, name VARCHAR(125) NOT NULL, guard_name VARCHAR(125) NOT NULL,
+        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, UNIQUE(name, guard_name))""",
+    """CREATE TABLE IF NOT EXISTS permissions (
+        id BIGSERIAL PRIMARY KEY, name VARCHAR(125) NOT NULL, guard_name VARCHAR(125) NOT NULL,
+        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, UNIQUE(name, guard_name))""",
+    """CREATE TABLE IF NOT EXISTS model_has_roles (
+        role_id BIGINT NOT NULL, model_type VARCHAR(255) NOT NULL, model_id BIGINT NOT NULL,
+        PRIMARY KEY(role_id, model_id, model_type))""",
+    """CREATE TABLE IF NOT EXISTS model_has_permissions (
+        permission_id BIGINT NOT NULL, model_type VARCHAR(255) NOT NULL, model_id BIGINT NOT NULL,
+        PRIMARY KEY(permission_id, model_id, model_type))""",
+    """CREATE TABLE IF NOT EXISTS role_has_permissions (
+        permission_id BIGINT NOT NULL, role_id BIGINT NOT NULL,
+        PRIMARY KEY(permission_id, role_id))""",
+]
+for sql in spatie_tables:
+    try:
+        c.execute(sql)
+    except Exception as e:
+        pass
+print("  Spatie permission tables OK")
+
+# 6. Ensure admin user exists (users table is created by migrations but not populated by MySQL sync)
 try:
     c.execute("SELECT COUNT(*) FROM users WHERE email = 'nastase.ai@gmail.com'")
     if c.fetchone()[0] == 0:
@@ -154,7 +179,7 @@ try:
 except Exception as e:
     print(f"  Admin user: {e}")
 
-# 6. Ensure Spatie roles table has super-admin
+# 7. Ensure Spatie roles table has super-admin
 try:
     c.execute("SELECT COUNT(*) FROM roles WHERE name = 'super-admin'")
     if c.fetchone()[0] == 0:
