@@ -86,16 +86,16 @@ class AttributionReport extends Page
         }
 
         // Scope helper: apply tenant or marketplace filter
-        $applyScope = function ($query, string $tenantCol = 'tenant_id', string $mpCol = 'marketplace_client_id') use ($tenantId, $marketplaceId) {
+        $applyScope = function ($query, string $tenantCol = 'tenant_id') use ($tenantId, $marketplaceId) {
             if ($tenantId) return $query->where($tenantCol, $tenantId);
-            if ($marketplaceId) return $query->where($mpCol, $marketplaceId);
+            if ($marketplaceId) return $query->whereJsonContains('marketplace_client_ids', $marketplaceId);
             return $query;
         };
 
         // Get all conversions in the period
         $conversions = CoreCustomerEvent::purchases()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -106,7 +106,7 @@ class AttributionReport extends Page
         // Credits the first interaction that brought the customer
         $this->firstTouchAttribution = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->selectRaw("
                 CASE
@@ -130,7 +130,7 @@ class AttributionReport extends Page
         // Credits the last interaction before conversion
         $this->lastTouchAttribution = CoreCustomerEvent::purchases()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("
                 CASE
@@ -166,7 +166,7 @@ class AttributionReport extends Page
         // How long from first visit to purchase
         $this->timeToConversion = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->whereNotNull('first_seen_at')
             ->whereNotNull('first_purchase_at')
@@ -212,12 +212,12 @@ class AttributionReport extends Page
         $this->touchpointAnalysis = [
             'avg_sessions' => CoreCustomer::purchasers()
                 ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-                ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+                ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
                 ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
                 ->avg('total_visits') ?? 0,
             'avg_page_views' => CoreCustomer::purchasers()
                 ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-                ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+                ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
                 ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
                 ->avg('total_pageviews') ?? 0,
         ];
@@ -266,7 +266,7 @@ class AttributionReport extends Page
 
         $convertedCustomers = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->limit(100)
             ->get();
@@ -318,7 +318,7 @@ class AttributionReport extends Page
 
         $customers = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
-            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->when($marketplaceId, fn($q) => $q->whereJsonContains('marketplace_client_ids', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->get();
 
