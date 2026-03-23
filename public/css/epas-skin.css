@@ -4098,10 +4098,13 @@ html.dark {
 }
 
 .dark .fi-section.fi-section-has-header {
+	background-color: var(--metro-bg-secondary) !important;
+	border-color: var(--metro-border) !important;
+}
+.dark .fi-section.fi-section-not-contained {
 	background-color: transparent !important;
 	border-color: var(--metro-border) !important;
 }
-.dark .fi-section.fi-section-not-contained,
 .dark .fi-card,
 .dark .fi-modal-window,
 .dark .fi-dropdown-panel {
