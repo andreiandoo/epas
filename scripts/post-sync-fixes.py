@@ -34,29 +34,7 @@ try:
 except Exception as e:
     print(f"  notifications.data: {e}")
 
-# 2. Create missing tables
-missing_tables = [
-    """CREATE TABLE IF NOT EXISTS contract_templates (
-        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, name VARCHAR(255),
-        slug VARCHAR(255), content TEXT, is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
-    """CREATE TABLE IF NOT EXISTS contract_custom_variables (
-        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, name VARCHAR(255),
-        label VARCHAR(255), type VARCHAR(50) DEFAULT 'text',
-        default_value TEXT NULL, is_active BOOLEAN DEFAULT true,
-        sort_order INT DEFAULT 0, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
-    """CREATE TABLE IF NOT EXISTS gdpr_requests (
-        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, customer_id BIGINT NULL,
-        type VARCHAR(255) NULL, status VARCHAR(255) NULL, data JSONB NULL,
-        notes TEXT NULL, processed_at TIMESTAMP NULL,
-        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
-]
-for sql in missing_tables:
-    try:
-        c.execute(sql)
-        print("  Missing table created OK")
-    except Exception as e:
-        print(f"  Missing table: {e}")
+# 2. (Moved to section 5 - core tables)
 
 # 2.5 Fix varchar columns that are too short for JSON data
 try:
@@ -136,7 +114,44 @@ for table in taxonomy_tables:
             pg.autocommit = True
             print(f"  {table}.{col}: SKIP ({str(e)[:60]})")
 
-# 5. Create Spatie permission tables if missing (not created by migrate when vendor migrations unpublished)
+# 5. Create Laravel core tables if missing (not in MySQL, only created by migrations)
+core_tables = [
+    """CREATE TABLE IF NOT EXISTS users (
+        id BIGSERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL UNIQUE,
+        email_verified_at TIMESTAMP NULL, password VARCHAR(255) NOT NULL,
+        remember_token VARCHAR(100) NULL, role VARCHAR(255) NOT NULL DEFAULT 'editor',
+        tenant_id BIGINT NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        email VARCHAR(255) PRIMARY KEY, token VARCHAR(255) NOT NULL, created_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(255) PRIMARY KEY, user_id BIGINT NULL, ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL, payload TEXT NOT NULL, last_activity INT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS settings (
+        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, key VARCHAR(255) NULL,
+        value TEXT NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS gdpr_requests (
+        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, customer_id BIGINT NULL,
+        type VARCHAR(255) NULL, status VARCHAR(255) NULL, data JSONB NULL,
+        notes TEXT NULL, processed_at TIMESTAMP NULL,
+        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS contract_templates (
+        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, name VARCHAR(255),
+        slug VARCHAR(255), content TEXT, is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS contract_custom_variables (
+        id BIGSERIAL PRIMARY KEY, tenant_id BIGINT NULL, name VARCHAR(255),
+        label VARCHAR(255), type VARCHAR(50) DEFAULT 'text',
+        default_value TEXT NULL, is_active BOOLEAN DEFAULT true,
+        sort_order INT DEFAULT 0, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+]
+for sql in core_tables:
+    try:
+        c.execute(sql)
+    except Exception as e:
+        pass
+print("  Core Laravel tables OK")
+
+# 5b. Create Spatie permission tables if missing (not created by migrate when vendor migrations unpublished)
 spatie_tables = [
     """CREATE TABLE IF NOT EXISTS roles (
         id BIGSERIAL PRIMARY KEY, name VARCHAR(125) NOT NULL, guard_name VARCHAR(125) NOT NULL,
