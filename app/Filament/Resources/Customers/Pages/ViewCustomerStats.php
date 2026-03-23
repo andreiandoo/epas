@@ -48,9 +48,10 @@ class ViewCustomerStats extends ViewRecord
                 ->count('e.id'),
         ];
 
-        // Monthly orders (YYYY-MM) - using DATE_FORMAT for MySQL
+        // Monthly orders (YYYY-MM) - cross-DB compatible
+        $monthExpr = DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
         $this->monthlyOrders = Order::query()
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt")
+            ->selectRaw("{$monthExpr} as month, COUNT(*) as cnt")
             ->where('customer_id', $customer->id)
             ->groupBy('month')
             ->orderBy('month')

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Customers\Widgets;
 use App\Models\Customer;
 use App\Models\Order;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\DB;
 
 class CustomerOrdersByMonthChart extends ChartWidget
 {
@@ -25,9 +26,10 @@ class CustomerOrdersByMonthChart extends ChartWidget
             ];
         }
 
-        // Construim serii lunare (YYYY-MM) - using DATE_FORMAT for MySQL
+        // Construim serii lunare (YYYY-MM) - cross-DB compatible
+        $monthExpr = DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
         $rows = Order::query()
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(total_cents) as total")
+            ->selectRaw("{$monthExpr} as month, COUNT(*) as cnt, SUM(total_cents) as total")
             ->where('customer_id', $this->record->id)
             ->groupBy('month')
             ->orderBy('month')

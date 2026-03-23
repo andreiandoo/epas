@@ -380,7 +380,7 @@ class ViewArtist extends Page
             ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
             ->where('event_artist.artist_id', $artistId)
             ->whereBetween('events.event_date', [$startDate, $endDate])
-            ->select(DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"), DB::raw('COUNT(*) as cnt'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(events.event_date, 'YYYY-MM') as ym" : "DATE_FORMAT(events.event_date, '%Y-%m') as ym"), DB::raw('COUNT(*) as cnt'))
             ->groupBy('ym')
             ->pluck('cnt', 'ym');
 
@@ -392,7 +392,7 @@ class ViewArtist extends Page
             ->where('event_artist.artist_id', $artistId)
             ->whereBetween('events.event_date', [$startDate, $endDate])
             ->select(
-                DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(events.event_date, 'YYYY-MM') as ym" : "DATE_FORMAT(events.event_date, '%Y-%m') as ym"),
                 DB::raw('COUNT(tickets.id) as ticket_count'),
                 DB::raw('COALESCE(SUM(tickets.price), 0) as revenue')
             )

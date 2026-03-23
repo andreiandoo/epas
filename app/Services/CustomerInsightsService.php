@@ -627,8 +627,9 @@ class CustomerInsightsService
 
     public function monthlyOrders(): array
     {
+        $monthExpr = DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
         return DB::table('orders')
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
+            ->selectRaw("{$monthExpr} as month, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->groupBy('month')
             ->orderBy('month')

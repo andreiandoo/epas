@@ -33,7 +33,7 @@ class SalesController extends Controller
             ->where('festival_edition_id', $editionId)
             ->where('created_at', '>=', now()->subHours(24))
             ->selectRaw('
-                DATE_FORMAT(created_at, "%Y-%m-%d %H:00") as hour,
+                ' . (DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM-DD HH24:00')" : 'DATE_FORMAT(created_at, "%Y-%m-%d %H:00")') . ' as hour,
                 SUM(total_cents) as revenue_cents,
                 SUM(quantity) as quantity
             ')

@@ -79,6 +79,9 @@ class PromoCodeUsageAnalyzer
         }
 
         // Check for rapid succession usage (within 1 minute)
+        $dateGroupExpr = DB::getDriverName() === 'pgsql'
+            ? "TO_CHAR(used_at, 'YYYY-MM-DD HH24:MI')"
+            : "DATE_FORMAT(used_at, '%Y-%m-%d %H:%i')";
         $rapidUsage = DB::select("
             SELECT
                 customer_id,
@@ -87,8 +90,8 @@ class PromoCodeUsageAnalyzer
                 MAX(used_at) as last_use
             FROM promo_code_usage
             WHERE promo_code_id = ?
-            GROUP BY customer_id, DATE_FORMAT(used_at, '%Y-%m-%d %H:%i')
-            HAVING uses > 3
+            GROUP BY customer_id, {$dateGroupExpr}
+            HAVING COUNT(*) > 3
         ", [$promoCodeId]);
 
         if (count($rapidUsage) > 0) {
@@ -157,15 +160,19 @@ class PromoCodeUsageAnalyzer
      */
     public function getUsageTimeline(string $promoCodeId, string $groupBy = 'day'): array
     {
+        $isPgsql = DB::getDriverName() === 'pgsql';
         $dateFormat = match($groupBy) {
-            'week' => '%Y-%u',
-            'month' => '%Y-%m',
-            default => '%Y-%m-%d',
+            'week' => $isPgsql ? 'IYYY-IW' : '%Y-%u',
+            'month' => $isPgsql ? 'YYYY-MM' : '%Y-%m',
+            default => $isPgsql ? 'YYYY-MM-DD' : '%Y-%m-%d',
         };
+        $periodExpr = $isPgsql
+            ? "TO_CHAR(used_at, '{$dateFormat}')"
+            : "DATE_FORMAT(used_at, '{$dateFormat}')";
 
         $timeline = DB::select("
             SELECT
-                DATE_FORMAT(used_at, ?) as period,
+                {$periodExpr} as period,
                 COUNT(*) as uses,
                 SUM(discount_amount) as total_discount,
                 SUM(original_amount) as total_revenue,
@@ -174,7 +181,7 @@ class PromoCodeUsageAnalyzer
             WHERE promo_code_id = ?
             GROUP BY period
             ORDER BY period ASC
-        ", [$dateFormat, $promoCodeId]);
+        ", [$promoCodeId]);
 
         return array_map(fn($t) => (array) $t, $timeline);
     }

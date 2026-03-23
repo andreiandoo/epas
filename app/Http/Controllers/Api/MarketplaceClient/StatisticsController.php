@@ -61,17 +61,19 @@ class StatisticsController extends BaseController
         $toDate = $request->input('to_date', now()->toDateString());
         $groupBy = $request->input('group_by', 'day'); // day, week, month
 
+        $isPgsql = DB::getDriverName() === 'pgsql';
         $dateFormat = match ($groupBy) {
-            'week' => '%Y-%u',
-            'month' => '%Y-%m',
-            default => '%Y-%m-%d',
+            'week' => $isPgsql ? 'IYYY-IW' : '%Y-%u',
+            'month' => $isPgsql ? 'YYYY-MM' : '%Y-%m',
+            default => $isPgsql ? 'YYYY-MM-DD' : '%Y-%m-%d',
         };
+        $periodExpr = $isPgsql ? "TO_CHAR(created_at, '{$dateFormat}')" : "DATE_FORMAT(created_at, '{$dateFormat}')";
 
         $sales = Order::where('marketplace_client_id', $client->id)
             ->where('status', 'completed')
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
-            ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
+            ->selectRaw("{$periodExpr} as period")
             ->selectRaw('COUNT(*) as orders')
             ->selectRaw('SUM(total) as revenue')
             ->selectRaw('SUM(commission_amount) as commission')

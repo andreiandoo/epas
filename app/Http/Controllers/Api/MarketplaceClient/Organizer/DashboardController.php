@@ -9,6 +9,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends BaseController
@@ -141,17 +142,19 @@ class DashboardController extends BaseController
         $toDate = $request->input('to_date', now()->toDateString());
         $groupBy = $request->input('group_by', 'day');
 
+        $isPgsql = DB::getDriverName() === 'pgsql';
         $dateFormat = match ($groupBy) {
-            'week' => '%Y-%u',
-            'month' => '%Y-%m',
-            default => '%Y-%m-%d',
+            'week' => $isPgsql ? 'IYYY-IW' : '%Y-%u',
+            'month' => $isPgsql ? 'YYYY-MM' : '%Y-%m',
+            default => $isPgsql ? 'YYYY-MM-DD' : '%Y-%m-%d',
         };
+        $periodExpr = $isPgsql ? "TO_CHAR(created_at, '{$dateFormat}')" : "DATE_FORMAT(created_at, '{$dateFormat}')";
 
         $sales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
-            ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
+            ->selectRaw("{$periodExpr} as period")
             ->selectRaw('COUNT(*) as orders')
             ->selectRaw('SUM(total) as revenue')
             ->groupBy('period')
