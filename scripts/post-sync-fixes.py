@@ -18,6 +18,8 @@ c = pg.cursor()
 
 # 1. Fix notifications.data to jsonb
 try:
+    # Clean invalid JSON first
+    c.execute("UPDATE notifications SET data = '{}' WHERE data IS NOT NULL AND data !~ '^[{\\[]'")
     c.execute("""
         ALTER TABLE notifications ALTER COLUMN data TYPE jsonb
         USING CASE WHEN data IS NULL THEN NULL
