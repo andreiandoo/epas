@@ -22,6 +22,7 @@ use Filament\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use UnitEnum;
@@ -512,10 +513,18 @@ class MediaLibraryResource extends Resource
                     ->label('Compressed')
                     ->queries(
                         true: fn (Builder $query) => $query->whereNotNull('metadata')
-                            ->whereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL"),
+                            ->whereRaw(
+                                DB::getDriverName() === 'pgsql'
+                                    ? "metadata->>'compressed_at' IS NOT NULL"
+                                    : "JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL"
+                            ),
                         false: fn (Builder $query) => $query->where(function ($q) {
                             $q->whereNull('metadata')
-                              ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                              ->orWhereRaw(
+                                  DB::getDriverName() === 'pgsql'
+                                      ? "metadata->>'compressed_at' IS NULL"
+                                      : "JSON_EXTRACT(metadata, '$.compressed_at') IS NULL"
+                              );
                         }),
                     ),
             ])

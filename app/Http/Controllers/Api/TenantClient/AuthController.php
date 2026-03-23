@@ -12,6 +12,7 @@ use App\Services\TenantMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -395,7 +396,12 @@ class AuthController extends Controller
         }
 
         // Find customer by verification token in meta
-        $customer = Customer::whereRaw("JSON_EXTRACT(meta, '$.verification_token') = ?", [$token])
+        $customer = Customer::whereRaw(
+            DB::getDriverName() === 'pgsql'
+                ? "meta->>'verification_token' = ?"
+                : "JSON_EXTRACT(meta, '$.verification_token') = ?",
+            [$token]
+        )
             ->first();
 
         if (!$customer) {

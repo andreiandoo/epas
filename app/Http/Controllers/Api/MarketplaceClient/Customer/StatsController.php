@@ -354,7 +354,11 @@ class StatsController extends BaseController
                 ->whereIn('aag.artist_id', $allArtistIds)
                 ->select(
                     'ag.id',
-                    \DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), ag.name) as label")
+                    \DB::raw(
+                        \DB::getDriverName() === 'pgsql'
+                            ? "COALESCE(ag.name->>'ro', ag.name->>'en', ag.name::text) as label"
+                            : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), ag.name) as label"
+                    )
                 )
                 ->get();
             foreach ($genreRows as $gr) {

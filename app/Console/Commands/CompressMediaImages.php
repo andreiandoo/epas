@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\MediaLibrary;
 use App\Services\Media\ImageCompressionService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class CompressMediaImages extends Command
 {
@@ -87,7 +88,11 @@ class CompressMediaImages extends Command
         if ($uncompressedOnly) {
             $query->where(function ($q) {
                 $q->whereNull('metadata')
-                  ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                  ->orWhereRaw(
+                      DB::getDriverName() === 'pgsql'
+                          ? "metadata->>'compressed_at' IS NULL"
+                          : "JSON_EXTRACT(metadata, '$.compressed_at') IS NULL"
+                  );
             });
             $this->info("📦 Only uncompressed files");
         }

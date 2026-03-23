@@ -67,7 +67,11 @@ class ViewCustomerStats extends ViewRecord
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customer->id)
-            ->select('e.id', DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"))
+            ->select('e.id', DB::raw(
+                DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(e.title->>'en', e.title->>'ro') as title"
+                    : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"
+            ))
             ->distinct()
             ->orderByDesc('e.id')
             ->limit(20)
@@ -138,7 +142,11 @@ class ViewCustomerStats extends ViewRecord
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customerId)
-            ->select(DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"), DB::raw('COUNT(*) as cnt'))
+            ->select(DB::raw(
+                DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(eg.name->>'en', eg.name->>'ro') as genre_name"
+                    : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"
+            ), DB::raw('COUNT(*) as cnt'))
             ->groupBy('genre_name')
             ->orderByDesc('cnt')
             ->limit(10)

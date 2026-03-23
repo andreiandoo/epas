@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use App\Support\Translatable;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -558,7 +559,12 @@ class Event extends Model
                 ->orWhere(function ($q2) use ($now) {
                     $q2->whereNotIn('duration_mode', ['range', 'single_day'])
                        ->where(function ($q3) use ($now) {
-                           $q3->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[0].date')) >= ?", [$now->toDateString()])
+                           $q3->whereRaw(
+                               DB::getDriverName() === 'pgsql'
+                                   ? "multi_slots->0->>'date' >= ?"
+                                   : "JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[0].date')) >= ?",
+                               [$now->toDateString()]
+                           )
                               ->orWhereNull('multi_slots');
                        });
                 });

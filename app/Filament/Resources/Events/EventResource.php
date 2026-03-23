@@ -1586,7 +1586,11 @@ class EventResource extends Resource
                     ->label('Title')
                     ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: collect($record->title)->first())
                     ->searchable(query: fn (Builder $query, string $search) => $query->where('title', 'like', "%{$search}%"))
-                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) {$direction}"))
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "title->>'en' {$direction}"
+                            : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) {$direction}"
+                    ))
                     ->limit(40)
                     ->url(fn (Event $record) => static::getUrl('edit', ['record' => $record])),
 

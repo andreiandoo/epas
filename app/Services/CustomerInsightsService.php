@@ -234,7 +234,11 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.ro')), vt.name) as label"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(vt.name->>'en', vt.name->>'ro', vt.name::text) as label"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(vt.name, '$.ro')), vt.name) as label"
+                ),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
             )
             ->groupBy('label')
@@ -258,7 +262,11 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), ag.name) as label"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(ag.name->>'en', ag.name->>'ro', ag.name::text) as label"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), ag.name) as label"
+                ),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
             )
             ->groupBy('label')
@@ -280,7 +288,11 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.ro')), et.name) as label"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(et.name->>'en', et.name->>'ro', et.name::text) as label"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(et.name, '$.ro')), et.name) as label"
+                ),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
             )
             ->groupBy('label')
@@ -302,7 +314,11 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->select(
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro')), eg.name) as label"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(eg.name->>'en', eg.name->>'ro', eg.name::text) as label"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro')), eg.name) as label"
+                ),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
             )
             ->groupBy('label')
@@ -468,7 +484,11 @@ class CustomerInsightsService
             ->select(
                 'o.id',
                 'o.order_number',
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(e.title->>'en', e.title->>'ro', 'N/A') as event_title"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"
+                ),
                 DB::raw($this->totalExpr('o') . ' as total_cents'),
                 'o.currency',
                 'o.status',
@@ -492,7 +512,11 @@ class CustomerInsightsService
             ->select(
                 't.id',
                 't.code',
-                DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"),
+                DB::raw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "COALESCE(e.title->>'en', e.title->>'ro', 'N/A') as event_title"
+                        : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro')), 'N/A') as event_title"
+                ),
                 'tt.name as ticket_type_name',
                 't.attendee_name',
                 't.attendee_email',
@@ -646,7 +670,11 @@ class CustomerInsightsService
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
-            ->select('e.id', DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"))
+            ->select('e.id', DB::raw(
+                DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(e.title->>'en', e.title->>'ro') as title"
+                    : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"
+            ))
             ->distinct()
             ->orderByDesc('e.id')
             ->limit($limit)

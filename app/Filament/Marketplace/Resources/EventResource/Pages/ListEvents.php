@@ -9,6 +9,7 @@ use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 
 class ListEvents extends ListRecords
@@ -128,7 +129,12 @@ class ListEvents extends ListRecords
                         // Multi-day mode
                         ->orWhere(function ($qq) use ($now) {
                             $qq->where('duration_mode', 'multi_day')
-                                ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?", [$now->format('Y-m-d')]);
+                                ->whereRaw(
+                                    DB::getDriverName() === 'pgsql'
+                                        ? "multi_slots->0->>'date' >= ?"
+                                        : "JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?",
+                                    [$now->format('Y-m-d')]
+                                );
                         })
                         // Fallback for null duration_mode
                         ->orWhere(function ($qq) use ($now) {
@@ -157,7 +163,12 @@ class ListEvents extends ListRecords
                             })
                             ->orWhere(function ($qq) use ($now) {
                                 $qq->where('duration_mode', 'multi_day')
-                                    ->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?", [$now->format('Y-m-d')]);
+                                    ->whereRaw(
+                                        DB::getDriverName() === 'pgsql'
+                                            ? "multi_slots->0->>'date' >= ?"
+                                            : "JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[*].date')) >= ?",
+                                        [$now->format('Y-m-d')]
+                                    );
                             })
                             ->orWhere(function ($qq) use ($now) {
                                 $qq->whereNull('duration_mode')

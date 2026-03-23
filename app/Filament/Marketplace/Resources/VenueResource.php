@@ -18,6 +18,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
@@ -87,11 +88,21 @@ class VenueResource extends Resource
                                         // Search ALL venues (including this marketplace's own to prevent duplicates)
                                         ->where(function (Builder $q) use ($normalizedSearch, $search) {
                                             // Search in name JSON field
-                                            $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$normalizedSearch}%"])
-                                                ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$normalizedSearch}%"])
+                                            $isPgsql = DB::getDriverName() === 'pgsql';
+                                            $q->whereRaw(
+                                                $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                                                ["%{$normalizedSearch}%"]
+                                            )
+                                                ->orWhereRaw(
+                                                    $isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
+                                                    ["%{$normalizedSearch}%"]
+                                                )
                                                 ->orWhereRaw("LOWER(city) LIKE ?", ["%{$normalizedSearch}%"])
                                                 // Also search with original term
-                                                ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%" . mb_strtolower($search) . "%"])
+                                                ->orWhereRaw(
+                                                    $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                                                    ["%" . mb_strtolower($search) . "%"]
+                                                )
                                                 ->orWhereRaw("LOWER(city) LIKE ?", ["%" . mb_strtolower($search) . "%"]);
                                         })
                                         ->limit(20)
@@ -697,7 +708,9 @@ class VenueResource extends Resource
                     ->label('Nume')
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
                         $query->whereRaw(
-                            "LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?",
+                            DB::getDriverName() === 'pgsql'
+                                ? "LOWER(name->>'{$lang}') LIKE ?"
+                                : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?",
                             ['%' . mb_strtolower($search) . '%']
                         )->orWhereRaw(
                             "LOWER(`city`) LIKE ?",

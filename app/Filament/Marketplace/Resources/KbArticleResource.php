@@ -18,6 +18,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class KbArticleResource extends Resource
@@ -344,8 +345,15 @@ class KbArticleResource extends Resource
                     ->label('Title/Question')
                     ->searchable(query: function (Builder $query, string $search) use ($marketplaceLanguage): Builder {
                         return $query->where(function ($q) use ($search, $marketplaceLanguage) {
-                            $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"])
-                              ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$marketplaceLanguage}')) LIKE ?", ["%{$search}%"]);
+                            $isPgsql = DB::getDriverName() === 'pgsql';
+                            $q->whereRaw(
+                                $isPgsql ? "title->>'{$marketplaceLanguage}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?",
+                                ["%{$search}%"]
+                            )
+                              ->orWhereRaw(
+                                  $isPgsql ? "question->>'{$marketplaceLanguage}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$marketplaceLanguage}')) LIKE ?",
+                                  ["%{$search}%"]
+                              );
                         });
                     })
                     ->limit(50)

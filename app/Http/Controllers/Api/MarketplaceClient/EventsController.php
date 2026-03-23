@@ -150,8 +150,18 @@ class EventsController extends BaseController
                 // Tenant events: search in name column
                 $q->where('name', 'like', "%{$search}%")
                     // Marketplace events: search in JSON title field (ro and en)
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "title->>'ro' LIKE ?"
+                            : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?",
+                        ["%{$search}%"]
+                    )
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "title->>'en' LIKE ?"
+                            : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) LIKE ?",
+                        ["%{$search}%"]
+                    )
                     ->orWhere('description', 'like', "%{$search}%")
                     ->orWhereHas('venue', function ($vq) use ($search) {
                         $vq->where('name', 'like', "%{$search}%")

@@ -260,8 +260,18 @@ class ViewArtist extends Page
         $search = $this->venueSearch;
         $this->venueResults = \App\Models\Venue::where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(name->>'en') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
+                        ['%' . mb_strtolower($search) . '%']
+                    )
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(name->>'ro') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                        ['%' . mb_strtolower($search) . '%']
+                    )
                     ->orWhere('city', 'LIKE', "%{$search}%");
             })
             ->select('id', 'name', 'city', 'capacity', 'capacity_total')

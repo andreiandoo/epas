@@ -55,7 +55,11 @@ class FixAmbiletOrphanTicketsCommand extends Command
         $orphaned = DB::table('tickets')
             ->whereNull('order_id')
             ->where('marketplace_client_id', $clientId)
-            ->whereRaw("JSON_EXTRACT(meta, '$.imported_from') = 'ambilet'")
+            ->whereRaw(
+                DB::getDriverName() === 'pgsql'
+                    ? "meta->>'imported_from' = 'ambilet'"
+                    : "JSON_EXTRACT(meta, '$.imported_from') = 'ambilet'"
+            )
             ->select('id', 'meta')
             ->get();
 
