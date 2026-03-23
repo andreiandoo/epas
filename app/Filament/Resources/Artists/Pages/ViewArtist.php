@@ -784,7 +784,9 @@ class ViewArtist extends Page
             })
             ->whereIn('o.id', array_slice($orderIds, 0, 5000)) // limit for performance
             ->whereNotNull('e.event_date')
-            ->select(DB::raw('DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql'
+                ? '(e.event_date::date - COALESCE(o.paid_at, o.created_at)::date) as days_before'
+                : 'DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
             ->get()
             ->pluck('days_before')
             ->filter(fn ($d) => $d !== null && $d >= 0);
@@ -844,7 +846,9 @@ class ViewArtist extends Page
                         $q->where('tt.event_id', $evId)->orWhere('t.event_id', $evId)->orWhere('t.marketplace_event_id', $evId);
                     })
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-                    ->selectRaw("GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
+                    ->selectRaw(DB::getDriverName() === 'pgsql'
+                        ? "GREATEST(0, ('{$evDateStr}'::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before, COUNT(t.id) as cnt"
+                        : "GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
                     ->groupBy('days_before')
                     ->orderBy('days_before')
                     ->get();
@@ -1114,7 +1118,9 @@ class ViewArtist extends Page
                 })
                 ->whereIn('o.id', array_slice($orderIds, 0, 5000))
                 ->whereNotNull('e.event_date')
-                ->selectRaw('GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
+                ->selectRaw(DB::getDriverName() === 'pgsql'
+                    ? 'GREATEST(0, (e.event_date::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before'
+                    : 'GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
                 ->get()
                 ->pluck('days_before')
                 ->filter(fn ($d) => $d >= 0);
