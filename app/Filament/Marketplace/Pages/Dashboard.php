@@ -112,7 +112,7 @@ class Dashboard extends Page
         // 1. Events - single query with conditional counts
         $eventStats = Event::where('marketplace_client_id', $marketplaceId)
             ->selectRaw('COUNT(*) as total')
-            ->selectRaw("SUM(CASE WHEN is_cancelled = 0 AND (
+            ->selectRaw("SUM(CASE WHEN NOT is_cancelled AND (
                 (duration_mode = 'single_day' AND event_date >= ?) OR
                 (duration_mode = 'range' AND range_end_date >= ?) OR
                 (duration_mode NOT IN ('single_day','range') AND multi_slots IS NOT NULL)
@@ -132,7 +132,7 @@ class Dashboard extends Page
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
-            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN `total` ELSE 0 END) as revenue")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN \"total\" ELSE 0 END) as revenue")
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN commission_amount ELSE 0 END) as commissions")
             ->first();
 

@@ -31,8 +31,8 @@ class VenueCategory extends Model
         return $this->hasMany(VenueType::class)->orderBy('sort_order');
     }
 
-    public function getRouteKeyName(): string
-    {
-        return 'slug';
-    }
+    /**
+     * Route key uses 'id' (default) for Filament admin compatibility.
+     * For public routes that need slug-based URLs, use explicit route model binding.
+     */
 }

@@ -424,7 +424,7 @@ class MediaLibraryResource extends Resource
                     ->label('Year')
                     ->options(function () {
                         $years = MediaLibrary::query()
-                            ->selectRaw('DISTINCT YEAR(created_at) as year')
+                            ->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::int as year')
                             ->whereNotNull('created_at')
                             ->orderBy('year', 'desc')
                             ->pluck('year', 'year')

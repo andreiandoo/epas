@@ -500,7 +500,7 @@ class MediaLibraryResource extends Resource
 
                         $years = MediaLibrary::query()
                             ->where('marketplace_client_id', $marketplace?->id)
-                            ->selectRaw('DISTINCT YEAR(created_at) as year')
+                            ->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::int as year')
                             ->whereNotNull('created_at')
                             ->orderBy('year', 'desc')
                             ->pluck('year', 'year')

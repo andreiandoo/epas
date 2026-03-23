@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\AffiliateWithdrawalResource;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 
 class ViewAffiliateWithdrawal extends ViewRecord
 {
@@ -15,7 +16,7 @@ class ViewAffiliateWithdrawal extends ViewRecord
     {
         return $schema
             ->schema([
-                Infolists\Components\Section::make('Withdrawal Details')
+                SC\Section::make('Withdrawal Details')
                     ->schema([
                         Infolists\Components\TextEntry::make('reference')
                             ->label('Reference')
@@ -37,7 +38,7 @@ class ViewAffiliateWithdrawal extends ViewRecord
                     ])
                     ->columns(4),
 
-                Infolists\Components\Section::make('Affiliate Information')
+                SC\Section::make('Affiliate Information')
                     ->schema([
                         Infolists\Components\TextEntry::make('affiliate.name')
                             ->label('Affiliate Name'),
@@ -57,7 +58,7 @@ class ViewAffiliateWithdrawal extends ViewRecord
                     ])
                     ->columns(4),
 
-                Infolists\Components\Section::make('Payment Information')
+                SC\Section::make('Payment Information')
                     ->schema([
                         Infolists\Components\TextEntry::make('payment_method')
                             ->label('Payment Method')
@@ -74,7 +75,7 @@ class ViewAffiliateWithdrawal extends ViewRecord
                     ])
                     ->columns(3),
 
-                Infolists\Components\Section::make('Processing Information')
+                SC\Section::make('Processing Information')
                     ->schema([
                         Infolists\Components\TextEntry::make('processedByUser.name')
                             ->label('Processed By')
@@ -98,7 +99,7 @@ class ViewAffiliateWithdrawal extends ViewRecord
                     ->columns(2)
                     ->visible(fn ($record) => in_array($record->status, ['processing', 'completed', 'rejected'])),
 
-                Infolists\Components\Section::make('Request Information')
+                SC\Section::make('Request Information')
                     ->schema([
                         Infolists\Components\TextEntry::make('requested_ip')
                             ->label('IP Address')
