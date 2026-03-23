@@ -64,7 +64,10 @@ json_columns = [
     'data', 'properties', 'meta', 'settings', 'features',
     'type_settings', 'donation_settings', 'payment_credentials',
     'stripe_connect_meta', 'config_snapshot', 'options',
-    'failed_job_ids', 'custom_fields', 'extra_data'
+    'failed_job_ids', 'custom_fields', 'extra_data',
+    # Translatable columns used with ->> operator in queries
+    'name', 'description', 'slug', 'title', 'short_description',
+    'content', 'ticket_terms',
 ]
 
 c.execute("""
@@ -91,6 +94,41 @@ for table, col, dtype in c.fetchall():
         pg.rollback()
         pg.autocommit = True
         print(f"  {table}.{col}: SKIP ({str(e)[:60]})")
+
+# 4. Ensure translatable columns in taxonomy tables are jsonb
+# These tables use the Translatable trait and queries use ->> operator
+taxonomy_tables = [
+    'artist_types', 'artist_genres', 'event_types', 'event_genres',
+    'event_tags', 'venue_types',
+]
+translatable_columns = ['name', 'description', 'slug']
+
+for table in taxonomy_tables:
+    c.execute("""
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = %s
+        AND column_name = ANY(%s)
+        AND data_type IN ('text', 'character varying')
+    """, (table, translatable_columns))
+
+    for col, dtype in c.fetchall():
+        try:
+            c.execute(f"""
+                ALTER TABLE "{table}" ALTER COLUMN "{col}" TYPE jsonb
+                USING CASE
+                    WHEN "{col}" IS NULL THEN NULL
+                    WHEN "{col}" = '' THEN '{{}}'::jsonb
+                    WHEN "{col}" ~ '^[{{\\[]' THEN "{col}"::jsonb
+                    ELSE jsonb_build_object('en', "{col}")
+                END
+            """)
+            print(f"  {table}.{col} ({dtype}) -> jsonb OK")
+        except Exception as e:
+            pg.rollback()
+            pg.autocommit = True
+            print(f"  {table}.{col}: SKIP ({str(e)[:60]})")
 
 print("Post-sync fixes complete!")
 pg.close()

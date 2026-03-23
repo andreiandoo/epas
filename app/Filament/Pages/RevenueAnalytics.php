@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\PlatformCost;
 use App\Models\Microservice;
+use App\Models\TenantMicroservice;
 use App\Models\MarketplaceClientMicroservice;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
@@ -154,7 +155,7 @@ class RevenueAnalytics extends Page
 
         // === COST BREAKDOWN ===
         $this->costBreakdown = PlatformCost::active()->recurring()
-            ->selectRaw('category, SUM(CASE WHEN billing_cycle = "yearly" THEN amount/12 ELSE amount END) as total')
+            ->selectRaw("category, SUM(CASE WHEN billing_cycle = 'yearly' THEN amount/12 ELSE amount END) as total")
             ->groupBy('category')
             ->pluck('total', 'category')
             ->map(fn ($value, $key) => ['label' => ucfirst($key), 'value' => $value])
@@ -184,8 +185,9 @@ class RevenueAnalytics extends Page
 
         foreach ($microservices as $microservice) {
             // Count active tenants using this microservice
-            $activeTenantCount = $microservice->tenants()
-                ->wherePivot('status', 'active')
+            // Use TenantMicroservice directly to avoid bigint/varchar type mismatch on pivot join
+            $activeTenantCount = TenantMicroservice::where('microservice_id', $microservice->id)
+                ->where('status', 'active')
                 ->count();
 
             // Count active marketplace clients using this microservice
