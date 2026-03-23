@@ -75,11 +75,27 @@ class AttributionReport extends Page
     {
         $startDate = Carbon::parse($this->startDate)->startOfDay();
         $endDate = Carbon::parse($this->endDate)->endOfDay();
-        $tenantId = $this->tenantId ? (int) $this->tenantId : null;
+
+        // Parse tenant/marketplace filter
+        $tenantId = null;
+        $marketplaceId = null;
+        if ($this->tenantId && str_starts_with($this->tenantId, 't_')) {
+            $tenantId = (int) substr($this->tenantId, 2);
+        } elseif ($this->tenantId && str_starts_with($this->tenantId, 'm_')) {
+            $marketplaceId = (int) substr($this->tenantId, 2);
+        }
+
+        // Scope helper: apply tenant or marketplace filter
+        $applyScope = function ($query, string $tenantCol = 'tenant_id', string $mpCol = 'marketplace_client_id') use ($tenantId, $marketplaceId) {
+            if ($tenantId) return $query->where($tenantCol, $tenantId);
+            if ($marketplaceId) return $query->where($mpCol, $marketplaceId);
+            return $query;
+        };
 
         // Get all conversions in the period
         $conversions = CoreCustomerEvent::purchases()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -90,6 +106,7 @@ class AttributionReport extends Page
         // Credits the first interaction that brought the customer
         $this->firstTouchAttribution = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->selectRaw("
                 CASE
@@ -113,6 +130,7 @@ class AttributionReport extends Page
         // Credits the last interaction before conversion
         $this->lastTouchAttribution = CoreCustomerEvent::purchases()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("
                 CASE
@@ -138,16 +156,17 @@ class AttributionReport extends Page
 
         // === CONVERSION PATHS ===
         // Show common paths to conversion
-        $this->conversionPaths = $this->analyzeConversionPaths($tenantId, $startDate, $endDate);
+        $this->conversionPaths = $this->analyzeConversionPaths($tenantId, $startDate, $endDate, $marketplaceId);
 
         // === ASSISTED CONVERSIONS ===
         // Channels that assisted but didn't get last-touch credit
-        $this->assistedConversions = $this->calculateAssistedConversions($tenantId, $startDate, $endDate);
+        $this->assistedConversions = $this->calculateAssistedConversions($tenantId, $startDate, $endDate, $marketplaceId);
 
         // === TIME TO CONVERSION ===
         // How long from first visit to purchase
         $this->timeToConversion = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->whereNotNull('first_seen_at')
             ->whereNotNull('first_purchase_at')
@@ -193,10 +212,12 @@ class AttributionReport extends Page
         $this->touchpointAnalysis = [
             'avg_sessions' => CoreCustomer::purchasers()
                 ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+                ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
                 ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
                 ->avg('total_visits') ?? 0,
             'avg_page_views' => CoreCustomer::purchasers()
                 ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+                ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
                 ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
                 ->avg('total_pageviews') ?? 0,
         ];
@@ -238,13 +259,14 @@ class AttributionReport extends Page
             ->toArray();
     }
 
-    protected function analyzeConversionPaths(?int $tenantId, Carbon $startDate, Carbon $endDate): array
+    protected function analyzeConversionPaths(?int $tenantId, Carbon $startDate, Carbon $endDate, ?int $marketplaceId = null): array
     {
         // Get customers who converted and analyze their journey
         $paths = [];
 
         $convertedCustomers = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->limit(100)
             ->get();
@@ -288,7 +310,7 @@ class AttributionReport extends Page
         ], array_keys(array_slice($paths, 0, 10)), array_slice($paths, 0, 10));
     }
 
-    protected function calculateAssistedConversions(?int $tenantId, Carbon $startDate, Carbon $endDate): array
+    protected function calculateAssistedConversions(?int $tenantId, Carbon $startDate, Carbon $endDate, ?int $marketplaceId = null): array
     {
         // Find channels that appear in first-touch but not last-touch
         // These are "assisting" channels
@@ -296,6 +318,7 @@ class AttributionReport extends Page
 
         $customers = CoreCustomer::purchasers()
             ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+            ->when($marketplaceId, fn($q) => $q->where('marketplace_client_id', $marketplaceId))
             ->whereHas('events', fn($q) => $q->purchases()->whereBetween('created_at', [$startDate, $endDate]))
             ->get();
 
@@ -333,10 +356,19 @@ class AttributionReport extends Page
 
     public function getTenantOptions(): array
     {
-        return ['' => 'All Tenants'] + Tenant::where('status', 'active')
+        $tenants = Tenant::where('status', 'active')
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn ($t) => ['t_' . $t->id => '[T] ' . ($t->public_name ?? $t->name)])
+            ->toArray();
+
+        $marketplaces = \App\Models\MarketplaceClient::where('is_active', true)
             ->orderBy('name')
             ->pluck('name', 'id')
+            ->mapWithKeys(fn ($name, $id) => ['m_' . $id => '[M] ' . $name])
             ->toArray();
+
+        return ['' => 'All'] + $tenants + $marketplaces;
     }
 
     protected function getHeaderActions(): array
