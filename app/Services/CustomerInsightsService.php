@@ -460,11 +460,17 @@ class CustomerInsightsService
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
             ->select(
-                DB::raw("CASE
-                    WHEN DAY(e.event_date) <= 10 THEN 'Început de lună (1-10)'
-                    WHEN DAY(e.event_date) <= 20 THEN 'Mijloc de lună (11-20)'
-                    ELSE 'Sfârșit de lună (21-31)'
-                END as label"),
+                DB::raw(DB::getDriverName() === 'pgsql'
+                    ? "CASE
+                        WHEN EXTRACT(DAY FROM e.event_date) <= 10 THEN 'Început de lună (1-10)'
+                        WHEN EXTRACT(DAY FROM e.event_date) <= 20 THEN 'Mijloc de lună (11-20)'
+                        ELSE 'Sfârșit de lună (21-31)'
+                    END as label"
+                    : "CASE
+                        WHEN DAY(e.event_date) <= 10 THEN 'Început de lună (1-10)'
+                        WHEN DAY(e.event_date) <= 20 THEN 'Mijloc de lună (11-20)'
+                        ELSE 'Sfârșit de lună (21-31)'
+                    END as label"),
                 DB::raw('COUNT(DISTINCT e.id) as cnt')
             )
             ->groupBy('label')
