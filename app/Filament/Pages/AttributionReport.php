@@ -362,7 +362,7 @@ class AttributionReport extends Page
             ->mapWithKeys(fn ($t) => ['t_' . $t->id => '[T] ' . ($t->public_name ?? $t->name)])
             ->toArray();
 
-        $marketplaces = \App\Models\MarketplaceClient::where('is_active', true)
+        $marketplaces = \App\Models\MarketplaceClient::query()
             ->orderBy('name')
             ->pluck('name', 'id')
             ->mapWithKeys(fn ($name, $id) => ['m_' . $id => '[M] ' . $name])
