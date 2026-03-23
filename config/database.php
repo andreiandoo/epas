@@ -99,7 +99,7 @@ return [
             'sticky' => true,
             'statement_timeout' => '30000',
             'options' => [
-                PDO::ATTR_PERSISTENT => true,
+                PDO::ATTR_EMULATE_PREPARES => true, // Required for PgBouncer transaction mode
             ],
         ],
 
