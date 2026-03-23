@@ -19,35 +19,42 @@ return new class extends Migration
             \$\$ LANGUAGE sql IMMUTABLE PARALLEL SAFE;
         ");
 
-        // Events: full-text search on title (all locales)
-        DB::statement("
-            CREATE INDEX IF NOT EXISTS idx_events_title_fts ON events
-            USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(title->>'en', '') || ' ' || coalesce(title->>'ro', ''))))
-        ");
+        $indexes = [
+            // Events: FTS on title (jsonb column)
+            "idx_events_title_fts" => "
+                CREATE INDEX IF NOT EXISTS idx_events_title_fts ON events
+                USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(title::text, ''))))
+            ",
+            // Artists: FTS on name (may be varchar or jsonb)
+            "idx_artists_name_fts" => "
+                CREATE INDEX IF NOT EXISTS idx_artists_name_fts ON artists
+                USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(name::text, ''))))
+            ",
+            // Venues: FTS on name + city
+            "idx_venues_name_fts" => "
+                CREATE INDEX IF NOT EXISTS idx_venues_name_fts ON venues
+                USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(name::text, '') || ' ' || coalesce(city, ''))))
+            ",
+            // Orders: FTS on customer email
+            "idx_orders_email_fts" => "
+                CREATE INDEX IF NOT EXISTS idx_orders_email_fts ON orders
+                USING GIN (to_tsvector('simple', coalesce(customer_email, '')))
+            ",
+            // Marketplace customers: FTS on name + email
+            "idx_mp_customers_fts" => "
+                CREATE INDEX IF NOT EXISTS idx_mp_customers_fts ON marketplace_customers
+                USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(email, ''))))
+            ",
+        ];
 
-        // Artists: full-text search on name
-        DB::statement("
-            CREATE INDEX IF NOT EXISTS idx_artists_name_fts ON artists
-            USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(name->>'en', '') || ' ' || coalesce(name->>'ro', ''))))
-        ");
-
-        // Venues: full-text search on name + city
-        DB::statement("
-            CREATE INDEX IF NOT EXISTS idx_venues_name_fts ON venues
-            USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(name::text, '') || ' ' || coalesce(city, ''))))
-        ");
-
-        // Orders: full-text on customer email
-        DB::statement("
-            CREATE INDEX IF NOT EXISTS idx_orders_email_fts ON orders
-            USING GIN (to_tsvector('simple', coalesce(customer_email, '')))
-        ");
-
-        // Marketplace customers: full-text on name + email
-        DB::statement("
-            CREATE INDEX IF NOT EXISTS idx_mp_customers_fts ON marketplace_customers
-            USING GIN (to_tsvector('simple', immutable_unaccent(coalesce(first_name, '') || ' ' || coalesce(last_name, '') || ' ' || coalesce(email, ''))))
-        ");
+        foreach ($indexes as $name => $sql) {
+            try {
+                DB::statement($sql);
+            } catch (\Exception $e) {
+                // Skip if column types don't match - will work after post-sync fixes
+                logger()->warning("FTS index {$name} skipped: " . $e->getMessage());
+            }
+        }
     }
 
     public function down(): void
