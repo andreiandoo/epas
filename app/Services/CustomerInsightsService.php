@@ -157,7 +157,7 @@ class CustomerInsightsService
         $monthNames = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         $rows = DB::table('orders')
-            ->selectRaw("MONTH(created_at) as m, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
+            ->selectRaw((DB::getDriverName() === 'pgsql' ? "EXTRACT(MONTH FROM created_at)::int" : "MONTH(created_at)") . " as m, COUNT(*) as cnt, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
@@ -166,7 +166,7 @@ class CustomerInsightsService
             ->toArray();
 
         $revenueRows = DB::table('orders')
-            ->selectRaw("MONTH(created_at) as m, SUM(" . $this->totalExpr() . ") as total")
+            ->selectRaw((DB::getDriverName() === 'pgsql' ? "EXTRACT(MONTH FROM created_at)::int" : "MONTH(created_at)") . " as m, SUM(" . $this->totalExpr() . ") as total")
             ->where($this->orderColumn, $this->customerId)
             ->whereYear('created_at', $year)
             ->groupBy('m')
@@ -343,7 +343,7 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
-            ->select(DB::raw('DAYOFWEEK(e.event_date) as dow'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(DOW FROM e.event_date)::int + 1 as dow' : 'DAYOFWEEK(e.event_date) as dow'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('dow')
             ->orderByDesc('cnt')
             ->limit(3)
@@ -397,7 +397,7 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.start_time')
-            ->select(DB::raw("CONCAT(LPAD(HOUR(e.start_time), 2, '0'), ':00') as label"), DB::raw('COUNT(DISTINCT e.id) as cnt'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.start_time, 'HH24') || ':00' as label" : "CONCAT(LPAD(HOUR(e.start_time), 2, '0'), ':00') as label"), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('label')
             ->orderByDesc('cnt')
             ->get();
@@ -421,7 +421,7 @@ class CustomerInsightsService
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.' . $this->orderColumn, $this->customerId)
             ->whereNotNull('e.event_date')
-            ->select(DB::raw('MONTH(e.event_date) as m'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM e.event_date)::int as m' : 'MONTH(e.event_date) as m'), DB::raw('COUNT(DISTINCT e.id) as cnt'))
             ->groupBy('m')
             ->orderByDesc('cnt')
             ->get()

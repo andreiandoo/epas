@@ -67,8 +67,8 @@ class ProcessRealtimeAnalyticsCommand extends Command
         $hourlyStats = CoreCustomerEvent::where('event_id', $eventId)
             ->where('created_at', '>=', $cutoff)
             ->select([
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('HOUR(created_at) as hour'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'created_at::date as date' : 'DATE(created_at) as date'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int as hour' : 'HOUR(created_at) as hour'),
                 DB::raw("SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) as page_views"),
                 DB::raw("COUNT(DISTINCT visitor_id) as unique_visitors"),
                 DB::raw("SUM(CASE WHEN event_type = 'view_item' THEN 1 ELSE 0 END) as ticket_views"),
@@ -84,7 +84,7 @@ class ProcessRealtimeAnalyticsCommand extends Command
                 DB::raw("SUM(CASE WHEN event_type = 'share' THEN 1 ELSE 0 END) as shares"),
                 DB::raw("SUM(CASE WHEN event_type = 'event_interest' THEN 1 ELSE 0 END) as interests"),
             ])
-            ->groupBy(DB::raw('DATE(created_at)'), DB::raw('HOUR(created_at)'))
+            ->groupBy(DB::raw(DB::getDriverName() === 'pgsql' ? 'created_at::date' : 'DATE(created_at)'), DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int' : 'HOUR(created_at)'))
             ->get();
 
         foreach ($hourlyStats as $stats) {
@@ -163,7 +163,7 @@ class ProcessRealtimeAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->where('created_at', '>=', $cutoff)
             ->selectRaw("
                 CASE
@@ -188,7 +188,7 @@ class ProcessRealtimeAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->where('created_at', '>=', $cutoff)
             ->whereNotNull('utm_campaign')
             ->select('utm_campaign')
@@ -214,7 +214,7 @@ class ProcessRealtimeAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->where('created_at', '>=', $cutoff)
             ->whereNotNull('device_type')
             ->selectRaw('LOWER(device_type) as device, COUNT(*) as count')
@@ -230,7 +230,7 @@ class ProcessRealtimeAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->where('created_at', '>=', $cutoff)
             ->whereNotNull('country_code')
             ->selectRaw('country_code, COUNT(*) as count')

@@ -88,8 +88,8 @@ class AggregateEventAnalyticsCommand extends Command
         $hourlyData = CoreCustomerEvent::where('event_id', $event->id)
             ->whereBetween('created_at', [$startOfDay, $endOfDay])
             ->select([
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('HOUR(created_at) as hour'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'created_at::date as date' : 'DATE(created_at) as date'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int as hour' : 'HOUR(created_at) as hour'),
                 DB::raw('COUNT(*) as total_events'),
                 DB::raw("SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) as page_views"),
                 DB::raw("COUNT(DISTINCT visitor_id) as unique_visitors"),
@@ -107,7 +107,7 @@ class AggregateEventAnalyticsCommand extends Command
                 DB::raw("SUM(CASE WHEN event_type = 'event_interest' THEN 1 ELSE 0 END) as interests"),
                 DB::raw("SUM(COALESCE(time_on_page_seconds, 0)) as total_time_on_page"),
             ])
-            ->groupBy(DB::raw('DATE(created_at)'), DB::raw('HOUR(created_at)'))
+            ->groupBy(DB::raw(DB::getDriverName() === 'pgsql' ? 'created_at::date' : 'DATE(created_at)'), DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int' : 'HOUR(created_at)'))
             ->get();
 
         foreach ($hourlyData as $hourData) {
@@ -357,7 +357,7 @@ class AggregateEventAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->where('event_type', 'page_view')
             ->selectRaw("
                 CASE
@@ -382,7 +382,7 @@ class AggregateEventAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->whereNotNull('utm_campaign')
             ->select('utm_campaign')
             ->selectRaw("COUNT(*) as views")
@@ -407,7 +407,7 @@ class AggregateEventAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->whereNotNull('device_type')
             ->selectRaw('LOWER(device_type) as device, COUNT(*) as count')
             ->groupBy('device_type')
@@ -422,7 +422,7 @@ class AggregateEventAnalyticsCommand extends Command
     {
         return CoreCustomerEvent::where('event_id', $eventId)
             ->whereDate('created_at', $date)
-            ->whereRaw('HOUR(created_at) = ?', [$hour])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int = ?' : 'HOUR(created_at) = ?', [$hour])
             ->whereNotNull('country_code')
             ->selectRaw('country_code, COUNT(*) as count')
             ->groupBy('country_code')

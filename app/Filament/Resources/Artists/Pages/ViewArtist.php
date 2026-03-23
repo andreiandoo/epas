@@ -1057,8 +1057,8 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->whereNotNull('e.event_date')
             ->select(
-                DB::raw('DAYOFWEEK(e.event_date) as dow'),
-                DB::raw('DAYNAME(e.event_date) as day_name'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(DOW FROM e.event_date)::int + 1 as dow' : 'DAYOFWEEK(e.event_date) as dow'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Day') as day_name" : 'DAYNAME(e.event_date) as day_name'),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'),
@@ -1075,8 +1075,8 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->whereNotNull('e.event_date')
             ->select(
-                DB::raw('MONTH(e.event_date) as month_num'),
-                DB::raw('MONTHNAME(e.event_date) as month_name'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM e.event_date)::int as month_num' : 'MONTH(e.event_date) as month_num'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Month') as month_name" : 'MONTHNAME(e.event_date) as month_name'),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')

@@ -158,13 +158,13 @@ class SalesController extends Controller
         $report = VendorSaleItem::where('vendor_id', $vendor->id)
             ->where('festival_edition_id', $editionId)
             ->selectRaw('
-                DATE(created_at) as date,
+                ' . (DB::getDriverName() === 'pgsql' ? 'created_at::date' : 'DATE(created_at)') . ' as date,
                 COUNT(*) as total_transactions,
                 SUM(quantity) as total_quantity,
                 SUM(total_cents) as total_revenue_cents,
                 SUM(commission_cents) as total_commission_cents
             ')
-            ->groupBy(DB::raw('DATE(created_at)'))
+            ->groupBy(DB::raw(DB::getDriverName() === 'pgsql' ? 'created_at::date' : 'DATE(created_at)'))
             ->orderBy('date')
             ->get();
 
@@ -185,13 +185,16 @@ class SalesController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        $report = $query->selectRaw('
-                DATE(created_at) as date,
-                HOUR(created_at) as hour,
+        $dateExpr = DB::getDriverName() === 'pgsql' ? 'created_at::date' : 'DATE(created_at)';
+        $hourExpr = DB::getDriverName() === 'pgsql' ? 'EXTRACT(HOUR FROM created_at)::int' : 'HOUR(created_at)';
+
+        $report = $query->selectRaw("
+                {$dateExpr} as date,
+                {$hourExpr} as hour,
                 SUM(quantity) as total_quantity,
                 SUM(total_cents) as total_revenue_cents
-            ')
-            ->groupBy(DB::raw('DATE(created_at)'), DB::raw('HOUR(created_at)'))
+            ")
+            ->groupBy(DB::raw($dateExpr), DB::raw($hourExpr))
             ->orderBy('date')
             ->orderBy('hour')
             ->get();
