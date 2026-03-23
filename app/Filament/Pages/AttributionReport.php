@@ -173,9 +173,16 @@ class AttributionReport extends Page
                 COUNT(*) as count
                 "
             )
-            ->groupBy('time_range')
+            ->groupBy(DB::raw('1'))
             ->orderByRaw(DB::getDriverName() === 'pgsql'
-                ? "ARRAY_POSITION(ARRAY['Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days'], time_range)"
+                ? "ARRAY_POSITION(ARRAY['Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days']::text[], (
+                    CASE
+                        WHEN EXTRACT(EPOCH FROM (first_purchase_at::timestamp - first_seen_at::timestamp)) / 3600 < 1 THEN 'Same Session'
+                        WHEN (first_purchase_at::date - first_seen_at::date) < 1 THEN 'Same Day'
+                        WHEN (first_purchase_at::date - first_seen_at::date) < 7 THEN '1-7 Days'
+                        WHEN (first_purchase_at::date - first_seen_at::date) < 30 THEN '7-30 Days'
+                        ELSE '30+ Days'
+                    END))"
                 : "FIELD(time_range, 'Same Session', 'Same Day', '1-7 Days', '7-30 Days', '30+ Days')"
             )
             ->get()
