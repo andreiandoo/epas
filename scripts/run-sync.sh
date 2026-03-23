@@ -16,6 +16,14 @@ sudo -u postgres psql -c "ALTER USER stage_tixello WITH SUPERUSER;" 2>&1
 cd "$APP_DIR"
 DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1
 
+# Pre-import fixes: widen varchar columns that are too short for JSON data
+PGPASSWORD=viHJ41Y86rS9zJVRibeA psql -U stage_tixello -h localhost -d stage_tixello_temp -c "
+ALTER TABLE venues ALTER COLUMN name TYPE text;
+ALTER TABLE venues ALTER COLUMN slug TYPE text;
+ALTER TABLE venues ALTER COLUMN address TYPE text;
+ALTER TABLE venues ALTER COLUMN city TYPE text;
+" 2>&1
+
 sed "s/stage_tixello_core/stage_tixello_temp/g" "$SYNC_SCRIPT" | "$VENV/bin/python" 2>&1
 
 # Post-sync fixes

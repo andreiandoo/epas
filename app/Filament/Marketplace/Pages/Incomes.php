@@ -165,10 +165,14 @@ class Incomes extends Page
         // Insurance amount is stored in order meta as 'insurance_amount'
         $insuranceQuery = $this->baseOrderQuery()
             ->whereBetween('paid_at', [$startDate, $endDate])
-            ->whereRaw("json_extract(meta, '$.ticket_insurance') = true");
+            ->whereRaw(DB::getDriverName() === 'pgsql'
+                ? "(meta->>'ticket_insurance')::boolean = true"
+                : "json_extract(meta, '$.ticket_insurance') = true");
 
         $refundFeeRevenue = (float) (clone $insuranceQuery)
-            ->selectRaw("COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+            ->selectRaw(DB::getDriverName() === 'pgsql'
+                ? "COALESCE(SUM((meta->>'insurance_amount')::numeric), 0) as total"
+                : "COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
             ->value('total');
         $totalRefunds = (int) (clone $insuranceQuery)->count();
 
@@ -444,8 +448,12 @@ class Incomes extends Page
         $prevOrders = (int) (clone $prevOrderQuery)->count();
 
         $prevRefundFees = (float) (clone $prevOrderQuery)
-            ->whereRaw("json_extract(meta, '$.ticket_insurance') = true")
-            ->selectRaw("COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+            ->whereRaw(DB::getDriverName() === 'pgsql'
+                ? "(meta->>'ticket_insurance')::boolean = true"
+                : "json_extract(meta, '$.ticket_insurance') = true")
+            ->selectRaw(DB::getDriverName() === 'pgsql'
+                ? "COALESCE(SUM((meta->>'insurance_amount')::numeric), 0) as total"
+                : "COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
             ->value('total');
 
         $prevGiftCards = (float) MarketplaceGiftCard::where('marketplace_client_id', $marketplaceId)

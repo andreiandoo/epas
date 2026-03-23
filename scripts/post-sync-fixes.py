@@ -58,6 +58,15 @@ for sql in missing_tables:
     except Exception as e:
         print(f"  Missing table: {e}")
 
+# 2.5 Fix varchar columns that are too short for JSON data
+try:
+    c.execute("ALTER TABLE venues ALTER COLUMN name TYPE text")
+    c.execute("ALTER TABLE venues ALTER COLUMN slug TYPE text")
+    c.execute("ALTER TABLE venues ALTER COLUMN address TYPE text")
+    print("  venues columns widened OK")
+except Exception as e:
+    print(f"  venues columns: {e}")
+
 # 3. Convert varchar/text columns that contain JSON to jsonb
 # These columns are used with ->> operator in queries
 json_columns = [
@@ -98,7 +107,7 @@ taxonomy_tables = [
     'artist_types', 'artist_genres', 'event_types', 'event_genres',
     'event_tags', 'venue_types',
 ]
-translatable_columns = ['name', 'description', 'slug']
+translatable_columns = ['name', 'description']
 
 for table in taxonomy_tables:
     c.execute("""
