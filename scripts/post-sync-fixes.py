@@ -143,6 +143,31 @@ core_tables = [
         label VARCHAR(255), type VARCHAR(50) DEFAULT 'text',
         default_value TEXT NULL, is_active BOOLEAN DEFAULT true,
         sort_order INT DEFAULT 0, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY, type VARCHAR(255) NOT NULL,
+        notifiable_type VARCHAR(255) NOT NULL, notifiable_id BIGINT NOT NULL,
+        data JSONB NOT NULL, read_at TIMESTAMP NULL,
+        created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
+    """CREATE TABLE IF NOT EXISTS cache (
+        key VARCHAR(255) PRIMARY KEY, value TEXT NOT NULL, expiration INT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS cache_locks (
+        key VARCHAR(255) PRIMARY KEY, owner VARCHAR(255) NOT NULL, expiration INT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS jobs (
+        id BIGSERIAL PRIMARY KEY, queue VARCHAR(255) NOT NULL, payload TEXT NOT NULL,
+        attempts SMALLINT NOT NULL, reserved_at INT NULL, available_at INT NOT NULL, created_at INT NOT NULL)""",
+    """CREATE TABLE IF NOT EXISTS job_batches (
+        id VARCHAR(255) PRIMARY KEY, name VARCHAR(255) NOT NULL, total_jobs INT NOT NULL,
+        pending_jobs INT NOT NULL, failed_jobs INT NOT NULL, failed_job_ids TEXT NOT NULL,
+        options TEXT NULL, cancelled_at INT NULL, created_at INT NOT NULL, finished_at INT NULL)""",
+    """CREATE TABLE IF NOT EXISTS failed_jobs (
+        id BIGSERIAL PRIMARY KEY, uuid VARCHAR(255) NOT NULL UNIQUE, connection TEXT NOT NULL,
+        queue TEXT NOT NULL, payload TEXT NOT NULL, exception TEXT NOT NULL, failed_at TIMESTAMP DEFAULT NOW())""",
+    """CREATE TABLE IF NOT EXISTS activity_log (
+        id BIGSERIAL PRIMARY KEY, log_name VARCHAR(255) NULL, description TEXT NOT NULL,
+        subject_type VARCHAR(255) NULL, subject_id BIGINT NULL,
+        causer_type VARCHAR(255) NULL, causer_id BIGINT NULL,
+        properties JSONB NULL, batch_uuid UUID NULL,
+        event VARCHAR(255) NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL)""",
 ]
 for sql in core_tables:
     try:
