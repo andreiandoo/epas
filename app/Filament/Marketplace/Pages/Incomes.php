@@ -10,6 +10,7 @@ use App\Models\ServiceOrder;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -147,105 +148,122 @@ class Incomes extends Page
         [$startDate, $endDate] = $this->getDateRange();
         $daysInRange = $this->getDaysInRange();
 
-        // ─── Total Sales (gross order totals) ───
-        $totalSales = (float) $this->baseOrderQuery()
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->sum('total');
+        // Cache heavy aggregate queries for 5 minutes
+        $cacheKey = "incomes.{$marketplaceId}.{$this->organizerId}.{$startDate->format('Y-m-d')}.{$endDate->format('Y-m-d')}";
+        $cachedData = Cache::remember($cacheKey, 300, function () use ($marketplaceId, $startDate, $endDate, $daysInRange) {
+            // ─── Total Sales (gross order totals) ───
+            $totalSales = (float) $this->baseOrderQuery()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->sum('total');
 
-        $totalOrders = (int) $this->baseOrderQuery()
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->count();
+            $totalOrders = (int) $this->baseOrderQuery()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->count();
 
-        // ─── Total Commissions ───
-        $totalCommissions = (float) $this->baseOrderQuery()
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->sum('commission_amount');
+            // ─── Total Commissions ───
+            $totalCommissions = (float) $this->baseOrderQuery()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->sum('commission_amount');
 
-        // ─── Ticket Insurance Revenue (Taxa Retur) ───
-        // Insurance amount is stored in order meta as 'insurance_amount'
-        $insuranceQuery = $this->baseOrderQuery()
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->whereRaw(DB::getDriverName() === 'pgsql'
-                ? "(meta->>'ticket_insurance')::boolean = true"
-                : "json_extract(meta, '$.ticket_insurance') = true");
+            // ─── Ticket Insurance Revenue (Taxa Retur) ───
+            $insuranceQuery = $this->baseOrderQuery()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->whereRaw(DB::getDriverName() === 'pgsql'
+                    ? "(meta->>'ticket_insurance')::boolean = true"
+                    : "json_extract(meta, '$.ticket_insurance') = true");
 
-        $refundFeeRevenue = (float) (clone $insuranceQuery)
-            ->selectRaw(DB::getDriverName() === 'pgsql'
-                ? "COALESCE(SUM((meta->>'insurance_amount')::numeric), 0) as total"
-                : "COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
-            ->value('total');
-        $totalRefunds = (int) (clone $insuranceQuery)->count();
+            $refundFeeRevenue = (float) (clone $insuranceQuery)
+                ->selectRaw(DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(SUM((meta->>'insurance_amount')::numeric), 0) as total"
+                    : "COALESCE(SUM(json_extract(meta, '$.insurance_amount')), 0) as total")
+                ->value('total');
+            $totalRefunds = (int) (clone $insuranceQuery)->count();
 
-        // ─── Gift Card Revenue ───
-        // Revenue from gift card purchases (initial_amount when purchased)
-        $giftCardQuery = MarketplaceGiftCard::where('marketplace_client_id', $marketplaceId)
-            ->whereNotIn('status', ['cancelled', 'revoked'])
-            ->whereBetween('created_at', [$startDate, $endDate]);
+            // ─── Gift Card Revenue ───
+            $giftCardQuery = MarketplaceGiftCard::where('marketplace_client_id', $marketplaceId)
+                ->whereNotIn('status', ['cancelled', 'revoked'])
+                ->whereBetween('created_at', [$startDate, $endDate]);
 
-        $giftCardRevenue = (float) $giftCardQuery->sum('initial_amount');
-        $giftCardCount = (int) $giftCardQuery->count();
+            $giftCardRevenue = (float) $giftCardQuery->sum('initial_amount');
+            $giftCardCount = (int) $giftCardQuery->count();
 
-        // ─── Extra Services Revenue ───
-        $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)
-            ->where('payment_status', 'paid')
-            ->whereBetween('paid_at', [$startDate, $endDate]);
+            // ─── Extra Services Revenue ───
+            $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+                ->where('payment_status', 'paid')
+                ->whereBetween('paid_at', [$startDate, $endDate]);
 
-        if ($this->organizerId) {
-            $serviceQuery->where('marketplace_organizer_id', $this->organizerId);
-        }
+            if ($this->organizerId) {
+                $serviceQuery->where('marketplace_organizer_id', $this->organizerId);
+            }
 
-        $servicesRevenue = (float) $serviceQuery->sum('total');
-        $serviceCount = (int) $serviceQuery->count();
+            $servicesRevenue = (float) $serviceQuery->sum('total');
+            $serviceCount = (int) $serviceQuery->count();
 
-        // Services breakdown by type
-        $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)
-            ->where('payment_status', 'paid')
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
-            ->select('service_type', DB::raw('SUM(total) as revenue'), DB::raw('COUNT(*) as count'))
-            ->groupBy('service_type')
-            ->get()
-            ->map(fn ($row) => [
-                'type' => $row->service_type,
-                'label' => match ($row->service_type) {
-                    'featuring' => 'Promovare Eveniment',
-                    'email' => 'Email Marketing',
-                    'tracking' => 'Ad Tracking',
-                    'campaign' => 'Creare Campanie',
-                    default => ucfirst($row->service_type),
-                },
-                'revenue' => (float) $row->revenue,
-                'count' => (int) $row->count,
-            ])
-            ->toArray();
+            // Services breakdown by type
+            $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+                ->where('payment_status', 'paid')
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
+                ->select('service_type', DB::raw('SUM(total) as revenue'), DB::raw('COUNT(*) as count'))
+                ->groupBy('service_type')
+                ->get()
+                ->map(fn ($row) => [
+                    'type' => $row->service_type,
+                    'label' => match ($row->service_type) {
+                        'featuring' => 'Promovare Eveniment',
+                        'email' => 'Email Marketing',
+                        'tracking' => 'Ad Tracking',
+                        'campaign' => 'Creare Campanie',
+                        default => ucfirst($row->service_type),
+                    },
+                    'revenue' => (float) $row->revenue,
+                    'count' => (int) $row->count,
+                ])
+                ->toArray();
 
-        // ─── Grand Total ───
-        $grandTotal = $totalCommissions + $refundFeeRevenue + $giftCardRevenue + $servicesRevenue;
+            // ─── Grand Total ───
+            $grandTotal = $totalCommissions + $refundFeeRevenue + $giftCardRevenue + $servicesRevenue;
 
-        // ─── Averages ───
-        $avgDailySales = $daysInRange > 0 ? $totalSales / $daysInRange : 0;
-        $avgDailyCommissions = $daysInRange > 0 ? $totalCommissions / $daysInRange : 0;
-        $avgDailyRevenue = $daysInRange > 0 ? $grandTotal / $daysInRange : 0;
-        $avgOrderValue = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
-        $avgCommissionPerOrder = $totalOrders > 0 ? $totalCommissions / $totalOrders : 0;
-        $effectiveCommissionRate = $totalSales > 0 ? ($totalCommissions / $totalSales) * 100 : 0;
+            // ─── Averages ───
+            $avgDailySales = $daysInRange > 0 ? $totalSales / $daysInRange : 0;
+            $avgDailyCommissions = $daysInRange > 0 ? $totalCommissions / $daysInRange : 0;
+            $avgDailyRevenue = $daysInRange > 0 ? $grandTotal / $daysInRange : 0;
+            $avgOrderValue = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
+            $avgCommissionPerOrder = $totalOrders > 0 ? $totalCommissions / $totalOrders : 0;
+            $effectiveCommissionRate = $totalSales > 0 ? ($totalCommissions / $totalSales) * 100 : 0;
 
-        // ─── Previous Period Comparison ───
-        $prevStats = $this->getPreviousPeriodStats($marketplaceId);
-        $deltas = [
-            'total_sales' => self::deltaPercent($totalSales, $prevStats['total_sales']),
-            'total_orders' => self::deltaPercent($totalOrders, $prevStats['total_orders']),
-            'total_commissions' => self::deltaPercent($totalCommissions, $prevStats['total_commissions']),
-            'refund_fee_revenue' => self::deltaPercent($refundFeeRevenue, $prevStats['refund_fee_revenue']),
-            'gift_card_revenue' => self::deltaPercent($giftCardRevenue, $prevStats['gift_card_revenue']),
-            'services_revenue' => self::deltaPercent($servicesRevenue, $prevStats['services_revenue']),
-            'grand_total' => self::deltaPercent($grandTotal, $prevStats['grand_total']),
-        ];
+            // ─── Previous Period Comparison ───
+            $prevStats = $this->getPreviousPeriodStats($marketplaceId);
+            $deltas = [
+                'total_sales' => self::deltaPercent($totalSales, $prevStats['total_sales']),
+                'total_orders' => self::deltaPercent($totalOrders, $prevStats['total_orders']),
+                'total_commissions' => self::deltaPercent($totalCommissions, $prevStats['total_commissions']),
+                'refund_fee_revenue' => self::deltaPercent($refundFeeRevenue, $prevStats['refund_fee_revenue']),
+                'gift_card_revenue' => self::deltaPercent($giftCardRevenue, $prevStats['gift_card_revenue']),
+                'services_revenue' => self::deltaPercent($servicesRevenue, $prevStats['services_revenue']),
+                'grand_total' => self::deltaPercent($grandTotal, $prevStats['grand_total']),
+            ];
 
-        // ─── Chart Data (daily breakdown) ───
-        $chartData = $this->getChartData($marketplaceId, $startDate, $endDate, $daysInRange);
+            // ─── Chart Data (daily breakdown) ───
+            $chartData = $this->getChartData($marketplaceId, $startDate, $endDate, $daysInRange);
 
-        // ─── Organizers list for filter ───
+            // ─── Top Organizers by revenue in period ───
+            $topOrganizers = $this->getTopOrganizers($marketplaceId, $startDate, $endDate);
+
+            return compact(
+                'totalSales', 'totalOrders', 'totalCommissions',
+                'refundFeeRevenue', 'totalRefunds', 'giftCardRevenue', 'giftCardCount',
+                'servicesRevenue', 'serviceCount', 'servicesByType',
+                'grandTotal', 'avgDailySales', 'avgDailyCommissions', 'avgDailyRevenue',
+                'avgOrderValue', 'avgCommissionPerOrder', 'effectiveCommissionRate',
+                'deltas', 'chartData', 'topOrganizers'
+            );
+        });
+
+        // Extract cached data
+        extract($cachedData);
+
+        // ─── Organizers list for filter (lightweight, not cached) ───
         $organizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
             ->where('status', 'active')
             ->orderBy('name')
@@ -256,9 +274,6 @@ class Incomes extends Page
         if ($this->organizerId) {
             $selectedOrganizerName = $organizers[$this->organizerId] ?? null;
         }
-
-        // ─── Top Organizers by revenue in period ───
-        $topOrganizers = $this->getTopOrganizers($marketplaceId, $startDate, $endDate);
 
         // ─── Breakdown ───
         $breakdown = [
