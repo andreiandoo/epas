@@ -26,8 +26,12 @@ ALTER TABLE venues ALTER COLUMN city TYPE text;
 
 sed "s/stage_tixello_core/stage_tixello_temp/g" "$SYNC_SCRIPT" | "$VENV/bin/python" 2>&1
 
-# Post-sync fixes
+# Post-sync fixes (jsonb conversion, taxonomy fixes)
 "$VENV/bin/python" "$SCRIPT_DIR/post-sync-fixes.py" stage_tixello_temp 2>&1
+
+# Re-run migrations to recreate any tables that were dropped by Python import
+# (users, notifications, sessions, jobs, etc. that don't exist in MySQL)
+DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1
 
 # Swap databases (instant)
 sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('stage_tixello_core', 'stage_tixello_temp') AND pid <> pg_backend_pid();" 2>&1
