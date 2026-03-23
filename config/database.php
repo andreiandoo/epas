@@ -98,7 +98,9 @@ return [
             'sslmode' => 'prefer',
             'sticky' => true,
             'statement_timeout' => '30000',
-            'options' => [],
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => true,
+            ],
         ],
 
         'sqlsrv' => [
