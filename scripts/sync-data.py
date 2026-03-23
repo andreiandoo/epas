@@ -42,8 +42,19 @@ def get_pg_col_types(table):
 my_cur.execute("SHOW TABLES")
 tables = [t[0] for t in my_cur.fetchall()]
 
-# Tables to skip (Laravel framework tables not in MySQL)
-skip = {'migrations', 'cache', 'cache_locks'}
+# Tables to skip - Laravel framework tables that should be preserved from migrations
+skip = {
+    'migrations',           # Migration history - NEVER touch
+    'cache', 'cache_locks', # Cache (using Redis now)
+    'users',                # Admin users - not in MySQL
+    'password_reset_tokens',
+    'sessions',             # Sessions (using Redis now)
+    'notifications',        # Laravel notifications
+    'jobs', 'job_batches', 'failed_jobs',  # Queue (using Redis now)
+    'roles', 'permissions', 'model_has_roles', 'model_has_permissions', 'role_has_permissions',  # Spatie
+    'activity_log',         # Spatie activity log
+    'personal_access_tokens',  # Sanctum
+}
 errors = []
 
 for table in tables:
