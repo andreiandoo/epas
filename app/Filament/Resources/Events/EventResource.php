@@ -729,7 +729,7 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->label('Title')
                     ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: collect($record->title)->first())
-                    ->searchable(query: fn (Builder $query, string $search) => $query->where('title', 'like', "%{$search}%"))
+                    ->searchable(query: fn (Builder $query, string $search) => \App\Support\SearchHelper::searchTranslatable($query, 'title', $search))
                     ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw(
                         DB::getDriverName() === 'pgsql'
                             ? "title->>'en' {$direction}"

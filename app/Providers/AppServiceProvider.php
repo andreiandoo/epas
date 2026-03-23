@@ -52,6 +52,13 @@ class AppServiceProvider extends ServiceProvider
             $table->searchDebounce('2000ms');
         });
 
+        // PostgreSQL: make LIKE case-insensitive and accent-insensitive
+        if (config('database.default') === 'pgsql' || (app()->bound('db') && \Illuminate\Support\Facades\DB::getDriverName() === 'pgsql')) {
+            \Illuminate\Database\Query\Builder::macro('whereLikeUnaccent', function (string $column, string $value) {
+                return $this->whereRaw("unaccent(lower({$column}::text)) LIKE unaccent(lower(?))", ["%{$value}%"]);
+            });
+        }
+
         // Register observers
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);

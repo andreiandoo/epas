@@ -64,7 +64,7 @@ class OrdersTable
                 'customer:id,first_name,last_name,email',
                 'marketplaceClient:id,name',
                 'marketplaceOrganizer:id,name',
-                'tickets.ticketType:id,event_id,name,marketplace_event_id',
+                'tickets.ticketType:id,event_id,name',
                 'tickets.ticketType.event:id,title,event_date,venue_id',
             ]))
             ->columns([
