@@ -39,7 +39,7 @@ class EventResource extends Resource
     {
         $today = Carbon::today();
 
-        return $schema->schema([
+        return $schema->columns(1)->schema([
             SC\Grid::make(4)->schema([
                 // ========== LEFT COLUMN (3/4) ==========
                 SC\Group::make()
