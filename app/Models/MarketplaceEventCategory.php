@@ -142,7 +142,8 @@ class MarketplaceEventCategory extends Model
     public function getLocalizedName(?string $locale = null): string
     {
         $locale = $locale ?? ($this->marketplaceClient?->language ?? 'en');
-        return $this->name[$locale] ?? $this->name['en'] ?? reset($this->name) ?? '';
+        $nameData = $this->name;
+        return $nameData[$locale] ?? $nameData['en'] ?? collect($nameData)->first() ?? '';
     }
 
     /**
