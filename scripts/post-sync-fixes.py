@@ -18,15 +18,19 @@ c = pg.cursor()
 
 # 1. Fix notifications.data to jsonb
 try:
-    # Clean invalid JSON first
-    c.execute("UPDATE notifications SET data = '{}' WHERE data IS NOT NULL AND data !~ '^[{\\[]'")
-    c.execute("""
-        ALTER TABLE notifications ALTER COLUMN data TYPE jsonb
-        USING CASE WHEN data IS NULL THEN NULL
-        WHEN data = '' THEN '{}'::jsonb
-        ELSE data::jsonb END
-    """)
-    print("  notifications.data -> jsonb OK")
+    c.execute("SELECT data_type FROM information_schema.columns WHERE table_name='notifications' AND column_name='data' AND table_schema='public'")
+    row = c.fetchone()
+    if row and row[0] != 'jsonb':
+        c.execute("UPDATE notifications SET data = '{}' WHERE data IS NOT NULL AND data::text !~ '^[{\\[]'")
+        c.execute("""
+            ALTER TABLE notifications ALTER COLUMN data TYPE jsonb
+            USING CASE WHEN data IS NULL THEN NULL
+            WHEN data::text = '' THEN '{}'::jsonb
+            ELSE data::text::jsonb END
+        """)
+        print("  notifications.data -> jsonb OK")
+    else:
+        print("  notifications.data already jsonb, skipping")
 except Exception as e:
     print(f"  notifications.data: {e}")
 
