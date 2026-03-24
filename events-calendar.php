@@ -80,13 +80,13 @@ include 'includes/header.php'; ?>
         <div id="calendarView" class="mb-12 overflow-hidden bg-white border border-gray-200 rounded-2xl">
             <!-- Header -->
             <div class="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Luni</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Marți</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Miercuri</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Joi</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Vineri</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Sâmbătă</div>
-                <div class="p-4 text-xs font-bold tracking-wider text-center uppercase text-muted">Duminică</div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Luni</span><span class="md:hidden">L</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Marți</span><span class="md:hidden">Ma</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Miercuri</span><span class="md:hidden">Mi</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Joi</span><span class="md:hidden">J</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Vineri</span><span class="md:hidden">V</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Sâmbătă</span><span class="md:hidden">S</span></div>
+                <div class="p-2 text-xs font-bold tracking-wider text-center uppercase md:p-4 text-muted"><span class="hidden md:inline">Duminică</span><span class="md:hidden">D</span></div>
             </div>
             <!-- Calendar Body -->
             <div class="grid grid-cols-7" id="calendarGrid">
@@ -313,8 +313,8 @@ include 'includes/header.php'; ?>
             // Previous month days
             var prevMonthDays = new Date(year, month, 0).getDate();
             for (var i = startDay - 1; i >= 0; i--) {
-                html += '<div class="min-h-[100px] md:min-h-[120px] p-2 border-r border-b border-gray-200 bg-gray-50">' +
-                    '<div class="flex items-center justify-center w-8 h-8 mb-1 text-sm font-semibold text-gray-300 rounded-lg">' + (prevMonthDays - i) + '</div>' +
+                html += '<div class="min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 bg-gray-50">' +
+                    '<div class="flex items-center justify-center w-6 h-6 mb-1 text-xs font-semibold text-gray-300 rounded-lg md:w-8 md:h-8 md:text-sm">' + (prevMonthDays - i) + '</div>' +
                 '</div>';
             }
 
@@ -327,27 +327,42 @@ include 'includes/header.php'; ?>
                 var dayClass = isToday ? 'bg-red-50' : 'bg-white hover:bg-gray-50';
                 var numberClass = isToday ? 'bg-gradient-to-br from-primary to-primary-light text-white' : '';
 
-                html += '<div class="' + dayClass + ' min-h-[100px] md:min-h-[120px] p-2 border-r border-b border-gray-200 cursor-pointer transition-colors">' +
-                    '<div class="w-8 h-8 flex items-center justify-center text-sm font-semibold text-secondary rounded-lg mb-1.5 ' + numberClass + '">' + day + '</div>' +
-                    '<div class="flex flex-col gap-1">';
+                html += '<div class="' + dayClass + ' min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 cursor-pointer transition-colors" onclick="CalendarPage.showDayEvents(\'' + dateStr + '\')">' +
+                    '<div class="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center text-xs md:text-sm font-semibold text-secondary rounded-lg mb-0.5 md:mb-1.5 ' + numberClass + '">' + day + '</div>';
 
-                dayEvents.slice(0, 2).forEach(function(event) {
-                    var colorClass = CalendarPage.typeColors[event.type] || CalendarPage.typeColors['default'];
-                    html += '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="block px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis ' + colorClass + ' hover:opacity-80">' + CalendarPage.escapeHtml(event.name) + '</a>';
-                });
+                // On mobile: show only dots for events, on desktop: show event names
+                if (dayEvents.length > 0) {
+                    // Desktop: event names
+                    html += '<div class="flex-col hidden gap-1 md:flex">';
+                    dayEvents.slice(0, 2).forEach(function(event) {
+                        var colorClass = CalendarPage.typeColors[event.type] || CalendarPage.typeColors['default'];
+                        html += '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="block px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis ' + colorClass + ' hover:opacity-80">' + CalendarPage.escapeHtml(event.name) + '</a>';
+                    });
+                    if (dayEvents.length > 2) {
+                        html += '<div class="text-[11px] font-semibold text-primary px-2 cursor-pointer">+' + (dayEvents.length - 2) + ' mai multe</div>';
+                    }
+                    html += '</div>';
 
-                if (dayEvents.length > 2) {
-                    html += '<div class="text-[11px] font-semibold text-primary px-2 cursor-pointer" onclick="CalendarPage.showDayEvents(\'' + dateStr + '\')">+' + (dayEvents.length - 2) + ' mai multe</div>';
+                    // Mobile: colored dots
+                    html += '<div class="flex flex-wrap gap-0.5 md:hidden justify-center">';
+                    dayEvents.slice(0, 3).forEach(function(event) {
+                        var dotColor = CalendarPage.typeColors[event.type] ? CalendarPage.typeColors[event.type].replace('text-', 'bg-').split(' ')[0] : 'bg-gray-300';
+                        html += '<div class="w-1.5 h-1.5 rounded-full ' + dotColor + '"></div>';
+                    });
+                    if (dayEvents.length > 3) {
+                        html += '<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>';
+                    }
+                    html += '</div>';
                 }
 
-                html += '</div></div>';
+                html += '</div>';
             }
 
             // Next month days
             var remainingDays = 42 - (startDay + lastDay.getDate());
             for (var j = 1; j <= remainingDays; j++) {
-                html += '<div class="min-h-[100px] md:min-h-[120px] p-2 border-r border-b border-gray-200 bg-gray-50">' +
-                    '<div class="flex items-center justify-center w-8 h-8 mb-1 text-sm font-semibold text-gray-300 rounded-lg">' + j + '</div>' +
+                html += '<div class="min-h-[60px] md:min-h-[120px] p-1 md:p-2 border-r border-b border-gray-200 bg-gray-50">' +
+                    '<div class="flex items-center justify-center w-6 h-6 mb-1 text-xs font-semibold text-gray-300 rounded-lg md:w-8 md:h-8 md:text-sm">' + j + '</div>' +
                 '</div>';
             }
 

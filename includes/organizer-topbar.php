@@ -7,6 +7,13 @@
 $skipJsComponents = true;
 ?>
 
+<?php if (defined('USE_STAGE_API') && USE_STAGE_API): ?>
+<div class="bg-amber-500 text-black text-center text-xs font-bold py-1 tracking-wide">
+    STAGE API — Datele sunt de test
+    <a href="?use_stage=0" class="ml-3 underline hover:no-underline">Dezactiveaza</a>
+</div>
+<?php endif; ?>
+
 <!-- Top Header -->
 <header class="sticky top-0 z-30 bg-white border-b border-border">
     <div class="flex items-center justify-between h-16 px-4 lg:px-8">
