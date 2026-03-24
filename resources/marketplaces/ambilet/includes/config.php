@@ -11,9 +11,27 @@ if (!defined('AMBILET_ROOT')) {
 }
 
 // API Configuration
-define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
-define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
-define('STORAGE_URL', 'https://core.tixello.com/storage'); // Core storage URL for images
+// Switch between core (production) and stage (testing) by changing USE_STAGE_API
+// Set via query param: ?use_stage=1 to enable, ?use_stage=0 to disable
+// Or set directly: define('USE_STAGE_API', true);
+$useStage = false;
+if (isset($_GET['use_stage'])) {
+    $useStage = $_GET['use_stage'] === '1';
+    setcookie('use_stage_api', $useStage ? '1' : '0', time() + 86400, '/');
+} elseif (isset($_COOKIE['use_stage_api'])) {
+    $useStage = $_COOKIE['use_stage_api'] === '1';
+}
+define('USE_STAGE_API', $useStage);
+
+if (USE_STAGE_API) {
+    define('API_BASE_URL', 'https://stage.tixello.com/api/marketplace-client');
+    define('STORAGE_URL', 'https://stage.tixello.com/storage');
+} else {
+    define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
+    define('STORAGE_URL', 'https://core.tixello.com/storage');
+}
+define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB');
+define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
 // Site Configuration
 define('SITE_NAME', 'AmBilet');

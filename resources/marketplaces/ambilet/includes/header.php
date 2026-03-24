@@ -159,6 +159,14 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 </div>
 
+<?php if (defined('USE_STAGE_API') && USE_STAGE_API): ?>
+<div id="stage-banner" class="fixed top-0 left-0 right-0 z-[1100] bg-amber-500 text-black text-center text-xs font-bold py-1 tracking-wide">
+    STAGE API — Datele sunt de test
+    <a href="?use_stage=0" class="ml-3 underline hover:no-underline">Dezactiveaza</a>
+</div>
+<style>#header { top: 28px !important; } body { padding-top: 28px; }</style>
+<?php endif; ?>
+
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 <?= $transparentHeader ? 'header-transparent bg-transparent border-transparent' : 'bg-white border-b border-gray-200' ?>" id="header" data-transparent="<?= $transparentHeader ? 'true' : 'false' ?>">
     <!-- Top Bar (default) -->
