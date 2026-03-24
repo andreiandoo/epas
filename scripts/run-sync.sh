@@ -16,7 +16,7 @@ sudo -u postgres psql -c "ALTER USER stage_tixello WITH SUPERUSER;" 2>&1
 
 # 2. Run migrations on temp DB (bypass PgBouncer - connect directly to PG on port 5432)
 cd "$APP_DIR"
-DB_DATABASE=stage_tixello_temp DB_PORT=5432 php artisan migrate --force --no-interaction 2>&1
+sudo -u stage-rh0h5 DB_DATABASE=stage_tixello_temp DB_PORT=5432 php artisan migrate --force --no-interaction 2>&1
 
 # 3. Widen varchar columns before import
 PGPASSWORD=viHJ41Y86rS9zJVRibeA psql -U stage_tixello -h localhost -p 5432 -d stage_tixello_temp -c "
