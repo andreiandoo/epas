@@ -369,22 +369,30 @@ php artisan import:ambilet-orders $INC/inc_orders.csv
 cp $INC/inc_order_item_map.csv $INC/order_item_map.csv
 php artisan import:ambilet-tickets $INC/inc_ticket_instances.csv
 
-# 5. Fix event fields (NEW apoi MODIFIED) — cu --skip-images!
-php artisan fix:ambilet-event-fields $INC/inc_event_fields_fix.csv --skip-images
+# 5. Fix order statuses (OBLIGATORIU — fără asta toate comenzile sunt completed/paid)
+php artisan fix:ambilet-order-statuses $INC/inc_orders.csv
+# Remapează: wc-cancelled→cancelled, wc-failed→failed, wc-processing→pending
+# Actualizează și statusul biletelor asociate (cancelled/void)
+
+# 6. Fix event fields — ATENȚIE la ordinea --skip-images:
+#    NEW events: FĂRĂ --skip-images (au nevoie de URL-uri setate pentru download)
+#    MODIFIED events: CU --skip-images (să nu suprascrie imaginile locale existente)
+php artisan fix:ambilet-event-fields $INC/inc_event_fields_fix.csv
 php artisan fix:ambilet-event-fields $INC/inc_event_fields_fix_modified.csv --skip-images
 
-# 6. Fix event dates (NEW apoi MODIFIED)
+# 7. Fix event dates (NEW apoi MODIFIED)
 php artisan fix:ambilet-event-dates $INC/inc_event_dates_fix.csv
 php artisan fix:ambilet-event-dates $INC/inc_event_dates_fix_modified.csv
 
-# 7. Download imagini + fix paths
+# 8. Download imagini + fix paths
+#    TREBUIE rulat DUPĂ fix:ambilet-event-fields (care setează URL-urile externe)
 php artisan fix:ambilet-event-images
 php artisan fix:ambilet-event-images --fix-paths
 
-# 8. Activare ticket types + quota fix
+# 9. Activare ticket types + quota fix
 php artisan tinker --execute='$ids=DB::table("events")->where("marketplace_client_id",1)->pluck("id");echo "Activated: ".DB::table("ticket_types")->whereIn("event_id",$ids)->where("status","hidden")->update(["status"=>"active","updated_at"=>now()]).PHP_EOL;echo "Quota: ".DB::table("ticket_types")->whereIn("event_id",$ids)->where("quota_total",0)->update(["quota_total"=>-1,"updated_at"=>now()]).PHP_EOL;'
 
-# 9. Link orphan tickets
+# 10. Link orphan tickets
 php artisan fix:ambilet-orphan-tickets $INC/inc_ticket_order_map.csv
 
 # 10. Clear bilete.online cache (pe serverul bilete.online)
@@ -409,8 +417,12 @@ php artisan tinker --execute='echo "Events: ".DB::table("events")->where("market
 
 ### ORDINEA CONTEAZĂ
 
-7. **fix:ambilet-event-fields SUPRASCRIE imaginile locale** cu URL-uri externe din CSV → rulează ÎNTOTDEAUNA cu `--skip-images` sau rulează `fix:ambilet-event-images` + `--fix-paths` DUPĂ
-8. **Import order: Events → Ticket Types → Orders → Tickets** — strict, altfel foreign key errors
+7. **`fix:ambilet-order-statuses` e OBLIGATORIU după `import:ambilet-orders`** — fără el, TOATE comenzile sunt `completed/paid` indiferent de statusul real WC. Actualizează și biletele asociate (cancelled/void).
+8. **fix:ambilet-event-fields SUPRASCRIE imaginile locale** cu URL-uri externe din CSV:
+   - Pentru evenimente **NOI**: rulează FĂRĂ `--skip-images` (au nevoie de URL-uri pentru download)
+   - Pentru evenimente **MODIFICATE**: rulează CU `--skip-images` (păstrează imaginile locale)
+   - APOI rulează `fix:ambilet-event-images` + `--fix-paths`
+9. **Import order: Events → Ticket Types → Orders → Tickets → Order Statuses** — strict, altfel foreign key errors sau statusuri greșite
 
 ### VALORI SPECIALE
 
