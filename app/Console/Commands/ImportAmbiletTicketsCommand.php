@@ -126,7 +126,7 @@ class ImportAmbiletTicketsCommand extends Command
                 'code'                       => $this->n($data['ticket_code']) ?? Str::random(64),
                 'barcode'                    => Str::random(64),
                 'status'                     => 'valid',
-                'seat_label'                 => $this->n($data['seat_label']),
+                'seat_label'                 => $this->n($data['seat_label'] ?? null),
                 'checked_in_at'              => $checkedInAt,
                 'meta'                       => json_encode([
                     'wp_ticket_id'  => $wpTicketId,
