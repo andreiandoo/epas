@@ -86,6 +86,13 @@ $userMenuItems = [
     </div>
 </div>
 
+<?php if (defined('USE_STAGE_API') && USE_STAGE_API): ?>
+<div class="bg-amber-500 text-black text-center text-xs font-bold py-1 tracking-wide no-print">
+    STAGE API — Datele sunt de test
+    <a href="?use_stage=0" class="ml-3 underline hover:no-underline">Dezactiveaza</a>
+</div>
+<?php endif; ?>
+
 <!-- Header -->
 <header class="sticky top-0 z-30 bg-white border-b border-border no-print">
     <div class="px-4 mx-auto max-w-7xl">
