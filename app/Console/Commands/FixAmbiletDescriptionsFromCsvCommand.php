@@ -63,9 +63,14 @@ class FixAmbiletDescriptionsFromCsvCommand extends Command
                 continue;
             }
 
+            // Force valid UTF-8 — ambilet descriptions may contain invalid byte sequences
+            $rawDesc = mb_convert_encoding($rawDesc, 'UTF-8', 'UTF-8');
+            // Remove any remaining invalid UTF-8 bytes
+            $rawDesc = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $rawDesc);
+
             $html = $this->convertToHtml($rawDesc);
 
-            $jsonEncoded = json_encode(['ro' => $html], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $jsonEncoded = json_encode(['ro' => $html], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
             if ($jsonEncoded === false) {
                 $this->warn("JSON encode failed for WP#{$wpEventId} (Tixello #{$tixelloId}) — skipping.");
                 $skipped++;
