@@ -14,28 +14,25 @@ sudo -u postgres psql -c "DROP DATABASE IF EXISTS stage_tixello_temp;" 2>&1
 sudo -u postgres psql -c "CREATE DATABASE stage_tixello_temp OWNER stage_tixello;" 2>&1
 sudo -u postgres psql -c "ALTER USER stage_tixello WITH SUPERUSER;" 2>&1
 
-# 2. Run migrations (creates correct PG schema)
+# 2. Run migrations on temp DB (bypass PgBouncer - connect directly to PG on port 5432)
 cd "$APP_DIR"
-DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1
+DB_DATABASE=stage_tixello_temp DB_PORT=5432 php artisan migrate --force --no-interaction 2>&1
 
 # 3. Widen varchar columns before import
-PGPASSWORD=viHJ41Y86rS9zJVRibeA psql -U stage_tixello -h localhost -d stage_tixello_temp -c "
+PGPASSWORD=viHJ41Y86rS9zJVRibeA psql -U stage_tixello -h localhost -p 5432 -d stage_tixello_temp -c "
 ALTER TABLE venues ALTER COLUMN name TYPE text;
 ALTER TABLE venues ALTER COLUMN slug TYPE text;
 ALTER TABLE venues ALTER COLUMN address TYPE text;
 ALTER TABLE venues ALTER COLUMN city TYPE text;
 " 2>&1
 
-# 4. Import data from MySQL (uses the old working script - DROP+CREATE)
+# 4. Import data from MySQL (Python connects directly to PG port 5432)
 sed "s/stage_tixello_core/stage_tixello_temp/g" "$SYNC_SCRIPT" | "$VENV/bin/python" 2>&1
 
-# 5. Re-run migrations to restore framework tables destroyed by Python import
-DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1 || true
-
-# 6. Post-sync fixes (jsonb, admin user, roles)
+# 5. Post-sync fixes (jsonb, admin user, roles)
 "$VENV/bin/python" "$SCRIPT_DIR/post-sync-fixes.py" stage_tixello_temp 2>&1
 
-# 7. Swap databases (instant)
+# 6. Swap databases (instant)
 sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('stage_tixello_core', 'stage_tixello_temp') AND pid <> pg_backend_pid();" 2>&1
 sudo -u postgres psql -c "ALTER DATABASE stage_tixello_core RENAME TO stage_tixello_old;" 2>&1
 sudo -u postgres psql -c "ALTER DATABASE stage_tixello_temp RENAME TO stage_tixello_core;" 2>&1
