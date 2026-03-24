@@ -4,6 +4,7 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 VENV="/home/stage-rh0h5/pgvenv"
+SYNC_SCRIPT="/home/stage-rh0h5/sync-core-to-stage.py"
 LOG="/home/stage-rh0h5/sync.log"
 
 echo "=== Sync started at $(date) ===" >> "$LOG"
@@ -13,7 +14,7 @@ sudo -u postgres psql -c "DROP DATABASE IF EXISTS stage_tixello_temp;" 2>&1
 sudo -u postgres psql -c "CREATE DATABASE stage_tixello_temp OWNER stage_tixello;" 2>&1
 sudo -u postgres psql -c "ALTER USER stage_tixello WITH SUPERUSER;" 2>&1
 
-# 2. Run all migrations (creates correct PG schema with all tables)
+# 2. Run migrations (creates correct PG schema)
 cd "$APP_DIR"
 DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1
 
@@ -25,13 +26,16 @@ ALTER TABLE venues ALTER COLUMN address TYPE text;
 ALTER TABLE venues ALTER COLUMN city TYPE text;
 " 2>&1
 
-# 4. Import data from MySQL into existing PG tables (DELETE + INSERT, no DROP/CREATE)
-"$VENV/bin/python" "$SCRIPT_DIR/sync-data.py" stage_tixello_temp 2>&1
+# 4. Import data from MySQL (uses the old working script - DROP+CREATE)
+sed "s/stage_tixello_core/stage_tixello_temp/g" "$SYNC_SCRIPT" | "$VENV/bin/python" 2>&1
 
-# 5. Post-sync fixes (jsonb conversion, admin user, roles)
+# 5. Re-run migrations to restore framework tables destroyed by Python import
+DB_DATABASE=stage_tixello_temp php artisan migrate --force --no-interaction 2>&1 || true
+
+# 6. Post-sync fixes (jsonb, admin user, roles)
 "$VENV/bin/python" "$SCRIPT_DIR/post-sync-fixes.py" stage_tixello_temp 2>&1
 
-# 6. Swap databases (instant, ~1 second downtime)
+# 7. Swap databases (instant)
 sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('stage_tixello_core', 'stage_tixello_temp') AND pid <> pg_backend_pid();" 2>&1
 sudo -u postgres psql -c "ALTER DATABASE stage_tixello_core RENAME TO stage_tixello_old;" 2>&1
 sudo -u postgres psql -c "ALTER DATABASE stage_tixello_temp RENAME TO stage_tixello_core;" 2>&1
