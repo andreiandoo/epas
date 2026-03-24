@@ -65,9 +65,16 @@ class FixAmbiletDescriptionsFromCsvCommand extends Command
 
             $html = $this->convertToHtml($rawDesc);
 
+            $jsonEncoded = json_encode(['ro' => $html], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($jsonEncoded === false) {
+                $this->warn("JSON encode failed for WP#{$wpEventId} (Tixello #{$tixelloId}) — skipping.");
+                $skipped++;
+                continue;
+            }
+
             if (! $dryRun) {
                 DB::table('events')->where('id', $tixelloId)->update([
-                    'description' => json_encode(['ro' => $html], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    'description' => $jsonEncoded,
                     'updated_at'  => now(),
                 ]);
             }
