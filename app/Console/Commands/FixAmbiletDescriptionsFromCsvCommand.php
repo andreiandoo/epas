@@ -41,9 +41,11 @@ class FixAmbiletDescriptionsFromCsvCommand extends Command
                 continue;
             }
 
-            $data = array_combine(array_slice($header, 0, count($row)), $row);
-            $wpEventId  = $data['wp_event_id'] ?? null;
-            $rawDesc    = $data['description'] ?? '';
+            // CSV has only 2 columns: wp_event_id, description
+            // But description may contain commas, so fgetcsv may split into more columns
+            // First element is always wp_event_id, everything else is the description
+            $wpEventId = $row[0];
+            $rawDesc   = count($row) === 2 ? $row[1] : implode(',', array_slice($row, 1));
 
             if (! $wpEventId) {
                 continue;
