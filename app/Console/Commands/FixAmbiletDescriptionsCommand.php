@@ -78,10 +78,22 @@ class FixAmbiletDescriptionsCommand extends Command
      */
     private function cleanHtml(string $text): string
     {
-        // Already has <p> tags — likely already cleaned
-        if (str_contains($text, '<p>') || str_contains($text, '<p ')) {
+        // If already has multiple <p> tags, consider it properly formatted
+        if (substr_count($text, '<p>') > 1 || substr_count($text, '<p ') > 1) {
+            // Still clean separators within existing paragraphs
+            $text = preg_replace('/={3,}/', '', $text);
+            $text = preg_replace('/-{3,}/', '', $text);
             return $text;
         }
+
+        // Unwrap single <p> wrapper if present (fix:ambilet-event-fields wraps everything in one <p>)
+        if (preg_match('/^<p>(.*)<\/p>$/s', trim($text), $m)) {
+            $text = $m[1];
+        }
+
+        // Remove separator lines (=== and ---)
+        $text = preg_replace('/={3,}/', "\n\n", $text);
+        $text = preg_replace('/-{3,}/', "\n\n", $text);
 
         // Normalize non-breaking spaces
         $text = str_replace(["\xc2\xa0", "\xa0"], ' ', $text);
@@ -93,10 +105,7 @@ class FixAmbiletDescriptionsCommand extends Command
         // Normalize multiple spaces to single
         $text = preg_replace('/  +/', ' ', $text);
 
-        // Split into paragraphs on common separators:
-        // - Double space around emoji (🔍, 🎶, 🎟, 👪, 🕵, etc.)
-        // - Patterns like "  text  " that were visual paragraph breaks in ambilet
-        // First, add paragraph breaks before emoji characters
+        // Add paragraph breaks before emoji characters
         $text = preg_replace('/\s+([\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}])/u', "\n\n$1", $text);
 
         // Add paragraph breaks before common section patterns
