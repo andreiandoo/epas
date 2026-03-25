@@ -2148,6 +2148,11 @@ const EventPage = {
                         commission: tt.commission || null,
                         is_refundable: tt.is_refundable || false
                     };
+                    console.log('[EventPage] addToCart price debug:', {
+                        ttId: tt.id, ttName: tt.name, ttBasePrice: tt.price,
+                        effectivePrice: basePrice, perfId: eventData.performance_id,
+                        ticketTypeDataPrice: ticketTypeData.price
+                    });
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
                 }
