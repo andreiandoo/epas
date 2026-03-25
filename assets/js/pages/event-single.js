@@ -1911,7 +1911,7 @@ const EventPage = {
 
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
-                var ticketBasePrice = tt.price;
+                var ticketBasePrice = self.getEffectivePrice(tt);
                 // Calculate per-ticket commission
                 var ticketComm = self.calculateTicketCommission(tt, ticketBasePrice);
                 var ticketCommission = 0;
