@@ -408,6 +408,8 @@ class EventsController extends BaseController
             ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
             : $event->category;
 
+        \Log::info('[EventsController] Building response for event ' . $event->id . ', performances_count=' . $event->performances()->count());
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
@@ -440,6 +442,7 @@ class EventsController extends BaseController
                 'range_end_time' => $event->range_end_time,
             ],
             'performances' => $this->getEventPerformances($event),
+            '_debug_perf_count' => $event->performances()->count(),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
                 'slug' => $event->venue->slug,
