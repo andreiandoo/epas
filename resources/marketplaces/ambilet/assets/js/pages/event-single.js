@@ -1042,11 +1042,20 @@ const EventPage = {
             console.log('[EventPage] Event has seating layout:', this.seatingLayout.name);
         }
 
-        // Auto-select first upcoming performance for multi-day events
+        // Filter out past performances and auto-select first upcoming
         if (e.performances && e.performances.length > 0) {
             const now = new Date();
-            const upcoming = e.performances.find(p => new Date(p.date + 'T' + (p.start_time || '00:00')) >= now);
-            this.event.selectedPerformanceId = upcoming ? upcoming.id : e.performances[0].id;
+            // Keep only future performances (add 2h buffer for ongoing shows)
+            this.event.performances = e.performances.filter(function(p) {
+                const endTime = p.end_time || p.start_time || '23:59';
+                const perfEnd = new Date(p.date + 'T' + endTime);
+                return perfEnd >= now;
+            });
+            // If all past, show the last one as reference
+            if (this.event.performances.length === 0) {
+                this.event.performances = [e.performances[e.performances.length - 1]];
+            }
+            this.event.selectedPerformanceId = this.event.performances[0].id;
         }
 
         // Ticket types (skip for ended events)
