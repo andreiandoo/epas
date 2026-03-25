@@ -591,6 +591,8 @@ const EventPage = {
         var venueData = apiData.venue || null;
         var artistsData = apiData.artists || [];
         var ticketTypesData = apiData.ticket_types || [];
+        // Performances are at top-level in API response, not inside event
+        var performancesData = apiData.performances || eventData.performances || [];
 
         // Parse starts_at to get date and time
         var startsAt = eventData.starts_at ? new Date(eventData.starts_at) : new Date();
@@ -629,7 +631,7 @@ const EventPage = {
             range_start_time: eventData.range_start_time,
             range_end_time: eventData.range_end_time,
             multi_slots: eventData.multi_slots,
-            performances: eventData.performances || [],
+            performances: performancesData,
             selectedPerformanceId: null,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
@@ -996,10 +998,18 @@ const EventPage = {
         // Date
         this.renderDate(e);
 
-        // Time
-        
-        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.doors_time || '19:00');
-        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Start:</span> ' + (e.start_time || '20:00');
+        // Time — for multi-day, use selected performance's times
+        var displayStartTime = e.start_time;
+        var displayDoorsTime = e.doors_time;
+        if (e.duration_mode === 'multi_day' && e.performances && e.performances.length > 0) {
+            var selPerf = e.performances.find(p => p.id === e.selectedPerformanceId) || e.performances[0];
+            displayStartTime = selPerf.start_time || null;
+            displayDoorsTime = selPerf.door_time || null;
+        }
+        document.getElementById(this.elements.eventTime).innerHTML = displayStartTime
+            ? '<span class="text-muted">Start:</span> ' + displayStartTime : '';
+        document.getElementById(this.elements.eventDoors).innerHTML = displayDoorsTime
+            ? '<span class="text-muted">Acces:</span> ' + displayDoorsTime : '';
 
         // Venue (with city)
         var venueName = e.venue?.name || e.location || 'Locație TBA';
@@ -1233,9 +1243,8 @@ const EventPage = {
                 document.getElementById(this.elements.eventDateFull).textContent =
                     headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear();
             } else {
-                const timeStr = upcomingSlot.start_time ? ' · ' + upcomingSlot.start_time : '';
                 document.getElementById(this.elements.eventDateFull).textContent =
-                    headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear() + timeStr +
+                    headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear() +
                     ' (+' + (e.multi_slots.length - 1) + ' ' + (e.multi_slots.length === 2 ? 'altă dată' : 'alte date') + ')';
             }
 
@@ -1513,7 +1522,7 @@ const EventPage = {
             btn.addEventListener('click', function() {
                 self.event.selectedPerformanceId = parseInt(btn.dataset.perfId);
 
-                // Update header date to show selected performance
+                // Update header date + Start/Acces to show selected performance
                 const perf = self.getSelectedPerformance();
                 if (perf) {
                     const pd = new Date(perf.date + 'T' + (perf.start_time || '00:00'));
@@ -1522,9 +1531,14 @@ const EventPage = {
                     document.getElementById(self.elements.eventDay).textContent = pd.getDate();
                     document.getElementById(self.elements.eventMonth).textContent = m[pd.getMonth()];
                     document.getElementById(self.elements.eventWeekday).textContent = w[pd.getDay()];
-                    const timeStr = perf.start_time ? ' · ' + perf.start_time : '';
                     document.getElementById(self.elements.eventDateFull).textContent =
-                        pd.getDate() + ' ' + m[pd.getMonth()] + ' ' + pd.getFullYear() + timeStr;
+                        pd.getDate() + ' ' + m[pd.getMonth()] + ' ' + pd.getFullYear();
+
+                    // Update Start / Acces
+                    document.getElementById(self.elements.eventTime).innerHTML = perf.start_time
+                        ? '<span class="text-muted">Start:</span> ' + perf.start_time : '';
+                    document.getElementById(self.elements.eventDoors).innerHTML = perf.door_time
+                        ? '<span class="text-muted">Acces:</span> ' + perf.door_time : '';
                 }
 
                 // Re-render performance list (to update active state)
