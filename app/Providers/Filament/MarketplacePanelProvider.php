@@ -547,13 +547,31 @@ class MarketplacePanelProvider extends PanelProvider
                 /* Smooth morph transitions */
                 .fi-fo-repeater-item { transition: none !important; }
                 .fi-section-content { transition: none !important; }
-                /* Compact performance pricing repeater — everything inline */
-                .perf-prices-compact .fi-fo-repeater-item { padding: 4px 6px !important; gap: 0 !important; }
-                .perf-prices-compact .fi-fo-repeater-item-header { display: none !important; }
-                .perf-prices-compact .fi-fo-repeater-item-content { padding: 0 !important; }
-                .perf-prices-compact .fi-fo-repeater-item > div { display: flex !important; align-items: center !important; gap: 8px !important; }
-                .perf-prices-compact .fi-fo-repeater-item-actions { position: static !important; flex-shrink: 0; margin-left: auto; }
-                .perf-prices-compact .fi-fo-repeater-item-actions button { padding: 4px !important; }
+                /* Compact performance pricing repeater — header + content on single row */
+                .perf-prices-compact .fi-fo-repeater-item {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    align-items: center !important;
+                    gap: 8px !important;
+                    padding: 6px 8px !important;
+                }
+                .perf-prices-compact .fi-fo-repeater-item-header {
+                    order: 2 !important;
+                    flex-shrink: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
+                    background: none !important;
+                    min-height: unset !important;
+                }
+                .perf-prices-compact .fi-fo-repeater-item-header-end-actions { gap: 0 !important; }
+                .perf-prices-compact .fi-fo-repeater-item-content {
+                    order: 1 !important;
+                    flex: 1 !important;
+                    padding: 0 !important;
+                }
+                .perf-prices-compact .fi-fo-repeater-item-content .fi-sc { gap: 8px !important; }
+                /* Remove collapse behavior */
+                .perf-prices-compact .fi-fo-repeater-item.fi-collapsed .fi-fo-repeater-item-content { display: block !important; }
             </style>')
 
             // Preserve scroll position, section collapse state AND repeater collapse state during Livewire morph updates
