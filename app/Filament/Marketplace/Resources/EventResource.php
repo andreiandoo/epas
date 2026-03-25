@@ -1234,63 +1234,41 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                             ->columnSpan(3),
 
-                                        // Per-performance association (multi-day events only)
-                                        Forms\Components\Select::make('performance_ids')
-                                            ->label($t('Reprezentări', 'Performances'))
-                                            ->helperText($t('Asociază acest tip de bilet cu reprezentări specifice. Lasă gol = disponibil la toate.', 'Associate this ticket type with specific performances. Leave empty = available at all.'))
-                                            ->multiple()
-                                            ->searchable()
-                                            ->options(function (SGet $get) {
-                                                $eventId = $get('../../id');
-                                                if (!$eventId) return [];
-                                                return \App\Models\Performance::where('event_id', $eventId)
-                                                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
-                                                    ->orderBy('starts_at')
-                                                    ->get()
-                                                    ->mapWithKeys(fn ($p) => [
-                                                        $p->id => $p->starts_at->format('D, d M Y · H:i')
-                                                    ])
-                                                    ->toArray();
-                                            })
+                                        // Per-performance price overrides (multi-day events only)
+                                        // Stored in TicketType.meta['performance_prices'] as [{perf_id, price}]
+                                        Forms\Components\Repeater::make('meta.performance_prices')
+                                            ->label($t('Prețuri per reprezentare', 'Prices per performance'))
+                                            ->helperText($t('Adaugă prețuri diferite per reprezentare. Lasă prețul gol = preț de bază.', 'Add different prices per performance. Leave price empty = base price.'))
                                             ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
-                                            ->dehydrated(false)
-                                            ->afterStateHydrated(function ($component, ?TicketType $record) {
-                                                if (!$record || !$record->event_id) { $component->state([]); return; }
-                                                // Find which performances include this ticket type in their overrides
-                                                $perfIds = \App\Models\Performance::where('event_id', $record->event_id)
-                                                    ->whereNotNull('ticket_overrides')
-                                                    ->get()
-                                                    ->filter(fn ($p) => collect($p->ticket_overrides)->contains('ticket_type_id', $record->id))
-                                                    ->pluck('id')
-                                                    ->toArray();
-                                                $component->state($perfIds);
-                                            })
-                                            ->columnSpan(12),
-
-                                        // Per-performance price overrides table
-                                        Forms\Components\Placeholder::make('performance_prices_info')
-                                            ->hiddenLabel()
-                                            ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing') && !empty($get('performance_ids')))
-                                            ->content(function (SGet $get) use ($t) {
-                                                $perfIds = $get('performance_ids') ?? [];
-                                                if (empty($perfIds)) return '';
-                                                $performances = \App\Models\Performance::whereIn('id', $perfIds)->orderBy('starts_at')->get();
-                                                if ($performances->isEmpty()) return '';
-                                                $basePrice = $get('price') ?? $get('price_cents');
-                                                $html = '<div class="text-xs text-gray-500 mb-1">' . $t('Prețuri per reprezentare (lasă gol = preț de bază):', 'Prices per performance (leave empty = base price):') . '</div>';
-                                                $html .= '<div class="grid gap-2">';
-                                                foreach ($performances as $p) {
-                                                    $html .= '<div class="flex items-center gap-2 text-sm">'
-                                                        . '<span class="text-gray-600 min-w-[180px]">' . $p->starts_at->format('D, d M Y · H:i') . '</span>'
-                                                        . '<input type="number" step="0.01" placeholder="' . ($basePrice ?: '0.00') . '" '
-                                                        . 'data-perf-price-id="' . $p->id . '" '
-                                                        . 'class="perf-price-input fi-input block w-24 rounded-lg border-gray-300 text-sm" />'
-                                                        . '<span class="text-gray-400">' . ($get('../../currency') ?: 'RON') . '</span>'
-                                                        . '</div>';
-                                                }
-                                                $html .= '</div>';
-                                                return new \Illuminate\Support\HtmlString($html);
-                                            })
+                                            ->schema([
+                                                Forms\Components\Select::make('perf_id')
+                                                    ->label($t('Reprezentare', 'Performance'))
+                                                    ->options(function (SGet $get) {
+                                                        $eventId = $get('../../../../id');
+                                                        if (!$eventId) return [];
+                                                        return \App\Models\Performance::where('event_id', $eventId)
+                                                            ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                                                            ->orderBy('starts_at')
+                                                            ->get()
+                                                            ->mapWithKeys(fn ($p) => [
+                                                                $p->id => $p->starts_at->format('D, d M Y · H:i')
+                                                            ])
+                                                            ->toArray();
+                                                    })
+                                                    ->required()
+                                                    ->searchable()
+                                                    ->columnSpan(2),
+                                                Forms\Components\TextInput::make('price')
+                                                    ->label($t('Preț', 'Price'))
+                                                    ->numeric()
+                                                    ->step(0.01)
+                                                    ->placeholder($t('Preț de bază', 'Base price'))
+                                                    ->suffix('RON')
+                                                    ->columnSpan(1),
+                                            ])
+                                            ->columns(3)
+                                            ->addActionLabel($t('Adaugă preț per reprezentare', 'Add price per performance'))
+                                            ->defaultItems(0)
                                             ->columnSpan(12),
 
                                         Forms\Components\Textarea::make('description')

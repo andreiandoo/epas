@@ -1498,6 +1498,22 @@ const EventPage = {
                 const endTime = p.end_time || '';
                 const timeRange = time + (endTime ? ' – ' + endTime : '');
 
+                // Calculate min price for this performance
+                var minPrice = null;
+                var ticketTypes = self.ticketTypes || [];
+                ticketTypes.forEach(function(tt) {
+                    var effectivePrice = tt.price;
+                    if (p.ticket_overrides && p.ticket_overrides[tt.id]) {
+                        effectivePrice = p.ticket_overrides[tt.id].price;
+                    }
+                    if (effectivePrice > 0 && (minPrice === null || effectivePrice < minPrice)) {
+                        minPrice = effectivePrice;
+                    }
+                });
+                var priceHtml = minPrice !== null
+                    ? '<div style="font-size:12px;font-weight:600;color:#a5b4fc;margin-top:2px;">de la ' + minPrice.toFixed(0) + ' lei</div>'
+                    : '';
+
                 return '<button type="button" class="perf-list-btn" data-perf-id="' + p.id + '" ' +
                     'style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:1px solid ' +
                     (isActive ? '#6366f1' : 'rgba(255,255,255,0.12)') + ';background:' +
@@ -1512,7 +1528,8 @@ const EventPage = {
                         '<div style="font-size:14px;font-weight:600;color:' + (isActive ? '#e2e8f0' : 'rgba(255,255,255,0.7)') + ';">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
                         '<div style="font-size:12px;color:rgba(255,255,255,0.45);">' + timeRange + '</div>' +
                     '</div>' +
-                    (isActive ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="#818cf8"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
+                    (minPrice !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-size:14px;font-weight:700;color:#a5b4fc;">de la ' + minPrice.toFixed(0) + ' lei</div></div>' : '') +
+                    (isActive ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
                 '</button>';
             }).join('') +
             '</div>';

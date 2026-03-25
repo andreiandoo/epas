@@ -1024,46 +1024,42 @@ class EditEvent extends EditRecord
             }
         }
 
-        // Sync per-performance ticket type associations → ticket_overrides JSON
-        if ($this->record->duration_mode === 'multi_day' && ($this->data['has_per_performance_pricing'] ?? false)) {
+        // Sync per-performance ticket type prices → Performance.ticket_overrides JSON
+        // Data comes from TicketType.meta.performance_prices repeater
+        if ($this->record->duration_mode === 'multi_day') {
             $performances = $this->record->performances()->get();
             $ticketTypesData = $this->data['ticketTypes'] ?? [];
 
-            // Build a map: performance_id → [ticket_type_id, ...]
-            $perfToTts = [];
+            // Build a map: performance_id → [{ticket_type_id, price_cents}]
+            $perfOverrides = [];
             foreach ($ticketTypesData as $ttData) {
                 $ttId = (int) ($ttData['id'] ?? 0);
-                $perfIds = $ttData['performance_ids'] ?? [];
-                if ($ttId && !empty($perfIds)) {
-                    foreach ($perfIds as $pid) {
-                        $perfToTts[(int) $pid][] = $ttId;
+                if (!$ttId) continue;
+
+                $perfPrices = $ttData['meta']['performance_prices'] ?? [];
+                foreach ($perfPrices as $pp) {
+                    $perfId = (int) ($pp['perf_id'] ?? 0);
+                    $price = $pp['price'] ?? null;
+                    if ($perfId) {
+                        $perfOverrides[$perfId][] = [
+                            'ticket_type_id' => $ttId,
+                            'price_cents' => $price !== null && $price !== '' ? (int) round((float) $price * 100) : null,
+                            'quota' => null,
+                        ];
                     }
                 }
             }
 
             // Update ticket_overrides on each performance
             foreach ($performances as $perf) {
-                $ttIds = $perfToTts[$perf->id] ?? [];
-                if (empty($ttIds)) {
-                    // No ticket types assigned → clear overrides
-                    $perf->update(['ticket_overrides' => null]);
-                    continue;
-                }
-
-                // Build overrides array (for now just association, prices stay at base)
-                // Price overrides will come from the perf-price-input fields via JS in a future iteration
-                $existingOverrides = collect($perf->ticket_overrides ?? []);
-                $newOverrides = [];
-                foreach ($ttIds as $ttId) {
-                    $existing = $existingOverrides->firstWhere('ticket_type_id', $ttId);
-                    $newOverrides[] = [
-                        'ticket_type_id' => $ttId,
-                        'price_cents' => $existing['price_cents'] ?? null,
-                        'quota' => $existing['quota'] ?? null,
-                    ];
-                }
-                $perf->update(['ticket_overrides' => $newOverrides]);
+                $overrides = $perfOverrides[$perf->id] ?? [];
+                $perf->update(['ticket_overrides' => !empty($overrides) ? $overrides : null]);
             }
+
+            \Log::info('[EditEvent] Synced performance overrides', [
+                'event_id' => $this->record->id,
+                'overrides_map' => $perfOverrides,
+            ]);
         }
 
         // Tour management — only act if the tour field is present in form data

@@ -1240,6 +1240,16 @@ class MarketplaceEventsController extends BaseController
             $minPrice = $event->min_price;
         }
 
+        // Child events (multi-day occurrences) inherit price + availability from parent
+        if ($minPrice === null && $event->parent_id) {
+            $parent = Event::with(['ticketTypes' => fn ($q) => $q->where('status', 'active')])->find($event->parent_id);
+            if ($parent && $parent->ticketTypes->isNotEmpty()) {
+                $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+                $parentPrices = $parentPublicTts->map(fn ($tt) => $tt->sale_price_cents ?: ($tt->price_cents ?? 0))->filter(fn ($p) => $p > 0);
+                $minPrice = $parentPrices->isNotEmpty() ? $parentPrices->min() / 100 : null;
+            }
+        }
+
         return [
             'id' => $event->id,
             'name' => $event->getTranslation('title', $language),
@@ -1262,12 +1272,14 @@ class MarketplaceEventsController extends BaseController
             'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
             'has_paid_promotion' => $this->hasActivePaidPromotion($event),
             'is_password_protected' => !empty($event->access_password),
-            'is_sold_out' => (bool) ($event->is_sold_out ?? false),
+            'is_sold_out' => (bool) ($event->is_sold_out ?? ($event->parent_id ? ($event->parent?->is_sold_out ?? false) : false)),
             'is_cancelled' => (bool) ($event->is_cancelled ?? false),
             'is_postponed' => (bool) ($event->is_postponed ?? false),
             'postponed_date' => $event->is_postponed && $event->postponed_date ? $event->postponed_date->format('Y-m-d') : null,
             'price_from' => $minPrice,
-            'ticket_types_count' => $event->relationLoaded('ticketTypes') ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))->count() : null,
+            'ticket_types_count' => $event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()
+                ? $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false))->count()
+                : ($event->parent_id ? ($event->parent?->ticketTypes()->where('status', 'active')->count() ?? 0) : null),
             'commission_mode' => $commissionMode,
             'commission_rate' => $commissionRate,
             'organizer' => $organizer ? [
