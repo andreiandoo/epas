@@ -985,6 +985,7 @@ class EditEvent extends EditRecord
         }
 
         // Sync Performance records from multi_slots (for per-slot pricing)
+        \Log::info('[EditEvent afterSave] duration_mode=' . $this->record->duration_mode . ' multi_slots=' . json_encode($this->record->multi_slots));
         if ($this->record->duration_mode === 'multi_day') {
             app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
         }

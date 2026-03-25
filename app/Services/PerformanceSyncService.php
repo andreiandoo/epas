@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\Performance;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PerformanceSyncService
 {
@@ -16,12 +17,20 @@ class PerformanceSyncService
      */
     public function syncFromMultiSlots(Event $event): void
     {
+        Log::info('[PerformanceSyncService] syncFromMultiSlots called', [
+            'event_id' => $event->id,
+            'duration_mode' => $event->duration_mode,
+            'multi_slots' => $event->multi_slots,
+        ]);
+
         if ($event->duration_mode !== 'multi_day') {
+            Log::info('[PerformanceSyncService] Skipping — not multi_day');
             return;
         }
 
         $slots = $event->multi_slots ?? [];
         if (empty($slots)) {
+            Log::info('[PerformanceSyncService] Skipping — multi_slots empty');
             return;
         }
 
@@ -49,14 +58,19 @@ class PerformanceSyncService
                 ]);
             } else {
                 // Create new performance
-                Performance::create([
-                    'event_id' => $event->id,
-                    'starts_at' => $startsAt,
-                    'ends_at' => $endsAt,
-                    'door_time' => $doorTime,
-                    'status' => 'active',
-                    'label' => $startsAt->format('D, d M Y · H:i'),
-                ]);
+                try {
+                    $perf = Performance::create([
+                        'event_id' => $event->id,
+                        'starts_at' => $startsAt,
+                        'ends_at' => $endsAt,
+                        'door_time' => $doorTime,
+                        'status' => 'active',
+                        'label' => $startsAt->format('D, d M Y · H:i'),
+                    ]);
+                    Log::info('[PerformanceSyncService] Created performance', ['id' => $perf->id, 'starts_at' => $startsAt->toDateTimeString()]);
+                } catch (\Exception $e) {
+                    Log::error('[PerformanceSyncService] Failed to create performance', ['error' => $e->getMessage(), 'date' => $date, 'start_time' => $startTime]);
+                }
             }
 
             $processedKeys[] = $key;
