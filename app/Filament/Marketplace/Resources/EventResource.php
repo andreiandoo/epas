@@ -1264,6 +1264,7 @@ class EventResource extends Resource
                                                     })
                                                     ->required()
                                                     ->searchable()
+                                                    ->live()
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('price')
                                                     ->hiddenLabel()
