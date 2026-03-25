@@ -470,8 +470,8 @@ class Event extends Model
     {
         return match ($this->duration_mode) {
             'range' => $this->range_end_date,
-            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
-                ? \Carbon\Carbon::parse(end($this->multi_slots)['date'])
+            'multi_day' => !empty($this->multi_slots)
+                ? \Carbon\Carbon::parse(collect($this->multi_slots)->last()['date'])
                 : null,
             default => null,
         };
@@ -486,8 +486,8 @@ class Event extends Model
         $endTime = match ($this->duration_mode) {
             'single_day' => $this->end_time,
             'range' => $this->range_end_time,
-            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
-                ? (end($this->multi_slots)['end_time'] ?? '23:59')
+            'multi_day' => !empty($this->multi_slots)
+                ? (collect($this->multi_slots)->last()['end_time'] ?? '23:59')
                 : null,
             default => $this->end_time,
         };
