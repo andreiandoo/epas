@@ -265,9 +265,32 @@ class ArtistsController extends BaseController
                         ->where('status', 'active')->get();
                 }
 
-                // Calculate min price from ticket types
+                // Calculate min price — for child events, check performance overrides
+                $matchedPerformance = null;
+                if ($event->parent_id && $event->event_date) {
+                    $childDate = $event->event_date->format('Y-m-d');
+                    $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $matchedPerformance = \App\Models\Performance::where('event_id', $event->parent_id)
+                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                        ->get()
+                        ->first(function ($p) use ($childDate, $childTime) {
+                            return $p->starts_at->format('Y-m-d') === $childDate
+                                && (!$childTime || $p->starts_at->format('H:i') === $childTime);
+                        });
+                }
+
                 $minPriceCents = $ticketTypes
-                    ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
+                    ->map(function ($tt) use ($matchedPerformance) {
+                        $baseCents = $tt->sale_price_cents ?? $tt->price_cents;
+                        // Check performance override
+                        if ($matchedPerformance) {
+                            $overrideCents = $matchedPerformance->getEffectivePrice($tt);
+                            if ($overrideCents !== null) {
+                                return $overrideCents;
+                            }
+                        }
+                        return $baseCents;
+                    })
                     ->filter()
                     ->min();
                 $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
@@ -431,9 +454,29 @@ class ArtistsController extends BaseController
                     ->get();
             }
 
-            // Calculate min price from ticket types
+            // Calculate min price — check performance overrides for child events
+            $matchedPerformance = null;
+            if ($event->parent_id && $event->event_date) {
+                $childDate = $event->event_date->format('Y-m-d');
+                $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                $matchedPerformance = \App\Models\Performance::where('event_id', $event->parent_id)
+                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                    ->get()
+                    ->first(function ($p) use ($childDate, $childTime) {
+                        return $p->starts_at->format('Y-m-d') === $childDate
+                            && (!$childTime || $p->starts_at->format('H:i') === $childTime);
+                    });
+            }
+
             $minPriceCents = $ticketTypes
-                ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
+                ->map(function ($tt) use ($matchedPerformance) {
+                    $baseCents = $tt->sale_price_cents ?? $tt->price_cents;
+                    if ($matchedPerformance) {
+                        $overrideCents = $matchedPerformance->getEffectivePrice($tt);
+                        if ($overrideCents !== null) return $overrideCents;
+                    }
+                    return $baseCents;
+                })
                 ->filter()
                 ->min();
             $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
