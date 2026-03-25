@@ -432,7 +432,37 @@ class EventsController extends BaseController
                 'ticket_terms' => $isMarketplaceEvent
                     ? ($event->getTranslation('ticket_terms', $language) ?? $event->getTranslation('ticket_terms', 'ro') ?? $event->getTranslation('ticket_terms', 'en') ?? null)
                     : null,
+                'duration_mode' => $event->duration_mode,
+                'multi_slots' => $event->multi_slots,
+                'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+                'range_end_date' => $event->range_end_date?->format('Y-m-d'),
+                'range_start_time' => $event->range_start_time,
+                'range_end_time' => $event->range_end_time,
             ],
+            'performances' => $event->performances()
+                ->where(function ($q) {
+                    $q->where('status', 'active')->orWhereNull('status');
+                })
+                ->orderBy('starts_at')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'date' => $p->starts_at->format('Y-m-d'),
+                        'start_time' => $p->starts_at->format('H:i'),
+                        'end_time' => $p->ends_at?->format('H:i'),
+                        'door_time' => $p->door_time,
+                        'label' => $p->label,
+                        'status' => $p->status ?? 'active',
+                        'ticket_overrides' => collect($p->ticket_overrides ?? [])
+                            ->mapWithKeys(fn ($o) => [
+                                $o['ticket_type_id'] => [
+                                    'price' => ($o['price_cents'] ?? 0) / 100,
+                                    'quota' => $o['quota'] ?? null,
+                                ],
+                            ]),
+                    ];
+                }),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
                 'slug' => $event->venue->slug,

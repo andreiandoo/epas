@@ -629,6 +629,8 @@ const EventPage = {
             range_start_time: eventData.range_start_time,
             range_end_time: eventData.range_end_time,
             multi_slots: eventData.multi_slots,
+            performances: eventData.performances || [],
+            selectedPerformanceId: null,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -1037,6 +1039,13 @@ const EventPage = {
             console.log('[EventPage] Event has seating layout:', this.seatingLayout.name);
         }
 
+        // Auto-select first upcoming performance for multi-day events
+        if (e.performances && e.performances.length > 0) {
+            const now = new Date();
+            const upcoming = e.performances.find(p => new Date(p.date + 'T' + (p.start_time || '00:00')) >= now);
+            this.event.selectedPerformanceId = upcoming ? upcoming.id : e.performances[0].id;
+        }
+
         // Ticket types (skip for ended events)
         if (!this.eventEnded) {
             this.ticketTypes = e.ticket_types || this.getDefaultTicketTypes();
@@ -1410,6 +1419,61 @@ const EventPage = {
     /**
      * Render ticket type cards
      */
+    /**
+     * Get the selected performance object
+     */
+    getSelectedPerformance() {
+        if (!this.event.selectedPerformanceId || !this.event.performances) return null;
+        return this.event.performances.find(p => p.id === this.event.selectedPerformanceId) || null;
+    },
+
+    /**
+     * Get the effective price for a ticket type considering performance overrides
+     */
+    getEffectivePrice(tt) {
+        const perf = this.getSelectedPerformance();
+        if (perf && perf.ticket_overrides && perf.ticket_overrides[tt.id]) {
+            return perf.ticket_overrides[tt.id].price;
+        }
+        return tt.price;
+    },
+
+    /**
+     * Render performance selector pills for multi-day events
+     */
+    renderPerformanceSelector() {
+        const container = document.getElementById(this.elements.ticketTypes);
+        if (!container) return '';
+
+        const performances = this.event.performances || [];
+        if (performances.length <= 1) return '';
+
+        const self = this;
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        return '<div class="perf-selector" style="display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
+            performances.map(function(p) {
+                const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+                const isActive = p.id === self.event.selectedPerformanceId;
+                const dayName = days[d.getDay()];
+                const dayNum = d.getDate();
+                const monthName = months[d.getMonth()];
+                const time = p.start_time || '';
+
+                return '<button type="button" class="perf-pill" data-perf-id="' + p.id + '" ' +
+                    'style="flex-shrink:0;padding:8px 16px;border-radius:20px;border:1px solid ' +
+                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.2)') + ';background:' +
+                    (isActive ? '#6366f1' : 'transparent') + ';color:' +
+                    (isActive ? '#fff' : 'rgba(255,255,255,0.7)') +
+                    ';cursor:pointer;font-size:13px;line-height:1.2;text-align:center;transition:all .2s">' +
+                    '<div style="font-weight:600">' + dayName + ', ' + dayNum + ' ' + monthName + '</div>' +
+                    (time ? '<div style="font-size:11px;opacity:0.8">' + time + '</div>' : '') +
+                    '</button>';
+            }).join('') +
+            '</div>';
+    },
+
     renderTicketTypes() {
         const container = document.getElementById(this.elements.ticketTypes);
         var self = this;
@@ -1421,13 +1485,16 @@ const EventPage = {
         var eventIsSoldOut = this.event.is_sold_out || false;
         var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
 
-        container.innerHTML = this.ticketTypes.map(function(tt) {
+        // Render performance selector pills for multi-day events
+        var perfSelectorHtml = this.renderPerformanceSelector();
+
+        container.innerHTML = perfSelectorHtml + this.ticketTypes.map(function(tt) {
             if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
 
-            // Always show base ticket price (without commission on top)
-            var displayPrice = tt.price;
+            // Get effective price (with performance override if applicable)
+            var displayPrice = self.getEffectivePrice(tt);
 
             // Determine discount: use target_price if available and greater than displayPrice
             // Otherwise fall back to original_price from ticket type
@@ -1610,6 +1677,14 @@ const EventPage = {
                 '</div>' +
             '</div>';
         }).join('');
+
+        // Bind performance pill click handlers
+        container.querySelectorAll('.perf-pill').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.event.selectedPerformanceId = parseInt(btn.dataset.perfId);
+                self.renderTicketTypes(); // Re-render with new prices
+            });
+        });
     },
 
     /**
@@ -1880,14 +1955,22 @@ const EventPage = {
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
-                    // Store BASE price in cart (without commission)
-                    // Commission will be calculated at display time in cart/checkout
-                    var basePrice = tt.price;
+                    // Store BASE price in cart (with performance override if applicable)
+                    var basePrice = self.getEffectivePrice(tt);
                     var baseOriginalPrice = tt.original_price;
 
                     // Use target_price as original_price if applicable
                     if (targetPrice && basePrice < targetPrice) {
                         baseOriginalPrice = targetPrice;
+                    }
+
+                    // Add performance data to event data
+                    var selectedPerf = self.getSelectedPerformance();
+                    if (selectedPerf) {
+                        eventData.performance_id = selectedPerf.id;
+                        eventData.performance_date = selectedPerf.date;
+                        eventData.performance_time = selectedPerf.start_time;
+                        eventData.performance_label = selectedPerf.label;
                     }
 
                     // Include per-ticket commission settings if present

@@ -32,6 +32,7 @@ class OrdersController extends BaseController
             'tickets' => 'required|array|min:1',
             'tickets.*.ticket_type_id' => 'required|integer|exists:ticket_types,id',
             'tickets.*.quantity' => 'required|integer|min:1|max:20',
+            'tickets.*.performance_id' => 'nullable|integer|exists:performances,id',
             'seat_uids' => 'nullable|array',
             'seat_uids.*' => 'string|max:32',
             'customer' => 'required|array',
@@ -120,9 +121,24 @@ class OrdersController extends BaseController
                     throw new \Exception("Maximum {$ticketType->max_per_order} tickets per order for {$ticketType->name}");
                 }
 
-                // Use display_price which falls back to price_cents when sale_price_cents is null
+                // Resolve performance and potential price override
+                $perfId = $ticketRequest['performance_id'] ?? null;
                 $isInvitation = (bool) $request->input('is_invitation', false);
                 $unitPrice = $isInvitation ? 0 : ($ticketType->display_price ?? ($ticketType->price_cents / 100) ?? 0);
+
+                // Apply per-performance price override if available
+                if ($perfId && !$isInvitation) {
+                    $performance = \App\Models\Performance::where('id', $perfId)
+                        ->where('event_id', $event->id)
+                        ->first();
+                    if ($performance) {
+                        $priceOverride = $performance->getEffectivePrice($ticketType);
+                        if ($priceOverride !== null) {
+                            $unitPrice = $priceOverride / 100;
+                        }
+                    }
+                }
+
                 $itemTotal = $unitPrice * $quantity;
                 $subtotal += $itemTotal;
 
@@ -131,6 +147,7 @@ class OrdersController extends BaseController
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total' => $itemTotal,
+                    'performance_id' => $perfId,
                 ];
 
                 // Reserve tickets (increment quota_sold; available_quantity is computed)
@@ -178,6 +195,7 @@ class OrdersController extends BaseController
             foreach ($orderItems as $item) {
                 $orderItem = $order->items()->create([
                     'ticket_type_id' => $item['ticket_type']->id,
+                    'performance_id' => $item['performance_id'] ?? null,
                     'name' => $item['ticket_type']->name,
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
@@ -221,6 +239,7 @@ class OrdersController extends BaseController
                         'order_item_id' => $orderItem->id,
                         'event_id' => $event->id,
                         'ticket_type_id' => $item['ticket_type']->id,
+                        'performance_id' => $item['performance_id'] ?? null,
                         'customer_id' => $customer->id,
                         'code' => strtoupper(Str::random(12)),
                         'barcode' => Str::uuid()->toString(),

@@ -82,6 +82,7 @@ class CartController extends Controller
             'quantity' => 'required|integer|min:1|max:10',
             'seat_ids' => 'nullable|array',
             'seat_ids.*' => 'integer',
+            'performance_id' => 'nullable|integer|exists:performances,id',
         ]);
 
         $sessionId = $this->getSessionId($request);
@@ -92,7 +93,8 @@ class CartController extends Controller
             $validated['event_id'],
             $validated['ticket_type_id'],
             $validated['quantity'],
-            $validated['seat_ids'] ?? null
+            $validated['seat_ids'] ?? null,
+            $validated['performance_id'] ?? null
         );
 
         if (!$result['success']) {
