@@ -232,7 +232,7 @@
                 <div class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div class="flex items-center gap-2">
                         <x-heroicon-o-ticket class="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                        <span class="text-sm text-gray-700 dark:text-gray-300">Comision ticketing</span>
+                        <span class="text-sm text-gray-700 dark:text-gray-300">Comision ticketing ({{ $billing['commission_rate'] }}% din {{ number_format($billing['order_revenue'], 2) }})</span>
                     </div>
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($billing['ticketing_commission'], 2) }} {{ $billing['currency'] }}</span>
                 </div>

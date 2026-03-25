@@ -30,7 +30,7 @@
                 <p class="mt-1 text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($d['grand_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Comision ticketing</p>
+                <p class="text-xs tracking-wide text-gray-500 uppercase dark:text-gray-400">Comision ticketing ({{ $d['commission_rate'] }}%)</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</p>
             </div>
             <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
@@ -47,7 +47,7 @@
         <div class="p-5 mb-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="flex items-center gap-2 mb-4">
                 <x-heroicon-o-ticket class="w-5 h-5 text-indigo-500" />
-                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Comision ticketing per eveniment</h3>
+                <h3 class="text-sm font-semibold tracking-wide text-gray-900 uppercase dark:text-white">Comision ticketing per eveniment ({{ $d['commission_rate'] }}% din încasări)</h3>
             </div>
 
             @if(count($d['events']) > 0)

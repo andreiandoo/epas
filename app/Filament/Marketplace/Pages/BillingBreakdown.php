@@ -67,19 +67,19 @@ class BillingBreakdown extends Page
         $monthStart = $monthDate->copy()->startOfMonth();
         $monthEnd = $monthDate->copy()->endOfMonth();
         $currency = $marketplace->currency ?? 'RON';
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+        $commissionRate = (float) ($marketplace->commission_rate ?? 0);
 
         // === TICKETING BREAKDOWN PER EVENT ===
         $eventBreakdown = Order::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('status', $paidStatuses)
+            ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw('marketplace_event_id')
             ->selectRaw('COUNT(*) as order_count')
             ->selectRaw('SUM(total) as revenue')
-            ->selectRaw('SUM(commission_amount) as commission')
             ->groupBy('marketplace_event_id')
-            ->orderByDesc('commission')
+            ->orderByDesc('revenue')
             ->get();
 
         // Get event names
@@ -108,20 +108,21 @@ class BillingBreakdown extends Page
                 ->toArray();
         }
 
-        $events = $eventBreakdown->map(function ($row) use ($eventNames, $ticketCounts) {
+        $events = $eventBreakdown->map(function ($row) use ($eventNames, $ticketCounts, $commissionRate) {
             $eventId = $row->marketplace_event_id;
+            $revenue = (float) $row->revenue;
             return [
                 'event_id' => $eventId,
-                'event_name' => $eventNames[$eventId] ?? 'Eveniment #' . $eventId,
+                'event_name' => $eventNames[$eventId] ?? ($eventId ? 'Eveniment #' . $eventId : 'Fără eveniment'),
                 'order_count' => (int) $row->order_count,
                 'ticket_count' => (int) ($ticketCounts[$eventId] ?? 0),
-                'revenue' => (float) $row->revenue,
-                'commission' => (float) $row->commission,
+                'revenue' => $revenue,
+                'commission' => round($revenue * ($commissionRate / 100), 2),
             ];
         })->toArray();
 
-        $ticketingTotal = collect($events)->sum('commission');
         $revenueTotal = collect($events)->sum('revenue');
+        $ticketingTotal = round($revenueTotal * ($commissionRate / 100), 2);
 
         // === SERVICE ORDERS BREAKDOWN ===
         $serviceOrders = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -169,6 +170,7 @@ class BillingBreakdown extends Page
                 'month_label' => $monthDate->translatedFormat('F Y'),
                 'month' => $this->month,
                 'currency' => $currency,
+                'commission_rate' => $commissionRate,
                 'events' => $events,
                 'ticketing_total' => $ticketingTotal,
                 'revenue_total' => $revenueTotal,

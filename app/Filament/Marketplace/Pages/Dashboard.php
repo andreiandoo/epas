@@ -295,14 +295,19 @@ class Dashboard extends Page
     {
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
-        // 1. Ticketing commissions for current month
-        $ticketingCommission = (float) Order::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('status', $paidStatuses)
+        // Commission rate from marketplace client settings
+        $commissionRate = (float) ($this->marketplace->commission_rate ?? 0);
+
+        // 1. Ticketing: calculate commission as revenue * rate (not from commission_amount field)
+        $orderRevenue = (float) Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->sum('commission_amount');
+            ->sum('total');
+
+        $ticketingCommission = round($orderRevenue * ($commissionRate / 100), 2);
 
         // 2. Service orders for current month, grouped by service_type
         $serviceBreakdown = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -336,6 +341,8 @@ class Dashboard extends Page
 
         return [
             'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'commission_rate' => $commissionRate,
+            'order_revenue' => $orderRevenue,
             'ticketing_commission' => $ticketingCommission,
             'services' => $services,
             'services_total' => $servicesTotal,
