@@ -43,6 +43,16 @@ class CreateEvent extends CreateRecord
             }
         }
 
+        // Ensure slug uniqueness (previous failed creates may have left orphan records)
+        if (!empty($data['slug'])) {
+            $baseSlug = $data['slug'];
+            $counter = 1;
+            while (\App\Models\Event::where('slug', $data['slug'])->exists()) {
+                $data['slug'] = $baseSlug . '-' . $counter;
+                $counter++;
+            }
+        }
+
         return $data;
     }
 
