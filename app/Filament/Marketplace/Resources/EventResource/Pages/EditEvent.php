@@ -1023,6 +1023,48 @@ class EditEvent extends EditRecord
             }
         }
 
+        // Sync per-performance ticket type associations → ticket_overrides JSON
+        if ($this->record->duration_mode === 'multi_day' && ($this->data['has_per_performance_pricing'] ?? false)) {
+            $performances = $this->record->performances()->get();
+            $ticketTypesData = $this->data['ticketTypes'] ?? [];
+
+            // Build a map: performance_id → [ticket_type_id, ...]
+            $perfToTts = [];
+            foreach ($ticketTypesData as $ttData) {
+                $ttId = (int) ($ttData['id'] ?? 0);
+                $perfIds = $ttData['performance_ids'] ?? [];
+                if ($ttId && !empty($perfIds)) {
+                    foreach ($perfIds as $pid) {
+                        $perfToTts[(int) $pid][] = $ttId;
+                    }
+                }
+            }
+
+            // Update ticket_overrides on each performance
+            foreach ($performances as $perf) {
+                $ttIds = $perfToTts[$perf->id] ?? [];
+                if (empty($ttIds)) {
+                    // No ticket types assigned → clear overrides
+                    $perf->update(['ticket_overrides' => null]);
+                    continue;
+                }
+
+                // Build overrides array (for now just association, prices stay at base)
+                // Price overrides will come from the perf-price-input fields via JS in a future iteration
+                $existingOverrides = collect($perf->ticket_overrides ?? []);
+                $newOverrides = [];
+                foreach ($ttIds as $ttId) {
+                    $existing = $existingOverrides->firstWhere('ticket_type_id', $ttId);
+                    $newOverrides[] = [
+                        'ticket_type_id' => $ttId,
+                        'price_cents' => $existing['price_cents'] ?? null,
+                        'quota' => $existing['quota'] ?? null,
+                    ];
+                }
+                $perf->update(['ticket_overrides' => $newOverrides]);
+            }
+        }
+
         // Tour management — only act if the tour field is present in form data
         // (prevents accidental clearing when the field value is missing/undefined)
         if (!array_key_exists('is_in_tour', $this->data)) {

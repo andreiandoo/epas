@@ -22,6 +22,7 @@ use App\Models\MarketplaceTaxTemplate;
 use App\Models\EventGeneratedDocument;
 use App\Models\OrganizerDocument;
 use App\Models\MarketplaceEvent;
+use App\Models\TicketType;
 use Illuminate\Support\Facades\Storage;
 use Filament\Forms;
 use Illuminate\Support\HtmlString;
@@ -1113,6 +1114,22 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Preț de referință pentru planificare și negocieri. Nu este afișat public.', 'Reference price for planning and negotiations. Not displayed publicly.')),
                                 ]),
 
+                                Forms\Components\Toggle::make('has_per_performance_pricing')
+                                    ->label($t('Prețuri diferite per reprezentare', 'Different prices per performance'))
+                                    ->helperText($t('Activează pentru a asocia tipuri de bilete cu reprezentări specifice și a seta prețuri diferite per show.', 'Enable to associate ticket types with specific performances and set different prices per show.'))
+                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function ($component, ?Event $record) {
+                                        if (!$record) { $component->state(false); return; }
+                                        $hasOverrides = $record->performances()
+                                            ->whereNotNull('ticket_overrides')
+                                            ->where('ticket_overrides', '!=', '[]')
+                                            ->exists();
+                                        $component->state($hasOverrides);
+                                    })
+                                    ->columnSpanFull(),
+
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
@@ -1216,6 +1233,65 @@ class EventResource extends Resource
                                             ->hexColor()
                                             ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                             ->columnSpan(3),
+
+                                        // Per-performance association (multi-day events only)
+                                        Forms\Components\Select::make('performance_ids')
+                                            ->label($t('Reprezentări', 'Performances'))
+                                            ->helperText($t('Asociază acest tip de bilet cu reprezentări specifice. Lasă gol = disponibil la toate.', 'Associate this ticket type with specific performances. Leave empty = available at all.'))
+                                            ->multiple()
+                                            ->searchable()
+                                            ->options(function (SGet $get) {
+                                                $eventId = $get('../../id');
+                                                if (!$eventId) return [];
+                                                return \App\Models\Performance::where('event_id', $eventId)
+                                                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                                                    ->orderBy('starts_at')
+                                                    ->get()
+                                                    ->mapWithKeys(fn ($p) => [
+                                                        $p->id => $p->starts_at->format('D, d M Y · H:i')
+                                                    ])
+                                                    ->toArray();
+                                            })
+                                            ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function ($component, ?TicketType $record) {
+                                                if (!$record || !$record->event_id) { $component->state([]); return; }
+                                                // Find which performances include this ticket type in their overrides
+                                                $perfIds = \App\Models\Performance::where('event_id', $record->event_id)
+                                                    ->whereNotNull('ticket_overrides')
+                                                    ->get()
+                                                    ->filter(fn ($p) => collect($p->ticket_overrides)->contains('ticket_type_id', $record->id))
+                                                    ->pluck('id')
+                                                    ->toArray();
+                                                $component->state($perfIds);
+                                            })
+                                            ->columnSpan(12),
+
+                                        // Per-performance price overrides table
+                                        Forms\Components\Placeholder::make('performance_prices_info')
+                                            ->hiddenLabel()
+                                            ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing') && !empty($get('performance_ids')))
+                                            ->content(function (SGet $get) use ($t) {
+                                                $perfIds = $get('performance_ids') ?? [];
+                                                if (empty($perfIds)) return '';
+                                                $performances = \App\Models\Performance::whereIn('id', $perfIds)->orderBy('starts_at')->get();
+                                                if ($performances->isEmpty()) return '';
+                                                $basePrice = $get('price') ?? $get('price_cents');
+                                                $html = '<div class="text-xs text-gray-500 mb-1">' . $t('Prețuri per reprezentare (lasă gol = preț de bază):', 'Prices per performance (leave empty = base price):') . '</div>';
+                                                $html .= '<div class="grid gap-2">';
+                                                foreach ($performances as $p) {
+                                                    $html .= '<div class="flex items-center gap-2 text-sm">'
+                                                        . '<span class="text-gray-600 min-w-[180px]">' . $p->starts_at->format('D, d M Y · H:i') . '</span>'
+                                                        . '<input type="number" step="0.01" placeholder="' . ($basePrice ?: '0.00') . '" '
+                                                        . 'data-perf-price-id="' . $p->id . '" '
+                                                        . 'class="perf-price-input fi-input block w-24 rounded-lg border-gray-300 text-sm" />'
+                                                        . '<span class="text-gray-400">' . ($get('../../currency') ?: 'RON') . '</span>'
+                                                        . '</div>';
+                                                }
+                                                $html .= '</div>';
+                                                return new \Illuminate\Support\HtmlString($html);
+                                            })
+                                            ->columnSpan(12),
 
                                         Forms\Components\Textarea::make('description')
                                             ->label($t('Descriere', 'Description'))
@@ -1869,6 +1945,40 @@ class EventResource extends Resource
                                     ->visible(fn (SGet $get) => (bool) $get('seating_layout_id'))
                                     ->lazy()
                                     ->schema([
+                        // Performance selector for multi-day events with seating
+                        Forms\Components\Select::make('seating_performance_id')
+                            ->label($t('Reprezentare', 'Performance'))
+                            ->helperText($t('Selectează reprezentarea pentru care configurezi harta de locuri', 'Select the performance for which you configure the seating map'))
+                            ->options(function (?Event $record) {
+                                if (!$record) return [];
+                                return $record->performances()
+                                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                                    ->orderBy('starts_at')
+                                    ->get()
+                                    ->mapWithKeys(fn ($p) => [
+                                        $p->id => ($p->hasSeatingSnapshot() ? "\u{2713} " : '')
+                                                 . $p->starts_at->format('D, d M Y · H:i')
+                                    ])
+                                    ->toArray();
+                            })
+                            ->placeholder($t('Toate reprezentările (layout partajat)', 'All performances (shared layout)'))
+                            ->live()
+                            ->dehydrated(false)
+                            ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
+                            ->columnSpanFull(),
+
+                        // Warning for multi-day + seating without per-performance
+                        Forms\Components\Placeholder::make('seating_multiday_warning')
+                            ->hiddenLabel()
+                            ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day' && !$get('seating_performance_id'))
+                            ->content(fn () => new HtmlString(
+                                '<div class="flex items-center gap-2 p-3 text-sm border rounded-lg bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-900/20 dark:border-amber-700 dark:text-amber-300">' .
+                                    '<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>' .
+                                    '<span>' . $t('Harta de locuri este partajată între toate reprezentările. Fiecare loc vândut pe o reprezentare va fi indisponibil și pe celelalte. Selectează o reprezentare pentru inventar separat.', 'The seating map is shared between all performances. Each seat sold on one performance will be unavailable on others. Select a performance for separate inventory.') . '</span>' .
+                                '</div>'
+                            ))
+                            ->columnSpanFull(),
+
                         // Interactive seating map editor with zoom/pan and row assignment
                         Forms\Components\Placeholder::make('seating_map_editor')
                             ->hiddenLabel()
