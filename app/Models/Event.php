@@ -309,17 +309,15 @@ class Event extends Model
 
     public function artists(): BelongsToMany
     {
-        $relation = $this->belongsToMany(
+        return $this->belongsToMany(
             Artist::class,
             'event_artist',
             'event_id',
             'artist_id'
-        );
-
-        $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
-                 ->orderByPivot('sort_order');
-
-        return $relation;
+        )
+        ->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+        ->orderByPivot('sort_order')
+        ->select('artists.*');
     }
 
     /**
