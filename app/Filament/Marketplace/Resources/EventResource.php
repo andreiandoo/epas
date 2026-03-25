@@ -1238,13 +1238,12 @@ class EventResource extends Resource
                                         // Stored in TicketType.meta['performance_prices'] as [{perf_id, price}]
                                         Forms\Components\Repeater::make('meta.performance_prices')
                                             ->label($t('Prețuri per reprezentare', 'Prices per performance'))
-                                            ->helperText($t('Adaugă prețuri diferite per reprezentare. Lasă prețul gol = preț de bază.', 'Add different prices per performance. Leave price empty = base price.'))
                                             ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
+                                            ->simple(false)
                                             ->schema([
                                                 Forms\Components\Select::make('perf_id')
                                                     ->label($t('Reprezentare', 'Performance'))
                                                     ->options(function (SGet $get, \Livewire\Component $livewire) {
-                                                        // Get event ID from Livewire record (path traversal unreliable in nested repeaters)
                                                         $eventId = $livewire->record?->id ?? null;
                                                         if (!$eventId) return [];
                                                         return \App\Models\Performance::where('event_id', $eventId)
@@ -1256,9 +1255,18 @@ class EventResource extends Resource
                                                             ])
                                                             ->toArray();
                                                     })
+                                                    ->disableOptionWhen(function (string $value, SGet $get) {
+                                                        // Hide already-selected performances in this ticket type's repeater
+                                                        $currentPerfId = $get('perf_id');
+                                                        $allItems = $get('../../meta.performance_prices') ?? [];
+                                                        $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
+                                                        // Allow current item's own value
+                                                        if ((string) $value === (string) $currentPerfId) return false;
+                                                        return in_array((string) $value, $usedIds);
+                                                    })
                                                     ->required()
                                                     ->searchable()
-                                                    ->columnSpan(2),
+                                                    ->columnSpan(3),
                                                 Forms\Components\TextInput::make('price')
                                                     ->label($t('Preț', 'Price'))
                                                     ->numeric()
@@ -1267,9 +1275,11 @@ class EventResource extends Resource
                                                     ->suffix('RON')
                                                     ->columnSpan(1),
                                             ])
-                                            ->columns(3)
-                                            ->addActionLabel($t('Adaugă preț per reprezentare', 'Add price per performance'))
+                                            ->columns(4)
+                                            ->grid(1)
+                                            ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
                                             ->defaultItems(0)
+                                            ->reorderable(false)
                                             ->columnSpan(12),
 
                                         Forms\Components\Textarea::make('description')
@@ -1487,7 +1497,6 @@ class EventResource extends Resource
                                                 Forms\Components\Toggle::make('is_active')
                                                     ->label($t('Activ', 'Active'))
                                                     ->default(true)
-                                                    ->live()
                                                     ->columnSpan(6),
                                                 Forms\Components\DateTimePicker::make('active_until')
                                                     ->label($t('Activ până la', 'Active until'))

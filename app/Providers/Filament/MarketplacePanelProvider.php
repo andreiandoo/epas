@@ -539,6 +539,16 @@ class MarketplacePanelProvider extends PanelProvider
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
+            // Prevent visual flash during Livewire morph updates
+            ->renderHook('panels::styles.after', fn () => '<style>
+                /* Prevent content flash during Livewire updates */
+                [wire\:loading]:not(.wire\:loading) { transition: opacity 0s; }
+                .fi-fo-repeater [wire\:loading] { opacity: 1 !important; }
+                /* Smooth morph transitions */
+                .fi-fo-repeater-item { transition: none !important; }
+                .fi-section-content { transition: none !important; }
+            </style>')
+
             // Preserve scroll position, section collapse state AND repeater collapse state during Livewire morph updates
             ->renderHook('panels::body.end', fn () => <<<'HTML'
             <script>
