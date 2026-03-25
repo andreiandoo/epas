@@ -439,13 +439,16 @@ class EventsController extends BaseController
                 'range_start_time' => $event->range_start_time,
                 'range_end_time' => $event->range_end_time,
             ],
-            'performances' => $event->performances()
-                ->where(function ($q) {
-                    $q->where('status', 'active')->orWhereNull('status');
-                })
-                ->orderBy('starts_at')
-                ->get()
-                ->map(function ($p) {
+            'performances' => (function () use ($event) {
+                $perfs = $event->performances()
+                    ->where(function ($q) {
+                        $q->where('status', 'active')->orWhereNull('status');
+                    })
+                    ->orderBy('starts_at')
+                    ->get();
+                \Log::info('[EventsController] Performances query for event ' . $event->id . ': count=' . $perfs->count());
+                return $perfs;
+            })()->map(function ($p) {
                     return [
                         'id' => $p->id,
                         'date' => $p->starts_at->format('Y-m-d'),
