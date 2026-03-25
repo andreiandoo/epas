@@ -1470,8 +1470,12 @@ const EventPage = {
      */
     getEffectivePrice(tt) {
         const perf = this.getSelectedPerformance();
-        if (perf && perf.ticket_overrides && perf.ticket_overrides[tt.id]) {
-            return perf.ticket_overrides[tt.id].price;
+        if (perf && perf.ticket_overrides) {
+            // Check both string and number keys (API may serialize differently)
+            const override = perf.ticket_overrides[tt.id] || perf.ticket_overrides[String(tt.id)];
+            if (override && override.price !== null && override.price !== undefined) {
+                return override.price;
+            }
         }
         return tt.price;
     },
