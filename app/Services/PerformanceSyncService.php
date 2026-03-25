@@ -40,15 +40,22 @@ class PerformanceSyncService
 
         $processedKeys = [];
 
-        foreach ($slots as $slot) {
+        Log::info('[PerformanceSyncService] Processing ' . count($slots) . ' slots, ' . $existing->count() . ' existing performances');
+
+        foreach ($slots as $index => $slot) {
             $date = $slot['date'] ?? null;
-            if (!$date) continue;
+            if (!$date) {
+                Log::info('[PerformanceSyncService] Slot ' . $index . ' has no date, skipping');
+                continue;
+            }
 
             $startTime = $slot['start_time'] ?? '00:00';
             $key = $date . ' ' . $startTime;
             $startsAt = Carbon::parse($key);
             $endsAt = !empty($slot['end_time']) ? Carbon::parse($date . ' ' . $slot['end_time']) : null;
             $doorTime = $slot['door_time'] ?? null;
+
+            Log::info('[PerformanceSyncService] Processing slot ' . $index, ['key' => $key, 'exists' => $existing->has($key)]);
 
             if ($existing->has($key)) {
                 // Update existing — KEEP ticket_overrides intact
