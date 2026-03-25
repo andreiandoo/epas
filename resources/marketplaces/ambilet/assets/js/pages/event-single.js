@@ -593,6 +593,7 @@ const EventPage = {
         var ticketTypesData = apiData.ticket_types || [];
         // Performances are at top-level in API response, not inside event
         var performancesData = apiData.performances || eventData.performances || [];
+        console.log('[EventPage] Performances data:', performancesData, 'apiData keys:', Object.keys(apiData), 'duration_mode:', eventData.duration_mode);
 
         // Parse starts_at to get date and time
         var startsAt = eventData.starts_at ? new Date(eventData.starts_at) : new Date();
@@ -1465,6 +1466,7 @@ const EventPage = {
      */
     renderPerformanceList() {
         const performances = this.event.performances || [];
+        console.log('[EventPage] renderPerformanceList called, performances count:', performances.length, 'duration_mode:', this.event.duration_mode);
         if (performances.length <= 1) return;
 
         const descEl = document.getElementById(this.elements.eventDescription);
