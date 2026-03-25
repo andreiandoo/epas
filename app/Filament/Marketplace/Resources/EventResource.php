@@ -121,6 +121,7 @@ class EventResource extends Resource
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
+                                            ->skipRenderAfterStateUpdated()
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get, ?Event $record) {
                                                 // Slug is NOT translatable - it's a plain string field
                                                 // Format: event-name-[id] (ID is appended after save if record exists)
@@ -454,6 +455,7 @@ class EventResource extends Resource
                                                 ->minDate($minDateForEvent)
                                                 ->native(false)
                                                 ->live(onBlur: true)
+                                                ->skipRenderAfterStateUpdated()
                                                 ->afterStateUpdated(function ($state, SSet $set) {
                                                     if (!$state) { $set('recurring_weekday', null); return; }
                                                     $w = Carbon::parse($state)->dayOfWeekIso;
@@ -1219,6 +1221,7 @@ class EventResource extends Resource
                                             ->inlineLabel($il)
                                             ->columnSpan(4)
                                             ->live(onBlur: true)
+                                            ->skipRenderAfterStateUpdated()
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                 if ($get('sku')) return;
                                                 $set('sku', Str::upper(Str::slug($state, '-')));
@@ -1267,9 +1270,13 @@ class EventResource extends Resource
                                                             ])
                                                             ->toArray();
                                                     })
-                                                    ->disableOptionWhen(function (string $value, SGet $get) {
+                                                    ->disableOptionWhen(function (string $value, SGet $get, \Livewire\Component $livewire) {
                                                         $currentPerfId = $get('perf_id');
-                                                        $allItems = $get('../../meta.performance_prices') ?? [];
+                                                        // Read all performance_prices items from parent repeater
+                                                        // Try multiple path strategies for nested repeaters
+                                                        $allItems = $get('../../meta.performance_prices')
+                                                            ?? $get('../meta.performance_prices')
+                                                            ?? [];
                                                         $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
                                                         if ((string) $value === (string) $currentPerfId) return false;
                                                         return in_array((string) $value, $usedIds);
@@ -1277,7 +1284,6 @@ class EventResource extends Resource
                                                     ->required()
                                                     ->searchable()
                                                     ->live()
-                                                    ->partiallyRenderAfterStateUpdated()
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('price')
                                                     ->hiddenLabel()
@@ -1330,6 +1336,7 @@ class EventResource extends Resource
                                                 ->minValue(0)
                                                 ->required()
                                                 ->live(onBlur: true)
+                                                ->partiallyRenderAfterStateUpdated()
                                                 ->hint(function (SGet $get) use ($t) {
                                                     $targetPrice = (float) ($get('../../target_price') ?: 0);
                                                     $price = (float) ($get('price_max') ?: 0);
@@ -1349,6 +1356,7 @@ class EventResource extends Resource
                                                 ->required()
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                 ->live(onBlur: true)
+                                                ->skipRenderAfterStateUpdated()
                                                 ->hint(function ($record, SGet $get) use ($t) {
                                                     $hints = [];
                                                     if ($record && $record->quota_sold > 0) {
@@ -1567,6 +1575,7 @@ class EventResource extends Resource
                                                     ->numeric()
                                                     ->minValue(0)
                                                     ->live(onBlur: true)
+                                                    ->skipRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                         $price = (float) ($get('price_max') ?: 0);
                                                         $sale = $state !== null && $state !== '' ? (float)$state : null;
@@ -1587,6 +1596,7 @@ class EventResource extends Resource
                                                     ->minValue(0)
                                                     ->maxValue(100)
                                                     ->live(onBlur: true)
+                                                    ->skipRenderAfterStateUpdated()
                                                     ->formatStateUsing(function ($state, SGet $get) {
                                                         if ($state !== null && $state !== '') {
                                                             return $state;
@@ -1619,6 +1629,7 @@ class EventResource extends Resource
                                                     ->displayFormat('Y-m-d H:i')
                                                     ->minDate($minDateForEvent)
                                                     ->live(onBlur: true)
+                                                    ->skipRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set) {
                                                         if (!$state) return;
 
@@ -1643,6 +1654,7 @@ class EventResource extends Resource
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
                                                     ->live(onBlur: true)
+                                                    ->skipRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                                         if ($state && !$get('description')) {
                                                             $date = Carbon::parse($state)->format('d.m.Y');
