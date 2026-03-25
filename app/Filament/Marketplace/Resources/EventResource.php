@@ -1239,7 +1239,6 @@ class EventResource extends Resource
                                         Forms\Components\Repeater::make('meta.performance_prices')
                                             ->label($t('Prețuri per reprezentare', 'Prices per performance'))
                                             ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
-                                            ->simple(false)
                                             ->schema([
                                                 Forms\Components\Select::make('perf_id')
                                                     ->label($t('Reprezentare', 'Performance'))
