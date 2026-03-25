@@ -410,13 +410,26 @@ class ArtistsController extends BaseController
         $paginator = $query->paginate($perPage);
 
         $events = collect($paginator->items())->map(function ($event) use ($language) {
+            // For child events (multi-day occurrences), inherit ticket data from parent
+            $ticketTypes = $event->ticketTypes;
+            if ($ticketTypes->isEmpty() && $event->parent_id) {
+                $ticketTypes = \App\Models\TicketType::where('event_id', $event->parent_id)
+                    ->where('status', 'active')
+                    ->get();
+            }
+
             // Calculate min price from ticket types
-            $minPriceCents = $event->ticketTypes
+            $minPriceCents = $ticketTypes
                 ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
                 ->filter()
                 ->min();
             $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
-            $currency = $event->ticketTypes->first()?->currency ?? 'RON';
+            $currency = $ticketTypes->first()?->currency ?? 'RON';
+
+            // is_sold_out: empty collection returns true for ->every(), so check count first
+            $isSoldOut = $ticketTypes->isNotEmpty()
+                ? $ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0))
+                : (bool) $event->is_sold_out;
 
             return [
                 'id' => $event->id,
@@ -425,6 +438,7 @@ class ArtistsController extends BaseController
                 'event_date' => $event->event_date,
                 'start_time' => $event->start_time,
                 'end_time' => $event->end_time,
+                'parent_slug' => $event->parent_id ? $event->parent?->slug : null,
                 'venue' => $event->venue ? [
                     'name' => $event->venue->getTranslation('name', $language) ?? $event->venue->name,
                     'city' => $event->venue->city,
@@ -433,7 +447,7 @@ class ArtistsController extends BaseController
                 'min_price' => $minPrice,
                 'currency' => $currency,
                 'image' => $event->main_image_url ?? $event->poster_url,
-                'is_sold_out' => $event->ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0)),
+                'is_sold_out' => $isSoldOut,
             ];
         });
 

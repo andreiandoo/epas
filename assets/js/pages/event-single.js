@@ -1482,7 +1482,7 @@ const EventPage = {
 
         const section = document.createElement('div');
         section.id = 'perf-list-section';
-        section.className = 'mb-6 p-4 rounded-2xl';
+        section.className = 'p-4 mb-6';
         section.style.cssText = 'background:#1a1f35;';
         section.innerHTML =
             '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Alege reprezentarea</h3>' +
@@ -1590,11 +1590,11 @@ const EventPage = {
         const endTime = perf.end_time || '';
         const timeRange = time + (endTime ? ' – ' + endTime : '');
 
-        return '<div class="perf-selected-bar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);">' +
-            '<svg width="18" height="18" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
-            '<div style="flex:1;min-width:0;">' +
-                '<span style="font-size:13px;font-weight:600;color:#c7d2fe;">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
-                '<span style="font-size:12px;color:rgba(199,210,254,0.6);margin-left:8px;">' + timeRange + '</span>' +
+        return '<div class="flex items-center justify-center gap-2.5 px-3.5 py-2.5 mb-3 rounded-lg bg-primary/10 border border-primary/20">' +
+            '<svg class="w-4 h-4 shrink-0 text-slate-800" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
+            '<div class="min-w-0">' +
+                '<span class="text-sm font-semibold text-primary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
+                '<span class="text-xs text-primary/60 ml-2">' + timeRange + '</span>' +
             '</div>' +
         '</div>';
     },

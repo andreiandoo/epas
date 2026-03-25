@@ -425,6 +425,21 @@ class MarketplaceEventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
+        // Child events (multi-day occurrences) inherit ticket types + performances from parent
+        $parentEvent = null;
+        if ($event->parent_id && $event->ticketTypes->isEmpty()) {
+            $parentEvent = Event::with([
+                'ticketTypes.seatingSections',
+                'ticketTypes.seatingRows.section',
+                'performances' => fn ($q) => $q->where(fn ($qq) => $qq->where('status', 'active')->orWhereNull('status'))->orderBy('starts_at'),
+            ])->find($event->parent_id);
+
+            if ($parentEvent) {
+                // Use parent's ticket types for this child event
+                $event->setRelation('ticketTypes', $parentEvent->ticketTypes);
+            }
+        }
+
         $venue = $event->venue;
         $organizer = $event->marketplaceOrganizer;
 
@@ -556,7 +571,7 @@ class MarketplaceEventsController extends BaseController
                     return $terms;
                 })(),
             ],
-            'performances' => $event->performances()
+            'performances' => ($parentEvent ?? $event)->performances()
                 ->where(function ($q) {
                     $q->where('status', 'active')->orWhereNull('status');
                 })
