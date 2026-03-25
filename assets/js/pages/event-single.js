@@ -1234,12 +1234,22 @@ const EventPage = {
             const firstSlot = e.multi_slots[0];
             const firstDate = new Date(firstSlot.date);
 
-            // Show the first (or nearest upcoming) slot in the header
+            // Show the selected performance's date, or nearest upcoming slot
             const now = new Date();
-            const upcomingSlot = e.multi_slots.find(function(s) {
-                return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
-            }) || firstSlot;
-            const headerDate = new Date(upcomingSlot.date);
+            let headerSlot = null;
+            // If a performance is selected, match its date/time to a slot
+            if (e.selectedPerformanceId && e.performances) {
+                const selPerf = e.performances.find(p => p.id === e.selectedPerformanceId);
+                if (selPerf) {
+                    headerSlot = e.multi_slots.find(s => s.date === selPerf.date && s.start_time === selPerf.start_time);
+                }
+            }
+            if (!headerSlot) {
+                headerSlot = e.multi_slots.find(function(s) {
+                    return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
+                }) || firstSlot;
+            }
+            const headerDate = new Date(headerSlot.date);
 
             document.getElementById(this.elements.eventDay).textContent = headerDate.getDate();
             document.getElementById(this.elements.eventMonth).textContent = months[headerDate.getMonth()];
