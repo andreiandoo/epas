@@ -1482,10 +1482,11 @@ const EventPage = {
 
         const section = document.createElement('div');
         section.id = 'perf-list-section';
-        section.className = 'mb-6';
+        section.className = 'mb-6 p-4 rounded-2xl';
+        section.style.cssText = 'background:#1a1f35;';
         section.innerHTML =
-            '<h3 class="text-lg font-bold mb-3 text-white">Alege reprezentarea</h3>' +
-            '<div class="grid gap-2">' +
+            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Alege reprezentarea</h3>' +
+            '<div style="display:grid;gap:8px;">' +
             performances.map(function(p) {
                 const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
                 const isActive = p.id === self.event.selectedPerformanceId;
@@ -1497,21 +1498,21 @@ const EventPage = {
                 const endTime = p.end_time || '';
                 const timeRange = time + (endTime ? ' – ' + endTime : '');
 
-                return '<button type="button" class="perf-list-btn flex items-center gap-3 p-3 rounded-xl border transition-all text-left w-full ' +
-                    (isActive
-                        ? 'border-indigo-500 bg-indigo-500/15 text-white'
-                        : 'border-white/10 bg-white/5 text-white/70 hover:border-white/30 hover:bg-white/10') +
-                    '" data-perf-id="' + p.id + '">' +
-                    '<div class="flex-shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center text-center ' +
-                    (isActive ? 'bg-indigo-500 text-white' : 'bg-white/10 text-white/60') + '">' +
-                        '<span class="text-lg font-bold leading-none">' + dayNum + '</span>' +
-                        '<span class="text-[10px] uppercase leading-none mt-0.5">' + monthName + '</span>' +
+                return '<button type="button" class="perf-list-btn" data-perf-id="' + p.id + '" ' +
+                    'style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:1px solid ' +
+                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.12)') + ';background:' +
+                    (isActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)') +
+                    ';text-align:left;width:100%;cursor:pointer;transition:all .2s;">' +
+                    '<div style="flex-shrink:0;width:48px;height:48px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:' +
+                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.08)') + ';color:' + (isActive ? '#fff' : 'rgba(255,255,255,0.5)') + ';">' +
+                        '<span style="font-size:18px;font-weight:700;line-height:1;">' + dayNum + '</span>' +
+                        '<span style="font-size:10px;text-transform:uppercase;line-height:1;margin-top:2px;">' + monthName + '</span>' +
                     '</div>' +
-                    '<div class="flex-1 min-w-0">' +
-                        '<div class="font-semibold text-sm">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
-                        '<div class="text-xs opacity-70">' + timeRange + '</div>' +
+                    '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-size:14px;font-weight:600;color:' + (isActive ? '#e2e8f0' : 'rgba(255,255,255,0.7)') + ';">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
+                        '<div style="font-size:12px;color:rgba(255,255,255,0.45);">' + timeRange + '</div>' +
                     '</div>' +
-                    (isActive ? '<svg class="w-5 h-5 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
+                    (isActive ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="#818cf8"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
                 '</button>';
             }).join('') +
             '</div>';
@@ -1552,39 +1553,33 @@ const EventPage = {
     },
 
     /**
-     * Render performance selector pills for multi-day events
+     * Render selected performance info bar in ticket drawer (replaces pills)
      */
     renderPerformanceSelector() {
-        const container = document.getElementById(this.elements.ticketTypes);
-        if (!container) return '';
-
         const performances = this.event.performances || [];
         if (performances.length <= 1) return '';
 
-        const self = this;
+        const perf = this.getSelectedPerformance();
+        if (!perf) return '';
+
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+        const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+        const d = new Date(perf.date + 'T' + (perf.start_time || '00:00'));
+        const dayName = days[d.getDay()];
+        const dayNum = d.getDate();
+        const monthName = months[d.getMonth()];
+        const year = d.getFullYear();
+        const time = perf.start_time || '';
+        const endTime = perf.end_time || '';
+        const timeRange = time + (endTime ? ' – ' + endTime : '');
 
-        return '<div class="perf-selector" style="display:flex;gap:8px;overflow-x:auto;padding:0 0 12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1)">' +
-            performances.map(function(p) {
-                const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
-                const isActive = p.id === self.event.selectedPerformanceId;
-                const dayName = days[d.getDay()];
-                const dayNum = d.getDate();
-                const monthName = months[d.getMonth()];
-                const time = p.start_time || '';
-
-                return '<button type="button" class="perf-pill" data-perf-id="' + p.id + '" ' +
-                    'style="flex-shrink:0;padding:8px 16px;border-radius:20px;border:1px solid ' +
-                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.2)') + ';background:' +
-                    (isActive ? '#6366f1' : 'transparent') + ';color:' +
-                    (isActive ? '#fff' : 'rgba(255,255,255,0.7)') +
-                    ';cursor:pointer;font-size:13px;line-height:1.2;text-align:center;transition:all .2s">' +
-                    '<div style="font-weight:600">' + dayName + ', ' + dayNum + ' ' + monthName + '</div>' +
-                    (time ? '<div style="font-size:11px;opacity:0.8">' + time + '</div>' : '') +
-                    '</button>';
-            }).join('') +
-            '</div>';
+        return '<div class="perf-selected-bar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);">' +
+            '<svg width="18" height="18" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
+            '<div style="flex:1;min-width:0;">' +
+                '<span style="font-size:13px;font-weight:600;color:#c7d2fe;">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
+                '<span style="font-size:12px;color:rgba(199,210,254,0.6);margin-left:8px;">' + timeRange + '</span>' +
+            '</div>' +
+        '</div>';
     },
 
     renderTicketTypes() {
@@ -2044,6 +2039,19 @@ const EventPage = {
 
         console.log('[EventPage] addToCart called');
         console.log('[EventPage] Event taxes to add:', self.event.taxes);
+
+        // Multi-day events: require performance selection before adding to cart
+        if (this.event.duration_mode === 'multi_day' && this.event.performances && this.event.performances.length > 1 && !this.event.selectedPerformanceId) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Te rugăm să alegi o reprezentare înainte de a adăuga bilete în coș.');
+            } else {
+                alert('Te rugăm să alegi o reprezentare înainte de a adăuga bilete în coș.');
+            }
+            // Scroll to performance list
+            var perfSection = document.getElementById('perf-list-section');
+            if (perfSection) perfSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
 
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
