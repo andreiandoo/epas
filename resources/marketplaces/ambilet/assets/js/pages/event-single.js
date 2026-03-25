@@ -1470,9 +1470,14 @@ const EventPage = {
      */
     getEffectivePrice(tt) {
         const perf = this.getSelectedPerformance();
+        console.log('[getEffectivePrice] tt.id:', tt.id, 'type:', typeof tt.id,
+            'perf:', perf?.id,
+            'ticket_overrides:', perf?.ticket_overrides,
+            'keys:', perf?.ticket_overrides ? Object.keys(perf.ticket_overrides) : 'none');
         if (perf && perf.ticket_overrides) {
             // Check both string and number keys (API may serialize differently)
             const override = perf.ticket_overrides[tt.id] || perf.ticket_overrides[String(tt.id)];
+            console.log('[getEffectivePrice] override found:', override);
             if (override && override.price !== null && override.price !== undefined) {
                 return override.price;
             }
