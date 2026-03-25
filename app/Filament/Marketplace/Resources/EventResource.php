@@ -1411,6 +1411,7 @@ class EventResource extends Resource
 
                                         // Per-ticket commission settings (override organizer/marketplace defaults)
                                         SC\Fieldset::make($t('Comision personalizat', 'Custom commission'))
+                                            ->key('commission_fieldset')
                                             ->schema([
                                                 Forms\Components\Select::make('commission_type')
                                                     ->label($t('Tip comision', 'Commission type'))
@@ -1423,7 +1424,8 @@ class EventResource extends Resource
                                                     ])
                                                     ->default('')
                                                     ->live()
-                                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
+                                                    ->partiallyRenderComponentsAfterStateUpdated(['commission_fieldset'])
+                                                    ->afterStateUpdated(function ($state, SSet $set, $component) use ($marketplace) {
                                                         $defaultRate = $marketplace?->commission_rate ?? 5;
                                                         $defaultMode = $marketplace?->commission_mode ?? 'included';
                                                         if ($state === 'percentage' || $state === 'both') {
