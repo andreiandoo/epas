@@ -539,7 +539,7 @@ class MarketplacePanelProvider extends PanelProvider
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
 
-            // Prevent visual flash during Livewire morph updates
+            // Prevent visual flash during Livewire morph updates + compact repeater styles
             ->renderHook('panels::styles.after', fn () => '<style>
                 /* Prevent content flash during Livewire updates */
                 [wire\:loading]:not(.wire\:loading) { transition: opacity 0s; }
@@ -547,6 +547,13 @@ class MarketplacePanelProvider extends PanelProvider
                 /* Smooth morph transitions */
                 .fi-fo-repeater-item { transition: none !important; }
                 .fi-section-content { transition: none !important; }
+                /* Compact performance pricing repeater — everything inline */
+                .perf-prices-compact .fi-fo-repeater-item { padding: 4px 6px !important; gap: 0 !important; }
+                .perf-prices-compact .fi-fo-repeater-item-header { display: none !important; }
+                .perf-prices-compact .fi-fo-repeater-item-content { padding: 0 !important; }
+                .perf-prices-compact .fi-fo-repeater-item > div { display: flex !important; align-items: center !important; gap: 8px !important; }
+                .perf-prices-compact .fi-fo-repeater-item-actions { position: static !important; flex-shrink: 0; margin-left: auto; }
+                .perf-prices-compact .fi-fo-repeater-item-actions button { padding: 4px !important; }
             </style>')
 
             // Preserve scroll position, section collapse state AND repeater collapse state during Livewire morph updates

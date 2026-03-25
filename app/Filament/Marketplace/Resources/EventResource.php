@@ -1241,7 +1241,8 @@ class EventResource extends Resource
                                             ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
                                             ->schema([
                                                 Forms\Components\Select::make('perf_id')
-                                                    ->label($t('Reprezentare', 'Performance'))
+                                                    ->hiddenLabel()
+                                                    ->placeholder($t('Alege reprezentarea...', 'Choose performance...'))
                                                     ->options(function (SGet $get, \Livewire\Component $livewire) {
                                                         $eventId = $livewire->record?->id ?? null;
                                                         if (!$eventId) return [];
@@ -1255,11 +1256,9 @@ class EventResource extends Resource
                                                             ->toArray();
                                                     })
                                                     ->disableOptionWhen(function (string $value, SGet $get) {
-                                                        // Hide already-selected performances in this ticket type's repeater
                                                         $currentPerfId = $get('perf_id');
                                                         $allItems = $get('../../meta.performance_prices') ?? [];
                                                         $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
-                                                        // Allow current item's own value
                                                         if ((string) $value === (string) $currentPerfId) return false;
                                                         return in_array((string) $value, $usedIds);
                                                     })
@@ -1267,7 +1266,7 @@ class EventResource extends Resource
                                                     ->searchable()
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('price')
-                                                    ->label($t('Preț', 'Price'))
+                                                    ->hiddenLabel()
                                                     ->numeric()
                                                     ->step(0.01)
                                                     ->placeholder($t('Preț de bază', 'Base price'))
@@ -1276,9 +1275,11 @@ class EventResource extends Resource
                                             ])
                                             ->columns(4)
                                             ->grid(1)
+                                            ->itemLabel(fn () => null)
                                             ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
                                             ->defaultItems(0)
                                             ->reorderable(false)
+                                            ->extraAttributes(['class' => 'perf-prices-compact'])
                                             ->columnSpan(12),
 
                                         Forms\Components\Textarea::make('description')
