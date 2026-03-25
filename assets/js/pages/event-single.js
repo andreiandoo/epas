@@ -1691,7 +1691,7 @@ const EventPage = {
             }
 
             // Calculate commission for tooltip using per-ticket commission
-            var ticketComm = self.calculateTicketCommission(tt, tt.price);
+            var ticketComm = self.calculateTicketCommission(tt, displayPrice);
             var basePrice, commissionAmount, totalPrice;
             var commissionLabel = '';
 

@@ -1273,9 +1273,48 @@ class MarketplaceEventsController extends BaseController
         if ($minPrice === null && $event->parent_id) {
             $parent = Event::with(['ticketTypes' => fn ($q) => $q->where('status', 'active')])->find($event->parent_id);
             if ($parent && $parent->ticketTypes->isNotEmpty()) {
+                // Match child's date+time to a performance for overrides
+                $matchedPerf = null;
+                if ($event->event_date) {
+                    $childDate = $event->event_date->format('Y-m-d');
+                    $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $matchedPerf = \App\Models\Performance::where('event_id', $parent->id)
+                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                        ->get()
+                        ->first(fn ($p) => $p->starts_at->format('Y-m-d') === $childDate
+                            && (!$childTime || $p->starts_at->format('H:i') === $childTime));
+                }
                 $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
-                $parentPrices = $parentPublicTts->map(fn ($tt) => $tt->sale_price_cents ?: ($tt->price_cents ?? 0))->filter(fn ($p) => $p > 0);
+                $parentPrices = $parentPublicTts->map(function ($tt) use ($matchedPerf) {
+                    if ($matchedPerf) {
+                        $override = $matchedPerf->getEffectivePrice($tt);
+                        if ($override !== null) return $override;
+                    }
+                    return $tt->sale_price_cents ?: ($tt->price_cents ?? 0);
+                })->filter(fn ($p) => $p > 0);
                 $minPrice = $parentPrices->isNotEmpty() ? $parentPrices->min() / 100 : null;
+            }
+        }
+
+        // For multi-day parent events, check if any performance has lower prices
+        if ($minPrice !== null && $event->duration_mode === 'multi_day' && !$event->parent_id) {
+            $performances = $event->performances()
+                ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                ->whereNotNull('ticket_overrides')
+                ->get();
+            if ($performances->isNotEmpty()) {
+                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+                foreach ($performances as $perf) {
+                    foreach ($publicTickets as $tt) {
+                        $overrideCents = $perf->getEffectivePrice($tt);
+                        if ($overrideCents !== null && $overrideCents > 0) {
+                            $overridePrice = $overrideCents / 100;
+                            if ($overridePrice < $minPrice) {
+                                $minPrice = $overridePrice;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1822,10 +1861,28 @@ class MarketplaceEventsController extends BaseController
             $category = $event->marketplaceEventCategory;
             $eventDate = $event->event_date ?? $event->range_start_date;
 
-            // Get minimum price
+            // Get minimum price (with performance override support)
             $minPrice = null;
-            if ($event->ticketTypes->isNotEmpty()) {
-                $minPriceCents = $event->ticketTypes->map(function ($ticket) {
+            $tts = $event->ticketTypes;
+            if ($tts->isEmpty() && $event->parent_id) {
+                $tts = \App\Models\TicketType::where('event_id', $event->parent_id)->where('status', 'active')->get();
+            }
+            if ($tts->isNotEmpty()) {
+                // Find matching performance for child events
+                $perf = null;
+                if ($event->parent_id && $event->event_date) {
+                    $cd = $event->event_date->format('Y-m-d');
+                    $ct = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $perf = \App\Models\Performance::where('event_id', $event->parent_id)
+                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                        ->get()
+                        ->first(fn ($p) => $p->starts_at->format('Y-m-d') === $cd && (!$ct || $p->starts_at->format('H:i') === $ct));
+                }
+                $minPriceCents = $tts->map(function ($ticket) use ($perf) {
+                    if ($perf) {
+                        $override = $perf->getEffectivePrice($ticket);
+                        if ($override !== null) return $override;
+                    }
                     if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                         return $ticket->sale_price_cents;
                     }
