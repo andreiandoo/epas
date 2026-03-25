@@ -173,6 +173,7 @@ class EventResource extends Resource
                                         ->onIcon('heroicon-m-lock-closed')
                                         ->offIcon('heroicon-m-lock-open')
                                         ->live()
+                                        ->partiallyRenderAfterStateUpdated()
                                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                             if ($state) {
                                                 if ($get('is_cancelled')) $set('is_cancelled', false);
@@ -189,6 +190,7 @@ class EventResource extends Resource
                                         ->onIcon('heroicon-m-x-circle')
                                         ->offIcon('heroicon-m-x-circle')
                                         ->live()
+                                        ->partiallyRenderAfterStateUpdated()
                                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                             if ($state) {
                                                 if ($get('is_postponed')) $set('is_postponed', false);
@@ -202,6 +204,7 @@ class EventResource extends Resource
                                         ->onIcon('heroicon-m-clock')
                                         ->offIcon('heroicon-m-clock')
                                         ->live()
+                                        ->partiallyRenderAfterStateUpdated()
                                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                             if ($state) {
                                                 if ($get('is_cancelled')) $set('is_cancelled', false);
@@ -219,6 +222,7 @@ class EventResource extends Resource
                                         ->onIcon('heroicon-m-sparkles')
                                         ->offIcon('heroicon-m-sparkles')
                                         ->live()
+                                        ->partiallyRenderAfterStateUpdated()
                                         ->afterStateUpdated(function ($state, SSet $set) {
                                             if (!$state) $set('promoted_until', null);
                                         })
@@ -271,19 +275,22 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în secțiunea hero/featured de pe homepage', 'Show on homepage hero/featured section'))
                                         ->onIcon('heroicon-m-home')
                                         ->offIcon('heroicon-m-home')
-                                        ->live(),
+                                        ->live()
+                                        ->partiallyRenderAfterStateUpdated(),
                                     Forms\Components\Toggle::make('is_general_featured')
                                         ->label($t('Featured General', 'General Featured'))
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în listele generale de evenimente featured', 'Show in general featured events lists'))
                                         ->onIcon('heroicon-m-star')
                                         ->offIcon('heroicon-m-star')
-                                        ->live(),
+                                        ->live()
+                                        ->partiallyRenderAfterStateUpdated(),
                                     Forms\Components\Toggle::make('is_category_featured')
                                         ->label($t('Featured în Categorie', 'Category Featured'))
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează ca featured pe pagina categoriei sale', 'Show as featured in its category page'))
                                         ->onIcon('heroicon-m-tag')
                                         ->offIcon('heroicon-m-tag')
-                                        ->live(),
+                                        ->live()
+                                        ->partiallyRenderAfterStateUpdated(),
                                 ]),
 
                                 // Homepage Featured Image - only shown when Homepage Featured is enabled
@@ -319,7 +326,8 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează manual ce evenimente să apară în secțiunea "Îți recomandăm"', 'Manually select which events to show in the "Îți recomandăm" section'))
                                         ->onIcon('heroicon-m-queue-list')
                                         ->offIcon('heroicon-m-queue-list')
-                                        ->live(),
+                                        ->live()
+                                        ->partiallyRenderAfterStateUpdated(),
 
                                     Forms\Components\Select::make('custom_related_event_ids')
                                         ->label($t('Selectează Evenimente Conexe', 'Select Related Events'))
@@ -770,6 +778,7 @@ class EventResource extends Resource
                                     ->placeholder($t('Selectează o categorie', 'Select a category'))
                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Categorie personalizată de eveniment marketplace', 'Custom marketplace event category'))
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->afterStateUpdated(function ($state, SSet $set) {
                                         // Auto-fill eventTypes from the category's linked event types
                                         if ($state) {
@@ -804,6 +813,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->maxItems(2)
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                         $typeIds = (array) ($get('eventTypes') ?? []);
                                         if (!$typeIds) {
@@ -858,6 +868,7 @@ class EventResource extends Resource
                                     ->preload()
                                     ->searchable()
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->suffixAction(
                                         Action::make('create_artist')
                                             ->icon('heroicon-o-plus-circle')
@@ -1119,6 +1130,7 @@ class EventResource extends Resource
                                     ->helperText($t('Activează pentru a asocia tipuri de bilete cu reprezentări specifice și a seta prețuri diferite per show.', 'Enable to associate ticket types with specific performances and set different prices per show.'))
                                     ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->dehydrated(false)
                                     ->afterStateHydrated(function ($component, ?Event $record) {
                                         if (!$record) { $component->state(false); return; }
@@ -1265,6 +1277,7 @@ class EventResource extends Resource
                                                     ->required()
                                                     ->searchable()
                                                     ->live()
+                                                    ->partiallyRenderAfterStateUpdated()
                                                     ->columnSpan(3),
                                                 Forms\Components\TextInput::make('price')
                                                     ->hiddenLabel()
@@ -1401,6 +1414,7 @@ class EventResource extends Resource
                                                     ])
                                                     ->default('')
                                                     ->live()
+                                                    ->partiallyRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
                                                         $defaultRate = $marketplace?->commission_rate ?? 5;
                                                         $defaultMode = $marketplace?->commission_mode ?? 'included';
@@ -1535,6 +1549,7 @@ class EventResource extends Resource
                                                 Forms\Components\Toggle::make('has_sale')
                                                     ->label($t('Activează reducere', 'Enable Sale Discount'))
                                                     ->live()
+                                                    ->partiallyRenderAfterStateUpdated()
                                                     ->default(false)
                                                     ->dehydrated(false)
                                                     ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
@@ -1682,7 +1697,8 @@ class EventResource extends Resource
                                                             ])
                                                             ->required()
                                                             ->columnSpan(4)
-                                                            ->live(),
+                                                            ->live()
+                                                            ->partiallyRenderAfterStateUpdated(),
                                                         Forms\Components\TextInput::make('buy_qty')
                                                             ->label($t('Cumperi', 'Buy'))
                                                             ->numeric()->minValue(1)
@@ -1748,6 +1764,7 @@ class EventResource extends Resource
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează șabloane pentru a adăuga chei. Valorile vor fi pre-completate din datele evenimentului unde este disponibil.', 'Select templates to add keys. Values will be pre-filled from event data where available.'))
                         ->live()
+                        ->partiallyRenderAfterStateUpdated()
                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplaceLanguage, $marketplace) {
                             $seo = (array) ($get('seo') ?? []);
 
@@ -1952,6 +1969,7 @@ class EventResource extends Resource
                             })
                             ->placeholder($t('Toate reprezentările (layout partajat)', 'All performances (shared layout)'))
                             ->live()
+                            ->partiallyRenderAfterStateUpdated()
                             ->dehydrated(false)
                             ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
                             ->columnSpanFull(),
@@ -2000,7 +2018,8 @@ class EventResource extends Resource
                                     ->label($t('Face parte dintr-o grupare', 'Part of a Grouping'))
                                     ->helperText($t('Bifează dacă acest eveniment face parte dintr-o grupare (serie sau turneu)', 'Check if this event is part of a grouping (series or tour)'))
                                     ->dehydrated(false)
-                                    ->live(),
+                                    ->live()
+                                    ->partiallyRenderAfterStateUpdated(),
 
                                 Forms\Components\Radio::make('grouping_type')
                                     ->label($t('Tip grupare', 'Grouping type'))
@@ -2011,6 +2030,7 @@ class EventResource extends Resource
                                     ->default('serie_evenimente')
                                     ->dehydrated(false)
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
 
                                 Forms\Components\Radio::make('tour_mode')
@@ -2022,6 +2042,7 @@ class EventResource extends Resource
                                     ->default('new')
                                     ->dehydrated(false)
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
 
                                 Forms\Components\TextInput::make('tour_name')
@@ -2456,6 +2477,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->live()
+                                    ->partiallyRenderAfterStateUpdated()
                                     ->placeholder($t('Selectează organizator...', 'Select organizer...'))
                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
                                         // When organizer changes, update commission info and ticket terms
