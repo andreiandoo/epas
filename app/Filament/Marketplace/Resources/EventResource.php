@@ -445,7 +445,7 @@ class EventResource extends Resource
                                                 ->label($t('Data inițială', 'Initial date'))
                                                 ->minDate($minDateForEvent)
                                                 ->native(false)
-                                                ->live()
+                                                ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, SSet $set) {
                                                     if (!$state) { $set('recurring_weekday', null); return; }
                                                     $w = Carbon::parse($state)->dayOfWeekIso;
@@ -2125,7 +2125,6 @@ class EventResource extends Resource
                                 ->onIcon('heroicon-m-eye')
                                 ->offIcon('heroicon-m-eye-slash')
                                 ->default(false)
-                                ->live()
                                 ->columnSpan(1),
                             Forms\Components\Placeholder::make('event_status_badge_inline')
                                 ->hiddenLabel()
