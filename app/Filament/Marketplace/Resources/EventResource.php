@@ -1270,13 +1270,14 @@ class EventResource extends Resource
                                                             ])
                                                             ->toArray();
                                                     })
-                                                    ->disableOptionWhen(function (string $value, SGet $get, \Livewire\Component $livewire) {
+                                                    ->disableOptionWhen(function (string $value, SGet $get, $component) {
                                                         $currentPerfId = $get('perf_id');
-                                                        // Read all performance_prices items from parent repeater
-                                                        // Try multiple path strategies for nested repeaters
-                                                        $allItems = $get('../../meta.performance_prices')
-                                                            ?? $get('../meta.performance_prices')
-                                                            ?? [];
+                                                        // Get the full state path and derive the repeater path
+                                                        $statePath = $component->getStatePath();
+                                                        // statePath: data.ticketTypes.record-XXX.meta.performance_prices.UUID.perf_id
+                                                        // We need: data.ticketTypes.record-XXX.meta.performance_prices
+                                                        $repeaterPath = preg_replace('/\.[^.]+\.perf_id$/', '', $statePath);
+                                                        $allItems = data_get($component->getLivewire()->data, str_replace('data.', '', $repeaterPath), []);
                                                         $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
                                                         if ((string) $value === (string) $currentPerfId) return false;
                                                         return in_array((string) $value, $usedIds);
@@ -1422,7 +1423,6 @@ class EventResource extends Resource
                                                     ])
                                                     ->default('')
                                                     ->live()
-                                                    ->partiallyRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
                                                         $defaultRate = $marketplace?->commission_rate ?? 5;
                                                         $defaultMode = $marketplace?->commission_mode ?? 'included';
