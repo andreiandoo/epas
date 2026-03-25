@@ -1470,14 +1470,8 @@ const EventPage = {
      */
     getEffectivePrice(tt) {
         const perf = this.getSelectedPerformance();
-        console.log('[getEffectivePrice] tt.id:', tt.id, 'type:', typeof tt.id,
-            'perf:', perf?.id,
-            'ticket_overrides:', perf?.ticket_overrides,
-            'keys:', perf?.ticket_overrides ? Object.keys(perf.ticket_overrides) : 'none');
         if (perf && perf.ticket_overrides) {
-            // Check both string and number keys (API may serialize differently)
             const override = perf.ticket_overrides[tt.id] || perf.ticket_overrides[String(tt.id)];
-            console.log('[getEffectivePrice] override found:', override);
             if (override && override.price !== null && override.price !== undefined) {
                 return override.price;
             }
@@ -1710,21 +1704,21 @@ const EventPage = {
             }
 
             if (ticketComm.mode === 'included') {
-                // Commission is included - calculate base price from display price
+                // Commission is included - calculate base price from effective display price
                 if (ticketComm.type === 'fixed') {
-                    basePrice = tt.price - ticketComm.fixed;
+                    basePrice = displayPrice - ticketComm.fixed;
                 } else if (ticketComm.type === 'both') {
-                    basePrice = (tt.price - ticketComm.fixed) / (1 + ticketComm.rate / 100);
+                    basePrice = (displayPrice - ticketComm.fixed) / (1 + ticketComm.rate / 100);
                 } else {
-                    basePrice = tt.price / (1 + ticketComm.rate / 100);
+                    basePrice = displayPrice / (1 + ticketComm.rate / 100);
                 }
-                commissionAmount = tt.price - basePrice;
-                totalPrice = tt.price;
+                commissionAmount = displayPrice - basePrice;
+                totalPrice = displayPrice;
             } else {
                 // Commission added on top
-                basePrice = tt.price;
+                basePrice = displayPrice;
                 commissionAmount = ticketComm.amount;
-                totalPrice = tt.price + commissionAmount;
+                totalPrice = displayPrice + commissionAmount;
             }
 
             // Tooltip HTML - show commission as "Taxe procesare"
@@ -1734,7 +1728,7 @@ const EventPage = {
                     '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             } else {
-                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + displayPrice.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
@@ -2148,11 +2142,6 @@ const EventPage = {
                         commission: tt.commission || null,
                         is_refundable: tt.is_refundable || false
                     };
-                    console.log('[EventPage] addToCart price debug:', {
-                        ttId: tt.id, ttName: tt.name, ttBasePrice: tt.price,
-                        effectivePrice: basePrice, perfId: eventData.performance_id,
-                        ticketTypeDataPrice: ticketTypeData.price
-                    });
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
                     addedAny = true;
                 }
