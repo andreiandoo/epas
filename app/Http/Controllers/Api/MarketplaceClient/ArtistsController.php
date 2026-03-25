@@ -258,13 +258,25 @@ class ArtistsController extends BaseController
             ->limit(10)
             ->get()
             ->map(function ($event) use ($language, $client) {
+                // For child events (multi-day), inherit ticket types from parent
+                $ticketTypes = $event->ticketTypes;
+                if ($ticketTypes->isEmpty() && $event->parent_id) {
+                    $ticketTypes = \App\Models\TicketType::where('event_id', $event->parent_id)
+                        ->where('status', 'active')->get();
+                }
+
                 // Calculate min price from ticket types
-                $minPriceCents = $event->ticketTypes
+                $minPriceCents = $ticketTypes
                     ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
                     ->filter()
                     ->min();
                 $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
-                $currency = $event->ticketTypes->first()?->currency ?? 'RON';
+                $currency = $ticketTypes->first()?->currency ?? 'RON';
+
+                // is_sold_out: empty collection should NOT be sold out
+                $isSoldOut = $ticketTypes->isNotEmpty()
+                    ? $ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0))
+                    : (bool) $event->is_sold_out;
 
                 // Get commission settings (event > organizer > marketplace default)
                 $organizer = $event->marketplaceOrganizer;
@@ -280,12 +292,13 @@ class ArtistsController extends BaseController
                     'slug' => $event->slug,
                     'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
                     'start_time' => $event->start_time,
+                    'parent_slug' => $event->parent_id ? $event->parent?->slug : null,
                     'venue_name' => $event->venue?->getTranslation('name', $language) ?? $event->venue?->name,
                     'venue_city' => $event->venue?->city,
                     'price_from' => $minPrice,
                     'currency' => $currency,
                     'image' => $event->main_image_url ?? $event->poster_url,
-                    'is_sold_out' => $event->ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0)),
+                    'is_sold_out' => $isSoldOut,
                     'category' => $categoryName ? ['name' => $categoryName] : null,
                     'commission_mode' => $commissionMode,
                     'commission_rate' => $commissionRate,

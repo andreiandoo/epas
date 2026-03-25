@@ -633,7 +633,7 @@ const EventPage = {
             range_end_time: eventData.range_end_time,
             multi_slots: eventData.multi_slots,
             performances: performancesData,
-            selectedPerformanceId: null,
+            selectedPerformanceId: eventData.selected_performance_id || null,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -1066,7 +1066,12 @@ const EventPage = {
             if (this.event.performances.length === 0) {
                 this.event.performances = [e.performances[e.performances.length - 1]];
             }
-            this.event.selectedPerformanceId = this.event.performances[0].id;
+            // Use API-provided selection (child event) or default to first
+            if (this.event.selectedPerformanceId && this.event.performances.find(p => p.id === this.event.selectedPerformanceId)) {
+                // Already set from API (child event accessing parent performances)
+            } else {
+                this.event.selectedPerformanceId = this.event.performances[0].id;
+            }
         }
 
         // Ticket types (skip for ended events)
@@ -1594,7 +1599,7 @@ const EventPage = {
             '<svg class="w-4 h-4 shrink-0 text-slate-800" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
             '<div class="min-w-0">' +
                 '<span class="text-sm font-semibold text-primary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
-                '<span class="text-xs text-primary/60 ml-2">' + timeRange + '</span>' +
+                '<span class="text-sm font-semibold text-slate-800 ml-2">' + timeRange + '</span>' +
             '</div>' +
         '</div>';
     },

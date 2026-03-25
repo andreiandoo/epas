@@ -427,6 +427,7 @@ class MarketplaceEventsController extends BaseController
 
         // Child events (multi-day occurrences) inherit ticket types + performances from parent
         $parentEvent = null;
+        $selectedPerformanceId = null;
         if ($event->parent_id && $event->ticketTypes->isEmpty()) {
             $parentEvent = Event::with([
                 'ticketTypes.seatingSections',
@@ -437,6 +438,18 @@ class MarketplaceEventsController extends BaseController
             if ($parentEvent) {
                 // Use parent's ticket types for this child event
                 $event->setRelation('ticketTypes', $parentEvent->ticketTypes);
+
+                // Match child's date/time to a specific performance for auto-selection
+                if ($event->event_date && $parentEvent->relationLoaded('performances')) {
+                    $childDate = $event->event_date->format('Y-m-d');
+                    $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $matchedPerf = $parentEvent->performances->first(function ($p) use ($childDate, $childTime) {
+                        $perfDate = $p->starts_at->format('Y-m-d');
+                        $perfTime = $p->starts_at->format('H:i');
+                        return $perfDate === $childDate && (!$childTime || $perfTime === $childTime);
+                    });
+                    $selectedPerformanceId = $matchedPerf?->id;
+                }
             }
         }
 
@@ -518,7 +531,8 @@ class MarketplaceEventsController extends BaseController
                 'cover_image_url' => $coverImage ?? $posterImage,
                 'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
                 // Schedule info
-                'duration_mode' => $event->duration_mode ?? 'single_day',
+                'duration_mode' => $parentEvent ? ($parentEvent->duration_mode ?? 'multi_day') : ($event->duration_mode ?? 'single_day'),
+                'selected_performance_id' => $selectedPerformanceId,
                 // Single day fields
                 'starts_at' => ($event->event_date?->format('Y-m-d') ?? $event->range_start_date?->format('Y-m-d')) . 'T' . ($event->start_time ?? '00:00:00'),
                 'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
@@ -529,7 +543,7 @@ class MarketplaceEventsController extends BaseController
                 'range_start_time' => $event->range_start_time,
                 'range_end_time' => $event->range_end_time,
                 // Multi-day slots
-                'multi_slots' => $event->multi_slots,
+                'multi_slots' => $parentEvent ? $parentEvent->multi_slots : $event->multi_slots,
                 // Keep flat venue fields for backwards compatibility
                 'venue_name' => $venue?->getTranslation('name', $language),
                 'venue_address' => $venue?->address ?? $event->address,
