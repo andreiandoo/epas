@@ -1243,8 +1243,9 @@ class EventResource extends Resource
                                             ->schema([
                                                 Forms\Components\Select::make('perf_id')
                                                     ->label($t('Reprezentare', 'Performance'))
-                                                    ->options(function (SGet $get) {
-                                                        $eventId = $get('../../../../id');
+                                                    ->options(function (SGet $get, \Livewire\Component $livewire) {
+                                                        // Get event ID from Livewire record (path traversal unreliable in nested repeaters)
+                                                        $eventId = $livewire->record?->id ?? null;
                                                         if (!$eventId) return [];
                                                         return \App\Models\Performance::where('event_id', $eventId)
                                                             ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
