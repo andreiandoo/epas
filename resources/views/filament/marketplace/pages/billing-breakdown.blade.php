@@ -66,9 +66,13 @@
                         @foreach($d['events'] as $event)
                         <tr class="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-3 py-2.5">
+                                @if($event['event_id'])
                                 <a href="{{ route('filament.marketplace.resources.events.edit', $event['event_id']) }}" class="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
                                     {{ $event['event_name'] }}
                                 </a>
+                                @else
+                                <span class="font-medium text-gray-900 dark:text-white">{{ $event['event_name'] }}</span>
+                                @endif
                             </td>
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['order_count']) }}</td>
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['ticket_count']) }}</td>
