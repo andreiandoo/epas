@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Services\EventSchedulingService;
+use App\Services\PerformanceSyncService;
 use Filament\Resources\Pages\CreateRecord;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
@@ -97,6 +98,11 @@ class CreateEvent extends CreateRecord
         // Process multi-day and recurring event scheduling
         // Creates child events for each occurrence
         app(EventSchedulingService::class)->processEventScheduling($this->record);
+
+        // Sync Performance records from multi_slots (for per-slot pricing)
+        if ($this->record->duration_mode === 'multi_day') {
+            app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
+        }
     }
 
     protected function getRedirectUrl(): string

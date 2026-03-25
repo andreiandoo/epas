@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\EventResource;
 use App\Models\Event;
 use App\Models\Tour;
 use App\Services\EventSchedulingService;
+use App\Services\PerformanceSyncService;
 use App\Services\Seating\MarketplaceEventSeatingService;
 use App\Models\Seating\EventSeatingLayout;
 use Filament\Actions;
@@ -981,6 +982,11 @@ class EditEvent extends EditRecord
         // Only sync child events if this is a parent event (not a child)
         if (!$this->record->isChild()) {
             app(EventSchedulingService::class)->syncChildEvents($this->record);
+        }
+
+        // Sync Performance records from multi_slots (for per-slot pricing)
+        if ($this->record->duration_mode === 'multi_day') {
+            app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
         }
 
         // Sync artist pivot data (sort_order, is_headliner, is_co_headliner)

@@ -351,6 +351,11 @@ class Event extends Model
         return $this->hasMany(TicketType::class);
     }
 
+    public function performances(): HasMany
+    {
+        return $this->hasMany(Performance::class);
+    }
+
     public function tickets(): HasManyThrough
     {
         return $this->hasManyThrough(

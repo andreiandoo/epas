@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Performance extends Model
 {
@@ -58,6 +60,44 @@ class Performance extends Model
     public function season(): BelongsTo
     {
         return $this->belongsTo(Season::class);
+    }
+
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    public function seatingLayout(): HasOne
+    {
+        return $this->hasOne(Seating\EventSeatingLayout::class);
+    }
+
+    /**
+     * Get effective price for a ticket type (override or null = base price).
+     */
+    public function getEffectivePrice(TicketType $tt): ?int
+    {
+        $overrides = collect($this->ticket_overrides ?? []);
+        $match = $overrides->firstWhere('ticket_type_id', $tt->id);
+        return $match['price_cents'] ?? null;
+    }
+
+    /**
+     * Get effective quota for a ticket type (override or null = ticket_type quota).
+     */
+    public function getEffectiveQuota(TicketType $tt): ?int
+    {
+        $overrides = collect($this->ticket_overrides ?? []);
+        $match = $overrides->firstWhere('ticket_type_id', $tt->id);
+        return $match['quota'] ?? null;
+    }
+
+    /**
+     * Check if this performance has a seating snapshot saved.
+     */
+    public function hasSeatingSnapshot(): bool
+    {
+        return $this->seatingLayout()->exists();
     }
 
     /**
