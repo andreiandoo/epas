@@ -208,7 +208,7 @@
 
         <!-- Tixello Monthly Billing -->
         @if(isset($billing))
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-5">
+        <a href="{{ route('filament.marketplace.pages.billing-breakdown') }}" class="block bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-5 hover:border-rose-300 dark:hover:border-rose-700 transition-colors group">
             <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
@@ -219,8 +219,11 @@
                         <p class="text-xs text-gray-500 dark:text-gray-400">{{ $billing['month_label'] }}</p>
                     </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($billing['grand_total'], 2) }} <span class="text-sm font-medium">{{ $billing['currency'] }}</span></p>
+                <div class="flex items-center gap-3">
+                    <div class="text-right">
+                        <p class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ number_format($billing['grand_total'], 2) }} <span class="text-sm font-medium">{{ $billing['currency'] }}</span></p>
+                    </div>
+                    <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400 group-hover:text-rose-500 transition-colors" />
                 </div>
             </div>
 
@@ -234,8 +237,8 @@
                     <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($billing['ticketing_commission'], 2) }} {{ $billing['currency'] }}</span>
                 </div>
 
-                {{-- Service breakdown --}}
-                @forelse($billing['services'] as $service)
+                {{-- Service breakdown - always show all --}}
+                @foreach($billing['services'] as $service)
                 <div class="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div class="flex items-center gap-2">
                         @switch($service['type'])
@@ -256,24 +259,16 @@
                         @endswitch
                         <span class="text-sm text-gray-700 dark:text-gray-300">{{ $service['label'] }}</span>
                     </div>
-                    <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ number_format($service['amount'], 2) }} {{ $billing['currency'] }}</span>
+                    <span class="text-sm font-semibold {{ $service['amount'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500' }}">{{ number_format($service['amount'], 2) }} {{ $billing['currency'] }}</span>
                 </div>
-                @empty
-                    @if($billing['ticketing_commission'] == 0)
-                    <div class="py-2 px-3 text-center">
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Nicio factură pentru luna curentă</p>
-                    </div>
-                    @endif
-                @endforelse
+                @endforeach
 
-                @if($billing['services_total'] > 0)
                 <div class="flex items-center justify-between py-2 px-3 border-t border-gray-200 dark:border-gray-600 mt-1">
                     <span class="text-xs text-gray-500 dark:text-gray-400 uppercase">Subtotal servicii</span>
                     <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ number_format($billing['services_total'], 2) }} {{ $billing['currency'] }}</span>
                 </div>
-                @endif
             </div>
-        </div>
+        </a>
         @endif
 
         <!-- Tables: Top Organizers + Top Live Events side by side -->

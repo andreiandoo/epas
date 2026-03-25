@@ -321,13 +321,14 @@ class Dashboard extends Page
             'campaign' => 'Creare Campanie',
         ];
 
+        // Always show all service types, even if 0
         $services = [];
         $servicesTotal = 0;
-        foreach ($serviceBreakdown as $type => $amount) {
-            $amount = (float) $amount;
+        foreach ($serviceLabels as $type => $label) {
+            $amount = (float) ($serviceBreakdown[$type] ?? 0);
             $services[] = [
                 'type' => $type,
-                'label' => $serviceLabels[$type] ?? $type,
+                'label' => $label,
                 'amount' => $amount,
             ];
             $servicesTotal += $amount;
