@@ -1518,8 +1518,7 @@ class EventResource extends Resource
                                                             ->hiddenLabel()
                                                             ->numeric()
                                                             ->step(0.01)
-                                                            ->placeholder($t('Preț de bază', 'Base price'))
-                                                            ->suffix('RON')
+                                                            ->placeholder($t('Preț', 'Price'))
                                                             ->columnSpan(1),
                                                         Forms\Components\TextInput::make('stock')
                                                             ->hiddenLabel()
@@ -1529,17 +1528,17 @@ class EventResource extends Resource
                                                             ->columnSpan(1),
                                                         Forms\Components\TextInput::make('series_start')
                                                             ->hiddenLabel()
-                                                            ->placeholder($t('Serie start', 'Series start'))
+                                                            ->placeholder('Serie start')
                                                             ->disabled()
                                                             ->dehydrated(true)
-                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:11px;'])
+                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])
                                                             ->columnSpan(2),
                                                         Forms\Components\TextInput::make('series_end')
                                                             ->hiddenLabel()
-                                                            ->placeholder($t('Serie end', 'Series end'))
+                                                            ->placeholder('Serie end')
                                                             ->disabled()
                                                             ->dehydrated(true)
-                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:11px;'])
+                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:9px;'])
                                                             ->columnSpan(2),
                                                     ])
                                                     ->columns(9)
