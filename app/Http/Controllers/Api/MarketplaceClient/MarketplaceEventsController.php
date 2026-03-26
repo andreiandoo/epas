@@ -710,8 +710,12 @@ class MarketplaceEventsController extends BaseController
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
+                    'ticket_group' => $tt->ticket_group,
+                    'perks' => $tt->perks ?? [],
                 ];
             })->values(),
+            'enable_ticket_groups' => (bool) $event->enable_ticket_groups,
+            'enable_ticket_perks' => (bool) $event->enable_ticket_perks,
             'artists' => $event->artists->map(function ($artist) use ($language) {
                 // Get bio and truncate to first 80 words
                 $bio = $artist->getTranslation('bio_html', $language) ?? '';

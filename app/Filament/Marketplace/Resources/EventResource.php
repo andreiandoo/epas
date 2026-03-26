@@ -1144,6 +1144,19 @@ class EventResource extends Resource
                                     })
                                     ->columnSpanFull(),
 
+                                SC\Grid::make(2)->schema([
+                                    Forms\Components\Toggle::make('enable_ticket_groups')
+                                        ->label($t('Grupează tipurile de bilete', 'Group ticket types'))
+                                        ->helperText($t('Activează pentru a grupa tipurile de bilete în secțiuni (ex: Bilete Acces, Camping, Parcări)', 'Enable to group ticket types into sections'))
+                                        ->live()
+                                        ->default(false),
+                                    Forms\Components\Toggle::make('enable_ticket_perks')
+                                        ->label($t('Condiții / Beneficii per tip bilet', 'Perks / Conditions per ticket type'))
+                                        ->helperText($t('Activează pentru a adăuga o listă de condiții sau beneficii la fiecare tip de bilet', 'Enable to add a list of perks or conditions to each ticket type'))
+                                        ->live()
+                                        ->default(false),
+                                ]),
+
                                 Forms\Components\Repeater::make('ticketTypes')
                                     ->relationship()
                                     ->label($t('Tipuri de bilete', 'Ticket types'))
@@ -1320,6 +1333,28 @@ class EventResource extends Resource
                                             ->label($t('Note interne', 'Internal Notes'))
                                             ->placeholder($t('Notițe vizibile doar pentru admin...', 'Notes visible only for admin...'))
                                             ->rows(2)
+                                            ->columnSpan(12),
+
+                                        // Ticket group (shown when event has enable_ticket_groups)
+                                        Forms\Components\TextInput::make('ticket_group')
+                                            ->label($t('Grup', 'Group'))
+                                            ->placeholder($t('ex: Bilete Acces, Camping, Parcări', 'e.g. General Access, Camping, Parking'))
+                                            ->datalist(['Bilete Acces', 'Camping', 'Parcări', 'VIP', 'Add-ons'])
+                                            ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_groups'))
+                                            ->columnSpan(12),
+
+                                        // Perks / Conditions repeater (shown when event has enable_ticket_perks)
+                                        Forms\Components\Repeater::make('perks')
+                                            ->label($t('Condiții / Beneficii', 'Perks / Conditions'))
+                                            ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
+                                            ->simple(
+                                                Forms\Components\TextInput::make('text')
+                                                    ->placeholder($t('ex: Include acces la zona VIP', 'e.g. Includes VIP area access'))
+                                                    ->required()
+                                            )
+                                            ->defaultItems(0)
+                                            ->addActionLabel($t('Adaugă condiție / beneficiu', 'Add perk / condition'))
+                                            ->reorderable()
                                             ->columnSpan(12),
 
                                         SC\Grid::make(3)->schema([

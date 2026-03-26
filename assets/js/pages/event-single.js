@@ -1800,6 +1800,20 @@ const EventPage = {
                 controlsHtml += '</div>';
             }
 
+            // Render perks list if available
+            var perksHtml = '';
+            if (self.event.enable_ticket_perks && tt.perks && tt.perks.length > 0) {
+                perksHtml = '<ul class="mt-2 space-y-1">' +
+                    tt.perks.map(function(perk) {
+                        var perkText = typeof perk === 'string' ? perk : (perk.text || perk);
+                        return '<li class="flex items-start gap-1.5 text-xs text-muted">' +
+                            '<svg class="w-3.5 h-3.5 mt-0.5 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' +
+                            '<span>' + self.escapeHtml(perkText) + '</span>' +
+                        '</li>';
+                    }).join('') +
+                '</ul>';
+            }
+
             return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-center justify-between">' +
                     '<div class="relative tooltip-trigger">' +
@@ -1807,6 +1821,7 @@ const EventPage = {
                             (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span>' : '') +
                         '</h3>' +
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
+                        perksHtml +
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right relative">' +
@@ -1819,7 +1834,46 @@ const EventPage = {
                     controlsHtml +
                 '</div>' +
             '</div>';
-        }).join('');
+        });
+
+        // Group ticket types if enabled
+        var ticketCardsHtml;
+        if (self.event.enable_ticket_groups) {
+            // Group by ticket_group
+            var groups = {};
+            var ungrouped = [];
+            self.ticketTypes.forEach(function(tt, idx) {
+                if (tt.ticket_group) {
+                    if (!groups[tt.ticket_group]) groups[tt.ticket_group] = [];
+                    groups[tt.ticket_group].push(ticketCards[idx]);
+                } else {
+                    ungrouped.push(ticketCards[idx]);
+                }
+            });
+
+            ticketCardsHtml = '';
+            Object.keys(groups).forEach(function(groupName) {
+                ticketCardsHtml += '<div class="mb-4 overflow-hidden border rounded-2xl border-border">' +
+                    '<button type="button" onclick="this.parentElement.querySelector(\'.ticket-group-content\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
+                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100">' +
+                        '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(groupName) + '</span>' +
+                        '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
+                    '</button>' +
+                    '<div class="ticket-group-content">' +
+                        groups[groupName].join('') +
+                    '</div>' +
+                '</div>';
+            });
+
+            // Append ungrouped tickets at the end
+            if (ungrouped.length > 0) {
+                ticketCardsHtml += ungrouped.join('');
+            }
+        } else {
+            ticketCardsHtml = ticketCards.join('');
+        }
+
+        container.innerHTML = perfSelectorHtml + ticketCardsHtml;
 
         // Bind performance pill click handlers
         container.querySelectorAll('.perf-pill').forEach(function(btn) {
@@ -4159,6 +4213,13 @@ const EventPage = {
             // Silently fail - tracking should never break the page
             console.warn('[EventPage] Failed to load organizer tracking:', e.message);
         }
+    },
+
+    escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
 
