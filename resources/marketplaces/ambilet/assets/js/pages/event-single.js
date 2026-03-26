@@ -1677,14 +1677,28 @@ const EventPage = {
 
         // Create modal
         var modal = document.createElement('div');
+        // Hide ticket drawer while picking performance
+        var ticketDrawer = document.getElementById('ticketDrawer');
+        var ticketBackdrop = document.getElementById('ticketDrawerBackdrop');
+        if (ticketDrawer) ticketDrawer.style.visibility = 'hidden';
+        if (ticketBackdrop) ticketBackdrop.style.visibility = 'hidden';
+
         modal.id = 'perf-picker-modal';
-        modal.className = 'fixed inset-0 z-50 flex items-end justify-center';
+        modal.className = 'fixed inset-0 z-[1100] flex items-end justify-center';
+
+        var closeAndRestore = function() {
+            document.getElementById('perf-picker-modal')?.remove();
+            // Restore ticket drawer
+            if (ticketDrawer) ticketDrawer.style.visibility = 'visible';
+            if (ticketBackdrop) ticketBackdrop.style.visibility = 'visible';
+        };
+
         modal.innerHTML =
-            '<div class="absolute inset-0 bg-black/50" onclick="document.getElementById(\'perf-picker-modal\').remove()"></div>' +
-            '<div class="relative w-full max-h-[80vh] bg-white rounded-t-2xl shadow-xl overflow-hidden animate-slide-up">' +
+            '<div class="absolute inset-0 bg-black/50" onclick="document.getElementById(\'perf-picker-modal\')?.remove();var td=document.getElementById(\'ticketDrawer\');var tb=document.getElementById(\'ticketDrawerBackdrop\');if(td)td.style.visibility=\'visible\';if(tb)tb.style.visibility=\'visible\';"></div>' +
+            '<div class="relative w-full max-h-[80vh] bg-white rounded-t-2xl shadow-xl overflow-hidden">' +
                 '<div class="flex items-center justify-between px-5 py-4 border-b border-border">' +
                     '<h3 class="text-base font-bold text-secondary">Selectează reprezentația</h3>' +
-                    '<button type="button" onclick="document.getElementById(\'perf-picker-modal\').remove()" class="p-1 rounded-lg text-muted hover:bg-gray-100">' +
+                    '<button type="button" id="perf-picker-close-btn" class="p-1 rounded-lg text-muted hover:bg-gray-100">' +
                         '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
@@ -1692,6 +1706,9 @@ const EventPage = {
             '</div>';
 
         document.body.appendChild(modal);
+
+        // Close button handler
+        document.getElementById('perf-picker-close-btn').addEventListener('click', closeAndRestore);
 
         // Bind click handlers
         modal.querySelectorAll('[data-perf-modal-id]').forEach(function(btn) {
@@ -1708,7 +1725,7 @@ const EventPage = {
                         b.style.background = isNowActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)';
                     });
                 }
-                modal.remove();
+                closeAndRestore();
             });
         });
     },
