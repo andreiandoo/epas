@@ -122,6 +122,24 @@ body {
     display: none !important;
 }
 
+/* ─── Ticket type sections inside repeater ───────────────────────── */
+
+/* Reduce padding on ticket type inner sections */
+.ep-tt-section .fi-section,
+.fi-fo-repeater .fi-section.fi-section-compact {
+    padding: 0 !important;
+}
+
+/* Compact section headers */
+.fi-fo-repeater .fi-section .fi-section-header-ctn {
+    padding: 0.5rem 1rem !important;
+}
+
+/* Smaller section heading text */
+.fi-fo-repeater .fi-section .fi-section-header-heading {
+    font-size: 0.875rem !important;
+}
+
 /* ─── Event row status colours ───────────────────────────────────── */
 
 /* Unpublished events: light orange background */

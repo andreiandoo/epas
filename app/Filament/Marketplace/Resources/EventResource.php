@@ -1170,32 +1170,45 @@ class EventResource extends Resource
                                         $name = e($state['name'] ?? $t('Bilet', 'Ticket'));
                                         $isActive = $state['is_active'] ?? true;
                                         $isEntryTicket = $state['is_entry_ticket'] ?? false;
-                                        $channelBadge = $isEntryTicket
-                                            ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Offline</span>'
-                                            : '<span style="font-size:10px;font-weight:600;color:#0891b2;background:#ecfeff;padding:1px 6px;border-radius:4px;margin-left:6px;">Online</span>';
+                                        $isDeclarable = $state['is_declarable'] ?? true;
+                                        $isRefundable = $state['is_refundable'] ?? false;
+
+                                        $badges = '';
+                                        // App badge
+                                        $badges .= $isEntryTicket
+                                            ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">App</span>'
+                                            : '';
+                                        // Declarabil badge
+                                        $badges .= $isDeclarable
+                                            ? '<span style="font-size:10px;font-weight:600;color:#0891b2;background:#ecfeff;padding:1px 6px;border-radius:4px;margin-left:6px;">Declarabil</span>'
+                                            : '';
+                                        // Returnabil badge
+                                        $badges .= $isRefundable
+                                            ? '<span style="font-size:10px;font-weight:600;color:#059669;background:#ecfdf5;padding:1px 6px;border-radius:4px;margin-left:6px;">Returnabil</span>'
+                                            : '';
 
                                         if ($isActive) {
-                                            return new \Illuminate\Support\HtmlString('✓ ' . $name . ' ' . $channelBadge);
+                                            return new \Illuminate\Support\HtmlString('✓ ' . $name . $badges);
                                         }
 
                                         // Expired: active_until is set and in the past
                                         $activeUntil = $state['active_until'] ?? null;
                                         if ($activeUntil && \Carbon\Carbon::parse($activeUntil, 'Europe/Bucharest')->isPast()) {
                                             return new \Illuminate\Support\HtmlString(
-                                                '○ ' . $name . ' ' . $channelBadge . ' <span style="font-size:11px;font-weight:600;color:#dc2626;background:#fef2f2;padding:1px 6px;border-radius:4px;margin-left:6px;">Expirat</span>'
+                                                '○ ' . $name . $badges . ' <span style="font-size:11px;font-weight:600;color:#dc2626;background:#fef2f2;padding:1px 6px;border-radius:4px;margin-left:6px;">Expirat</span>'
                                             );
                                         }
 
                                         // Autostart: waiting for previous ticket type to sell out
                                         if ($state['autostart_when_previous_sold_out'] ?? false) {
                                             return new \Illuminate\Support\HtmlString(
-                                                '○ ' . $name . ' ' . $channelBadge . ' <span style="font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Autostart</span>'
+                                                '○ ' . $name . $badges . ' <span style="font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Autostart</span>'
                                             );
                                         }
 
                                         // Manually deactivated
                                         return new \Illuminate\Support\HtmlString(
-                                            '○ ' . $name . ' ' . $channelBadge . ' <span style="font-size:11px;font-weight:600;color:#d97706;background:#fffbeb;padding:1px 6px;border-radius:4px;margin-left:6px;">Dezactivat</span>'
+                                            '○ ' . $name . $badges . ' <span style="font-size:11px;font-weight:600;color:#d97706;background:#fffbeb;padding:1px 6px;border-radius:4px;margin-left:6px;">Dezactivat</span>'
                                         );
                                     })
                                     ->extraItemActions([
@@ -1229,6 +1242,7 @@ class EventResource extends Resource
 
                                         // ── Section 1: Identificare (always visible, not collapsible) ──
                                         SC\Section::make($t('Identificare', 'Identification'))
+                                            ->extraAttributes(['class' => 'ep-tt-section'])
                                             ->schema([
                                                 // Row 1: Name, SKU, Price, Stock, Currency
                                                 SC\Grid::make(5)->schema([
@@ -1268,7 +1282,7 @@ class EventResource extends Resource
                                                             return null;
                                                         }),
                                                     Forms\Components\TextInput::make('capacity')
-                                                        ->label($t('Stoc bilete', 'Ticket stock'))
+                                                        ->label($t('Stoc', 'Stock'))
                                                         ->inlineLabel($il)
                                                         ->placeholder($t('obligatoriu', 'required'))
                                                         ->numeric()
@@ -1280,7 +1294,7 @@ class EventResource extends Resource
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
                                                             if ($record && $record->quota_sold > 0) {
-                                                                $hints[] = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
+                                                                $hints[] = '<span class="text-xs">' . $t('Vândute', 'Sold') . ": {$record->quota_sold}</span>";
                                                             }
                                                             $generalStock = (int) ($get('../../general_stock') ?: 0);
                                                             $capacity = (int) ($get('capacity') ?: 0);
@@ -1352,33 +1366,23 @@ class EventResource extends Resource
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
                                                 ])->columnSpan(12),
 
-                                                // Row 3: Description + is_refundable
-                                                SC\Grid::make(12)->schema([
+                                                // Row 3: Description + Admin notes side by side
+                                                SC\Grid::make(2)->schema([
                                                     Forms\Components\Textarea::make('description')
                                                         ->label($t('Descriere', 'Description'))
-                                                        ->inlineLabel($il)
-                                                        ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
+                                                        ->placeholder($t('Descriere opțională tip bilet', 'Optional ticket type description'))
                                                         ->rows(2)
                                                         ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                             if (!$state && $get('sales_end_at') && $get('price')) {
                                                                 $date = Carbon::parse($get('sales_end_at'))->format('d.m.Y');
                                                                 $set('description', "Reducere până la {$date}");
                                                             }
-                                                        })
-                                                        ->columnSpan(10),
-                                                    Forms\Components\Toggle::make('is_refundable')
-                                                        ->label($t('Returnabil', 'Refundable'))
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                                        ->default(false)
-                                                        ->columnSpan(2),
+                                                        }),
+                                                    Forms\Components\Textarea::make('admin_notes')
+                                                        ->label($t('Note interne', 'Internal Notes'))
+                                                        ->placeholder($t('Vizibil doar în admin...', 'Visible only in admin...'))
+                                                        ->rows(2),
                                                 ])->columnSpan(12),
-
-                                                // Row 4: Admin notes
-                                                Forms\Components\Textarea::make('admin_notes')
-                                                    ->label($t('Note interne', 'Internal Notes'))
-                                                    ->placeholder($t('Notițe vizibile doar pentru admin...', 'Notes visible only for admin...'))
-                                                    ->rows(2)
-                                                    ->columnSpan(12),
 
                                                 // Color picker (conditional on seating)
                                                 Forms\Components\ColorPicker::make('color')
@@ -1418,6 +1422,7 @@ class EventResource extends Resource
 
                                         // ── Section 2: Prețuri per reprezentație (collapsible, collapsed) ──
                                         SC\Section::make($t('Prețuri per reprezentație', 'Prices per performance'))
+                                            ->visible(fn (SGet $get) => $get('../../duration_mode') === 'multi_day')
                                             ->schema([
                                                 Forms\Components\Repeater::make('meta.performance_prices')
                                                     ->label($t('Prețuri per reprezentare', 'Prices per performance'))
@@ -1473,6 +1478,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1535,6 +1542,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1556,6 +1565,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1595,6 +1606,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1724,6 +1737,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1794,6 +1809,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
 
@@ -1836,6 +1853,8 @@ class EventResource extends Resource
                                             ])
                                             ->collapsible()
                                             ->collapsed()
+                                            ->persistCollapsed()
+                                            ->compact()
                                             ->columns(12)
                                             ->columnSpan(12),
                                     ]),
