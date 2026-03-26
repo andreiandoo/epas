@@ -1476,8 +1476,22 @@ class EventResource extends Resource
                                                             ->minValue(0)
                                                             ->placeholder($t('Stoc (gol = stoc tip bilet)', 'Stock (empty = ticket type stock)'))
                                                             ->columnSpan(1),
+                                                        Forms\Components\TextInput::make('series_start')
+                                                            ->hiddenLabel()
+                                                            ->placeholder($t('Serie start', 'Series start'))
+                                                            ->disabled()
+                                                            ->dehydrated(true)
+                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:11px;'])
+                                                            ->columnSpan(2),
+                                                        Forms\Components\TextInput::make('series_end')
+                                                            ->hiddenLabel()
+                                                            ->placeholder($t('Serie end', 'Series end'))
+                                                            ->disabled()
+                                                            ->dehydrated(true)
+                                                            ->extraAttributes(['style' => 'font-family:monospace;font-size:11px;'])
+                                                            ->columnSpan(2),
                                                     ])
-                                                    ->columns(5)
+                                                    ->columns(9)
                                                     ->grid(1)
                                                     ->itemLabel(fn () => null)
                                                     ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
