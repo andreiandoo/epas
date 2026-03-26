@@ -44,8 +44,8 @@ class ListTickets extends ListRecords
         return [
             'all' => Tab::make('Toate'),
             'valid' => Tab::make('Valide')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'valid'))
-                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'valid')->count())
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['valid', 'used']))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->whereIn('status', ['valid', 'used'])->count())
                 ->badgeColor('success'),
             'used' => Tab::make('Utilizate')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'used'))
