@@ -1226,251 +1226,258 @@ class EventResource extends Resource
                                     ->columns(12)
                                     ->schema([
                                         Forms\Components\Hidden::make('id'),
-                                        Forms\Components\TextInput::make('name')
-                                            ->label($t('Nume', 'Name'))
-                                            ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
-                                            ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
-                                            ->required()
-                                            ->inlineLabel($il)
-                                            ->columnSpan(4)
-                                            ->live(onBlur: true)
-                                            ->skipRenderAfterStateUpdated()
-                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                if ($get('sku')) return;
-                                                $set('sku', Str::upper(Str::slug($state, '-')));
-                                            }),
-                                        Forms\Components\TextInput::make('sku')
-                                            ->label('SKU')
-                                            ->inlineLabel($il)
-                                            ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty'))
-                                            ->columnSpan(3),
-                                        Forms\Components\Toggle::make('is_entry_ticket')
-                                            ->label($t('Bilet pentru aplicație', 'App Ticket'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
-                                            ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
-                                            ->default(false)
-                                            ->columnSpan(3),
-                                        Forms\Components\Toggle::make('is_declarable')
-                                            ->label($t('Declarabil', 'Declarable'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
-                                            ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
-                                            ->default(true)
-                                            ->columnSpan(2),
-                                        Forms\Components\ColorPicker::make('color')
-                                            ->label($t('Culoare pe hartă', 'Map color'))
-                                            ->hexColor()
-                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
-                                            ->columnSpan(3),
 
-                                        // Per-performance price overrides (multi-day events only)
-                                        // Stored in TicketType.meta['performance_prices'] as [{perf_id, price}]
-                                        Forms\Components\Repeater::make('meta.performance_prices')
-                                            ->label($t('Prețuri per reprezentare', 'Prices per performance'))
-                                            ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
+                                        // ── Section 1: Identificare (always visible, not collapsible) ──
+                                        SC\Section::make($t('Identificare', 'Identification'))
                                             ->schema([
-                                                Forms\Components\Select::make('perf_id')
-                                                    ->hiddenLabel()
-                                                    ->placeholder($t('Alege reprezentarea...', 'Choose performance...'))
-                                                    ->options(function (SGet $get, \Livewire\Component $livewire) {
-                                                        $eventId = $livewire->record?->id ?? null;
-                                                        if (!$eventId) return [];
-                                                        return \App\Models\Performance::where('event_id', $eventId)
-                                                            ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
-                                                            ->orderBy('starts_at')
-                                                            ->get()
-                                                            ->mapWithKeys(fn ($p) => [
-                                                                $p->id => $p->starts_at->format('D, d M Y · H:i')
-                                                            ])
-                                                            ->toArray();
-                                                    })
-                                                    ->disableOptionWhen(function (string $value, SGet $get, $component) {
-                                                        $currentPerfId = $get('perf_id');
-                                                        // Get the full state path and derive the repeater path
-                                                        $statePath = $component->getStatePath();
-                                                        // statePath: data.ticketTypes.record-XXX.meta.performance_prices.UUID.perf_id
-                                                        // We need: data.ticketTypes.record-XXX.meta.performance_prices
-                                                        $repeaterPath = preg_replace('/\.[^.]+\.perf_id$/', '', $statePath);
-                                                        $allItems = data_get($component->getLivewire()->data, str_replace('data.', '', $repeaterPath), []);
-                                                        $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
-                                                        if ((string) $value === (string) $currentPerfId) return false;
-                                                        return in_array((string) $value, $usedIds);
-                                                    })
-                                                    ->required()
-                                                    ->searchable()
-                                                    ->live()
+                                                // Row 1: Name, SKU, Price, Stock, Currency
+                                                SC\Grid::make(5)->schema([
+                                                    Forms\Components\TextInput::make('name')
+                                                        ->label($t('Nume', 'Name'))
+                                                        ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
+                                                        ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
+                                                        ->required()
+                                                        ->inlineLabel($il)
+                                                        ->live(onBlur: true)
+                                                        ->skipRenderAfterStateUpdated()
+                                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                            if ($get('sku')) return;
+                                                            $set('sku', Str::upper(Str::slug($state, '-')));
+                                                        }),
+                                                    Forms\Components\TextInput::make('sku')
+                                                        ->label('SKU')
+                                                        ->inlineLabel($il)
+                                                        ->placeholder($t('Se generează automat dacă lași gol', 'AUTO-GEN if left empty')),
+                                                    Forms\Components\TextInput::make('price_max')
+                                                        ->label($t('Preț', 'Price'))
+                                                        ->inlineLabel($il)
+                                                        ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
+                                                        ->numeric()
+                                                        ->minValue(0)
+                                                        ->required()
+                                                        ->live(onBlur: true)
+                                                        ->partiallyRenderAfterStateUpdated()
+                                                        ->hint(function (SGet $get) use ($t) {
+                                                            $targetPrice = (float) ($get('../../target_price') ?: 0);
+                                                            $price = (float) ($get('price_max') ?: 0);
+                                                            if ($targetPrice > 0 && $price > $targetPrice) {
+                                                                return new \Illuminate\Support\HtmlString(
+                                                                    '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește prețul la intrare', 'Exceeds door price') . ' (' . number_format($targetPrice, 2) . ')</span>'
+                                                                );
+                                                            }
+                                                            return null;
+                                                        }),
+                                                    Forms\Components\TextInput::make('capacity')
+                                                        ->label($t('Stoc bilete', 'Ticket stock'))
+                                                        ->inlineLabel($il)
+                                                        ->placeholder($t('obligatoriu', 'required'))
+                                                        ->numeric()
+                                                        ->minValue(-1)
+                                                        ->required()
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
+                                                        ->live(onBlur: true)
+                                                        ->skipRenderAfterStateUpdated()
+                                                        ->hint(function ($record, SGet $get) use ($t) {
+                                                            $hints = [];
+                                                            if ($record && $record->quota_sold > 0) {
+                                                                $hints[] = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
+                                                            }
+                                                            $generalStock = (int) ($get('../../general_stock') ?: 0);
+                                                            $capacity = (int) ($get('capacity') ?: 0);
+                                                            if ($generalStock > 0 && $capacity > $generalStock) {
+                                                                $hints[] = '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește stocul general', 'Exceeds general stock') . ' (' . $generalStock . ')</span>';
+                                                            }
+                                                            return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
+                                                        }),
+                                                    Forms\Components\TextInput::make('currency')
+                                                        ->label($t('Monedă', 'Currency'))
+                                                        ->inlineLabel($il)
+                                                        ->default($marketplace?->currency ?? 'RON')
+                                                        ->disabled()
+                                                        ->dehydrated(true),
+                                                ])->columnSpan(12),
+
+                                                // Row 2: Ticket group, Min/order, Max/order, Multiplier
+                                                SC\Grid::make(4)->schema([
+                                                    Forms\Components\Select::make('ticket_group')
+                                                        ->label($t('Grup', 'Group'))
+                                                        ->placeholder($t('Selectează sau creează un grup...', 'Select or create a group...'))
+                                                        ->options(function (SGet $get) {
+                                                            // Collect all group names from sibling ticket types
+                                                            $allTicketTypes = $get('../../ticketTypes') ?? [];
+                                                            $groups = [];
+                                                            foreach ($allTicketTypes as $tt) {
+                                                                $g = $tt['ticket_group'] ?? null;
+                                                                if ($g && !isset($groups[$g])) {
+                                                                    $groups[$g] = $g;
+                                                                }
+                                                            }
+                                                            // Add default suggestions
+                                                            foreach (['Bilete Acces', 'Camping', 'Parcări', 'VIP', 'Add-ons'] as $suggestion) {
+                                                                if (!isset($groups[$suggestion])) {
+                                                                    $groups[$suggestion] = $suggestion;
+                                                                }
+                                                            }
+                                                            ksort($groups);
+                                                            return $groups;
+                                                        })
+                                                        ->searchable()
+                                                        ->createOptionForm([
+                                                            Forms\Components\TextInput::make('group_name')
+                                                                ->label($t('Nume grup nou', 'New group name'))
+                                                                ->required(),
+                                                        ])
+                                                        ->createOptionUsing(fn (array $data) => $data['group_name'])
+                                                        ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_groups')),
+                                                    Forms\Components\TextInput::make('min_per_order')
+                                                        ->label($t('Min bilete/comandă', 'Min tickets/order'))
+                                                        ->inlineLabel($il)
+                                                        ->numeric()
+                                                        ->minValue(1)
+                                                        ->default(1)
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
+                                                    Forms\Components\TextInput::make('max_per_order')
+                                                        ->label($t('Max bilete/comandă', 'Max tickets/order'))
+                                                        ->inlineLabel($il)
+                                                        ->numeric()
+                                                        ->minValue(1)
+                                                        ->default(10)
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
+                                                    Forms\Components\TextInput::make('multiplier')
+                                                        ->label($t('Multiplicator', 'Multiplier'))
+                                                        ->inlineLabel($il)
+                                                        ->numeric()
+                                                        ->minValue(1)
+                                                        ->default(1)
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
+                                                ])->columnSpan(12),
+
+                                                // Row 3: Description + is_refundable
+                                                SC\Grid::make(12)->schema([
+                                                    Forms\Components\Textarea::make('description')
+                                                        ->label($t('Descriere', 'Description'))
+                                                        ->inlineLabel($il)
+                                                        ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
+                                                        ->rows(2)
+                                                        ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                            if (!$state && $get('sales_end_at') && $get('price')) {
+                                                                $date = Carbon::parse($get('sales_end_at'))->format('d.m.Y');
+                                                                $set('description', "Reducere până la {$date}");
+                                                            }
+                                                        })
+                                                        ->columnSpan(10),
+                                                    Forms\Components\Toggle::make('is_refundable')
+                                                        ->label($t('Returnabil', 'Refundable'))
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
+                                                        ->default(false)
+                                                        ->columnSpan(2),
+                                                ])->columnSpan(12),
+
+                                                // Row 4: Admin notes
+                                                Forms\Components\Textarea::make('admin_notes')
+                                                    ->label($t('Note interne', 'Internal Notes'))
+                                                    ->placeholder($t('Notițe vizibile doar pentru admin...', 'Notes visible only for admin...'))
+                                                    ->rows(2)
+                                                    ->columnSpan(12),
+
+                                                // Color picker (conditional on seating)
+                                                Forms\Components\ColorPicker::make('color')
+                                                    ->label($t('Culoare pe hartă', 'Map color'))
+                                                    ->hexColor()
+                                                    ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                                     ->columnSpan(3),
-                                                Forms\Components\TextInput::make('price')
-                                                    ->hiddenLabel()
-                                                    ->numeric()
-                                                    ->step(0.01)
-                                                    ->placeholder($t('Preț de bază', 'Base price'))
-                                                    ->suffix('RON')
-                                                    ->columnSpan(1),
+
+                                                // Toggles
+                                                Forms\Components\Toggle::make('is_entry_ticket')
+                                                    ->label($t('Bilet pentru aplicație', 'App Ticket'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
+                                                    ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
+                                                    ->default(false)
+                                                    ->columnSpan(3),
+                                                Forms\Components\Toggle::make('is_declarable')
+                                                    ->label($t('Declarabil', 'Declarable'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
+                                                    ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
+                                                    ->default(true)
+                                                    ->columnSpan(2),
+
+                                                // Single-day ticket date (visible only for range events)
+                                                Forms\Components\DatePicker::make('valid_date')
+                                                    ->label($t('Bilet de 1 zi — valabil în data', 'Single-day ticket — valid on date'))
+                                                    ->inlineLabel($il)
+                                                    ->native(false)
+                                                    ->minDate(fn (SGet $get) => $get('../../range_start_date'))
+                                                    ->maxDate(fn (SGet $get) => $get('../../range_end_date'))
+                                                    ->placeholder($t('Completează doar pentru bilete valabile o singură zi', 'Fill only for tickets valid on a single day'))
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol dacă biletul e valabil pe toată durata evenimentului. Completează o dată specifică pentru bilete de o zi.', 'Leave empty if ticket is valid for the entire event. Fill a specific date for single-day tickets.'))
+                                                    ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
+                                                    ->columnSpan(12),
                                             ])
-                                            ->columns(4)
-                                            ->grid(1)
-                                            ->itemLabel(fn () => null)
-                                            ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
-                                            ->defaultItems(0)
-                                            ->reorderable(false)
-                                            ->extraAttributes(['class' => 'perf-prices-compact'])
+                                            ->columns(12)
                                             ->columnSpan(12),
 
-                                        Forms\Components\Textarea::make('description')
-                                            ->label($t('Descriere', 'Description'))
-                                            ->inlineLabel($il)
-                                            ->placeholder($t('Descriere opțională tip bilet (ex: "Include acces backstage și meet & greet")', 'Optional ticket type description (e.g. "Includes backstage access and meet & greet")'))
-                                            ->rows(2)
-                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                if (!$state && $get('sales_end_at') && $get('price')) {
-                                                    $date = Carbon::parse($get('sales_end_at'))->format('d.m.Y');
-                                                    $set('description', "Reducere până la {$date}");
-                                                }
-                                            })
-                                            ->columnSpan(12),
-
-                                        Forms\Components\Textarea::make('admin_notes')
-                                            ->label($t('Note interne', 'Internal Notes'))
-                                            ->placeholder($t('Notițe vizibile doar pentru admin...', 'Notes visible only for admin...'))
-                                            ->rows(2)
-                                            ->columnSpan(12),
-
-                                        // Ticket group (shown when event has enable_ticket_groups)
-                                        Forms\Components\Select::make('ticket_group')
-                                            ->label($t('Grup', 'Group'))
-                                            ->placeholder($t('Selectează sau creează un grup...', 'Select or create a group...'))
-                                            ->options(function (SGet $get) {
-                                                // Collect all group names from sibling ticket types
-                                                $allTicketTypes = $get('../../ticketTypes') ?? [];
-                                                $groups = [];
-                                                foreach ($allTicketTypes as $tt) {
-                                                    $g = $tt['ticket_group'] ?? null;
-                                                    if ($g && !isset($groups[$g])) {
-                                                        $groups[$g] = $g;
-                                                    }
-                                                }
-                                                // Add default suggestions
-                                                foreach (['Bilete Acces', 'Camping', 'Parcări', 'VIP', 'Add-ons'] as $suggestion) {
-                                                    if (!isset($groups[$suggestion])) {
-                                                        $groups[$suggestion] = $suggestion;
-                                                    }
-                                                }
-                                                ksort($groups);
-                                                return $groups;
-                                            })
-                                            ->searchable()
-                                            ->createOptionForm([
-                                                Forms\Components\TextInput::make('group_name')
-                                                    ->label($t('Nume grup nou', 'New group name'))
-                                                    ->required(),
+                                        // ── Section 2: Prețuri per reprezentație (collapsible, collapsed) ──
+                                        SC\Section::make($t('Prețuri per reprezentație', 'Prices per performance'))
+                                            ->schema([
+                                                Forms\Components\Repeater::make('meta.performance_prices')
+                                                    ->label($t('Prețuri per reprezentare', 'Prices per performance'))
+                                                    ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
+                                                    ->schema([
+                                                        Forms\Components\Select::make('perf_id')
+                                                            ->hiddenLabel()
+                                                            ->placeholder($t('Alege reprezentarea...', 'Choose performance...'))
+                                                            ->options(function (SGet $get, \Livewire\Component $livewire) {
+                                                                $eventId = $livewire->record?->id ?? null;
+                                                                if (!$eventId) return [];
+                                                                return \App\Models\Performance::where('event_id', $eventId)
+                                                                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                                                                    ->orderBy('starts_at')
+                                                                    ->get()
+                                                                    ->mapWithKeys(fn ($p) => [
+                                                                        $p->id => $p->starts_at->format('D, d M Y · H:i')
+                                                                    ])
+                                                                    ->toArray();
+                                                            })
+                                                            ->disableOptionWhen(function (string $value, SGet $get, $component) {
+                                                                $currentPerfId = $get('perf_id');
+                                                                // Get the full state path and derive the repeater path
+                                                                $statePath = $component->getStatePath();
+                                                                // statePath: data.ticketTypes.record-XXX.meta.performance_prices.UUID.perf_id
+                                                                // We need: data.ticketTypes.record-XXX.meta.performance_prices
+                                                                $repeaterPath = preg_replace('/\.[^.]+\.perf_id$/', '', $statePath);
+                                                                $allItems = data_get($component->getLivewire()->data, str_replace('data.', '', $repeaterPath), []);
+                                                                $usedIds = collect($allItems)->pluck('perf_id')->filter()->map(fn ($v) => (string) $v)->toArray();
+                                                                if ((string) $value === (string) $currentPerfId) return false;
+                                                                return in_array((string) $value, $usedIds);
+                                                            })
+                                                            ->required()
+                                                            ->searchable()
+                                                            ->live()
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('price')
+                                                            ->hiddenLabel()
+                                                            ->numeric()
+                                                            ->step(0.01)
+                                                            ->placeholder($t('Preț de bază', 'Base price'))
+                                                            ->suffix('RON')
+                                                            ->columnSpan(1),
+                                                    ])
+                                                    ->columns(4)
+                                                    ->grid(1)
+                                                    ->itemLabel(fn () => null)
+                                                    ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
+                                                    ->defaultItems(0)
+                                                    ->reorderable(false)
+                                                    ->extraAttributes(['class' => 'perf-prices-compact'])
+                                                    ->columnSpan(12),
                                             ])
-                                            ->createOptionUsing(fn (array $data) => $data['group_name'])
-                                            ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_groups'))
+                                            ->collapsible()
+                                            ->collapsed()
+                                            ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Perks / Conditions repeater (shown when event has enable_ticket_perks)
-                                        Forms\Components\Repeater::make('perks')
-                                            ->label($t('Condiții / Beneficii', 'Perks / Conditions'))
-                                            ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
-                                            ->simple(
-                                                Forms\Components\TextInput::make('text')
-                                                    ->placeholder($t('ex: Include acces la zona VIP', 'e.g. Includes VIP area access'))
-                                                    ->required()
-                                            )
-                                            ->defaultItems(0)
-                                            ->addActionLabel($t('Adaugă condiție / beneficiu', 'Add perk / condition'))
-                                            ->reorderable()
-                                            ->columnSpan(12),
-
-                                        SC\Grid::make(3)->schema([
-                                            Forms\Components\TextInput::make('currency')
-                                                ->label($t('Monedă', 'Currency'))
-                                                ->inlineLabel($il)
-                                                ->default($marketplace?->currency ?? 'RON')
-                                                ->disabled()
-                                                ->dehydrated(true),
-                                            Forms\Components\TextInput::make('price_max')
-                                                ->label($t('Preț', 'Price'))
-                                                ->inlineLabel($il)
-                                                ->placeholder($t('ex: 120.00', 'e.g. 120.00'))
-                                                ->numeric()
-                                                ->minValue(0)
-                                                ->required()
-                                                ->live(onBlur: true)
-                                                ->partiallyRenderAfterStateUpdated()
-                                                ->hint(function (SGet $get) use ($t) {
-                                                    $targetPrice = (float) ($get('../../target_price') ?: 0);
-                                                    $price = (float) ($get('price_max') ?: 0);
-                                                    if ($targetPrice > 0 && $price > $targetPrice) {
-                                                        return new \Illuminate\Support\HtmlString(
-                                                            '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește prețul la intrare', 'Exceeds door price') . ' (' . number_format($targetPrice, 2) . ')</span>'
-                                                        );
-                                                    }
-                                                    return null;
-                                                }),
-                                            Forms\Components\TextInput::make('capacity')
-                                                ->label($t('Stoc bilete', 'Ticket stock'))
-                                                ->inlineLabel($il)
-                                                ->placeholder($t('obligatoriu', 'required'))
-                                                ->numeric()
-                                                ->minValue(-1)
-                                                ->required()
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
-                                                ->live(onBlur: true)
-                                                ->skipRenderAfterStateUpdated()
-                                                ->hint(function ($record, SGet $get) use ($t) {
-                                                    $hints = [];
-                                                    if ($record && $record->quota_sold > 0) {
-                                                        $hints[] = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
-                                                    }
-                                                    $generalStock = (int) ($get('../../general_stock') ?: 0);
-                                                    $capacity = (int) ($get('capacity') ?: 0);
-                                                    if ($generalStock > 0 && $capacity > $generalStock) {
-                                                        $hints[] = '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește stocul general', 'Exceeds general stock') . ' (' . $generalStock . ')</span>';
-                                                    }
-                                                    return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
-                                                }),
-                                        ])->columnSpan(12),
-
-                                        // Order quantity limits
-                                        SC\Grid::make(3)->schema([
-                                            Forms\Components\TextInput::make('min_per_order')
-                                                ->label($t('Min bilete/comandă', 'Min tickets/order'))
-                                                ->inlineLabel($il)
-                                                ->numeric()
-                                                ->minValue(1)
-                                                ->default(1)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
-                                            Forms\Components\TextInput::make('max_per_order')
-                                                ->label($t('Max bilete/comandă', 'Max tickets/order'))
-                                                ->inlineLabel($il)
-                                                ->numeric()
-                                                ->minValue(1)
-                                                ->default(10)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
-                                            Forms\Components\TextInput::make('multiplier')
-                                                ->label($t('Multiplicator', 'Multiplier'))
-                                                ->inlineLabel($il)
-                                                ->numeric()
-                                                ->minValue(1)
-                                                ->default(1)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
-                                        ])->columnSpan(12),
-
-                                        // Single-day ticket date (visible only for range events)
-                                        Forms\Components\DatePicker::make('valid_date')
-                                            ->label($t('Bilet de 1 zi — valabil în data', 'Single-day ticket — valid on date'))
-                                            ->inlineLabel($il)
-                                            ->native(false)
-                                            ->minDate(fn (SGet $get) => $get('../../range_start_date'))
-                                            ->maxDate(fn (SGet $get) => $get('../../range_end_date'))
-                                            ->placeholder($t('Completează doar pentru bilete valabile o singură zi', 'Fill only for tickets valid on a single day'))
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol dacă biletul e valabil pe toată durata evenimentului. Completează o dată specifică pentru bilete de o zi.', 'Leave empty if ticket is valid for the entire event. Fill a specific date for single-day tickets.'))
-                                            ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
-                                            ->columnSpan(12),
-
-                                        // Per-ticket commission settings (override organizer/marketplace defaults)
-                                        SC\Fieldset::make($t('Comision personalizat', 'Custom commission'))
+                                        // ── Section 3: Comision personalizat (collapsible, collapsed) ──
+                                        SC\Section::make($t('Comision personalizat', 'Custom commission'))
                                             ->schema([
                                                 Forms\Components\Select::make('commission_type')
                                                     ->label($t('Tip comision', 'Commission type'))
@@ -1526,56 +1533,34 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => !empty($get('commission_type')))
                                                     ->columnSpan(3),
                                             ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Serie bilet fieldset
-                                        SC\Fieldset::make($t('Serie bilet', 'Ticket series'))
+                                        // ── Section 4: Condiții & Beneficii (collapsible, collapsed) ──
+                                        SC\Section::make($t('Condiții & Beneficii', 'Perks & Conditions'))
                                             ->schema([
-                                                Forms\Components\TextInput::make('series_start')
-                                                    ->label($t('Serie start', 'Series start'))
-                                                    ->inlineLabel($il)
-                                                    ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
-                                                    ->maxLength(50)
-                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                        if (!$state) {
-                                                            $eventSeries = $get('../../event_series');
-                                                            $capacity = $get('capacity');
-                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                                $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
-                                                            }
-                                                        }
-                                                    })
-                                                    ->columnSpan(4),
-                                                Forms\Components\TextInput::make('series_end')
-                                                    ->label($t('Serie end', 'Series end'))
-                                                    ->inlineLabel($il)
-                                                    ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
-                                                    ->maxLength(50)
-                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
-                                                        if (!$state) {
-                                                            $eventSeries = $get('../../event_series');
-                                                            $capacity = $get('capacity');
-                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                                $endNumber = (int)$capacity;
-                                                                $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
-                                                            }
-                                                        }
-                                                    })
-                                                    ->columnSpan(4),
-                                                Forms\Components\Toggle::make('is_refundable')
-                                                    ->label($t('Returnabil', 'Refundable'))
-                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet', 'If the event is cancelled or postponed, customers can request a refund for this ticket type'))
-                                                    ->default(false)
-                                                    ->columnSpan(4),
+                                                Forms\Components\Repeater::make('perks')
+                                                    ->label($t('Condiții / Beneficii', 'Perks / Conditions'))
+                                                    ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
+                                                    ->simple(
+                                                        Forms\Components\TextInput::make('text')
+                                                            ->placeholder($t('ex: Include acces la zona VIP', 'e.g. Includes VIP area access'))
+                                                            ->required()
+                                                    )
+                                                    ->defaultItems(0)
+                                                    ->addActionLabel($t('Adaugă condiție / beneficiu', 'Add perk / condition'))
+                                                    ->reorderable()
+                                                    ->columnSpan(12),
                                             ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Disponibilitate fieldset
-                                        SC\Fieldset::make($t('Disponibilitate', 'Availability'))
+                                        // ── Section 5: Disponibilitate (collapsible, collapsed) ──
+                                        SC\Section::make($t('Disponibilitate', 'Availability'))
                                             ->schema([
                                                 Forms\Components\Toggle::make('is_active')
                                                     ->label($t('Activ', 'Active'))
@@ -1608,11 +1593,13 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => !$get('is_active'))
                                                     ->columnSpan(4),
                                             ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Reducere fieldset
-                                        SC\Fieldset::make($t('Reducere', 'Discount'))
+                                        // ── Section 6: Reducere (collapsible, collapsed) ──
+                                        SC\Section::make($t('Reducere', 'Discount'))
                                             ->schema([
                                                 Forms\Components\Toggle::make('has_sale')
                                                     ->label($t('Activează reducere', 'Enable Sale Discount'))
@@ -1735,11 +1722,13 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => $get('has_sale'))
                                                     ->columnSpan(6),
                                             ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columns(12)
                                             ->columnSpan(12),
 
-                                        // Bulk discounts fieldset
-                                        SC\Fieldset::make($t('Reduceri la cantitate', 'Bulk discounts'))
+                                        // ── Section 7: Reduceri la cantitate (collapsible, collapsed) ──
+                                        SC\Section::make($t('Reduceri la cantitate', 'Bulk discounts'))
                                             ->schema([
                                                 Forms\Components\Repeater::make('bulk_discounts')
                                                     ->label('')
@@ -1803,6 +1792,50 @@ class EventResource extends Resource
                                                             ->columnSpan(4),
                                                     ]),
                                             ])
+                                            ->collapsible()
+                                            ->collapsed()
+                                            ->columns(12)
+                                            ->columnSpan(12),
+
+                                        // ── Section 8: Serie bilete (collapsible, collapsed) ──
+                                        SC\Section::make($t('Serie bilete', 'Ticket series'))
+                                            ->schema([
+                                                Forms\Components\TextInput::make('series_start')
+                                                    ->label($t('Serie start', 'Series start'))
+                                                    ->inlineLabel($il)
+                                                    ->placeholder($t('Ex: AMB-5-00001', 'E.g. AMB-5-00001'))
+                                                    ->maxLength(50)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        if (!$state) {
+                                                            $eventSeries = $get('../../event_series');
+                                                            $capacity = $get('capacity');
+                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
+                                                            }
+                                                        }
+                                                    })
+                                                    ->columnSpan(6),
+                                                Forms\Components\TextInput::make('series_end')
+                                                    ->label($t('Serie end', 'Series end'))
+                                                    ->inlineLabel($il)
+                                                    ->placeholder($t('Ex: AMB-5-00500', 'E.g. AMB-5-00500'))
+                                                    ->maxLength(50)
+                                                    ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                        if (!$state) {
+                                                            $eventSeries = $get('../../event_series');
+                                                            $capacity = $get('capacity');
+                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                                $endNumber = (int)$capacity;
+                                                                $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            }
+                                                        }
+                                                    })
+                                                    ->columnSpan(6),
+                                            ])
+                                            ->collapsible()
+                                            ->collapsed()
                                             ->columns(12)
                                             ->columnSpan(12),
                                     ]),
