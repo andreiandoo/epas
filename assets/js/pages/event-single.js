@@ -1613,13 +1613,104 @@ const EventPage = {
         const endTime = perf.end_time || '';
         const timeRange = time + (endTime ? ' – ' + endTime : '');
 
-        return '<div class="flex items-center justify-center gap-2.5 px-3.5 py-2.5 mb-3 rounded-lg bg-primary/10 border border-primary/20">' +
-            '<svg class="w-4 h-4 shrink-0 text-slate-800" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
-            '<div class="min-w-0">' +
-                '<span class="text-sm font-semibold text-primary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
-                '<span class="text-sm font-semibold text-slate-800 ml-2">' + timeRange + '</span>' +
+        return '<div class="flex items-center justify-between gap-2.5 px-3.5 py-2.5 mb-3 rounded-lg bg-primary/10 border border-primary/20">' +
+            '<div class="flex items-center gap-2.5 min-w-0">' +
+                '<svg class="w-4 h-4 shrink-0 text-slate-800" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
+                '<div class="min-w-0">' +
+                    '<span class="text-sm font-semibold text-primary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
+                    '<span class="text-sm font-semibold text-slate-800 ml-2">' + timeRange + '</span>' +
+                '</div>' +
             '</div>' +
+            '<button type="button" onclick="EventPage.showPerformancePicker()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white transition-colors rounded-lg shrink-0 bg-secondary hover:bg-secondary/90">' +
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>' +
+                'Schimbă' +
+            '</button>' +
         '</div>';
+    },
+
+    showPerformancePicker() {
+        var isMobile = window.innerWidth < 768;
+
+        if (!isMobile) {
+            // Desktop: scroll to perf-list-section
+            var section = document.getElementById('perf-list-section');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Brief highlight
+                section.style.outline = '2px solid #6366f1';
+                section.style.outlineOffset = '4px';
+                setTimeout(function() { section.style.outline = ''; section.style.outlineOffset = ''; }, 2000);
+            }
+            return;
+        }
+
+        // Mobile: show modal with performance list
+        var self = this;
+        var performances = this.event.performances || [];
+        var months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        var listHtml = performances.map(function(p) {
+            var d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+            var isActive = p.id === self.event.selectedPerformanceId;
+            var dayName = days[d.getDay()];
+            var dayNum = d.getDate();
+            var monthName = months[d.getMonth()];
+            var time = p.start_time || '';
+            var endTime = p.end_time ? ' – ' + p.end_time : '';
+
+            return '<button type="button" data-perf-modal-id="' + p.id + '" ' +
+                'class="flex items-center gap-3 w-full px-4 py-3 text-left rounded-xl border transition-colors ' +
+                (isActive ? 'border-primary bg-primary/10' : 'border-border bg-white hover:bg-gray-50') + '">' +
+                '<div class="flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 ' +
+                (isActive ? 'bg-primary text-white' : 'bg-gray-100 text-secondary') + '">' +
+                    '<span class="text-lg font-bold leading-none">' + dayNum + '</span>' +
+                    '<span class="text-[10px] font-semibold uppercase">' + monthName + '</span>' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<div class="text-sm font-semibold text-secondary">' + dayName + ', ' + dayNum + ' ' + monthName + '</div>' +
+                    '<div class="text-xs text-muted">' + time + endTime + '</div>' +
+                '</div>' +
+                (isActive ? '<svg class="w-5 h-5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
+            '</button>';
+        }).join('');
+
+        // Create modal
+        var modal = document.createElement('div');
+        modal.id = 'perf-picker-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-end justify-center';
+        modal.innerHTML =
+            '<div class="absolute inset-0 bg-black/50" onclick="document.getElementById(\'perf-picker-modal\').remove()"></div>' +
+            '<div class="relative w-full max-h-[80vh] bg-white rounded-t-2xl shadow-xl overflow-hidden animate-slide-up">' +
+                '<div class="flex items-center justify-between px-5 py-4 border-b border-border">' +
+                    '<h3 class="text-base font-bold text-secondary">Selectează reprezentația</h3>' +
+                    '<button type="button" onclick="document.getElementById(\'perf-picker-modal\').remove()" class="p-1 rounded-lg text-muted hover:bg-gray-100">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="p-4 space-y-2 overflow-y-auto max-h-[65vh]">' + listHtml + '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        // Bind click handlers
+        modal.querySelectorAll('[data-perf-modal-id]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.event.selectedPerformanceId = parseInt(btn.dataset.perfModalId);
+                self.renderTicketTypes();
+                // Also update perf-list-section if exists
+                var perfSection = document.getElementById('perf-list-section');
+                if (perfSection) {
+                    perfSection.querySelectorAll('.perf-list-btn').forEach(function(b) {
+                        var bId = parseInt(b.dataset.perfId);
+                        var isNowActive = bId === self.event.selectedPerformanceId;
+                        b.style.borderColor = isNowActive ? '#6366f1' : 'rgba(255,255,255,0.12)';
+                        b.style.background = isNowActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)';
+                    });
+                }
+                modal.remove();
+            });
+        });
     },
 
     renderTicketTypes() {
