@@ -1336,10 +1336,35 @@ class EventResource extends Resource
                                             ->columnSpan(12),
 
                                         // Ticket group (shown when event has enable_ticket_groups)
-                                        Forms\Components\TextInput::make('ticket_group')
+                                        Forms\Components\Select::make('ticket_group')
                                             ->label($t('Grup', 'Group'))
-                                            ->placeholder($t('ex: Bilete Acces, Camping, Parcări', 'e.g. General Access, Camping, Parking'))
-                                            ->datalist(['Bilete Acces', 'Camping', 'Parcări', 'VIP', 'Add-ons'])
+                                            ->placeholder($t('Selectează sau creează un grup...', 'Select or create a group...'))
+                                            ->options(function (SGet $get) {
+                                                // Collect all group names from sibling ticket types
+                                                $allTicketTypes = $get('../../ticketTypes') ?? [];
+                                                $groups = [];
+                                                foreach ($allTicketTypes as $tt) {
+                                                    $g = $tt['ticket_group'] ?? null;
+                                                    if ($g && !isset($groups[$g])) {
+                                                        $groups[$g] = $g;
+                                                    }
+                                                }
+                                                // Add default suggestions
+                                                foreach (['Bilete Acces', 'Camping', 'Parcări', 'VIP', 'Add-ons'] as $suggestion) {
+                                                    if (!isset($groups[$suggestion])) {
+                                                        $groups[$suggestion] = $suggestion;
+                                                    }
+                                                }
+                                                ksort($groups);
+                                                return $groups;
+                                            })
+                                            ->searchable()
+                                            ->createOptionForm([
+                                                Forms\Components\TextInput::make('group_name')
+                                                    ->label($t('Nume grup nou', 'New group name'))
+                                                    ->required(),
+                                            ])
+                                            ->createOptionUsing(fn (array $data) => $data['group_name'])
                                             ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_groups'))
                                             ->columnSpan(12),
 

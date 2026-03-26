@@ -1631,7 +1631,7 @@ const EventPage = {
         // Render performance selector pills for multi-day events
         var perfSelectorHtml = this.renderPerformanceSelector();
 
-        container.innerHTML = perfSelectorHtml + this.ticketTypes.map(function(tt) {
+        var ticketCards = this.ticketTypes.map(function(tt) {
             if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
