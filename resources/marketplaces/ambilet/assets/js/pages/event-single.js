@@ -697,7 +697,9 @@ const EventPage = {
                     seating_sections: tt.seating_sections || [],
                     seating_rows: tt.seating_rows || [],
                     commission: tt.commission || null,
-                    is_refundable: tt.is_refundable || false
+                    is_refundable: tt.is_refundable || false,
+                    ticket_group: tt.ticket_group || null,
+                    perks: tt.perks || []
                 };
             }),
             seating_layout: apiData.seating_layout || null,
@@ -717,7 +719,10 @@ const EventPage = {
             tour_type: apiData.tour_type || 'serie_evenimente',
             tour_events: apiData.tour_events || [],
             // Ticket terms (HTML from WYSIWYG editor)
-            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null
+            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null,
+            // Ticket display options
+            enable_ticket_groups: apiData.enable_ticket_groups || false,
+            enable_ticket_perks: apiData.enable_ticket_perks || false
         };
     },
 
