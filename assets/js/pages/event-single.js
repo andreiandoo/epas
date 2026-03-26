@@ -1844,28 +1844,39 @@ const EventPage = {
         // Group ticket types if enabled
         var ticketCardsHtml;
         if (self.event.enable_ticket_groups) {
-            // Group by ticket_group
+            // Build ordered group list preserving first-seen order, and collect cards
+            var groupOrder = [];
             var groups = {};
             var ungrouped = [];
-            self.ticketTypes.forEach(function(tt, idx) {
-                if (tt.ticket_group) {
-                    if (!groups[tt.ticket_group]) groups[tt.ticket_group] = [];
-                    groups[tt.ticket_group].push(ticketCards[idx]);
+            for (var i = 0; i < ticketCards.length; i++) {
+                var groupName = self.ticketTypes[i] ? self.ticketTypes[i].ticket_group : null;
+                if (groupName) {
+                    if (!groups[groupName]) {
+                        groups[groupName] = [];
+                        groupOrder.push(groupName);
+                    }
+                    groups[groupName].push(ticketCards[i]);
                 } else {
-                    ungrouped.push(ticketCards[idx]);
+                    ungrouped.push(ticketCards[i]);
                 }
-            });
+            }
 
             ticketCardsHtml = '';
-            Object.keys(groups).forEach(function(groupName) {
+            groupOrder.forEach(function(gName) {
+                var groupCards = groups[gName];
+                // Remove rounded corners from cards inside groups
+                var cardsHtml = groupCards.map(function(card) {
+                    return card.replace(/rounded-2xl/g, 'rounded-none border-t-0');
+                }).join('');
+
                 ticketCardsHtml += '<div class="mb-4 overflow-hidden border rounded-2xl border-border">' +
-                    '<button type="button" onclick="this.parentElement.querySelector(\'.ticket-group-content\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
+                    '<button type="button" onclick="var content=this.nextElementSibling;content.classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
                         'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100">' +
-                        '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(groupName) + '</span>' +
+                        '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-muted">(' + groupCards.length + ')</span></span>' +
                         '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
                     '<div class="ticket-group-content">' +
-                        groups[groupName].join('') +
+                        cardsHtml +
                     '</div>' +
                 '</div>';
             });
