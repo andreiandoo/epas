@@ -1624,10 +1624,10 @@ class EventResource extends Resource
 
                                         // ── Section 4: Condiții & Beneficii (collapsible, collapsed) ──
                                         SC\Section::make($t('Condiții & Beneficii', 'Perks & Conditions'))
+                                            ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
                                             ->schema([
                                                 Forms\Components\Repeater::make('perks')
                                                     ->label($t('Condiții / Beneficii', 'Perks / Conditions'))
-                                                    ->visible(fn (SGet $get) => (bool) $get('../../enable_ticket_perks'))
                                                     ->simple(
                                                         Forms\Components\TextInput::make('text')
                                                             ->placeholder($t('ex: Include acces la zona VIP', 'e.g. Includes VIP area access'))
