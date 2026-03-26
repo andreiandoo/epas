@@ -1636,7 +1636,9 @@ const EventPage = {
         // Render performance selector pills for multi-day events
         var perfSelectorHtml = this.renderPerformanceSelector();
 
+        var isGrouped = self.event.enable_ticket_groups;
         var ticketCards = this.ticketTypes.map(function(tt) {
+            var ttInGroup = isGrouped && tt.ticket_group;
             if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
@@ -1740,9 +1742,10 @@ const EventPage = {
             tooltipHtml += '</div>';
 
             // Card classes
+            var roundedClass = ttInGroup ? '' : 'rounded-lg';
             var cardClasses = isSoldOut
-                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
-                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20 group';
+                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 ' + roundedClass + ' bg-gray-100 cursor-default'
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border ' + roundedClass + ' hover:z-20 group';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-slate-700';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1862,20 +1865,18 @@ const EventPage = {
             }
 
             ticketCardsHtml = '';
-            groupOrder.forEach(function(gName) {
+            groupOrder.forEach(function(gName, gIdx) {
                 var groupCards = groups[gName];
-                // Remove rounded corners from cards inside groups
-                var cardsHtml = groupCards.map(function(card) {
-                    return card.replace(/rounded-2xl/g, 'rounded-none border-t-0');
-                }).join('');
+                var cardsHtml = groupCards.join('');
+                var groupId = 'ticket-group-' + gIdx;
 
-                ticketCardsHtml += '<div class="mb-4 overflow-hidden border rounded-2xl border-border">' +
-                    '<button type="button" onclick="var content=this.nextElementSibling;content.classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
-                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100">' +
+                ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
+                    '<button type="button" onclick="document.getElementById(\'' + groupId + '\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
+                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100 rounded-t-2xl">' +
                         '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-muted">(' + groupCards.length + ')</span></span>' +
                         '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
-                    '<div class="ticket-group-content">' +
+                    '<div id="' + groupId + '" class="ticket-group-content">' +
                         cardsHtml +
                     '</div>' +
                 '</div>';
