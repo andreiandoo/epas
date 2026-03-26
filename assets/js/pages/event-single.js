@@ -1822,7 +1822,7 @@ const EventPage = {
                 '</ul>';
             }
 
-            return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
+            return {group: tt.ticket_group || null, html: '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-center justify-between">' +
                     '<div class="relative tooltip-trigger">' +
                         '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name +
@@ -1841,33 +1841,30 @@ const EventPage = {
                     availabilityHtml +
                     controlsHtml +
                 '</div>' +
-            '</div>';
+            '</div>'};
         });
 
         // Group ticket types if enabled
         var ticketCardsHtml;
         if (self.event.enable_ticket_groups) {
-            // Build ordered group list preserving first-seen order, and collect cards
             var groupOrder = [];
             var groups = {};
             var ungrouped = [];
-            for (var i = 0; i < ticketCards.length; i++) {
-                var groupName = self.ticketTypes[i] ? self.ticketTypes[i].ticket_group : null;
-                if (groupName) {
-                    if (!groups[groupName]) {
-                        groups[groupName] = [];
-                        groupOrder.push(groupName);
+            ticketCards.forEach(function(card) {
+                if (card.group) {
+                    if (!groups[card.group]) {
+                        groups[card.group] = [];
+                        groupOrder.push(card.group);
                     }
-                    groups[groupName].push(ticketCards[i]);
+                    groups[card.group].push(card.html);
                 } else {
-                    ungrouped.push(ticketCards[i]);
+                    ungrouped.push(card.html);
                 }
-            }
+            });
 
             ticketCardsHtml = '';
             groupOrder.forEach(function(gName, gIdx) {
                 var groupCards = groups[gName];
-                var cardsHtml = groupCards.join('');
                 var groupId = 'ticket-group-' + gIdx;
 
                 ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
@@ -1877,17 +1874,16 @@ const EventPage = {
                         '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
                     '<div id="' + groupId + '" class="ticket-group-content">' +
-                        cardsHtml +
+                        groupCards.join('') +
                     '</div>' +
                 '</div>';
             });
 
-            // Append ungrouped tickets at the end
             if (ungrouped.length > 0) {
                 ticketCardsHtml += ungrouped.join('');
             }
         } else {
-            ticketCardsHtml = ticketCards.join('');
+            ticketCardsHtml = ticketCards.map(function(c) { return c.html; }).join('');
         }
 
         container.innerHTML = perfSelectorHtml + ticketCardsHtml;
