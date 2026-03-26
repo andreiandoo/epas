@@ -1174,18 +1174,22 @@ class EventResource extends Resource
                                         $isRefundable = $state['is_refundable'] ?? false;
 
                                         $badges = '';
-                                        // App badge
+                                        // Channel badge: Online (default) or Offline (app ticket)
                                         $badges .= $isEntryTicket
-                                            ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">App</span>'
-                                            : '';
+                                            ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Offline</span>'
+                                            : '<span style="font-size:10px;font-weight:600;color:#0891b2;background:#ecfeff;padding:1px 6px;border-radius:4px;margin-left:6px;">Online</span>';
+                                        // App badge (only when enabled)
+                                        if ($isEntryTicket) {
+                                            $badges .= '<span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:4px;">App</span>';
+                                        }
                                         // Declarabil badge
-                                        $badges .= $isDeclarable
-                                            ? '<span style="font-size:10px;font-weight:600;color:#0891b2;background:#ecfeff;padding:1px 6px;border-radius:4px;margin-left:6px;">Declarabil</span>'
-                                            : '';
+                                        if ($isDeclarable) {
+                                            $badges .= '<span style="font-size:10px;font-weight:600;color:#0e7490;background:#ecfeff;padding:1px 6px;border-radius:4px;margin-left:4px;">Declarabil</span>';
+                                        }
                                         // Returnabil badge
-                                        $badges .= $isRefundable
-                                            ? '<span style="font-size:10px;font-weight:600;color:#059669;background:#ecfdf5;padding:1px 6px;border-radius:4px;margin-left:6px;">Returnabil</span>'
-                                            : '';
+                                        if ($isRefundable) {
+                                            $badges .= '<span style="font-size:10px;font-weight:600;color:#059669;background:#ecfdf5;padding:1px 6px;border-radius:4px;margin-left:4px;">Returnabil</span>';
+                                        }
 
                                         if ($isActive) {
                                             return new \Illuminate\Support\HtmlString('✓ ' . $name . $badges);
@@ -1393,7 +1397,7 @@ class EventResource extends Resource
 
                                                 // Toggles
                                                 Forms\Components\Toggle::make('is_entry_ticket')
-                                                    ->label($t('Bilet pentru aplicație', 'App Ticket'))
+                                                    ->label('App')
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
                                                     ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
                                                     ->default(false)
@@ -1466,8 +1470,14 @@ class EventResource extends Resource
                                                             ->placeholder($t('Preț de bază', 'Base price'))
                                                             ->suffix('RON')
                                                             ->columnSpan(1),
+                                                        Forms\Components\TextInput::make('stock')
+                                                            ->hiddenLabel()
+                                                            ->numeric()
+                                                            ->minValue(0)
+                                                            ->placeholder($t('Stoc (gol = stoc tip bilet)', 'Stock (empty = ticket type stock)'))
+                                                            ->columnSpan(1),
                                                     ])
-                                                    ->columns(4)
+                                                    ->columns(5)
                                                     ->grid(1)
                                                     ->itemLabel(fn () => null)
                                                     ->addActionLabel($t('+ Adaugă preț', '+ Add price'))
@@ -1841,11 +1851,12 @@ class EventResource extends Resource
                                                     ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                         if (!$state) {
                                                             $eventSeries = $get('../../event_series');
-                                                            $capacity = $get('capacity');
+                                                            $capacity = (int) ($get('capacity') ?: 0);
                                                             $ticketTypeIdentifier = $get('id') ?: $get('sku');
-                                                            if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
-                                                                $endNumber = (int)$capacity;
-                                                                $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            // Use 1000 as default when stock is unlimited (-1)
+                                                            if ($capacity === -1) $capacity = 1000;
+                                                            if ($eventSeries && $capacity > 0 && $ticketTypeIdentifier) {
+                                                                $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($capacity, 5, '0', STR_PAD_LEFT));
                                                             }
                                                         }
                                                     })
