@@ -1216,6 +1216,66 @@ class EventResource extends Resource
                                         );
                                     })
                                     ->extraItemActions([
+                                        Action::make('toggleApp')
+                                            ->iconButton()
+                                            ->icon(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_entry_ticket'] ?? false)
+                                                    ? 'heroicon-s-device-phone-mobile'
+                                                    : 'heroicon-o-device-phone-mobile'
+                                            )
+                                            ->color(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_entry_ticket'] ?? false)
+                                                    ? 'success' : 'gray'
+                                            )
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                ($component->getState()[$arguments['item']]['is_entry_ticket'] ?? false)
+                                                    ? 'App: ON (click to disable)' : 'App: OFF (click to enable)'
+                                            )
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $state[$arguments['item']]['is_entry_ticket'] = !($state[$arguments['item']]['is_entry_ticket'] ?? false);
+                                                $component->state($state);
+                                            }),
+                                        Action::make('toggleDeclarabil')
+                                            ->iconButton()
+                                            ->icon(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_declarable'] ?? true)
+                                                    ? 'heroicon-s-document-check'
+                                                    : 'heroicon-o-document-check'
+                                            )
+                                            ->color(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_declarable'] ?? true)
+                                                    ? 'info' : 'gray'
+                                            )
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                ($component->getState()[$arguments['item']]['is_declarable'] ?? true)
+                                                    ? 'Declarabil: ON (click to disable)' : 'Declarabil: OFF (click to enable)'
+                                            )
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $state[$arguments['item']]['is_declarable'] = !($state[$arguments['item']]['is_declarable'] ?? true);
+                                                $component->state($state);
+                                            }),
+                                        Action::make('toggleReturnabil')
+                                            ->iconButton()
+                                            ->icon(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_refundable'] ?? false)
+                                                    ? 'heroicon-s-arrow-uturn-left'
+                                                    : 'heroicon-o-arrow-uturn-left'
+                                            )
+                                            ->color(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_refundable'] ?? false)
+                                                    ? 'warning' : 'gray'
+                                            )
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                ($component->getState()[$arguments['item']]['is_refundable'] ?? false)
+                                                    ? 'Returnabil: ON (click to disable)' : 'Returnabil: OFF (click to enable)'
+                                            )
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $state[$arguments['item']]['is_refundable'] = !($state[$arguments['item']]['is_refundable'] ?? false);
+                                                $component->state($state);
+                                            }),
                                         Action::make('duplicateTicketType')
                                             ->icon('heroicon-m-document-duplicate')
                                             ->color('gray')
@@ -1231,7 +1291,6 @@ class EventResource extends Resource
                                                 $newData['id'] = null;
                                                 $newData['sku'] = '';
                                                 $newData['quota_sold'] = 0;
-                                                // Series will auto-generate on save using the new ticket type ID
                                                 $newData['series_start'] = null;
                                                 $newData['series_end'] = null;
 
@@ -1395,19 +1454,11 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                                     ->columnSpan(3),
 
-                                                // Toggles
-                                                Forms\Components\Toggle::make('is_entry_ticket')
-                                                    ->label('App')
-                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Doar tipurile cu acest flag sunt disponibile în aplicația mobilă', 'Only types with this flag are available in the mobile app'))
-                                                    ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
-                                                    ->default(false)
-                                                    ->columnSpan(3),
-                                                Forms\Components\Toggle::make('is_declarable')
-                                                    ->label($t('Declarabil', 'Declarable'))
-                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Include acest tip de bilet în cereri de avizare', 'Include this ticket type in approval requests'))
-                                                    ->extraAttributes(['class' => 'flex flex-col gap-y-2 items-start'])
-                                                    ->default(true)
-                                                    ->columnSpan(2),
+                                                // Hidden fields for header toggle buttons (App, Declarabil, Returnabil)
+                                                // These are toggled via extraItemActions in the repeater header
+                                                Forms\Components\Hidden::make('is_entry_ticket')->default(false),
+                                                Forms\Components\Hidden::make('is_declarable')->default(true),
+                                                Forms\Components\Hidden::make('is_refundable')->default(false),
 
                                                 // Single-day ticket date (visible only for range events)
                                                 Forms\Components\DatePicker::make('valid_date')
