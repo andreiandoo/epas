@@ -1508,7 +1508,7 @@ const EventPage = {
         section.className = 'p-4 mb-6';
         section.style.cssText = 'background:#1a1f35;';
         section.innerHTML =
-            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Alege reprezentarea</h3>' +
+            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Acest eveniment are mai multe reprezentații. Alege-o pe cea care ți se potrivește cel mai bine.</h3>' +
             '<div style="display:grid;gap:8px;">' +
             performances.map(function(p) {
                 const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
@@ -1688,9 +1688,10 @@ const EventPage = {
 
         var closeAndRestore = function() {
             document.getElementById('perf-picker-modal')?.remove();
-            // Restore ticket drawer
+            // Restore ticket drawer and re-sync its content
             if (ticketDrawer) ticketDrawer.style.visibility = 'visible';
             if (ticketBackdrop) ticketBackdrop.style.visibility = 'visible';
+            if (typeof syncDrawerContent === 'function') syncDrawerContent();
         };
 
         modal.innerHTML =
