@@ -395,10 +395,16 @@ php artisan tinker --execute='$ids=DB::table("events")->where("marketplace_clien
 # 10. Link orphan tickets
 php artisan fix:ambilet-orphan-tickets $INC/inc_ticket_order_map.csv
 
-# 10. Clear bilete.online cache (pe serverul bilete.online)
+# 11. Import comisioane și limite cantitate pe ticket types
+php artisan fix:ambilet-ticket-type-commissions resources/marketplaces/ambilet/old_database/2026/product_comissions_data.csv
+
+# 12. Mark scanned tickets as used (bilete cu checked_in_at dar status=valid)
+php artisan tinker --execute='$fixed=DB::table("tickets")->where("marketplace_client_id",1)->where("status","valid")->whereNotNull("checked_in_at")->update(["status"=>"used","updated_at"=>now()]);echo "Marked used: $fixed".PHP_EOL;'
+
+# 13. Clear bilete.online cache (pe serverul bilete.online)
 # Accesează clear-cache.php sau procedura specifică
 
-# 11. Verificare
+# 14. Verificare
 php artisan tinker --execute='echo "Events: ".DB::table("events")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Ticket Types: ".DB::table("ticket_types")->whereIn("event_id",DB::table("events")->where("marketplace_client_id",1)->pluck("id"))->count().PHP_EOL;echo "Orders: ".DB::table("orders")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Tickets: ".DB::table("tickets")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Customers: ".DB::table("marketplace_customers")->where("marketplace_client_id",1)->count().PHP_EOL;'
 ```
 
