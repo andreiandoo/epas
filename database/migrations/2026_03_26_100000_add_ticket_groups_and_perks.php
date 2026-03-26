@@ -16,8 +16,8 @@ return new class extends Migration
 
         // Event-level toggles
         Schema::table('events', function (Blueprint $table) {
-            $table->boolean('enable_ticket_groups')->default(false)->after('is_ended');
-            $table->boolean('enable_ticket_perks')->default(false)->after('enable_ticket_groups');
+            $table->boolean('enable_ticket_groups')->default(false);
+            $table->boolean('enable_ticket_perks')->default(false);
         });
     }
 
