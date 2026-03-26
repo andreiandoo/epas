@@ -130,6 +130,16 @@ body {
     padding: 0 !important;
 }
 
+/* No padding on repeater item content */
+.fi-fo-repeater-item-content {
+    padding: 0 !important;
+}
+
+/* Larger ticket type header title */
+.fi-fo-repeater-item-header-label {
+    font-size: 1.125rem !important;
+}
+
 /* Compact section headers */
 .fi-fo-repeater .fi-section .fi-section-header-ctn {
     padding: 0.5rem 1rem !important;

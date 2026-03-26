@@ -1127,32 +1127,27 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Preț de referință pentru planificare și negocieri. Nu este afișat public.', 'Reference price for planning and negotiations. Not displayed publicly.')),
                                 ]),
 
-                                Forms\Components\Toggle::make('has_per_performance_pricing')
-                                    ->label($t('Prețuri diferite per reprezentare', 'Different prices per performance'))
-                                    ->helperText($t('Activează pentru a asocia tipuri de bilete cu reprezentări specifice și a seta prețuri diferite per show.', 'Enable to associate ticket types with specific performances and set different prices per show.'))
-                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
-                                    ->live()
-                                    ->partiallyRenderAfterStateUpdated()
-                                    ->dehydrated(false)
-                                    ->afterStateHydrated(function ($component, ?Event $record) {
-                                        if (!$record) { $component->state(false); return; }
-                                        $hasOverrides = $record->performances()
-                                            ->whereNotNull('ticket_overrides')
-                                            ->where('ticket_overrides', '!=', '[]')
-                                            ->exists();
-                                        $component->state($hasOverrides);
-                                    })
-                                    ->columnSpanFull(),
-
-                                SC\Grid::make(2)->schema([
+                                SC\Grid::make(3)->schema([
+                                    Forms\Components\Toggle::make('has_per_performance_pricing')
+                                        ->label($t('Prețuri diferite per reprezentare', 'Different prices per performance'))
+                                        ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
+                                        ->live()
+                                        ->partiallyRenderAfterStateUpdated()
+                                        ->dehydrated(false)
+                                        ->afterStateHydrated(function ($component, ?Event $record) {
+                                            if (!$record) { $component->state(false); return; }
+                                            $hasOverrides = $record->performances()
+                                                ->whereNotNull('ticket_overrides')
+                                                ->where('ticket_overrides', '!=', '[]')
+                                                ->exists();
+                                            $component->state($hasOverrides);
+                                        }),
                                     Forms\Components\Toggle::make('enable_ticket_groups')
                                         ->label($t('Grupează tipurile de bilete', 'Group ticket types'))
-                                        ->helperText($t('Activează pentru a grupa tipurile de bilete în secțiuni (ex: Bilete Acces, Camping, Parcări)', 'Enable to group ticket types into sections'))
                                         ->live()
                                         ->default(false),
                                     Forms\Components\Toggle::make('enable_ticket_perks')
                                         ->label($t('Condiții / Beneficii per tip bilet', 'Perks / Conditions per ticket type'))
-                                        ->helperText($t('Activează pentru a adăuga o listă de condiții sau beneficii la fiecare tip de bilet', 'Enable to add a list of perks or conditions to each ticket type'))
                                         ->live()
                                         ->default(false),
                                 ]),
