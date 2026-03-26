@@ -2530,7 +2530,7 @@ class EventResource extends Resource
                                                     <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
                                                 </div>
                                                 <div class='h-2 overflow-hidden bg-gray-700 rounded-full'>
-                                                    <div class='h-full transition-all rounded-full bg-gradient-to-r from-primary-500 to-primary-400' style='width: {$percentSold}%'></div>
+                                                    <div class='h-full transition-all rounded-full' style='width: {$percentSold}%; background: linear-gradient(to right, #10b981, #34d399);'></div>
                                                 </div>
                                             </div>
                                             <div class='flex justify-between mt-3 text-xs'>
