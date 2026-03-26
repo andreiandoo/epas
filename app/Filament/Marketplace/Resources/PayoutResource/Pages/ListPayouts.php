@@ -697,17 +697,24 @@ class ListPayouts extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('All'),
+            'all' => Tab::make('All')
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
             'approved' => Tab::make('Approved')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'approved')->count())
+                ->badgeColor('info'),
             'processing' => Tab::make('Processing')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'processing')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'processing'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'processing')->count())
+                ->badgeColor('primary'),
             'completed' => Tab::make('Completed')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'completed')->count())
+                ->badgeColor('success'),
         ];
     }
 }

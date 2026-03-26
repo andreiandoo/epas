@@ -42,18 +42,24 @@ class ListTickets extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Toate'),
+            'all' => Tab::make('Toate')
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
             'valid' => Tab::make('Valide')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', ['valid', 'used']))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->whereIn('status', ['valid', 'used'])->count())
                 ->badgeColor('success'),
             'used' => Tab::make('Utilizate')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'used'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'used')->count())
                 ->badgeColor('warning'),
             'cancelled' => Tab::make('Anulate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'cancelled'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'cancelled')->count())
+                ->badgeColor('danger'),
             'refunded' => Tab::make('Rambursate')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'refunded'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'refunded')->count())
+                ->badgeColor('gray'),
         ];
     }
 }
