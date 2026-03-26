@@ -2486,17 +2486,24 @@ class EventResource extends Resource
 
                                         // Tickets & Orders counts and URLs
                                         $eventId = $record->id;
-                                        $ticketCount = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))->count();
-                                        $orderCount = \App\Models\Order::where(fn ($q) => $q
+                                        $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId));
+                                        $ticketCountValid = (clone $ticketsQuery)->whereIn('status', ['valid', 'used'])->count();
+                                        $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
+                                        $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
+                                        $ordersQuery = \App\Models\Order::where(fn ($q) => $q
                                             ->where('event_id', $eventId)
                                             ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                        )->count();
+                                        );
+                                        $orderCountCompleted = (clone $ordersQuery)->whereIn('status', ['completed', 'confirmed'])->count();
                                         $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
                                         $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
-                                        $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCount > 0 ? " ({$ticketCount})" : '');
-                                        $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCount > 0 ? " ({$orderCount})" : '');
+                                        $ticketsBtnLabel = $t('Bilete', 'Tickets') . ($ticketCountValid > 0 ? " ({$ticketCountValid})" : '');
+                                        $ordersBtnLabel = $t('Comenzi', 'Orders') . ($orderCountCompleted > 0 ? " ({$orderCountCompleted})" : '');
 
                                         $btnClass = 'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-lg transition-colors no-underline';
+
+                                        $cancelledLabel = $t('Anulate', 'Cancelled');
+                                        $refundedLabel = $t('Rambursate', 'Refunded');
 
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
@@ -2507,6 +2514,14 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$revenueLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-red-400'>" . number_format($ticketCountCancelled) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$cancelledLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-amber-400'>" . number_format($ticketCountRefunded) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$refundedLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
