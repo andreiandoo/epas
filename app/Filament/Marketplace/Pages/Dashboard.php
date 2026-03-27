@@ -105,6 +105,7 @@ class Dashboard extends Page
 
         return [
             'marketplace' => $marketplace,
+            'isSuperAdmin' => Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false,
             'stats' => $stats['cards'],
             'monthStats' => $monthStats,
             'chartData' => $chartData,
