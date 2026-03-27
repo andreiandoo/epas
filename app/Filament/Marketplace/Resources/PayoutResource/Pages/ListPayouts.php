@@ -132,7 +132,15 @@ class ListPayouts extends ListRecords
                         $event = Event::with('marketplaceOrganizer')->find($eventId);
                         if (!$event) return '-';
                         $balance = self::calculateEventBalance($event);
-                        return number_format($balance, 2) . ' RON disponibil';
+
+                        $commMode = $event->getEffectiveCommissionMode();
+                        $commRate = $event->getEffectiveCommissionRate();
+                        $modeLabel = $commMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+
+                        return new \Illuminate\Support\HtmlString(
+                            '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . number_format($balance, 2) . ' RON</span> disponibil' .
+                            '<br><span class="text-xs text-gray-500">Comisionare: ' . $modeLabel . ' · ' . number_format($commRate, 2) . '%</span>'
+                        );
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
@@ -587,13 +595,11 @@ class ListPayouts extends ListRecords
         $commissionRate = $event->getEffectiveCommissionRate();
         $commissionModeLabel = $commissionMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
 
-        // Completed orders — include both event_id and marketplace_event_id
-        $completedOrders = Order::where(function ($q) use ($event, $organizer) {
-                $q->where(function ($qq) use ($event) {
-                    $qq->where('event_id', $event->id)
-                       ->orWhere('marketplace_event_id', $event->id);
-                });
-                $q->where('marketplace_organizer_id', $organizer->id);
+        // Completed orders — match by event_id OR marketplace_event_id
+        // Include orders with or without marketplace_organizer_id (migrated may lack it)
+        $completedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
             })
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order')
@@ -601,12 +607,9 @@ class ListPayouts extends ListRecords
             ->get();
 
         // Refunded orders
-        $refundedOrders = Order::where(function ($q) use ($event, $organizer) {
-                $q->where(function ($qq) use ($event) {
-                    $qq->where('event_id', $event->id)
-                       ->orWhere('marketplace_event_id', $event->id);
-                });
-                $q->where('marketplace_organizer_id', $organizer->id);
+        $refundedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
             })
             ->where('status', 'refunded')
             ->get();
@@ -618,40 +621,72 @@ class ListPayouts extends ListRecords
         $ticketBreakdown = [];
         $totalTicketsSold = 0;
 
+        // Also load ticket types for the event (for commission info fallback)
+        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+
         foreach ($completedOrders as $order) {
-            if ($order->items->isEmpty()) {
-                // Orders without items (migrated) — count as 1 ticket per order
-                $name = 'Bilet (fără detalii)';
-                if (!isset($ticketBreakdown[$name])) {
-                    $ticketBreakdown[$name] = [
-                        'quantity' => 0, 'total' => 0, 'unit_price' => (float) $order->total,
-                        'commission_type' => null, 'commission_rate' => null, 'commission_mode' => null,
-                    ];
-                }
-                $ticketBreakdown[$name]['quantity'] += 1;
-                $ticketBreakdown[$name]['total'] += (float) $order->total;
-                $totalTicketsSold += 1;
-                continue;
-            }
+            if ($order->items->isNotEmpty()) {
+                foreach ($order->items as $item) {
+                    $tt = $item->ticketType ?? ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null);
+                    $name = $item->name ?? $tt?->name ?? 'Bilet';
 
-            foreach ($order->items as $item) {
-                $name = $item->name ?? 'Unknown';
-                $tt = $item->ticketType;
-
-                if (!isset($ticketBreakdown[$name])) {
-                    $ticketBreakdown[$name] = [
-                        'quantity' => 0,
-                        'total' => 0,
-                        'unit_price' => (float) $item->unit_price,
-                        'commission_type' => $tt?->commission_type,
-                        'commission_rate' => $tt?->commission_rate,
-                        'commission_fixed' => $tt?->commission_fixed,
-                        'commission_mode' => $tt?->commission_mode,
-                    ];
+                    if (!isset($ticketBreakdown[$name])) {
+                        $ticketBreakdown[$name] = [
+                            'quantity' => 0,
+                            'total' => 0,
+                            'unit_price' => (float) $item->unit_price,
+                            'commission_type' => $tt?->commission_type,
+                            'commission_rate' => $tt?->commission_rate,
+                            'commission_fixed' => $tt?->commission_fixed,
+                            'commission_mode' => $tt?->commission_mode,
+                            'ticket_type_id' => $tt?->id,
+                        ];
+                    }
+                    $ticketBreakdown[$name]['quantity'] += $item->quantity;
+                    $ticketBreakdown[$name]['total'] += (float) $item->total;
+                    $totalTicketsSold += $item->quantity;
                 }
-                $ticketBreakdown[$name]['quantity'] += $item->quantity;
-                $ticketBreakdown[$name]['total'] += (float) $item->total;
-                $totalTicketsSold += $item->quantity;
+            } else {
+                // Orders without items (migrated) — try to match ticket records
+                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
+                if ($orderTickets->isNotEmpty()) {
+                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
+                        $tt = $eventTicketTypes->get($ttId);
+                        $name = $tt?->name ?? 'Bilet #' . $ttId;
+                        $qty = $tickets->count();
+                        $unitPrice = (float) ($tickets->first()->price ?? ($order->total / max(1, $orderTickets->count())));
+
+                        if (!isset($ticketBreakdown[$name])) {
+                            $ticketBreakdown[$name] = [
+                                'quantity' => 0,
+                                'total' => 0,
+                                'unit_price' => $unitPrice,
+                                'commission_type' => $tt?->commission_type,
+                                'commission_rate' => $tt?->commission_rate,
+                                'commission_fixed' => $tt?->commission_fixed,
+                                'commission_mode' => $tt?->commission_mode,
+                                'ticket_type_id' => $tt?->id,
+                            ];
+                        }
+                        $ticketBreakdown[$name]['quantity'] += $qty;
+                        $ticketBreakdown[$name]['total'] += $unitPrice * $qty;
+                        $totalTicketsSold += $qty;
+                    }
+                } else {
+                    // No items, no tickets — fallback
+                    $name = 'Bilet (fără detalii)';
+                    if (!isset($ticketBreakdown[$name])) {
+                        $ticketBreakdown[$name] = [
+                            'quantity' => 0, 'total' => 0, 'unit_price' => (float) $order->total,
+                            'commission_type' => null, 'commission_rate' => null,
+                            'commission_fixed' => null, 'commission_mode' => null,
+                            'ticket_type_id' => null,
+                        ];
+                    }
+                    $ticketBreakdown[$name]['quantity'] += 1;
+                    $ticketBreakdown[$name]['total'] += (float) $order->total;
+                    $totalTicketsSold += 1;
+                }
             }
         }
 
@@ -669,42 +704,41 @@ class ListPayouts extends ListRecords
         // Per-ticket-type commission calculation
         $totalCommission = 0;
         foreach ($ticketBreakdown as $name => &$data) {
-            if ($data['commission_type'] && $data['commission_type'] !== '') {
-                // Per-ticket custom commission
-                $ttRate = (float) ($data['commission_rate'] ?? 0);
-                $ttFixed = (float) ($data['commission_fixed'] ?? 0);
-                $ttMode = $data['commission_mode'] ?? $commissionMode;
+            $ttCommType = $data['commission_type'] ?? null;
+            $ttCommRate = (float) ($data['commission_rate'] ?? 0);
+            $ttCommFixed = (float) ($data['commission_fixed'] ?? 0);
+            $ttCommMode = $data['commission_mode'] ?? null;
 
-                $comm = match ($data['commission_type']) {
-                    'percentage' => round($data['total'] * ($ttRate / 100), 2),
-                    'fixed' => round($ttFixed * $data['quantity'], 2),
-                    'both' => round($data['total'] * ($ttRate / 100), 2) + round($ttFixed * $data['quantity'], 2),
+            if ($ttCommType && $ttCommType !== '') {
+                // Per-ticket custom commission
+                $comm = match ($ttCommType) {
+                    'percentage' => round($data['total'] * ($ttCommRate / 100), 2),
+                    'fixed' => round($ttCommFixed * $data['quantity'], 2),
+                    'both' => round($data['total'] * ($ttCommRate / 100), 2) + round($ttCommFixed * $data['quantity'], 2),
                     default => round($data['total'] * ($commissionRate / 100), 2),
                 };
                 $data['calculated_commission'] = $comm;
-                $data['commission_label'] = match ($data['commission_type']) {
-                    'percentage' => number_format($ttRate, 2) . '%',
-                    'fixed' => number_format($ttFixed, 2) . ' RON/bilet',
-                    'both' => number_format($ttRate, 2) . '% + ' . number_format($ttFixed, 2) . ' RON/bilet',
-                    default => number_format($commissionRate, 2) . '%',
+
+                $modeLabel = match ($ttCommMode ?? $commissionMode) {
+                    'added_on_top' => 'on top',
+                    'included' => 'inclus',
+                    default => '',
+                };
+                $data['commission_label'] = match ($ttCommType) {
+                    'percentage' => number_format($ttCommRate, 2) . '% ' . $modeLabel,
+                    'fixed' => number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
+                    'both' => number_format($ttCommRate, 2) . '% + ' . number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
+                    default => number_format($commissionRate, 2) . '% ' . $modeLabel,
                 };
             } else {
                 // Use event-level commission
-                if ($commissionMode === 'added_on_top') {
-                    $data['calculated_commission'] = 0; // buyer pays it
-                } else {
-                    $data['calculated_commission'] = round($data['total'] * ($commissionRate / 100), 2);
-                }
-                $data['commission_label'] = number_format($commissionRate, 2) . '% (eveniment)';
+                $data['calculated_commission'] = round($data['total'] * ($commissionRate / 100), 2);
+                $modeLabel = $commissionMode === 'added_on_top' ? 'on top' : 'inclus';
+                $data['commission_label'] = number_format($commissionRate, 2) . '% ' . $modeLabel . ' (eveniment)';
             }
             $totalCommission += $data['calculated_commission'];
         }
         unset($data);
-
-        // If commission mode is on_top, calculate from gross-subtotal difference
-        if ($commissionMode === 'added_on_top') {
-            $totalCommission = round($grossRevenue - $subtotalRevenue, 2);
-        }
 
         $netRevenue = $grossRevenue - $totalCommission - $totalRefundedAmount;
 
