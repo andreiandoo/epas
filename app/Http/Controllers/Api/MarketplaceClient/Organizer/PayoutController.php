@@ -179,7 +179,9 @@ class PayoutController extends BaseController
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
-                    'tickets_sold' => $completedOrders->sum(fn($o) => $o->tickets_count ?? $o->tickets()->count()),
+                    'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
+                        ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                        ->count(),
                 ];
             });
 
