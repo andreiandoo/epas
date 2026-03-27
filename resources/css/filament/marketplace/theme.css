@@ -150,6 +150,13 @@ body {
     font-size: 0.875rem !important;
 }
 
+/* Allow dropdowns to overflow inside repeater sections */
+.fi-fo-repeater-item-content,
+.fi-fo-repeater-item-content .fi-section,
+.fi-fo-repeater-item-content .fi-section-content-ctn {
+    overflow: visible !important;
+}
+
 /* Remove gap between sections inside ticket type repeater items */
 .fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
     gap: 0 !important;
