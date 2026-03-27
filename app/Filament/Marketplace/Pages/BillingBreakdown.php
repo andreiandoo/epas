@@ -79,7 +79,7 @@ class BillingBreakdown extends Page
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('COUNT(*) as order_count')
             ->selectRaw('SUM(total) as revenue')
-            ->selectRaw('SUM(commission_amount) as marketplace_commission')
+            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission')
             ->groupBy('resolved_event_id')
             ->orderByDesc('revenue')
             ->get();
@@ -88,18 +88,23 @@ class BillingBreakdown extends Page
         $eventIds = $eventBreakdown->pluck('resolved_event_id')->filter()->toArray();
         $eventDetails = [];
         if (!empty($eventIds)) {
-            $eventDetails = Event::with('venue')->whereIn('id', $eventIds)
+            $eventDetails = Event::with(['venue', 'marketplaceOrganizer'])->whereIn('id', $eventIds)
                 ->get()
                 ->mapWithKeys(function ($e) {
                     $name = $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en');
                     $venueName = $e->venue ? (is_array($e->venue->name) ? ($e->venue->name['ro'] ?? $e->venue->name['en'] ?? '') : $e->venue->name) : null;
                     $venueCity = $e->venue?->city;
                     $eventDate = $e->event_date ?? $e->range_start_date;
+                    // Commission rate fallback: event → organizer → marketplace default
+                    $eventCommRate = $e->commission_rate
+                        ?? $e->marketplaceOrganizer?->commission_rate
+                        ?? null;
                     return [$e->id => [
                         'name' => $name,
                         'date' => $eventDate?->format('d.m.Y'),
                         'venue' => $venueName,
                         'city' => $venueCity,
+                        'commission_rate' => $eventCommRate,
                     ]];
                 })
                 ->toArray();
@@ -119,12 +124,20 @@ class BillingBreakdown extends Page
                 ->toArray();
         }
 
-        $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate) {
+        $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate, $marketplace) {
             $eventId = $row->resolved_event_id;
             $revenue = (float) $row->revenue;
             $marketplaceCommission = (float) ($row->marketplace_commission ?? 0);
-            $tixelloCommission = round($revenue * ($commissionRate / 100), 2);
             $details = $eventDetails[$eventId] ?? null;
+
+            // If SQL couldn't calculate commission (both commission_amount and commission_rate are 0/null),
+            // fall back to event's commission_rate or marketplace default
+            if ($marketplaceCommission <= 0 && $revenue > 0) {
+                $eventCommRate = $details['commission_rate'] ?? $marketplace->commission_rate ?? 5;
+                $marketplaceCommission = round($revenue * ((float) $eventCommRate / 100), 2);
+            }
+
+            $tixelloCommission = round($revenue * ($commissionRate / 100), 2);
 
             return [
                 'event_id' => $eventId,
