@@ -37,10 +37,10 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <!-- Events with Balances -->
             <div class="mb-8">
                 <h2 class="mb-4 text-lg font-semibold text-secondary">Sold per eveniment</h2>
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="overflow-x-auto">
+                <div class="bg-white border rounded-2xl border-border">
+                    <div>
                         <table class="w-full">
-                            <thead class="sticky top-[6.5rem] z-10 bg-surface shadow-sm">
+                            <thead class="sticky top-[4rem] z-10 bg-surface shadow-sm">
                                 <tr>
                                     <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Eveniment</th>
                                     <th class="px-6 py-4 text-sm font-semibold text-right text-secondary">Venituri brute</th>
@@ -133,10 +133,11 @@ function renderEvents(events) {
             ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Incheiat</span>'
             : '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Activ</span>';
 
-        const canRequestPayout = e.is_past && e.available_balance >= 100;
         let payoutButton;
         if (!e.is_past) {
             payoutButton = `<span class="text-xs text-muted">Eveniment activ</span>`;
+        } else if (e.pending_payout > 0 && e.available_balance < 100) {
+            payoutButton = `<span class="text-xs text-warning">Plata solicitata</span>`;
         } else if (e.available_balance < 100) {
             payoutButton = `<span class="text-xs text-muted">${e.available_balance > 0 ? 'Min. 100 RON' : 'Fara sold'}</span>`;
         } else {
