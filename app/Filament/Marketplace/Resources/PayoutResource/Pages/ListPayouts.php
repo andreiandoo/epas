@@ -232,10 +232,6 @@ class ListPayouts extends ListRecords
                             ->numeric()
                             ->minValue(0)
                             ->suffix('bilete')
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function (Set $set, Get $get, $component) {
-                                $this->recalculateFromTickets($set, $get, $component);
-                            })
                             ->columnSpan(1),
                     ])
                     ->columns(3)
@@ -246,6 +242,33 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => $get('event_id') !== null)
                     ->dehydrated(false)
                     ->columnSpanFull(),
+
+                // Recalculate button
+                \Filament\Schemas\Components\Actions::make([
+                    \Filament\Actions\Action::make('recalculate_payout')
+                        ->label('Recalculează din bilete selectate')
+                        ->icon('heroicon-o-calculator')
+                        ->color('gray')
+                        ->size('sm')
+                        ->action(function (Get $get, Set $set) {
+                            $tickets = $get('payout_tickets') ?? [];
+                            $gross = 0;
+                            $commission = 0;
+
+                            foreach ($tickets as $item) {
+                                $qty = (int) ($item['qty'] ?? 0);
+                                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                                $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+                                $gross += $qty * ($unitPrice + $commPerTicket);
+                                $commission += $qty * $commPerTicket;
+                            }
+
+                            $fees = (float) ($get('fees_amount') ?? 0);
+                            $set('gross_amount', number_format($gross, 2, '.', ''));
+                            $set('commission_amount', number_format($commission, 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                        })
+                ])->visible(fn (Get $get) => $get('event_id') !== null),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('gross_amount')
@@ -637,65 +660,6 @@ class ListPayouts extends ListRecords
     }
 
 
-    /**
-     * Recalculate gross/commission/net from ticket selection.
-     * Tries multiple strategies to find payout_tickets data.
-     */
-    protected function recalculateFromTickets(Set $set, Get $get, $component): void
-    {
-        // Strategy 1: try to get from mounted action data
-        $livewire = $component->getLivewire();
-        $tickets = null;
-
-        // Try mountedActionsData (Filament 4 action form state)
-        if (property_exists($livewire, 'mountedActionsData') && !empty($livewire->mountedActionsData)) {
-            $actionData = is_array($livewire->mountedActionsData) ? ($livewire->mountedActionsData[0] ?? []) : [];
-            $tickets = $actionData['payout_tickets'] ?? null;
-        }
-
-        // Strategy 2: try $get with various paths
-        if (!$tickets) {
-            foreach (['../../payout_tickets', '../payout_tickets', 'payout_tickets'] as $path) {
-                $try = $get($path);
-                if ($try && is_array($try) && !empty($try)) {
-                    $tickets = $try;
-                    break;
-                }
-            }
-        }
-
-        \Log::info('[RecalculateTickets] tickets found: ' . ($tickets ? count($tickets) : 'NULL'));
-
-        if (!$tickets || empty($tickets)) {
-            return; // Don't zero out if we can't find the data
-        }
-
-        $gross = 0;
-        $commission = 0;
-
-        foreach ($tickets as $item) {
-            $qty = (int) ($item['qty'] ?? 0);
-            $unitPrice = (float) ($item['unit_price'] ?? 0);
-            $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
-            $gross += $qty * ($unitPrice + $commPerTicket);
-            $commission += $qty * $commPerTicket;
-        }
-
-        $fees = 0;
-        foreach (['../../fees_amount', '../fees_amount'] as $path) {
-            $f = $get($path);
-            if ($f !== null) { $fees = (float) $f; break; }
-        }
-
-        \Log::info('[RecalculateTickets] gross=' . $gross . ' commission=' . $commission . ' fees=' . $fees);
-
-        // Try multiple set paths
-        foreach (['../../', '../', ''] as $prefix) {
-            $set($prefix . 'gross_amount', number_format($gross, 2, '.', ''));
-            $set($prefix . 'commission_amount', number_format($commission, 2, '.', ''));
-            $set($prefix . 'net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
-        }
-    }
 
     /**
      * Calculate event financials: gross, commission (per-ticket-type aware), net.
