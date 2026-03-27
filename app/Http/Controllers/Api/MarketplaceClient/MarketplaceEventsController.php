@@ -1063,14 +1063,23 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        // Normalize Romanian diacritics for grouping
+        $normalizeCityKey = function (string $city): string {
+            $city = mb_strtolower(trim($city));
+            return strtr($city, [
+                'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+            ]);
+        };
+
         $cities = $query->with('venue:id,city')
             ->get()
             ->filter(fn ($e) => $e->venue?->city)
-            ->groupBy(fn ($e) => strtolower(trim($e->venue->city))) // Normalize city names
-            ->map(function ($group, $cityKey) {
-                // Use the first occurrence's original city name for display
+            ->groupBy(fn ($e) => $normalizeCityKey($e->venue->city))
+            ->map(function ($group) {
+                // Use the cleanest city name for display (trimmed, prefer one with diacritics)
+                $bestName = $group->sortByDesc(fn ($e) => mb_strlen($e->venue->city) - strlen($e->venue->city))->first()->venue->city;
                 return [
-                    'name' => $group->first()->venue->city,
+                    'name' => trim($bestName),
                     'event_count' => $group->count(),
                 ];
             })
