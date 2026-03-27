@@ -96,9 +96,11 @@ async function loadFinanceData() {
             // Calculate available balance as sum of all event net revenues minus payouts
             const events = financeData.events || [];
             const calculatedAvailable = events.reduce((sum, e) => sum + (e.available_balance || 0), 0);
+            const calculatedPending = events.reduce((sum, e) => sum + (e.pending_payout || 0), 0);
+            const calculatedPaidOut = events.reduce((sum, e) => sum + (e.total_paid_out || 0), 0);
             document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(calculatedAvailable);
-            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
-            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
+            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(calculatedPending || financeData.pending_balance || 0);
+            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(calculatedPaidOut || financeData.total_paid_out || 0);
             renderEvents(events);
             // Highlight event if coming from events page
             if (highlightEventId) {
