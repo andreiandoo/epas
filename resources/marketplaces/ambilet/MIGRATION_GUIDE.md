@@ -401,6 +401,12 @@ php artisan fix:ambilet-ticket-type-commissions resources/marketplaces/ambilet/o
 # 12. Generate SKU și serie start/end pe ticket types (lipsesc la import)
 php artisan fix:ambilet-ticket-type-series
 
+# 13. Fix availability: dezactivare produse scoase, programare, sale prices
+# Necesită CSV-uri în old_database/product_stock/:
+# - event_active_products.csv (bilete_eveniment serialized per event)
+# - product_availability.csv (availability dates, sale prices, stock status)
+php artisan fix:ambilet-ticket-type-availability
+
 # 13. Mark scanned tickets as used (bilete cu checked_in_at dar status=valid)
 php artisan tinker --execute='$fixed=DB::table("tickets")->where("marketplace_client_id",1)->where("status","valid")->whereNotNull("checked_in_at")->update(["status"=>"used","updated_at"=>now()]);echo "Marked used: $fixed".PHP_EOL;'
 
