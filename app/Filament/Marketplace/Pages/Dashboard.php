@@ -175,8 +175,8 @@ class Dashboard extends Page
                 $q->where('marketplace_client_id', $marketplaceId);
             })
             ->selectRaw('COUNT(*) as total_db')
-            ->selectRaw("SUM(CASE WHEN status = 'valid' THEN 1 ELSE 0 END) as sold")
-            ->selectRaw("SUM(CASE WHEN status = 'valid' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
+            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
+            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
 
         // 6. Organizers - single query
@@ -388,6 +388,18 @@ class Dashboard extends Page
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->count();
 
+        // New customers this month
+        $newCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
+        $monthOrders = Order::where($orderScope)
+            ->whereIn('orders.status', ['paid', 'confirmed', 'completed', 'refunded'])
+            ->where('orders.source', '!=', 'test_order')
+            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->count();
+
         return [
             'month_label' => Carbon::now()->translatedFormat('F Y'),
             'new_organizers' => $newOrganizers,
@@ -396,6 +408,8 @@ class Dashboard extends Page
             'total_sales' => $totalSales,
             'total_commission' => $totalCommission,
             'tickets_sold' => $ticketsSold,
+            'new_customers' => $newCustomers,
+            'month_orders' => $monthOrders,
             'currency' => $this->marketplace->currency ?? 'RON',
         ];
     }

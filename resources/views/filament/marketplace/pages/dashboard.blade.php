@@ -73,7 +73,7 @@
                 <x-heroicon-o-calendar-days class="w-4 h-4" />
                 {{ $monthStats['month_label'] }}
             </h3>
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori noi</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['new_organizers']) }}</p>
@@ -98,16 +98,25 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
                     <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($monthStats['tickets_sold']) }}</p>
                 </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
+                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($monthStats['new_customers']) }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['month_orders']) }}</p>
+                </div>
             </div>
         </div>
         @endif
 
         <!-- All Time Stats -->
+        <div class="mb-5">
         <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
             <x-heroicon-o-chart-bar-square class="w-4 h-4" />
             All Time
         </h3>
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {{-- 1. Evenimente --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div class="flex items-center gap-3">
@@ -244,6 +253,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         </div>
 
         <!-- Tixello Monthly Billing -->
