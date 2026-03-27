@@ -47,7 +47,7 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
         $eventIds = DB::table('events')->where('marketplace_client_id', $clientId)->pluck('id');
         $ticketTypes = DB::table('ticket_types')
             ->whereIn('event_id', $eventIds)
-            ->select('id', 'event_id', 'is_active', 'status', 'meta')
+            ->select('id', 'event_id', 'status', 'meta')
             ->get();
 
         $this->info("Ticket types to check: {$ticketTypes->count()}");
@@ -72,7 +72,6 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
                 $activeProducts = $activeProductsPerEvent[$wpEventId];
                 if (! in_array($wpProductId, $activeProducts)) {
                     // Product was removed from event
-                    $fields['is_active'] = false;
                     $fields['status'] = 'hidden';
                     $deactivated++;
                 }
@@ -84,7 +83,7 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
                 // Sold out — only count, don't change quota_total
                 // Most ambilet products are outofstock because they're historical (all sold)
                 // quota_total is already -1 (unlimited) which is correct for sold historical events
-                if ($avail['stock_status'] === 'outofstock') {
+                if ($avail['stock_status'] === 'outofstock' && ! isset($fields['status'])) {
                     $soldOut++;
                 }
 
@@ -92,7 +91,7 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
                 if (! empty($avail['available_from'])) {
                     $from = $this->parseDate($avail['available_from']);
                     if ($from && $from->isFuture()) {
-                        $fields['is_active'] = false;
+                        $fields['status'] = 'hidden';
                         $fields['scheduled_at'] = $from->toDateTimeString();
                         $scheduled++;
                     }
