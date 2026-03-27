@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Domain;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class TenantClientCors
@@ -36,21 +37,30 @@ class TenantClientCors
                 }
             }
         } else {
-            // Check if origin is a verified tenant domain
-            $domain = Domain::where('domain', $originHost)
-                ->where('is_active', true)
-                ->first();
-
-            if (!$domain) {
-                // Check for subdomain match
-                $parts = explode('.', $originHost);
-                if (count($parts) > 2) {
-                    $baseDomain = implode('.', array_slice($parts, -2));
-                    $domain = Domain::where('domain', $baseDomain)
+            // Check if origin is a verified tenant domain (cached)
+            $domain = Cache::remember(
+                "cors_domain_{$originHost}",
+                now()->addMinutes(30),
+                function () use ($originHost) {
+                    $domain = Domain::with('tenant')
+                        ->where('domain', $originHost)
                         ->where('is_active', true)
                         ->first();
+
+                    if (!$domain) {
+                        $parts = explode('.', $originHost);
+                        if (count($parts) > 2) {
+                            $baseDomain = implode('.', array_slice($parts, -2));
+                            $domain = Domain::with('tenant')
+                                ->where('domain', $baseDomain)
+                                ->where('is_active', true)
+                                ->first();
+                        }
+                    }
+
+                    return $domain;
                 }
-            }
+            );
 
             if ($domain) {
                 $allowCors = true;
