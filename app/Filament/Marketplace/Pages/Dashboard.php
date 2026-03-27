@@ -382,31 +382,24 @@ class Dashboard extends Page
             }
         };
 
-        $salesData = Order::where($orderScope)
-            ->whereIn('status', $allStatuses)
-            ->where('source', '!=', 'test_order')
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 ELSE total END) as revenue")
-            ->selectRaw('SUM(total) as revenue_all')
-            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as commission')
-            ->first();
+        // Revenue (excl refunded)
+        $totalSales = (float) Order::where($orderScope)
+            ->whereIn('orders.status', $allStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
+            ->value('revenue') ?? 0;
 
-        $totalSales = (float) ($salesData->revenue ?? 0);
-        $totalCommission = (float) ($salesData->commission ?? 0);
-
-        // If commission still 0 (all migrated, no commission_rate on orders), use event rates
-        if ($totalCommission <= 0 && $totalSales > 0) {
-            $perEventComm = Order::where($orderScope)
-                ->whereIn('orders.status', $allStatuses)
-                ->where('orders.source', '!=', 'test_order')
-                ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
-                ->join('events', function ($join) {
-                    $join->on('events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'));
-                })
-                ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, ?) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
-                ->value('total_comm');
-            $totalCommission = round((float) ($perEventComm ?? 0), 2);
-        }
+        // Marketplace commission — always use JOIN with events for per-event commission_rate
+        // This matches BillingBreakdown logic exactly (don't rely on orders.commission_amount)
+        $totalCommission = (float) Order::where($orderScope)
+            ->whereIn('orders.status', $allStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->join('events', 'events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'))
+            ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, COALESCE(orders.commission_rate, ?)) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
+            ->value('total_comm') ?? 0;
+        $totalCommission = round($totalCommission, 2);
 
         // Tickets sold this month — include tickets for marketplace events
         $ticketsSold = DB::table('tickets')
