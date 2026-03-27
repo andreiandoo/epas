@@ -1468,22 +1468,32 @@ class MarketplaceEventsController extends BaseController
             }
         }
 
+        // Filter by category slug — only show genres that have events in this category
+        $categorySlug = $request->get('category');
+        $categoryId = null;
+        if ($categorySlug) {
+            $category = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $client->id)
+                ->where('slug', $categorySlug)
+                ->first();
+            $categoryId = $category?->id;
+        }
+
+        // Build event filter closure (reused for whereHas and withCount)
+        $eventFilter = function ($q) use ($client, $categoryId) {
+            $q->where('marketplace_client_id', $client->id)
+                ->where(function ($q2) {
+                    $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                });
+            if ($categoryId) {
+                $q->where('marketplace_event_category_id', $categoryId);
+            }
+            $this->applyUpcomingFilter($q);
+        };
+
         // Get all event genres that have events in this marketplace
         $genres = $query
-            ->whereHas('events', function ($q) use ($client) {
-                $q->where('marketplace_client_id', $client->id)
-                    ->where(function ($q2) {
-                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                    });
-                $this->applyUpcomingFilter($q);
-            })
-            ->withCount(['events' => function ($q) use ($client) {
-                $q->where('marketplace_client_id', $client->id)
-                    ->where(function ($q2) {
-                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                    });
-                $this->applyUpcomingFilter($q);
-            }])
+            ->whereHas('events', $eventFilter)
+            ->withCount(['events' => $eventFilter])
             ->orderBy('name')
             ->get()
             ->map(function ($genre) use ($language) {
