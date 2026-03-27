@@ -245,11 +245,6 @@ class ListPayouts extends ListRecords
                     ->defaultItems(0)
                     ->visible(fn (Get $get) => $get('event_id') !== null)
                     ->dehydrated(false)
-                    ->afterStateHydrated(function ($component, Get $get) {
-                        $eventId = $get('event_id');
-                        if (!$eventId) return;
-                        $this->populatePayoutTickets($component, $eventId);
-                    })
                     ->columnSpanFull(),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
@@ -641,15 +636,6 @@ class ListPayouts extends ListRecords
         $set('payout_tickets', $items);
     }
 
-    /**
-     * Populate payout_tickets from component hydration.
-     */
-    protected function populatePayoutTickets($component, int $eventId): void
-    {
-        $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
-        if (!$event) return;
-        // Will be populated via afterStateUpdated on event_id
-    }
 
     /**
      * Recalculate gross/commission/net from ticket selection.
@@ -737,20 +723,6 @@ class ListPayouts extends ListRecords
         // Load event ticket types for commission info
         $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
 
-        // Debug: log ticket types and commission info
-        \Log::info('[PayoutFinancials] Event #' . $event->id . ' eventTicketTypes: ' . $eventTicketTypes->map(fn ($tt) => [
-            'id' => $tt->id, 'name' => $tt->name,
-            'commission_type' => $tt->commission_type, 'commission_rate' => $tt->commission_rate,
-            'commission_fixed' => $tt->commission_fixed, 'commission_mode' => $tt->commission_mode,
-        ])->toJson());
-        \Log::info('[PayoutFinancials] Orders: ' . $completedOrders->count() . ', items: ' . $completedOrders->sum(fn ($o) => $o->items->count()));
-        foreach ($completedOrders as $order) {
-            foreach ($order->items as $item) {
-                $ttFound = ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null) ?? $item->ticketType;
-                \Log::info('[PayoutFinancials] Item: tt_id=' . $item->ticket_type_id . ', found_tt=' . ($ttFound ? $ttFound->id : 'NULL') . ', comm_type=' . ($ttFound?->commission_type ?? 'NULL') . ', total=' . $item->total);
-            }
-        }
-
         // Per-ticket-type commission calculation
         $totalCommission = 0;
         foreach ($completedOrders as $order) {
@@ -798,13 +770,54 @@ class ListPayouts extends ListRecords
                     }
                 }
             } else {
-                // Orders without items — use event-level commission
-                $orderTotal = (float) $order->total;
-                if ($commissionMode === 'added_on_top') {
-                    $base = round($orderTotal / (1 + $commissionRate / 100), 2);
-                    $totalCommission += round($orderTotal - $base, 2);
+                // Orders without items — look up ticket records for ticket_type commission info
+                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
+                if ($orderTickets->isNotEmpty()) {
+                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
+                        $tt = $eventTicketTypes->get($ttId);
+                        $ticketPrice = (float) ($tickets->first()->price ?? 0);
+                        $ticketQty = $tickets->count();
+
+                        if ($tt && $tt->commission_type && $tt->commission_type !== '') {
+                            $ttCommRate = (float) ($tt->commission_rate ?? 0);
+                            $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+                            $ttCommMode = $tt->commission_mode ?: $commissionMode;
+
+                            // price_cents is BASE price. Ticket.price may be base or base+commission.
+                            $basePrice = (float) ($tt->price_cents ? $tt->price_cents / 100 : $ticketPrice);
+
+                            if ($ttCommMode === 'added_on_top') {
+                                // Commission is calculated on base price, added to what customer pays
+                                $comm = match ($tt->commission_type) {
+                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
+                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
+                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
+                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
+                                };
+                            } else {
+                                $comm = match ($tt->commission_type) {
+                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
+                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
+                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
+                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
+                                };
+                            }
+                            $totalCommission += $comm;
+                        } else {
+                            // No per-type commission, use event-level
+                            $basePrice = (float) ($tt?->price_cents ? $tt->price_cents / 100 : $ticketPrice);
+                            $totalCommission += round($basePrice * ($commissionRate / 100) * $ticketQty, 2);
+                        }
+                    }
                 } else {
-                    $totalCommission += round($orderTotal * ($commissionRate / 100), 2);
+                    // No items AND no tickets — last resort event-level
+                    $orderTotal = (float) $order->total;
+                    if ($commissionMode === 'added_on_top') {
+                        $base = round($orderTotal / (1 + $commissionRate / 100), 2);
+                        $totalCommission += round($orderTotal - $base, 2);
+                    } else {
+                        $totalCommission += round($orderTotal * ($commissionRate / 100), 2);
+                    }
                 }
             }
         }
