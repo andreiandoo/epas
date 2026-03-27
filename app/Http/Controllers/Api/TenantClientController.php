@@ -208,37 +208,37 @@ class TenantClientController extends Controller
 
         $tenantId = $resolved['tenant']->id;
         $limit = $request->query('limit', 6);
-        $showAll = $request->query('show_all'); // Debug parameter
+        $showAll = $request->query('show_all');
 
-        $query = Event::where('tenant_id', $tenantId);
+        $cacheKey = "featured_events_{$tenantId}_{$limit}" . ($showAll ? '_all' : '');
 
-        // Use upcoming scope for filtering (excludes past events and cancelled)
-        if (!$showAll) {
-            $query->upcoming();
-        } else {
-            // Even with show_all, exclude cancelled
-            $query->where(function ($q) {
-                $q->where('is_cancelled', false)
-                  ->orWhereNull('is_cancelled');
-            });
-        }
+        $events = Cache::remember($cacheKey, now()->addMinutes(2), function () use ($tenantId, $limit, $showAll) {
+            $query = Event::where('tenant_id', $tenantId);
 
-        $query->where('is_featured', true);
+            if (!$showAll) {
+                $query->upcoming();
+            } else {
+                $query->where(function ($q) {
+                    $q->where('is_cancelled', false)
+                      ->orWhereNull('is_cancelled');
+                });
+            }
 
-        $orderColumn = 'range_start_date';
+            $query->where('is_featured', true);
 
-        $events = $query->with([
-                'venue:id,name,city',
-                'eventTypes',
-                'ticketTypes' => fn ($q) => $q->where('status', 'active'),
-            ])
-            ->orderBy($orderColumn, 'asc')
-            ->take($limit)
-            ->get();
+            return $query->with([
+                    'venue:id,name,city',
+                    'eventTypes',
+                    'ticketTypes' => fn ($q) => $q->where('status', 'active'),
+                ])
+                ->orderBy('range_start_date', 'asc')
+                ->take($limit)
+                ->get();
+        });
 
         return response()->json([
             'data' => $events->map(fn ($event) => $this->formatEvent($event)),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=60, s-maxage=120');
     }
 
     /**
@@ -286,21 +286,23 @@ class TenantClientController extends Controller
         }
 
         $tenantId = $resolved['tenant']->id;
+        $locale = app()->getLocale();
 
-        // Get event types that have events for this tenant
-        $types = EventType::whereHas('events', function ($q) use ($tenantId) {
-            $q->where('tenant_id', $tenantId);
-            $q->where('status', 'published');
-        })->get();
+        $types = Cache::remember("tenant_categories_{$tenantId}", now()->addMinutes(10), function () use ($tenantId) {
+            return EventType::whereHas('events', function ($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId);
+                $q->where('status', 'published');
+            })->get();
+        });
 
         return response()->json([
             'data' => $types->map(fn ($type) => [
                 'id' => $type->id,
-                'name' => $type->getTranslation('name', app()->getLocale()),
+                'name' => $type->getTranslation('name', $locale),
                 'slug' => $type->slug,
                 'icon' => $type->icon ?? 'calendar',
             ]),
-        ]);
+        ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
     }
 
     /**
