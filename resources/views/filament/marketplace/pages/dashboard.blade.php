@@ -4,6 +4,7 @@
             <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
         </div>
     @else
+        @if($isSuperAdmin ?? false)
         <!-- Pending Review Events -->
         @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)
         <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
@@ -342,6 +343,7 @@
             </div>
         </a>
         @endif
+        @endif {{-- end isSuperAdmin --}}
 
         <!-- Tables: Top Organizers + Top Live Events side by side -->
         <div class="grid grid-cols-1 gap-5 mb-5 md:grid-cols-2">
