@@ -141,11 +141,25 @@ class PayoutController extends BaseController
                     ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
                     : ($event->title ?? 'Untitled');
 
+                // Get venue info
+                $venue = $event->venue;
+                $venueName = null;
+                $venueCity = null;
+                if ($venue) {
+                    $venueName = is_array($venue->name)
+                        ? ($venue->name['ro'] ?? $venue->name['en'] ?? collect($venue->name)->first() ?? null)
+                        : ($venue->name ?? null);
+                    $venueCity = $venue->city;
+                }
+
                 return [
                     'id' => $event->id,
                     'title' => $title,
                     'image' => $this->getStorageUrl($event->poster_url),
                     'starts_at' => $event->event_date?->toIso8601String() ?? $event->starts_at?->toIso8601String(),
+                    'start_time' => $event->start_time,
+                    'venue_name' => $venueName,
+                    'venue_city' => $venueCity,
                     'status' => $event->is_published ? 'published' : 'draft',
                     'is_past' => $event->event_date ? $event->event_date->isPast() : false,
                     'commission_rate' => $commissionRate,
