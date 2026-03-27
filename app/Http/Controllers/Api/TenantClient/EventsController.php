@@ -265,7 +265,7 @@ class EventsController extends Controller
                     'per_page' => $perPage,
                 ],
             ],
-        ]);
+        ])->header('Cache-Control', 'public, max-age=60, s-maxage=120');
     }
 
     /**
@@ -297,7 +297,8 @@ class EventsController extends Controller
                 'venue',
                 'eventTypes',
                 'eventGenres',
-                'artists',
+                'artists.artistTypes',
+                'artists.artistGenres',
                 'ticketTypes' => fn ($q) => $q->where('status', 'active'),
                 'tags',
                 'tenant:id,name,public_name,slug,company_name,website',
@@ -413,7 +414,7 @@ class EventsController extends Controller
                     'name' => $genre->getTranslation('name', $locale),
                     'slug' => $genre->slug,
                 ]),
-                'artists' => $event->artists->load(['artistTypes', 'artistGenres'])->map(fn ($artist) => [
+                'artists' => $event->artists->map(fn ($artist) => [
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'slug' => $artist->slug ?? null,
@@ -513,7 +514,7 @@ class EventsController extends Controller
                     ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
                     ->min('display_price'),
             ],
-        ]);
+        ])->header('Cache-Control', 'public, max-age=30, s-maxage=60');
     }
 
     /**
@@ -587,12 +588,8 @@ class EventsController extends Controller
             return $query->past();
         };
 
-        // Base query for past events
-        $baseQuery = $buildQuery();
-
-        // Get available years and months for filters
-        $allPastEvents = (clone $baseQuery)->get();
-        $availableFilters = $this->getAvailableYearsAndMonths($allPastEvents);
+        // Get available years and months via DB aggregation (not loading all events)
+        $availableFilters = $this->getAvailableYearsAndMonthsFromDb($buildQuery);
 
         $query = $buildQuery();
 
@@ -635,7 +632,14 @@ class EventsController extends Controller
         $total = $query->count();
 
         // Order by start_date descending (most recent first)
-        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'tenant'])
+        $events = $query->with([
+                'venue:id,name,city,slug',
+                'eventTypes',
+                'eventGenres',
+                'artists:id,name,main_image',
+                'tags',
+                'tenant:id,name,public_name,slug',
+            ])
             ->orderBy('event_date', 'desc')
             ->orderBy('range_start_date', 'desc')
             ->skip(($page - 1) * $perPage)
@@ -708,37 +712,29 @@ class EventsController extends Controller
                     'per_page' => $perPage,
                 ],
             ],
-        ]);
+        ])->header('Cache-Control', 'public, max-age=300, s-maxage=600');
     }
 
     /**
-     * Get available years and months from past events
+     * Get available years and months via DB aggregation (no full table load)
      */
-    protected function getAvailableYearsAndMonths($events): array
+    protected function getAvailableYearsAndMonthsFromDb(callable $buildQuery): array
     {
+        $rows = $buildQuery()
+            ->selectRaw('EXTRACT(YEAR FROM COALESCE(event_date, range_start_date)) as yr, EXTRACT(MONTH FROM COALESCE(event_date, range_start_date)) as mo')
+            ->whereRaw('COALESCE(event_date, range_start_date) IS NOT NULL')
+            ->groupByRaw('yr, mo')
+            ->orderByRaw('yr DESC, mo ASC')
+            ->get();
+
         $yearMonths = [];
-
-        foreach ($events as $event) {
-            $date = $event->event_date ?? $event->range_start_date;
-            if ($date) {
-                $year = $date->year;
-                $month = $date->month;
-
-                if (!isset($yearMonths[$year])) {
-                    $yearMonths[$year] = [];
-                }
-                if (!in_array($month, $yearMonths[$year])) {
-                    $yearMonths[$year][] = $month;
-                }
+        foreach ($rows as $row) {
+            $year = (int) $row->yr;
+            $month = (int) $row->mo;
+            if (!isset($yearMonths[$year])) {
+                $yearMonths[$year] = [];
             }
-        }
-
-        // Sort years descending
-        krsort($yearMonths);
-
-        // Sort months within each year
-        foreach ($yearMonths as $year => $months) {
-            sort($yearMonths[$year]);
+            $yearMonths[$year][] = $month;
         }
 
         return [
