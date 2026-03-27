@@ -96,13 +96,15 @@ class ListPayouts extends ListRecords
                                 $set('fees_amount', '0.00');
 
                                 if ($fin['balance'] <= 0) {
-                                    // Nothing left to pay — zero everything
+                                    // Nothing left to pay
+                                    $set('has_balance', false);
                                     $set('payout_tickets', []);
                                     $set('gross_amount', '0.00');
                                     $set('commission_amount', '0.00');
                                     $set('net_amount', '0.00');
                                     $set('desired_net_amount', null);
                                 } else {
+                                    $set('has_balance', true);
                                     // Populate ticket selector with available (not yet paid) tickets
                                     $this->populatePayoutTicketsFromEvent($set, $event, $fin);
                                     $set('gross_amount', number_format($fin['gross'] - $fin['paid_gross'], 2, '.', ''));
@@ -154,8 +156,22 @@ class ListPayouts extends ListRecords
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
+                Forms\Components\Hidden::make('has_balance')->default(false)->dehydrated(false),
+
+                // Zero balance message
+                Forms\Components\Placeholder::make('zero_balance_message')
+                    ->hiddenLabel()
+                    ->content(new \Illuminate\Support\HtmlString(
+                        '<div class="flex items-center gap-2 p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">' .
+                        '<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' .
+                        '<span class="text-gray-600 dark:text-gray-400">Sold eveniment 0. Nu se mai pot face deconturi suplimentare.</span>' .
+                        '</div>'
+                    ))
+                    ->visible(fn (Get $get) => $get('event_id') !== null && !$get('has_balance')),
+
                 Forms\Components\Placeholder::make('event_details')
                     ->label('')
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->content(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return '';
@@ -330,7 +346,7 @@ class ListPayouts extends ListRecords
                             })
                     ])->visible(fn (Get $get) => $get('event_id') !== null)
                       ->extraAttributes(['class' => 'flex items-end pb-6']),
-                ])->visible(fn (Get $get) => $get('event_id') !== null),
+                ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
                 // Ticket selection for partial payout
                 Forms\Components\Repeater::make('payout_tickets')
@@ -365,6 +381,7 @@ class ListPayouts extends ListRecords
                     ->defaultItems(0)
                     ->visible(fn (Get $get) => $get('event_id') !== null)
                     ->dehydrated(false)
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->columnSpanFull(),
 
                 // Recalculate button
@@ -392,13 +409,13 @@ class ListPayouts extends ListRecords
                             $set('commission_amount', number_format($commission, 2, '.', ''));
                             $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
                         })
-                ])->visible(fn (Get $get) => $get('event_id') !== null),
+                ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('gross_amount')
                         ->label('Suma brută')
                         ->numeric()
-                        ->required()
+                        ->required(fn (Get $get) => (bool) $get('has_balance'))
                         ->suffix('RON')
                         ->live(onBlur: true)
                         ->afterStateUpdated(function ($state, Set $set, Get $get) {
@@ -437,12 +454,13 @@ class ListPayouts extends ListRecords
                     Forms\Components\TextInput::make('net_amount')
                         ->label('Suma netă (de plată)')
                         ->numeric()
-                        ->required()
+                        ->required(fn (Get $get) => (bool) $get('has_balance'))
                         ->suffix('RON')
                         ->readOnly(),
-                ]),
+                ])->visible(fn (Get $get) => $get('has_balance')),
 
                 Forms\Components\Textarea::make('admin_notes')
+                    ->visible(fn (Get $get) => $get('has_balance'))
                     ->label('Note admin')
                     ->rows(2),
             ])
