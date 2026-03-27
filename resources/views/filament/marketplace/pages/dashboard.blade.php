@@ -66,6 +66,42 @@
             </div>
         </div>
 
+        <!-- Current Month Stats -->
+        @if(isset($monthStats))
+        <div class="mb-5">
+            <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                <x-heroicon-o-calendar-days class="w-4 h-4" />
+                {{ $monthStats['month_label'] }}
+            </h3>
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori noi</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['new_organizers']) }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente live</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($monthStats['live_events']) }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente încheiate</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['ended_events']) }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Total vânzări</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['total_sales'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comision marketplace</p>
+                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['total_commission'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($monthStats['tickets_sold']) }}</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Stats Cards - 4 per row -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             {{-- 1. Evenimente --}}

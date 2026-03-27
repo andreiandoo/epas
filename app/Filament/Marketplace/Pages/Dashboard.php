@@ -97,9 +97,15 @@ class Dashboard extends Page
             return $this->computeMonthlyBilling($marketplaceId);
         });
 
+        // Current month stats
+        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}", 120, function () use ($marketplaceId) {
+            return $this->computeCurrentMonthStats($marketplaceId);
+        });
+
         return [
             'marketplace' => $marketplace,
             'stats' => $stats['cards'],
+            'monthStats' => $monthStats,
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
@@ -291,23 +297,108 @@ class Dashboard extends Page
         return ['labels' => $labels, 'data' => $data];
     }
 
+    private function computeCurrentMonthStats(int $marketplaceId): array
+    {
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $now = Carbon::now();
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+
+        // New organizers this month
+        $newOrganizers = DB::table('marketplace_organizers')
+            ->where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Live events (happening this month, published, not cancelled)
+        $liveEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where('is_cancelled', false)
+            ->where(function ($q) use ($monthStart, $monthEnd) {
+                $q->whereBetween('event_date', [$monthStart, $monthEnd])
+                    ->orWhereBetween('range_start_date', [$monthStart, $monthEnd])
+                    ->orWhere(function ($qq) use ($monthStart, $monthEnd) {
+                        $qq->where('range_start_date', '<=', $monthEnd)
+                            ->where('range_end_date', '>=', $monthStart);
+                    });
+            })
+            ->where(function ($q) use ($now) {
+                $q->where('event_date', '>=', $now->toDateString())
+                    ->orWhere('range_end_date', '>=', $now->toDateString());
+            })
+            ->count();
+
+        // Ended events this month
+        $endedEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where(function ($q) use ($monthStart, $now) {
+                $q->whereBetween('event_date', [$monthStart, $now])
+                    ->orWhere(function ($qq) use ($monthStart, $now) {
+                        $qq->where('range_end_date', '>=', $monthStart)
+                            ->where('range_end_date', '<', $now);
+                    });
+            })
+            ->count();
+
+        // Sales this month
+        $salesData = Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', $validStatuses)
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw('SUM(total) as revenue, SUM(COALESCE(commission_amount, 0)) as commission')
+            ->first();
+
+        $totalSales = (float) ($salesData->revenue ?? 0);
+        $totalCommission = (float) ($salesData->commission ?? 0);
+
+        // If commission is 0 (migrated orders), calculate from revenue
+        if ($totalCommission <= 0 && $totalSales > 0) {
+            $avgRate = (float) ($this->marketplace->commission_rate ?? 5);
+            $totalCommission = round($totalSales * ($avgRate / 100), 2);
+        }
+
+        // Tickets sold this month
+        $ticketsSold = DB::table('tickets')
+            ->where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        return [
+            'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'new_organizers' => $newOrganizers,
+            'live_events' => $liveEvents,
+            'ended_events' => $endedEvents,
+            'total_sales' => $totalSales,
+            'total_commission' => $totalCommission,
+            'tickets_sold' => $ticketsSold,
+            'currency' => $this->marketplace->currency ?? 'RON',
+        ];
+    }
+
     private function computeMonthlyBilling(int $marketplaceId): array
     {
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
         $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
-        // Commission rate from marketplace client settings
+        // Commission rate from marketplace client settings (Tixello rate)
         $commissionRate = (float) ($this->marketplace->commission_rate ?? 0);
 
-        // 1. Ticketing: calculate commission as revenue * rate (not from commission_amount field)
+        // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
         $orderRevenue = (float) Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total');
 
-        $ticketingCommission = round($orderRevenue * ($commissionRate / 100), 2);
+        // Use DB-level SUM with ROUND to match BillingBreakdown per-event rounding
+        $ticketingCommission = (float) Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', $validStatuses)
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(ROUND(total * {$commissionRate} / 100, 2)) as total_commission")
+            ->value('total_commission') ?? 0;
 
         // 2. Service orders for current month, grouped by service_type
         $serviceBreakdown = ServiceOrder::where('marketplace_client_id', $marketplaceId)
