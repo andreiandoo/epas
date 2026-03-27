@@ -88,7 +88,7 @@ class ListPayouts extends ListRecords
                     ->preload()
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function ($state, Set $set) {
+                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         if ($state) {
                             $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
