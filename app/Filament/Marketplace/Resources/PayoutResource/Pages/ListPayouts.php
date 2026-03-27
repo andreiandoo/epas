@@ -107,9 +107,30 @@ class ListPayouts extends ListRecords
                                     $set('has_balance', true);
                                     // Populate ticket selector with available (not yet paid) tickets
                                     $this->populatePayoutTicketsFromEvent($set, $event, $fin);
-                                    $set('gross_amount', number_format($fin['gross'] - $fin['paid_gross'], 2, '.', ''));
-                                    $set('commission_amount', number_format($fin['commission'] - $fin['paid_commission'], 2, '.', ''));
-                                    $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+
+                                    // Check if tickets were populated
+                                    // If no specific tickets remain, set amounts based on balance directly
+                                    $populatedTickets = $get('payout_tickets') ?? [];
+                                    $hasTickets = collect($populatedTickets)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+
+                                    if ($hasTickets) {
+                                        // Calculate from populated tickets
+                                        $ticketGross = 0;
+                                        $ticketComm = 0;
+                                        foreach ($populatedTickets as $t) {
+                                            $qty = (int) ($t['qty'] ?? 0);
+                                            $ticketGross += $qty * ((float) ($t['unit_price'] ?? 0) + (float) ($t['commission_per_ticket'] ?? 0));
+                                            $ticketComm += $qty * (float) ($t['commission_per_ticket'] ?? 0);
+                                        }
+                                        $set('gross_amount', number_format($ticketGross, 2, '.', ''));
+                                        $set('commission_amount', number_format($ticketComm, 2, '.', ''));
+                                        $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                                    } else {
+                                        // Remainder payout — no specific tickets, just the balance
+                                        $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
+                                        $set('commission_amount', '0.00');
+                                        $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                                    }
                                 }
                             }
                         } else {
@@ -1158,6 +1179,7 @@ class ListPayouts extends ListRecords
             $ttCommFixed = (float) ($data['commission_fixed'] ?? 0);
             $ttCommMode = $data['commission_mode'] ?? null;
             $effectiveMode = $ttCommMode ?: $commissionMode;
+            $data['effective_mode'] = $effectiveMode;
 
             if ($ttCommType && $ttCommType !== '') {
                 // Per-ticket custom commission
@@ -1294,9 +1316,19 @@ class ListPayouts extends ListRecords
             $html .= '</div>';
         }
 
-        // Net balance line with commission mode
+        // Determine actual commission mode(s) used across ticket types
+        $modesUsed = collect($ticketBreakdown)->map(fn ($d) => $d['effective_mode'] ?? $d['commission_mode'] ?? null)->filter()->unique()->values();
+        if ($modesUsed->isEmpty()) {
+            $actualModeLabel = $commissionModeLabel;
+        } elseif ($modesUsed->count() === 1) {
+            $actualModeLabel = $modesUsed->first() === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+        } else {
+            $actualModeLabel = 'Mixt (inclus + adăugat)';
+        }
+
+        // Net balance line with actual commission mode
         $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold">';
-        $html .= '<span>Sold disponibil <span class="text-xs font-normal text-gray-400">(' . $commissionModeLabel . ')</span></span>';
+        $html .= '<span>Sold disponibil <span class="text-xs font-normal text-gray-400">(' . $actualModeLabel . ')</span></span>';
         $html .= '<span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format(max(0, $netRevenue - $totalPreviouslyPaid - $totalPreviousPending), 2) . ' RON</span>';
         $html .= '</div>';
 
