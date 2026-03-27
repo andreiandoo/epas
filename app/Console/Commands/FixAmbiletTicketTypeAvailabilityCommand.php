@@ -81,10 +81,10 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
             // Check 2: Product availability data
             $avail = $productAvailability[$wpProductId] ?? null;
             if ($avail) {
-                // Sold out
-                if ($avail['stock_status'] === 'outofstock' && ! isset($fields['is_active'])) {
-                    // Only mark sold out if not already deactivated for other reasons
-                    // Keep is_active but set quota_total to match quota_sold (= sold out)
+                // Sold out — only count, don't change quota_total
+                // Most ambilet products are outofstock because they're historical (all sold)
+                // quota_total is already -1 (unlimited) which is correct for sold historical events
+                if ($avail['stock_status'] === 'outofstock') {
                     $soldOut++;
                 }
 
@@ -98,10 +98,11 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
                     }
                 }
 
-                // Active until (available_to)
+                // Active until (available_to) — only set if future or recent
                 if (! empty($avail['available_to'])) {
                     $to = $this->parseDate($avail['available_to']);
                     if ($to) {
+                        // Always store the original active_until for historical accuracy
                         $fields['active_until'] = $to->toDateTimeString();
                         $activeUntilSet++;
                     }
