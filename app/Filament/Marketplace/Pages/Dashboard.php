@@ -211,17 +211,25 @@ class Dashboard extends Page
                 });
             })
             ->withCount(['tickets as sold_tickets_count' => function ($q) {
-                $q->where('tickets.status', 'valid');
+                $q->whereIn('tickets.status', ['valid', 'used']);
             }])
             ->get();
 
         if ($topLiveEvents->isNotEmpty()) {
             $liveEventIds = $topLiveEvents->pluck('id')->toArray();
-            $revenueByEvent = Order::where('marketplace_client_id', $marketplaceId)
-                ->whereIn('marketplace_event_id', $liveEventIds)
+            // Include orders linked by marketplace_event_id OR event_id
+            $revenueByEvent = Order::where(function ($q) use ($marketplaceId, $liveEventIds) {
+                    $q->where('marketplace_client_id', $marketplaceId)
+                      ->orWhereIn('marketplace_event_id', $liveEventIds)
+                      ->orWhereIn('event_id', $liveEventIds);
+                })
+                ->where(function ($q) use ($liveEventIds) {
+                    $q->whereIn('marketplace_event_id', $liveEventIds)
+                      ->orWhereIn('event_id', $liveEventIds);
+                })
                 ->whereIn('status', $paidStatuses)
                 ->where('source', '!=', 'test_order')
-                ->selectRaw('marketplace_event_id as eid, SUM(total) as rev')
+                ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
 

@@ -240,16 +240,17 @@
                 </div>
             </div>
 
-            {{-- 8. Payouts --}}
+            {{-- 8. Datorat organizatorilor --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div class="flex items-center gap-3">
                     <div class="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg shrink-0">
                         <x-heroicon-o-banknotes class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
                     </div>
                     <div class="min-w-0">
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['pending_payouts_value'], 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payouts Pending</p>
-                        <p class="text-xs text-green-600 dark:text-green-400 mt-0.5">{{ number_format($stats['completed_payouts_value'], 2) }} plătite</p>
+                        @php $owedToOrganizers = $stats['order_revenue'] - $stats['all_time_commissions'] - $stats['service_orders_total']; @endphp
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format(max(0, $owedToOrganizers), 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Datorat Organizatori</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">= Încasări - Comisioane - Servicii</p>
                     </div>
                 </div>
             </div>
