@@ -53,7 +53,12 @@ Migrare incrementală de date din AmBilet (WordPress/WooCommerce/Tickera) în Ti
 | `_price` | Preț (float, RON) | |
 | `_stock` | Stoc | NULL/empty = unlimited |
 | `_manage_stock` | "no" la toate | Nu contează |
-| `_ticket_availability` | "open_ended" / "range" | Fereastra temporală, NU stoc |
+| `_ticket_availability` | "open_ended" / "range" | Fereastra de VALIDITATE/SCANARE, **NU** vânzare |
+| `subtitlu_bilet` | Descriere tip bilet | → ticket_types.description |
+| `product-fee-amount` | Comision: "6%" sau "2,5" | → commission_type/rate/fixed |
+| `minimum_allowed_quantity` | Min per tranzacție | → min_per_order |
+| `maximum_allowed_quantity` | Max per tranzacție | → max_per_order |
+| `bilete_eveniment` (pe eveniment) | Array serializat PHP cu wp_product_ids active | Controlează asocierea, NU disponibilitatea |
 
 **tc_tickets_instances (bilete):**
 | Meta Key | Descriere | Notes |
