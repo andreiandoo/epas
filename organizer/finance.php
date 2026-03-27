@@ -157,6 +157,7 @@ function renderEvents(events) {
                             <svg class="w-4 h-4 transition-transform text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             <div>
                                 <p class="font-medium text-secondary hover:text-primary">${e.title}</p>
+                                <p class="text-xs text-muted mt-0.5">${[e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ')}</p>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     ${statusBadge}
                                     <span class="text-xs text-muted">${e.tickets_sold || 0} bilete</span>
