@@ -174,17 +174,14 @@ class BillingBreakdown extends Page
         // Get ticket counts per event
         $ticketCounts = [];
         if (!empty($eventIds)) {
+            // Join through ticket_types to get event_id (same as TicketResource logic)
             $ticketCounts = DB::table('tickets')
-                ->where(function ($q) use ($marketplaceId, $eventIds) {
-                    $q->where('marketplace_client_id', $marketplaceId)
-                      ->orWhereIn('marketplace_event_id', $eventIds)
-                      ->orWhereIn('event_id', $eventIds);
-                })
-                ->whereIn(DB::raw('COALESCE(marketplace_event_id, event_id)'), $eventIds)
-                ->whereIn('status', ['valid', 'pending'])
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id, COUNT(*) as cnt')
-                ->groupBy('resolved_event_id')
+                ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+                ->whereIn('ticket_types.event_id', $eventIds)
+                ->whereIn('tickets.status', ['valid', 'used'])
+                ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
+                ->selectRaw('ticket_types.event_id as resolved_event_id, COUNT(tickets.id) as cnt')
+                ->groupBy('ticket_types.event_id')
                 ->pluck('cnt', 'resolved_event_id')
                 ->toArray();
         }
