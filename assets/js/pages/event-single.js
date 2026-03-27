@@ -436,7 +436,9 @@ const EventPage = {
             }
         } catch (error) {
             console.error('Failed to load event:', error);
-            if (error.status === 404) {
+            if (error.status === 410 && error.data && error.data.ended) {
+                this.showEndedPerformance(error.data);
+            } else if (error.status === 404) {
                 this.showError('Eveniment negăsit');
             } else {
                 this.showError('Eroare la încărcarea evenimentului');
@@ -744,6 +746,61 @@ const EventPage = {
             '<div id="error-recommended" class="mt-12 text-left"></div>';
 
         // Load recommended events
+        this.loadErrorRecommendations();
+    },
+
+    showEndedPerformance(data) {
+        var self = this;
+        var months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        var days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+
+        var perfsHtml = '';
+        var upcoming = data.upcoming_performances || [];
+        if (upcoming.length > 0) {
+            perfsHtml = '<div class="mt-6 text-left">' +
+                '<h3 class="mb-3 text-lg font-bold text-secondary">Mai poți găsi bilete la:</h3>' +
+                '<div class="space-y-2">' +
+                upcoming.map(function(p) {
+                    var d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+                    var dayName = days[d.getDay()];
+                    var dayNum = d.getDate();
+                    var monthName = months[d.getMonth()];
+                    var year = d.getFullYear();
+                    var timeRange = p.start_time + (p.end_time ? ' – ' + p.end_time : '');
+
+                    return '<a href="/bilete/' + self.escapeHtml(data.parent_slug) + '" class="flex items-center gap-4 p-4 bg-white border rounded-xl border-border hover:border-primary hover:shadow-md transition-all">' +
+                        '<div class="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 shrink-0">' +
+                            '<span class="text-lg font-bold leading-none text-primary">' + dayNum + '</span>' +
+                            '<span class="text-[10px] font-semibold text-primary/70 uppercase">' + monthName.substring(0, 3) + '</span>' +
+                        '</div>' +
+                        '<div class="flex-1">' +
+                            '<div class="font-semibold text-secondary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
+                            '<div class="text-sm text-muted">' + timeRange + '</div>' +
+                        '</div>' +
+                        '<svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+                    '</a>';
+                }).join('') +
+                '</div>' +
+            '</div>';
+        }
+
+        var el = document.getElementById(this.elements.loadingState);
+        el.className = 'flex flex-col gap-8';
+        el.innerHTML =
+            '<div class="w-full py-12 text-center">' +
+                '<svg class="w-16 h-16 mx-auto mb-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                '<h1 class="mb-2 text-2xl font-bold text-secondary">Această reprezentație s-a încheiat</h1>' +
+                (data.parent_title ? '<p class="text-muted">' + self.escapeHtml(data.parent_title) + '</p>' : '') +
+                perfsHtml +
+                '<div class="mt-6">' +
+                    '<a href="/" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-colors bg-primary rounded-xl hover:bg-primary-dark">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>' +
+                        'Înapoi acasă' +
+                    '</a>' +
+                '</div>' +
+            '</div>' +
+            '<div id="error-recommended" class="mt-8 text-left"></div>';
+
         this.loadErrorRecommendations();
     },
 

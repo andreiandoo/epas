@@ -65,7 +65,9 @@ const AmbiletAPI = {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
+                var apiErr = new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
+                apiErr.data = data;
+                throw apiErr;
             }
 
             return data;

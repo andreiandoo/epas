@@ -422,6 +422,43 @@ class MarketplaceEventsController extends BaseController
         ])->first();
 
         if (!$event) {
+            // Check if this is a child event (ended performance link)
+            $endedEvent = Event::where('marketplace_client_id', $client->id)
+                ->where(is_numeric($identifier) ? 'id' : 'slug', $identifier)
+                ->whereNotNull('parent_id')
+                ->first();
+
+            if ($endedEvent && $endedEvent->parent_id) {
+                $parentEvt = Event::where('id', $endedEvent->parent_id)
+                    ->where('is_published', true)
+                    ->first();
+
+                if ($parentEvt) {
+                    $upcomingPerfs = $parentEvt->performances()
+                        ->where(function ($q) {
+                            $q->where('status', 'active')->orWhereNull('status');
+                        })
+                        ->where('starts_at', '>=', now())
+                        ->orderBy('starts_at')
+                        ->get();
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Această reprezentație s-a încheiat',
+                        'ended' => true,
+                        'parent_slug' => $parentEvt->slug,
+                        'parent_title' => $parentEvt->getTranslation('title', $language) ?: $parentEvt->getTranslation('title', 'en'),
+                        'upcoming_performances' => $upcomingPerfs->map(fn ($p) => [
+                            'id' => $p->id,
+                            'date' => $p->starts_at->format('Y-m-d'),
+                            'start_time' => $p->starts_at->format('H:i'),
+                            'end_time' => $p->ends_at?->format('H:i'),
+                            'label' => $p->label,
+                        ])->toArray(),
+                    ], 410);
+                }
+            }
+
             return $this->error('Event not found', 404);
         }
 
@@ -589,6 +626,7 @@ class MarketplaceEventsController extends BaseController
                 ->where(function ($q) {
                     $q->where('status', 'active')->orWhereNull('status');
                 })
+                ->where('starts_at', '>=', now()->subHours(2)) // Hide past performances (with 2h buffer for ongoing shows)
                 ->orderBy('starts_at')
                 ->get()
                 ->map(fn ($p) => [
