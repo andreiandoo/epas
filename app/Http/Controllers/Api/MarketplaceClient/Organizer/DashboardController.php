@@ -313,7 +313,7 @@ class DashboardController extends BaseController
             ->with([
                 'event:id,title',
                 'marketplaceEvent:id,name',
-                'marketplaceCustomer:id,first_name,last_name,email,phone',
+                'marketplaceCustomer:id,first_name,last_name,phone',
                 'tickets.marketplaceTicketType:id,name',
                 'tickets.ticketType:id,name',
             ]);
