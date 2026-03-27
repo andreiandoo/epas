@@ -142,10 +142,10 @@ class Dashboard extends Page
         $marketplaceEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
 
         $orderStats = Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
-                $q->where('marketplace_client_id', $marketplaceId);
+                $q->where('orders.marketplace_client_id', $marketplaceId);
                 if (!empty($marketplaceEventIds)) {
-                    $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
-                      ->orWhereIn('event_id', $marketplaceEventIds);
+                    $q->orWhereIn('orders.marketplace_event_id', $marketplaceEventIds)
+                      ->orWhereIn('orders.event_id', $marketplaceEventIds);
                 }
             })
             ->where('source', '!=', 'test_order')
@@ -257,14 +257,14 @@ class Dashboard extends Page
                     if ($commissions > $expectedMin) return $commissions;
                     // Calculate from event commission rates
                     $calculated = (float) Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
-                            $q->where('marketplace_client_id', $marketplaceId);
+                            $q->where('orders.marketplace_client_id', $marketplaceId);
                             if (!empty($marketplaceEventIds)) {
-                                $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
-                                  ->orWhereIn('event_id', $marketplaceEventIds);
+                                $q->orWhereIn('orders.marketplace_event_id', $marketplaceEventIds)
+                                  ->orWhereIn('orders.event_id', $marketplaceEventIds);
                             }
                         })
-                        ->where('source', '!=', 'test_order')
-                        ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->where('orders.source', '!=', 'test_order')
+                        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
                         ->join('events', 'events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'))
                         ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, COALESCE(orders.commission_rate, ?)) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
                         ->value('total_comm') ?? 0;
@@ -379,10 +379,10 @@ class Dashboard extends Page
         $allStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
         $orderScope = function ($q) use ($marketplaceId, $mpEventIds) {
-            $q->where('marketplace_client_id', $marketplaceId);
+            $q->where('orders.marketplace_client_id', $marketplaceId);
             if (!empty($mpEventIds)) {
-                $q->orWhereIn('marketplace_event_id', $mpEventIds)
-                  ->orWhereIn('event_id', $mpEventIds);
+                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('orders.event_id', $mpEventIds);
             }
         };
 
@@ -401,9 +401,9 @@ class Dashboard extends Page
         // If commission still 0 (all migrated, no commission_rate on orders), use event rates
         if ($totalCommission <= 0 && $totalSales > 0) {
             $perEventComm = Order::where($orderScope)
-                ->whereIn('status', $allStatuses)
-                ->where('source', '!=', 'test_order')
-                ->whereBetween('created_at', [$monthStart, $monthEnd])
+                ->whereIn('orders.status', $allStatuses)
+                ->where('orders.source', '!=', 'test_order')
+                ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
                 ->join('events', function ($join) {
                     $join->on('events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'));
                 })
@@ -449,10 +449,10 @@ class Dashboard extends Page
         // Include orders for marketplace events (migrated may lack marketplace_client_id)
         $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
         $billingScope = function ($q) use ($marketplaceId, $mpEventIds) {
-            $q->where('marketplace_client_id', $marketplaceId);
+            $q->where('orders.marketplace_client_id', $marketplaceId);
             if (!empty($mpEventIds)) {
-                $q->orWhereIn('marketplace_event_id', $mpEventIds)
-                  ->orWhereIn('event_id', $mpEventIds);
+                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('orders.event_id', $mpEventIds);
             }
         };
 
