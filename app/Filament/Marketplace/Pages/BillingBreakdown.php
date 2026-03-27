@@ -55,6 +55,58 @@ class BillingBreakdown extends Page
         }
     }
 
+    /**
+     * Calculate marketplace commission total for a given month.
+     * Reusable by Dashboard and other pages.
+     */
+    public static function calculateMarketplaceCommission(int $marketplaceId, $monthStart, $monthEnd, float $defaultRate = 5): float
+    {
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+
+        $eventBreakdown = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($mpEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('event_id', $mpEventIds);
+                }
+            })
+            ->whereIn('status', $validStatuses)
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
+            ->selectRaw('SUM(total) as revenue_all')
+            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission')
+            ->groupBy('resolved_event_id')
+            ->get();
+
+        $eventIds = $eventBreakdown->pluck('resolved_event_id')->filter()->toArray();
+        $eventRates = [];
+        if (!empty($eventIds)) {
+            $eventRates = Event::with('marketplaceOrganizer')->whereIn('id', $eventIds)
+                ->get()
+                ->mapWithKeys(fn ($e) => [
+                    $e->id => (float) ($e->commission_rate ?? $e->marketplaceOrganizer?->commission_rate ?? $defaultRate)
+                ])
+                ->toArray();
+        }
+
+        $total = 0;
+        foreach ($eventBreakdown as $row) {
+            $eventId = $row->resolved_event_id;
+            $comm = (float) ($row->marketplace_commission ?? 0);
+            $revenueAll = (float) ($row->revenue_all ?? 0);
+
+            if ($comm <= 0 && $revenueAll > 0) {
+                $rate = $eventRates[$eventId] ?? $defaultRate;
+                $comm = round($revenueAll * ($rate / 100), 2);
+            }
+            $total += $comm;
+        }
+
+        return round($total, 2);
+    }
+
     public function getViewData(): array
     {
         $marketplace = $this->marketplace;

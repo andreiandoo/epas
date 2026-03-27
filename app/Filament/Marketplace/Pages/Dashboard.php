@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Pages;
 
+use App\Filament\Marketplace\Pages\BillingBreakdown;
 use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
@@ -390,16 +391,10 @@ class Dashboard extends Page
             ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
             ->value('revenue') ?? 0;
 
-        // Marketplace commission — always use JOIN with events for per-event commission_rate
-        // This matches BillingBreakdown logic exactly (don't rely on orders.commission_amount)
-        $totalCommission = (float) Order::where($orderScope)
-            ->whereIn('orders.status', $allStatuses)
-            ->where('orders.source', '!=', 'test_order')
-            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
-            ->join('events', 'events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'))
-            ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, COALESCE(orders.commission_rate, ?)) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
-            ->value('total_comm') ?? 0;
-        $totalCommission = round($totalCommission, 2);
+        // Marketplace commission — reuse BillingBreakdown's per-event logic (single source of truth)
+        $totalCommission = BillingBreakdown::calculateMarketplaceCommission(
+            $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
+        );
 
         // Tickets sold this month — include tickets for marketplace events
         $ticketsSold = DB::table('tickets')
