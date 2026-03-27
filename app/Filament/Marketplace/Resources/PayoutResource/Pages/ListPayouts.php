@@ -416,7 +416,7 @@ class ListPayouts extends ListRecords
                             $set('gross_amount', number_format($gross, 2, '.', ''));
                             $set('commission_amount', number_format($commission, 2, '.', ''));
                             $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
-                        })
+                        }),
                     \Filament\Actions\Action::make('reset_payout_tickets')
                         ->label('Resetează la valori inițiale')
                         ->icon('heroicon-o-arrow-path')
