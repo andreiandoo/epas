@@ -165,10 +165,11 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
-        // Filter by named date range
-        if ($request->has('date') && !$request->has('from_date')) {
+        // Filter by named date range (accepts both 'date' and 'date_filter' params)
+        $dateParam = $request->get('date_filter') ?? $request->get('date');
+        if ($dateParam && !$request->has('from_date')) {
             $today = now()->startOfDay();
-            switch ($request->date) {
+            switch ($dateParam) {
                 case 'today':
                     $query->whereDate('event_date', $today);
                     break;
@@ -267,6 +268,37 @@ class MarketplaceEventsController extends BaseController
                     });
                 });
             }
+        }
+
+        // Filter by min_price / max_price (sent by category/events page filters)
+        if (!$request->has('price') && ($request->has('min_price') || $request->has('max_price'))) {
+            $minCents = $request->has('min_price') ? (int) $request->min_price * 100 : 0;
+            $maxCents = $request->has('max_price') ? (int) $request->max_price * 100 : null;
+
+            $query->where(function ($q) use ($minCents, $maxCents) {
+                $priceFilter = function ($tq) use ($minCents, $maxCents) {
+                    $tq->where('status', 'active')
+                        ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents]);
+                    if ($maxCents !== null) {
+                        $tq->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) <= ?', [$maxCents]);
+                    }
+                };
+
+                $q->whereHas('ticketTypes', $priceFilter)
+                    ->orWhere(function ($q2) use ($minCents, $maxCents) {
+                        $q2->whereNotNull('parent_id')
+                            ->whereExists(function ($sub) use ($minCents, $maxCents) {
+                                $sub->selectRaw('1')
+                                    ->from('ticket_types')
+                                    ->whereColumn('ticket_types.event_id', 'events.parent_id')
+                                    ->where('ticket_types.status', 'active')
+                                    ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents]);
+                                if ($maxCents !== null) {
+                                    $sub->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) <= ?', [$maxCents]);
+                                }
+                            });
+                    });
+            });
         }
 
         // Featured only
