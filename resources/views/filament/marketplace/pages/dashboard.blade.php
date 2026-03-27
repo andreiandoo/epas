@@ -102,7 +102,11 @@
         </div>
         @endif
 
-        <!-- Stats Cards - 4 per row -->
+        <!-- All Time Stats -->
+        <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+            <x-heroicon-o-chart-bar-square class="w-4 h-4" />
+            All Time
+        </h3>
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             {{-- 1. Evenimente --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">

@@ -247,26 +247,10 @@ class Dashboard extends Page
                 'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
                 'commissions' => $commissions,
-                // For all-time: use per-event commission rates via join if commission_amount is mostly 0
-                'all_time_commissions' => (function () use ($marketplaceId, $marketplaceEventIds, $orderRevenue, $commissions) {
-                    // If commission_amount covers > 50% of expected value, it's populated
-                    $expectedMin = $orderRevenue * 0.01; // at least 1% would be expected
-                    if ($commissions > $expectedMin) return $commissions;
-                    // Calculate from event commission rates
-                    $calculated = (float) Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
-                            $q->where('orders.marketplace_client_id', $marketplaceId);
-                            if (!empty($marketplaceEventIds)) {
-                                $q->orWhereIn('orders.marketplace_event_id', $marketplaceEventIds)
-                                  ->orWhereIn('orders.event_id', $marketplaceEventIds);
-                            }
-                        })
-                        ->where('orders.source', '!=', 'test_order')
-                        ->whereIn('orders.status', ['paid', 'confirmed', 'completed'])
-                        ->join('events', 'events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'))
-                        ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, COALESCE(orders.commission_rate, ?)) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
-                        ->value('total_comm') ?? 0;
-                    return round($calculated, 2);
-                })(),
+                // All-time marketplace commissions — single source of truth
+                'all_time_commissions' => BillingBreakdown::calculateMarketplaceCommission(
+                    $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
+                ),
                 'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => (int) $ticketStats->sold,
                 'today_tickets' => (int) $ticketStats->sold_today,

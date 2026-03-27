@@ -56,15 +56,16 @@ class BillingBreakdown extends Page
     }
 
     /**
-     * Calculate marketplace commission total for a given month.
+     * Calculate marketplace commission total for a given period.
+     * Pass null for $monthStart/$monthEnd to calculate all-time.
      * Reusable by Dashboard and other pages.
      */
-    public static function calculateMarketplaceCommission(int $marketplaceId, $monthStart, $monthEnd, float $defaultRate = 5): float
+    public static function calculateMarketplaceCommission(int $marketplaceId, $monthStart = null, $monthEnd = null, float $defaultRate = 5): float
     {
         $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
         $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
-        $eventBreakdown = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
+        $query = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
                 $q->where('marketplace_client_id', $marketplaceId);
                 if (!empty($mpEventIds)) {
                     $q->orWhereIn('marketplace_event_id', $mpEventIds)
@@ -72,8 +73,13 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order')
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->where('source', '!=', 'test_order');
+
+        if ($monthStart && $monthEnd) {
+            $query->whereBetween('created_at', [$monthStart, $monthEnd]);
+        }
+
+        $eventBreakdown = $query
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('SUM(total) as revenue_all')
             ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission')
