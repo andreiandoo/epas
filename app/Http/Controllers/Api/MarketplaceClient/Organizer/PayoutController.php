@@ -99,16 +99,19 @@ class PayoutController extends BaseController
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($event) use ($organizer) {
-                // Get completed orders for this event (check event_id, marketplace_event_id, and ticket links)
+                // Get ALL completed orders for this event (regardless of organizer_id on order)
+                // The event already belongs to this organizer, so all orders for it count
                 $eventId = $event->id;
-                $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where(function ($q) use ($eventId) {
+                $ttIds = \App\Models\TicketType::where('event_id', $eventId)->pluck('id');
+                $completedOrders = Order::whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('marketplace_client_id', $organizer->marketplace_client_id)
+                    ->where(function ($q) use ($eventId, $ttIds) {
                         $q->where('event_id', $eventId)
                           ->orWhere('marketplace_event_id', $eventId)
-                          ->orWhereHas('tickets', function ($tq) use ($eventId) {
+                          ->orWhereHas('tickets', function ($tq) use ($eventId, $ttIds) {
                               $tq->where('event_id', $eventId)
-                                 ->orWhere('marketplace_event_id', $eventId);
+                                 ->orWhere('marketplace_event_id', $eventId)
+                                 ->orWhereIn('ticket_type_id', $ttIds);
                           });
                     })
                     ->withCount('tickets')
