@@ -67,6 +67,8 @@ class MarketplaceTaxTemplate extends Model
         'declaratie_impozite' => 'Declaratie impozite',
         'organizer_contract' => 'Organizer Contract',
         'decont' => 'Decont',
+        'decont_ontop' => 'Decont On-Top',
+        'decont_inclus' => 'Decont Inclus',
         'other' => 'Other',
     ];
 

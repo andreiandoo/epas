@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerBankAccount;
 use App\Models\MarketplacePayout;
+use App\Models\MarketplaceTaxTemplate;
 use App\Models\Order;
 use Filament\Actions;
 use Filament\Forms;
@@ -599,11 +600,89 @@ class ListPayouts extends ListRecords
                     'admin_notes' => $data['admin_notes'] ?? null,
                 ]);
 
+                // Generate decont document immediately based on commission mode
+                try {
+                    $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
+                    $templateType = $commissionMode === 'added_on_top' ? 'decont_ontop' : 'decont_inclus';
+
+                    // Try specific template first, fall back to generic 'decont'
+                    $template = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplaceAdmin->marketplace_client_id)
+                        ->where('type', $templateType)
+                        ->where('is_active', true)
+                        ->first();
+
+                    if (!$template) {
+                        $template = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplaceAdmin->marketplace_client_id)
+                            ->where('type', 'decont')
+                            ->where('is_active', true)
+                            ->first();
+                    }
+
+                    if ($template) {
+                        $marketplace = \App\Models\MarketplaceClient::find($marketplaceAdmin->marketplace_client_id);
+                        $organizer = \App\Models\MarketplaceOrganizer::find($data['marketplace_organizer_id']);
+                        $taxRegistry = $event ? \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+                            ->where(function ($q) use ($event) {
+                                $venue = $event->venue;
+                                if ($venue?->county) $q->where('county', $venue->county);
+                                if ($venue?->city) $q->orWhere('city', $venue->city);
+                            })->first() : null;
+
+                        $variables = $template->getVariablesForContext(
+                            taxRegistry: $taxRegistry,
+                            marketplace: $marketplace,
+                            organizer: $organizer,
+                            event: $event,
+                            payout: $payout
+                        );
+
+                        $htmlContent = $template->processTemplate($variables);
+                        if (!str_contains($htmlContent, '<html')) {
+                            $htmlContent = '<html><head><meta charset="UTF-8"><style>body{font-family:DejaVu Sans,sans-serif;font-size:12px;}</style></head><body>' . $htmlContent . '</body></html>';
+                        }
+
+                        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($htmlContent);
+                        $pdf->setPaper('A4', $template->page_orientation ?? 'portrait');
+                        $pdfContent = $pdf->output();
+
+                        $fileName = 'decont_' . $payout->reference . '_' . now()->format('Ymd_His') . '.pdf';
+                        $filePath = "organizer-documents/{$organizer->id}/{$fileName}";
+                        \Illuminate\Support\Facades\Storage::disk('public')->put($filePath, $pdfContent);
+
+                        \App\Models\OrganizerDocument::create([
+                            'marketplace_client_id' => $marketplace->id,
+                            'marketplace_organizer_id' => $organizer->id,
+                            'event_id' => $payout->event_id,
+                            'marketplace_payout_id' => $payout->id,
+                            'tax_template_id' => $template->id,
+                            'title' => 'Decont ' . $payout->reference,
+                            'document_type' => 'decont',
+                            'file_path' => $filePath,
+                            'file_name' => $fileName,
+                            'file_size' => strlen($pdfContent),
+                            'html_content' => $htmlContent,
+                            'document_data' => [
+                                'payout_reference' => $payout->reference,
+                                'payout_amount' => $payout->amount,
+                                'commission_mode' => $commissionMode,
+                                'template_type' => $templateType,
+                                'template_name' => $template->name,
+                            ],
+                            'issued_at' => now(),
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::warning('Decont document generation failed: ' . $e->getMessage());
+                }
+
                 \Filament\Notifications\Notification::make()
                     ->title('Decont creat')
                     ->body("Decontul {$payout->reference} a fost creat cu succes.")
                     ->success()
                     ->send();
+
+                // Redirect to payout view page
+                $this->redirect(\App\Filament\Marketplace\Resources\PayoutResource::getUrl('view', ['record' => $payout]));
             });
     }
 
