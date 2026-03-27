@@ -233,8 +233,8 @@ class ListPayouts extends ListRecords
                             ->minValue(0)
                             ->suffix('bilete')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function () {
-                                $this->recalculatePayoutAmounts();
+                            ->afterStateUpdated(function (Set $set, Get $get, $component) {
+                                $this->recalculateFromTickets($set, $get, $component);
                             })
                             ->columnSpan(1),
                     ])
@@ -612,26 +612,21 @@ class ListPayouts extends ListRecords
             $sold = $ticketCounts[$tt->id] ?? 0;
             if ($sold <= 0) continue;
 
-            // Calculate commission per ticket
+            // price_cents = BASE price (what the organizer set). On top means buyer pays base + commission.
             $ttMode = $tt->commission_mode ?: $commissionMode;
-            $unitPrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
 
+            // Commission is always calculated on BASE price, regardless of mode
             if ($tt->commission_type && $tt->commission_type !== '') {
                 $commPerTicket = match ($tt->commission_type) {
-                    'percentage' => $ttMode === 'added_on_top'
-                        ? round($unitPrice * ($tt->commission_rate / 100) / (1 + $tt->commission_rate / 100), 2) // extract from total
-                        : round($unitPrice * ($tt->commission_rate / 100), 2),
-                    'fixed' => (float) $tt->commission_fixed,
-                    'both' => round($unitPrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
-                    default => round($unitPrice * ($commissionRate / 100), 2),
+                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
+                    'fixed' => (float) ($tt->commission_fixed ?? 0),
+                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
+                    default => round($basePrice * ($commissionRate / 100), 2),
                 };
             } else {
-                $commPerTicket = $ttMode === 'added_on_top'
-                    ? round($unitPrice - $unitPrice / (1 + $commissionRate / 100), 2)
-                    : round($unitPrice * ($commissionRate / 100), 2);
+                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
             }
-
-            $basePrice = $ttMode === 'added_on_top' ? round($unitPrice - $commPerTicket, 2) : $unitPrice;
 
             $items[] = [
                 'ticket_type_id' => $tt->id,
@@ -658,11 +653,14 @@ class ListPayouts extends ListRecords
 
     /**
      * Recalculate gross/commission/net from ticket selection.
-     * Uses Livewire data directly (relative paths unreliable in repeaters).
      */
-    public function recalculatePayoutAmounts(): void
+    protected function recalculateFromTickets(Set $set, Get $get, $component): void
     {
-        $tickets = data_get($this->data, 'payout_tickets', []);
+        // Navigate to root form state via component's Livewire
+        $livewire = $component->getLivewire();
+        $allData = $livewire->mountedActionsData[0] ?? [];
+        $tickets = $allData['payout_tickets'] ?? [];
+
         $gross = 0;
         $commission = 0;
 
@@ -674,10 +672,12 @@ class ListPayouts extends ListRecords
             $commission += $qty * $commPerTicket;
         }
 
-        $fees = (float) data_get($this->data, 'fees_amount', 0);
-        data_set($this->data, 'gross_amount', number_format($gross, 2, '.', ''));
-        data_set($this->data, 'commission_amount', number_format($commission, 2, '.', ''));
-        data_set($this->data, 'net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+        $fees = (float) ($allData['fees_amount'] ?? 0);
+
+        // Use absolute paths from the action form root
+        $set('../../gross_amount', number_format($gross, 2, '.', ''));
+        $set('../../commission_amount', number_format($commission, 2, '.', ''));
+        $set('../../net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
     }
 
     /**
@@ -711,15 +711,21 @@ class ListPayouts extends ListRecords
         foreach ($completedOrders as $order) {
             if ($order->items->isNotEmpty()) {
                 foreach ($order->items as $item) {
-                    $tt = $item->ticketType ?? ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null);
-                    $ttCommType = $tt?->commission_type;
-                    $ttCommRate = (float) ($tt?->commission_rate ?? 0);
-                    $ttCommFixed = (float) ($tt?->commission_fixed ?? 0);
-                    $ttCommMode = $tt?->commission_mode ?: $commissionMode;
+                    // Prefer event's ticket type (has commission info) over eager-loaded
+                    $tt = ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null) ?? $item->ticketType;
                     $itemTotal = (float) $item->total;
                     $itemQty = (int) $item->quantity;
+                    $itemBasePerUnit = $itemQty > 0 ? $itemTotal / $itemQty : $itemTotal;
+
+                    $ttCommType = $tt?->commission_type;
+                    $ttCommMode = $tt?->commission_mode ?: $commissionMode;
 
                     if ($ttCommType && $ttCommType !== '') {
+                        $ttCommRate = (float) ($tt->commission_rate ?? 0);
+                        $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+
+                        // For ON TOP: item total includes commission. Extract base first.
+                        // For INCLUDED: item total = base price. Commission deducted from organizer.
                         if ($ttCommMode === 'added_on_top') {
                             $base = match ($ttCommType) {
                                 'percentage' => round($itemTotal / (1 + $ttCommRate / 100), 2),
@@ -737,7 +743,7 @@ class ListPayouts extends ListRecords
                             };
                         }
                     } else {
-                        // Event-level commission
+                        // No per-ticket commission — use event-level
                         if ($commissionMode === 'added_on_top') {
                             $base = round($itemTotal / (1 + $commissionRate / 100), 2);
                             $totalCommission += round($itemTotal - $base, 2);
