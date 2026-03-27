@@ -71,25 +71,36 @@ class BillingBreakdown extends Page
         $commissionRate = (float) ($marketplace->commission_rate ?? 0);
 
         // === TICKETING BREAKDOWN PER EVENT ===
+        // Use COALESCE to catch orders with event_id but no marketplace_event_id (POS/app)
         $eventBreakdown = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->selectRaw('marketplace_event_id')
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('COUNT(*) as order_count')
             ->selectRaw('SUM(total) as revenue')
-            ->groupBy('marketplace_event_id')
+            ->selectRaw('SUM(commission_amount) as marketplace_commission')
+            ->groupBy('resolved_event_id')
             ->orderByDesc('revenue')
             ->get();
 
-        // Get event names
-        $eventIds = $eventBreakdown->pluck('marketplace_event_id')->filter()->toArray();
-        $eventNames = [];
+        // Get event details (name, date, venue)
+        $eventIds = $eventBreakdown->pluck('resolved_event_id')->filter()->toArray();
+        $eventDetails = [];
         if (!empty($eventIds)) {
-            $eventNames = Event::whereIn('id', $eventIds)
+            $eventDetails = Event::with('venue')->whereIn('id', $eventIds)
                 ->get()
                 ->mapWithKeys(function ($e) {
-                    return [$e->id => $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en')];
+                    $name = $e->getTranslation('title', 'ro') ?: $e->getTranslation('title', 'en');
+                    $venueName = $e->venue ? (is_array($e->venue->name) ? ($e->venue->name['ro'] ?? $e->venue->name['en'] ?? '') : $e->venue->name) : null;
+                    $venueCity = $e->venue?->city;
+                    $eventDate = $e->event_date ?? $e->range_start_date;
+                    return [$e->id => [
+                        'name' => $name,
+                        'date' => $eventDate?->format('d.m.Y'),
+                        'venue' => $venueName,
+                        'city' => $venueCity,
+                    ]];
                 })
                 ->toArray();
         }
@@ -99,30 +110,39 @@ class BillingBreakdown extends Page
         if (!empty($eventIds)) {
             $ticketCounts = DB::table('tickets')
                 ->where('marketplace_client_id', $marketplaceId)
-                ->whereIn('marketplace_event_id', $eventIds)
-                ->where('status', 'valid')
+                ->whereIn(DB::raw('COALESCE(marketplace_event_id, event_id)'), $eventIds)
+                ->whereIn('status', ['valid', 'pending'])
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
-                ->selectRaw('marketplace_event_id, COUNT(*) as cnt')
-                ->groupBy('marketplace_event_id')
-                ->pluck('cnt', 'marketplace_event_id')
+                ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id, COUNT(*) as cnt')
+                ->groupBy('resolved_event_id')
+                ->pluck('cnt', 'resolved_event_id')
                 ->toArray();
         }
 
-        $events = $eventBreakdown->map(function ($row) use ($eventNames, $ticketCounts, $commissionRate) {
-            $eventId = $row->marketplace_event_id;
+        $events = $eventBreakdown->map(function ($row) use ($eventDetails, $ticketCounts, $commissionRate) {
+            $eventId = $row->resolved_event_id;
             $revenue = (float) $row->revenue;
+            $marketplaceCommission = (float) ($row->marketplace_commission ?? 0);
+            $tixelloCommission = round($revenue * ($commissionRate / 100), 2);
+            $details = $eventDetails[$eventId] ?? null;
+
             return [
                 'event_id' => $eventId,
-                'event_name' => $eventNames[$eventId] ?? ($eventId ? 'Eveniment #' . $eventId : 'Fără eveniment'),
+                'event_name' => $details['name'] ?? ($eventId ? 'Eveniment #' . $eventId : 'Necunoscut'),
+                'event_date' => $details['date'] ?? null,
+                'venue' => $details['venue'] ?? null,
+                'city' => $details['city'] ?? null,
                 'order_count' => (int) $row->order_count,
                 'ticket_count' => (int) ($ticketCounts[$eventId] ?? 0),
                 'revenue' => $revenue,
-                'commission' => round($revenue * ($commissionRate / 100), 2),
+                'marketplace_commission' => $marketplaceCommission,
+                'tixello_commission' => $tixelloCommission,
             ];
         })->toArray();
 
         $revenueTotal = collect($events)->sum('revenue');
         $ticketingTotal = round($revenueTotal * ($commissionRate / 100), 2);
+        $marketplaceCommissionTotal = collect($events)->sum('marketplace_commission');
 
         // === SERVICE ORDERS BREAKDOWN ===
         $serviceOrders = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -174,6 +194,7 @@ class BillingBreakdown extends Page
                 'events' => $events,
                 'ticketing_total' => $ticketingTotal,
                 'revenue_total' => $revenueTotal,
+                'marketplace_commission_total' => $marketplaceCommissionTotal,
                 'services_by_type' => $servicesByType,
                 'services_total' => $servicesTotal,
                 'grand_total' => $ticketingTotal + $servicesTotal,

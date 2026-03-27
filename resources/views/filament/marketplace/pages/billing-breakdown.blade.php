@@ -56,10 +56,13 @@
                     <thead>
                         <tr class="border-b border-gray-200 dark:border-gray-700">
                             <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Eveniment</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
+                            <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Locație</th>
                             <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comenzi</th>
                             <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Bilete</th>
                             <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Încasări</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comision</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comision marketplace</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Comision Tixello</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,19 +77,29 @@
                                 <span class="font-medium text-gray-900 dark:text-white">{{ $event['event_name'] }}</span>
                                 @endif
                             </td>
+                            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $event['event_date'] ?? '-' }}</td>
+                            <td class="px-3 py-2.5 text-gray-500 dark:text-gray-400">
+                                @if($event['venue'])
+                                    {{ $event['venue'] }}@if($event['city']), {{ $event['city'] }}@endif
+                                @else
+                                    -
+                                @endif
+                            </td>
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['order_count']) }}</td>
                             <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-300">{{ number_format($event['ticket_count']) }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ number_format($event['revenue'], 2) }} {{ $d['currency'] }}</td>
-                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['commission'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ number_format($event['marketplace_commission'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($event['tixello_commission'], 2) }} {{ $d['currency'] }}</td>
                         </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-300 dark:border-gray-600">
-                            <td class="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">Total</td>
+                            <td colspan="3" class="px-3 py-2.5 font-semibold text-gray-900 dark:text-white">Total</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-700 dark:text-gray-300">{{ number_format(collect($d['events'])->sum('order_count')) }}</td>
                             <td class="px-3 py-2.5 text-right font-medium text-gray-700 dark:text-gray-300">{{ number_format(collect($d['events'])->sum('ticket_count')) }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-gray-900 dark:text-white whitespace-nowrap">{{ number_format($d['revenue_total'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap">{{ number_format($d['marketplace_commission_total'], 2) }} {{ $d['currency'] }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">{{ number_format($d['ticketing_total'], 2) }} {{ $d['currency'] }}</td>
                         </tr>
                     </tfoot>
