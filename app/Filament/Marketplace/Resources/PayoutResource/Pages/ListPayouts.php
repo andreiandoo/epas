@@ -97,12 +97,16 @@ class ListPayouts extends ListRecords
                                 $set('commission_amount', number_format($fin['commission'], 2, '.', ''));
                                 $set('fees_amount', '0.00');
                                 $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+
+                                // Populate ticket selector with all ticket types
+                                $this->populatePayoutTicketsFromEvent($set, $event);
                             }
                         } else {
                             $set('gross_amount', '0.00');
                             $set('commission_amount', '0.00');
                             $set('fees_amount', '0.00');
                             $set('net_amount', '0.00');
+                            $set('payout_tickets', []);
                         }
                     }),
 
@@ -201,6 +205,49 @@ class ListPayouts extends ListRecords
                         if (!$organizerId) return false;
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
                     }),
+
+                // Ticket selection for partial payout
+                Forms\Components\Repeater::make('payout_tickets')
+                    ->label('Bilete pentru decont')
+                    ->helperText('Selectează câte bilete din fiecare tip incluzi în acest decont. Implicit: toate.')
+                    ->schema([
+                        Forms\Components\Hidden::make('ticket_type_id'),
+                        Forms\Components\Hidden::make('ticket_type_name'),
+                        Forms\Components\Hidden::make('available'),
+                        Forms\Components\Hidden::make('unit_price'),
+                        Forms\Components\Hidden::make('commission_per_ticket'),
+                        Forms\Components\Placeholder::make('label')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
+                                '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>' .
+                                '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet</span>'
+                            ))
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('qty')
+                            ->hiddenLabel()
+                            ->numeric()
+                            ->minValue(0)
+                            ->suffix('bilete')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                // Recalculate totals when qty changes
+                                $this->recalculatePayoutFromTickets($set, $get);
+                            })
+                            ->columnSpan(1),
+                    ])
+                    ->columns(3)
+                    ->reorderable(false)
+                    ->addable(false)
+                    ->deletable(false)
+                    ->defaultItems(0)
+                    ->visible(fn (Get $get) => $get('event_id') !== null)
+                    ->dehydrated(false)
+                    ->afterStateHydrated(function ($component, Get $get) {
+                        $eventId = $get('event_id');
+                        if (!$eventId) return;
+                        $this->populatePayoutTickets($component, $eventId);
+                    })
+                    ->columnSpanFull(),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('gross_amount')
@@ -539,6 +586,94 @@ class ListPayouts extends ListRecords
             ->send();
 
         $this->redirect(PayoutResource::getUrl('index'));
+    }
+
+    /**
+     * Populate payout_tickets repeater with ticket type breakdown from event.
+     */
+    protected function populatePayoutTicketsFromEvent(Set $set, Event $event): void
+    {
+        $commissionMode = $event->getEffectiveCommissionMode();
+        $commissionRate = $event->getEffectiveCommissionRate();
+
+        // Get sold ticket counts per type
+        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id')
+            ->toArray();
+
+        $items = [];
+        foreach ($event->ticketTypes as $tt) {
+            $sold = $ticketCounts[$tt->id] ?? 0;
+            if ($sold <= 0) continue;
+
+            // Calculate commission per ticket
+            $ttMode = $tt->commission_mode ?: $commissionMode;
+            $unitPrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+
+            if ($tt->commission_type && $tt->commission_type !== '') {
+                $commPerTicket = match ($tt->commission_type) {
+                    'percentage' => $ttMode === 'added_on_top'
+                        ? round($unitPrice * ($tt->commission_rate / 100) / (1 + $tt->commission_rate / 100), 2) // extract from total
+                        : round($unitPrice * ($tt->commission_rate / 100), 2),
+                    'fixed' => (float) $tt->commission_fixed,
+                    'both' => round($unitPrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
+                    default => round($unitPrice * ($commissionRate / 100), 2),
+                };
+            } else {
+                $commPerTicket = $ttMode === 'added_on_top'
+                    ? round($unitPrice - $unitPrice / (1 + $commissionRate / 100), 2)
+                    : round($unitPrice * ($commissionRate / 100), 2);
+            }
+
+            $basePrice = $ttMode === 'added_on_top' ? round($unitPrice - $commPerTicket, 2) : $unitPrice;
+
+            $items[] = [
+                'ticket_type_id' => $tt->id,
+                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
+                'available' => $sold,
+                'unit_price' => $basePrice,
+                'commission_per_ticket' => $commPerTicket,
+                'qty' => $sold, // default: all tickets
+            ];
+        }
+
+        $set('payout_tickets', $items);
+    }
+
+    /**
+     * Populate payout_tickets from component hydration.
+     */
+    protected function populatePayoutTickets($component, int $eventId): void
+    {
+        $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+        if (!$event) return;
+        // Will be populated via afterStateUpdated on event_id
+    }
+
+    /**
+     * Recalculate gross/commission/net from ticket selection.
+     */
+    protected function recalculatePayoutFromTickets(Set $set, Get $get): void
+    {
+        $tickets = $get('../../payout_tickets') ?? $get('../payout_tickets') ?? [];
+        $gross = 0;
+        $commission = 0;
+
+        foreach ($tickets as $item) {
+            $qty = (int) ($item['qty'] ?? 0);
+            $unitPrice = (float) ($item['unit_price'] ?? 0);
+            $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+            $gross += $qty * ($unitPrice + $commPerTicket); // total = base + commission
+            $commission += $qty * $commPerTicket;
+        }
+
+        $fees = (float) ($get('../../fees_amount') ?? $get('../fees_amount') ?? 0);
+        $set('../../gross_amount', number_format($gross, 2, '.', ''));
+        $set('../../commission_amount', number_format($commission, 2, '.', ''));
+        $set('../../net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
     }
 
     /**
