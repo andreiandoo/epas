@@ -2457,21 +2457,24 @@ class EventResource extends Resource
                                             return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
                                         }
 
-                                        // Get stats from the event or calculate from ticket types
-                                        // TicketType uses quota_sold for sold count and capacity accessor for total
-                                        $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quota_sold') ?? 0;
-                                        // Calculate revenue from ticket types (sold * display_price)
-                                        $calculatedRevenue = $record->ticketTypes->sum(fn ($tt) => ($tt->quota_sold ?? 0) * ($tt->display_price ?? 0));
-                                        $totalRevenue = $record->revenue ?? $calculatedRevenue ?? 0;
+                                        // Calculate real revenue from actual orders (not from quota_sold × price)
+                                        $eventId = $record->id;
+                                        $totalRevenue = (float) \App\Models\Order::whereIn('status', ['paid', 'confirmed', 'completed'])
+                                            ->where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->sum('total');
+
+                                        // Count valid tickets (not cancelled/refunded)
+                                        $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                                            ->count();
+
                                         $totalCapacity = $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
                                         $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
                                         $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
 
-                                        $revenueFormatted = $totalRevenue >= 1000
-                                            ? number_format($totalRevenue / 1000, 1) . 'K'
-                                            : number_format($totalRevenue, 0);
+                                        $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
 
                                         $ticketsLabel = $t('Bilete', 'Tickets');
                                         $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
