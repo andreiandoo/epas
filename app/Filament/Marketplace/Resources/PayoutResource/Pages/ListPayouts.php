@@ -653,13 +653,36 @@ class ListPayouts extends ListRecords
 
     /**
      * Recalculate gross/commission/net from ticket selection.
+     * Tries multiple strategies to find payout_tickets data.
      */
     protected function recalculateFromTickets(Set $set, Get $get, $component): void
     {
-        // Navigate to root form state via component's Livewire
+        // Strategy 1: try to get from mounted action data
         $livewire = $component->getLivewire();
-        $allData = $livewire->mountedActionsData[0] ?? [];
-        $tickets = $allData['payout_tickets'] ?? [];
+        $tickets = null;
+
+        // Try mountedActionsData (Filament 4 action form state)
+        if (property_exists($livewire, 'mountedActionsData') && !empty($livewire->mountedActionsData)) {
+            $actionData = is_array($livewire->mountedActionsData) ? ($livewire->mountedActionsData[0] ?? []) : [];
+            $tickets = $actionData['payout_tickets'] ?? null;
+        }
+
+        // Strategy 2: try $get with various paths
+        if (!$tickets) {
+            foreach (['../../payout_tickets', '../payout_tickets', 'payout_tickets'] as $path) {
+                $try = $get($path);
+                if ($try && is_array($try) && !empty($try)) {
+                    $tickets = $try;
+                    break;
+                }
+            }
+        }
+
+        \Log::info('[RecalculateTickets] tickets found: ' . ($tickets ? count($tickets) : 'NULL'));
+
+        if (!$tickets || empty($tickets)) {
+            return; // Don't zero out if we can't find the data
+        }
 
         $gross = 0;
         $commission = 0;
@@ -672,12 +695,20 @@ class ListPayouts extends ListRecords
             $commission += $qty * $commPerTicket;
         }
 
-        $fees = (float) ($allData['fees_amount'] ?? 0);
+        $fees = 0;
+        foreach (['../../fees_amount', '../fees_amount'] as $path) {
+            $f = $get($path);
+            if ($f !== null) { $fees = (float) $f; break; }
+        }
 
-        // Use absolute paths from the action form root
-        $set('../../gross_amount', number_format($gross, 2, '.', ''));
-        $set('../../commission_amount', number_format($commission, 2, '.', ''));
-        $set('../../net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+        \Log::info('[RecalculateTickets] gross=' . $gross . ' commission=' . $commission . ' fees=' . $fees);
+
+        // Try multiple set paths
+        foreach (['../../', '../', ''] as $prefix) {
+            $set($prefix . 'gross_amount', number_format($gross, 2, '.', ''));
+            $set($prefix . 'commission_amount', number_format($commission, 2, '.', ''));
+            $set($prefix . 'net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+        }
     }
 
     /**
@@ -705,6 +736,20 @@ class ListPayouts extends ListRecords
 
         // Load event ticket types for commission info
         $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+
+        // Debug: log ticket types and commission info
+        \Log::info('[PayoutFinancials] Event #' . $event->id . ' eventTicketTypes: ' . $eventTicketTypes->map(fn ($tt) => [
+            'id' => $tt->id, 'name' => $tt->name,
+            'commission_type' => $tt->commission_type, 'commission_rate' => $tt->commission_rate,
+            'commission_fixed' => $tt->commission_fixed, 'commission_mode' => $tt->commission_mode,
+        ])->toJson());
+        \Log::info('[PayoutFinancials] Orders: ' . $completedOrders->count() . ', items: ' . $completedOrders->sum(fn ($o) => $o->items->count()));
+        foreach ($completedOrders as $order) {
+            foreach ($order->items as $item) {
+                $ttFound = ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null) ?? $item->ticketType;
+                \Log::info('[PayoutFinancials] Item: tt_id=' . $item->ticket_type_id . ', found_tt=' . ($ttFound ? $ttFound->id : 'NULL') . ', comm_type=' . ($ttFound?->commission_type ?? 'NULL') . ', total=' . $item->total);
+            }
+        }
 
         // Per-ticket-type commission calculation
         $totalCommission = 0;
