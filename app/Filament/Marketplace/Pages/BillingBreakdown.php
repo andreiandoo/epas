@@ -78,8 +78,9 @@ class BillingBreakdown extends Page
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('COUNT(*) as order_count')
-            ->selectRaw('SUM(total) as revenue')
-            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission')
+            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 ELSE total END) as revenue")
+            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as marketplace_commission")
+            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END) as refunded_count")
             ->groupBy('resolved_event_id')
             ->orderByDesc('revenue')
             ->get();
