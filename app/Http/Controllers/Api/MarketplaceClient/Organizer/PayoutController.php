@@ -99,10 +99,19 @@ class PayoutController extends BaseController
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($event) use ($organizer) {
-                // Get completed orders for this event
+                // Get completed orders for this event (check event_id, marketplace_event_id, and ticket links)
+                $eventId = $event->id;
                 $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-                    ->where('event_id', $event->id)
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where(function ($q) use ($eventId) {
+                        $q->where('event_id', $eventId)
+                          ->orWhere('marketplace_event_id', $eventId)
+                          ->orWhereHas('tickets', function ($tq) use ($eventId) {
+                              $tq->where('event_id', $eventId)
+                                 ->orWhere('marketplace_event_id', $eventId);
+                          });
+                    })
+                    ->withCount('tickets')
                     ->get();
 
                 $commissionMode = $event->getEffectiveCommissionMode();
@@ -170,7 +179,7 @@ class PayoutController extends BaseController
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
-                    'tickets_sold' => $completedOrders->sum(fn($o) => $o->tickets()->count()),
+                    'tickets_sold' => $completedOrders->sum(fn($o) => $o->tickets_count ?? $o->tickets()->count()),
                 ];
             });
 
