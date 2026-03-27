@@ -73,7 +73,7 @@
                 <x-heroicon-o-calendar-days class="w-4 h-4" />
                 {{ $monthStats['month_label'] }}
             </h3>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori noi</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['new_organizers']) }}</p>
@@ -105,6 +105,14 @@
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($monthStats['month_orders']) }}</p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Payouts pending</p>
+                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($monthStats['payouts_pending'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
+                </div>
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Payouts achitate</p>
+                    <p class="mt-1 text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($monthStats['payouts_paid'], 0) }} <span class="text-sm font-normal text-gray-400">{{ $monthStats['currency'] }}</span></p>
                 </div>
             </div>
         </div>
@@ -251,6 +259,20 @@
                         <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format(max(0, $owedToOrganizers), 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Datorat Organizatori</p>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">= Încasări - Comisioane - Servicii</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- 9. Payouts --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg shrink-0">
+                        <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <div class="min-w-0">
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['completed_payouts_value'], 2) }} <span class="text-sm font-medium text-gray-400">RON</span></p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Payouts Achitate</p>
+                        <p class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{{ number_format($stats['pending_payouts_value'], 2) }} pending</p>
                     </div>
                 </div>
             </div>

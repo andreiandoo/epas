@@ -408,6 +408,13 @@ class Dashboard extends Page
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->count();
 
+        // Payouts this month
+        $monthPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw("COALESCE(SUM(CASE WHEN status IN ('pending','approved','processing') THEN amount ELSE 0 END), 0) as pending")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as paid")
+            ->first();
+
         return [
             'month_label' => Carbon::now()->translatedFormat('F Y'),
             'new_organizers' => $newOrganizers,
@@ -417,6 +424,8 @@ class Dashboard extends Page
             'total_commission' => $totalCommission,
             'tickets_sold' => $ticketsSold,
             'new_customers' => $newCustomers,
+            'payouts_pending' => (float) ($monthPayouts->pending ?? 0),
+            'payouts_paid' => (float) ($monthPayouts->paid ?? 0),
             'month_orders' => $monthOrders,
             'currency' => $this->marketplace->currency ?? 'RON',
         ];
