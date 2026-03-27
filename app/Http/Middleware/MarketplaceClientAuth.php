@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\MarketplaceClient;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -48,8 +49,12 @@ class MarketplaceClientAuth
             ], 401);
         }
 
-        // Find marketplace client by API key
-        $client = MarketplaceClient::where('api_key', $apiKey)->first();
+        // Find marketplace client by API key (cached for 10 minutes)
+        $client = Cache::remember(
+            "marketplace_client_api_{$apiKey}",
+            now()->addMinutes(10),
+            fn () => MarketplaceClient::where('api_key', $apiKey)->first()
+        );
 
         if (!$client) {
             $this->logFailedAttempt($request, 'invalid_api_key');
