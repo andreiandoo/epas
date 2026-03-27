@@ -169,13 +169,9 @@ class Dashboard extends Page
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 
-        // 5. Tickets - include tickets for marketplace events (migrated may lack marketplace_client_id)
-        $ticketStats = Ticket::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
+        // 5. Tickets — use same logic as TicketResource: whereHas ticketType.event
+        $ticketStats = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
                 $q->where('marketplace_client_id', $marketplaceId);
-                if (!empty($marketplaceEventIds)) {
-                    $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
-                      ->orWhereIn('event_id', $marketplaceEventIds);
-                }
             })
             ->selectRaw('COUNT(*) as total_db')
             ->selectRaw("SUM(CASE WHEN status = 'valid' THEN 1 ELSE 0 END) as sold")
