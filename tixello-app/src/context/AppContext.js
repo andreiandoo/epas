@@ -147,18 +147,52 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  const addSale = (sale) => {
+  const addSale = useCallback((sale) => {
     if (!shiftStartTime) {
       setShiftStartTime(Date.now());
     }
-    setRecentSales(prev => [sale, ...prev].slice(0, 20));
+    setRecentSales(prev => {
+      const updated = [sale, ...prev].slice(0, 20);
+      // Persist sale history per event
+      if (sale.eventId) {
+        AsyncStorage.setItem(`sale_history_${sale.eventId}`, JSON.stringify(updated)).catch(() => {});
+      }
+      return updated;
+    });
     setMySales(prev => prev + 1);
     if (sale.method === 'cash') {
       setCashTurnover(prev => prev + sale.total);
     } else {
       setCardTurnover(prev => prev + sale.total);
     }
-  };
+  }, [shiftStartTime]);
+
+  const loadSaleHistory = useCallback(async (eventId) => {
+    if (!eventId) return;
+    try {
+      const stored = await AsyncStorage.getItem(`sale_history_${eventId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setRecentSales(parsed);
+        setMySales(parsed.length);
+        // Restore turnover from persisted sales
+        let cash = 0, card = 0;
+        parsed.forEach(s => {
+          if (s.method === 'cash') cash += s.total || 0;
+          else card += s.total || 0;
+        });
+        setCashTurnover(cash);
+        setCardTurnover(card);
+      } else {
+        setRecentSales([]);
+        setMySales(0);
+        setCashTurnover(0);
+        setCardTurnover(0);
+      }
+    } catch (e) {
+      setRecentSales([]);
+    }
+  }, []);
 
   const addNotification = (notification) => {
     setNotifications(prev => [{
@@ -272,6 +306,7 @@ export function AppProvider({ children }) {
       addScan,
       addSale,
       loadScanHistory,
+      loadSaleHistory,
 
       // Notifications
       notifications,

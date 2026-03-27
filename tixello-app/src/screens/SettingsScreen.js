@@ -285,6 +285,9 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         <Text style={styles.logoutButtonText}>Încheie Tura & Deconectare</Text>
       </TouchableOpacity>
 
+      {/* App Version */}
+      <Text style={styles.versionText}>Tixello Staff v1.4.1</Text>
+
       <View style={styles.bottomSpacer} />
     </ScrollView>
   );
@@ -505,6 +508,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.red,
+  },
+
+  versionText: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginTop: 24,
   },
 
   bottomSpacer: {
