@@ -470,13 +470,24 @@ class ListPayouts extends ListRecords
                 $event = Event::find($data['event_id']);
 
                 // Build ticket breakdown from form data
-                $ticketBreakdown = collect($data['payout_tickets'] ?? [])->filter(fn ($t) => ($t['qty'] ?? 0) > 0)->map(fn ($t) => [
-                    'ticket_type_id' => $t['ticket_type_id'] ?? null,
-                    'ticket_type_name' => $t['ticket_type_name'] ?? '',
-                    'qty' => (int) $t['qty'],
-                    'unit_price' => (float) ($t['unit_price'] ?? 0),
-                    'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
-                ])->values()->toArray();
+                // Build ticket breakdown with full commission details
+                $eventForBreakdown = Event::with('ticketTypes')->find($data['event_id']);
+                $ttMap = $eventForBreakdown ? $eventForBreakdown->ticketTypes->keyBy('id') : collect();
+
+                $ticketBreakdown = collect($data['payout_tickets'] ?? [])->filter(fn ($t) => ($t['qty'] ?? 0) > 0)->map(function ($t) use ($ttMap) {
+                    $tt = $ttMap->get($t['ticket_type_id'] ?? null);
+                    return [
+                        'ticket_type_id' => $t['ticket_type_id'] ?? null,
+                        'ticket_type_name' => $t['ticket_type_name'] ?? '',
+                        'qty' => (int) $t['qty'],
+                        'unit_price' => (float) ($t['unit_price'] ?? 0),
+                        'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
+                        'commission_type' => $tt?->commission_type ?? null,
+                        'commission_rate' => $tt?->commission_rate ? (float) $tt->commission_rate : null,
+                        'commission_fixed' => $tt?->commission_fixed ? (float) $tt->commission_fixed : null,
+                        'commission_mode' => $tt?->commission_mode ?? null,
+                    ];
+                })->values()->toArray();
 
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
