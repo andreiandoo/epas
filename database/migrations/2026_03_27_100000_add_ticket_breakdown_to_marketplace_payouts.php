@@ -10,7 +10,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('marketplace_payouts') && !Schema::hasColumn('marketplace_payouts', 'ticket_breakdown')) {
             Schema::table('marketplace_payouts', function (Blueprint $table) {
-                $table->json('ticket_breakdown')->nullable()->after('notes');
+                $table->json('ticket_breakdown')->nullable()->after('admin_notes');
             });
         }
     }
