@@ -529,6 +529,17 @@ class PayoutController extends BaseController
      */
     protected function formatPayout(MarketplacePayout $payout): array
     {
+        // Get event title
+        $eventTitle = null;
+        if ($payout->event_id) {
+            $event = \App\Models\Event::find($payout->event_id);
+            if ($event) {
+                $eventTitle = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? collect($event->title)->first() ?? null)
+                    : ($event->title ?? null);
+            }
+        }
+
         $data = [
             'id' => $payout->id,
             'reference' => $payout->reference,
@@ -538,6 +549,7 @@ class PayoutController extends BaseController
             'status_label' => $payout->status_label,
             'account' => $payout->payout_method['iban'] ?? null,
             'event_id' => $payout->event_id,
+            'event_title' => $eventTitle,
             'period_start' => $payout->period_start?->toDateString(),
             'period_end' => $payout->period_end?->toDateString(),
             'created_at' => $payout->created_at->toIso8601String(),
