@@ -216,7 +216,7 @@ class GdprRequestResource extends Resource
     {
         return $schema
             ->schema([
-                Infolists\Components\Section::make('Request Details')
+                SC\Section::make('Request Details')
                     ->schema([
                         Infolists\Components\TextEntry::make('request_type')
                             ->badge()
@@ -239,7 +239,7 @@ class GdprRequestResource extends Resource
                     ])
                     ->columns(2),
 
-                Infolists\Components\Section::make('Timeline')
+                SC\Section::make('Timeline')
                     ->schema([
                         Infolists\Components\TextEntry::make('requested_at')
                             ->dateTime(),
@@ -257,7 +257,7 @@ class GdprRequestResource extends Resource
                     ])
                     ->columns(2),
 
-                Infolists\Components\Section::make('Affected Data')
+                SC\Section::make('Affected Data')
                     ->schema([
                         Infolists\Components\KeyValueEntry::make('affected_data')
                             ->label('')
@@ -265,7 +265,7 @@ class GdprRequestResource extends Resource
                     ])
                     ->visible(fn ($record) => !empty($record->affected_data)),
 
-                Infolists\Components\Section::make('Notes')
+                SC\Section::make('Notes')
                     ->schema([
                         Infolists\Components\TextEntry::make('notes')
                             ->label('')

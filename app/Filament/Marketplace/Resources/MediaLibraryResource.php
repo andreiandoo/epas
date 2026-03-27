@@ -22,6 +22,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use UnitEnum;
 
@@ -499,7 +500,7 @@ class MediaLibraryResource extends Resource
 
                         $years = MediaLibrary::query()
                             ->where('marketplace_client_id', $marketplace?->id)
-                            ->selectRaw('DISTINCT YEAR(created_at) as year')
+                            ->selectRaw('DISTINCT EXTRACT(YEAR FROM created_at)::int as year')
                             ->whereNotNull('created_at')
                             ->orderBy('year', 'desc')
                             ->pluck('year', 'year')
@@ -597,11 +598,19 @@ class MediaLibraryResource extends Resource
                         return $query->when($data['value'], function (Builder $query, string $status) {
                             if ($status === 'compressed') {
                                 return $query->whereNotNull('metadata')
-                                    ->whereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL");
+                                    ->whereRaw(
+                                        DB::getDriverName() === 'pgsql'
+                                            ? "metadata->>'compressed_at' IS NOT NULL"
+                                            : "JSON_EXTRACT(metadata, '$.compressed_at') IS NOT NULL"
+                                    );
                             }
                             return $query->where(function ($q) {
                                 $q->whereNull('metadata')
-                                    ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                                    ->orWhereRaw(
+                                        DB::getDriverName() === 'pgsql'
+                                            ? "metadata->>'compressed_at' IS NULL"
+                                            : "JSON_EXTRACT(metadata, '$.compressed_at') IS NULL"
+                                    );
                             });
                         });
                     }),

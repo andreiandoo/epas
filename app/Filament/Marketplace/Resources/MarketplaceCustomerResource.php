@@ -19,6 +19,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
@@ -477,10 +478,19 @@ class MarketplaceCustomerResource extends Resource
                     ->trueLabel('Doar importați')
                     ->falseLabel('Doar noi')
                     ->queries(
-                        true: fn (Builder $query) => $query->whereRaw("JSON_EXTRACT(settings, '$.imported_from') = ?", ['ambilet']),
+                        true: fn (Builder $query) => $query->whereRaw(
+                            DB::getDriverName() === 'pgsql'
+                                ? "settings->>'imported_from' = ?"
+                                : "JSON_EXTRACT(settings, '$.imported_from') = ?",
+                            ['ambilet']
+                        ),
                         false: fn (Builder $query) => $query->where(function (Builder $q) {
                             $q->whereNull('settings')
-                                ->orWhereRaw("JSON_EXTRACT(settings, '$.imported_from') IS NULL");
+                                ->orWhereRaw(
+                                    DB::getDriverName() === 'pgsql'
+                                        ? "settings->>'imported_from' IS NULL"
+                                        : "JSON_EXTRACT(settings, '$.imported_from') IS NULL"
+                                );
                         }),
                     ),
             ])

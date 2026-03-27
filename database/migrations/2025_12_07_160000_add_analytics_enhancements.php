@@ -10,29 +10,43 @@ return new class extends Migration
     {
         // Add GDPR anonymization fields to core_customers
         Schema::table('core_customers', function (Blueprint $table) {
-            $table->boolean('is_anonymized')->default(false)->after('is_merged');
-            $table->timestamp('anonymized_at')->nullable()->after('is_anonymized');
-            $table->integer('rfm_score')->nullable()->after('rfm_segment')->comment('Combined RFM score 3-15');
+            if (!Schema::hasColumn('core_customers', 'is_anonymized')) {
+                $table->boolean('is_anonymized')->default(false);
+            }
+            if (!Schema::hasColumn('core_customers', 'anonymized_at')) {
+                $table->timestamp('anonymized_at')->nullable();
+            }
+            if (!Schema::hasColumn('core_customers', 'rfm_score')) {
+                $table->integer('rfm_score')->nullable()->comment('Combined RFM score 3-15');
+            }
         });
 
         // Add additional fields to cohort_metrics for the CalculateCohortMetricsJob
-        Schema::table('cohort_metrics', function (Blueprint $table) {
-            $table->unsignedBigInteger('tenant_id')->nullable()->after('id');
-            $table->integer('total_orders')->default(0)->after('total_revenue');
-            $table->decimal('revenue_per_customer', 10, 2)->default(0)->after('total_orders');
-            $table->decimal('average_order_value', 10, 2)->default(0)->after('revenue_per_customer');
-            $table->date('period_start')->nullable()->after('average_order_value');
-            $table->date('period_end')->nullable()->after('period_start');
-            $table->timestamp('calculated_at')->nullable()->after('period_end');
-
-            // Update the unique constraint to include tenant_id
-            $table->dropUnique(['cohort_period', 'cohort_type', 'period_offset']);
-        });
-
-        Schema::table('cohort_metrics', function (Blueprint $table) {
-            $table->unique(['cohort_period', 'cohort_type', 'period_offset', 'tenant_id'], 'cohort_metrics_unique');
-            $table->index(['tenant_id', 'cohort_type']);
-        });
+        if (Schema::hasTable('cohort_metrics')) {
+            Schema::table('cohort_metrics', function (Blueprint $table) {
+                if (!Schema::hasColumn('cohort_metrics', 'tenant_id')) {
+                    $table->unsignedBigInteger('tenant_id')->nullable();
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'total_orders')) {
+                    $table->integer('total_orders')->default(0);
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'revenue_per_customer')) {
+                    $table->decimal('revenue_per_customer', 10, 2)->default(0);
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'average_order_value')) {
+                    $table->decimal('average_order_value', 10, 2)->default(0);
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'period_start')) {
+                    $table->date('period_start')->nullable();
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'period_end')) {
+                    $table->date('period_end')->nullable();
+                }
+                if (!Schema::hasColumn('cohort_metrics', 'calculated_at')) {
+                    $table->timestamp('calculated_at')->nullable();
+                }
+            });
+        }
 
         // Create table for storing customer merge history
         if (Schema::hasTable('customer_merge_logs')) {
@@ -121,9 +135,11 @@ return new class extends Migration
         });
 
         // Add index for anonymized customer filtering
-        Schema::table('core_customers', function (Blueprint $table) {
-            $table->index(['is_anonymized', 'is_merged']);
-        });
+        if (Schema::hasColumn('core_customers', 'is_anonymized') && Schema::hasColumn('core_customers', 'is_merged')) {
+            Schema::table('core_customers', function (Blueprint $table) {
+                $table->index(['is_anonymized', 'is_merged']);
+            });
+        }
     }
 
     public function down(): void

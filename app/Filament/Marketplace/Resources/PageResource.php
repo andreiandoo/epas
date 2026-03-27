@@ -12,6 +12,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PageResource extends Resource
@@ -178,7 +179,12 @@ class PageResource extends Resource
                     ->label('Title')
                     ->getStateUsing(fn ($record) => $record->getTranslation('title', 'en') ?? '-')
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        return $query->whereRaw("JSON_EXTRACT(title, '$.en') LIKE ?", ["%{$search}%"]);
+                        return $query->whereRaw(
+                            DB::getDriverName() === 'pgsql'
+                                ? "title->>'en' LIKE ?"
+                                : "JSON_EXTRACT(title, '$.en') LIKE ?",
+                            ["%{$search}%"]
+                        );
                     })
                     ->sortable(),
 

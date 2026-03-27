@@ -88,39 +88,58 @@ class ListPayouts extends ListRecords
                     ->preload()
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function ($state, Set $set) {
+                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
                         if ($state) {
-                            $event = Event::with('marketplaceOrganizer')->find($state);
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
-                                // Calculate and prefill all amount fields
-                                $organizer = $event->marketplaceOrganizer;
-                                $commissionMode = $event->getEffectiveCommissionMode();
-                                $commissionRate = $event->getEffectiveCommissionRate();
-
-                                $completedOrders = Order::where('marketplace_organizer_id', $organizer?->id)
-                                    ->where('event_id', $event->id)
-                                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                                    ->get();
-
-                                $grossRevenue = (float) $completedOrders->sum('total');
-                                $subtotalRevenue = (float) $completedOrders->sum('subtotal');
-
-                                if ($commissionMode === 'added_on_top') {
-                                    $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
-                                } else {
-                                    $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-                                }
-
-                                $set('gross_amount', number_format($grossRevenue, 2, '.', ''));
-                                $set('commission_amount', number_format($commissionAmount, 2, '.', ''));
+                                $fin = self::calculateEventFinancials($event);
                                 $set('fees_amount', '0.00');
-                                $set('net_amount', number_format(max(0, $grossRevenue - $commissionAmount), 2, '.', ''));
+
+                                if ($fin['balance'] <= 0) {
+                                    // Distinguish: no sales vs fully paid
+                                    $set('has_balance', false);
+                                    $set('zero_reason', $fin['gross'] > 0 ? 'fully_paid' : 'no_sales');
+                                    $set('payout_tickets', []);
+                                    $set('gross_amount', '0.00');
+                                    $set('commission_amount', '0.00');
+                                    $set('net_amount', '0.00');
+                                    $set('desired_net_amount', null);
+                                } else {
+                                    $set('has_balance', true);
+                                    // Populate ticket selector with available (not yet paid) tickets
+                                    $this->populatePayoutTicketsFromEvent($set, $event, $fin);
+
+                                    // Check if tickets were populated
+                                    // If no specific tickets remain, set amounts based on balance directly
+                                    $populatedTickets = $get('payout_tickets') ?? [];
+                                    $hasTickets = collect($populatedTickets)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+
+                                    if ($hasTickets) {
+                                        // Calculate from populated tickets
+                                        $ticketGross = 0;
+                                        $ticketComm = 0;
+                                        foreach ($populatedTickets as $t) {
+                                            $qty = (int) ($t['qty'] ?? 0);
+                                            $ticketGross += $qty * ((float) ($t['unit_price'] ?? 0) + (float) ($t['commission_per_ticket'] ?? 0));
+                                            $ticketComm += $qty * (float) ($t['commission_per_ticket'] ?? 0);
+                                        }
+                                        $set('gross_amount', number_format($ticketGross, 2, '.', ''));
+                                        $set('commission_amount', number_format($ticketComm, 2, '.', ''));
+                                        $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                                    } else {
+                                        // Remainder payout — no specific tickets, just the balance
+                                        $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
+                                        $set('commission_amount', '0.00');
+                                        $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                                    }
+                                }
                             }
                         } else {
                             $set('gross_amount', '0.00');
                             $set('commission_amount', '0.00');
                             $set('fees_amount', '0.00');
                             $set('net_amount', '0.00');
+                            $set('payout_tickets', []);
                         }
                     }),
 
@@ -129,15 +148,61 @@ class ListPayouts extends ListRecords
                     ->content(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return '-';
-                        $event = Event::with('marketplaceOrganizer')->find($eventId);
+                        $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
                         if (!$event) return '-';
                         $balance = self::calculateEventBalance($event);
-                        return number_format($balance, 2) . ' RON disponibil';
+
+                        // Commission info — check at event level first
+                        $html = '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . number_format($balance, 2) . ' RON</span> disponibil';
+
+                        // Event-level commission
+                        $eventHasOwnCommission = $event->commission_rate !== null || $event->commission_mode !== null;
+                        $effectiveMode = $event->getEffectiveCommissionMode();
+                        $effectiveRate = $event->getEffectiveCommissionRate();
+                        $modeLabel = $effectiveMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+
+                        if ($eventHasOwnCommission) {
+                            $html .= '<br><span class="text-xs text-gray-500">Setari eveniment: ' . number_format($effectiveRate, 2) . '% (' . $modeLabel . ')</span>';
+                        } else {
+                            $orgName = $event->marketplaceOrganizer?->name ?? 'Organizator';
+                            $html .= '<br><span class="text-xs text-gray-500">Setari organizator: ' . e($orgName) . ' ' . number_format($effectiveRate, 2) . '% (' . $modeLabel . ')</span>';
+                        }
+
+                        // Check if any ticket types have custom commission
+                        $customCommTts = $event->ticketTypes->filter(fn ($tt) => $tt->commission_type && $tt->commission_type !== '');
+                        if ($customCommTts->isNotEmpty()) {
+                            $html .= '<br><span class="text-xs text-amber-600 dark:text-amber-400">⚠ ' . $customCommTts->count() . ' tip(uri) de bilet cu comision personalizat</span>';
+                        }
+
+                        return new \Illuminate\Support\HtmlString($html);
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
+                Forms\Components\Hidden::make('has_balance')->default(false)->dehydrated(false),
+                Forms\Components\Hidden::make('zero_reason')->default(null)->dehydrated(false),
+
+                // Zero balance message
+                Forms\Components\Placeholder::make('zero_balance_message')
+                    ->hiddenLabel()
+                    ->content(function (Get $get) {
+                        $reason = $get('zero_reason');
+                        if ($reason === 'no_sales') {
+                            $icon = '<svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+                            $msg = 'Evenimentul încă nu are vânzări înregistrate. Nu se poate face decont.';
+                        } else {
+                            $icon = '<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                            $msg = 'Sold eveniment 0. Nu se mai pot face deconturi suplimentare.';
+                        }
+                        return new \Illuminate\Support\HtmlString(
+                            '<div class="flex items-center gap-2 p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">' .
+                            $icon . '<span class="text-gray-600 dark:text-gray-400">' . $msg . '</span></div>'
+                        );
+                    })
+                    ->visible(fn (Get $get) => $get('event_id') !== null && !$get('has_balance')),
+
                 Forms\Components\Placeholder::make('event_details')
                     ->label('')
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->content(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return '';
@@ -175,33 +240,233 @@ class ListPayouts extends ListRecords
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() === 0;
                     }),
 
-                Forms\Components\Select::make('bank_account_id')
-                    ->label('Cont bancar')
-                    ->options(function (Get $get) {
-                        $organizerId = $get('marketplace_organizer_id');
-                        if (!$organizerId) return [];
+                // Quick payout amount — auto-distributes tickets
+                \Filament\Schemas\Components\Grid::make(3)->schema([
+                    Forms\Components\TextInput::make('desired_net_amount')
+                        ->label('Cât vrei să decontezi?')
+                        ->helperText('Introduce suma netă dorită. Biletele se vor distribui automat.')
+                        ->numeric()
+                        ->minValue(0)
+                        ->suffix('RON')
+                        ->columnSpan(2)
+                        ->visible(fn (Get $get) => $get('event_id') !== null)
+                        ->dehydrated(false)
+                        ->maxValue(function (Get $get) {
+                            $eventId = $get('event_id');
+                            if (!$eventId) return 0;
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                            if (!$event) return 0;
+                            return self::calculateEventFinancials($event)['balance'];
+                        }),
+                    \Filament\Schemas\Components\Actions::make([
+                        \Filament\Actions\Action::make('auto_distribute')
+                            ->label('Distribuie automat')
+                            ->icon('heroicon-o-sparkles')
+                            ->color('primary')
+                            ->size('sm')
+                            ->action(function (Get $get, Set $set) {
+                                $desiredNet = (float) ($get('desired_net_amount') ?? 0);
+                                if ($desiredNet <= 0) return;
 
-                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
-                            ->orderByDesc('is_primary')
-                            ->get()
-                            ->mapWithKeys(fn ($acc) => [
-                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
-                            ])
-                            ->toArray();
-                    })
-                    ->searchable()
-                    ->required()
-                    ->visible(function (Get $get) {
-                        $organizerId = $get('marketplace_organizer_id');
-                        if (!$organizerId) return false;
-                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
-                    }),
+                                $tickets = $get('payout_tickets') ?? [];
+                                if (empty($tickets)) return;
+
+                                // Check against balance
+                                $eventId = $get('event_id');
+                                if ($eventId) {
+                                    $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                                    if ($event) {
+                                        $maxBalance = self::calculateEventFinancials($event)['balance'];
+                                        $desiredNet = min($desiredNet, $maxBalance);
+                                    }
+                                }
+
+                                // Sort by net_per_ticket descending (fill with most expensive first)
+                                $indexed = [];
+                                foreach ($tickets as $key => $item) {
+                                    $indexed[] = [
+                                        'key' => $key,
+                                        'net_per_ticket' => (float) ($item['unit_price'] ?? 0),
+                                        'available' => (int) ($item['available'] ?? 0),
+                                        'unit_price' => (float) ($item['unit_price'] ?? 0),
+                                        'commission_per_ticket' => (float) ($item['commission_per_ticket'] ?? 0),
+                                    ];
+                                }
+                                usort($indexed, fn ($a, $b) => $b['net_per_ticket'] <=> $a['net_per_ticket']);
+
+                                // Greedy: assign tickets starting from most expensive
+                                $remaining = $desiredNet;
+                                $allocation = array_fill_keys(array_column($indexed, 'key'), 0);
+
+                                foreach ($indexed as $item) {
+                                    if ($remaining <= 0) break;
+                                    $netPerTicket = $item['net_per_ticket'];
+                                    if ($netPerTicket <= 0) continue;
+
+                                    $maxQty = min(
+                                        $item['available'],
+                                        (int) floor($remaining / $netPerTicket)
+                                    );
+                                    $allocation[$item['key']] = $maxQty;
+                                    $remaining -= $maxQty * $netPerTicket;
+                                }
+
+                                // If remaining > 0 and we can fit one more cheap ticket
+                                if ($remaining > 0) {
+                                    foreach (array_reverse($indexed) as $item) {
+                                        $netPerTicket = $item['net_per_ticket'];
+                                        $currentQty = $allocation[$item['key']];
+                                        if ($netPerTicket > 0 && $netPerTicket <= $remaining && $currentQty < $item['available']) {
+                                            $allocation[$item['key']]++;
+                                            $remaining -= $netPerTicket;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Apply allocation to repeater
+                                $updatedTickets = $tickets;
+                                foreach ($updatedTickets as $key => &$item) {
+                                    $item['qty'] = $allocation[$key] ?? 0;
+                                }
+                                unset($item);
+                                $set('payout_tickets', $updatedTickets);
+
+                                // Recalculate amounts
+                                $gross = 0;
+                                $commission = 0;
+                                foreach ($updatedTickets as $item) {
+                                    $qty = (int) ($item['qty'] ?? 0);
+                                    $unitPrice = (float) ($item['unit_price'] ?? 0);
+                                    $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+                                    $gross += $qty * ($unitPrice + $commPerTicket);
+                                    $commission += $qty * $commPerTicket;
+                                }
+                                $fees = (float) ($get('fees_amount') ?? 0);
+                                $set('gross_amount', number_format($gross, 2, '.', ''));
+                                $set('commission_amount', number_format($commission, 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Bilete distribuite automat')
+                                    ->body('Suma netă: ' . number_format($gross - $commission - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
+                                    ->success()
+                                    ->send();
+                            })
+                    ])->visible(fn (Get $get) => $get('event_id') !== null)
+                      ->extraAttributes(['class' => 'flex items-end pb-6']),
+                ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
+
+                // Ticket selection for partial payout
+                Forms\Components\Repeater::make('payout_tickets')
+                    ->label('Bilete pentru decont')
+                    ->helperText('Selectează câte bilete din fiecare tip incluzi în acest decont. Implicit: toate.')
+                    ->schema([
+                        Forms\Components\Hidden::make('ticket_type_id'),
+                        Forms\Components\Hidden::make('ticket_type_name'),
+                        Forms\Components\Hidden::make('available'),
+                        Forms\Components\Hidden::make('unit_price'),
+                        Forms\Components\Hidden::make('commission_per_ticket'),
+                        Forms\Components\Placeholder::make('label')
+                            ->hiddenLabel()
+                            ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
+                                '<div class="flex items-center h-full py-2">' .
+                                '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>' .
+                                '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet</span>' .
+                                '</div>'
+                            ))
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('qty')
+                            ->hiddenLabel()
+                            ->numeric()
+                            ->minValue(0)
+                            ->suffix('bilete')
+                            ->columnSpan(1),
+                    ])
+                    ->columns(3)
+                    ->reorderable(false)
+                    ->addable(false)
+                    ->deletable(false)
+                    ->defaultItems(0)
+                    ->dehydrated(false)
+                    ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
+                    ->columnSpanFull(),
+
+                // Recalculate button
+                \Filament\Schemas\Components\Actions::make([
+                    \Filament\Actions\Action::make('recalculate_payout')
+                        ->label('Recalculează din bilete selectate')
+                        ->icon('heroicon-o-calculator')
+                        ->color('gray')
+                        ->size('sm')
+                        ->action(function (Get $get, Set $set) {
+                            $tickets = $get('payout_tickets') ?? [];
+                            $gross = 0;
+                            $commission = 0;
+
+                            foreach ($tickets as $item) {
+                                $qty = (int) ($item['qty'] ?? 0);
+                                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                                $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+                                $gross += $qty * ($unitPrice + $commPerTicket);
+                                $commission += $qty * $commPerTicket;
+                            }
+
+                            $fees = (float) ($get('fees_amount') ?? 0);
+                            $set('gross_amount', number_format($gross, 2, '.', ''));
+                            $set('commission_amount', number_format($commission, 2, '.', ''));
+                            $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+                        }),
+                    \Filament\Actions\Action::make('reset_payout_tickets')
+                        ->label('Resetează la valori inițiale')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('danger')
+                        ->size('sm')
+                        ->requiresConfirmation()
+                        ->modalHeading('Resetare bilete')
+                        ->modalDescription('Ești sigur? Se vor reseta cantitățile de bilete și sumele la valorile inițiale.')
+                        ->action(function (Get $get, Set $set) {
+                            $eventId = $get('event_id');
+                            if (!$eventId) return;
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                            if (!$event) return;
+
+                            $fin = self::calculateEventFinancials($event);
+                            $this->populatePayoutTicketsFromEvent($set, $event, $fin);
+                            $set('desired_net_amount', null);
+
+                            $populatedTickets = $get('payout_tickets') ?? [];
+                            $hasTickets = collect($populatedTickets)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+
+                            if ($hasTickets) {
+                                $ticketGross = 0;
+                                $ticketComm = 0;
+                                foreach ($populatedTickets as $t) {
+                                    $qty = (int) ($t['qty'] ?? 0);
+                                    $ticketGross += $qty * ((float) ($t['unit_price'] ?? 0) + (float) ($t['commission_per_ticket'] ?? 0));
+                                    $ticketComm += $qty * (float) ($t['commission_per_ticket'] ?? 0);
+                                }
+                                $set('gross_amount', number_format($ticketGross, 2, '.', ''));
+                                $set('commission_amount', number_format($ticketComm, 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                            } else {
+                                $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
+                                $set('commission_amount', '0.00');
+                                $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Resetat la valori inițiale')
+                                ->success()
+                                ->send();
+                        }),
+                ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('gross_amount')
                         ->label('Suma brută')
                         ->numeric()
-                        ->required()
+                        ->required(fn (Get $get) => (bool) $get('has_balance'))
                         ->suffix('RON')
                         ->live(onBlur: true)
                         ->afterStateUpdated(function ($state, Set $set, Get $get) {
@@ -240,12 +505,35 @@ class ListPayouts extends ListRecords
                     Forms\Components\TextInput::make('net_amount')
                         ->label('Suma netă (de plată)')
                         ->numeric()
-                        ->required()
+                        ->required(fn (Get $get) => (bool) $get('has_balance'))
                         ->suffix('RON')
                         ->readOnly(),
-                ]),
+                ])->visible(fn (Get $get) => $get('has_balance')),
+
+                Forms\Components\Select::make('bank_account_id')
+                    ->label('Cont bancar')
+                    ->options(function (Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return [];
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
+                            ->orderByDesc('is_primary')
+                            ->get()
+                            ->mapWithKeys(fn ($acc) => [
+                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
+                            ])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->required()
+                    ->visible(function (Get $get) {
+                        if (!$get('has_balance')) return false;
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return false;
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
+                    }),
 
                 Forms\Components\Textarea::make('admin_notes')
+                    ->visible(fn (Get $get) => $get('has_balance'))
                     ->label('Note admin')
                     ->rows(2),
             ])
@@ -272,6 +560,26 @@ class ListPayouts extends ListRecords
 
                 $event = Event::find($data['event_id']);
 
+                // Build ticket breakdown from form data
+                // Build ticket breakdown with full commission details
+                $eventForBreakdown = Event::with('ticketTypes')->find($data['event_id']);
+                $ttMap = $eventForBreakdown ? $eventForBreakdown->ticketTypes->keyBy('id') : collect();
+
+                $ticketBreakdown = collect($data['payout_tickets'] ?? [])->filter(fn ($t) => ($t['qty'] ?? 0) > 0)->map(function ($t) use ($ttMap) {
+                    $tt = $ttMap->get($t['ticket_type_id'] ?? null);
+                    return [
+                        'ticket_type_id' => $t['ticket_type_id'] ?? null,
+                        'ticket_type_name' => $t['ticket_type_name'] ?? '',
+                        'qty' => (int) $t['qty'],
+                        'unit_price' => (float) ($t['unit_price'] ?? 0),
+                        'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
+                        'commission_type' => $tt?->commission_type ?? null,
+                        'commission_rate' => $tt?->commission_rate ? (float) $tt->commission_rate : null,
+                        'commission_fixed' => $tt?->commission_fixed ? (float) $tt->commission_fixed : null,
+                        'commission_mode' => $tt?->commission_mode ?? null,
+                    ];
+                })->values()->toArray();
+
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
@@ -287,6 +595,7 @@ class ListPayouts extends ListRecords
                     'status' => 'pending',
                     'source' => 'manual',
                     'payout_method' => $payoutMethod,
+                    'ticket_breakdown' => !empty($ticketBreakdown) ? $ticketBreakdown : null,
                     'admin_notes' => $data['admin_notes'] ?? null,
                 ]);
 
@@ -537,42 +846,260 @@ class ListPayouts extends ListRecords
     }
 
     /**
-     * Calculate available balance for an event
+     * Populate payout_tickets repeater with ticket type breakdown from event.
      */
-    public static function calculateEventBalance(Event $event): float
+    protected function populatePayoutTicketsFromEvent(Set $set, Event $event, ?array $financials = null): void
+    {
+        $commissionMode = $event->getEffectiveCommissionMode();
+        $commissionRate = $event->getEffectiveCommissionRate();
+
+        // Get sold ticket counts per type
+        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id')
+            ->toArray();
+
+        // Get exact ticket counts already paid from previous payouts' ticket_breakdown
+        $organizer = $event->marketplaceOrganizer;
+        $alreadyPaidPerType = [];
+        if ($organizer) {
+            $previousPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+                ->where('event_id', $event->id)
+                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
+                ->whereNotNull('ticket_breakdown')
+                ->get();
+
+            foreach ($previousPayouts as $pp) {
+                foreach ($pp->ticket_breakdown ?? [] as $tb) {
+                    $ttId = $tb['ticket_type_id'] ?? null;
+                    if ($ttId) {
+                        $alreadyPaidPerType[$ttId] = ($alreadyPaidPerType[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        // If no ticket_breakdown data on previous payouts, fall back to ratio estimation
+        $fin = $financials ?? self::calculateEventFinancials($event);
+        $hasExactData = !empty($alreadyPaidPerType);
+
+        if (!$hasExactData && ($fin['paid'] + $fin['pending']) > 0) {
+            $paidRatio = $fin['net'] > 0 ? ($fin['paid'] + $fin['pending']) / $fin['net'] : 1;
+            $paidRatio = min(1, max(0, $paidRatio));
+        }
+
+        $items = [];
+        foreach ($event->ticketTypes as $tt) {
+            $totalSold = $ticketCounts[$tt->id] ?? 0;
+            if ($totalSold <= 0) continue;
+
+            // How many tickets remain (not yet paid out)
+            if ($hasExactData) {
+                $alreadyPaid = $alreadyPaidPerType[$tt->id] ?? 0;
+            } else {
+                $alreadyPaid = isset($paidRatio) ? (int) round($totalSold * $paidRatio) : 0;
+            }
+            $remaining = max(0, $totalSold - $alreadyPaid);
+
+            // price_cents = BASE price
+            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+
+            // Commission on BASE price
+            if ($tt->commission_type && $tt->commission_type !== '') {
+                $commPerTicket = match ($tt->commission_type) {
+                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
+                    'fixed' => (float) ($tt->commission_fixed ?? 0),
+                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
+                    default => round($basePrice * ($commissionRate / 100), 2),
+                };
+            } else {
+                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
+            }
+
+            if ($remaining > 0) {
+                $items[] = [
+                    'ticket_type_id' => $tt->id,
+                    'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
+                    'available' => $remaining,
+                    'unit_price' => $basePrice,
+                    'commission_per_ticket' => $commPerTicket,
+                    'qty' => $remaining, // default: all remaining tickets
+                ];
+            }
+        }
+
+        $set('payout_tickets', $items);
+    }
+
+
+
+    /**
+     * Calculate event financials: gross, commission (per-ticket-type aware), net.
+     * Single source of truth for all payout calculations.
+     */
+    public static function calculateEventFinancials(Event $event): array
     {
         $organizer = $event->marketplaceOrganizer;
-        if (!$organizer) return 0;
-
-        $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->get();
+        if (!$organizer) return ['gross' => 0, 'commission' => 0, 'net' => 0, 'refunds' => 0, 'paid' => 0, 'pending' => 0, 'balance' => 0];
 
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
 
-        $grossRevenue = (float) $completedOrders->sum('total');
-        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
+        // Load orders
+        $completedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+            })
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
+            ->with(['items.ticketType'])
+            ->get();
 
-        if ($commissionMode === 'added_on_top') {
-            $netRevenue = $subtotalRevenue;
-        } else {
-            $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-            $netRevenue = $grossRevenue - $commissionAmount;
+        $grossRevenue = (float) $completedOrders->sum('total');
+
+        // Load event ticket types for commission info
+        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+
+        // Per-ticket-type commission calculation
+        $totalCommission = 0;
+        foreach ($completedOrders as $order) {
+            if ($order->items->isNotEmpty()) {
+                foreach ($order->items as $item) {
+                    // Prefer event's ticket type (has commission info) over eager-loaded
+                    $tt = ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null) ?? $item->ticketType;
+                    $itemTotal = (float) $item->total;
+                    $itemQty = (int) $item->quantity;
+                    $itemBasePerUnit = $itemQty > 0 ? $itemTotal / $itemQty : $itemTotal;
+
+                    $ttCommType = $tt?->commission_type;
+                    $ttCommMode = $tt?->commission_mode ?: $commissionMode;
+
+                    if ($ttCommType && $ttCommType !== '') {
+                        $ttCommRate = (float) ($tt->commission_rate ?? 0);
+                        $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+
+                        // For ON TOP: item total includes commission. Extract base first.
+                        // For INCLUDED: item total = base price. Commission deducted from organizer.
+                        if ($ttCommMode === 'added_on_top') {
+                            $base = match ($ttCommType) {
+                                'percentage' => round($itemTotal / (1 + $ttCommRate / 100), 2),
+                                'fixed' => $itemTotal - round($ttCommFixed * $itemQty, 2),
+                                'both' => round(($itemTotal - $ttCommFixed * $itemQty) / (1 + $ttCommRate / 100), 2),
+                                default => round($itemTotal / (1 + $commissionRate / 100), 2),
+                            };
+                            $totalCommission += round($itemTotal - $base, 2);
+                        } else {
+                            $totalCommission += match ($ttCommType) {
+                                'percentage' => round($itemTotal * ($ttCommRate / 100), 2),
+                                'fixed' => round($ttCommFixed * $itemQty, 2),
+                                'both' => round($itemTotal * ($ttCommRate / 100), 2) + round($ttCommFixed * $itemQty, 2),
+                                default => round($itemTotal * ($commissionRate / 100), 2),
+                            };
+                        }
+                    } else {
+                        // No per-ticket commission — use event-level
+                        if ($commissionMode === 'added_on_top') {
+                            $base = round($itemTotal / (1 + $commissionRate / 100), 2);
+                            $totalCommission += round($itemTotal - $base, 2);
+                        } else {
+                            $totalCommission += round($itemTotal * ($commissionRate / 100), 2);
+                        }
+                    }
+                }
+            } else {
+                // Orders without items — look up ticket records for ticket_type commission info
+                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
+                if ($orderTickets->isNotEmpty()) {
+                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
+                        $tt = $eventTicketTypes->get($ttId);
+                        $ticketPrice = (float) ($tickets->first()->price ?? 0);
+                        $ticketQty = $tickets->count();
+
+                        if ($tt && $tt->commission_type && $tt->commission_type !== '') {
+                            $ttCommRate = (float) ($tt->commission_rate ?? 0);
+                            $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+                            $ttCommMode = $tt->commission_mode ?: $commissionMode;
+
+                            // price_cents is BASE price. Ticket.price may be base or base+commission.
+                            $basePrice = (float) ($tt->price_cents ? $tt->price_cents / 100 : $ticketPrice);
+
+                            if ($ttCommMode === 'added_on_top') {
+                                // Commission is calculated on base price, added to what customer pays
+                                $comm = match ($tt->commission_type) {
+                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
+                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
+                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
+                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
+                                };
+                            } else {
+                                $comm = match ($tt->commission_type) {
+                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
+                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
+                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
+                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
+                                };
+                            }
+                            $totalCommission += $comm;
+                        } else {
+                            // No per-type commission, use event-level
+                            $basePrice = (float) ($tt?->price_cents ? $tt->price_cents / 100 : $ticketPrice);
+                            $totalCommission += round($basePrice * ($commissionRate / 100) * $ticketQty, 2);
+                        }
+                    }
+                } else {
+                    // No items AND no tickets — last resort event-level
+                    $orderTotal = (float) $order->total;
+                    if ($commissionMode === 'added_on_top') {
+                        $base = round($orderTotal / (1 + $commissionRate / 100), 2);
+                        $totalCommission += round($orderTotal - $base, 2);
+                    } else {
+                        $totalCommission += round($orderTotal * ($commissionRate / 100), 2);
+                    }
+                }
+            }
         }
 
-        $eventPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+        // Refunds
+        $refundedAmount = (float) Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+            })
+            ->where('status', 'refunded')
+            ->sum(\DB::raw('COALESCE(refund_amount, total)'));
+
+        $netRevenue = $grossRevenue - $totalCommission - $refundedAmount;
+
+        // Previous payouts
+        $paidPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->where('status', 'completed')
             ->sum('amount');
 
-        $eventPendingPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+        $pendingPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->whereIn('status', ['pending', 'approved', 'processing'])
             ->sum('amount');
 
-        return max(0, $netRevenue - $eventPayouts - $eventPendingPayouts);
+        return [
+            'gross' => round($grossRevenue, 2),
+            'commission' => round($totalCommission, 2),
+            'refunds' => round($refundedAmount, 2),
+            'net' => round($netRevenue, 2),
+            'paid' => round($paidPayouts, 2),
+            'pending' => round($pendingPayouts, 2),
+            'balance' => round(max(0, $netRevenue - $paidPayouts - $pendingPayouts), 2),
+            // For partial payout: how much gross/commission was already paid
+            'paid_gross' => round($paidPayouts > 0 ? $paidPayouts + ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
+            'paid_commission' => round($paidPayouts > 0 ? ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
+        ];
+    }
+
+    /**
+     * Calculate available balance for an event (backward compat)
+     */
+    public static function calculateEventBalance(Event $event): float
+    {
+        return self::calculateEventFinancials($event)['balance'];
     }
 
     /**
@@ -585,77 +1112,221 @@ class ListPayouts extends ListRecords
 
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
+        $commissionModeLabel = $commissionMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
 
-        // Commission type label
-        $commissionModeLabel = match ($commissionMode) {
-            'added_on_top' => 'Adăugat',
-            'included' => 'Inclus',
-            default => 'Procentual',
-        };
-
-        // Completed orders
-        $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
+        // Completed orders — match by event_id OR marketplace_event_id
+        // Include orders with or without marketplace_organizer_id (migrated may lack it)
+        $completedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+            })
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->with('items')
+            ->where('source', '!=', 'test_order')
+            ->with(['items.ticketType'])
             ->get();
 
         // Refunded orders
-        $refundedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
+        $refundedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+            })
             ->where('status', 'refunded')
             ->get();
 
-        $totalRefundedAmount = (float) $refundedOrders->sum('refund_amount');
+        $totalRefundedAmount = (float) $refundedOrders->sum(fn ($o) => $o->refund_amount ?: $o->total);
         $totalRefundedCount = $refundedOrders->count();
 
-        // Ticket type breakdown from order items
+        // Ticket type breakdown with per-ticket commission info
         $ticketBreakdown = [];
+        $totalTicketsSold = 0;
+
+        // Also load ticket types for the event (for commission info fallback)
+        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+
         foreach ($completedOrders as $order) {
-            foreach ($order->items as $item) {
-                $name = $item->name ?? 'Unknown';
-                if (!isset($ticketBreakdown[$name])) {
-                    $ticketBreakdown[$name] = ['quantity' => 0, 'total' => 0, 'unit_price' => (float) $item->unit_price];
+            if ($order->items->isNotEmpty()) {
+                foreach ($order->items as $item) {
+                    $tt = $item->ticketType ?? ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null);
+                    $name = $item->name ?? $tt?->name ?? 'Bilet';
+
+                    if (!isset($ticketBreakdown[$name])) {
+                        $ticketBreakdown[$name] = [
+                            'quantity' => 0,
+                            'total' => 0,
+                            'unit_price' => (float) $item->unit_price,
+                            'commission_type' => $tt?->commission_type,
+                            'commission_rate' => $tt?->commission_rate,
+                            'commission_fixed' => $tt?->commission_fixed,
+                            'commission_mode' => $tt?->commission_mode,
+                            'ticket_type_id' => $tt?->id,
+                        ];
+                    }
+                    $ticketBreakdown[$name]['quantity'] += $item->quantity;
+                    $ticketBreakdown[$name]['total'] += (float) $item->total;
+                    $totalTicketsSold += $item->quantity;
                 }
-                $ticketBreakdown[$name]['quantity'] += $item->quantity;
-                $ticketBreakdown[$name]['total'] += (float) $item->total;
+            } else {
+                // Orders without items (migrated) — try to match ticket records
+                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
+                if ($orderTickets->isNotEmpty()) {
+                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
+                        $tt = $eventTicketTypes->get($ttId);
+                        $name = $tt?->name ?? 'Bilet #' . $ttId;
+                        $qty = $tickets->count();
+                        $unitPrice = (float) ($tickets->first()->price ?? ($order->total / max(1, $orderTickets->count())));
+
+                        if (!isset($ticketBreakdown[$name])) {
+                            $ticketBreakdown[$name] = [
+                                'quantity' => 0,
+                                'total' => 0,
+                                'unit_price' => $unitPrice,
+                                'commission_type' => $tt?->commission_type,
+                                'commission_rate' => $tt?->commission_rate,
+                                'commission_fixed' => $tt?->commission_fixed,
+                                'commission_mode' => $tt?->commission_mode,
+                                'ticket_type_id' => $tt?->id,
+                            ];
+                        }
+                        $ticketBreakdown[$name]['quantity'] += $qty;
+                        $ticketBreakdown[$name]['total'] += $unitPrice * $qty;
+                        $totalTicketsSold += $qty;
+                    }
+                } else {
+                    // No items, no tickets — fallback
+                    $name = 'Bilet (fără detalii)';
+                    if (!isset($ticketBreakdown[$name])) {
+                        $ticketBreakdown[$name] = [
+                            'quantity' => 0, 'total' => 0, 'unit_price' => (float) $order->total,
+                            'commission_type' => null, 'commission_rate' => null,
+                            'commission_fixed' => null, 'commission_mode' => null,
+                            'ticket_type_id' => null,
+                        ];
+                    }
+                    $ticketBreakdown[$name]['quantity'] += 1;
+                    $ticketBreakdown[$name]['total'] += (float) $order->total;
+                    $totalTicketsSold += 1;
+                }
             }
         }
 
-        $grossRevenue = (float) $completedOrders->sum('total');
-        $totalTicketsSold = array_sum(array_column($ticketBreakdown, 'quantity'));
-
-        // Commission calculation
-        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
-        if ($commissionMode === 'added_on_top') {
-            // Commission paid by buyer — organizer gets subtotal
-            $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
-            $netRevenue = $subtotalRevenue;
-        } else {
-            // Commission deducted from organizer's revenue
-            $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-            $netRevenue = $grossRevenue - $commissionAmount;
+        // Also count actual ticket records as fallback
+        $ticketRecordCount = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->count();
+        if ($ticketRecordCount > $totalTicketsSold) {
+            $totalTicketsSold = $ticketRecordCount;
         }
 
-        // Build HTML
+        $grossRevenue = (float) $completedOrders->sum('total');
+        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
+
+        // Per-ticket-type commission calculation
+        // CRITICAL: when commission is ON TOP, $data['total'] includes the commission.
+        // We must extract the base price first: base = total / (1 + rate/100) for percentage
+        // When INCLUDED, $data['total'] IS the base — commission is deducted from it.
+        $totalCommission = 0;
+        foreach ($ticketBreakdown as $name => &$data) {
+            $ttCommType = $data['commission_type'] ?? null;
+            $ttCommRate = (float) ($data['commission_rate'] ?? 0);
+            $ttCommFixed = (float) ($data['commission_fixed'] ?? 0);
+            $ttCommMode = $data['commission_mode'] ?? null;
+            $effectiveMode = $ttCommMode ?: $commissionMode;
+            $data['effective_mode'] = $effectiveMode;
+
+            if ($ttCommType && $ttCommType !== '') {
+                // Per-ticket custom commission
+                if ($effectiveMode === 'added_on_top') {
+                    // Total INCLUDES commission on top — extract base
+                    $baseTotal = match ($ttCommType) {
+                        'percentage' => round($data['total'] / (1 + $ttCommRate / 100), 2),
+                        'fixed' => $data['total'] - round($ttCommFixed * $data['quantity'], 2),
+                        'both' => round(($data['total'] - $ttCommFixed * $data['quantity']) / (1 + $ttCommRate / 100), 2),
+                        default => round($data['total'] / (1 + $commissionRate / 100), 2),
+                    };
+                    $comm = round($data['total'] - $baseTotal, 2);
+                    $data['base_total'] = $baseTotal;
+                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
+                } else {
+                    // Commission INCLUDED — total is what customer paid, commission deducted from organizer
+                    $comm = match ($ttCommType) {
+                        'percentage' => round($data['total'] * ($ttCommRate / 100), 2),
+                        'fixed' => round($ttCommFixed * $data['quantity'], 2),
+                        'both' => round($data['total'] * ($ttCommRate / 100), 2) + round($ttCommFixed * $data['quantity'], 2),
+                        default => round($data['total'] * ($commissionRate / 100), 2),
+                    };
+                    $data['base_total'] = $data['total'];
+                    $data['base_unit_price'] = $data['unit_price'];
+                }
+                $data['calculated_commission'] = $comm;
+
+                $modeLabel = $effectiveMode === 'added_on_top' ? 'on top' : 'inclus';
+                $data['commission_label'] = match ($ttCommType) {
+                    'percentage' => number_format($ttCommRate, 2) . '% ' . $modeLabel,
+                    'fixed' => number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
+                    'both' => number_format($ttCommRate, 2) . '% + ' . number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
+                    default => number_format($commissionRate, 2) . '% ' . $modeLabel,
+                };
+            } else {
+                // Use event-level commission
+                if ($commissionMode === 'added_on_top') {
+                    $baseTotal = round($data['total'] / (1 + $commissionRate / 100), 2);
+                    $comm = round($data['total'] - $baseTotal, 2);
+                    $data['base_total'] = $baseTotal;
+                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
+                } else {
+                    $comm = round($data['total'] * ($commissionRate / 100), 2);
+                    $data['base_total'] = $data['total'];
+                    $data['base_unit_price'] = $data['unit_price'];
+                }
+                $data['calculated_commission'] = $comm;
+                $modeLabel = $commissionMode === 'added_on_top' ? 'on top' : 'inclus';
+                $data['commission_label'] = number_format($commissionRate, 2) . '% ' . $modeLabel . ' (eveniment)';
+            }
+            $totalCommission += $data['calculated_commission'];
+        }
+        unset($data);
+
+        // Net revenue = gross - commission - refunds
+        $netRevenue = $grossRevenue - $totalCommission - $totalRefundedAmount;
+
+        // Previous payouts for this event
+        $previousPayouts = \App\Models\MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+            ->where('event_id', $event->id)
+            ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        $totalPreviouslyPaid = (float) $previousPayouts->where('status', 'completed')->sum('amount');
+        $totalPreviousPending = (float) $previousPayouts->whereIn('status', ['pending', 'approved', 'processing'])->sum('amount');
+
+        // === BUILD HTML ===
         $html = '<div class="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden text-sm">';
 
-        // Ticket types table
+        // Ticket types table with commission per type
         if (!empty($ticketBreakdown)) {
             $html .= '<table class="w-full">';
             $html .= '<thead><tr class="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">';
             $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tip bilet</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț unitar</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Cantitate</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț bilet</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Qty</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total bilete</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total încasat</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Comision</th>';
             $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/5">';
 
             foreach ($ticketBreakdown as $name => $data) {
+                $baseUnitPrice = $data['base_unit_price'] ?? $data['unit_price'];
+                $baseTotal = $data['base_total'] ?? $data['total'];
+
                 $html .= '<tr>';
                 $html .= '<td class="px-3 py-1.5 text-gray-900 dark:text-white">' . e($name) . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($data['unit_price'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($baseUnitPrice, 2) . '</td>';
                 $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . $data['quantity'] . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($data['total'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($baseTotal, 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-500 dark:text-gray-400">' . number_format($data['total'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right text-gray-500 dark:text-gray-400">';
+                $html .= '<span class="font-mono">' . number_format($data['calculated_commission'], 2) . '</span>';
+                $html .= '<br><span class="text-xs text-gray-400">' . $data['commission_label'] . '</span>';
+                $html .= '</td>';
                 $html .= '</tr>';
             }
 
@@ -663,16 +1334,47 @@ class ListPayouts extends ListRecords
         }
 
         // Summary section
+        $totalBase = collect($ticketBreakdown)->sum(fn ($d) => $d['base_total'] ?? $d['total']);
         $html .= '<div class="border-t border-gray-200 dark:border-white/10 px-3 py-2 space-y-1 bg-gray-50 dark:bg-white/5">';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . $totalTicketsSold . '</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Vânzări brute:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Comision:</span><span class="font-medium">' . $commissionModeLabel . ' | ' . number_format($commissionRate, 2) . '% | ' . number_format($commissionAmount, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . number_format($totalTicketsSold) . '</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete (fără comision):</span><span class="font-mono font-medium">' . number_format($totalBase, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total încasat:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total comision:</span><span class="font-mono font-medium text-amber-600 dark:text-amber-400">-' . number_format($totalCommission, 2) . ' RON</span></div>';
 
         if ($totalRefundedCount > 0) {
             $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
         }
 
-        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold"><span>Sold net:</span><span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format($netRevenue, 2) . ' RON</span></div>';
+        // Previous payouts
+        if ($previousPayouts->isNotEmpty()) {
+            $html .= '<div class="pt-1 mt-1 border-t border-gray-200 dark:border-white/10">';
+            $html .= '<div class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Deconturi anterioare:</div>';
+            foreach ($previousPayouts as $pp) {
+                $statusBadge = match ($pp->status) {
+                    'completed' => '<span class="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">Achitat</span>',
+                    'pending' => '<span class="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Pending</span>',
+                    'approved' => '<span class="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">Aprobat</span>',
+                    'processing' => '<span class="text-xs px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">În procesare</span>',
+                    default => '<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">' . $pp->status . '</span>',
+                };
+                $html .= '<div class="flex items-center justify-between text-xs py-0.5">';
+                $refLabel = $pp->reference ? '<span class="font-mono text-gray-400">' . e($pp->reference) . '</span> · ' : '';
+                $html .= '<span class="text-gray-500">' . $refLabel . $pp->created_at->format('d.m.Y') . ' ' . $statusBadge . '</span>';
+                $html .= '<span class="font-mono font-medium text-gray-700 dark:text-gray-300">' . number_format($pp->amount, 2) . ' RON</span>';
+                $html .= '</div>';
+            }
+            if ($totalPreviouslyPaid > 0) {
+                $html .= '<div class="flex justify-between text-xs font-semibold mt-1 pt-1 border-t border-gray-100 dark:border-white/5"><span>Total achitat anterior:</span><span class="font-mono">' . number_format($totalPreviouslyPaid, 2) . ' RON</span></div>';
+            }
+            $html .= '</div>';
+        }
+
+        // Net balance line
+        $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold">';
+        $html .= '<span>Sold disponibil</span>';
+        $html .= '<span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format(max(0, $netRevenue - $totalPreviouslyPaid - $totalPreviousPending), 2) . ' RON</span>';
+        $html .= '</div>';
+
         $html .= '</div></div>';
 
         return $html;
@@ -697,17 +1399,24 @@ class ListPayouts extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('All'),
+            'all' => Tab::make('All')
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->count()),
             'pending' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'pending'))
                 ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'pending')->count())
                 ->badgeColor('warning'),
             'approved' => Tab::make('Approved')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'approved'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'approved')->count())
+                ->badgeColor('info'),
             'processing' => Tab::make('Processing')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'processing')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'processing'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'processing')->count())
+                ->badgeColor('primary'),
             'completed' => Tab::make('Completed')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed')),
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'completed'))
+                ->badge(fn () => $this->getResource()::getEloquentQuery()->where('status', 'completed')->count())
+                ->badgeColor('success'),
         ];
     }
 }

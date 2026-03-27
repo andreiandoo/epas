@@ -214,7 +214,7 @@ const ArtistPage = {
                 day: date.getDate().toString().padStart(2, '0'),
                 month: self.monthNames[date.getMonth()],
                 title: event.title || event.name,
-                venue: event.venue ? event.venue.name + ', ' + event.venue.city : '-',
+                venue: event.venue_name ? (event.venue_name + (event.venue_city ? ', ' + event.venue_city : '')) : (event.venue ? event.venue.name + (event.venue.city ? ', ' + event.venue.city : '') : '-'),
                 time: event.start_time ? event.start_time.substring(0, 5) : '-',
                 price: event.min_price || event.price_from,
                 currency: event.currency || 'RON',

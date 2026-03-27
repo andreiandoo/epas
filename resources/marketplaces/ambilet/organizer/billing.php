@@ -96,6 +96,49 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
+            <!-- Payouts / Deconturi Section -->
+            <div class="overflow-hidden bg-white border lg:col-span-2 rounded-xl border-border">
+                <div class="flex flex-col gap-4 p-4 border-b sm:flex-row sm:items-center sm:justify-between border-border">
+                    <h2 class="text-lg font-semibold text-secondary">Istoric deconturi</h2>
+                    <div class="flex gap-2">
+                        <button onclick="PayoutManager.setFilter('all')" data-payout-filter="all" class="payout-filter-tab px-3 py-1.5 text-sm font-medium rounded-lg bg-primary text-white">Toate</button>
+                        <button onclick="PayoutManager.setFilter('completed')" data-payout-filter="completed" class="payout-filter-tab px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-muted hover:bg-slate-200">Finalizate</button>
+                        <button onclick="PayoutManager.setFilter('pending')" data-payout-filter="pending" class="payout-filter-tab px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-muted hover:bg-slate-200">In asteptare</button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-slate-50">
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Referinta</th>
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Data</th>
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Eveniment</th>
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Valoare</th>
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Status</th>
+                                <th class="px-6 py-3 text-xs font-semibold tracking-wider text-left uppercase text-muted">Actiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payouts-table-body">
+                            <!-- Loaded via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="payouts-empty-state" class="hidden py-12 text-center">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                    <h3 class="mb-2 text-lg font-semibold text-secondary">Niciun decont</h3>
+                    <p class="text-sm text-muted">Nu ai niciun decont incă</p>
+                </div>
+
+                <div id="payouts-loading-state" class="py-12 text-center">
+                    <div class="inline-flex items-center gap-2 text-muted">
+                        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Se incarca...
+                    </div>
+                </div>
+            </div>
+
             <!-- Right Sidebar -->
             <div class="space-y-6">
                 <!-- Billing Info -->
@@ -306,15 +349,9 @@ const BillingManager = {
                         <button onclick="BillingManager.viewInvoice('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Vizualizează">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </button>
-                        ${isPending ? `
-                            <button onclick="BillingManager.payInvoice('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark" title="Plătește">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                            </button>
-                        ` : `
-                            <button onclick="BillingManager.downloadInvoicePdf('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Descarcă">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            </button>
-                        `}
+                        <button onclick="BillingManager.downloadInvoicePdf('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Descarcă">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -711,8 +748,157 @@ const BillingManager = {
 };
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => BillingManager.init());
+document.addEventListener('DOMContentLoaded', () => {
+    BillingManager.init();
+    PayoutManager.init();
+});
 
 // Site name for modal
 const SITE_NAME = '<?= SITE_NAME ?>';
+
+/**
+ * Payout / Decont Management Module
+ */
+const PayoutManager = {
+    payouts: [],
+    currentFilter: 'all',
+
+    async init() {
+        await this.loadPayouts();
+    },
+
+    async loadPayouts() {
+        try {
+            const response = await AmbiletAPI.request('/organizer/payouts?per_page=50');
+            if (response.success) {
+                this.payouts = response.data?.data || response.data?.payouts || response.data || [];
+                this.render();
+            }
+        } catch (error) {
+            console.error('Error loading payouts:', error);
+        } finally {
+            document.getElementById('payouts-loading-state').classList.add('hidden');
+        }
+    },
+
+    setFilter(filter) {
+        this.currentFilter = filter;
+        document.querySelectorAll('.payout-filter-tab').forEach(btn => {
+            const isActive = btn.dataset.payoutFilter === filter;
+            btn.className = `payout-filter-tab px-3 py-1.5 text-sm font-medium rounded-lg ${isActive ? 'bg-primary text-white' : 'bg-slate-100 text-muted hover:bg-slate-200'}`;
+        });
+        this.render();
+    },
+
+    getFiltered() {
+        if (this.currentFilter === 'all') return this.payouts;
+        if (this.currentFilter === 'completed') return this.payouts.filter(p => p.status === 'completed');
+        if (this.currentFilter === 'pending') return this.payouts.filter(p => ['pending', 'approved', 'processing'].includes(p.status));
+        return this.payouts;
+    },
+
+    render() {
+        const tbody = document.getElementById('payouts-table-body');
+        const emptyState = document.getElementById('payouts-empty-state');
+        const filtered = this.getFiltered();
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            return;
+        }
+
+        emptyState.classList.add('hidden');
+        tbody.innerHTML = filtered.map(p => {
+            const statusMap = {
+                'pending': { cls: 'bg-amber-100 text-amber-700', label: 'In asteptare' },
+                'approved': { cls: 'bg-blue-100 text-blue-700', label: 'Aprobat' },
+                'processing': { cls: 'bg-blue-100 text-blue-700', label: 'In procesare' },
+                'completed': { cls: 'bg-green-100 text-green-700', label: 'Finalizat' },
+                'rejected': { cls: 'bg-red-100 text-red-700', label: 'Respins' },
+                'cancelled': { cls: 'bg-gray-100 text-gray-600', label: 'Anulat' },
+            };
+            const st = statusMap[p.status] || statusMap['pending'];
+            const eventTitle = p.event_title || p.event?.title || '-';
+
+            return `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-6 py-4"><span class="font-mono text-sm font-semibold text-secondary">${p.reference || '#' + p.id}</span></td>
+                    <td class="px-6 py-4"><span class="text-sm text-muted">${AmbiletUtils.formatDate(p.created_at)}</span></td>
+                    <td class="px-6 py-4"><span class="text-sm text-secondary">${this.escapeHtml(eventTitle)}</span></td>
+                    <td class="px-6 py-4"><span class="text-sm font-bold text-secondary">${AmbiletUtils.formatCurrency(p.amount)}</span></td>
+                    <td class="px-6 py-4"><span class="px-2 py-0.5 text-xs font-medium rounded-full ${st.cls}">${st.label}</span></td>
+                    <td class="px-6 py-4">
+                        <div class="flex gap-2">
+                            <button onclick="PayoutManager.viewPayout(${p.id})" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Vizualizeaza">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </button>
+                            ${p.status === 'completed' ? `
+                                <button onclick="PayoutManager.downloadPayout(${p.id})" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Descarca PDF">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    async viewPayout(id) {
+        try {
+            const response = await AmbiletAPI.request(`/organizer/payouts/${id}`);
+            if (response.success) {
+                const p = response.data?.payout || response.data;
+                const st = { pending: 'In asteptare', approved: 'Aprobat', processing: 'In procesare', completed: 'Finalizat', rejected: 'Respins', cancelled: 'Anulat' };
+                const ref = p.reference || '#' + p.id;
+                const status = st[p.status] || p.status;
+                const amount = AmbiletUtils.formatCurrency(p.amount || 0);
+                const event = p.event_title || '-';
+                const date = p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-';
+                const account = p.account || p.payout_method?.iban || '-';
+
+                // Show in invoice modal (reuse existing modal)
+                document.getElementById('modal-invoice-number').textContent = `Decont ${ref}`;
+                document.getElementById('invoice-modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Referinta</span><span class="text-sm font-semibold text-secondary">${ref}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Data</span><span class="text-sm font-semibold text-secondary">${date}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Eveniment</span><span class="text-sm font-semibold text-secondary">${this.escapeHtml(event)}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Valoare</span><span class="text-sm font-bold text-secondary">${amount}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Status</span><span class="text-sm font-semibold">${status}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Cont bancar</span><span class="text-sm font-semibold text-secondary">${account}</span></div>
+                        ${p.period_start ? `<div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Perioada</span><span class="text-sm text-secondary">${p.period_start} — ${p.period_end || '-'}</span></div>` : ''}
+                        ${p.rejection_reason ? `<div class="p-3 mt-2 text-sm text-red-700 bg-red-50 rounded-lg"><strong>Motiv respingere:</strong> ${this.escapeHtml(p.rejection_reason)}</div>` : ''}
+                        ${p.notes ? `<div class="p-3 mt-2 text-sm text-slate-600 bg-slate-50 rounded-lg"><strong>Note:</strong> ${this.escapeHtml(p.notes)}</div>` : ''}
+                    </div>
+                `;
+                document.getElementById('invoice-modal').classList.remove('hidden');
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la incarcarea decontului');
+        }
+    },
+
+    async downloadPayout(id) {
+        try {
+            const response = await AmbiletAPI.request(`/organizer/payouts/${id}/pdf`);
+            if (response.success && response.data?.url) {
+                window.open(response.data.url, '_blank');
+            } else {
+                // Fallback: generate client-side or show message
+                AmbiletNotifications.info('PDF-ul se genereaza. Vei fi notificat cand este gata.');
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la descarcarea PDF-ului');
+        }
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+};
 </script>

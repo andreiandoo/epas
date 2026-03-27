@@ -12,10 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('role')->default('editor')->after('email');
-            $table->index('role');
-        });
+        if (!Schema::hasColumn('users', 'role')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('role')->default('editor')->after('email');
+                $table->index('role');
+            });
+        }
 
         // Set first user as super-admin
         DB::table('users')->orderBy('id')->limit(1)->update(['role' => 'super-admin']);

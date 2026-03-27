@@ -64,6 +64,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div class="bg-white border border-border rounded-2xl p-4">
                     <p class="text-sm text-muted mb-1">Total comenzi</p>
                     <p class="text-2xl font-bold text-secondary" id="stat-total-orders">-</p>
+                    <p class="text-xs text-muted mt-1" id="stat-orders-breakdown"></p>
                 </div>
                 <div class="bg-white border border-border rounded-2xl p-4">
                     <p class="text-sm text-muted mb-1">Valoare totala</p>
@@ -317,6 +318,16 @@ function updateStats(meta) {
     document.getElementById('stat-total-value').textContent = AmbiletUtils.formatCurrency(meta.total_revenue || 0);
     document.getElementById('stat-total-tickets').textContent = (meta.total_tickets || 0).toLocaleString('ro-RO');
     document.getElementById('stat-completed').textContent = (meta.completed_orders || 0).toLocaleString('ro-RO');
+
+    // Order breakdown
+    const bd = meta.order_breakdown;
+    if (bd) {
+        const parts = [];
+        if (bd.failed > 0 || bd.cancelled > 0 || bd.expired > 0) parts.push(`${(bd.failed||0)+(bd.cancelled||0)+(bd.expired||0)} esuate`);
+        if (bd.pending > 0) parts.push(`${bd.pending} in asteptare`);
+        if (bd.refunded > 0) parts.push(`${bd.refunded} rambursate`);
+        document.getElementById('stat-orders-breakdown').textContent = parts.join(' · ');
+    }
 }
 
 function updatePagination() {

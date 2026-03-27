@@ -9,6 +9,7 @@ use App\Models\Shop\ShopCategory;
 use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ShopProductController extends Controller
 {
@@ -110,7 +111,12 @@ class ShopProductController extends Controller
 
         if ($search) {
             $query->where(function ($q) use ($search, $tenantLanguage) {
-                $q->whereRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') LIKE ?", ["%{$search}%"])
+                $q->whereRaw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "title->>'{$tenantLanguage}' LIKE ?"
+                        : "JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') LIKE ?",
+                    ["%{$search}%"]
+                )
                   ->orWhere('sku', 'like', "%{$search}%");
             });
         }
@@ -126,8 +132,16 @@ class ShopProductController extends Controller
         $query = match ($sort) {
             'price_asc' => $query->orderBy('price_cents', 'asc'),
             'price_desc' => $query->orderBy('price_cents', 'desc'),
-            'name_asc' => $query->orderByRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') ASC"),
-            'name_desc' => $query->orderByRaw("JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') DESC"),
+            'name_asc' => $query->orderByRaw(
+                DB::getDriverName() === 'pgsql'
+                    ? "title->>'{$tenantLanguage}' ASC"
+                    : "JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') ASC"
+            ),
+            'name_desc' => $query->orderByRaw(
+                DB::getDriverName() === 'pgsql'
+                    ? "title->>'{$tenantLanguage}' DESC"
+                    : "JSON_EXTRACT(title, '$.\"{$tenantLanguage}\"') DESC"
+            ),
             'rating' => $query->orderBy('average_rating', 'desc'),
             default => $query->orderBy('created_at', 'desc'),
         };

@@ -15,32 +15,30 @@ return new class extends Migration
     {
         // Add marketplace_client_id to inv_batches
         Schema::table('inv_batches', function (Blueprint $table) {
-            // Make tenant_id nullable since marketplace batches won't have a tenant
             $table->foreignId('tenant_id')->nullable()->change();
 
-            // Add marketplace columns after tenant_id
-            $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')
-                ->constrained('marketplace_clients')->onDelete('cascade');
-            $table->foreignId('marketplace_organizer_id')->nullable()->after('marketplace_client_id')
-                ->constrained('marketplace_organizers')->onDelete('cascade');
-            $table->foreignId('marketplace_event_id')->nullable()->after('marketplace_organizer_id')
-                ->constrained('marketplace_events')->onDelete('cascade');
-
-            // Add index for marketplace queries
-            $table->index(['marketplace_client_id', 'status']);
+            if (!Schema::hasColumn('inv_batches', 'marketplace_client_id')) {
+                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')
+                    ->constrained('marketplace_clients')->onDelete('cascade');
+            }
+            if (!Schema::hasColumn('inv_batches', 'marketplace_organizer_id')) {
+                $table->foreignId('marketplace_organizer_id')->nullable()->after('marketplace_client_id')
+                    ->constrained('marketplace_organizers')->onDelete('cascade');
+            }
+            if (!Schema::hasColumn('inv_batches', 'marketplace_event_id')) {
+                $table->foreignId('marketplace_event_id')->nullable()->after('marketplace_organizer_id')
+                    ->constrained('marketplace_events')->onDelete('cascade');
+            }
         });
 
         // Add marketplace_client_id to inv_invites
         Schema::table('inv_invites', function (Blueprint $table) {
-            // Make tenant_id nullable since marketplace invites won't have a tenant
             $table->foreignId('tenant_id')->nullable()->change();
 
-            // Add marketplace_client_id after tenant_id
-            $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')
-                ->constrained('marketplace_clients')->onDelete('cascade');
-
-            // Add index for marketplace queries
-            $table->index(['marketplace_client_id', 'status']);
+            if (!Schema::hasColumn('inv_invites', 'marketplace_client_id')) {
+                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')
+                    ->constrained('marketplace_clients')->onDelete('cascade');
+            }
         });
     }
 

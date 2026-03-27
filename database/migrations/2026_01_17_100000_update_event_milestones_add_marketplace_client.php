@@ -9,8 +9,12 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // First, make tenant_id nullable using raw SQL (avoids doctrine/dbal requirement)
-        DB::statement('ALTER TABLE event_milestones MODIFY tenant_id BIGINT UNSIGNED NULL');
+        // Make tenant_id nullable
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE "event_milestones" ALTER COLUMN "tenant_id" DROP NOT NULL');
+        } else {
+            DB::statement('ALTER TABLE event_milestones MODIFY tenant_id BIGINT UNSIGNED NULL');
+        }
 
         // Drop the foreign key constraint first if it exists
         try {
@@ -26,7 +30,6 @@ return new class extends Migration
             Schema::table('event_milestones', function (Blueprint $table) {
                 $table->foreignId('marketplace_client_id')
                     ->nullable()
-                    ->after('tenant_id')
                     ->constrained()
                     ->onDelete('cascade');
 

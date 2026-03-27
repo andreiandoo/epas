@@ -66,6 +66,10 @@ class TicketType extends Model
         'color',
         // Single-day ticket: valid only on this date (for range events)
         'valid_date',
+        // Ticket grouping (e.g. "Bilete Acces", "Camping", "Parcari")
+        'ticket_group',
+        // Perks/conditions list (JSON array of strings)
+        'perks',
     ];
 
     protected $casts = [
@@ -84,6 +88,7 @@ class TicketType extends Model
         'max_per_order'    => 'integer',
         'commission_rate'  => 'decimal:2',
         'commission_fixed' => 'decimal:2',
+        'perks' => 'array',
     ];
 
     protected $appends = [

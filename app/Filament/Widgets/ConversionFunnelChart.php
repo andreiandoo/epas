@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\Order;
 use App\Models\Ticket;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 
 class ConversionFunnelChart extends ChartWidget
 {
@@ -20,17 +21,22 @@ class ConversionFunnelChart extends ChartWidget
 
     protected function getData(): array
     {
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $cached = Cache::remember('widget.conversion_funnel.' . now()->format('Y-m-d-H-i'), 120, function () {
+            $paidStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Use real order/ticket data instead of analytics tracking
-        $todayOrders = Order::whereDate('created_at', today())->count();
-        $todayPaid = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->count();
-        $todayCancelled = Order::where('status', 'cancelled')->whereDate('created_at', today())->count();
-        $todayPending = Order::where('status', 'pending')->whereDate('created_at', today())->count();
-        $todayTickets = Ticket::where('status', 'valid')
-            ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
-            ->whereDate('created_at', today())
-            ->count();
+            $todayOrders = Order::whereDate('created_at', today())->count();
+            $todayPaid = Order::whereIn('status', $paidStatuses)->whereDate('created_at', today())->count();
+            $todayCancelled = Order::where('status', 'cancelled')->whereDate('created_at', today())->count();
+            $todayPending = Order::where('status', 'pending')->whereDate('created_at', today())->count();
+            $todayTickets = Ticket::where('status', 'valid')
+                ->whereHas('order', fn ($q) => $q->whereIn('status', $paidStatuses))
+                ->whereDate('created_at', today())
+                ->count();
+
+            return compact('todayOrders', 'todayPaid', 'todayCancelled', 'todayPending', 'todayTickets');
+        });
+
+        extract($cached);
 
         return [
             'datasets' => [

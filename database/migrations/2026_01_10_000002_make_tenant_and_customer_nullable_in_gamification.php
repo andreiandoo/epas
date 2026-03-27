@@ -7,43 +7,27 @@ use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
-    /**
-     * Make tenant_id and customer_id nullable in gamification tables
-     * to support marketplace customers (who don't have tenant_id or customer_id)
-     */
     public function up(): void
     {
-        // Customer Points - make tenant_id and customer_id nullable
-        if (Schema::hasTable('customer_points')) {
-            // Use raw SQL for MySQL to alter columns
-            DB::statement('ALTER TABLE `customer_points` MODIFY `tenant_id` BIGINT UNSIGNED NULL');
-            DB::statement('ALTER TABLE `customer_points` MODIFY `customer_id` BIGINT UNSIGNED NULL');
-        }
+        $tables = [
+            'customer_points' => ['tenant_id', 'customer_id'],
+            'points_transactions' => ['tenant_id', 'customer_id'],
+            'customer_experience' => ['customer_id'],
+            'experience_transactions' => ['customer_id'],
+            'customer_badges' => ['customer_id'],
+            'reward_redemptions' => ['customer_id'],
+        ];
 
-        // Points Transactions
-        if (Schema::hasTable('points_transactions')) {
-            DB::statement('ALTER TABLE `points_transactions` MODIFY `tenant_id` BIGINT UNSIGNED NULL');
-            DB::statement('ALTER TABLE `points_transactions` MODIFY `customer_id` BIGINT UNSIGNED NULL');
-        }
-
-        // Customer Experience - customer_id
-        if (Schema::hasTable('customer_experience') && Schema::hasColumn('customer_experience', 'customer_id')) {
-            DB::statement('ALTER TABLE `customer_experience` MODIFY `customer_id` BIGINT UNSIGNED NULL');
-        }
-
-        // Experience Transactions - customer_id
-        if (Schema::hasTable('experience_transactions') && Schema::hasColumn('experience_transactions', 'customer_id')) {
-            DB::statement('ALTER TABLE `experience_transactions` MODIFY `customer_id` BIGINT UNSIGNED NULL');
-        }
-
-        // Customer Badges - customer_id
-        if (Schema::hasTable('customer_badges') && Schema::hasColumn('customer_badges', 'customer_id')) {
-            DB::statement('ALTER TABLE `customer_badges` MODIFY `customer_id` BIGINT UNSIGNED NULL');
-        }
-
-        // Reward Redemptions - customer_id
-        if (Schema::hasTable('reward_redemptions') && Schema::hasColumn('reward_redemptions', 'customer_id')) {
-            DB::statement('ALTER TABLE `reward_redemptions` MODIFY `customer_id` BIGINT UNSIGNED NULL');
+        foreach ($tables as $table => $columns) {
+            if (!Schema::hasTable($table)) continue;
+            foreach ($columns as $column) {
+                if (!Schema::hasColumn($table, $column)) continue;
+                if (DB::getDriverName() === 'pgsql') {
+                    DB::statement("ALTER TABLE \"{$table}\" ALTER COLUMN \"{$column}\" DROP NOT NULL");
+                } else {
+                    DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` BIGINT UNSIGNED NULL");
+                }
+            }
         }
     }
 

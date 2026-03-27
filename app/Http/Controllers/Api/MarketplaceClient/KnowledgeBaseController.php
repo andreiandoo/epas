@@ -6,6 +6,7 @@ use App\Models\KnowledgeBase\KbArticle;
 use App\Models\KnowledgeBase\KbCategory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class KnowledgeBaseController extends BaseController
 {
@@ -243,9 +244,19 @@ class KnowledgeBaseController extends BaseController
             ->where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
             ->where(function ($q) use ($query, $language) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$language}')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(content, '$.{$language}')) LIKE ?", ["%{$query}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$language}')) LIKE ?", ["%{$query}%"]);
+                $isPgsql = DB::getDriverName() === 'pgsql';
+                $q->whereRaw(
+                    $isPgsql ? "title->>'{$language}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$language}')) LIKE ?",
+                    ["%{$query}%"]
+                )
+                    ->orWhereRaw(
+                        $isPgsql ? "content->>'{$language}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(content, '$.{$language}')) LIKE ?",
+                        ["%{$query}%"]
+                    )
+                    ->orWhereRaw(
+                        $isPgsql ? "question->>'{$language}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(question, '$.{$language}')) LIKE ?",
+                        ["%{$query}%"]
+                    );
             })
             ->with('category')
             ->orderByDesc('view_count')

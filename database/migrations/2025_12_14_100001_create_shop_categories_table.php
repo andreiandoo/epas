@@ -25,10 +25,13 @@ return new class extends Migration
             $table->json('meta')->nullable();
             $table->timestamps();
 
-            $table->foreign('parent_id')->references('id')->on('shop_categories')->nullOnDelete();
             $table->unique(['tenant_id', 'slug']);
             $table->index(['tenant_id', 'parent_id']);
             $table->index(['tenant_id', 'is_active']);
+        });
+
+        Schema::table('shop_categories', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('shop_categories')->nullOnDelete();
         });
     }
 

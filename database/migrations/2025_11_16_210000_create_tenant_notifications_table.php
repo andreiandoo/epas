@@ -64,7 +64,7 @@ return new class extends Migration
             // Indexes
             $table->index(['tenant_id', 'status', 'priority'], 'idx_tenant_status_priority');
             $table->index(['tenant_id', 'type'], 'idx_tenant_type');
-            $table->index(['created_at'], 'idx_created_at');
+            $table->index(['created_at'], 'idx_notifications_created_at');
         });
     }
 

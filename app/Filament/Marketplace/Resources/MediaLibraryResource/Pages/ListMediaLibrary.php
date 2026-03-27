@@ -11,6 +11,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ListMediaLibrary extends ListRecords
@@ -235,7 +236,11 @@ class ListMediaLibrary extends ListRecords
             ->where('mime_type', 'LIKE', 'image/%')
             ->where(function ($q) {
                 $q->whereNull('metadata')
-                    ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "metadata->>'compressed_at' IS NULL"
+                            : "JSON_EXTRACT(metadata, '$.compressed_at') IS NULL"
+                    );
             })
             ->get();
 

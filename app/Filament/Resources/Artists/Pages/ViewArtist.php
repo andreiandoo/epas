@@ -260,8 +260,18 @@ class ViewArtist extends Page
         $search = $this->venueSearch;
         $this->venueResults = \App\Models\Venue::where(function ($q) use ($search) {
                 $q->where('name', 'LIKE', "%{$search}%")
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ['%' . mb_strtolower($search) . '%'])
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(name->>'en') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
+                        ['%' . mb_strtolower($search) . '%']
+                    )
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(name->>'ro') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                        ['%' . mb_strtolower($search) . '%']
+                    )
                     ->orWhere('city', 'LIKE', "%{$search}%");
             })
             ->select('id', 'name', 'city', 'capacity', 'capacity_total')
@@ -380,7 +390,7 @@ class ViewArtist extends Page
             ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
             ->where('event_artist.artist_id', $artistId)
             ->whereBetween('events.event_date', [$startDate, $endDate])
-            ->select(DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"), DB::raw('COUNT(*) as cnt'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(events.event_date, 'YYYY-MM') as ym" : "DATE_FORMAT(events.event_date, '%Y-%m') as ym"), DB::raw('COUNT(*) as cnt'))
             ->groupBy('ym')
             ->pluck('cnt', 'ym');
 
@@ -392,7 +402,7 @@ class ViewArtist extends Page
             ->where('event_artist.artist_id', $artistId)
             ->whereBetween('events.event_date', [$startDate, $endDate])
             ->select(
-                DB::raw("DATE_FORMAT(events.event_date, '%Y-%m') as ym"),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(events.event_date, 'YYYY-MM') as ym" : "DATE_FORMAT(events.event_date, '%Y-%m') as ym"),
                 DB::raw('COUNT(tickets.id) as ticket_count'),
                 DB::raw('COALESCE(SUM(tickets.price), 0) as revenue')
             )
@@ -693,14 +703,14 @@ class ViewArtist extends Page
                 ->whereIn('o.id', $orderIds)
                 ->select(
                     DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'),
-                    DB::raw('COALESCE(mc.first_name, c.first_name, "") as first_name'),
-                    DB::raw('COALESCE(mc.last_name, c.last_name, "") as last_name'),
+                    DB::raw("COALESCE(mc.first_name, c.first_name, '') as first_name"),
+                    DB::raw("COALESCE(mc.last_name, c.last_name, '') as last_name"),
                     DB::raw('COALESCE(mc.email, c.email, o.customer_email) as email'),
                     DB::raw('COALESCE(mc.city, c.city) as city'),
                     DB::raw('SUM(o.total) as total_spent'),
                     DB::raw('COUNT(DISTINCT o.id) as orders')
                 )
-                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw('COALESCE(mc.first_name, c.first_name, "")'), DB::raw('COALESCE(mc.last_name, c.last_name, "")'), DB::raw('COALESCE(mc.email, c.email, o.customer_email)'), DB::raw('COALESCE(mc.city, c.city)'))
+                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw("COALESCE(mc.first_name, c.first_name, '')"), DB::raw("COALESCE(mc.last_name, c.last_name, '')"), DB::raw('COALESCE(mc.email, c.email, o.customer_email)'), DB::raw('COALESCE(mc.city, c.city)'))
                 ->orderByDesc('total_spent')
                 ->limit(20)
                 ->get()
@@ -784,7 +794,9 @@ class ViewArtist extends Page
             })
             ->whereIn('o.id', array_slice($orderIds, 0, 5000)) // limit for performance
             ->whereNotNull('e.event_date')
-            ->select(DB::raw('DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
+            ->select(DB::raw(DB::getDriverName() === 'pgsql'
+                ? '(e.event_date::date - COALESCE(o.paid_at, o.created_at)::date) as days_before'
+                : 'DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
             ->get()
             ->pluck('days_before')
             ->filter(fn ($d) => $d !== null && $d >= 0);
@@ -844,7 +856,9 @@ class ViewArtist extends Page
                         $q->where('tt.event_id', $evId)->orWhere('t.event_id', $evId)->orWhere('t.marketplace_event_id', $evId);
                     })
                     ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
-                    ->selectRaw("GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
+                    ->selectRaw(DB::getDriverName() === 'pgsql'
+                        ? "GREATEST(0, ('{$evDateStr}'::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before, COUNT(t.id) as cnt"
+                        : "GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
                     ->groupBy('days_before')
                     ->orderBy('days_before')
                     ->get();
@@ -1053,8 +1067,8 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->whereNotNull('e.event_date')
             ->select(
-                DB::raw('DAYOFWEEK(e.event_date) as dow'),
-                DB::raw('DAYNAME(e.event_date) as day_name'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(DOW FROM e.event_date)::int + 1 as dow' : 'DAYOFWEEK(e.event_date) as dow'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Day') as day_name" : 'DAYNAME(e.event_date) as day_name'),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'),
@@ -1071,8 +1085,8 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->whereNotNull('e.event_date')
             ->select(
-                DB::raw('MONTH(e.event_date) as month_num'),
-                DB::raw('MONTHNAME(e.event_date) as month_name'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM e.event_date)::int as month_num' : 'MONTH(e.event_date) as month_num'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Month') as month_name" : 'MONTHNAME(e.event_date) as month_name'),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
@@ -1087,13 +1101,13 @@ class ViewArtist extends Page
             ->where('tt.quota_total', '>', 0)
             ->where('tt.price_cents', '>', 0)
             ->select(
-                DB::raw('CASE
-                    WHEN tt.price_cents/100 < 50 THEN "0-50"
-                    WHEN tt.price_cents/100 < 100 THEN "50-100"
-                    WHEN tt.price_cents/100 < 150 THEN "100-150"
-                    WHEN tt.price_cents/100 < 200 THEN "150-200"
-                    WHEN tt.price_cents/100 < 300 THEN "200-300"
-                    ELSE "300+" END as price_range'),
+                DB::raw("CASE
+                    WHEN tt.price_cents/100 < 50 THEN '0-50'
+                    WHEN tt.price_cents/100 < 100 THEN '50-100'
+                    WHEN tt.price_cents/100 < 150 THEN '100-150'
+                    WHEN tt.price_cents/100 < 200 THEN '150-200'
+                    WHEN tt.price_cents/100 < 300 THEN '200-300'
+                    ELSE '300+' END as price_range"),
                 DB::raw('AVG(tt.price_cents/100) as avg_price'),
                 DB::raw('SUM(tt.quota_sold) as total_sold'),
                 DB::raw('SUM(tt.quota_total) as total_cap'),
@@ -1114,7 +1128,9 @@ class ViewArtist extends Page
                 })
                 ->whereIn('o.id', array_slice($orderIds, 0, 5000))
                 ->whereNotNull('e.event_date')
-                ->selectRaw('GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
+                ->selectRaw(DB::getDriverName() === 'pgsql'
+                    ? 'GREATEST(0, (e.event_date::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before'
+                    : 'GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
                 ->get()
                 ->pluck('days_before')
                 ->filter(fn ($d) => $d >= 0);
@@ -1142,13 +1158,13 @@ class ViewArtist extends Page
             ->where('ea.artist_id', $artistId)
             ->where('v.capacity', '>', 0)
             ->select(
-                DB::raw('CASE
-                    WHEN v.capacity < 200 THEN "< 200"
-                    WHEN v.capacity < 500 THEN "200-500"
-                    WHEN v.capacity < 1000 THEN "500-1000"
-                    WHEN v.capacity < 2000 THEN "1000-2000"
-                    WHEN v.capacity < 5000 THEN "2000-5000"
-                    ELSE "5000+" END as cap_range'),
+                DB::raw("CASE
+                    WHEN v.capacity < 200 THEN '< 200'
+                    WHEN v.capacity < 500 THEN '200-500'
+                    WHEN v.capacity < 1000 THEN '500-1000'
+                    WHEN v.capacity < 2000 THEN '1000-2000'
+                    WHEN v.capacity < 5000 THEN '2000-5000'
+                    ELSE '5000+' END as cap_range"),
                 DB::raw('COUNT(DISTINCT e.id) as events'),
                 DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')

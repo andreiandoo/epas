@@ -7,6 +7,7 @@ use App\Models\Gamification\GamificationConfig;
 use App\Models\Tenant;
 use App\Services\Gamification\GamificationService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GamificationMaintenanceCommand extends Command
@@ -112,7 +113,7 @@ class GamificationMaintenanceCommand extends Command
         $today = now()->format('m-d');
         $customersWithBirthday = Customer::where('tenant_id', $tenant->id)
             ->whereNotNull('date_of_birth')
-            ->whereRaw("DATE_FORMAT(date_of_birth, '%m-%d') = ?", [$today])
+            ->whereRaw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(date_of_birth, 'MM-DD') = ?" : "DATE_FORMAT(date_of_birth, '%m-%d') = ?", [$today])
             ->get();
 
         $awarded = 0;

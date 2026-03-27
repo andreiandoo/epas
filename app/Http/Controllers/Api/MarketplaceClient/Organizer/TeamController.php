@@ -7,6 +7,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceOrganizerTeamMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Address;
 
@@ -24,8 +25,14 @@ class TeamController extends BaseController
         }
 
         $members = $organizer->teamMembers()
-            ->orderByRaw("FIELD(role, 'admin', 'manager', 'staff')")
-            ->orderByRaw("FIELD(status, 'active', 'pending', 'inactive')")
+            ->orderByRaw(DB::getDriverName() === 'pgsql'
+                ? "ARRAY_POSITION(ARRAY['admin', 'manager', 'staff'], role)"
+                : "FIELD(role, 'admin', 'manager', 'staff')"
+            )
+            ->orderByRaw(DB::getDriverName() === 'pgsql'
+                ? "ARRAY_POSITION(ARRAY['active', 'pending', 'inactive'], status)"
+                : "FIELD(status, 'active', 'pending', 'inactive')"
+            )
             ->orderBy('name')
             ->get();
 

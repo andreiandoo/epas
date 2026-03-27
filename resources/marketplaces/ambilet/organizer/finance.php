@@ -25,25 +25,22 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="grid gap-6 mb-8 lg:grid-cols-3">
                 <div class="p-6 text-white bg-gradient-to-br from-primary to-primary-dark rounded-2xl">
                     <div class="flex items-center gap-3 mb-4"><div class="flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-white/80">Balanta Disponibila</p><p class="text-3xl font-bold" id="available-balance">0 RON</p></div></div>
-                    <p class="text-sm text-white/90">Suma disponibila pentru retragere</p>
                 </div>
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <div class="flex items-center gap-3 mb-4"><div class="flex items-center justify-center w-12 h-12 bg-warning/10 rounded-xl"><svg class="w-6 h-6 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><p class="text-sm text-muted">In Procesare</p><p class="text-3xl font-bold text-secondary" id="pending-balance">0 RON</p></div></div>
-                    <p class="text-sm text-muted">Plati in curs de procesare</p>
                 </div>
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <div class="flex items-center gap-3 mb-4"><div class="flex items-center justify-center w-12 h-12 bg-success/10 rounded-xl"><svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div><div><p class="text-sm text-muted">Total Incasat</p><p class="text-3xl font-bold text-secondary" id="total-paid-out">0 RON</p></div></div>
-                    <p class="text-sm text-muted">Suma totala retrasa</p>
                 </div>
             </div>
 
             <!-- Events with Balances -->
             <div class="mb-8">
                 <h2 class="mb-4 text-lg font-semibold text-secondary">Sold per eveniment</h2>
-                <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                    <div class="overflow-x-auto">
+                <div class="bg-white border rounded-2xl border-border">
+                    <div>
                         <table class="w-full">
-                            <thead class="bg-surface">
+                            <thead class="sticky top-[4rem] z-10 bg-surface shadow-sm">
                                 <tr>
                                     <th class="px-6 py-4 text-sm font-semibold text-left text-secondary">Eveniment</th>
                                     <th class="px-6 py-4 text-sm font-semibold text-right text-secondary">Venituri brute</th>
@@ -96,10 +93,15 @@ async function loadFinanceData() {
         const response = await AmbiletAPI.get('/organizer/finance');
         if (response.success) {
             financeData = response.data;
-            document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(financeData.available_balance || 0);
-            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(financeData.pending_balance || 0);
-            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(financeData.total_paid_out || 0);
-            renderEvents(financeData.events || []);
+            // Calculate available balance as sum of all event net revenues minus payouts
+            const events = financeData.events || [];
+            const calculatedAvailable = events.reduce((sum, e) => sum + (e.available_balance || 0), 0);
+            const calculatedPending = events.reduce((sum, e) => sum + (e.pending_payout || 0), 0);
+            const calculatedPaidOut = events.reduce((sum, e) => sum + (e.total_paid_out || 0), 0);
+            document.getElementById('available-balance').textContent = AmbiletUtils.formatCurrency(calculatedAvailable);
+            document.getElementById('pending-balance').textContent = AmbiletUtils.formatCurrency(calculatedPending || financeData.pending_balance || 0);
+            document.getElementById('total-paid-out').textContent = AmbiletUtils.formatCurrency(calculatedPaidOut || financeData.total_paid_out || 0);
+            renderEvents(events);
             // Highlight event if coming from events page
             if (highlightEventId) {
                 const targetRow = document.querySelector(`.event-row[data-event-id="${highlightEventId}"]`);
@@ -133,10 +135,16 @@ function renderEvents(events) {
             ? '<span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">Incheiat</span>'
             : '<span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">Activ</span>';
 
-        const canRequestPayout = e.available_balance >= 100;
-        const payoutButton = canRequestPayout
-            ? `<button onclick="event.stopPropagation(); openPayoutModal(${e.id}, '${e.title.replace(/'/g, "\\'")}', ${e.available_balance})" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary-dark">Solicita plata</button>`
-            : `<span class="text-xs text-muted">Min. 100 RON</span>`;
+        let payoutButton;
+        if (!e.is_past) {
+            payoutButton = `<span class="text-xs text-muted">Eveniment activ</span>`;
+        } else if (e.pending_payout > 0 && e.available_balance < 100) {
+            payoutButton = `<span class="text-xs text-warning">Plata solicitata</span>`;
+        } else if (e.available_balance < 100) {
+            payoutButton = `<span class="text-xs text-muted">${e.available_balance > 0 ? 'Min. 100 RON' : 'Fara sold'}</span>`;
+        } else {
+            payoutButton = `<button onclick="event.stopPropagation(); openPayoutModal(${e.id}, '${e.title.replace(/'/g, "\\'")}', ${e.available_balance})" class="px-3 py-1.5 text-xs font-medium text-white bg-primary rounded-lg hover:bg-primary-dark">Solicita plata</button>`;
+        }
 
         return `
             <tr class="cursor-pointer hover:bg-surface/50 event-row" data-event-id="${e.id}" onclick="toggleEventDetails(${e.id})">
@@ -149,6 +157,7 @@ function renderEvents(events) {
                             <svg class="w-4 h-4 transition-transform text-muted event-expand-icon" id="expand-icon-${e.id}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                             <div>
                                 <p class="font-medium text-secondary hover:text-primary">${e.title}</p>
+                                <p class="text-xs text-muted mt-0.5">${[e.starts_at ? AmbiletUtils.formatDate(e.starts_at) + (e.start_time ? ' ' + e.start_time : '') : '', e.venue_name, e.venue_city].filter(Boolean).join(' · ')}</p>
                                 <div class="flex items-center gap-2 mt-0.5">
                                     ${statusBadge}
                                     <span class="text-xs text-muted">${e.tickets_sold || 0} bilete</span>

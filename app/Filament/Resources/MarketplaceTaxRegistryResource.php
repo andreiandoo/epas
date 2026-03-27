@@ -53,14 +53,14 @@ class MarketplaceTaxRegistryResource extends Resource
                             ->searchable()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                                 $set('county', null);
                                 $set('city', null);
                             }),
 
                         Forms\Components\Select::make('county')
                             ->label('County/State')
-                            ->options(function (Forms\Get $get) use ($locationService) {
+                            ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($locationService) {
                                 $country = $get('country');
                                 if (!$country) {
                                     return [];
@@ -69,13 +69,13 @@ class MarketplaceTaxRegistryResource extends Resource
                             })
                             ->searchable()
                             ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                                 $set('city', null);
                             }),
 
                         Forms\Components\Select::make('city')
                             ->label('City')
-                            ->options(function (Forms\Get $get) use ($locationService) {
+                            ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($locationService) {
                                 $country = $get('country');
                                 $county = $get('county');
                                 if (!$country || !$county) {

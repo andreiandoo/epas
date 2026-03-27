@@ -100,9 +100,14 @@ class PayoutController extends BaseController
             ->get()
             ->map(function ($event) use ($organizer) {
                 // Get completed orders for this event
+                $eventId = $event->id;
                 $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-                    ->where('event_id', $event->id)
                     ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where(function ($q) use ($eventId) {
+                        $q->where('event_id', $eventId)
+                          ->orWhere('marketplace_event_id', $eventId);
+                    })
+                    ->withCount('tickets')
                     ->get();
 
                 $commissionMode = $event->getEffectiveCommissionMode();
@@ -141,11 +146,25 @@ class PayoutController extends BaseController
                     ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
                     : ($event->title ?? 'Untitled');
 
+                // Get venue info
+                $venue = $event->venue;
+                $venueName = null;
+                $venueCity = null;
+                if ($venue) {
+                    $venueName = is_array($venue->name)
+                        ? ($venue->name['ro'] ?? $venue->name['en'] ?? collect($venue->name)->first() ?? null)
+                        : ($venue->name ?? null);
+                    $venueCity = $venue->city;
+                }
+
                 return [
                     'id' => $event->id,
                     'title' => $title,
                     'image' => $this->getStorageUrl($event->poster_url),
                     'starts_at' => $event->event_date?->toIso8601String() ?? $event->starts_at?->toIso8601String(),
+                    'start_time' => $event->start_time,
+                    'venue_name' => $venueName,
+                    'venue_city' => $venueCity,
                     'status' => $event->is_published ? 'published' : 'draft',
                     'is_past' => $event->event_date ? $event->event_date->isPast() : false,
                     'commission_rate' => $commissionRate,
@@ -156,7 +175,9 @@ class PayoutController extends BaseController
                     'total_paid_out' => (float) $eventPayouts,
                     'pending_payout' => (float) $eventPendingPayouts,
                     'available_balance' => max(0, $eventAvailableBalance),
-                    'tickets_sold' => $completedOrders->sum(fn($o) => $o->tickets()->count()),
+                    'tickets_sold' => \App\Models\Ticket::whereIn('order_id', $completedOrders->pluck('id'))
+                        ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                        ->count(),
                 ];
             });
 
@@ -515,6 +536,17 @@ class PayoutController extends BaseController
      */
     protected function formatPayout(MarketplacePayout $payout): array
     {
+        // Get event title
+        $eventTitle = null;
+        if ($payout->event_id) {
+            $event = \App\Models\Event::find($payout->event_id);
+            if ($event) {
+                $eventTitle = is_array($event->title)
+                    ? ($event->title['ro'] ?? $event->title['en'] ?? collect($event->title)->first() ?? null)
+                    : ($event->title ?? null);
+            }
+        }
+
         $data = [
             'id' => $payout->id,
             'reference' => $payout->reference,
@@ -524,6 +556,7 @@ class PayoutController extends BaseController
             'status_label' => $payout->status_label,
             'account' => $payout->payout_method['iban'] ?? null,
             'event_id' => $payout->event_id,
+            'event_title' => $eventTitle,
             'period_start' => $payout->period_start?->toDateString(),
             'period_end' => $payout->period_end?->toDateString(),
             'created_at' => $payout->created_at->toIso8601String(),

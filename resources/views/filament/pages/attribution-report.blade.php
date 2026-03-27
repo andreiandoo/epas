@@ -11,7 +11,7 @@
                 <input type="date" wire:model.live="endDate" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm">
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tenant</label>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tenant / Marketplace</label>
                 <select wire:model.live="tenantId" class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm">
                     @foreach($this->getTenantOptions() as $value => $label)
                         <option value="{{ $value }}">{{ $label }}</option>

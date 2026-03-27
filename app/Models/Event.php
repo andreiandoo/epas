@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use App\Support\Translatable;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -105,6 +106,10 @@ class Event extends Model
         'general_stock',
         'views_count',
         'interested_count',
+
+        // ticket display options
+        'enable_ticket_groups',
+        'enable_ticket_perks',
     ];
 
     protected $casts = [
@@ -139,6 +144,8 @@ class Event extends Model
         'has_custom_related'    => 'bool',
         'custom_related_event_ids' => 'array',
         'is_template'       => 'bool',
+        'enable_ticket_groups' => 'bool',
+        'enable_ticket_perks'  => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',
@@ -561,7 +568,12 @@ class Event extends Model
                 ->orWhere(function ($q2) use ($now) {
                     $q2->whereNotIn('duration_mode', ['range', 'single_day'])
                        ->where(function ($q3) use ($now) {
-                           $q3->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[0].date')) >= ?", [$now->toDateString()])
+                           $q3->whereRaw(
+                               DB::getDriverName() === 'pgsql'
+                                   ? "multi_slots->0->>'date' >= ?"
+                                   : "JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[0].date')) >= ?",
+                               [$now->toDateString()]
+                           )
                               ->orWhereNull('multi_slots');
                        });
                 });

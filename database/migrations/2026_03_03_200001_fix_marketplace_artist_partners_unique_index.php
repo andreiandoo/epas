@@ -10,12 +10,13 @@ return new class extends Migration
     public function up(): void
     {
         // Add unique index if it doesn't exist (on fresh installs, migration 200000 already created it)
-        try {
+        $indexExists = collect(Schema::getIndexes('marketplace_artist_partners'))
+            ->contains(fn ($idx) => $idx['name'] === 'mp_artist_partners_client_artist_unique');
+
+        if (!$indexExists) {
             Schema::table('marketplace_artist_partners', function (Blueprint $table) {
                 $table->unique(['marketplace_client_id', 'artist_id'], 'mp_artist_partners_client_artist_unique');
             });
-        } catch (\Illuminate\Database\QueryException $e) {
-            // Index already exists — skip
         }
 
         // Migrate existing data if not already done

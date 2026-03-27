@@ -745,3 +745,20 @@ Schedule::command('marketplace:generate-auto-deconts --days-after=3')
     ->onFailure(function () {
         \Log::error('Failed to generate auto-deconts');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Materialized Views Refresh
+|--------------------------------------------------------------------------
+*/
+
+// Refresh materialized views every 5 minutes (PostgreSQL only)
+Schedule::command('views:refresh')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::debug('Materialized views refreshed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to refresh materialized views');
+    });

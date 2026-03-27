@@ -8,25 +8,20 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('tenant_pages')) {
-            return;
-        }
-
         Schema::create('tenant_pages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
-            $table->foreignId('parent_id')->nullable()->constrained('tenant_pages')->onDelete('set null');
-            $table->json('title'); // Translatable
+            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('parent_id')->nullable()->constrained('tenant_pages')->nullOnDelete();
+            $table->json('title')->nullable();
             $table->string('slug');
-            $table->json('content')->nullable(); // Translatable WYSIWYG content
-            $table->string('menu_location')->default('footer'); // 'header', 'footer', 'none'
+            $table->json('content')->nullable();
+            $table->string('menu_location')->nullable();
             $table->integer('menu_order')->default(0);
             $table->boolean('is_published')->default(false);
-            $table->json('meta')->nullable(); // SEO meta, etc.
+            $table->json('meta')->nullable();
             $table->timestamps();
 
             $table->unique(['tenant_id', 'slug']);
-            $table->index(['tenant_id', 'menu_location', 'is_published']);
         });
     }
 

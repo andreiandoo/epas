@@ -25,7 +25,7 @@ return new class extends Migration
         $driver = Schema::getConnection()->getDriverName();
 
         if ($driver === 'pgsql') {
-            DB::statement("ALTER TABLE tenant_microservices ADD COLUMN is_active BOOLEAN GENERATED ALWAYS AS (status = 'active') STORED");
+            DB::statement("ALTER TABLE tenant_microservices ADD COLUMN is_active BOOLEAN GENERATED ALWAYS AS (status::text = 'active') STORED");
         } elseif ($driver === 'sqlite') {
             // SQLite supports generated columns since 3.31.0
             DB::statement("ALTER TABLE tenant_microservices ADD COLUMN is_active BOOLEAN GENERATED ALWAYS AS (status = 'active') STORED");

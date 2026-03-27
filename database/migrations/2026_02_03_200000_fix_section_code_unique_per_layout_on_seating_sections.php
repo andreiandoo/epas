@@ -10,8 +10,8 @@ return new class extends Migration
     public function up(): void
     {
         // Drop any existing unique index on section_code alone (if it exists)
-        $indexes = DB::select("SHOW INDEX FROM seating_sections WHERE Key_name = 'seating_sections_section_code_unique'");
-        if (!empty($indexes)) {
+        $indexNames = collect(Schema::getIndexes('seating_sections'))->pluck('name')->toArray();
+        if (in_array('seating_sections_section_code_unique', $indexNames)) {
             Schema::table('seating_sections', function (Blueprint $table) {
                 $table->dropUnique(['section_code']);
             });

@@ -10,6 +10,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Attributes\Url;
@@ -252,7 +253,11 @@ class ListMediaLibrary extends ListRecords
         if ($scope === 'uncompressed') {
             $query->where(function ($q) {
                 $q->whereNull('metadata')
-                  ->orWhereRaw("JSON_EXTRACT(metadata, '$.compressed_at') IS NULL");
+                  ->orWhereRaw(
+                      DB::getDriverName() === 'pgsql'
+                          ? "metadata->>'compressed_at' IS NULL"
+                          : "JSON_EXTRACT(metadata, '$.compressed_at') IS NULL"
+                  );
             });
         }
 

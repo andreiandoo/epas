@@ -46,14 +46,24 @@ class FixAmbiletPostImportCommand extends Command
             $count = DB::table('tickets')
                 ->where('marketplace_client_id', $clientId)
                 ->where('status', 'valid')
-                ->whereRaw("JSON_EXTRACT(meta, '$.imported_from') = ?", ['ambilet'])
+                ->whereRaw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "meta->>'imported_from' = ?"
+                        : "JSON_EXTRACT(meta, '$.imported_from') = ?",
+                    ['ambilet']
+                )
                 ->count();
             $this->info("[DRY RUN] Would update {$count} tickets from 'valid' to 'used'.");
         } else {
             $affected = DB::table('tickets')
                 ->where('marketplace_client_id', $clientId)
                 ->where('status', 'valid')
-                ->whereRaw("JSON_EXTRACT(meta, '$.imported_from') = ?", ['ambilet'])
+                ->whereRaw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "meta->>'imported_from' = ?"
+                        : "JSON_EXTRACT(meta, '$.imported_from') = ?",
+                    ['ambilet']
+                )
                 ->update(['status' => 'used', 'updated_at' => now()]);
             $this->info("Updated {$affected} tickets to 'used'.");
         }
@@ -236,13 +246,30 @@ class FixAmbiletPostImportCommand extends Command
         if ($dryRun) {
             $count = DB::table('marketplace_customers')
                 ->where('marketplace_client_id', $clientId)
-                ->whereRaw("(settings IS NULL OR JSON_EXTRACT(settings, '$.imported_from') IS NULL)")
+                ->whereRaw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "(settings IS NULL OR settings->>'imported_from' IS NULL)"
+                        : "(settings IS NULL OR JSON_EXTRACT(settings, '$.imported_from') IS NULL)"
+                )
                 ->whereRaw("EXISTS (SELECT 1 FROM orders o WHERE o.marketplace_customer_id = marketplace_customers.id AND o.source = 'legacy_import')")
                 ->count();
             $this->info("[DRY RUN] Would mark ~{$count} customers as imported from ambilet.");
         } else {
             // Mark customers that have at least one legacy_import order
-            $affected = DB::statement("
+            $affected = DB::statement(
+                DB::getDriverName() === 'pgsql'
+                    ? "
+                UPDATE marketplace_customers mc
+                SET settings = jsonb_set(COALESCE(settings::jsonb, '{}'::jsonb), '{imported_from}', '\"ambilet\"'::jsonb),
+                    updated_at = NOW()
+                WHERE marketplace_client_id = {$clientId}
+                  AND EXISTS (
+                      SELECT 1 FROM orders o
+                      WHERE o.marketplace_customer_id = mc.id
+                        AND o.source = 'legacy_import'
+                  )
+                "
+                    : "
                 UPDATE marketplace_customers mc
                 SET mc.settings = JSON_SET(COALESCE(mc.settings, '{}'), '$.imported_from', 'ambilet'),
                     mc.updated_at = NOW()
@@ -252,11 +279,17 @@ class FixAmbiletPostImportCommand extends Command
                       WHERE o.marketplace_customer_id = mc.id
                         AND o.source = 'legacy_import'
                   )
-            ");
+                "
+            );
             // Count how many were marked
             $marked = DB::table('marketplace_customers')
                 ->where('marketplace_client_id', $clientId)
-                ->whereRaw("JSON_EXTRACT(settings, '$.imported_from') = ?", ['ambilet'])
+                ->whereRaw(
+                    DB::getDriverName() === 'pgsql'
+                        ? "settings->>'imported_from' = ?"
+                        : "JSON_EXTRACT(settings, '$.imported_from') = ?",
+                    ['ambilet']
+                )
                 ->count();
             $this->info("Marked {$marked} customers as imported from ambilet.");
         }

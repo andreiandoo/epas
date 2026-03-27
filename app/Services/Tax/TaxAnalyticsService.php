@@ -207,8 +207,8 @@ class TaxAnalyticsService
     {
         $data = TaxCollectionRecord::forTenant($tenantId)
             ->whereYear('collection_date', $year)
-            ->selectRaw('MONTH(collection_date) as month, SUM(tax_amount) as total, COUNT(*) as count')
-            ->groupBy(DB::raw('MONTH(collection_date)'))
+            ->selectRaw((DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM collection_date)::int' : 'MONTH(collection_date)') . ' as month, SUM(tax_amount) as total, COUNT(*) as count')
+            ->groupBy(DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM collection_date)::int' : 'MONTH(collection_date)'))
             ->orderBy('month')
             ->get()
             ->keyBy('month');

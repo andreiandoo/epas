@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -36,21 +37,36 @@ return new class extends Migration
 
         // Change name column to JSON in shop_shipping_zones (for translatable)
         if (Schema::hasColumn('shop_shipping_zones', 'name')) {
-            Schema::table('shop_shipping_zones', function (Blueprint $table) {
-                $table->json('name')->nullable()->change();
-            });
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE shop_shipping_zones ALTER COLUMN name TYPE json USING name::json');
+                DB::statement('ALTER TABLE shop_shipping_zones ALTER COLUMN name DROP NOT NULL');
+            } else {
+                Schema::table('shop_shipping_zones', function (Blueprint $table) {
+                    $table->json('name')->nullable()->change();
+                });
+            }
         }
 
         // Change name and description columns to JSON in shop_shipping_methods (for translatable)
         if (Schema::hasColumn('shop_shipping_methods', 'name')) {
-            Schema::table('shop_shipping_methods', function (Blueprint $table) {
-                $table->json('name')->nullable()->change();
-            });
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE shop_shipping_methods ALTER COLUMN name TYPE json USING name::json');
+                DB::statement('ALTER TABLE shop_shipping_methods ALTER COLUMN name DROP NOT NULL');
+            } else {
+                Schema::table('shop_shipping_methods', function (Blueprint $table) {
+                    $table->json('name')->nullable()->change();
+                });
+            }
         }
         if (Schema::hasColumn('shop_shipping_methods', 'description')) {
-            Schema::table('shop_shipping_methods', function (Blueprint $table) {
-                $table->json('description')->nullable()->change();
-            });
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE shop_shipping_methods ALTER COLUMN description TYPE json USING description::json');
+                DB::statement('ALTER TABLE shop_shipping_methods ALTER COLUMN description DROP NOT NULL');
+            } else {
+                Schema::table('shop_shipping_methods', function (Blueprint $table) {
+                    $table->json('description')->nullable()->change();
+                });
+            }
         }
     }
 

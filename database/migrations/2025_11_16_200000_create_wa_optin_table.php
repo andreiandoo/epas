@@ -41,7 +41,7 @@ return new class extends Migration
             $table->unique(['tenant_id', 'phone_e164'], 'unique_tenant_phone');
 
             // Index for quick lookups
-            $table->index(['tenant_id', 'status'], 'idx_tenant_status');
+            $table->index(['tenant_id', 'status'], 'idx_wa_optin_tenant_status');
         });
     }
 

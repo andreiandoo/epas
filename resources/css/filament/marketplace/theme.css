@@ -122,6 +122,46 @@ body {
     display: none !important;
 }
 
+/* ─── Ticket type sections inside repeater ───────────────────────── */
+
+/* Reduce padding on ticket type inner sections */
+.ep-tt-section .fi-section,
+.fi-fo-repeater .fi-section.fi-section-compact {
+    padding: 0 !important;
+}
+
+/* No padding on repeater item content */
+.fi-fo-repeater-item-content {
+    padding: 0 !important;
+}
+
+/* Larger ticket type header title */
+.fi-fo-repeater-item-header-label {
+    font-size: 1.125rem !important;
+}
+
+/* Compact section headers */
+.fi-fo-repeater .fi-section .fi-section-header-ctn {
+    padding: 0.5rem 1rem !important;
+}
+
+/* Smaller section heading text */
+.fi-fo-repeater .fi-section .fi-section-header-heading {
+    font-size: 0.875rem !important;
+}
+
+/* Allow dropdowns to overflow inside repeater sections */
+.fi-fo-repeater-item-content,
+.fi-fo-repeater-item-content .fi-section,
+.fi-fo-repeater-item-content .fi-section-content-ctn {
+    overflow: visible !important;
+}
+
+/* Remove gap between sections inside ticket type repeater items */
+.fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
+    gap: 0 !important;
+}
+
 /* ─── Event row status colours ───────────────────────────────────── */
 
 /* Unpublished events: light orange background */
@@ -140,10 +180,6 @@ tr.event-row-ended > td {
     background-color: rgb(31 41 55 / 0.5) !important;  /* gray-800/50 */
 }
 
-/* Vertically center items in grid rows (e.g. ticket type repeater fields) */
-.fi-sc.fi-sc-has-gap.fi-grid[class*="fi-grid-cols"] {
-    align-items: center;
-}
 
 /* Prevent underline on sidebar action buttons */
 .fi-section-sales-live a.no-underline:hover,

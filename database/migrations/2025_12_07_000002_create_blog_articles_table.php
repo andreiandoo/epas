@@ -289,9 +289,13 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('article_id')->references('id')->on('blog_articles')->onDelete('cascade');
-            $table->foreign('parent_id')->references('id')->on('blog_comments')->onDelete('cascade');
             $table->index(['article_id', 'status', 'created_at']);
             $table->index(['tenant_id', 'status']);
+        });
+
+        // Add self-referencing FK for blog_comments after table creation
+        Schema::table('blog_comments', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('blog_comments')->onDelete('cascade');
         });
 
         // Blog newsletter subscriptions

@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->string('city', 255)->nullable()->after('phone');
-            $table->string('country', 255)->nullable()->after('city');
-            $table->date('date_of_birth')->nullable()->after('country');
-            $table->integer('age')->unsigned()->nullable()->after('date_of_birth');
+            if (!Schema::hasColumn('customers', 'city')) {
+                $table->string('city', 255)->nullable();
+            }
+            if (!Schema::hasColumn('customers', 'country')) {
+                $table->string('country', 255)->nullable();
+            }
+            if (!Schema::hasColumn('customers', 'date_of_birth')) {
+                $table->date('date_of_birth')->nullable();
+            }
+            if (!Schema::hasColumn('customers', 'age')) {
+                $table->integer('age')->unsigned()->nullable();
+            }
         });
     }
 

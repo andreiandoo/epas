@@ -18,6 +18,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceCustomer;
 use App\Models\MarketplaceOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class GlobalSearchController extends Controller
 {
@@ -319,8 +320,18 @@ class GlobalSearchController extends Controller
                 // Search by invite_code (case insensitive)
                 $q->whereRaw("LOWER(invite_code) LIKE ?", [$lowerQuery])
                     // Search in recipient JSON field for name or email
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.name'))) LIKE ?", [$lowerQuery])
-                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.email'))) LIKE ?", [$lowerQuery]);
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(recipient->>'name') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.name'))) LIKE ?",
+                        [$lowerQuery]
+                    )
+                    ->orWhereRaw(
+                        DB::getDriverName() === 'pgsql'
+                            ? "LOWER(recipient->>'email') LIKE ?"
+                            : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.email'))) LIKE ?",
+                        [$lowerQuery]
+                    );
             })
             ->with('batch')
             ->limit(5)

@@ -307,9 +307,10 @@ class BlogArticleResource extends Resource
                                                     ->limit(300)
                                                     ->get()
                                                     ->mapWithKeys(function ($event) use ($marketplaceLanguage) {
-                                                        $title = is_array($event->title)
-                                                            ? ($event->title[$marketplaceLanguage] ?? $event->title['en'] ?? reset($event->title) ?? 'Unnamed')
-                                                            : ($event->title ?? 'Unnamed');
+                                                        $titleData = $event->title;
+                                                        $title = is_array($titleData)
+                                                            ? ($titleData[$marketplaceLanguage] ?? $titleData['en'] ?? collect($titleData)->first() ?? 'Unnamed')
+                                                            : ($titleData ?? 'Unnamed');
                                                         return [$event->id => $title];
                                                     });
                                             })

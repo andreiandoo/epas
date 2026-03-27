@@ -7,6 +7,7 @@ use App\Models\Artist;
 use App\Models\Venue;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends BaseController
 {
@@ -119,8 +120,12 @@ class SearchController extends BaseController
             })
             // Search in title (JSON column) - case and diacritic insensitive
             ->where(function ($q) use ($normalizedQuery) {
-                $titleRo = $this->normalizeColumnSql("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))");
-                $titleEn = $this->normalizeColumnSql("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))");
+                $titleRo = $this->normalizeColumnSql(
+                    DB::getDriverName() === 'pgsql' ? "title->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))"
+                );
+                $titleEn = $this->normalizeColumnSql(
+                    DB::getDriverName() === 'pgsql' ? "title->>'en'" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))"
+                );
 
                 $q->whereRaw("{$titleRo} LIKE ?", ["%{$normalizedQuery}%"])
                     ->orWhereRaw("{$titleEn} LIKE ?", ["%{$normalizedQuery}%"])

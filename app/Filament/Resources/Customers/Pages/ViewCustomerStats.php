@@ -48,9 +48,10 @@ class ViewCustomerStats extends ViewRecord
                 ->count('e.id'),
         ];
 
-        // Monthly orders (YYYY-MM) - using DATE_FORMAT for MySQL
+        // Monthly orders (YYYY-MM) - cross-DB compatible
+        $monthExpr = DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM')" : "DATE_FORMAT(created_at, '%Y-%m')";
         $this->monthlyOrders = Order::query()
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt")
+            ->selectRaw("{$monthExpr} as month, COUNT(*) as cnt")
             ->where('customer_id', $customer->id)
             ->groupBy('month')
             ->orderBy('month')
@@ -66,7 +67,11 @@ class ViewCustomerStats extends ViewRecord
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customer->id)
-            ->select('e.id', DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"))
+            ->select('e.id', DB::raw(
+                DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(e.title->>'en', e.title->>'ro') as title"
+                    : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"
+            ))
             ->distinct()
             ->orderByDesc('e.id')
             ->limit(20)
@@ -137,7 +142,11 @@ class ViewCustomerStats extends ViewRecord
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customerId)
-            ->select(DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"), DB::raw('COUNT(*) as cnt'))
+            ->select(DB::raw(
+                DB::getDriverName() === 'pgsql'
+                    ? "COALESCE(eg.name->>'en', eg.name->>'ro') as genre_name"
+                    : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"
+            ), DB::raw('COUNT(*) as cnt'))
             ->groupBy('genre_name')
             ->orderByDesc('cnt')
             ->limit(10)

@@ -15,6 +15,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class PartnerVenues extends Page implements HasForms, HasTable
 {
@@ -245,10 +246,20 @@ class PartnerVenues extends Page implements HasForms, HasTable
         $normalizedSearch = static::normalizeSearch($search);
 
         return $query->where(function (Builder $q) use ($normalizedSearch, $search) {
-            $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$normalizedSearch}%"])
-              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$normalizedSearch}%"])
+            $isPgsql = DB::getDriverName() === 'pgsql';
+            $q->whereRaw(
+                $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                ["%{$normalizedSearch}%"]
+            )
+              ->orWhereRaw(
+                  $isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
+                  ["%{$normalizedSearch}%"]
+              )
               ->orWhereRaw("LOWER(city) LIKE ?", ["%{$normalizedSearch}%"])
-              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%" . mb_strtolower($search) . "%"])
+              ->orWhereRaw(
+                  $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                  ["%" . mb_strtolower($search) . "%"]
+              )
               ->orWhereRaw("LOWER(city) LIKE ?", ["%" . mb_strtolower($search) . "%"]);
         });
     }

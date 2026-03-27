@@ -192,7 +192,7 @@ const CartPage = {
         const itemKey = item.key || index;
         const eventImage = getStorageUrl(item.event?.image || item.event_image);
         const eventTitle = item.event?.title || item.event_title || 'Eveniment';
-        const eventDate = item.event?.date || item.event_date || '';
+        const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
         const venueName = item.event?.venue?.name || item.event?.venue || item.venue_name || '';
         const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
         const ticketDescription = item.ticketType?.description || '';
@@ -426,7 +426,7 @@ const CartPage = {
         items.forEach(item => {
             const eventId = item.eventId || item.event?.id || 'unknown';
             const eventTitle = item.event?.title || item.event?.name || 'Eveniment';
-            const eventDate = item.event?.date || item.event_date || '';
+            const eventDate = item.event?.performance_date || item.event?.date || item.event_date || '';
             const venueName = item.event?.venue?.name || (typeof item.event?.venue === 'string' ? item.event.venue : '') || item.venue_name || '';
             const cityName = item.event?.city?.name || item.event?.city || item.event?.venue?.city || '';
 

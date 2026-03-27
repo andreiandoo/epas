@@ -9,6 +9,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class DashboardController extends BaseController
@@ -68,7 +69,7 @@ class DashboardController extends BaseController
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
 
-        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'completed'])
+        $completedOrders = (clone $orders)->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order');
 
         $commissionRate = $organizer->getEffectiveCommissionRate();
@@ -76,7 +77,24 @@ class DashboardController extends BaseController
         $commissionAmount = round($grossRevenue * $commissionRate / 100, 2);
         $netRevenue = $grossRevenue - $commissionAmount;
 
-        $ticketsSold = (clone $completedOrders)->withCount('tickets')->get()->sum('tickets_count');
+        // Count only valid/used tickets (not cancelled tickets on valid orders)
+        $ticketsSold = \App\Models\Ticket::whereHas('order', function ($q) use ($organizer, $fromDate, $toDate) {
+            $q->where('marketplace_organizer_id', $organizer->id)
+              ->whereIn('status', ['paid', 'confirmed', 'completed'])
+              ->where('source', '!=', 'test_order')
+              ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59']);
+        })->whereNotIn('status', ['cancelled', 'refunded', 'void'])->count();
+
+        // Order status breakdown
+        $allOrdersInPeriod = (clone $orders)->where('source', '!=', 'test_order');
+        $orderBreakdown = [
+            'paid' => (clone $allOrdersInPeriod)->whereIn('status', ['paid', 'confirmed', 'completed'])->count(),
+            'pending' => (clone $allOrdersInPeriod)->where('status', 'pending')->count(),
+            'failed' => (clone $allOrdersInPeriod)->where('status', 'failed')->count(),
+            'cancelled' => (clone $allOrdersInPeriod)->where('status', 'cancelled')->count(),
+            'expired' => (clone $allOrdersInPeriod)->where('status', 'expired')->count(),
+            'refunded' => (clone $allOrdersInPeriod)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
+        ];
 
         // Weekly sales (last 7 days)
         $weeklySales = Order::where('marketplace_organizer_id', $organizer->id)
@@ -107,6 +125,7 @@ class DashboardController extends BaseController
                 'commission_rate' => $commissionRate,
                 'commission_amount' => $commissionAmount,
                 'net_revenue' => $netRevenue,
+                'order_breakdown' => $orderBreakdown,
             ],
             'account' => [
                 'status' => $organizer->status,
@@ -141,17 +160,19 @@ class DashboardController extends BaseController
         $toDate = $request->input('to_date', now()->toDateString());
         $groupBy = $request->input('group_by', 'day');
 
+        $isPgsql = DB::getDriverName() === 'pgsql';
         $dateFormat = match ($groupBy) {
-            'week' => '%Y-%u',
-            'month' => '%Y-%m',
-            default => '%Y-%m-%d',
+            'week' => $isPgsql ? 'IYYY-IW' : '%Y-%u',
+            'month' => $isPgsql ? 'YYYY-MM' : '%Y-%m',
+            default => $isPgsql ? 'YYYY-MM-DD' : '%Y-%m-%d',
         };
+        $periodExpr = $isPgsql ? "TO_CHAR(created_at, '{$dateFormat}')" : "DATE_FORMAT(created_at, '{$dateFormat}')";
 
         $sales = Order::where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$fromDate, $toDate . ' 23:59:59'])
-            ->selectRaw("DATE_FORMAT(created_at, '{$dateFormat}') as period")
+            ->selectRaw("{$periodExpr} as period")
             ->selectRaw('COUNT(*) as orders')
             ->selectRaw('SUM(total) as revenue')
             ->groupBy('period')
@@ -255,15 +276,32 @@ class DashboardController extends BaseController
 
         $query->orderByDesc('created_at');
 
-        // Compute aggregate stats — include all sources (POS, marketplace, etc.)
-        // Exclude only cancelled, refunded, and test orders
+        // Compute aggregate stats — only paid/confirmed/completed orders
         $statsQuery = (clone $query)
-            ->whereNotIn('status', ['cancelled', 'refunded', 'failed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order');
+
+        // Count only valid tickets (not cancelled/refunded on valid orders)
+        $statsOrderIds = (clone $statsQuery)->pluck('id');
+        $validTickets = \App\Models\Ticket::whereIn('order_id', $statsOrderIds)
+            ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+            ->count();
+
         $stats = [
             'total_revenue' => (float) (clone $statsQuery)->sum('total'),
-            'total_tickets' => (int) (clone $statsQuery)->withCount('tickets')->get()->sum('tickets_count'),
+            'total_tickets' => $validTickets,
             'completed_orders' => (int) (clone $statsQuery)->count(),
+        ];
+
+        // Order breakdown for display
+        $allOrdersQuery = (clone $query)->where('source', '!=', 'test_order');
+        $stats['order_breakdown'] = [
+            'paid' => (int) (clone $allOrdersQuery)->whereIn('status', ['paid', 'confirmed', 'completed'])->count(),
+            'pending' => (int) (clone $allOrdersQuery)->where('status', 'pending')->count(),
+            'failed' => (int) (clone $allOrdersQuery)->where('status', 'failed')->count(),
+            'cancelled' => (int) (clone $allOrdersQuery)->where('status', 'cancelled')->count(),
+            'expired' => (int) (clone $allOrdersQuery)->where('status', 'expired')->count(),
+            'refunded' => (int) (clone $allOrdersQuery)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
         $perPage = min((int) $request->get('per_page', 20), 100);
@@ -313,7 +351,7 @@ class DashboardController extends BaseController
             ->with([
                 'event:id,title',
                 'marketplaceEvent:id,name',
-                'marketplaceCustomer:id,first_name,last_name,email,phone',
+                'marketplaceCustomer:id,first_name,last_name,phone',
                 'tickets.marketplaceTicketType:id,name',
                 'tickets.ticketType:id,name',
             ]);

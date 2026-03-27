@@ -32,12 +32,37 @@ function syncDrawerContent() {
     if (mainContent && drawerContent) {
         // Clone the ticket cards for the drawer
         drawerContent.innerHTML = mainContent.innerHTML;
+
+        // Fix duplicate IDs: rename ticket-group-X to drawer-ticket-group-X
+        drawerContent.querySelectorAll('[id^="ticket-group-"]').forEach(el => {
+            el.id = 'drawer-' + el.id;
+        });
+
+        // Fix group collapse buttons to target drawer IDs
+        drawerContent.querySelectorAll('button[onclick*="ticket-group-"]').forEach(btn => {
+            var onclick = btn.getAttribute('onclick');
+            btn.setAttribute('onclick', onclick.replace(/ticket-group-/g, 'drawer-ticket-group-'));
+        });
+
         // Update onclick handlers to work in drawer context
         drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
             const originalOnclick = btn.getAttribute('onclick');
             btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');
         });
     }
+
+    // Handle ticket terms visibility
+    var termsSection = document.getElementById('drawer-ticket-terms-section');
+    if (termsSection) {
+        var termsContent = typeof EventPage !== 'undefined' && EventPage.event ? EventPage.event.ticket_terms : null;
+        var hasTerms = termsContent && termsContent.trim() && termsContent !== '<p></p>' && termsContent !== '<p><br></p>';
+        termsSection.style.display = hasTerms ? '' : 'none';
+        if (hasTerms) {
+            var termsEl = document.getElementById('drawer-ticket-terms-content');
+            if (termsEl) termsEl.innerHTML = termsContent;
+        }
+    }
+
     syncDrawerSummary();
 }
 
@@ -48,6 +73,16 @@ function syncDrawerSummary() {
         const drawerContent = document.getElementById('drawerTicketTypes');
         if (mainContent && drawerContent) {
             drawerContent.innerHTML = mainContent.innerHTML;
+
+            // Fix duplicate IDs
+            drawerContent.querySelectorAll('[id^="ticket-group-"]').forEach(el => {
+                el.id = 'drawer-' + el.id;
+            });
+            drawerContent.querySelectorAll('button[onclick*="ticket-group-"]').forEach(btn => {
+                var onclick = btn.getAttribute('onclick');
+                btn.setAttribute('onclick', onclick.replace(/ticket-group-/g, 'drawer-ticket-group-'));
+            });
+
             drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
                 const originalOnclick = btn.getAttribute('onclick');
                 btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');

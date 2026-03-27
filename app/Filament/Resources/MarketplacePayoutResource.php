@@ -12,6 +12,7 @@ use Filament\Forms;
 use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use BackedEnum;
@@ -242,7 +243,7 @@ class MarketplacePayoutResource extends Resource
     {
         return $schema
             ->components([
-                Infolists\Components\Section::make('Payout Information')
+                SC\Section::make('Payout Information')
                     ->schema([
                         Infolists\Components\TextEntry::make('reference')
                             ->copyable(),
@@ -273,7 +274,7 @@ class MarketplacePayoutResource extends Resource
                     ])
                     ->columns(3),
 
-                Infolists\Components\Section::make('Amount Breakdown')
+                SC\Section::make('Amount Breakdown')
                     ->schema([
                         Infolists\Components\TextEntry::make('gross_amount')
                             ->money('RON'),
@@ -293,7 +294,7 @@ class MarketplacePayoutResource extends Resource
                     ])
                     ->columns(5),
 
-                Infolists\Components\Section::make('Period')
+                SC\Section::make('Period')
                     ->schema([
                         Infolists\Components\TextEntry::make('period_start')
                             ->date(),
@@ -302,7 +303,7 @@ class MarketplacePayoutResource extends Resource
                     ])
                     ->columns(2),
 
-                Infolists\Components\Section::make('Payout Method')
+                SC\Section::make('Payout Method')
                     ->schema([
                         Infolists\Components\TextEntry::make('payout_method.bank_name')
                             ->label('Bank'),
@@ -314,7 +315,7 @@ class MarketplacePayoutResource extends Resource
                     ])
                     ->columns(3),
 
-                Infolists\Components\Section::make('Notes')
+                SC\Section::make('Notes')
                     ->schema([
                         Infolists\Components\TextEntry::make('organizer_notes')
                             ->label('Organizer Notes')
@@ -326,7 +327,7 @@ class MarketplacePayoutResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                Infolists\Components\Section::make('Rejection Details')
+                SC\Section::make('Rejection Details')
                     ->schema([
                         Infolists\Components\TextEntry::make('rejection_reason')
                             ->columnSpanFull(),
@@ -338,7 +339,7 @@ class MarketplacePayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record->isRejected()),
 
-                Infolists\Components\Section::make('Payment Confirmation')
+                SC\Section::make('Payment Confirmation')
                     ->schema([
                         Infolists\Components\TextEntry::make('payment_reference')
                             ->copyable(),
@@ -349,7 +350,7 @@ class MarketplacePayoutResource extends Resource
                     ->columns(2)
                     ->visible(fn ($record) => $record->payment_reference),
 
-                Infolists\Components\Section::make('Timeline')
+                SC\Section::make('Timeline')
                     ->schema([
                         Infolists\Components\TextEntry::make('created_at')
                             ->label('Requested')

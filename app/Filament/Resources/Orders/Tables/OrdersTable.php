@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Orders\Tables;
 
+use App\Services\TicketEventResolver;
 use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Forms;
@@ -13,51 +14,59 @@ use Filament\Actions\DeleteBulkAction;
 class OrdersTable
 {
     /**
-     * Resolve event from an order through multiple paths:
-     * 1. Ticket → TicketType → Event (web orders)
-     * 2. Order → event_id direct (POS/app orders)
-     * 3. Order → marketplace_event_id (marketplace app orders)
-     * 4. Ticket → event_id direct (fallback)
+     * Cache resolved events per order to avoid duplicate resolution.
+     */
+    private static array $eventCache = [];
+
+    /**
+     * Resolve event from an order through multiple paths, with caching.
+     * Uses TicketEventResolver for ticket-level resolution.
      */
     protected static function resolveOrderEvent($record): ?\App\Models\Event
     {
+        $orderId = $record->id;
+        if (array_key_exists($orderId, self::$eventCache)) {
+            return self::$eventCache[$orderId];
+        }
+
+        $event = null;
+
         // 1. Via ticket → ticketType → event (standard web flow)
-        $firstTicket = $record->tickets()->with(['ticketType.event'])->first();
-        if ($firstTicket?->ticketType?->event) {
-            return $firstTicket->ticketType->event;
+        // Use eager-loaded tickets if available
+        $firstTicket = $record->relationLoaded('tickets')
+            ? $record->tickets->first()
+            : $record->tickets()->with(['ticketType.event'])->first();
+
+        if ($firstTicket) {
+            $event = TicketEventResolver::resolve($firstTicket);
         }
 
         // 2. Direct event_id on order
-        if ($record->event_id) {
+        if (!$event && $record->event_id) {
             $event = \App\Models\Event::find($record->event_id);
-            if ($event) return $event;
         }
 
         // 3. Marketplace event_id on order
-        if ($record->marketplace_event_id) {
+        if (!$event && $record->marketplace_event_id) {
             $event = \App\Models\Event::find($record->marketplace_event_id);
-            if ($event) return $event;
         }
 
-        // 4. Direct event_id on ticket (POS/app may set event_id on ticket without ticketType)
-        if ($firstTicket?->event_id) {
-            $event = \App\Models\Event::find($firstTicket->event_id);
-            if ($event) return $event;
-        }
-
-        // 5. Marketplace event_id on ticket
-        if ($firstTicket?->marketplace_event_id) {
-            $event = \App\Models\Event::find($firstTicket->marketplace_event_id);
-            if ($event) return $event;
-        }
-
-        return null;
+        self::$eventCache[$orderId] = $event;
+        return $event;
     }
 
     public static function configure(Table $table): Table
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn ($query) => $query->with([
+                'tenant:id,name,public_name',
+                'customer:id,first_name,last_name,email',
+                'marketplaceClient:id,name',
+                'marketplaceOrganizer:id,name',
+                'tickets.ticketType:id,event_id,name',
+                'tickets.ticketType.event:id,title,event_date,venue_id',
+            ]))
             ->columns([
                 TextColumn::make('id')
                     ->label('Order #')

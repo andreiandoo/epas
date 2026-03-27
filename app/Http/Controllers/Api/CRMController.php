@@ -36,7 +36,7 @@ class CRMController extends Controller
      */
     public function segments(Request $request): JsonResponse
     {
-        $segments = CustomerSegment::forTenant($request->tenant_id)->get();
+        $segments = CustomerSegment::forTenant($request->tenant_id)->paginate(50);
         return response()->json(['success' => true, 'segments' => $segments]);
     }
 
@@ -78,7 +78,7 @@ class CRMController extends Controller
         $campaigns = EmailCampaign::forTenant($request->tenant_id)
             ->with('segment')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(50);
 
         return response()->json(['success' => true, 'campaigns' => $campaigns]);
     }
@@ -143,7 +143,7 @@ class CRMController extends Controller
     {
         $workflows = AutomationWorkflow::forTenant($request->tenant_id)
             ->withCount(['steps', 'enrollments'])
-            ->get();
+            ->paginate(50);
 
         return response()->json(['success' => true, 'workflows' => $workflows]);
     }

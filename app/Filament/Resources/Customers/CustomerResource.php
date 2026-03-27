@@ -52,7 +52,7 @@ class CustomerResource extends Resource
 
                                         $ordersCount = $record->orders()->count();
                                         $totalSpent = $record->orders()->whereNotIn('status', ['cancelled', 'refunded', 'failed'])->sum('total');
-                                        $ticketsCount = \App\Models\Ticket::where('customer_id', $record->id)->count();
+                                        $ticketsCount = \App\Models\Ticket::whereHas('order', fn($q) => $q->where('customer_id', $record->id))->count();
                                         $points = static::getCustomerPoints($record);
                                         $pointsBalance = $points?->current_balance ?? 0;
                                         $tenantsCount = $record->tenants()->count();
@@ -277,7 +277,7 @@ class CustomerResource extends Resource
                                     if (!$record) return '';
                                     $ordersCount = $record->orders()->count();
                                     $totalSpent = $record->orders()->whereNotIn('status', ['cancelled', 'refunded', 'failed'])->sum('total');
-                                    $ticketsCount = \App\Models\Ticket::where('customer_id', $record->id)->count();
+                                    $ticketsCount = \App\Models\Ticket::whereHas('order', fn($q) => $q->where('customer_id', $record->id))->count();
                                     $points = static::getCustomerPoints($record);
 
                                     $row = fn ($label, $value, $color = '#E2E8F0') =>

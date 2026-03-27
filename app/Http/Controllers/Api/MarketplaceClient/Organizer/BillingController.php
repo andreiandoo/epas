@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\MarketplaceOrganizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class BillingController extends BaseController
@@ -210,7 +211,7 @@ class BillingController extends BaseController
             'total_paid' => $paidOut,
             'total_invoices' => $organizer->orders()
                 ->where('status', 'completed')
-                ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month')
+                ->selectRaw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(created_at, 'YYYY-MM') as month" : 'DATE_FORMAT(created_at, "%Y-%m") as month')
                 ->distinct()
                 ->count(),
             'pending_amount' => $pendingCommission,

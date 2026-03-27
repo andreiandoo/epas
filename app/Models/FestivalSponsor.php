@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class FestivalSponsor extends Model
 {
@@ -90,7 +91,10 @@ class FestivalSponsor extends Model
 
     public function scopeOrdered($query)
     {
-        return $query->orderByRaw("FIELD(tier, 'title','platinum','gold','silver','bronze','media','community')")
+        return $query->orderByRaw(DB::getDriverName() === 'pgsql'
+                ? "ARRAY_POSITION(ARRAY['title','platinum','gold','silver','bronze','media','community'], tier)"
+                : "FIELD(tier, 'title','platinum','gold','silver','bronze','media','community')"
+            )
             ->orderBy('sort_order');
     }
 }

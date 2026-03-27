@@ -10,12 +10,12 @@ return new class extends Migration
     {
         if (! Schema::hasColumn('events', 'is_city_featured')) {
             Schema::table('events', function (Blueprint $table) {
-                $table->boolean('is_city_featured')->default(false)->after('is_category_featured');
+                $table->boolean('is_city_featured')->default(false);
             });
         }
 
         try {
-            $indexNames = collect(\DB::select('SHOW INDEX FROM events'))->pluck('Key_name')->unique()->toArray();
+            $indexNames = collect(Schema::getIndexes('events'))->pluck('name')->toArray();
             if (! in_array('events_mp_city_featured_idx', $indexNames) && Schema::hasColumn('events', 'is_city_featured')) {
                 Schema::table('events', function (Blueprint $table) {
                     $table->index(

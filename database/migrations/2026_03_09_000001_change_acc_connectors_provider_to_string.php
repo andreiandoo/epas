@@ -1,32 +1,57 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Change ENUM to VARCHAR to support any provider (oblio, keez, etc.)
-        DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN provider VARCHAR(50) NOT NULL");
+        $isPgsql = DB::getDriverName() === 'pgsql';
 
-        // Make tenant_id nullable (may have failed in earlier migration due to FK)
-        // Drop FK if exists, then modify column
-        try {
-            DB::statement("ALTER TABLE acc_connectors DROP FOREIGN KEY acc_connectors_tenant_id_foreign");
-        } catch (\Exception $e) {
-            // FK may not exist
+        // Change ENUM to VARCHAR
+        if ($isPgsql) {
+            DB::statement('ALTER TABLE "acc_connectors" ALTER COLUMN "provider" TYPE VARCHAR(50)');
+        } else {
+            DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN provider VARCHAR(50) NOT NULL");
         }
+
+        // Drop FK if exists
         try {
-            DB::statement("ALTER TABLE acc_connectors DROP INDEX acc_connectors_tenant_id_foreign");
-        } catch (\Exception $e) {
-            // Index may not exist
+            if ($isPgsql) {
+                DB::statement("ALTER TABLE acc_connectors DROP CONSTRAINT IF EXISTS acc_connectors_tenant_id_foreign");
+            } else {
+                DB::statement("ALTER TABLE acc_connectors DROP FOREIGN KEY acc_connectors_tenant_id_foreign");
+            }
+        } catch (\Exception $e) {}
+
+        // Drop index if exists
+        try {
+            if ($isPgsql) {
+                DB::statement("DROP INDEX IF EXISTS acc_connectors_tenant_id_foreign");
+            } else {
+                DB::statement("ALTER TABLE acc_connectors DROP INDEX acc_connectors_tenant_id_foreign");
+            }
+        } catch (\Exception $e) {}
+
+        // Make tenant_id nullable VARCHAR
+        if ($isPgsql) {
+            DB::statement('ALTER TABLE "acc_connectors" ALTER COLUMN "tenant_id" TYPE VARCHAR(255)');
+            DB::statement('ALTER TABLE "acc_connectors" ALTER COLUMN "tenant_id" DROP NOT NULL');
+            DB::statement('ALTER TABLE "acc_connectors" ALTER COLUMN "tenant_id" SET DEFAULT NULL');
+        } else {
+            DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN tenant_id VARCHAR(255) NULL DEFAULT NULL");
         }
-        DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN tenant_id VARCHAR(255) NULL DEFAULT NULL");
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN provider ENUM('smartbill','fgo','exact','xero','quickbooks') NOT NULL");
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement("ALTER TABLE acc_connectors ALTER COLUMN provider TYPE VARCHAR(50)");
+        } else {
+            DB::statement("ALTER TABLE acc_connectors MODIFY COLUMN provider ENUM('smartbill','fgo','exact','xero','quickbooks') NOT NULL");
+        }
     }
 };

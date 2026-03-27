@@ -96,6 +96,9 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'sticky' => true,
+            'statement_timeout' => '30000',
+            'options' => [],
         ],
 
         'sqlsrv' => [

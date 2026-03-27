@@ -252,11 +252,10 @@ class CalculateRfmScoresJob implements ShouldQueue
      */
     protected function updateDaysSinceLastPurchase(): void
     {
-        DB::statement("
-            UPDATE core_customers
-            SET days_since_last_purchase = DATEDIFF(NOW(), last_purchase_at)
-            WHERE last_purchase_at IS NOT NULL
-        ");
+        DB::statement(DB::getDriverName() === 'pgsql'
+            ? "UPDATE core_customers SET days_since_last_purchase = (NOW()::date - last_purchase_at::date) WHERE last_purchase_at IS NOT NULL"
+            : "UPDATE core_customers SET days_since_last_purchase = DATEDIFF(NOW(), last_purchase_at) WHERE last_purchase_at IS NOT NULL"
+        );
     }
 
     /**

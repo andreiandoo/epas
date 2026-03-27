@@ -47,7 +47,7 @@ return new class extends Migration
 
             // Indexes for job processing
             $table->index(['status', 'run_at'], 'idx_status_run_at');
-            $table->index(['tenant_id', 'message_type', 'status'], 'idx_tenant_type_status');
+            $table->index(['tenant_id', 'message_type', 'status'], 'idx_wa_schedules_tenant_type_status');
 
             // Idempotency: prevent duplicate reminder schedules
             $table->unique(['tenant_id', 'correlation_ref', 'message_type'], 'unique_schedule');
