@@ -436,7 +436,9 @@ const EventPage = {
             }
         } catch (error) {
             console.error('Failed to load event:', error);
-            if (error.status === 404) {
+            if (error.status === 410 && error.data && error.data.ended) {
+                this.showEndedPerformance(error.data);
+            } else if (error.status === 404) {
                 this.showError('Eveniment negăsit');
             } else {
                 this.showError('Eroare la încărcarea evenimentului');
@@ -633,7 +635,7 @@ const EventPage = {
             range_end_time: eventData.range_end_time,
             multi_slots: eventData.multi_slots,
             performances: performancesData,
-            selectedPerformanceId: null,
+            selectedPerformanceId: eventData.selected_performance_id || null,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -697,7 +699,9 @@ const EventPage = {
                     seating_sections: tt.seating_sections || [],
                     seating_rows: tt.seating_rows || [],
                     commission: tt.commission || null,
-                    is_refundable: tt.is_refundable || false
+                    is_refundable: tt.is_refundable || false,
+                    ticket_group: tt.ticket_group || null,
+                    perks: tt.perks || []
                 };
             }),
             seating_layout: apiData.seating_layout || null,
@@ -717,7 +721,10 @@ const EventPage = {
             tour_type: apiData.tour_type || 'serie_evenimente',
             tour_events: apiData.tour_events || [],
             // Ticket terms (HTML from WYSIWYG editor)
-            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null
+            ticket_terms: (apiData.event && apiData.event.ticket_terms) ? apiData.event.ticket_terms : null,
+            // Ticket display options
+            enable_ticket_groups: apiData.enable_ticket_groups || false,
+            enable_ticket_perks: apiData.enable_ticket_perks || false
         };
     },
 
@@ -739,6 +746,61 @@ const EventPage = {
             '<div id="error-recommended" class="mt-12 text-left"></div>';
 
         // Load recommended events
+        this.loadErrorRecommendations();
+    },
+
+    showEndedPerformance(data) {
+        var self = this;
+        var months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        var days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+
+        var perfsHtml = '';
+        var upcoming = data.upcoming_performances || [];
+        if (upcoming.length > 0) {
+            perfsHtml = '<div class="mt-6 text-left">' +
+                '<h3 class="mb-3 text-lg font-bold text-secondary">Mai poți găsi bilete la:</h3>' +
+                '<div class="space-y-2">' +
+                upcoming.map(function(p) {
+                    var d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+                    var dayName = days[d.getDay()];
+                    var dayNum = d.getDate();
+                    var monthName = months[d.getMonth()];
+                    var year = d.getFullYear();
+                    var timeRange = p.start_time + (p.end_time ? ' – ' + p.end_time : '');
+
+                    return '<a href="/bilete/' + self.escapeHtml(data.parent_slug) + '" class="flex items-center gap-4 p-4 bg-white border rounded-xl border-border hover:border-primary hover:shadow-md transition-all">' +
+                        '<div class="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary/10 shrink-0">' +
+                            '<span class="text-lg font-bold leading-none text-primary">' + dayNum + '</span>' +
+                            '<span class="text-[10px] font-semibold text-primary/70 uppercase">' + monthName.substring(0, 3) + '</span>' +
+                        '</div>' +
+                        '<div class="flex-1">' +
+                            '<div class="font-semibold text-secondary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
+                            '<div class="text-sm text-muted">' + timeRange + '</div>' +
+                        '</div>' +
+                        '<svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>' +
+                    '</a>';
+                }).join('') +
+                '</div>' +
+            '</div>';
+        }
+
+        var el = document.getElementById(this.elements.loadingState);
+        el.className = 'flex flex-col gap-8';
+        el.innerHTML =
+            '<div class="w-full py-12 text-center">' +
+                '<svg class="w-16 h-16 mx-auto mb-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                '<h1 class="mb-2 text-2xl font-bold text-secondary">Această reprezentație s-a încheiat</h1>' +
+                (data.parent_title ? '<p class="text-muted">' + self.escapeHtml(data.parent_title) + '</p>' : '') +
+                perfsHtml +
+                '<div class="mt-6">' +
+                    '<a href="/" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-colors bg-primary rounded-xl hover:bg-primary-dark">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>' +
+                        'Înapoi acasă' +
+                    '</a>' +
+                '</div>' +
+            '</div>' +
+            '<div id="error-recommended" class="mt-8 text-left"></div>';
+
         this.loadErrorRecommendations();
     },
 
@@ -1066,7 +1128,12 @@ const EventPage = {
             if (this.event.performances.length === 0) {
                 this.event.performances = [e.performances[e.performances.length - 1]];
             }
-            this.event.selectedPerformanceId = this.event.performances[0].id;
+            // Use API-provided selection (child event) or default to first
+            if (this.event.selectedPerformanceId && this.event.performances.find(p => p.id === this.event.selectedPerformanceId)) {
+                // Already set from API (child event accessing parent performances)
+            } else {
+                this.event.selectedPerformanceId = this.event.performances[0].id;
+            }
         }
 
         // Ticket types (skip for ended events)
@@ -1229,12 +1296,22 @@ const EventPage = {
             const firstSlot = e.multi_slots[0];
             const firstDate = new Date(firstSlot.date);
 
-            // Show the first (or nearest upcoming) slot in the header
+            // Show the selected performance's date, or nearest upcoming slot
             const now = new Date();
-            const upcomingSlot = e.multi_slots.find(function(s) {
-                return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
-            }) || firstSlot;
-            const headerDate = new Date(upcomingSlot.date);
+            let headerSlot = null;
+            // If a performance is selected, match its date/time to a slot
+            if (e.selectedPerformanceId && e.performances) {
+                const selPerf = e.performances.find(p => p.id === e.selectedPerformanceId);
+                if (selPerf) {
+                    headerSlot = e.multi_slots.find(s => s.date === selPerf.date && s.start_time === selPerf.start_time);
+                }
+            }
+            if (!headerSlot) {
+                headerSlot = e.multi_slots.find(function(s) {
+                    return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
+                }) || firstSlot;
+            }
+            const headerDate = new Date(headerSlot.date);
 
             document.getElementById(this.elements.eventDay).textContent = headerDate.getDate();
             document.getElementById(this.elements.eventMonth).textContent = months[headerDate.getMonth()];
@@ -1455,8 +1532,11 @@ const EventPage = {
      */
     getEffectivePrice(tt) {
         const perf = this.getSelectedPerformance();
-        if (perf && perf.ticket_overrides && perf.ticket_overrides[tt.id]) {
-            return perf.ticket_overrides[tt.id].price;
+        if (perf && perf.ticket_overrides) {
+            const override = perf.ticket_overrides[tt.id] || perf.ticket_overrides[String(tt.id)];
+            if (override && override.price !== null && override.price !== undefined) {
+                return override.price;
+            }
         }
         return tt.price;
     },
@@ -1482,10 +1562,10 @@ const EventPage = {
 
         const section = document.createElement('div');
         section.id = 'perf-list-section';
-        section.className = 'mb-6 p-4 rounded-2xl';
+        section.className = 'p-4 mb-6';
         section.style.cssText = 'background:#1a1f35;';
         section.innerHTML =
-            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Alege reprezentarea</h3>' +
+            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Acest eveniment are mai multe reprezentații. Alege-o pe cea care ți se potrivește cel mai bine.</h3>' +
             '<div style="display:grid;gap:8px;">' +
             performances.map(function(p) {
                 const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
@@ -1590,13 +1670,122 @@ const EventPage = {
         const endTime = perf.end_time || '';
         const timeRange = time + (endTime ? ' – ' + endTime : '');
 
-        return '<div class="perf-selected-bar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);">' +
-            '<svg width="18" height="18" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
-            '<div style="flex:1;min-width:0;">' +
-                '<span style="font-size:13px;font-weight:600;color:#c7d2fe;">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
-                '<span style="font-size:12px;color:rgba(199,210,254,0.6);margin-left:8px;">' + timeRange + '</span>' +
+        return '<div class="flex items-center justify-between gap-2.5 px-3.5 py-2.5 mb-3 rounded-lg bg-primary/10 border border-primary/20">' +
+            '<div class="flex items-center gap-2.5 min-w-0">' +
+                '<svg class="w-4 h-4 shrink-0 text-slate-800" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
+                '<div class="min-w-0">' +
+                    '<span class="text-sm font-semibold text-primary">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
+                    '<span class="text-sm font-semibold text-slate-800 ml-2">' + timeRange + '</span>' +
+                '</div>' +
             '</div>' +
+            '<button type="button" onclick="EventPage.showPerformancePicker()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white transition-colors rounded-lg shrink-0 bg-secondary hover:bg-secondary/90">' +
+                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>' +
+                'Schimbă' +
+            '</button>' +
         '</div>';
+    },
+
+    showPerformancePicker() {
+        var isMobile = window.innerWidth < 768;
+
+        if (!isMobile) {
+            // Desktop: scroll to perf-list-section
+            var section = document.getElementById('perf-list-section');
+            if (section) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Brief highlight
+                section.style.outline = '2px solid #6366f1';
+                section.style.outlineOffset = '4px';
+                setTimeout(function() { section.style.outline = ''; section.style.outlineOffset = ''; }, 2000);
+            }
+            return;
+        }
+
+        // Mobile: show modal with performance list
+        var self = this;
+        var performances = this.event.performances || [];
+        var months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        var listHtml = performances.map(function(p) {
+            var d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+            var isActive = p.id === self.event.selectedPerformanceId;
+            var dayName = days[d.getDay()];
+            var dayNum = d.getDate();
+            var monthName = months[d.getMonth()];
+            var time = p.start_time || '';
+            var endTime = p.end_time ? ' – ' + p.end_time : '';
+
+            return '<button type="button" data-perf-modal-id="' + p.id + '" ' +
+                'class="flex items-center gap-3 w-full px-4 py-3 text-left rounded-xl border transition-colors ' +
+                (isActive ? 'border-primary bg-primary/10' : 'border-border bg-white hover:bg-gray-50') + '">' +
+                '<div class="flex flex-col items-center justify-center w-12 h-12 rounded-lg shrink-0 ' +
+                (isActive ? 'bg-primary text-white' : 'bg-gray-100 text-secondary') + '">' +
+                    '<span class="text-lg font-bold leading-none">' + dayNum + '</span>' +
+                    '<span class="text-[10px] font-semibold uppercase">' + monthName + '</span>' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                    '<div class="text-sm font-semibold text-secondary">' + dayName + ', ' + dayNum + ' ' + monthName + '</div>' +
+                    '<div class="text-xs text-muted">' + time + endTime + '</div>' +
+                '</div>' +
+                (isActive ? '<svg class="w-5 h-5 text-primary shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
+            '</button>';
+        }).join('');
+
+        // Create modal
+        var modal = document.createElement('div');
+        // Hide ticket drawer while picking performance
+        var ticketDrawer = document.getElementById('ticketDrawer');
+        var ticketBackdrop = document.getElementById('ticketDrawerBackdrop');
+        if (ticketDrawer) ticketDrawer.style.visibility = 'hidden';
+        if (ticketBackdrop) ticketBackdrop.style.visibility = 'hidden';
+
+        modal.id = 'perf-picker-modal';
+        modal.className = 'fixed inset-0 z-[1100] flex items-end justify-center';
+
+        var closeAndRestore = function() {
+            document.getElementById('perf-picker-modal')?.remove();
+            // Restore ticket drawer and re-sync its content
+            if (ticketDrawer) ticketDrawer.style.visibility = 'visible';
+            if (ticketBackdrop) ticketBackdrop.style.visibility = 'visible';
+            if (typeof syncDrawerContent === 'function') syncDrawerContent();
+        };
+
+        modal.innerHTML =
+            '<div class="absolute inset-0 bg-black/50" onclick="document.getElementById(\'perf-picker-modal\')?.remove();var td=document.getElementById(\'ticketDrawer\');var tb=document.getElementById(\'ticketDrawerBackdrop\');if(td)td.style.visibility=\'visible\';if(tb)tb.style.visibility=\'visible\';"></div>' +
+            '<div class="relative w-full max-h-[80vh] bg-white rounded-t-2xl shadow-xl overflow-hidden">' +
+                '<div class="flex items-center justify-between px-5 py-4 border-b border-border">' +
+                    '<h3 class="text-base font-bold text-secondary">Selectează reprezentația</h3>' +
+                    '<button type="button" id="perf-picker-close-btn" class="p-1 rounded-lg text-muted hover:bg-gray-100">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="p-4 space-y-2 overflow-y-auto max-h-[65vh]">' + listHtml + '</div>' +
+            '</div>';
+
+        document.body.appendChild(modal);
+
+        // Close button handler
+        document.getElementById('perf-picker-close-btn').addEventListener('click', closeAndRestore);
+
+        // Bind click handlers
+        modal.querySelectorAll('[data-perf-modal-id]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.event.selectedPerformanceId = parseInt(btn.dataset.perfModalId);
+                self.renderTicketTypes();
+                // Also update perf-list-section if exists
+                var perfSection = document.getElementById('perf-list-section');
+                if (perfSection) {
+                    perfSection.querySelectorAll('.perf-list-btn').forEach(function(b) {
+                        var bId = parseInt(b.dataset.perfId);
+                        var isNowActive = bId === self.event.selectedPerformanceId;
+                        b.style.borderColor = isNowActive ? '#6366f1' : 'rgba(255,255,255,0.12)';
+                        b.style.background = isNowActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)';
+                    });
+                }
+                closeAndRestore();
+            });
+        });
     },
 
     renderTicketTypes() {
@@ -1613,7 +1802,9 @@ const EventPage = {
         // Render performance selector pills for multi-day events
         var perfSelectorHtml = this.renderPerformanceSelector();
 
-        container.innerHTML = perfSelectorHtml + this.ticketTypes.map(function(tt) {
+        var isGrouped = self.event.enable_ticket_groups;
+        var ticketCards = this.ticketTypes.map(function(tt) {
+            var ttInGroup = isGrouped && tt.ticket_group;
             if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
@@ -1673,7 +1864,7 @@ const EventPage = {
             }
 
             // Calculate commission for tooltip using per-ticket commission
-            var ticketComm = self.calculateTicketCommission(tt, tt.price);
+            var ticketComm = self.calculateTicketCommission(tt, displayPrice);
             var basePrice, commissionAmount, totalPrice;
             var commissionLabel = '';
 
@@ -1686,21 +1877,21 @@ const EventPage = {
             }
 
             if (ticketComm.mode === 'included') {
-                // Commission is included - calculate base price from display price
+                // Commission is included - calculate base price from effective display price
                 if (ticketComm.type === 'fixed') {
-                    basePrice = tt.price - ticketComm.fixed;
+                    basePrice = displayPrice - ticketComm.fixed;
                 } else if (ticketComm.type === 'both') {
-                    basePrice = (tt.price - ticketComm.fixed) / (1 + ticketComm.rate / 100);
+                    basePrice = (displayPrice - ticketComm.fixed) / (1 + ticketComm.rate / 100);
                 } else {
-                    basePrice = tt.price / (1 + ticketComm.rate / 100);
+                    basePrice = displayPrice / (1 + ticketComm.rate / 100);
                 }
-                commissionAmount = tt.price - basePrice;
-                totalPrice = tt.price;
+                commissionAmount = displayPrice - basePrice;
+                totalPrice = displayPrice;
             } else {
                 // Commission added on top
-                basePrice = tt.price;
+                basePrice = displayPrice;
                 commissionAmount = ticketComm.amount;
-                totalPrice = tt.price + commissionAmount;
+                totalPrice = displayPrice + commissionAmount;
             }
 
             // Tooltip HTML - show commission as "Taxe procesare"
@@ -1710,16 +1901,17 @@ const EventPage = {
                     '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             } else {
-                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/90">Pret bilet:</span><span>' + displayPrice.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between"><span class="text-white/90">Taxe procesare (' + commissionLabel + '):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalPrice.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';
 
             // Card classes
+            var roundedClass = ttInGroup ? '' : 'rounded-lg';
             var cardClasses = isSoldOut
-                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 rounded-lg bg-gray-100 cursor-default'
-                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border rounded-lg hover:z-20 group';
+                ? 'relative z-10 p-2 pl-4 border ticket-card border-gray-200 ' + roundedClass + ' bg-gray-100 cursor-default'
+                : 'bg-white relative z-10 p-2 pl-4 border cursor-pointer ticket-card border-border ' + roundedClass + ' hover:z-20 group';
             var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-slate-700';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
@@ -1740,10 +1932,11 @@ const EventPage = {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
             } else {
                 if (currentQty === 0) {
-                    controlsHtml = '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-lg bg-primary text-white hover:bg-primary/80" aria-label="Add to cart">' +
-                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
-                        'Adaugă în coș' +
-                    '</button>';
+                    controlsHtml = '<div class="flex items-center gap-2">' +
+                        '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center gap-2 px-3 py-2 text-xs font-semibold transition-colors rounded-lg bg-primary text-white hover:bg-primary/80" aria-label="Add to cart">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                            'Adaugă în coș' +
+                        '</button>';
                 } else {
                 // Quantity controls (always show for available tickets)
                 controlsHtml = '<div class="flex items-center gap-2">' +
@@ -1782,13 +1975,28 @@ const EventPage = {
                 controlsHtml += '</div>';
             }
 
-            return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
+            // Render perks list if available
+            var perksHtml = '';
+            if (self.event.enable_ticket_perks && tt.perks && tt.perks.length > 0) {
+                perksHtml = '<ul class="mt-2 space-y-1">' +
+                    tt.perks.map(function(perk) {
+                        var perkText = typeof perk === 'string' ? perk : (perk.text || perk);
+                        return '<li class="flex items-start gap-1.5 text-xs text-muted">' +
+                            '<svg class="w-3.5 h-3.5 mt-0.5 text-green-500 shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' +
+                            '<span>' + self.escapeHtml(perkText) + '</span>' +
+                        '</li>';
+                    }).join('') +
+                '</ul>';
+            }
+
+            return {group: tt.ticket_group || null, html: '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-center justify-between">' +
                     '<div class="relative tooltip-trigger">' +
                         '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name +
                             (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span>' : '') +
                         '</h3>' +
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
+                        perksHtml +
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right relative">' +
@@ -1800,8 +2008,52 @@ const EventPage = {
                     availabilityHtml +
                     controlsHtml +
                 '</div>' +
-            '</div>';
-        }).join('');
+            '</div>'};
+        });
+
+        // Group ticket types if enabled
+        var ticketCardsHtml;
+        if (self.event.enable_ticket_groups) {
+            var groupOrder = [];
+            var groups = {};
+            var ungrouped = [];
+            ticketCards.forEach(function(card) {
+                if (card.group) {
+                    if (!groups[card.group]) {
+                        groups[card.group] = [];
+                        groupOrder.push(card.group);
+                    }
+                    groups[card.group].push(card.html);
+                } else {
+                    ungrouped.push(card.html);
+                }
+            });
+
+            ticketCardsHtml = '';
+            groupOrder.forEach(function(gName, gIdx) {
+                var groupCards = groups[gName];
+                var groupId = 'ticket-group-' + gIdx;
+
+                ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
+                    '<button type="button" onclick="document.getElementById(\'' + groupId + '\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
+                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100 rounded-t-2xl">' +
+                        '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-muted">(' + groupCards.length + ')</span></span>' +
+                        '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
+                    '</button>' +
+                    '<div id="' + groupId + '" class="ticket-group-content">' +
+                        groupCards.join('') +
+                    '</div>' +
+                '</div>';
+            });
+
+            if (ungrouped.length > 0) {
+                ticketCardsHtml += ungrouped.join('');
+            }
+        } else {
+            ticketCardsHtml = ticketCards.map(function(c) { return c.html; }).join('');
+        }
+
+        container.innerHTML = perfSelectorHtml + ticketCardsHtml;
 
         // Bind performance pill click handlers
         container.querySelectorAll('.perf-pill').forEach(function(btn) {
@@ -1893,7 +2145,7 @@ const EventPage = {
 
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
-                var ticketBasePrice = tt.price;
+                var ticketBasePrice = self.getEffectivePrice(tt);
                 // Calculate per-ticket commission
                 var ticketComm = self.calculateTicketCommission(tt, ticketBasePrice);
                 var ticketCommission = 0;
@@ -4141,6 +4393,13 @@ const EventPage = {
             // Silently fail - tracking should never break the page
             console.warn('[EventPage] Failed to load organizer tracking:', e.message);
         }
+    },
+
+    escapeHtml(text) {
+        if (!text) return '';
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
 

@@ -106,6 +106,10 @@ class Event extends Model
         'general_stock',
         'views_count',
         'interested_count',
+
+        // ticket display options
+        'enable_ticket_groups',
+        'enable_ticket_perks',
     ];
 
     protected $casts = [
@@ -140,6 +144,8 @@ class Event extends Model
         'has_custom_related'    => 'bool',
         'custom_related_event_ids' => 'array',
         'is_template'       => 'bool',
+        'enable_ticket_groups' => 'bool',
+        'enable_ticket_perks'  => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',

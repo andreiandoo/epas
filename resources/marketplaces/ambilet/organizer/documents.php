@@ -403,7 +403,8 @@ async function loadEventDocuments(eventId) {
     try {
         const response = await AmbiletAPI.get('/organizer/documents', { event_id: eventId });
         if (response.success) {
-            const docs = response.data.documents || [];
+            // Filter out payout/decont documents - those are shown in billing page
+            const docs = (response.data.documents || []).filter(d => !['payout', 'decont', 'settlement'].includes(d.type));
             renderEventDocuments(docs);
         } else {
             renderEventDocuments([]);

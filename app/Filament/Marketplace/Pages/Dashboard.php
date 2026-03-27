@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Pages;
 
+use App\Filament\Marketplace\Pages\BillingBreakdown;
 use App\Models\Event;
 use App\Models\MarketplaceClient;
 use App\Models\MarketplaceCustomer;
@@ -97,9 +98,16 @@ class Dashboard extends Page
             return $this->computeMonthlyBilling($marketplaceId);
         });
 
+        // Current month stats
+        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}", 120, function () use ($marketplaceId) {
+            return $this->computeCurrentMonthStats($marketplaceId);
+        });
+
         return [
             'marketplace' => $marketplace,
+            'isSuperAdmin' => Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false,
             'stats' => $stats['cards'],
+            'monthStats' => $monthStats,
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
@@ -132,14 +140,22 @@ class Dashboard extends Page
             ->selectRaw('SUM(CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END) as registered')
             ->first();
 
-        // 3. Orders - single aggregation query
-        $orderStats = Order::where('marketplace_client_id', $marketplaceId)
+        // 3. Orders - include orders linked to marketplace events (migrated may lack marketplace_client_id)
+        $marketplaceEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+
+        $orderStats = Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
+                $q->where('orders.marketplace_client_id', $marketplaceId);
+                if (!empty($marketplaceEventIds)) {
+                    $q->orWhereIn('orders.marketplace_event_id', $marketplaceEventIds)
+                      ->orWhereIn('orders.event_id', $marketplaceEventIds);
+                }
+            })
             ->where('source', '!=', 'test_order')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN \"total\" ELSE 0 END) as revenue")
-            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN commission_amount ELSE 0 END) as commissions")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN COALESCE(commission_amount, 0) ELSE 0 END) as commissions")
             ->first();
 
         $totalOrders = (int) $orderStats->total;
@@ -155,11 +171,13 @@ class Dashboard extends Page
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 
-        // 5. Tickets - use direct marketplace_client_id (indexed, no joins)
-        $ticketStats = Ticket::where('marketplace_client_id', $marketplaceId)
+        // 5. Tickets — use same logic as TicketResource: whereHas ticketType.event
+        $ticketStats = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
+                $q->where('marketplace_client_id', $marketplaceId);
+            })
             ->selectRaw('COUNT(*) as total_db')
-            ->selectRaw("SUM(CASE WHEN status = 'valid' THEN 1 ELSE 0 END) as sold")
-            ->selectRaw("SUM(CASE WHEN status = 'valid' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
+            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
+            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
 
         // 6. Organizers - single query
@@ -194,17 +212,25 @@ class Dashboard extends Page
                 });
             })
             ->withCount(['tickets as sold_tickets_count' => function ($q) {
-                $q->where('tickets.status', 'valid');
+                $q->whereIn('tickets.status', ['valid', 'used']);
             }])
             ->get();
 
         if ($topLiveEvents->isNotEmpty()) {
             $liveEventIds = $topLiveEvents->pluck('id')->toArray();
-            $revenueByEvent = Order::where('marketplace_client_id', $marketplaceId)
-                ->whereIn('marketplace_event_id', $liveEventIds)
+            // Include orders linked by marketplace_event_id OR event_id
+            $revenueByEvent = Order::where(function ($q) use ($marketplaceId, $liveEventIds) {
+                    $q->where('marketplace_client_id', $marketplaceId)
+                      ->orWhereIn('marketplace_event_id', $liveEventIds)
+                      ->orWhereIn('event_id', $liveEventIds);
+                })
+                ->where(function ($q) use ($liveEventIds) {
+                    $q->whereIn('marketplace_event_id', $liveEventIds)
+                      ->orWhereIn('event_id', $liveEventIds);
+                })
                 ->whereIn('status', $paidStatuses)
                 ->where('source', '!=', 'test_order')
-                ->selectRaw('marketplace_event_id as eid, SUM(total) as rev')
+                ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
 
@@ -230,6 +256,10 @@ class Dashboard extends Page
                 'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
                 'commissions' => $commissions,
+                // All-time marketplace commissions — single source of truth
+                'all_time_commissions' => BillingBreakdown::calculateMarketplaceCommission(
+                    $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
+                ),
                 'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => (int) $ticketStats->sold,
                 'today_tickets' => (int) $ticketStats->sold_today,
@@ -291,18 +321,150 @@ class Dashboard extends Page
         return ['labels' => $labels, 'data' => $data];
     }
 
+    private function computeCurrentMonthStats(int $marketplaceId): array
+    {
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $now = Carbon::now();
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+
+        // New organizers this month
+        $newOrganizers = DB::table('marketplace_organizers')
+            ->where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Live events (happening this month, published, not cancelled)
+        $liveEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where('is_cancelled', false)
+            ->where(function ($q) use ($monthStart, $monthEnd) {
+                $q->whereBetween('event_date', [$monthStart, $monthEnd])
+                    ->orWhereBetween('range_start_date', [$monthStart, $monthEnd])
+                    ->orWhere(function ($qq) use ($monthStart, $monthEnd) {
+                        $qq->where('range_start_date', '<=', $monthEnd)
+                            ->where('range_end_date', '>=', $monthStart);
+                    });
+            })
+            ->where(function ($q) use ($now) {
+                $q->where('event_date', '>=', $now->toDateString())
+                    ->orWhere('range_end_date', '>=', $now->toDateString());
+            })
+            ->count();
+
+        // Ended events this month
+        $endedEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
+            ->where(function ($q) use ($monthStart, $now) {
+                $q->whereBetween('event_date', [$monthStart, $now])
+                    ->orWhere(function ($qq) use ($monthStart, $now) {
+                        $qq->where('range_end_date', '>=', $monthStart)
+                            ->where('range_end_date', '<', $now);
+                    });
+            })
+            ->count();
+
+        // Sales this month — include orders for marketplace events (migrated may lack marketplace_client_id)
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+        $allStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+
+        $orderScope = function ($q) use ($marketplaceId, $mpEventIds) {
+            $q->where('orders.marketplace_client_id', $marketplaceId);
+            if (!empty($mpEventIds)) {
+                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('orders.event_id', $mpEventIds);
+            }
+        };
+
+        // Revenue (excl refunded)
+        $totalSales = (float) Order::where($orderScope)
+            ->whereIn('orders.status', $allStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
+            ->value('revenue') ?? 0;
+
+        // Marketplace commission — reuse BillingBreakdown's per-event logic (single source of truth)
+        $totalCommission = BillingBreakdown::calculateMarketplaceCommission(
+            $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
+        );
+
+        // Tickets sold this month — same logic as TicketResource
+        $ticketsSold = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
+                $q->where('marketplace_client_id', $marketplaceId);
+            })
+            ->whereIn('status', ['valid', 'used'])
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // New customers this month
+        $newCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
+        $monthOrders = Order::where($orderScope)
+            ->whereIn('orders.status', ['paid', 'confirmed', 'completed', 'refunded'])
+            ->where('orders.source', '!=', 'test_order')
+            ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Payouts this month
+        $monthPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw("COALESCE(SUM(CASE WHEN status IN ('pending','approved','processing') THEN amount ELSE 0 END), 0) as pending")
+            ->selectRaw("COALESCE(SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END), 0) as paid")
+            ->first();
+
+        return [
+            'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'new_organizers' => $newOrganizers,
+            'live_events' => $liveEvents,
+            'ended_events' => $endedEvents,
+            'total_sales' => $totalSales,
+            'total_commission' => $totalCommission,
+            'tickets_sold' => $ticketsSold,
+            'new_customers' => $newCustomers,
+            'payouts_pending' => (float) ($monthPayouts->pending ?? 0),
+            'payouts_paid' => (float) ($monthPayouts->paid ?? 0),
+            'month_orders' => $monthOrders,
+            'currency' => $this->marketplace->currency ?? 'RON',
+        ];
+    }
+
     private function computeMonthlyBilling(int $marketplaceId): array
     {
         $monthStart = Carbon::now()->startOfMonth();
         $monthEnd = Carbon::now()->endOfMonth();
-        $paidStatuses = ['paid', 'confirmed', 'completed'];
+        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
-        // 1. Ticketing commissions for current month
-        $ticketingCommission = (float) Order::where('marketplace_client_id', $marketplaceId)
-            ->whereIn('status', $paidStatuses)
+        // Commission rate from marketplace client settings (Tixello rate)
+        $commissionRate = (float) ($this->marketplace->commission_rate ?? 0);
+
+        // Include orders for marketplace events (migrated may lack marketplace_client_id)
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+        $billingScope = function ($q) use ($marketplaceId, $mpEventIds) {
+            $q->where('orders.marketplace_client_id', $marketplaceId);
+            if (!empty($mpEventIds)) {
+                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('orders.event_id', $mpEventIds);
+            }
+        };
+
+        // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
+        $orderRevenue = (float) Order::where($billingScope)
+            ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
-            ->sum('commission_amount');
+            ->sum('total');
+
+        // Use DB-level SUM with ROUND to match BillingBreakdown per-event rounding
+        $ticketingCommission = (float) Order::where($billingScope)
+            ->whereIn('status', $validStatuses)
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw("SUM(ROUND(total * {$commissionRate} / 100, 2)) as total_commission")
+            ->value('total_commission') ?? 0;
 
         // 2. Service orders for current month, grouped by service_type
         $serviceBreakdown = ServiceOrder::where('marketplace_client_id', $marketplaceId)
@@ -321,13 +483,14 @@ class Dashboard extends Page
             'campaign' => 'Creare Campanie',
         ];
 
+        // Always show all service types, even if 0
         $services = [];
         $servicesTotal = 0;
-        foreach ($serviceBreakdown as $type => $amount) {
-            $amount = (float) $amount;
+        foreach ($serviceLabels as $type => $label) {
+            $amount = (float) ($serviceBreakdown[$type] ?? 0);
             $services[] = [
                 'type' => $type,
-                'label' => $serviceLabels[$type] ?? $type,
+                'label' => $label,
                 'amount' => $amount,
             ];
             $servicesTotal += $amount;
@@ -335,6 +498,8 @@ class Dashboard extends Page
 
         return [
             'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'commission_rate' => $commissionRate,
+            'order_revenue' => $orderRevenue,
             'ticketing_commission' => $ticketingCommission,
             'services' => $services,
             'services_total' => $servicesTotal,

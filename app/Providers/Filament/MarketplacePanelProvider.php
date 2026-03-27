@@ -572,6 +572,13 @@ class MarketplacePanelProvider extends PanelProvider
                 .perf-prices-compact .fi-fo-repeater-item-content .fi-sc { gap: 8px !important; }
                 /* Remove collapse behavior */
                 .perf-prices-compact .fi-fo-repeater-item.fi-collapsed .fi-fo-repeater-item-content { display: block !important; }
+                /* Disabled options in Select dropdowns — strikethrough + red text */
+                .fi-select-input-option[aria-disabled="true"],
+                .fi-dropdown-list-item[aria-disabled="true"] {
+                    text-decoration: line-through !important;
+                    opacity: 0.45 !important;
+                    color: #ef4444 !important;
+                }
             </style>')
 
             // Preserve scroll position, section collapse state AND repeater collapse state during Livewire morph updates

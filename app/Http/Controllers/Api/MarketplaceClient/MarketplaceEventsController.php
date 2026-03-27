@@ -226,16 +226,24 @@ class MarketplaceEventsController extends BaseController
             } elseif (preg_match('/^(\d+)-(\d+)$/', $priceFilter, $matches)) {
                 $minCents = (int) $matches[1] * 100;
                 $maxCents = (int) $matches[2] * 100;
-                $query->whereHas('ticketTypes', function ($q) use ($minCents, $maxCents) {
+                $priceRangeFilter = function ($q) use ($minCents, $maxCents) {
                     $q->where('status', 'active')
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents])
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) <= ?', [$maxCents]);
+                };
+                $query->where(function ($q) use ($priceRangeFilter) {
+                    $q->whereHas('ticketTypes', $priceRangeFilter)
+                        ->orWhereHas('parent.ticketTypes', $priceRangeFilter);
                 });
             } elseif (preg_match('/^(\d+)\+$/', $priceFilter, $matches)) {
                 $minCents = (int) $matches[1] * 100;
-                $query->whereHas('ticketTypes', function ($q) use ($minCents) {
+                $priceMinFilter = function ($q) use ($minCents) {
                     $q->where('status', 'active')
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents]);
+                };
+                $query->where(function ($q) use ($priceMinFilter) {
+                    $q->whereHas('ticketTypes', $priceMinFilter)
+                        ->orWhereHas('parent.ticketTypes', $priceMinFilter);
                 });
             }
         }
@@ -422,7 +430,81 @@ class MarketplaceEventsController extends BaseController
         ])->first();
 
         if (!$event) {
+            // Check if this is a child event (ended performance link) — try with parent_id first
+            $endedEvent = Event::where('marketplace_client_id', $client->id)
+                ->where(is_numeric($identifier) ? 'id' : 'slug', $identifier)
+                ->first();
+
+            // If not found at all, try to find parent by slug pattern (slug ends with -XXXX)
+            $parentEvt = null;
+            if ($endedEvent && $endedEvent->parent_id) {
+                $parentEvt = Event::where('id', $endedEvent->parent_id)
+                    ->where('is_published', true)
+                    ->first();
+            } elseif (!$endedEvent && !is_numeric($identifier)) {
+                // Try to match parent slug: remove trailing -XXXX from slug
+                if (preg_match('/^(.+)-(\d+)$/', $identifier, $m)) {
+                    $parentEvt = Event::where('marketplace_client_id', $client->id)
+                        ->where('slug', $m[1])
+                        ->where('is_published', true)
+                        ->first();
+                }
+            }
+
+            if ($parentEvt) {
+                $upcomingPerfs = $parentEvt->performances()
+                    ->where(function ($q) {
+                        $q->where('status', 'active')->orWhereNull('status');
+                    })
+                    ->where('starts_at', '>=', now())
+                    ->orderBy('starts_at')
+                    ->get();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Această reprezentație s-a încheiat',
+                    'ended' => true,
+                    'parent_slug' => $parentEvt->slug,
+                    'parent_title' => $parentEvt->getTranslation('title', $language) ?: $parentEvt->getTranslation('title', 'en'),
+                    'upcoming_performances' => $upcomingPerfs->map(fn ($p) => [
+                        'id' => $p->id,
+                        'date' => $p->starts_at->format('Y-m-d'),
+                        'start_time' => $p->starts_at->format('H:i'),
+                        'end_time' => $p->ends_at?->format('H:i'),
+                        'label' => $p->label,
+                    ])->toArray(),
+                ], 410);
+            }
+
             return $this->error('Event not found', 404);
+        }
+
+        // Child events (multi-day occurrences) inherit ticket types + performances from parent
+        $parentEvent = null;
+        $selectedPerformanceId = null;
+        if ($event->parent_id && $event->ticketTypes->isEmpty()) {
+            $parentEvent = Event::with([
+                'ticketTypes.seatingSections',
+                'ticketTypes.seatingRows.section',
+                'performances' => fn ($q) => $q->where(fn ($qq) => $qq->where('status', 'active')->orWhereNull('status'))->orderBy('starts_at'),
+            ])->find($event->parent_id);
+
+            if ($parentEvent) {
+                // Use parent's ticket types for this child event
+                $event->setRelation('ticketTypes', $parentEvent->ticketTypes);
+
+                // Match child's date/time to a specific performance for auto-selection
+                if ($event->event_date && $parentEvent->relationLoaded('performances')) {
+                    $childDate = $event->event_date->format('Y-m-d');
+                    $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $matchedPerf = $parentEvent->performances->first(function ($p) use ($childDate, $childTime) {
+                        $perfDate = $p->starts_at->format('Y-m-d');
+                        $perfTime = $p->starts_at->format('H:i');
+                        return $perfDate === $childDate && (!$childTime || $perfTime === $childTime);
+                    });
+                    $selectedPerformanceId = $matchedPerf?->id;
+                }
+            }
         }
 
         $venue = $event->venue;
@@ -503,7 +585,8 @@ class MarketplaceEventsController extends BaseController
                 'cover_image_url' => $coverImage ?? $posterImage,
                 'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
                 // Schedule info
-                'duration_mode' => $event->duration_mode ?? 'single_day',
+                'duration_mode' => $parentEvent ? ($parentEvent->duration_mode ?? 'multi_day') : ($event->duration_mode ?? 'single_day'),
+                'selected_performance_id' => $selectedPerformanceId,
                 // Single day fields
                 'starts_at' => ($event->event_date?->format('Y-m-d') ?? $event->range_start_date?->format('Y-m-d')) . 'T' . ($event->start_time ?? '00:00:00'),
                 'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
@@ -514,7 +597,7 @@ class MarketplaceEventsController extends BaseController
                 'range_start_time' => $event->range_start_time,
                 'range_end_time' => $event->range_end_time,
                 // Multi-day slots
-                'multi_slots' => $event->multi_slots,
+                'multi_slots' => $parentEvent ? $parentEvent->multi_slots : $event->multi_slots,
                 // Keep flat venue fields for backwards compatibility
                 'venue_name' => $venue?->getTranslation('name', $language),
                 'venue_address' => $venue?->address ?? $event->address,
@@ -556,10 +639,11 @@ class MarketplaceEventsController extends BaseController
                     return $terms;
                 })(),
             ],
-            'performances' => $event->performances()
+            'performances' => ($parentEvent ?? $event)->performances()
                 ->where(function ($q) {
                     $q->where('status', 'active')->orWhereNull('status');
                 })
+                ->where('starts_at', '>=', now()->subHours(2)) // Hide past performances (with 2h buffer for ongoing shows)
                 ->orderBy('starts_at')
                 ->get()
                 ->map(fn ($p) => [
@@ -681,8 +765,12 @@ class MarketplaceEventsController extends BaseController
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
+                    'ticket_group' => $tt->ticket_group,
+                    'perks' => $tt->perks ?? [],
                 ];
             })->values(),
+            'enable_ticket_groups' => (bool) $event->enable_ticket_groups,
+            'enable_ticket_perks' => (bool) $event->enable_ticket_perks,
             'artists' => $event->artists->map(function ($artist) use ($language) {
                 // Get bio and truncate to first 80 words
                 $bio = $artist->getTranslation('bio_html', $language) ?? '';
@@ -1244,9 +1332,48 @@ class MarketplaceEventsController extends BaseController
         if ($minPrice === null && $event->parent_id) {
             $parent = Event::with(['ticketTypes' => fn ($q) => $q->where('status', 'active')])->find($event->parent_id);
             if ($parent && $parent->ticketTypes->isNotEmpty()) {
+                // Match child's date+time to a performance for overrides
+                $matchedPerf = null;
+                if ($event->event_date) {
+                    $childDate = $event->event_date->format('Y-m-d');
+                    $childTime = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $matchedPerf = \App\Models\Performance::where('event_id', $parent->id)
+                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                        ->get()
+                        ->first(fn ($p) => $p->starts_at->format('Y-m-d') === $childDate
+                            && (!$childTime || $p->starts_at->format('H:i') === $childTime));
+                }
                 $parentPublicTts = $parent->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
-                $parentPrices = $parentPublicTts->map(fn ($tt) => $tt->sale_price_cents ?: ($tt->price_cents ?? 0))->filter(fn ($p) => $p > 0);
+                $parentPrices = $parentPublicTts->map(function ($tt) use ($matchedPerf) {
+                    if ($matchedPerf) {
+                        $override = $matchedPerf->getEffectivePrice($tt);
+                        if ($override !== null) return $override;
+                    }
+                    return $tt->sale_price_cents ?: ($tt->price_cents ?? 0);
+                })->filter(fn ($p) => $p > 0);
                 $minPrice = $parentPrices->isNotEmpty() ? $parentPrices->min() / 100 : null;
+            }
+        }
+
+        // For multi-day parent events, check if any performance has lower prices
+        if ($minPrice !== null && $event->duration_mode === 'multi_day' && !$event->parent_id) {
+            $performances = $event->performances()
+                ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                ->whereNotNull('ticket_overrides')
+                ->get();
+            if ($performances->isNotEmpty()) {
+                $publicTickets = $event->ticketTypes->filter(fn ($tt) => !($tt->meta['is_invitation'] ?? false));
+                foreach ($performances as $perf) {
+                    foreach ($publicTickets as $tt) {
+                        $overrideCents = $perf->getEffectivePrice($tt);
+                        if ($overrideCents !== null && $overrideCents > 0) {
+                            $overridePrice = $overrideCents / 100;
+                            if ($overridePrice < $minPrice) {
+                                $minPrice = $overridePrice;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1349,22 +1476,32 @@ class MarketplaceEventsController extends BaseController
             }
         }
 
+        // Filter by category slug — only show genres that have events in this category
+        $categorySlug = $request->get('category');
+        $categoryId = null;
+        if ($categorySlug) {
+            $category = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $client->id)
+                ->where('slug', $categorySlug)
+                ->first();
+            $categoryId = $category?->id;
+        }
+
+        // Build event filter closure (reused for whereHas and withCount)
+        $eventFilter = function ($q) use ($client, $categoryId) {
+            $q->where('marketplace_client_id', $client->id)
+                ->where(function ($q2) {
+                    $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                });
+            if ($categoryId) {
+                $q->where('marketplace_event_category_id', $categoryId);
+            }
+            $this->applyUpcomingFilter($q);
+        };
+
         // Get all event genres that have events in this marketplace
         $genres = $query
-            ->whereHas('events', function ($q) use ($client) {
-                $q->where('marketplace_client_id', $client->id)
-                    ->where(function ($q2) {
-                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                    });
-                $this->applyUpcomingFilter($q);
-            })
-            ->withCount(['events' => function ($q) use ($client) {
-                $q->where('marketplace_client_id', $client->id)
-                    ->where(function ($q2) {
-                        $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                    });
-                $this->applyUpcomingFilter($q);
-            }])
+            ->whereHas('events', $eventFilter)
+            ->withCount(['events' => $eventFilter])
             ->orderBy('name')
             ->get()
             ->map(function ($genre) use ($language) {
@@ -1793,10 +1930,28 @@ class MarketplaceEventsController extends BaseController
             $category = $event->marketplaceEventCategory;
             $eventDate = $event->event_date ?? $event->range_start_date;
 
-            // Get minimum price
+            // Get minimum price (with performance override support)
             $minPrice = null;
-            if ($event->ticketTypes->isNotEmpty()) {
-                $minPriceCents = $event->ticketTypes->map(function ($ticket) {
+            $tts = $event->ticketTypes;
+            if ($tts->isEmpty() && $event->parent_id) {
+                $tts = \App\Models\TicketType::where('event_id', $event->parent_id)->where('status', 'active')->get();
+            }
+            if ($tts->isNotEmpty()) {
+                // Find matching performance for child events
+                $perf = null;
+                if ($event->parent_id && $event->event_date) {
+                    $cd = $event->event_date->format('Y-m-d');
+                    $ct = $event->start_time ? substr($event->start_time, 0, 5) : null;
+                    $perf = \App\Models\Performance::where('event_id', $event->parent_id)
+                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                        ->get()
+                        ->first(fn ($p) => $p->starts_at->format('Y-m-d') === $cd && (!$ct || $p->starts_at->format('H:i') === $ct));
+                }
+                $minPriceCents = $tts->map(function ($ticket) use ($perf) {
+                    if ($perf) {
+                        $override = $perf->getEffectivePrice($ticket);
+                        if ($override !== null) return $override;
+                    }
                     if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
                         return $ticket->sale_price_cents;
                     }

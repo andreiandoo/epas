@@ -1025,10 +1025,50 @@ class EditEvent extends EditRecord
         }
 
         // Sync per-performance ticket type prices → Performance.ticket_overrides JSON
+        // Also auto-calculate series_start/series_end per performance
         // Data comes from TicketType.meta.performance_prices repeater
         if ($this->record->duration_mode === 'multi_day') {
             $performances = $this->record->performances()->get();
             $ticketTypesData = $this->data['ticketTypes'] ?? [];
+            $eventSeries = $this->record->event_series ?? '';
+
+            // Auto-calculate performance series and build overrides map
+            foreach ($ticketTypesData as &$ttData) {
+                $ttId = (int) ($ttData['id'] ?? 0);
+                if (!$ttId) continue;
+
+                $sku = $ttData['sku'] ?? $ttId;
+                $ttCapacity = (int) ($ttData['capacity'] ?? 0);
+                if ($ttCapacity === -1) $ttCapacity = 1000;
+
+                $perfPrices = $ttData['meta']['performance_prices'] ?? [];
+                $perfIndex = 1;
+                foreach ($perfPrices as $key => &$pp) {
+                    $perfId = (int) ($pp['perf_id'] ?? 0);
+                    if (!$perfId) continue;
+
+                    $stock = !empty($pp['stock']) ? (int) $pp['stock'] : $ttCapacity;
+                    if ($stock <= 0) $stock = $ttCapacity ?: 1000;
+
+                    $prefix = $eventSeries . '-' . $sku . '-P' . $perfIndex;
+                    $pp['series_start'] = $prefix . '-' . str_pad(1, 5, '0', STR_PAD_LEFT);
+                    $pp['series_end'] = $prefix . '-' . str_pad($stock, 5, '0', STR_PAD_LEFT);
+                    $perfIndex++;
+                }
+                unset($pp);
+                $ttData['meta']['performance_prices'] = $perfPrices;
+
+                // Persist the updated meta with series back to the ticket type
+                if ($ttId && !empty($perfPrices)) {
+                    \App\Models\TicketType::where('id', $ttId)->update([
+                        'meta' => json_encode(array_merge(
+                            json_decode(\App\Models\TicketType::where('id', $ttId)->value('meta') ?? '{}', true) ?: [],
+                            ['performance_prices' => array_values($perfPrices)]
+                        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    ]);
+                }
+            }
+            unset($ttData);
 
             // Build a map: performance_id → [{ticket_type_id, price_cents}]
             $perfOverrides = [];
@@ -1044,7 +1084,7 @@ class EditEvent extends EditRecord
                         $perfOverrides[$perfId][] = [
                             'ticket_type_id' => $ttId,
                             'price_cents' => $price !== null && $price !== '' ? (int) round((float) $price * 100) : null,
-                            'quota' => null,
+                            'quota' => !empty($pp['stock']) ? (int) $pp['stock'] : null,
                         ];
                     }
                 }

@@ -46,6 +46,7 @@ class MarketplacePayout extends Model
         'payment_notes',
         'admin_notes',
         'organizer_notes',
+        'ticket_breakdown',
     ];
 
     protected $casts = [
@@ -57,6 +58,7 @@ class MarketplacePayout extends Model
         'period_start' => 'date',
         'period_end' => 'date',
         'payout_method' => 'array',
+        'ticket_breakdown' => 'array',
         'approved_at' => 'datetime',
         'processed_at' => 'datetime',
         'completed_at' => 'datetime',

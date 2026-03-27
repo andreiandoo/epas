@@ -508,8 +508,10 @@ const ProfileCompletionModal = {
     },
 
     renderEventTypesStep() {
-        const existing = this.customer.settings?.interests?.event_types || [];
-        this.selectedEventTypes = [...existing];
+        if (this.selectedEventTypes.length === 0) {
+            const existing = this.customer.settings?.interests?.event_types || [];
+            this.selectedEventTypes = [...existing];
+        }
 
         if (this.eventTypes.length === 0) {
             return '<p style="text-align:center;color:#94A3B8;padding:1rem 0">Se încarcă tipurile de evenimente...</p>';
@@ -540,8 +542,10 @@ const ProfileCompletionModal = {
     },
 
     renderEventGenresStep() {
-        const existing = this.customer.settings?.interests?.event_genres || this.customer.settings?.interests?.music_genres || [];
-        this.selectedEventGenres = [...existing];
+        if (this.selectedEventGenres.length === 0) {
+            const existing = this.customer.settings?.interests?.event_genres || this.customer.settings?.interests?.music_genres || [];
+            this.selectedEventGenres = [...existing];
+        }
 
         if (this.eventGenres.length === 0) {
             return '<p style="text-align:center;color:#94A3B8;padding:1rem 0">Se încarcă genurile muzicale...</p>';
@@ -559,8 +563,10 @@ const ProfileCompletionModal = {
     },
 
     renderCitiesStep() {
-        const existing = this.customer.settings?.interests?.preferred_cities || [];
-        this.selectedCities = [...existing];
+        if (this.selectedCities.length === 0) {
+            const existing = this.customer.settings?.interests?.preferred_cities || [];
+            this.selectedCities = [...existing];
+        }
 
         let html = '';
 
@@ -606,8 +612,10 @@ const ProfileCompletionModal = {
     },
 
     renderVenuesStep() {
-        const existing = this.customer.settings?.interests?.preferred_venues || [];
-        this.selectedVenues = [...existing];
+        if (this.selectedVenues.length === 0) {
+            const existing = this.customer.settings?.interests?.preferred_venues || [];
+            this.selectedVenues = [...existing];
+        }
 
         let html = '';
 

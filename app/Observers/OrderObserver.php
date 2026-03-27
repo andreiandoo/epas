@@ -27,6 +27,19 @@ class OrderObserver
     }
 
     /**
+     * Auto-fill marketplace_organizer_id from event if missing.
+     */
+    public function creating(Order $order): void
+    {
+        if (!$order->marketplace_organizer_id && $order->event_id) {
+            $event = \App\Models\Event::find($order->event_id);
+            if ($event?->marketplace_organizer_id) {
+                $order->marketplace_organizer_id = $event->marketplace_organizer_id;
+            }
+        }
+    }
+
+    /**
      * Handle the Order "created" event.
      */
     public function created(Order $order): void
