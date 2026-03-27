@@ -92,14 +92,16 @@ class ListPayouts extends ListRecords
                         if ($state) {
                             $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
+                                // Populate ticket selector first, then recalculate from it
+                                $this->populatePayoutTicketsFromEvent($set, $event);
+                                $set('fees_amount', '0.00');
+
+                                // Recalculate amounts from ticket selection (single source of truth)
+                                // Small delay needed — use financials as initial values
                                 $fin = self::calculateEventFinancials($event);
                                 $set('gross_amount', number_format($fin['gross'], 2, '.', ''));
                                 $set('commission_amount', number_format($fin['commission'], 2, '.', ''));
-                                $set('fees_amount', '0.00');
                                 $set('net_amount', number_format($fin['balance'], 2, '.', ''));
-
-                                // Populate ticket selector with all ticket types
-                                $this->populatePayoutTicketsFromEvent($set, $event);
                             }
                         } else {
                             $set('gross_amount', '0.00');
@@ -219,8 +221,10 @@ class ListPayouts extends ListRecords
                         Forms\Components\Placeholder::make('label')
                             ->hiddenLabel()
                             ->content(fn (Get $get) => new \Illuminate\Support\HtmlString(
+                                '<div class="flex items-center h-full py-2">' .
                                 '<span class="font-medium">' . e($get('ticket_type_name') ?? '') . '</span>' .
-                                '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet</span>'
+                                '<span class="text-xs text-gray-400 ml-2">' . $get('available') . ' disponibile · ' . number_format((float) ($get('unit_price') ?? 0), 2) . ' RON/bilet · comision ' . number_format((float) ($get('commission_per_ticket') ?? 0), 2) . ' RON/bilet</span>' .
+                                '</div>'
                             ))
                             ->columnSpan(2),
                         Forms\Components\TextInput::make('qty')
@@ -229,9 +233,8 @@ class ListPayouts extends ListRecords
                             ->minValue(0)
                             ->suffix('bilete')
                             ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                                // Recalculate totals when qty changes
-                                $this->recalculatePayoutFromTickets($set, $get);
+                            ->afterStateUpdated(function () {
+                                $this->recalculatePayoutAmounts();
                             })
                             ->columnSpan(1),
                     ])
@@ -655,10 +658,11 @@ class ListPayouts extends ListRecords
 
     /**
      * Recalculate gross/commission/net from ticket selection.
+     * Uses Livewire data directly (relative paths unreliable in repeaters).
      */
-    protected function recalculatePayoutFromTickets(Set $set, Get $get): void
+    public function recalculatePayoutAmounts(): void
     {
-        $tickets = $get('../../payout_tickets') ?? $get('../payout_tickets') ?? [];
+        $tickets = data_get($this->data, 'payout_tickets', []);
         $gross = 0;
         $commission = 0;
 
@@ -666,14 +670,14 @@ class ListPayouts extends ListRecords
             $qty = (int) ($item['qty'] ?? 0);
             $unitPrice = (float) ($item['unit_price'] ?? 0);
             $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
-            $gross += $qty * ($unitPrice + $commPerTicket); // total = base + commission
+            $gross += $qty * ($unitPrice + $commPerTicket);
             $commission += $qty * $commPerTicket;
         }
 
-        $fees = (float) ($get('../../fees_amount') ?? $get('../fees_amount') ?? 0);
-        $set('../../gross_amount', number_format($gross, 2, '.', ''));
-        $set('../../commission_amount', number_format($commission, 2, '.', ''));
-        $set('../../net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+        $fees = (float) data_get($this->data, 'fees_amount', 0);
+        data_set($this->data, 'gross_amount', number_format($gross, 2, '.', ''));
+        data_set($this->data, 'commission_amount', number_format($commission, 2, '.', ''));
+        data_set($this->data, 'net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
     }
 
     /**
