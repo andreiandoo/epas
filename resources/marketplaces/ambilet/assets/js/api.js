@@ -4,6 +4,29 @@
  */
 
 const AmbiletAPI = {
+    // In-memory cache for GET requests
+    _cache: new Map(),
+    _cacheTTL: {
+        'config': 300000,        // 5 min
+        'events': 60000,         // 1 min
+        'events.featured': 60000,
+        'events.past': 300000,   // 5 min
+        'categories': 300000,
+        'event': 30000,          // 30 sec
+        'default': 30000,
+    },
+
+    _getCacheTTL(action) {
+        return this._cacheTTL[action] || this._cacheTTL['default'];
+    },
+
+    clearCache(pattern) {
+        if (!pattern) { this._cache.clear(); return; }
+        for (const key of this._cache.keys()) {
+            if (key.includes(pattern)) this._cache.delete(key);
+        }
+    },
+
     /**
      * Get API base URL (uses proxy for security)
      */
@@ -56,6 +79,19 @@ const AmbiletAPI = {
             headers['Authorization'] = `Bearer ${authToken}`;
         }
 
+        // Cache GET requests (skip if preview mode, authenticated, or non-GET)
+        const method = (options.method || 'GET').toUpperCase();
+        const isPreview = new URLSearchParams(window.location.search).get('preview') === '1';
+        const useCache = method === 'GET' && !authToken && !isPreview && !options.noCache;
+        const cacheKey = url;
+
+        if (useCache) {
+            const cached = this._cache.get(cacheKey);
+            if (cached && Date.now() - cached.time < this._getCacheTTL(action)) {
+                return cached.data;
+            }
+        }
+
         try {
             const response = await fetch(url, {
                 ...options,
@@ -68,6 +104,16 @@ const AmbiletAPI = {
                 var apiErr = new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
                 apiErr.data = data;
                 throw apiErr;
+            }
+
+            // Store in cache for GET requests
+            if (useCache) {
+                this._cache.set(cacheKey, { data, time: Date.now() });
+                // Limit cache size to 50 entries
+                if (this._cache.size > 50) {
+                    const firstKey = this._cache.keys().next().value;
+                    this._cache.delete(firstKey);
+                }
             }
 
             return data;

@@ -82,13 +82,27 @@ class EventsController extends BaseController
 
         if ($request->has('category')) {
             $categoryParam = $request->category;
-            // Resolve category by slug, partial slug, or name
-            $categories = MarketplaceEventCategory::where('marketplace_client_id', $client->id)->get();
             $paramLower = mb_strtolower($categoryParam);
-            $category = $categories->first(fn ($c) => $c->slug === $categoryParam)
-                ?? $categories->first(fn ($c) => str_contains($c->slug, $paramLower))
-                ?? $categories->first(fn ($c) => mb_strtolower($c->getTranslation('name', 'ro')) === $paramLower
-                    || mb_strtolower($c->getTranslation('name', 'en')) === $paramLower);
+
+            // Try exact slug match first (most common), then partial, then name
+            $category = MarketplaceEventCategory::where('marketplace_client_id', $client->id)
+                ->where('slug', $categoryParam)
+                ->first();
+
+            if (!$category) {
+                $category = MarketplaceEventCategory::where('marketplace_client_id', $client->id)
+                    ->where('slug', 'like', "%{$paramLower}%")
+                    ->first();
+            }
+
+            if (!$category) {
+                $category = MarketplaceEventCategory::where('marketplace_client_id', $client->id)
+                    ->where(function ($q) use ($paramLower) {
+                        $q->whereRaw("LOWER(name->>'ro') = ?", [$paramLower])
+                          ->orWhereRaw("LOWER(name->>'en') = ?", [$paramLower]);
+                    })
+                    ->first();
+            }
 
             if ($category) {
                 $categoryIds = collect([$category->id])->merge($category->children()->pluck('id'));
