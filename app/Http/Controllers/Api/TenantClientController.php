@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Domain;
+use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Models\Event;
 use App\Models\EventType;
 use App\Models\Setting;
-use App\Models\Tenant;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,53 +15,7 @@ use Illuminate\Support\Facades\Storage;
 
 class TenantClientController extends Controller
 {
-    /**
-     * Resolve tenant from request (hostname preferred, ID fallback)
-     */
-    private function resolveTenant(Request $request): ?array
-    {
-        $hostname = $request->query('hostname');
-        $tenantId = $request->query('tenant');
-
-        if ($hostname) {
-            $domain = Cache::remember(
-                "domain_tenant_{$hostname}",
-                now()->addMinutes(30),
-                fn () => Domain::with('tenant')
-                    ->where('domain', $hostname)
-                    ->where('is_active', true)
-                    ->first()
-            );
-
-            if (!$domain) {
-                return null;
-            }
-
-            return [
-                'tenant' => $domain->tenant,
-                'domain_id' => $domain->id,
-            ];
-        }
-
-        if ($tenantId) {
-            $tenant = Cache::remember(
-                "tenant_{$tenantId}",
-                now()->addMinutes(30),
-                fn () => Tenant::find($tenantId)
-            );
-
-            if (!$tenant) {
-                return null;
-            }
-
-            return [
-                'tenant' => $tenant,
-                'domain_id' => $request->query('domain'),
-            ];
-        }
-
-        return null;
-    }
+    use ResolvesTenant;
 
     /**
      * Get tenant configuration
@@ -70,7 +23,7 @@ class TenantClientController extends Controller
      */
     public function config(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -131,7 +84,7 @@ class TenantClientController extends Controller
      */
     public function events(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -200,7 +153,7 @@ class TenantClientController extends Controller
      */
     public function featuredEvents(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -246,7 +199,7 @@ class TenantClientController extends Controller
      */
     public function event(Request $request, string $slug): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -279,7 +232,7 @@ class TenantClientController extends Controller
      */
     public function categories(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -409,7 +362,7 @@ class TenantClientController extends Controller
      */
     public function terms(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -437,7 +390,7 @@ class TenantClientController extends Controller
      */
     public function privacy(Request $request): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
@@ -465,7 +418,7 @@ class TenantClientController extends Controller
      */
     public function page(Request $request, string $slug): JsonResponse
     {
-        $resolved = $this->resolveTenant($request);
+        $resolved = $this->resolveRequestTenantWithDomain($request);
 
         if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);

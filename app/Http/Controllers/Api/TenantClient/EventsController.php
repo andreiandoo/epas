@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
-use App\Models\Domain;
+use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Models\Event;
-use App\Models\Tenant;
 use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,37 +13,7 @@ use Illuminate\Support\Facades\Storage;
 
 class EventsController extends Controller
 {
-    /**
-     * Resolve tenant from request (hostname preferred, ID fallback)
-     */
-    private function resolveTenant(Request $request): ?Tenant
-    {
-        $hostname = $request->query('hostname');
-        $tenantId = $request->query('tenant');
-
-        if ($hostname) {
-            $domain = Cache::remember(
-                "domain_tenant_{$hostname}",
-                now()->addMinutes(30),
-                fn () => Domain::with('tenant')
-                    ->where('domain', $hostname)
-                    ->where('is_active', true)
-                    ->first()
-            );
-
-            return $domain?->tenant;
-        }
-
-        if ($tenantId) {
-            return Cache::remember(
-                "tenant_{$tenantId}",
-                now()->addMinutes(30),
-                fn () => Tenant::find($tenantId)
-            );
-        }
-
-        return null;
-    }
+    use ResolvesTenant;
 
     /**
      * Get venue IDs owned by a tenant (cached for 10 minutes)
@@ -63,7 +32,7 @@ class EventsController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $tenant = $this->resolveTenant($request);
+        $tenant = $this->resolveRequestTenant($request);
 
         if (!$tenant) {
             return response()->json([
@@ -273,7 +242,7 @@ class EventsController extends Controller
      */
     public function show(Request $request, string $slug): JsonResponse
     {
-        $tenant = $this->resolveTenant($request);
+        $tenant = $this->resolveRequestTenant($request);
 
         if (!$tenant) {
             return response()->json([
@@ -554,7 +523,7 @@ class EventsController extends Controller
      */
     public function pastEvents(Request $request): JsonResponse
     {
-        $tenant = $this->resolveTenant($request);
+        $tenant = $this->resolveRequestTenant($request);
 
         if (!$tenant) {
             return response()->json([
