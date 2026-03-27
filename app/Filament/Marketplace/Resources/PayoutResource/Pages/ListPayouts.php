@@ -208,6 +208,123 @@ class ListPayouts extends ListRecords
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
                     }),
 
+                // Quick payout amount — auto-distributes tickets
+                \Filament\Schemas\Components\Grid::make(3)->schema([
+                    Forms\Components\TextInput::make('desired_net_amount')
+                        ->label('Cât vrei să decontezi?')
+                        ->helperText('Introduce suma netă dorită. Biletele se vor distribui automat.')
+                        ->numeric()
+                        ->minValue(0)
+                        ->suffix('RON')
+                        ->columnSpan(2)
+                        ->visible(fn (Get $get) => $get('event_id') !== null)
+                        ->dehydrated(false)
+                        ->maxValue(function (Get $get) {
+                            $eventId = $get('event_id');
+                            if (!$eventId) return 0;
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                            if (!$event) return 0;
+                            return self::calculateEventFinancials($event)['balance'];
+                        }),
+                    \Filament\Schemas\Components\Actions::make([
+                        \Filament\Actions\Action::make('auto_distribute')
+                            ->label('Distribuie automat')
+                            ->icon('heroicon-o-sparkles')
+                            ->color('primary')
+                            ->size('sm')
+                            ->action(function (Get $get, Set $set) {
+                                $desiredNet = (float) ($get('desired_net_amount') ?? 0);
+                                if ($desiredNet <= 0) return;
+
+                                $tickets = $get('payout_tickets') ?? [];
+                                if (empty($tickets)) return;
+
+                                // Check against balance
+                                $eventId = $get('event_id');
+                                if ($eventId) {
+                                    $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                                    if ($event) {
+                                        $maxBalance = self::calculateEventFinancials($event)['balance'];
+                                        $desiredNet = min($desiredNet, $maxBalance);
+                                    }
+                                }
+
+                                // Sort by net_per_ticket descending (fill with most expensive first)
+                                $indexed = [];
+                                foreach ($tickets as $key => $item) {
+                                    $indexed[] = [
+                                        'key' => $key,
+                                        'net_per_ticket' => (float) ($item['unit_price'] ?? 0),
+                                        'available' => (int) ($item['available'] ?? 0),
+                                        'unit_price' => (float) ($item['unit_price'] ?? 0),
+                                        'commission_per_ticket' => (float) ($item['commission_per_ticket'] ?? 0),
+                                    ];
+                                }
+                                usort($indexed, fn ($a, $b) => $b['net_per_ticket'] <=> $a['net_per_ticket']);
+
+                                // Greedy: assign tickets starting from most expensive
+                                $remaining = $desiredNet;
+                                $allocation = array_fill_keys(array_column($indexed, 'key'), 0);
+
+                                foreach ($indexed as $item) {
+                                    if ($remaining <= 0) break;
+                                    $netPerTicket = $item['net_per_ticket'];
+                                    if ($netPerTicket <= 0) continue;
+
+                                    $maxQty = min(
+                                        $item['available'],
+                                        (int) floor($remaining / $netPerTicket)
+                                    );
+                                    $allocation[$item['key']] = $maxQty;
+                                    $remaining -= $maxQty * $netPerTicket;
+                                }
+
+                                // If remaining > 0 and we can fit one more cheap ticket
+                                if ($remaining > 0) {
+                                    foreach (array_reverse($indexed) as $item) {
+                                        $netPerTicket = $item['net_per_ticket'];
+                                        $currentQty = $allocation[$item['key']];
+                                        if ($netPerTicket > 0 && $netPerTicket <= $remaining && $currentQty < $item['available']) {
+                                            $allocation[$item['key']]++;
+                                            $remaining -= $netPerTicket;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Apply allocation to repeater
+                                $updatedTickets = $tickets;
+                                foreach ($updatedTickets as $key => &$item) {
+                                    $item['qty'] = $allocation[$key] ?? 0;
+                                }
+                                unset($item);
+                                $set('payout_tickets', $updatedTickets);
+
+                                // Recalculate amounts
+                                $gross = 0;
+                                $commission = 0;
+                                foreach ($updatedTickets as $item) {
+                                    $qty = (int) ($item['qty'] ?? 0);
+                                    $unitPrice = (float) ($item['unit_price'] ?? 0);
+                                    $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+                                    $gross += $qty * ($unitPrice + $commPerTicket);
+                                    $commission += $qty * $commPerTicket;
+                                }
+                                $fees = (float) ($get('fees_amount') ?? 0);
+                                $set('gross_amount', number_format($gross, 2, '.', ''));
+                                $set('commission_amount', number_format($commission, 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Bilete distribuite automat')
+                                    ->body('Suma netă: ' . number_format($gross - $commission - $fees, 2) . ' RON din ' . number_format($desiredNet, 2) . ' RON solicitate')
+                                    ->success()
+                                    ->send();
+                            })
+                    ])->visible(fn (Get $get) => $get('event_id') !== null)
+                      ->extraAttributes(['class' => 'flex items-end pb-6']),
+                ])->visible(fn (Get $get) => $get('event_id') !== null),
+
                 // Ticket selection for partial payout
                 Forms\Components\Repeater::make('payout_tickets')
                     ->label('Bilete pentru decont')
