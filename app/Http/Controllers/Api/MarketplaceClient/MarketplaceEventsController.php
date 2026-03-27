@@ -226,16 +226,24 @@ class MarketplaceEventsController extends BaseController
             } elseif (preg_match('/^(\d+)-(\d+)$/', $priceFilter, $matches)) {
                 $minCents = (int) $matches[1] * 100;
                 $maxCents = (int) $matches[2] * 100;
-                $query->whereHas('ticketTypes', function ($q) use ($minCents, $maxCents) {
+                $priceRangeFilter = function ($q) use ($minCents, $maxCents) {
                     $q->where('status', 'active')
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents])
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) <= ?', [$maxCents]);
+                };
+                $query->where(function ($q) use ($priceRangeFilter) {
+                    $q->whereHas('ticketTypes', $priceRangeFilter)
+                        ->orWhereHas('parent.ticketTypes', $priceRangeFilter);
                 });
             } elseif (preg_match('/^(\d+)\+$/', $priceFilter, $matches)) {
                 $minCents = (int) $matches[1] * 100;
-                $query->whereHas('ticketTypes', function ($q) use ($minCents) {
+                $priceMinFilter = function ($q) use ($minCents) {
                     $q->where('status', 'active')
                         ->whereRaw('COALESCE(NULLIF(sale_price_cents, 0), price_cents) >= ?', [$minCents]);
+                };
+                $query->where(function ($q) use ($priceMinFilter) {
+                    $q->whereHas('ticketTypes', $priceMinFilter)
+                        ->orWhereHas('parent.ticketTypes', $priceMinFilter);
                 });
             }
         }
