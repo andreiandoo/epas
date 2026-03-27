@@ -717,28 +717,44 @@ class ListPayouts extends ListRecords
         $subtotalRevenue = (float) $completedOrders->sum('subtotal');
 
         // Per-ticket-type commission calculation
+        // CRITICAL: when commission is ON TOP, $data['total'] includes the commission.
+        // We must extract the base price first: base = total / (1 + rate/100) for percentage
+        // When INCLUDED, $data['total'] IS the base — commission is deducted from it.
         $totalCommission = 0;
         foreach ($ticketBreakdown as $name => &$data) {
             $ttCommType = $data['commission_type'] ?? null;
             $ttCommRate = (float) ($data['commission_rate'] ?? 0);
             $ttCommFixed = (float) ($data['commission_fixed'] ?? 0);
             $ttCommMode = $data['commission_mode'] ?? null;
+            $effectiveMode = $ttCommMode ?: $commissionMode;
 
             if ($ttCommType && $ttCommType !== '') {
                 // Per-ticket custom commission
-                $comm = match ($ttCommType) {
-                    'percentage' => round($data['total'] * ($ttCommRate / 100), 2),
-                    'fixed' => round($ttCommFixed * $data['quantity'], 2),
-                    'both' => round($data['total'] * ($ttCommRate / 100), 2) + round($ttCommFixed * $data['quantity'], 2),
-                    default => round($data['total'] * ($commissionRate / 100), 2),
-                };
+                if ($effectiveMode === 'added_on_top') {
+                    // Total INCLUDES commission on top — extract base
+                    $baseTotal = match ($ttCommType) {
+                        'percentage' => round($data['total'] / (1 + $ttCommRate / 100), 2),
+                        'fixed' => $data['total'] - round($ttCommFixed * $data['quantity'], 2),
+                        'both' => round(($data['total'] - $ttCommFixed * $data['quantity']) / (1 + $ttCommRate / 100), 2),
+                        default => round($data['total'] / (1 + $commissionRate / 100), 2),
+                    };
+                    $comm = round($data['total'] - $baseTotal, 2);
+                    $data['base_total'] = $baseTotal;
+                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
+                } else {
+                    // Commission INCLUDED — total is what customer paid, commission deducted from organizer
+                    $comm = match ($ttCommType) {
+                        'percentage' => round($data['total'] * ($ttCommRate / 100), 2),
+                        'fixed' => round($ttCommFixed * $data['quantity'], 2),
+                        'both' => round($data['total'] * ($ttCommRate / 100), 2) + round($ttCommFixed * $data['quantity'], 2),
+                        default => round($data['total'] * ($commissionRate / 100), 2),
+                    };
+                    $data['base_total'] = $data['total'];
+                    $data['base_unit_price'] = $data['unit_price'];
+                }
                 $data['calculated_commission'] = $comm;
 
-                $modeLabel = match ($ttCommMode ?? $commissionMode) {
-                    'added_on_top' => 'on top',
-                    'included' => 'inclus',
-                    default => '',
-                };
+                $modeLabel = $effectiveMode === 'added_on_top' ? 'on top' : 'inclus';
                 $data['commission_label'] = match ($ttCommType) {
                     'percentage' => number_format($ttCommRate, 2) . '% ' . $modeLabel,
                     'fixed' => number_format($ttCommFixed, 2) . ' RON/bilet ' . $modeLabel,
@@ -747,7 +763,17 @@ class ListPayouts extends ListRecords
                 };
             } else {
                 // Use event-level commission
-                $data['calculated_commission'] = round($data['total'] * ($commissionRate / 100), 2);
+                if ($commissionMode === 'added_on_top') {
+                    $baseTotal = round($data['total'] / (1 + $commissionRate / 100), 2);
+                    $comm = round($data['total'] - $baseTotal, 2);
+                    $data['base_total'] = $baseTotal;
+                    $data['base_unit_price'] = $data['quantity'] > 0 ? round($baseTotal / $data['quantity'], 2) : 0;
+                } else {
+                    $comm = round($data['total'] * ($commissionRate / 100), 2);
+                    $data['base_total'] = $data['total'];
+                    $data['base_unit_price'] = $data['unit_price'];
+                }
+                $data['calculated_commission'] = $comm;
                 $modeLabel = $commissionMode === 'added_on_top' ? 'on top' : 'inclus';
                 $data['commission_label'] = number_format($commissionRate, 2) . '% ' . $modeLabel . ' (eveniment)';
             }
@@ -755,6 +781,7 @@ class ListPayouts extends ListRecords
         }
         unset($data);
 
+        // Net revenue = gross - commission - refunds
         $netRevenue = $grossRevenue - $totalCommission - $totalRefundedAmount;
 
         // Previous payouts for this event
@@ -774,18 +801,23 @@ class ListPayouts extends ListRecords
             $html .= '<table class="w-full">';
             $html .= '<thead><tr class="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10">';
             $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600 dark:text-gray-400">Tip bilet</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Preț bilet</th>';
             $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Qty</th>';
-            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total bilete</th>';
+            $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Total încasat</th>';
             $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600 dark:text-gray-400">Comision</th>';
             $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/5">';
 
             foreach ($ticketBreakdown as $name => $data) {
+                $baseUnitPrice = $data['base_unit_price'] ?? $data['unit_price'];
+                $baseTotal = $data['base_total'] ?? $data['total'];
+
                 $html .= '<tr>';
                 $html .= '<td class="px-3 py-1.5 text-gray-900 dark:text-white">' . e($name) . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($data['unit_price'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . number_format($baseUnitPrice, 2) . '</td>';
                 $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-600 dark:text-gray-400">' . $data['quantity'] . '</td>';
-                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($data['total'], 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-900 dark:text-white">' . number_format($baseTotal, 2) . '</td>';
+                $html .= '<td class="px-3 py-1.5 text-right font-mono text-gray-500 dark:text-gray-400">' . number_format($data['total'], 2) . '</td>';
                 $html .= '<td class="px-3 py-1.5 text-right text-gray-500 dark:text-gray-400">';
                 $html .= '<span class="font-mono">' . number_format($data['calculated_commission'], 2) . '</span>';
                 $html .= '<br><span class="text-xs text-gray-400">' . $data['commission_label'] . '</span>';
@@ -797,10 +829,12 @@ class ListPayouts extends ListRecords
         }
 
         // Summary section
+        $totalBase = collect($ticketBreakdown)->sum(fn ($d) => $d['base_total'] ?? $d['total']);
         $html .= '<div class="border-t border-gray-200 dark:border-white/10 px-3 py-2 space-y-1 bg-gray-50 dark:bg-white/5">';
         $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete vândute:</span><span class="font-medium">' . number_format($totalTicketsSold) . '</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Vânzări brute:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
-        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total comision:</span><span class="font-mono font-medium">' . number_format($totalCommission, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total bilete (fără comision):</span><span class="font-mono font-medium">' . number_format($totalBase, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total încasat:</span><span class="font-mono font-medium">' . number_format($grossRevenue, 2) . ' RON</span></div>';
+        $html .= '<div class="flex justify-between"><span class="text-gray-600 dark:text-gray-400">Total comision:</span><span class="font-mono font-medium text-amber-600 dark:text-amber-400">-' . number_format($totalCommission, 2) . ' RON</span></div>';
 
         if ($totalRefundedCount > 0) {
             $html .= '<div class="flex justify-between text-red-600 dark:text-red-400"><span>Retururi (' . $totalRefundedCount . ' comenzi):</span><span class="font-mono font-medium">-' . number_format($totalRefundedAmount, 2) . ' RON</span></div>';
