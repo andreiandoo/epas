@@ -349,15 +349,9 @@ const BillingManager = {
                         <button onclick="BillingManager.viewInvoice('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Vizualizează">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                         </button>
-                        ${isPending ? `
-                            <button onclick="BillingManager.payInvoice('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark" title="Plătește">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                            </button>
-                        ` : `
-                            <button onclick="BillingManager.downloadInvoicePdf('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Descarcă">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            </button>
-                        `}
+                        <button onclick="BillingManager.downloadInvoicePdf('${invoice.id}')" class="flex items-center justify-center w-8 h-8 text-gray-500 transition-colors border rounded-lg border-border hover:border-primary hover:text-primary" title="Descarcă">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -775,9 +769,9 @@ const PayoutManager = {
 
     async loadPayouts() {
         try {
-            const response = await AmbiletAPI.request('/organizer/payouts');
+            const response = await AmbiletAPI.request('/organizer/payouts?per_page=50');
             if (response.success) {
-                this.payouts = response.data?.payouts || response.data || [];
+                this.payouts = response.data?.data || response.data?.payouts || response.data || [];
                 this.render();
             }
         } catch (error) {
@@ -855,9 +849,31 @@ const PayoutManager = {
         try {
             const response = await AmbiletAPI.request(`/organizer/payouts/${id}`);
             if (response.success) {
-                const p = response.data;
+                const p = response.data?.payout || response.data;
                 const st = { pending: 'In asteptare', approved: 'Aprobat', processing: 'In procesare', completed: 'Finalizat', rejected: 'Respins', cancelled: 'Anulat' };
-                AmbiletNotifications.info(`Decont ${p.reference || '#'+p.id} — ${st[p.status] || p.status} — ${AmbiletUtils.formatCurrency(p.amount)}`);
+                const ref = p.reference || '#' + p.id;
+                const status = st[p.status] || p.status;
+                const amount = AmbiletUtils.formatCurrency(p.amount || 0);
+                const event = p.event_title || '-';
+                const date = p.created_at ? AmbiletUtils.formatDate(p.created_at) : '-';
+                const account = p.account || p.payout_method?.iban || '-';
+
+                // Show in invoice modal (reuse existing modal)
+                document.getElementById('modal-invoice-number').textContent = `Decont ${ref}`;
+                document.getElementById('invoice-modal-content').innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Referinta</span><span class="text-sm font-semibold text-secondary">${ref}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Data</span><span class="text-sm font-semibold text-secondary">${date}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Eveniment</span><span class="text-sm font-semibold text-secondary">${this.escapeHtml(event)}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Valoare</span><span class="text-sm font-bold text-secondary">${amount}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Status</span><span class="text-sm font-semibold">${status}</span></div>
+                        <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Cont bancar</span><span class="text-sm font-semibold text-secondary">${account}</span></div>
+                        ${p.period_start ? `<div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Perioada</span><span class="text-sm text-secondary">${p.period_start} — ${p.period_end || '-'}</span></div>` : ''}
+                        ${p.rejection_reason ? `<div class="p-3 mt-2 text-sm text-red-700 bg-red-50 rounded-lg"><strong>Motiv respingere:</strong> ${this.escapeHtml(p.rejection_reason)}</div>` : ''}
+                        ${p.notes ? `<div class="p-3 mt-2 text-sm text-slate-600 bg-slate-50 rounded-lg"><strong>Note:</strong> ${this.escapeHtml(p.notes)}</div>` : ''}
+                    </div>
+                `;
+                document.getElementById('invoice-modal').classList.remove('hidden');
             }
         } catch (error) {
             AmbiletNotifications.error('Eroare la incarcarea decontului');
