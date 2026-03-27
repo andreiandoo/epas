@@ -166,8 +166,17 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Filter by named date range (accepts both 'date' and 'date_filter' params)
+        // Normalizes: this_week→week, this_month→month, next_month→next-month
         $dateParam = $request->get('date_filter') ?? $request->get('date');
         if ($dateParam && !$request->has('from_date')) {
+            // Normalize underscored variants from category/genre pages
+            $dateParam = match ($dateParam) {
+                'this_week' => 'week',
+                'this_month' => 'month',
+                'next_month' => 'next-month',
+                default => $dateParam,
+            };
+
             $today = now()->startOfDay();
             switch ($dateParam) {
                 case 'today':
