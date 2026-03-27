@@ -46,7 +46,7 @@ class FixAmbiletTicketTypeSeriesCommand extends Command
 
             // Generate SKU if missing
             if (empty($tt->sku)) {
-                $baseSku = Str::upper(Str::slug($tt->name ?: 'TICKET', '-'));
+                $baseSku = Str::limit(Str::upper(Str::slug($tt->name ?: 'TICKET', '-')), 58, '');
                 // Ensure unique within event
                 $eventSkus = $skusByEvent[$tt->event_id] ?? [];
                 $sku = $baseSku;
