@@ -396,14 +396,9 @@ class Dashboard extends Page
             $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
         );
 
-        // Tickets sold this month — include tickets for marketplace events
-        $ticketsSold = DB::table('tickets')
-            ->where(function ($q) use ($marketplaceId, $mpEventIds) {
+        // Tickets sold this month — same logic as TicketResource
+        $ticketsSold = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
                 $q->where('marketplace_client_id', $marketplaceId);
-                if (!empty($mpEventIds)) {
-                    $q->orWhereIn('marketplace_event_id', $mpEventIds)
-                      ->orWhereIn('event_id', $mpEventIds);
-                }
             })
             ->whereIn('status', ['valid', 'used'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
