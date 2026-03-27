@@ -129,18 +129,33 @@ class ListPayouts extends ListRecords
                     ->content(function (Get $get) {
                         $eventId = $get('event_id');
                         if (!$eventId) return '-';
-                        $event = Event::with('marketplaceOrganizer')->find($eventId);
+                        $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
                         if (!$event) return '-';
                         $balance = self::calculateEventBalance($event);
 
-                        $commMode = $event->getEffectiveCommissionMode();
-                        $commRate = $event->getEffectiveCommissionRate();
-                        $modeLabel = $commMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+                        // Commission info — check at event level first
+                        $html = '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . number_format($balance, 2) . ' RON</span> disponibil';
 
-                        return new \Illuminate\Support\HtmlString(
-                            '<span class="font-semibold text-emerald-600 dark:text-emerald-400">' . number_format($balance, 2) . ' RON</span> disponibil' .
-                            '<br><span class="text-xs text-gray-500">Comisionare: ' . $modeLabel . ' · ' . number_format($commRate, 2) . '%</span>'
-                        );
+                        // Event-level commission
+                        $eventHasOwnCommission = $event->commission_rate !== null || $event->commission_mode !== null;
+                        $effectiveMode = $event->getEffectiveCommissionMode();
+                        $effectiveRate = $event->getEffectiveCommissionRate();
+                        $modeLabel = $effectiveMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
+
+                        if ($eventHasOwnCommission) {
+                            $html .= '<br><span class="text-xs text-gray-500">Eveniment: ' . $modeLabel . ' · ' . number_format($effectiveRate, 2) . '%</span>';
+                        } else {
+                            $orgName = $event->marketplaceOrganizer?->name ?? 'Organizator';
+                            $html .= '<br><span class="text-xs text-gray-500">Moștenit de la ' . e($orgName) . ': ' . $modeLabel . ' · ' . number_format($effectiveRate, 2) . '%</span>';
+                        }
+
+                        // Check if any ticket types have custom commission
+                        $customCommTts = $event->ticketTypes->filter(fn ($tt) => $tt->commission_type && $tt->commission_type !== '');
+                        if ($customCommTts->isNotEmpty()) {
+                            $html .= '<br><span class="text-xs text-amber-600 dark:text-amber-400">⚠ ' . $customCommTts->count() . ' tip(uri) de bilet cu comision personalizat</span>';
+                        }
+
+                        return new \Illuminate\Support\HtmlString($html);
                     })
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
