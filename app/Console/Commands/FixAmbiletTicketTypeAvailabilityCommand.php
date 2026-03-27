@@ -55,7 +55,7 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
         // Build event_id → wp_event_id reverse map
         $reverseEventsMap = array_flip($eventsMap);
 
-        $deactivated = $scheduled = $saleSet = $soldOut = $activeUntilSet = $skipped = 0;
+        $deactivated = $saleSet = $soldOut = $skipped = 0;
 
         foreach ($ticketTypes as $tt) {
             $wpProductId = $reverseTtMap[$tt->id] ?? null;
@@ -87,25 +87,10 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
                     $soldOut++;
                 }
 
-                // Scheduled availability (available_from in the future)
-                if (! empty($avail['available_from'])) {
-                    $from = $this->parseDate($avail['available_from']);
-                    if ($from && $from->isFuture()) {
-                        $fields['status'] = 'hidden';
-                        $fields['scheduled_at'] = $from->toDateTimeString();
-                        $scheduled++;
-                    }
-                }
-
-                // Active until (available_to) — only set if future or recent
-                if (! empty($avail['available_to'])) {
-                    $to = $this->parseDate($avail['available_to']);
-                    if ($to) {
-                        // Always store the original active_until for historical accuracy
-                        $fields['active_until'] = $to->toDateTimeString();
-                        $activeUntilSet++;
-                    }
-                }
+                // NOTE: _ticket_availability_from_date and _ticket_availability_to_date
+                // control the VALIDITY/CHECK-IN window, NOT the sale availability.
+                // A ticket can be on sale NOW but only valid for scanning on a future date.
+                // Therefore we do NOT use these dates for scheduled_at or active_until.
 
                 // Sale price + dates
                 if (! empty($avail['sale_price']) && (float) $avail['sale_price'] > 0) {
@@ -142,10 +127,8 @@ class FixAmbiletTicketTypeAvailabilityCommand extends Command
         $prefix = $dryRun ? '[DRY RUN]' : 'Done.';
         $this->info("{$prefix}");
         $this->info("  Deactivated (not in bilete_eveniment): {$deactivated}");
-        $this->info("  Scheduled activation (future available_from): {$scheduled}");
-        $this->info("  Active until set: {$activeUntilSet}");
         $this->info("  Sale price set: {$saleSet}");
-        $this->info("  Sold out (outofstock): {$soldOut}");
+        $this->info("  Sold out (outofstock, info only): {$soldOut}");
         $this->info("  Skipped (no changes): {$skipped}");
 
         return 0;
