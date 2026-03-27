@@ -112,7 +112,7 @@ class ImportAmbiletOrdersCommand extends Command
                     $customersMap[$email] = 0;
                 }
 
-                $paidAt    = $this->parseDate($data['paid_at']) ?? $this->parseDate($data['created_at']);
+                $paidAt    = $this->parseDate($data['paid_at'] ?? null) ?? $this->parseDate($data['created_at']);
                 $createdAt = $this->parseDate($data['created_at']) ?? now()->toDateTimeString();
 
                 $customerName = trim($firstName . ' ' . $lastName);

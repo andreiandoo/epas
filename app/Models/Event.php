@@ -310,17 +310,15 @@ class Event extends Model
 
     public function artists(): BelongsToMany
     {
-        $relation = $this->belongsToMany(
+        return $this->belongsToMany(
             Artist::class,
             'event_artist',
             'event_id',
             'artist_id'
-        );
-
-        $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
-                 ->orderByPivot('sort_order');
-
-        return $relation;
+        )
+        ->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+        ->orderByPivot('sort_order')
+        ->select('artists.*');
     }
 
     /**
@@ -350,6 +348,11 @@ class Event extends Model
     public function ticketTypes(): HasMany
     {
         return $this->hasMany(TicketType::class);
+    }
+
+    public function performances(): HasMany
+    {
+        return $this->hasMany(Performance::class);
     }
 
     public function tickets(): HasManyThrough
@@ -468,8 +471,8 @@ class Event extends Model
     {
         return match ($this->duration_mode) {
             'range' => $this->range_end_date,
-            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
-                ? \Carbon\Carbon::parse(end($this->multi_slots)['date'])
+            'multi_day' => !empty($this->multi_slots)
+                ? \Carbon\Carbon::parse(collect($this->multi_slots)->last()['date'])
                 : null,
             default => null,
         };
@@ -484,8 +487,8 @@ class Event extends Model
         $endTime = match ($this->duration_mode) {
             'single_day' => $this->end_time,
             'range' => $this->range_end_time,
-            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
-                ? (end($this->multi_slots)['end_time'] ?? '23:59')
+            'multi_day' => !empty($this->multi_slots)
+                ? (collect($this->multi_slots)->last()['end_time'] ?? '23:59')
                 : null,
             default => $this->end_time,
         };

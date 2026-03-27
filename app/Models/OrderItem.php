@@ -11,6 +11,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'ticket_type_id',
+        'performance_id',
         'name',
         'quantity',
         'unit_price',
@@ -33,6 +34,11 @@ class OrderItem extends Model
     public function ticketType(): BelongsTo
     {
         return $this->belongsTo(TicketType::class);
+    }
+
+    public function performance(): BelongsTo
+    {
+        return $this->belongsTo(Performance::class);
     }
 
     public function tickets(): HasMany

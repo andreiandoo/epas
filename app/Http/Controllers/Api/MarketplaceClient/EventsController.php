@@ -418,6 +418,8 @@ class EventsController extends BaseController
             ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
             : $event->category;
 
+        \Log::info('[EventsController] Building response for event ' . $event->id . ', performances_count=' . $event->performances()->count());
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
@@ -442,7 +444,15 @@ class EventsController extends BaseController
                 'ticket_terms' => $isMarketplaceEvent
                     ? ($event->getTranslation('ticket_terms', $language) ?? $event->getTranslation('ticket_terms', 'ro') ?? $event->getTranslation('ticket_terms', 'en') ?? null)
                     : null,
+                'duration_mode' => $event->duration_mode,
+                'multi_slots' => $event->multi_slots,
+                'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+                'range_end_date' => $event->range_end_date?->format('Y-m-d'),
+                'range_start_time' => $event->range_start_time,
+                'range_end_time' => $event->range_end_time,
             ],
+            'performances' => $this->getEventPerformances($event),
+            '_debug_perf_count' => $event->performances()->count(),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
                 'slug' => $event->venue->slug,
@@ -962,6 +972,46 @@ class EventsController extends BaseController
     /**
      * Get applicable taxes for an event based on its event types
      */
+    /**
+     * Get performances for an event (multi-day support)
+     */
+    protected function getEventPerformances(Event $event): array
+    {
+        try {
+            $perfs = $event->performances()
+                ->where(function ($q) {
+                    $q->where('status', 'active')->orWhereNull('status');
+                })
+                ->orderBy('starts_at')
+                ->get();
+
+            \Log::info('[EventsController] Performances for event ' . $event->id . ': ' . $perfs->count());
+
+            return $perfs->map(function ($p) {
+                return [
+                    'id' => $p->id,
+                    'date' => $p->starts_at->format('Y-m-d'),
+                    'start_time' => $p->starts_at->format('H:i'),
+                    'end_time' => $p->ends_at?->format('H:i'),
+                    'door_time' => $p->door_time,
+                    'label' => $p->label,
+                    'status' => $p->status ?? 'active',
+                    'ticket_overrides' => collect($p->ticket_overrides ?? [])
+                        ->mapWithKeys(fn ($o) => [
+                            $o['ticket_type_id'] => [
+                                'price' => ($o['price_cents'] ?? 0) / 100,
+                                'quota' => $o['quota'] ?? null,
+                            ],
+                        ])
+                        ->toArray(),
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            \Log::error('[EventsController] Failed to get performances for event ' . $event->id . ': ' . $e->getMessage());
+            return [];
+        }
+    }
+
     protected function getEventTaxes(Event $event, $client): array
     {
         // Get event type IDs

@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\EventResource;
 use App\Models\Event;
 use App\Models\Tour;
 use App\Services\EventSchedulingService;
+use App\Services\PerformanceSyncService;
 use App\Services\Seating\MarketplaceEventSeatingService;
 use App\Models\Seating\EventSeatingLayout;
 use Filament\Actions;
@@ -983,6 +984,12 @@ class EditEvent extends EditRecord
             app(EventSchedulingService::class)->syncChildEvents($this->record);
         }
 
+        // Sync Performance records from multi_slots (for per-slot pricing)
+        \Log::info('[EditEvent afterSave] duration_mode=' . $this->record->duration_mode . ' multi_slots=' . json_encode($this->record->multi_slots));
+        if ($this->record->duration_mode === 'multi_day') {
+            app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
+        }
+
         // Sync artist pivot data (sort_order, is_headliner, is_co_headliner)
         $artistSettings = $this->data['artist_settings'] ?? [];
         if (!empty($artistSettings)) {
@@ -1015,6 +1022,44 @@ class EditEvent extends EditRecord
                     $sortIndex++;
                 }
             }
+        }
+
+        // Sync per-performance ticket type prices → Performance.ticket_overrides JSON
+        // Data comes from TicketType.meta.performance_prices repeater
+        if ($this->record->duration_mode === 'multi_day') {
+            $performances = $this->record->performances()->get();
+            $ticketTypesData = $this->data['ticketTypes'] ?? [];
+
+            // Build a map: performance_id → [{ticket_type_id, price_cents}]
+            $perfOverrides = [];
+            foreach ($ticketTypesData as $ttData) {
+                $ttId = (int) ($ttData['id'] ?? 0);
+                if (!$ttId) continue;
+
+                $perfPrices = $ttData['meta']['performance_prices'] ?? [];
+                foreach ($perfPrices as $pp) {
+                    $perfId = (int) ($pp['perf_id'] ?? 0);
+                    $price = $pp['price'] ?? null;
+                    if ($perfId) {
+                        $perfOverrides[$perfId][] = [
+                            'ticket_type_id' => $ttId,
+                            'price_cents' => $price !== null && $price !== '' ? (int) round((float) $price * 100) : null,
+                            'quota' => null,
+                        ];
+                    }
+                }
+            }
+
+            // Update ticket_overrides on each performance
+            foreach ($performances as $perf) {
+                $overrides = $perfOverrides[$perf->id] ?? [];
+                $perf->update(['ticket_overrides' => !empty($overrides) ? $overrides : null]);
+            }
+
+            \Log::info('[EditEvent] Synced performance overrides', [
+                'event_id' => $this->record->id,
+                'overrides_map' => $perfOverrides,
+            ]);
         }
 
         // Tour management — only act if the tour field is present in form data

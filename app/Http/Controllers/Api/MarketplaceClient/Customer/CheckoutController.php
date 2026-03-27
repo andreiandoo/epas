@@ -85,10 +85,14 @@ class CheckoutController extends BaseController
                 $price = $item['ticketType']['price'] ?? $item['price'] ?? 0;
                 $ticketTypeName = $item['ticketType']['name'] ?? $item['ticket_type_name'] ?? 'Bilet';
 
+                // Extract performance_id from cart item (from event data or direct field)
+                $performanceId = $item['event']['performance_id'] ?? $item['performance_id'] ?? null;
+
                 if ($eventId && $ticketTypeId) {
                     $cartItem = [
                         'event_id' => $eventId,
                         'ticket_type_id' => $ticketTypeId,
+                        'performance_id' => $performanceId,
                         'quantity' => $quantity,
                         'price' => $price,
                         'ticket_type_name' => $ticketTypeName,
@@ -319,6 +323,7 @@ class CheckoutController extends BaseController
                     'marketplace_event' => $marketplaceEvent,
                     'ticket_type' => $ticketType,
                     'marketplace_ticket_type' => $mktTicketType,
+                    'performance_id' => $item['performance_id'] ?? null,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total' => $itemTotal,
@@ -518,6 +523,7 @@ class CheckoutController extends BaseController
 
                 $orderItem = $order->items()->create([
                     'ticket_type_id' => $tt->id ?? $mtt->id ?? null,
+                    'performance_id' => $item['performance_id'] ?? null,
                     'name' => $itemName,
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
@@ -583,6 +589,7 @@ class CheckoutController extends BaseController
                         'marketplace_event_id' => $marketplaceEvent?->id,
                         'ticket_type_id' => $tt->id ?? null,
                         'marketplace_ticket_type_id' => $mtt->id ?? null,
+                        'performance_id' => $item['performance_id'] ?? null,
                         'marketplace_customer_id' => $customer->id,
                         'code' => strtoupper(Str::random(8)),
                         'barcode' => Str::uuid()->toString(),

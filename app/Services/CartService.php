@@ -48,7 +48,8 @@ class CartService
         int $eventId,
         int $ticketTypeId,
         int $quantity,
-        ?array $seatIds = null
+        ?array $seatIds = null,
+        ?int $performanceId = null
     ): array {
         $cart = $this->getCart($sessionId, $tenantId);
 
@@ -82,8 +83,28 @@ class CartService
             ];
         }
 
+        // Resolve performance data if provided
+        $performanceData = null;
+        if ($performanceId) {
+            $performance = \App\Models\Performance::find($performanceId);
+            if ($performance && $performance->event_id === $eventId) {
+                $performanceData = [
+                    'id' => $performance->id,
+                    'date' => $performance->starts_at->format('Y-m-d'),
+                    'time' => $performance->starts_at->format('H:i'),
+                    'label' => $performance->label,
+                ];
+                // Check for price override
+                $priceOverride = $performance->getEffectivePrice($ticketType);
+                if ($priceOverride !== null) {
+                    // Override the price for this performance
+                    $ticketType->setAttribute('display_price_cents_override', $priceOverride);
+                }
+            }
+        }
+
         // Generate cart item ID
-        $itemId = $this->generateItemId($eventId, $ticketTypeId, $seatIds);
+        $itemId = $this->generateItemId($eventId, $ticketTypeId, $seatIds, $performanceId);
 
         // Check if item already exists
         $existingIndex = $this->findItemIndex($cart['items'], $itemId);
@@ -99,11 +120,20 @@ class CartService
             }
             $cart['items'][$existingIndex]['quantity'] = $newQuantity;
         } else {
+            // Determine effective price (performance override or base)
+            $effectivePriceCents = $ticketType->display_price_cents_override
+                ?? $ticketType->display_price_cents
+                ?? ($ticketType->display_price * 100);
+
             // Add new item
             $cart['items'][] = [
                 'id' => $itemId,
                 'event_id' => $eventId,
                 'ticket_type_id' => $ticketTypeId,
+                'performance_id' => $performanceData['id'] ?? null,
+                'performance_date' => $performanceData['date'] ?? null,
+                'performance_time' => $performanceData['time'] ?? null,
+                'performance_label' => $performanceData['label'] ?? null,
                 'quantity' => $quantity,
                 'seat_ids' => $seatIds,
                 'event_title' => $event->getTranslation('title', app()->getLocale()),
@@ -112,7 +142,7 @@ class CartService
                 'event_time' => $event->start_time,
                 'event_poster' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'ticket_type_name' => $ticketType->name,
-                'price_cents' => $ticketType->display_price_cents ?? ($ticketType->display_price * 100),
+                'price_cents' => $effectivePriceCents,
                 'original_price_cents' => $ticketType->price_cents ?? ($ticketType->price * 100),
                 'currency' => $ticketType->currency ?? 'RON',
                 'venue_name' => $event->venue?->getTranslation('name', app()->getLocale()),
@@ -275,9 +305,12 @@ class CartService
     /**
      * Generate unique item ID
      */
-    protected function generateItemId(int $eventId, int $ticketTypeId, ?array $seatIds = null): string
+    protected function generateItemId(int $eventId, int $ticketTypeId, ?array $seatIds = null, ?int $performanceId = null): string
     {
         $base = "e{$eventId}-t{$ticketTypeId}";
+        if ($performanceId) {
+            $base .= "-p{$performanceId}";
+        }
         if ($seatIds && count($seatIds) > 0) {
             sort($seatIds);
             $base .= '-s' . implode(',', $seatIds);

@@ -92,6 +92,11 @@ class Dashboard extends Page
             ->orderBy('submitted_at', 'desc')
             ->get();
 
+        // Tixello billing for current month
+        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}", 300, function () use ($marketplaceId) {
+            return $this->computeMonthlyBilling($marketplaceId);
+        });
+
         return [
             'marketplace' => $marketplace,
             'stats' => $stats['cards'],
@@ -101,6 +106,7 @@ class Dashboard extends Page
             'topOrganizers' => $stats['topOrganizers'],
             'topLiveEvents' => $stats['topLiveEvents'],
             'pendingReviewEvents' => $pendingReviewEvents,
+            'billing' => $billingData,
         ];
     }
 
@@ -283,5 +289,57 @@ class Dashboard extends Page
         }
 
         return ['labels' => $labels, 'data' => $data];
+    }
+
+    private function computeMonthlyBilling(int $marketplaceId): array
+    {
+        $monthStart = Carbon::now()->startOfMonth();
+        $monthEnd = Carbon::now()->endOfMonth();
+        $paidStatuses = ['paid', 'confirmed', 'completed'];
+
+        // 1. Ticketing commissions for current month
+        $ticketingCommission = (float) Order::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', $paidStatuses)
+            ->where('source', '!=', 'test_order')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->sum('commission_amount');
+
+        // 2. Service orders for current month, grouped by service_type
+        $serviceBreakdown = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['active', 'completed'])
+            ->where('payment_status', 'paid')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->selectRaw('service_type, COALESCE(SUM(total), 0) as total')
+            ->groupBy('service_type')
+            ->pluck('total', 'service_type')
+            ->toArray();
+
+        $serviceLabels = [
+            'featuring' => 'Promovare Eveniment',
+            'email' => 'Email Marketing',
+            'tracking' => 'Ad Tracking',
+            'campaign' => 'Creare Campanie',
+        ];
+
+        $services = [];
+        $servicesTotal = 0;
+        foreach ($serviceBreakdown as $type => $amount) {
+            $amount = (float) $amount;
+            $services[] = [
+                'type' => $type,
+                'label' => $serviceLabels[$type] ?? $type,
+                'amount' => $amount,
+            ];
+            $servicesTotal += $amount;
+        }
+
+        return [
+            'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'ticketing_commission' => $ticketingCommission,
+            'services' => $services,
+            'services_total' => $servicesTotal,
+            'grand_total' => $ticketingCommission + $servicesTotal,
+            'currency' => $this->marketplace->currency ?? 'RON',
+        ];
     }
 }

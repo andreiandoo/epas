@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Services\EventSchedulingService;
+use App\Services\PerformanceSyncService;
 use Filament\Resources\Pages\CreateRecord;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
@@ -39,6 +40,16 @@ class CreateEvent extends CreateRecord
             $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
             if (empty($data['ticket_terms'][$marketplaceLanguage])) {
                 $data['ticket_terms'][$marketplaceLanguage] = $marketplace->ticket_terms;
+            }
+        }
+
+        // Ensure slug uniqueness (previous failed creates may have left orphan records)
+        if (!empty($data['slug'])) {
+            $baseSlug = $data['slug'];
+            $counter = 1;
+            while (\App\Models\Event::where('slug', $data['slug'])->exists()) {
+                $data['slug'] = $baseSlug . '-' . $counter;
+                $counter++;
             }
         }
 
@@ -97,6 +108,11 @@ class CreateEvent extends CreateRecord
         // Process multi-day and recurring event scheduling
         // Creates child events for each occurrence
         app(EventSchedulingService::class)->processEventScheduling($this->record);
+
+        // Sync Performance records from multi_slots (for per-slot pricing)
+        if ($this->record->duration_mode === 'multi_day') {
+            app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
+        }
     }
 
     protected function getRedirectUrl(): string

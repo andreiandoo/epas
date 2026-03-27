@@ -35,7 +35,8 @@ const AmbiletCart = {
      */
     addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1) {
         const cart = this.getCart();
-        const itemKey = `${eventId}_${ticketTypeId}`;
+        const perfId = eventData.performance_id || 0;
+        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}`;
 
         // Find existing item
         const existingIndex = cart.items.findIndex(item => item.key === itemKey);
@@ -61,7 +62,11 @@ const AmbiletCart = {
                     target_price: eventData.target_price || null,
                     commission_rate: eventData.commission_rate || 5,
                     commission_mode: eventData.commission_mode || 'included',
-                    preview_token: eventData.preview_token || null
+                    preview_token: eventData.preview_token || null,
+                    performance_id: eventData.performance_id || null,
+                    performance_date: eventData.performance_date || null,
+                    performance_time: eventData.performance_time || null,
+                    performance_label: eventData.performance_label || null
                 },
                 ticketTypeId,
                 ticketType: {

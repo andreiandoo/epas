@@ -52,6 +52,7 @@ class CartController extends BaseController
             'ticket_type_id' => 'required|integer',
             'quantity' => 'required|integer|min:1|max:20',
             'preview_token' => 'nullable|string',
+            'performance_id' => 'nullable|integer',
         ]);
 
         // Check for valid preview token (allows adding unpublished events to cart)
@@ -90,9 +91,33 @@ class CartController extends BaseController
         $customerId = $this->getCustomerId($request);
         $cart = MarketplaceCart::getOrCreate($sessionId, $client->id, $customerId);
 
+        // Resolve performance for multi-day events
+        $performanceId = $validated['performance_id'] ?? null;
+        $performanceData = [];
+        $effectivePrice = $this->getTicketPrice($ticketType);
+
+        if ($performanceId) {
+            $performance = \App\Models\Performance::where('id', $performanceId)
+                ->where('event_id', $event->id)
+                ->first();
+            if ($performance) {
+                $performanceData = [
+                    'performance_id' => $performance->id,
+                    'performance_date' => $performance->starts_at->format('Y-m-d'),
+                    'performance_time' => $performance->starts_at->format('H:i'),
+                    'performance_label' => $performance->label,
+                ];
+                // Check price override
+                $priceOverride = $performance->getEffectivePrice($ticketType);
+                if ($priceOverride !== null) {
+                    $effectivePrice = $priceOverride / 100;
+                }
+            }
+        }
+
         // Check if item already exists in cart
         $items = $cart->items ?? [];
-        $itemKey = $event->id . '_' . $ticketType->id;
+        $itemKey = $event->id . '_' . $ticketType->id . ($performanceId ? '_' . $performanceId : '');
 
         $existingQuantity = $items[$itemKey]['quantity'] ?? 0;
         $totalQuantity = $existingQuantity + $validated['quantity'];
@@ -109,17 +134,17 @@ class CartController extends BaseController
         }
 
         // Add/update item
-        $cart->addItem([
+        $cart->addItem(array_merge([
             'event_id' => $event->id,
             'event_name' => $this->getEventName($event),
             'event_date' => $this->getEventDateIso($event),
             'event_image' => $this->getEventImage($event),
             'ticket_type_id' => $ticketType->id,
             'ticket_type_name' => $ticketType->name,
-            'price' => $this->getTicketPrice($ticketType),
+            'price' => $effectivePrice,
             'quantity' => $validated['quantity'],
             'currency' => $ticketType->currency ?? 'RON',
-        ]);
+        ], $performanceData));
 
         $cart->extendExpiration(30);
         $cart->save();

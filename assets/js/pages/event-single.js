@@ -591,6 +591,9 @@ const EventPage = {
         var venueData = apiData.venue || null;
         var artistsData = apiData.artists || [];
         var ticketTypesData = apiData.ticket_types || [];
+        // Performances are at top-level in API response, not inside event
+        var performancesData = apiData.performances || eventData.performances || [];
+        console.log('[EventPage] Performances data:', performancesData, 'apiData keys:', Object.keys(apiData), 'duration_mode:', eventData.duration_mode);
 
         // Parse starts_at to get date and time
         var startsAt = eventData.starts_at ? new Date(eventData.starts_at) : new Date();
@@ -629,6 +632,8 @@ const EventPage = {
             range_start_time: eventData.range_start_time,
             range_end_time: eventData.range_end_time,
             multi_slots: eventData.multi_slots,
+            performances: performancesData,
+            selectedPerformanceId: null,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -994,10 +999,18 @@ const EventPage = {
         // Date
         this.renderDate(e);
 
-        // Time
-        
-        document.getElementById(this.elements.eventDoors).innerHTML = '<span class="text-muted">Acces:</span> ' + (e.doors_time || '19:00');
-        document.getElementById(this.elements.eventTime).innerHTML = '<span class="text-muted">Start:</span> ' + (e.start_time || '20:00');
+        // Time — for multi-day, use selected performance's times
+        var displayStartTime = e.start_time;
+        var displayDoorsTime = e.doors_time;
+        if (e.duration_mode === 'multi_day' && e.performances && e.performances.length > 0) {
+            var selPerf = e.performances.find(p => p.id === e.selectedPerformanceId) || e.performances[0];
+            displayStartTime = selPerf.start_time || null;
+            displayDoorsTime = selPerf.door_time || null;
+        }
+        document.getElementById(this.elements.eventTime).innerHTML = displayStartTime
+            ? '<span class="text-muted">Start:</span> ' + displayStartTime : '';
+        document.getElementById(this.elements.eventDoors).innerHTML = displayDoorsTime
+            ? '<span class="text-muted">Acces:</span> ' + displayDoorsTime : '';
 
         // Venue (with city)
         var venueName = e.venue?.name || e.location || 'Locație TBA';
@@ -1019,6 +1032,9 @@ const EventPage = {
         // Stats (views only - interest button text is handled separately)
         document.getElementById(this.elements.eventViews).textContent = this.formatCount(e.views_count || 0) + ' vizualizări';
 
+        // Performance selector (multi-day events) — insert BEFORE description
+        this.renderPerformanceList();
+
         // Description
         document.getElementById(this.elements.eventDescription).innerHTML = this.formatDescription(e.description || e.content);
 
@@ -1035,6 +1051,22 @@ const EventPage = {
         this.seatingLayout = e.seating_layout || null;
         if (this.seatingLayout) {
             console.log('[EventPage] Event has seating layout:', this.seatingLayout.name);
+        }
+
+        // Filter out past performances and auto-select first upcoming
+        if (e.performances && e.performances.length > 0) {
+            const now = new Date();
+            // Keep only future performances (add 2h buffer for ongoing shows)
+            this.event.performances = e.performances.filter(function(p) {
+                const endTime = p.end_time || p.start_time || '23:59';
+                const perfEnd = new Date(p.date + 'T' + endTime);
+                return perfEnd >= now;
+            });
+            // If all past, show the last one as reference
+            if (this.event.performances.length === 0) {
+                this.event.performances = [e.performances[e.performances.length - 1]];
+            }
+            this.event.selectedPerformanceId = this.event.performances[0].id;
         }
 
         // Ticket types (skip for ended events)
@@ -1197,24 +1229,24 @@ const EventPage = {
             const firstSlot = e.multi_slots[0];
             const firstDate = new Date(firstSlot.date);
 
-            if (e.multi_slots.length === 1) {
-                // Single slot
-                document.getElementById(this.elements.eventDay).textContent = firstDate.getDate();
-                document.getElementById(this.elements.eventMonth).textContent = months[firstDate.getMonth()];
-                document.getElementById(this.elements.eventWeekday).textContent = weekdays[firstDate.getDay()];
-                document.getElementById(this.elements.eventDateFull).textContent =
-                    firstDate.getDate() + ' ' + months[firstDate.getMonth()] + ' ' + firstDate.getFullYear();
-            } else {
-                // Multiple slots
-                document.getElementById(this.elements.eventDay).textContent = e.multi_slots.length;
-                document.getElementById(this.elements.eventMonth).textContent = 'zile';
-                document.getElementById(this.elements.eventWeekday).textContent = 'Mai multe date';
+            // Show the first (or nearest upcoming) slot in the header
+            const now = new Date();
+            const upcomingSlot = e.multi_slots.find(function(s) {
+                return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
+            }) || firstSlot;
+            const headerDate = new Date(upcomingSlot.date);
 
-                const dates = e.multi_slots.map(function(slot) {
-                    const d = new Date(slot.date);
-                    return d.getDate() + ' ' + months[d.getMonth()];
-                }).join(', ');
-                document.getElementById(this.elements.eventDateFull).textContent = dates;
+            document.getElementById(this.elements.eventDay).textContent = headerDate.getDate();
+            document.getElementById(this.elements.eventMonth).textContent = months[headerDate.getMonth()];
+            document.getElementById(this.elements.eventWeekday).textContent = weekdays[headerDate.getDay()];
+
+            if (e.multi_slots.length === 1) {
+                document.getElementById(this.elements.eventDateFull).textContent =
+                    headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear();
+            } else {
+                document.getElementById(this.elements.eventDateFull).textContent =
+                    headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear() +
+                    ' (+' + (e.multi_slots.length - 1) + ' ' + (e.multi_slots.length === 2 ? 'altă dată' : 'alte date') + ')';
             }
 
         } else {
@@ -1410,6 +1442,163 @@ const EventPage = {
     /**
      * Render ticket type cards
      */
+    /**
+     * Get the selected performance object
+     */
+    getSelectedPerformance() {
+        if (!this.event.selectedPerformanceId || !this.event.performances) return null;
+        return this.event.performances.find(p => p.id === this.event.selectedPerformanceId) || null;
+    },
+
+    /**
+     * Get the effective price for a ticket type considering performance overrides
+     */
+    getEffectivePrice(tt) {
+        const perf = this.getSelectedPerformance();
+        if (perf && perf.ticket_overrides && perf.ticket_overrides[tt.id]) {
+            return perf.ticket_overrides[tt.id].price;
+        }
+        return tt.price;
+    },
+
+    /**
+     * Render performance list above description for multi-day events
+     */
+    renderPerformanceList() {
+        const performances = this.event.performances || [];
+        console.log('[EventPage] renderPerformanceList called, performances count:', performances.length, 'duration_mode:', this.event.duration_mode);
+        if (performances.length <= 1) return;
+
+        const descEl = document.getElementById(this.elements.eventDescription);
+        if (!descEl) return;
+
+        // Remove previous instance if re-rendering
+        const existing = document.getElementById('perf-list-section');
+        if (existing) existing.remove();
+
+        const self = this;
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+
+        const section = document.createElement('div');
+        section.id = 'perf-list-section';
+        section.className = 'mb-6 p-4 rounded-2xl';
+        section.style.cssText = 'background:#1a1f35;';
+        section.innerHTML =
+            '<h3 style="font-size:15px;font-weight:700;margin-bottom:10px;color:#e2e8f0;">Alege reprezentarea</h3>' +
+            '<div style="display:grid;gap:8px;">' +
+            performances.map(function(p) {
+                const d = new Date(p.date + 'T' + (p.start_time || '00:00'));
+                const isActive = p.id === self.event.selectedPerformanceId;
+                const dayName = days[d.getDay()];
+                const dayNum = d.getDate();
+                const monthName = months[d.getMonth()];
+                const year = d.getFullYear();
+                const time = p.start_time || '';
+                const endTime = p.end_time || '';
+                const timeRange = time + (endTime ? ' – ' + endTime : '');
+
+                // Calculate min price for this performance
+                var minPrice = null;
+                var ticketTypes = self.ticketTypes || [];
+                ticketTypes.forEach(function(tt) {
+                    var effectivePrice = tt.price;
+                    if (p.ticket_overrides && p.ticket_overrides[tt.id]) {
+                        effectivePrice = p.ticket_overrides[tt.id].price;
+                    }
+                    if (effectivePrice > 0 && (minPrice === null || effectivePrice < minPrice)) {
+                        minPrice = effectivePrice;
+                    }
+                });
+                var priceHtml = minPrice !== null
+                    ? '<div style="font-size:12px;font-weight:600;color:#a5b4fc;margin-top:2px;">de la ' + minPrice.toFixed(0) + ' lei</div>'
+                    : '';
+
+                return '<button type="button" class="perf-list-btn" data-perf-id="' + p.id + '" ' +
+                    'style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:1px solid ' +
+                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.12)') + ';background:' +
+                    (isActive ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)') +
+                    ';text-align:left;width:100%;cursor:pointer;transition:all .2s;">' +
+                    '<div style="flex-shrink:0;width:48px;height:48px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:' +
+                    (isActive ? '#6366f1' : 'rgba(255,255,255,0.08)') + ';color:' + (isActive ? '#fff' : 'rgba(255,255,255,0.5)') + ';">' +
+                        '<span style="font-size:18px;font-weight:700;line-height:1;">' + dayNum + '</span>' +
+                        '<span style="font-size:10px;text-transform:uppercase;line-height:1;margin-top:2px;">' + monthName + '</span>' +
+                    '</div>' +
+                    '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-size:14px;font-weight:600;color:' + (isActive ? '#e2e8f0' : 'rgba(255,255,255,0.7)') + ';">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</div>' +
+                        '<div style="font-size:12px;color:rgba(255,255,255,0.45);">' + timeRange + '</div>' +
+                    '</div>' +
+                    (minPrice !== null ? '<div style="text-align:right;flex-shrink:0;"><div style="font-size:14px;font-weight:700;color:#a5b4fc;">de la ' + minPrice.toFixed(0) + ' lei</div></div>' : '') +
+                    (isActive ? '<svg width="20" height="20" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : '') +
+                '</button>';
+            }).join('') +
+            '</div>';
+
+        // Insert BEFORE description
+        descEl.parentNode.insertBefore(section, descEl);
+
+        // Bind click handlers
+        section.querySelectorAll('.perf-list-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.event.selectedPerformanceId = parseInt(btn.dataset.perfId);
+
+                // Update header date + Start/Acces to show selected performance
+                const perf = self.getSelectedPerformance();
+                if (perf) {
+                    const pd = new Date(perf.date + 'T' + (perf.start_time || '00:00'));
+                    const m = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    const w = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+                    document.getElementById(self.elements.eventDay).textContent = pd.getDate();
+                    document.getElementById(self.elements.eventMonth).textContent = m[pd.getMonth()];
+                    document.getElementById(self.elements.eventWeekday).textContent = w[pd.getDay()];
+                    document.getElementById(self.elements.eventDateFull).textContent =
+                        pd.getDate() + ' ' + m[pd.getMonth()] + ' ' + pd.getFullYear();
+
+                    // Update Start / Acces
+                    document.getElementById(self.elements.eventTime).innerHTML = perf.start_time
+                        ? '<span class="text-muted">Start:</span> ' + perf.start_time : '';
+                    document.getElementById(self.elements.eventDoors).innerHTML = perf.door_time
+                        ? '<span class="text-muted">Acces:</span> ' + perf.door_time : '';
+                }
+
+                // Re-render performance list (to update active state)
+                self.renderPerformanceList();
+                // Re-render ticket types (prices may change)
+                self.renderTicketTypes();
+            });
+        });
+    },
+
+    /**
+     * Render selected performance info bar in ticket drawer (replaces pills)
+     */
+    renderPerformanceSelector() {
+        const performances = this.event.performances || [];
+        if (performances.length <= 1) return '';
+
+        const perf = this.getSelectedPerformance();
+        if (!perf) return '';
+
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
+        const d = new Date(perf.date + 'T' + (perf.start_time || '00:00'));
+        const dayName = days[d.getDay()];
+        const dayNum = d.getDate();
+        const monthName = months[d.getMonth()];
+        const year = d.getFullYear();
+        const time = perf.start_time || '';
+        const endTime = perf.end_time || '';
+        const timeRange = time + (endTime ? ' – ' + endTime : '');
+
+        return '<div class="perf-selected-bar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;margin-bottom:12px;border-radius:10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);">' +
+            '<svg width="18" height="18" viewBox="0 0 20 20" fill="#818cf8" style="flex-shrink:0;"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/></svg>' +
+            '<div style="flex:1;min-width:0;">' +
+                '<span style="font-size:13px;font-weight:600;color:#c7d2fe;">' + dayName + ', ' + dayNum + ' ' + monthName + ' ' + year + '</span>' +
+                '<span style="font-size:12px;color:rgba(199,210,254,0.6);margin-left:8px;">' + timeRange + '</span>' +
+            '</div>' +
+        '</div>';
+    },
+
     renderTicketTypes() {
         const container = document.getElementById(this.elements.ticketTypes);
         var self = this;
@@ -1421,13 +1610,16 @@ const EventPage = {
         var eventIsSoldOut = this.event.is_sold_out || false;
         var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
 
-        container.innerHTML = this.ticketTypes.map(function(tt) {
+        // Render performance selector pills for multi-day events
+        var perfSelectorHtml = this.renderPerformanceSelector();
+
+        container.innerHTML = perfSelectorHtml + this.ticketTypes.map(function(tt) {
             if (!(tt.id in self.quantities)) self.quantities[tt.id] = 0;
             // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
             const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
 
-            // Always show base ticket price (without commission on top)
-            var displayPrice = tt.price;
+            // Get effective price (with performance override if applicable)
+            var displayPrice = self.getEffectivePrice(tt);
 
             // Determine discount: use target_price if available and greater than displayPrice
             // Otherwise fall back to original_price from ticket type
@@ -1610,6 +1802,14 @@ const EventPage = {
                 '</div>' +
             '</div>';
         }).join('');
+
+        // Bind performance pill click handlers
+        container.querySelectorAll('.perf-pill').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                self.event.selectedPerformanceId = parseInt(btn.dataset.perfId);
+                self.renderTicketTypes(); // Re-render with new prices
+            });
+        });
     },
 
     /**
@@ -1857,6 +2057,19 @@ const EventPage = {
         console.log('[EventPage] addToCart called');
         console.log('[EventPage] Event taxes to add:', self.event.taxes);
 
+        // Multi-day events: require performance selection before adding to cart
+        if (this.event.duration_mode === 'multi_day' && this.event.performances && this.event.performances.length > 1 && !this.event.selectedPerformanceId) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Te rugăm să alegi o reprezentare înainte de a adăuga bilete în coș.');
+            } else {
+                alert('Te rugăm să alegi o reprezentare înainte de a adăuga bilete în coș.');
+            }
+            // Scroll to performance list
+            var perfSection = document.getElementById('perf-list-section');
+            if (perfSection) perfSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
             if (qty > 0) {
@@ -1880,14 +2093,22 @@ const EventPage = {
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
-                    // Store BASE price in cart (without commission)
-                    // Commission will be calculated at display time in cart/checkout
-                    var basePrice = tt.price;
+                    // Store BASE price in cart (with performance override if applicable)
+                    var basePrice = self.getEffectivePrice(tt);
                     var baseOriginalPrice = tt.original_price;
 
                     // Use target_price as original_price if applicable
                     if (targetPrice && basePrice < targetPrice) {
                         baseOriginalPrice = targetPrice;
+                    }
+
+                    // Add performance data to event data
+                    var selectedPerf = self.getSelectedPerformance();
+                    if (selectedPerf) {
+                        eventData.performance_id = selectedPerf.id;
+                        eventData.performance_date = selectedPerf.date;
+                        eventData.performance_time = selectedPerf.start_time;
+                        eventData.performance_label = selectedPerf.label;
                     }
 
                     // Include per-ticket commission settings if present
