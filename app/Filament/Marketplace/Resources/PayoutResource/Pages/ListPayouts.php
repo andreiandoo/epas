@@ -92,16 +92,23 @@ class ListPayouts extends ListRecords
                         if ($state) {
                             $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
-                                // Populate ticket selector first, then recalculate from it
-                                $this->populatePayoutTicketsFromEvent($set, $event);
+                                $fin = self::calculateEventFinancials($event);
                                 $set('fees_amount', '0.00');
 
-                                // Recalculate amounts from ticket selection (single source of truth)
-                                // Small delay needed — use financials as initial values
-                                $fin = self::calculateEventFinancials($event);
-                                $set('gross_amount', number_format($fin['gross'], 2, '.', ''));
-                                $set('commission_amount', number_format($fin['commission'], 2, '.', ''));
-                                $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                                if ($fin['balance'] <= 0) {
+                                    // Nothing left to pay — zero everything
+                                    $set('payout_tickets', []);
+                                    $set('gross_amount', '0.00');
+                                    $set('commission_amount', '0.00');
+                                    $set('net_amount', '0.00');
+                                    $set('desired_net_amount', null);
+                                } else {
+                                    // Populate ticket selector with available (not yet paid) tickets
+                                    $this->populatePayoutTicketsFromEvent($set, $event, $fin);
+                                    $set('gross_amount', number_format($fin['gross'] - $fin['paid_gross'], 2, '.', ''));
+                                    $set('commission_amount', number_format($fin['commission'] - $fin['paid_commission'], 2, '.', ''));
+                                    $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                                }
                             }
                         } else {
                             $set('gross_amount', '0.00');
@@ -729,7 +736,7 @@ class ListPayouts extends ListRecords
     /**
      * Populate payout_tickets repeater with ticket type breakdown from event.
      */
-    protected function populatePayoutTicketsFromEvent(Set $set, Event $event): void
+    protected function populatePayoutTicketsFromEvent(Set $set, Event $event, ?array $financials = null): void
     {
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
@@ -742,16 +749,24 @@ class ListPayouts extends ListRecords
             ->pluck('cnt', 'ticket_type_id')
             ->toArray();
 
+        // Calculate ratio of what's already been paid (to reduce available tickets)
+        $fin = $financials ?? self::calculateEventFinancials($event);
+        $paidRatio = $fin['net'] > 0 ? ($fin['paid'] + $fin['pending']) / $fin['net'] : 0;
+        $paidRatio = min(1, max(0, $paidRatio));
+
         $items = [];
         foreach ($event->ticketTypes as $tt) {
-            $sold = $ticketCounts[$tt->id] ?? 0;
-            if ($sold <= 0) continue;
+            $totalSold = $ticketCounts[$tt->id] ?? 0;
+            if ($totalSold <= 0) continue;
 
-            // price_cents = BASE price (what the organizer set). On top means buyer pays base + commission.
-            $ttMode = $tt->commission_mode ?: $commissionMode;
+            // How many tickets are "remaining" (not yet paid out)
+            $alreadyPaid = (int) round($totalSold * $paidRatio);
+            $remaining = max(0, $totalSold - $alreadyPaid);
+
+            // price_cents = BASE price
             $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
 
-            // Commission is always calculated on BASE price, regardless of mode
+            // Commission on BASE price
             if ($tt->commission_type && $tt->commission_type !== '') {
                 $commPerTicket = match ($tt->commission_type) {
                     'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
@@ -763,14 +778,16 @@ class ListPayouts extends ListRecords
                 $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
             }
 
-            $items[] = [
-                'ticket_type_id' => $tt->id,
-                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
-                'available' => $sold,
-                'unit_price' => $basePrice,
-                'commission_per_ticket' => $commPerTicket,
-                'qty' => $sold, // default: all tickets
-            ];
+            if ($remaining > 0) {
+                $items[] = [
+                    'ticket_type_id' => $tt->id,
+                    'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
+                    'available' => $remaining,
+                    'unit_price' => $basePrice,
+                    'commission_per_ticket' => $commPerTicket,
+                    'qty' => $remaining, // default: all remaining tickets
+                ];
+            }
         }
 
         $set('payout_tickets', $items);
@@ -931,6 +948,9 @@ class ListPayouts extends ListRecords
             'paid' => round($paidPayouts, 2),
             'pending' => round($pendingPayouts, 2),
             'balance' => round(max(0, $netRevenue - $paidPayouts - $pendingPayouts), 2),
+            // For partial payout: how much gross/commission was already paid
+            'paid_gross' => round($paidPayouts > 0 ? $paidPayouts + ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
+            'paid_commission' => round($paidPayouts > 0 ? ($paidPayouts / max(1, $netRevenue) * $totalCommission) : 0, 2),
         ];
     }
 
