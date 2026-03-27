@@ -422,41 +422,50 @@ class MarketplaceEventsController extends BaseController
         ])->first();
 
         if (!$event) {
-            // Check if this is a child event (ended performance link)
+            // Check if this is a child event (ended performance link) — try with parent_id first
             $endedEvent = Event::where('marketplace_client_id', $client->id)
                 ->where(is_numeric($identifier) ? 'id' : 'slug', $identifier)
-                ->whereNotNull('parent_id')
                 ->first();
 
+            // If not found at all, try to find parent by slug pattern (slug ends with -XXXX)
+            $parentEvt = null;
             if ($endedEvent && $endedEvent->parent_id) {
                 $parentEvt = Event::where('id', $endedEvent->parent_id)
                     ->where('is_published', true)
                     ->first();
-
-                if ($parentEvt) {
-                    $upcomingPerfs = $parentEvt->performances()
-                        ->where(function ($q) {
-                            $q->where('status', 'active')->orWhereNull('status');
-                        })
-                        ->where('starts_at', '>=', now())
-                        ->orderBy('starts_at')
-                        ->get();
-
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Această reprezentație s-a încheiat',
-                        'ended' => true,
-                        'parent_slug' => $parentEvt->slug,
-                        'parent_title' => $parentEvt->getTranslation('title', $language) ?: $parentEvt->getTranslation('title', 'en'),
-                        'upcoming_performances' => $upcomingPerfs->map(fn ($p) => [
-                            'id' => $p->id,
-                            'date' => $p->starts_at->format('Y-m-d'),
-                            'start_time' => $p->starts_at->format('H:i'),
-                            'end_time' => $p->ends_at?->format('H:i'),
-                            'label' => $p->label,
-                        ])->toArray(),
-                    ], 410);
+            } elseif (!$endedEvent && !is_numeric($identifier)) {
+                // Try to match parent slug: remove trailing -XXXX from slug
+                if (preg_match('/^(.+)-(\d+)$/', $identifier, $m)) {
+                    $parentEvt = Event::where('marketplace_client_id', $client->id)
+                        ->where('slug', $m[1])
+                        ->where('is_published', true)
+                        ->first();
                 }
+            }
+
+            if ($parentEvt) {
+                $upcomingPerfs = $parentEvt->performances()
+                    ->where(function ($q) {
+                        $q->where('status', 'active')->orWhereNull('status');
+                    })
+                    ->where('starts_at', '>=', now())
+                    ->orderBy('starts_at')
+                    ->get();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Această reprezentație s-a încheiat',
+                    'ended' => true,
+                    'parent_slug' => $parentEvt->slug,
+                    'parent_title' => $parentEvt->getTranslation('title', $language) ?: $parentEvt->getTranslation('title', 'en'),
+                    'upcoming_performances' => $upcomingPerfs->map(fn ($p) => [
+                        'id' => $p->id,
+                        'date' => $p->starts_at->format('Y-m-d'),
+                        'start_time' => $p->starts_at->format('H:i'),
+                        'end_time' => $p->ends_at?->format('H:i'),
+                        'label' => $p->label,
+                    ])->toArray(),
+                ], 410);
             }
 
             return $this->error('Event not found', 404);
