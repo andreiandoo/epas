@@ -96,8 +96,9 @@ class ListPayouts extends ListRecords
                                 $set('fees_amount', '0.00');
 
                                 if ($fin['balance'] <= 0) {
-                                    // Nothing left to pay
+                                    // Distinguish: no sales vs fully paid
                                     $set('has_balance', false);
+                                    $set('zero_reason', $fin['gross'] > 0 ? 'fully_paid' : 'no_sales');
                                     $set('payout_tickets', []);
                                     $set('gross_amount', '0.00');
                                     $set('commission_amount', '0.00');
@@ -178,16 +179,25 @@ class ListPayouts extends ListRecords
                     ->visible(fn (Get $get) => $get('event_id') !== null),
 
                 Forms\Components\Hidden::make('has_balance')->default(false)->dehydrated(false),
+                Forms\Components\Hidden::make('zero_reason')->default(null)->dehydrated(false),
 
                 // Zero balance message
                 Forms\Components\Placeholder::make('zero_balance_message')
                     ->hiddenLabel()
-                    ->content(new \Illuminate\Support\HtmlString(
-                        '<div class="flex items-center gap-2 p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">' .
-                        '<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' .
-                        '<span class="text-gray-600 dark:text-gray-400">Sold eveniment 0. Nu se mai pot face deconturi suplimentare.</span>' .
-                        '</div>'
-                    ))
+                    ->content(function (Get $get) {
+                        $reason = $get('zero_reason');
+                        if ($reason === 'no_sales') {
+                            $icon = '<svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+                            $msg = 'Evenimentul încă nu are vânzări înregistrate. Nu se poate face decont.';
+                        } else {
+                            $icon = '<svg class="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+                            $msg = 'Sold eveniment 0. Nu se mai pot face deconturi suplimentare.';
+                        }
+                        return new \Illuminate\Support\HtmlString(
+                            '<div class="flex items-center gap-2 p-4 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800">' .
+                            $icon . '<span class="text-gray-600 dark:text-gray-400">' . $msg . '</span></div>'
+                        );
+                    })
                     ->visible(fn (Get $get) => $get('event_id') !== null && !$get('has_balance')),
 
                 Forms\Components\Placeholder::make('event_details')
@@ -228,29 +238,6 @@ class ListPayouts extends ListRecords
                         $organizerId = $get('marketplace_organizer_id');
                         if (!$organizerId) return false;
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() === 0;
-                    }),
-
-                Forms\Components\Select::make('bank_account_id')
-                    ->label('Cont bancar')
-                    ->options(function (Get $get) {
-                        $organizerId = $get('marketplace_organizer_id');
-                        if (!$organizerId) return [];
-
-                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
-                            ->orderByDesc('is_primary')
-                            ->get()
-                            ->mapWithKeys(fn ($acc) => [
-                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
-                            ])
-                            ->toArray();
-                    })
-                    ->searchable()
-                    ->required()
-                    ->visible(function (Get $get) {
-                        if (!$get('has_balance')) return false;
-                        $organizerId = $get('marketplace_organizer_id');
-                        if (!$organizerId) return false;
-                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
                     }),
 
                 // Quick payout amount — auto-distributes tickets
@@ -401,7 +388,6 @@ class ListPayouts extends ListRecords
                     ->addable(false)
                     ->deletable(false)
                     ->defaultItems(0)
-                    ->visible(fn (Get $get) => $get('event_id') !== null)
                     ->dehydrated(false)
                     ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->columnSpanFull(),
@@ -431,6 +417,49 @@ class ListPayouts extends ListRecords
                             $set('commission_amount', number_format($commission, 2, '.', ''));
                             $set('net_amount', number_format(max(0, $gross - $commission - $fees), 2, '.', ''));
                         })
+                    \Filament\Actions\Action::make('reset_payout_tickets')
+                        ->label('Resetează la valori inițiale')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('danger')
+                        ->size('sm')
+                        ->requiresConfirmation()
+                        ->modalHeading('Resetare bilete')
+                        ->modalDescription('Ești sigur? Se vor reseta cantitățile de bilete și sumele la valorile inițiale.')
+                        ->action(function (Get $get, Set $set) {
+                            $eventId = $get('event_id');
+                            if (!$eventId) return;
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($eventId);
+                            if (!$event) return;
+
+                            $fin = self::calculateEventFinancials($event);
+                            $this->populatePayoutTicketsFromEvent($set, $event, $fin);
+                            $set('desired_net_amount', null);
+
+                            $populatedTickets = $get('payout_tickets') ?? [];
+                            $hasTickets = collect($populatedTickets)->sum(fn ($t) => (int) ($t['qty'] ?? 0)) > 0;
+
+                            if ($hasTickets) {
+                                $ticketGross = 0;
+                                $ticketComm = 0;
+                                foreach ($populatedTickets as $t) {
+                                    $qty = (int) ($t['qty'] ?? 0);
+                                    $ticketGross += $qty * ((float) ($t['unit_price'] ?? 0) + (float) ($t['commission_per_ticket'] ?? 0));
+                                    $ticketComm += $qty * (float) ($t['commission_per_ticket'] ?? 0);
+                                }
+                                $set('gross_amount', number_format($ticketGross, 2, '.', ''));
+                                $set('commission_amount', number_format($ticketComm, 2, '.', ''));
+                                $set('net_amount', number_format(max(0, $ticketGross - $ticketComm), 2, '.', ''));
+                            } else {
+                                $set('gross_amount', number_format($fin['balance'], 2, '.', ''));
+                                $set('commission_amount', '0.00');
+                                $set('net_amount', number_format($fin['balance'], 2, '.', ''));
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Resetat la valori inițiale')
+                                ->success()
+                                ->send();
+                        }),
                 ])->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance')),
 
                 \Filament\Schemas\Components\Grid::make(2)->schema([
@@ -480,6 +509,28 @@ class ListPayouts extends ListRecords
                         ->suffix('RON')
                         ->readOnly(),
                 ])->visible(fn (Get $get) => $get('has_balance')),
+
+                Forms\Components\Select::make('bank_account_id')
+                    ->label('Cont bancar')
+                    ->options(function (Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return [];
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
+                            ->orderByDesc('is_primary')
+                            ->get()
+                            ->mapWithKeys(fn ($acc) => [
+                                $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
+                            ])
+                            ->toArray();
+                    })
+                    ->searchable()
+                    ->required()
+                    ->visible(function (Get $get) {
+                        if (!$get('has_balance')) return false;
+                        $organizerId = $get('marketplace_organizer_id');
+                        if (!$organizerId) return false;
+                        return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
+                    }),
 
                 Forms\Components\Textarea::make('admin_notes')
                     ->visible(fn (Get $get) => $get('has_balance'))
