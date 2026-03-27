@@ -469,6 +469,15 @@ class ListPayouts extends ListRecords
 
                 $event = Event::find($data['event_id']);
 
+                // Build ticket breakdown from form data
+                $ticketBreakdown = collect($data['payout_tickets'] ?? [])->filter(fn ($t) => ($t['qty'] ?? 0) > 0)->map(fn ($t) => [
+                    'ticket_type_id' => $t['ticket_type_id'] ?? null,
+                    'ticket_type_name' => $t['ticket_type_name'] ?? '',
+                    'qty' => (int) $t['qty'],
+                    'unit_price' => (float) ($t['unit_price'] ?? 0),
+                    'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
+                ])->values()->toArray();
+
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
                     'marketplace_organizer_id' => $data['marketplace_organizer_id'],
@@ -484,6 +493,7 @@ class ListPayouts extends ListRecords
                     'status' => 'pending',
                     'source' => 'manual',
                     'payout_method' => $payoutMethod,
+                    'ticket_breakdown' => !empty($ticketBreakdown) ? $ticketBreakdown : null,
                     'admin_notes' => $data['admin_notes'] ?? null,
                 ]);
 
@@ -749,18 +759,46 @@ class ListPayouts extends ListRecords
             ->pluck('cnt', 'ticket_type_id')
             ->toArray();
 
-        // Calculate ratio of what's already been paid (to reduce available tickets)
+        // Get exact ticket counts already paid from previous payouts' ticket_breakdown
+        $organizer = $event->marketplaceOrganizer;
+        $alreadyPaidPerType = [];
+        if ($organizer) {
+            $previousPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+                ->where('event_id', $event->id)
+                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
+                ->whereNotNull('ticket_breakdown')
+                ->get();
+
+            foreach ($previousPayouts as $pp) {
+                foreach ($pp->ticket_breakdown ?? [] as $tb) {
+                    $ttId = $tb['ticket_type_id'] ?? null;
+                    if ($ttId) {
+                        $alreadyPaidPerType[$ttId] = ($alreadyPaidPerType[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        // If no ticket_breakdown data on previous payouts, fall back to ratio estimation
         $fin = $financials ?? self::calculateEventFinancials($event);
-        $paidRatio = $fin['net'] > 0 ? ($fin['paid'] + $fin['pending']) / $fin['net'] : 0;
-        $paidRatio = min(1, max(0, $paidRatio));
+        $hasExactData = !empty($alreadyPaidPerType);
+
+        if (!$hasExactData && ($fin['paid'] + $fin['pending']) > 0) {
+            $paidRatio = $fin['net'] > 0 ? ($fin['paid'] + $fin['pending']) / $fin['net'] : 1;
+            $paidRatio = min(1, max(0, $paidRatio));
+        }
 
         $items = [];
         foreach ($event->ticketTypes as $tt) {
             $totalSold = $ticketCounts[$tt->id] ?? 0;
             if ($totalSold <= 0) continue;
 
-            // How many tickets are "remaining" (not yet paid out)
-            $alreadyPaid = (int) round($totalSold * $paidRatio);
+            // How many tickets remain (not yet paid out)
+            if ($hasExactData) {
+                $alreadyPaid = $alreadyPaidPerType[$tt->id] ?? 0;
+            } else {
+                $alreadyPaid = isset($paidRatio) ? (int) round($totalSold * $paidRatio) : 0;
+            }
             $remaining = max(0, $totalSold - $alreadyPaid);
 
             // price_cents = BASE price
