@@ -138,14 +138,22 @@ class Dashboard extends Page
             ->selectRaw('SUM(CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END) as registered')
             ->first();
 
-        // 3. Orders - single aggregation query
-        $orderStats = Order::where('marketplace_client_id', $marketplaceId)
+        // 3. Orders - include orders linked to marketplace events (migrated may lack marketplace_client_id)
+        $marketplaceEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+
+        $orderStats = Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($marketplaceEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
+                      ->orWhereIn('event_id', $marketplaceEventIds);
+                }
+            })
             ->where('source', '!=', 'test_order')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN `total` ELSE 0 END) as revenue")
-            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN commission_amount ELSE 0 END) as commissions")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN COALESCE(commission_amount, 0) ELSE 0 END) as commissions")
             ->first();
 
         $totalOrders = (int) $orderStats->total;
@@ -161,8 +169,14 @@ class Dashboard extends Page
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 
-        // 5. Tickets - use direct marketplace_client_id (indexed, no joins)
-        $ticketStats = Ticket::where('marketplace_client_id', $marketplaceId)
+        // 5. Tickets - include tickets for marketplace events (migrated may lack marketplace_client_id)
+        $ticketStats = Ticket::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($marketplaceEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
+                      ->orWhereIn('event_id', $marketplaceEventIds);
+                }
+            })
             ->selectRaw('COUNT(*) as total_db')
             ->selectRaw("SUM(CASE WHEN status = 'valid' THEN 1 ELSE 0 END) as sold")
             ->selectRaw("SUM(CASE WHEN status = 'valid' AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
@@ -236,7 +250,26 @@ class Dashboard extends Page
                 'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
                 'commissions' => $commissions,
-                'all_time_commissions' => $commissions > 0 ? $commissions : round($orderRevenue * ((float) ($this->marketplace->commission_rate ?? 5) / 100), 2),
+                // For all-time: use per-event commission rates via join if commission_amount is mostly 0
+                'all_time_commissions' => (function () use ($marketplaceId, $marketplaceEventIds, $orderRevenue, $commissions) {
+                    // If commission_amount covers > 50% of expected value, it's populated
+                    $expectedMin = $orderRevenue * 0.01; // at least 1% would be expected
+                    if ($commissions > $expectedMin) return $commissions;
+                    // Calculate from event commission rates
+                    $calculated = (float) Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
+                            $q->where('marketplace_client_id', $marketplaceId);
+                            if (!empty($marketplaceEventIds)) {
+                                $q->orWhereIn('marketplace_event_id', $marketplaceEventIds)
+                                  ->orWhereIn('event_id', $marketplaceEventIds);
+                            }
+                        })
+                        ->where('source', '!=', 'test_order')
+                        ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->join('events', 'events.id', '=', DB::raw('COALESCE(orders.marketplace_event_id, orders.event_id)'))
+                        ->selectRaw('SUM(orders.total * COALESCE(events.commission_rate, COALESCE(orders.commission_rate, ?)) / 100) as total_comm', [$this->marketplace->commission_rate ?? 5])
+                        ->value('total_comm') ?? 0;
+                    return round($calculated, 2);
+                })(),
                 'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => (int) $ticketStats->sold,
                 'today_tickets' => (int) $ticketStats->sold_today,
@@ -341,9 +374,19 @@ class Dashboard extends Page
             })
             ->count();
 
-        // Sales this month — use same logic as BillingBreakdown
+        // Sales this month — include orders for marketplace events (migrated may lack marketplace_client_id)
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
         $allStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
-        $salesData = Order::where('marketplace_client_id', $marketplaceId)
+
+        $orderScope = function ($q) use ($marketplaceId, $mpEventIds) {
+            $q->where('marketplace_client_id', $marketplaceId);
+            if (!empty($mpEventIds)) {
+                $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('event_id', $mpEventIds);
+            }
+        };
+
+        $salesData = Order::where($orderScope)
             ->whereIn('status', $allStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
@@ -357,8 +400,7 @@ class Dashboard extends Page
 
         // If commission still 0 (all migrated, no commission_rate on orders), use event rates
         if ($totalCommission <= 0 && $totalSales > 0) {
-            // Per-event calculation like BillingBreakdown
-            $perEventComm = Order::where('marketplace_client_id', $marketplaceId)
+            $perEventComm = Order::where($orderScope)
                 ->whereIn('status', $allStatuses)
                 ->where('source', '!=', 'test_order')
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
@@ -370,9 +412,15 @@ class Dashboard extends Page
             $totalCommission = round((float) ($perEventComm ?? 0), 2);
         }
 
-        // Tickets sold this month
+        // Tickets sold this month — include tickets for marketplace events
         $ticketsSold = DB::table('tickets')
-            ->where('marketplace_client_id', $marketplaceId)
+            ->where(function ($q) use ($marketplaceId, $mpEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($mpEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('event_id', $mpEventIds);
+                }
+            })
             ->whereIn('status', ['valid', 'used'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->count();
@@ -398,15 +446,25 @@ class Dashboard extends Page
         // Commission rate from marketplace client settings (Tixello rate)
         $commissionRate = (float) ($this->marketplace->commission_rate ?? 0);
 
+        // Include orders for marketplace events (migrated may lack marketplace_client_id)
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+        $billingScope = function ($q) use ($marketplaceId, $mpEventIds) {
+            $q->where('marketplace_client_id', $marketplaceId);
+            if (!empty($mpEventIds)) {
+                $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                  ->orWhereIn('event_id', $mpEventIds);
+            }
+        };
+
         // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
-        $orderRevenue = (float) Order::where('marketplace_client_id', $marketplaceId)
+        $orderRevenue = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total');
 
         // Use DB-level SUM with ROUND to match BillingBreakdown per-event rounding
-        $ticketingCommission = (float) Order::where('marketplace_client_id', $marketplaceId)
+        $ticketingCommission = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])

@@ -71,8 +71,16 @@ class BillingBreakdown extends Page
         $commissionRate = (float) ($marketplace->commission_rate ?? 0);
 
         // === TICKETING BREAKDOWN PER EVENT ===
-        // Use COALESCE to catch orders with event_id but no marketplace_event_id (POS/app)
-        $eventBreakdown = Order::where('marketplace_client_id', $marketplaceId)
+        // Include orders for marketplace events (migrated may lack marketplace_client_id)
+        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+
+        $eventBreakdown = Order::where(function ($q) use ($marketplaceId, $mpEventIds) {
+                $q->where('marketplace_client_id', $marketplaceId);
+                if (!empty($mpEventIds)) {
+                    $q->orWhereIn('marketplace_event_id', $mpEventIds)
+                      ->orWhereIn('event_id', $mpEventIds);
+                }
+            })
             ->whereIn('status', $validStatuses)
             ->where('source', '!=', 'test_order')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
@@ -115,7 +123,11 @@ class BillingBreakdown extends Page
         $ticketCounts = [];
         if (!empty($eventIds)) {
             $ticketCounts = DB::table('tickets')
-                ->where('marketplace_client_id', $marketplaceId)
+                ->where(function ($q) use ($marketplaceId, $eventIds) {
+                    $q->where('marketplace_client_id', $marketplaceId)
+                      ->orWhereIn('marketplace_event_id', $eventIds)
+                      ->orWhereIn('event_id', $eventIds);
+                })
                 ->whereIn(DB::raw('COALESCE(marketplace_event_id, event_id)'), $eventIds)
                 ->whereIn('status', ['valid', 'pending'])
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
