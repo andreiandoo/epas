@@ -401,11 +401,24 @@ php artisan fix:ambilet-ticket-type-commissions resources/marketplaces/ambilet/o
 # 12. Generate SKU și serie start/end pe ticket types (lipsesc la import)
 php artisan fix:ambilet-ticket-type-series
 
-# 13. Fix availability: dezactivare produse scoase, programare, sale prices
+# 13. Fix availability: dezactivare produse scoase + sale prices
 # Necesită CSV-uri în old_database/product_stock/:
 # - event_active_products.csv (bilete_eveniment serialized per event)
 # - product_availability.csv (availability dates, sale prices, stock status)
 php artisan fix:ambilet-ticket-type-availability
+
+# 14. Reactivare ticket types care sunt în bilete_eveniment dar hidden
+# (comanda de availability dezactivează pe baza bilete_eveniment, dar
+#  unele pot fi hidden din alte rulări anterioare)
+# Rulează tinker cu scriptul de reactivare IN LIST (vezi conversație)
+
+# 15. Fix future (scheduled) products — WP post_status=future
+# Exportează produse cu post_status=future din WP
+# Setează status=hidden + scheduled_at=post_date pe ticket types
+# Rulează tinker cu scriptul de scheduled (vezi conversație)
+# IMPORTANT: _ticket_availability_from/to_date NU controlează vânzarea!
+# Acestea controlează fereastra de VALIDITATE/SCANARE a biletului.
+# Disponibilitatea la vânzare e controlată de WP post_status (publish vs future).
 
 # 13. Mark scanned tickets as used (bilete cu checked_in_at dar status=valid)
 php artisan tinker --execute='$fixed=DB::table("tickets")->where("marketplace_client_id",1)->where("status","valid")->whereNotNull("checked_in_at")->update(["status"=>"used","updated_at"=>now()]);echo "Marked used: $fixed".PHP_EOL;'
@@ -444,6 +457,9 @@ php artisan tinker --execute='echo "Events: ".DB::table("events")->where("market
 9. **`quota_total = -1`** = nelimitat; `0` = blocat (nu se pot cumpăra bilete!); `>0` = cantitate fixă
 10. **Archived events păstrează `is_published = 1`** — nu pune draft la evenimentele expirate
 11. **Ticket types se importă cu `status = hidden`** — trebuie activate manual după import
+12. **`_ticket_availability_from/to_date` NU controlează vânzarea** — controlează fereastra de VALIDITATE/SCANARE. Disponibilitatea la vânzare e WP `post_status` (publish=activ, future=programat)
+13. **WP `post_status = future`** pe produse = ticket type programat → `status=hidden` + `scheduled_at=post_date`
+14. **`bilete_eveniment`** conține TOATE produsele asociate, inclusiv cele `future` — nu e suficient pentru a determina dacă e activ la vânzare
 
 ### IMAGINI
 
