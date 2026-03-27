@@ -246,24 +246,12 @@ class DashboardController extends BaseController
         }
 
         if ($request->has('event_id')) {
+            // Filter by either event_id or marketplace_event_id
             $eventId = $request->event_id;
-            $ttIds = \App\Models\TicketType::where('event_id', $eventId)->pluck('id');
-            // Remove organizer filter, use marketplace_client_id instead to catch all orders
-            $query = Order::where('marketplace_client_id', $organizer->marketplace_client_id)
-                ->with([
-                    'event:id,title',
-                    'marketplaceEvent:id,name',
-                    'marketplaceCustomer:id,first_name,last_name,phone',
-                    'tickets.marketplaceTicketType:id,name',
-                    'tickets.ticketType:id,name',
-                ])
-                ->where(function ($q) use ($eventId, $ttIds) {
-                    $q->where('event_id', $eventId)
-                        ->orWhere('marketplace_event_id', $eventId)
-                        ->orWhereHas('tickets', fn($tq) => $tq->where('event_id', $eventId)
-                            ->orWhere('marketplace_event_id', $eventId)
-                            ->orWhereIn('ticket_type_id', $ttIds));
-                });
+            $query->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                    ->orWhere('marketplace_event_id', $eventId);
+            });
         }
 
         if ($request->has('from_date')) {
