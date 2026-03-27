@@ -161,10 +161,10 @@ class ListPayouts extends ListRecords
                         $modeLabel = $effectiveMode === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
 
                         if ($eventHasOwnCommission) {
-                            $html .= '<br><span class="text-xs text-gray-500">Eveniment: ' . $modeLabel . ' · ' . number_format($effectiveRate, 2) . '%</span>';
+                            $html .= '<br><span class="text-xs text-gray-500">Setari eveniment: ' . number_format($effectiveRate, 2) . '% (' . $modeLabel . ')</span>';
                         } else {
                             $orgName = $event->marketplaceOrganizer?->name ?? 'Organizator';
-                            $html .= '<br><span class="text-xs text-gray-500">Moștenit de la ' . e($orgName) . ': ' . $modeLabel . ' · ' . number_format($effectiveRate, 2) . '%</span>';
+                            $html .= '<br><span class="text-xs text-gray-500">Setari organizator: ' . e($orgName) . ' ' . number_format($effectiveRate, 2) . '% (' . $modeLabel . ')</span>';
                         }
 
                         // Check if any ticket types have custom commission
@@ -247,6 +247,7 @@ class ListPayouts extends ListRecords
                     ->searchable()
                     ->required()
                     ->visible(function (Get $get) {
+                        if (!$get('has_balance')) return false;
                         $organizerId = $get('marketplace_organizer_id');
                         if (!$organizerId) return false;
                         return MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)->count() > 0;
@@ -1306,7 +1307,8 @@ class ListPayouts extends ListRecords
                     default => '<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-700">' . $pp->status . '</span>',
                 };
                 $html .= '<div class="flex items-center justify-between text-xs py-0.5">';
-                $html .= '<span class="text-gray-500">' . $pp->created_at->format('d.m.Y') . ' ' . $statusBadge . '</span>';
+                $refLabel = $pp->reference ? '<span class="font-mono text-gray-400">' . e($pp->reference) . '</span> · ' : '';
+                $html .= '<span class="text-gray-500">' . $refLabel . $pp->created_at->format('d.m.Y') . ' ' . $statusBadge . '</span>';
                 $html .= '<span class="font-mono font-medium text-gray-700 dark:text-gray-300">' . number_format($pp->amount, 2) . ' RON</span>';
                 $html .= '</div>';
             }
@@ -1316,19 +1318,9 @@ class ListPayouts extends ListRecords
             $html .= '</div>';
         }
 
-        // Determine actual commission mode(s) used across ticket types
-        $modesUsed = collect($ticketBreakdown)->map(fn ($d) => $d['effective_mode'] ?? $d['commission_mode'] ?? null)->filter()->unique()->values();
-        if ($modesUsed->isEmpty()) {
-            $actualModeLabel = $commissionModeLabel;
-        } elseif ($modesUsed->count() === 1) {
-            $actualModeLabel = $modesUsed->first() === 'added_on_top' ? 'Adăugat peste preț' : 'Inclus în preț';
-        } else {
-            $actualModeLabel = 'Mixt (inclus + adăugat)';
-        }
-
-        // Net balance line with actual commission mode
+        // Net balance line
         $html .= '<div class="flex justify-between pt-1 border-t border-gray-200 dark:border-white/10 font-semibold">';
-        $html .= '<span>Sold disponibil <span class="text-xs font-normal text-gray-400">(' . $actualModeLabel . ')</span></span>';
+        $html .= '<span>Sold disponibil</span>';
         $html .= '<span class="font-mono text-emerald-600 dark:text-emerald-400">' . number_format(max(0, $netRevenue - $totalPreviouslyPaid - $totalPreviousPending), 2) . ' RON</span>';
         $html .= '</div>';
 
