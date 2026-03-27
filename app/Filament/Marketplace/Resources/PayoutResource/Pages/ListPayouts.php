@@ -90,31 +90,13 @@ class ListPayouts extends ListRecords
                     ->live()
                     ->afterStateUpdated(function ($state, Set $set) {
                         if ($state) {
-                            $event = Event::with('marketplaceOrganizer')->find($state);
+                            $event = Event::with(['marketplaceOrganizer', 'ticketTypes'])->find($state);
                             if ($event) {
-                                // Calculate and prefill all amount fields
-                                $organizer = $event->marketplaceOrganizer;
-                                $commissionMode = $event->getEffectiveCommissionMode();
-                                $commissionRate = $event->getEffectiveCommissionRate();
-
-                                $completedOrders = Order::where('marketplace_organizer_id', $organizer?->id)
-                                    ->where('event_id', $event->id)
-                                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                                    ->get();
-
-                                $grossRevenue = (float) $completedOrders->sum('total');
-                                $subtotalRevenue = (float) $completedOrders->sum('subtotal');
-
-                                if ($commissionMode === 'added_on_top') {
-                                    $commissionAmount = round($grossRevenue - $subtotalRevenue, 2);
-                                } else {
-                                    $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-                                }
-
-                                $set('gross_amount', number_format($grossRevenue, 2, '.', ''));
-                                $set('commission_amount', number_format($commissionAmount, 2, '.', ''));
+                                $fin = self::calculateEventFinancials($event);
+                                $set('gross_amount', number_format($fin['gross'], 2, '.', ''));
+                                $set('commission_amount', number_format($fin['commission'], 2, '.', ''));
                                 $set('fees_amount', '0.00');
-                                $set('net_amount', number_format(max(0, $grossRevenue - $commissionAmount), 2, '.', ''));
+                                $set('net_amount', number_format($fin['balance'], 2, '.', ''));
                             }
                         } else {
                             $set('gross_amount', '0.00');
@@ -560,42 +542,120 @@ class ListPayouts extends ListRecords
     }
 
     /**
-     * Calculate available balance for an event
+     * Calculate event financials: gross, commission (per-ticket-type aware), net.
+     * Single source of truth for all payout calculations.
      */
-    public static function calculateEventBalance(Event $event): float
+    public static function calculateEventFinancials(Event $event): array
     {
         $organizer = $event->marketplaceOrganizer;
-        if (!$organizer) return 0;
-
-        $completedOrders = Order::where('marketplace_organizer_id', $organizer->id)
-            ->where('event_id', $event->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->get();
+        if (!$organizer) return ['gross' => 0, 'commission' => 0, 'net' => 0, 'refunds' => 0, 'paid' => 0, 'pending' => 0, 'balance' => 0];
 
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
 
-        $grossRevenue = (float) $completedOrders->sum('total');
-        $subtotalRevenue = (float) $completedOrders->sum('subtotal');
+        // Load orders
+        $completedOrders = Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+            })
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'test_order')
+            ->with(['items.ticketType'])
+            ->get();
 
-        if ($commissionMode === 'added_on_top') {
-            $netRevenue = $subtotalRevenue;
-        } else {
-            $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-            $netRevenue = $grossRevenue - $commissionAmount;
+        $grossRevenue = (float) $completedOrders->sum('total');
+
+        // Load event ticket types for commission info
+        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+
+        // Per-ticket-type commission calculation
+        $totalCommission = 0;
+        foreach ($completedOrders as $order) {
+            if ($order->items->isNotEmpty()) {
+                foreach ($order->items as $item) {
+                    $tt = $item->ticketType ?? ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null);
+                    $ttCommType = $tt?->commission_type;
+                    $ttCommRate = (float) ($tt?->commission_rate ?? 0);
+                    $ttCommFixed = (float) ($tt?->commission_fixed ?? 0);
+                    $ttCommMode = $tt?->commission_mode ?: $commissionMode;
+                    $itemTotal = (float) $item->total;
+                    $itemQty = (int) $item->quantity;
+
+                    if ($ttCommType && $ttCommType !== '') {
+                        if ($ttCommMode === 'added_on_top') {
+                            $base = match ($ttCommType) {
+                                'percentage' => round($itemTotal / (1 + $ttCommRate / 100), 2),
+                                'fixed' => $itemTotal - round($ttCommFixed * $itemQty, 2),
+                                'both' => round(($itemTotal - $ttCommFixed * $itemQty) / (1 + $ttCommRate / 100), 2),
+                                default => round($itemTotal / (1 + $commissionRate / 100), 2),
+                            };
+                            $totalCommission += round($itemTotal - $base, 2);
+                        } else {
+                            $totalCommission += match ($ttCommType) {
+                                'percentage' => round($itemTotal * ($ttCommRate / 100), 2),
+                                'fixed' => round($ttCommFixed * $itemQty, 2),
+                                'both' => round($itemTotal * ($ttCommRate / 100), 2) + round($ttCommFixed * $itemQty, 2),
+                                default => round($itemTotal * ($commissionRate / 100), 2),
+                            };
+                        }
+                    } else {
+                        // Event-level commission
+                        if ($commissionMode === 'added_on_top') {
+                            $base = round($itemTotal / (1 + $commissionRate / 100), 2);
+                            $totalCommission += round($itemTotal - $base, 2);
+                        } else {
+                            $totalCommission += round($itemTotal * ($commissionRate / 100), 2);
+                        }
+                    }
+                }
+            } else {
+                // Orders without items — use event-level commission
+                $orderTotal = (float) $order->total;
+                if ($commissionMode === 'added_on_top') {
+                    $base = round($orderTotal / (1 + $commissionRate / 100), 2);
+                    $totalCommission += round($orderTotal - $base, 2);
+                } else {
+                    $totalCommission += round($orderTotal * ($commissionRate / 100), 2);
+                }
+            }
         }
 
-        $eventPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+        // Refunds
+        $refundedAmount = (float) Order::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+            })
+            ->where('status', 'refunded')
+            ->sum(\DB::raw('COALESCE(refund_amount, total)'));
+
+        $netRevenue = $grossRevenue - $totalCommission - $refundedAmount;
+
+        // Previous payouts
+        $paidPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->where('status', 'completed')
             ->sum('amount');
 
-        $eventPendingPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+        $pendingPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
             ->whereIn('status', ['pending', 'approved', 'processing'])
             ->sum('amount');
 
-        return max(0, $netRevenue - $eventPayouts - $eventPendingPayouts);
+        return [
+            'gross' => round($grossRevenue, 2),
+            'commission' => round($totalCommission, 2),
+            'refunds' => round($refundedAmount, 2),
+            'net' => round($netRevenue, 2),
+            'paid' => round($paidPayouts, 2),
+            'pending' => round($pendingPayouts, 2),
+            'balance' => round(max(0, $netRevenue - $paidPayouts - $pendingPayouts), 2),
+        ];
+    }
+
+    /**
+     * Calculate available balance for an event (backward compat)
+     */
+    public static function calculateEventBalance(Event $event): float
+    {
+        return self::calculateEventFinancials($event)['balance'];
     }
 
     /**
