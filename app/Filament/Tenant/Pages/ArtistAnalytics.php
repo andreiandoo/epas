@@ -222,7 +222,7 @@ class ArtistAnalytics extends Page
             ->where('e.id', '!=', $eventId)
             ->whereNotNull('e.event_date')
             ->where('e.event_date', '<', now()->toDateString())
-            ->when($cap > 0, fn ($q) => $q->whereRaw('ts.capacity BETWEEN ? AND ?', [$cap * 0.5, $cap * 1.5]))
+            ->when($cap > 0, fn ($q) => $q->whereRaw('ts.capacity BETWEEN ? AND ?', [(int) floor($cap * 0.5), (int) ceil($cap * 1.5)]))
             ->select('e.id', 'e.title', 'e.event_date', 'v.name as venue_name', 'v.city', 'ts.sold', 'ts.capacity', 'ts.revenue')
             ->orderByDesc('e.event_date')
             ->limit(5)
