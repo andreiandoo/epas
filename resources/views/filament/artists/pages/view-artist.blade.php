@@ -273,11 +273,10 @@ canvas{width:100%!important;}
             <div class="kpi"><div class="l">Avg Lead</div><div class="v">{{ $sales['avg_lead_days'] ?? 0 }}d</div></div>
         </div>
 
-        {{-- Charts row --}}
-        <div class="g3" style="margin-bottom:14px;" wire:ignore>
-            <div class="card"><div class="card-h">Events / month</div><div class="card-b"><div class="chart-h"><canvas id="eventsChart"></canvas></div></div></div>
-            <div class="card"><div class="card-h">Tickets / month</div><div class="card-b"><div class="chart-h"><canvas id="ticketsChart"></canvas></div></div></div>
-            <div class="card"><div class="card-h">Revenue / month</div><div class="card-b"><div class="chart-h"><canvas id="revenueChart"></canvas></div></div></div>
+        {{-- Combined monthly chart --}}
+        <div class="card" style="margin-bottom:14px;" wire:ignore>
+            <div class="card-h">Monthly Trends — Events · Tickets · Revenue (12 months)</div>
+            <div class="card-b"><div style="height:250px;"><canvas id="combinedMonthlyChart"></canvas></div></div>
         </div>
 
         {{-- Quick insights row --}}
@@ -563,6 +562,28 @@ canvas{width:100%!important;}
                 <div class="card" wire:ignore><div class="card-h">Age Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="ageDistChart"></canvas></div></div></div>
                 <div class="card" wire:ignore><div class="card-h">Gender Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="genderChart"></canvas></div></div></div>
             </div>
+
+            {{-- City distribution bar --}}
+            @if(!empty($geoData))
+            <div class="card" style="margin-top:14px;">
+                <div class="card-h">Fan Distribution by City</div>
+                <div class="card-b">
+                    @php $maxTicketsGeo = collect($geoData)->sum('tickets_sold') ?: 1; $geoColors = ['#22d3ee','#7aa2ff','#c084fc','#fbbf24','#22c55e','#ef4444','#f97316','#8b5cf6','#06b6d4','#84cc16']; @endphp
+                    <div style="display:flex;gap:3px;height:36px;border-radius:8px;overflow:hidden;margin-bottom:10px;">
+                        @foreach(array_slice($geoData, 0, 10) as $i => $geo)
+                            <div style="flex:{{ max(1, $geo['tickets_sold']) }};background:{{ $geoColors[$i % 10] }};display:flex;align-items:center;justify-content:center;min-width:{{ $geo['tickets_sold'] / $maxTicketsGeo > 0.08 ? '40px' : '20px' }};cursor:default;" title="{{ $geo['city'] }}: {{ number_format($geo['tickets_sold']) }} tickets ({{ round($geo['tickets_sold'] / $maxTicketsGeo * 100, 1) }}%)">
+                                @if($geo['tickets_sold'] / $maxTicketsGeo > 0.06)<span style="font-size:10px;font-weight:700;color:#fff;white-space:nowrap;">{{ $geo['city'] }}</span>@endif
+                            </div>
+                        @endforeach
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                        @foreach(array_slice($geoData, 0, 10) as $i => $geo)
+                            <span style="font-size:11px;color:var(--muted);"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ $geoColors[$i % 10] }};margin-right:3px;"></span>{{ $geo['city'] }} <strong style="color:var(--text);">{{ number_format($geo['tickets_sold']) }}</strong></span>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
         @endif
 
         {{-- Superfans in Audience tab (tenant context only) --}}
@@ -624,31 +645,11 @@ canvas{width:100%!important;}
             <div class="g2">
                 @if(!empty($priceSens))<div class="card" wire:ignore><div class="card-h">Price Sensitivity</div><div class="card-b"><div style="height:230px;"><canvas id="priceChart"></canvas></div></div></div>@endif
                 @if(!empty($velocity))
-                <div class="card">
-                    <div class="card-h">Sales Pace — How fast tickets sold (last {{ count($velocity) }} events)</div>
+                <div class="card" wire:ignore>
+                    <div class="card-h">Sales Velocity Curves — How fast tickets sold (last {{ count($velocity) }} events)</div>
                     <div class="card-b">
-                        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">% of tickets already sold at each milestone before event day</div>
-                        <table class="tbl">
-                            <thead><tr><th>Event</th><th>Total</th><th>90d before</th><th>60d</th><th>30d</th><th>7d</th><th>1d</th></tr></thead>
-                            <tbody>
-                                @foreach($velocity as $vc)
-                                @php $pts = collect($vc['points'])->keyBy('days'); @endphp
-                                <tr>
-                                    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $vc['event_name'] }}</td>
-                                    <td><span class="badge">{{ $vc['total_tickets'] }}</span></td>
-                                    @foreach([90, 60, 30, 7, 1] as $d)
-                                    @php $pct = $pts->get($d)['pct'] ?? 0; @endphp
-                                    <td>
-                                        <div style="display:flex;align-items:center;gap:4px;">
-                                            <div class="progress" style="width:50px;"><div class="progress-fill" style="width:{{ min($pct,100) }}%;background:{{ $pct>=80?'var(--success)':($pct>=50?'var(--warn)':'var(--primary)') }};"></div></div>
-                                            <span style="font-size:11px;">{{ round($pct) }}%</span>
-                                        </div>
-                                    </td>
-                                    @endforeach
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Cumulative % of tickets sold at each milestone before event day</div>
+                        <div style="height:260px;"><canvas id="velocityChart"></canvas></div>
                     </div>
                 </div>
                 @endif
@@ -1040,7 +1041,48 @@ canvas{width:100%!important;}
     const safe = (a,n=12) => Array.isArray(a)&&a.length?a:new Array(n).fill(0);
     const opts = {responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#a7b0c3',font:{size:10}},grid:{color:'rgba(122,162,255,.06)'}},y:{beginAtZero:true,ticks:{color:'#a7b0c3',font:{size:10}},grid:{color:'rgba(122,162,255,.06)'}}}};
     const mk = (id,d,c) => {const el=document.getElementById(id);if(!el||!window.Chart)return;new Chart(el,{type:'line',data:{labels:M,datasets:[{data:safe(d),borderColor:c,backgroundColor:c+'22',tension:.35,pointRadius:2,borderWidth:2,fill:true}]},options:opts});};
-    mk('eventsChart',E,'#22d3ee');mk('ticketsChart',T,'#7aa2ff');mk('revenueChart',R,'#22c55e');
+
+    // Combined monthly chart (events + tickets bars, revenue line)
+    const cmEl = document.getElementById('combinedMonthlyChart');
+    if (cmEl && window.Chart) {
+        new Chart(cmEl, {
+            data: { labels: M, datasets: [
+                { type:'bar', label:'Events', data:safe(E), backgroundColor:'#22d3ee55', borderColor:'#22d3ee', borderWidth:1, borderRadius:3, yAxisID:'y', order:2 },
+                { type:'bar', label:'Tickets', data:safe(T), backgroundColor:'#7aa2ff55', borderColor:'#7aa2ff', borderWidth:1, borderRadius:3, yAxisID:'y', order:1 },
+                { type:'line', label:'Revenue (RON)', data:safe(R), borderColor:'#22c55e', backgroundColor:'#22c55e22', tension:.35, pointRadius:3, borderWidth:2.5, fill:true, yAxisID:'y1', order:0 }
+            ]},
+            options: { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+                plugins:{ legend:{ display:true, position:'top', labels:{color:'#cdd7f6',font:{size:11},usePointStyle:true,pointStyle:'circle'} } },
+                scales:{
+                    x:{ticks:{color:'#a7b0c3',font:{size:10}},grid:{color:'rgba(122,162,255,.06)'}},
+                    y:{position:'left',beginAtZero:true,ticks:{color:'#a7b0c3',font:{size:10}},grid:{color:'rgba(122,162,255,.06)'},title:{display:true,text:'Count',color:'#64748b',font:{size:10}}},
+                    y1:{position:'right',beginAtZero:true,ticks:{color:'#22c55e',font:{size:10},callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v},grid:{display:false},title:{display:true,text:'Revenue (RON)',color:'#22c55e',font:{size:10}}}
+                }
+            }
+        });
+    }
+
+    // Velocity curves line chart
+    const vel = @js($velocity ?? []);
+    const velEl = document.getElementById('velocityChart');
+    if (vel.length && velEl && window.Chart) {
+        const velColors = ['#22d3ee','#7aa2ff','#c084fc','#fbbf24','#22c55e'];
+        new Chart(velEl, {
+            type:'line',
+            data:{
+                labels:['90d before','60d','30d','7d','Event day'],
+                datasets: vel.map((v,i) => ({
+                    label: v.event_name + ' (' + v.total_tickets + ' tix)',
+                    data: v.points.map(p => p.pct),
+                    borderColor: velColors[i % velColors.length],
+                    backgroundColor: velColors[i % velColors.length] + '11',
+                    tension:.3, pointRadius:4, borderWidth:2.5, fill:false
+                }))
+            },
+            options:{...opts, plugins:{legend:{display:true,position:'bottom',labels:{color:'#cdd7f6',font:{size:10},usePointStyle:true}}},
+                scales:{...opts.scales, y:{...opts.scales.y, max:100, ticks:{...opts.scales.y.ticks, callback:v=>v+'%'}}}}
+        });
+    }
 
     // Age doughnut
     const ageDist = @js($aTotals['age_distribution'] ?? []);
