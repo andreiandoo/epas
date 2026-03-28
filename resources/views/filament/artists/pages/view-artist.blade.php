@@ -274,33 +274,59 @@ canvas{width:100%!important;}
         </div>
 
         {{-- Fan Engagement Score --}}
-        @php $fe = $fanEngagement ?? ['score' => 0, 'label' => 'N/A', 'components' => []]; @endphp
+        @php
+            $fe = $fanEngagement ?? ['score' => 0, 'label' => 'N/A', 'components' => []];
+            $feColor = $fe['score'] >= 75 ? 'var(--success)' : ($fe['score'] >= 50 ? 'var(--warn)' : ($fe['score'] >= 25 ? 'var(--primary)' : '#94a3b8'));
+            $feDescriptions = [
+                'favorites' => ['icon' => '❤️', 'title' => 'Fans who favorited you', 'unit' => 'favorites'],
+                'reviews' => ['icon' => '⭐', 'title' => 'Average event rating', 'unit' => 'avg rating'],
+                'loyalty' => ['icon' => '🔁', 'title' => 'Repeat purchase rate', 'unit' => '% repeat buyers'],
+                'referrals' => ['icon' => '📢', 'title' => 'Fan referrals', 'unit' => 'referrals'],
+            ];
+        @endphp
         @if($fe['score'] > 0 || !empty($fe['components']))
         <div class="card" style="margin-bottom:14px;">
-            <div class="card-b" style="display:flex;align-items:center;gap:24px;">
-                {{-- Radial gauge --}}
-                <div style="flex-shrink:0;position:relative;width:90px;height:90px;">
-                    <div style="width:90px;height:90px;border-radius:50%;background:conic-gradient({{ $fe['score'] >= 75 ? 'var(--success)' : ($fe['score'] >= 50 ? 'var(--warn)' : ($fe['score'] >= 25 ? 'var(--primary)' : 'var(--danger)')) }} {{ $fe['score'] * 3.6 }}deg, rgba(122,162,255,.1) 0);display:flex;align-items:center;justify-content:center;">
-                        <div style="width:70px;height:70px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;">
-                            <span style="font-size:22px;font-weight:800;color:var(--text);">{{ $fe['score'] }}</span>
-                            <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">{{ $fe['label'] }}</span>
+            <div class="card-h">Fan Engagement Score — How connected your audience is</div>
+            <div class="card-b">
+                <div style="display:flex;align-items:center;gap:28px;">
+                    {{-- Radial gauge --}}
+                    <div style="flex-shrink:0;text-align:center;">
+                        <div style="width:100px;height:100px;border-radius:50%;background:conic-gradient({{ $feColor }} {{ $fe['score'] * 3.6 }}deg, rgba(122,162,255,.08) 0);display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                            <div style="width:76px;height:76px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <span style="font-size:28px;font-weight:800;color:var(--text);">{{ $fe['score'] }}</span>
+                            </div>
                         </div>
+                        <div style="margin-top:6px;font-size:12px;font-weight:700;color:{{ $feColor }};text-transform:uppercase;letter-spacing:1px;">{{ $fe['label'] }}</div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:2px;">out of 100</div>
                     </div>
-                </div>
-                {{-- Component bars --}}
-                <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
-                    @foreach(['favorites' => 'Favorites', 'reviews' => 'Reviews', 'loyalty' => 'Loyalty', 'referrals' => 'Referrals'] as $key => $label)
-                        @php $comp = $fe['components'][$key] ?? ['raw' => 0, 'score' => 0, 'max' => 25]; @endphp
-                        <div>
-                            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;"><span>{{ $label }}</span><span style="color:var(--text);font-weight:600;">{{ $comp['score'] }}/{{ $comp['max'] }}</span></div>
-                            <div style="height:6px;background:rgba(122,162,255,.1);border-radius:3px;overflow:hidden;"><div style="height:100%;width:{{ $comp['max'] > 0 ? round($comp['score'] / $comp['max'] * 100) : 0 }}%;background:{{ $comp['score'] >= 20 ? 'var(--success)' : ($comp['score'] >= 10 ? 'var(--warn)' : 'var(--primary)') }};border-radius:3px;"></div></div>
-                            <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ $key === 'reviews' ? ($comp['raw'] ?: '—') . ' avg (' . ($comp['count'] ?? 0) . ')' : number_format($comp['raw'] ?? 0) }}</div>
-                        </div>
-                    @endforeach
-                </div>
-                <div style="flex-shrink:0;text-align:right;">
-                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Fan Engagement</div>
-                    <div style="font-size:11px;color:var(--muted);margin-top:2px;">Score</div>
+                    {{-- Component details --}}
+                    <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        @foreach($feDescriptions as $key => $desc)
+                            @php $comp = $fe['components'][$key] ?? ['raw' => 0, 'score' => 0, 'max' => 25, 'count' => 0]; $pct = $comp['max'] > 0 ? round($comp['score'] / $comp['max'] * 100) : 0; @endphp
+                            <div style="padding:10px 14px;border-radius:10px;background:rgba(122,162,255,.04);border:1px solid var(--ring);">
+                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                                    <span style="font-size:16px;">{{ $desc['icon'] }}</span>
+                                    <span style="font-size:12px;font-weight:600;color:var(--text);">{{ ucfirst($key) }}</span>
+                                    <span style="margin-left:auto;font-size:13px;font-weight:700;color:{{ $comp['score'] >= 20 ? 'var(--success)' : ($comp['score'] >= 10 ? 'var(--warn)' : 'var(--muted)') }};">{{ $comp['score'] }}<span style="font-size:10px;color:var(--muted);font-weight:400;">/{{ $comp['max'] }}</span></span>
+                                </div>
+                                <div style="height:5px;background:rgba(122,162,255,.1);border-radius:3px;overflow:hidden;margin-bottom:5px;">
+                                    <div style="height:100%;width:{{ $pct }}%;background:{{ $comp['score'] >= 20 ? 'var(--success)' : ($comp['score'] >= 10 ? 'var(--warn)' : 'var(--primary)') }};border-radius:3px;transition:width .3s;"></div>
+                                </div>
+                                <div style="font-size:11px;color:var(--muted);">
+                                    {{ $desc['title'] }}:
+                                    <strong style="color:var(--text);">
+                                        @if($key === 'reviews')
+                                            {{ $comp['raw'] ?: 'N/A' }}/5 ({{ $comp['count'] ?? 0 }} reviews)
+                                        @elseif($key === 'loyalty')
+                                            {{ $comp['raw'] ?? 0 }}%
+                                        @else
+                                            {{ number_format($comp['raw'] ?? 0) }}
+                                        @endif
+                                    </strong>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
