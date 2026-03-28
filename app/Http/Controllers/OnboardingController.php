@@ -525,13 +525,13 @@ class OnboardingController extends Controller
             ->where('name', 'ILIKE', "%{$query}%")
             ->orderBy('name')
             ->limit(10)
-            ->get(['id', 'name', 'image']);
+            ->get(['id', 'name', 'main_image_url']);
 
         return response()->json([
             'results' => $artists->map(fn ($a) => [
                 'id' => $a->id,
                 'name' => $a->name,
-                'image' => $a->image,
+                'image' => $a->main_image_url,
             ]),
         ]);
     }
