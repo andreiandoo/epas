@@ -193,27 +193,75 @@ class ArtistAnalytics extends Page
     public function analyzeEvent(int $eventId): void
     {
         $this->selectedEventId = $eventId;
+        $artistId = $this->record->id;
+
         $event = DB::table('events as e')
             ->leftJoin('venues as v', 'v.id', '=', 'e.venue_id')
             ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as capacity, SUM(quota_sold*price_cents)/100 as revenue FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
             ->where('e.id', $eventId)
-            ->select('e.*', 'v.name as venue_name', 'v.city as venue_city', 'ts.sold', 'ts.capacity as ticket_capacity', 'ts.revenue')
+            ->select('e.*', 'v.name as venue_name', 'v.city as venue_city', 'v.capacity as venue_capacity', 'ts.sold', 'ts.capacity as ticket_capacity', 'ts.revenue')
             ->first();
 
         if (!$event) { $this->eventAnalysis = null; return; }
+
         $title = $event->title;
         if ($title && str_starts_with($title, '{')) { $d = json_decode($title, true); $title = $d['en'] ?? $d['ro'] ?? reset($d) ?: $title; }
+        $venueName = $event->venue_name;
+        if ($venueName && str_starts_with($venueName, '{')) { $d = json_decode($venueName, true); $venueName = $d['en'] ?? $d['ro'] ?? reset($d) ?: $venueName; }
+
         $sold = (int) ($event->sold ?? 0);
         $cap = (int) ($event->ticket_capacity ?? 0);
+        $daysUntil = $event->event_date ? max(0, (int) now()->diffInDays(Carbon::parse($event->event_date), false)) : null;
+
+        // Find comparable past events (same artist, similar capacity ±50%)
+        $comparables = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin('venues as v', 'v.id', '=', 'e.venue_id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as capacity, SUM(quota_sold*price_cents)/100 as revenue FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)
+            ->where('e.id', '!=', $eventId)
+            ->whereNotNull('e.event_date')
+            ->where('e.event_date', '<', now()->toDateString())
+            ->when($cap > 0, fn ($q) => $q->whereRaw('ts.capacity BETWEEN ? AND ?', [$cap * 0.5, $cap * 1.5]))
+            ->select('e.id', 'e.title', 'e.event_date', 'v.name as venue_name', 'v.city', 'ts.sold', 'ts.capacity', 'ts.revenue')
+            ->orderByDesc('e.event_date')
+            ->limit(5)
+            ->get()
+            ->map(function ($c) {
+                $t = $c->title;
+                if ($t && str_starts_with($t, '{')) { $d = json_decode($t, true); $t = $d['en'] ?? $d['ro'] ?? reset($d) ?: $t; }
+                $vn = $c->venue_name;
+                if ($vn && str_starts_with($vn, '{')) { $d = json_decode($vn, true); $vn = $d['en'] ?? $d['ro'] ?? reset($d) ?: $vn; }
+                $s = (int) $c->sold; $cp = (int) $c->capacity;
+                return ['title' => mb_substr($t, 0, 40), 'date' => $c->event_date, 'venue' => $vn, 'city' => $c->city, 'sold' => $s, 'capacity' => $cp, 'sell_through' => $cp > 0 ? round($s / $cp * 100, 1) : null, 'revenue' => round((float) ($c->revenue ?? 0), 0)];
+            })->toArray();
+
+        // Prediction based on comparables
+        $compSellThroughs = collect($comparables)->whereNotNull('sell_through')->pluck('sell_through');
+        $prediction = [
+            'min_sell_through' => $compSellThroughs->isNotEmpty() ? round($compSellThroughs->min(), 1) : null,
+            'avg_sell_through' => $compSellThroughs->isNotEmpty() ? round($compSellThroughs->avg(), 1) : null,
+            'max_sell_through' => $compSellThroughs->isNotEmpty() ? round($compSellThroughs->max(), 1) : null,
+        ];
+        if ($cap > 0 && $prediction['avg_sell_through'] !== null) {
+            $prediction['predicted_sold'] = round($cap * $prediction['avg_sell_through'] / 100);
+            $prediction['predicted_revenue'] = $comparables ? round(collect($comparables)->avg('revenue')) : null;
+        }
+        if ($daysUntil !== null && $daysUntil > 0 && $sold > 0) {
+            $daysSelling = max(1, 90 - $daysUntil);
+            $dailyRate = $sold / $daysSelling;
+            $prediction['pace_forecast'] = min($cap ?: 99999, (int) round($sold + ($dailyRate * $daysUntil)));
+        }
 
         $this->eventAnalysis = [
             'title' => $title, 'date' => $event->event_date,
-            'venue' => $event->venue_name, 'city' => $event->venue_city,
+            'venue' => $venueName, 'city' => $event->venue_city,
             'sold' => $sold, 'capacity' => $cap,
             'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null,
             'revenue' => round((float) ($event->revenue ?? 0), 0),
-            'days_until' => $event->event_date ? max(0, (int) now()->diffInDays(Carbon::parse($event->event_date), false)) : null,
-            'comparables' => [], 'prediction' => [],
+            'days_until' => $daysUntil,
+            'comparables' => $comparables,
+            'prediction' => $prediction,
         ];
     }
 
@@ -221,12 +269,20 @@ class ArtistAnalytics extends Page
     {
         if (mb_strlen($this->venueSearch) < 2) { $this->venueResults = []; return; }
         $search = $this->venueSearch;
+        // Case-insensitive, diacritics-tolerant search using ILIKE (PostgreSQL) or unaccent
         $this->venueResults = \App\Models\Venue::where(function ($q) use ($search) {
-                $q->where('name', 'LIKE', "%{$search}%")->orWhere('city', 'LIKE', "%{$search}%");
+                $lower = mb_strtolower($search);
+                if (DB::getDriverName() === 'pgsql') {
+                    $q->whereRaw("LOWER(COALESCE(name->>'en', name->>'ro', name::text)) ILIKE ?", ["%{$lower}%"])
+                      ->orWhereRaw("LOWER(city) ILIKE ?", ["%{$lower}%"]);
+                } else {
+                    $q->where('name', 'LIKE', "%{$search}%")->orWhere('city', 'LIKE', "%{$search}%");
+                }
             })
             ->select('id', 'name', 'city', 'capacity')->orderBy('name')->limit(15)->get()
             ->map(function ($v) {
                 $name = is_array($v->name) ? ($v->name['en'] ?? $v->name['ro'] ?? reset($v->name) ?: '') : $v->name;
+                if (is_string($name) && str_starts_with($name, '{')) { $d = json_decode($name, true); $name = $d['en'] ?? $d['ro'] ?? reset($d) ?: $name; }
                 return ['id' => $v->id, 'label' => "{$name} ({$v->city})", 'name' => $name, 'city' => $v->city, 'capacity' => (int) ($v->capacity ?? 0)];
             })->toArray();
     }

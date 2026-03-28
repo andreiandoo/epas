@@ -458,9 +458,9 @@ canvas{width:100%!important;}
                 </table>
             </div></div>
 
-                {{-- Superfan details --}}
+                {{-- Superfan details (in Performance tab only for admin, moved to Audience for tenant) --}}
                 @php $superfans = $perf['superfan_details'] ?? []; @endphp
-                @if(!empty($superfans))
+                @if(!empty($superfans) && !isset($tenantEditUrl))
                 <div class="card" style="margin-top:14px;">
                     <div class="card-h" style="color:var(--warn);">Superfans — Customers who attended 3+ events ({{ count($superfans) }})</div>
                     <div class="card-b" style="overflow-x:auto;">
@@ -487,7 +487,7 @@ canvas{width:100%!important;}
 
     {{-- ═══════ TAB: AUDIENCE ═══════ --}}
     <div x-show="tab === 'audience'" x-cloak>
-        @if(empty($personas))
+        @if(empty($personas) && empty($superfans))
             <div class="card"><div class="card-b" style="color:var(--muted);text-align:center;padding:32px;">No customer demographic data available.</div></div>
         @else
             <div class="g3" style="margin-bottom:14px;">
@@ -510,6 +510,30 @@ canvas{width:100%!important;}
             <div class="g2">
                 <div class="card"><div class="card-h">Age Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="ageDistChart"></canvas></div></div></div>
                 <div class="card"><div class="card-h">Gender Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="genderChart"></canvas></div></div></div>
+            </div>
+        @endif
+
+        {{-- Superfans in Audience tab (tenant context only) --}}
+        @if(isset($tenantEditUrl) && !empty($superfans))
+            <div class="card" style="margin-top:14px;">
+                <div class="card-h" style="color:var(--warn);">Superfans — Customers who attended 3+ events ({{ count($superfans) }})</div>
+                <div class="card-b" style="overflow-x:auto;">
+                    <table class="tbl">
+                        <thead><tr><th>Name</th><th>Email</th><th>City</th><th>Events</th><th>Orders</th><th>Total Spent</th></tr></thead>
+                        <tbody>
+                            @foreach($superfans as $sf)
+                            <tr>
+                                <td><strong>{{ $sf['name'] }}</strong></td>
+                                <td style="font-size:12px;">{{ $sf['email'] }}</td>
+                                <td>{{ $sf['city'] }}</td>
+                                <td><span class="chip chip-yellow">{{ $sf['events'] }}x</span></td>
+                                <td>{{ $sf['orders'] }}</td>
+                                <td style="color:var(--success);">{{ number_format($sf['total_spent'], 0) }} RON</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         @endif
     </div>
@@ -588,7 +612,7 @@ canvas{width:100%!important;}
             {{-- Leaflet Heatmap --}}
             <div class="card" style="margin-bottom:14px;">
                 <div class="card-h">Sales Heatmap</div>
-                <div class="card-b" style="padding:0;"><div id="artistGeoMap" style="height:350px;border-radius:0 0 12px 12px;"></div></div>
+                <div class="card-b" style="padding:0;" wire:ignore><div id="artistGeoMap" style="height:350px;border-radius:0 0 12px 12px;"></div></div>
             </div>
 
             <div class="card"><div class="card-b" style="overflow-x:auto;">
@@ -928,7 +952,7 @@ canvas{width:100%!important;}
 
         {{-- Venues + Tenants --}}
         <div class="g2">
-            @if($artistVenues->count())
+            @if($artistVenues->count() && !isset($tenantEditUrl))
             <div class="card">
                 <div class="card-h">Venues ({{ $artistVenues->count() }})</div>
                 <div class="card-b"><table class="tbl"><thead><tr><th>Venue</th><th>City</th><th>Country</th></tr></thead><tbody>
