@@ -173,7 +173,7 @@ canvas{width:100%!important;}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14M1 10l4.64 4.36A9 9 0 0 0 20.49 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Refresh
                 </a>
-                <a class="btn" href="{{ \App\Filament\Resources\Artists\ArtistResource::getUrl('edit', ['record' => $record->getKey()]) }}">
+                <a class="btn" href="{{ $tenantEditUrl ?? \App\Filament\Resources\Artists\ArtistResource::getUrl('edit', ['record' => $record->getKey()]) }}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10-10a2.828 2.828 0 1 0-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Edit
                 </a>
