@@ -121,6 +121,8 @@ class PlatformCostResource extends Resource
 
                 Tables\Columns\TextColumn::make('start_date')
                     ->date('d M Y')
+                    ->badge()
+                    ->color('gray')
                     ->sortable()
                     ->toggleable(),
 
