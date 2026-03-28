@@ -343,7 +343,9 @@
             color: white;
         }
 
-        .dark-select option {
+        .dark-select option,
+        .dark-input option,
+        select.dark-input option {
             background: #1a1a2e;
             color: white;
         }
@@ -458,7 +460,7 @@
             <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
                 <div class="fixed inset-0 modal-backdrop transition-opacity" aria-hidden="true" @click="closeModal()"></div>
                 <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-                <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                <div class="inline-block align-bottom bg-dark-700 border border-white/10 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                     <div>
                         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full" :class="modalType === 'success' ? 'bg-green-100' : (modalType === 'error' ? 'bg-red-100' : 'bg-blue-100')">
                             <svg x-show="modalType === 'success'" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1292,32 +1294,63 @@
                             </div>
 
                             <div class="mb-8">
-                                <label class="block text-sm font-medium text-white/80 mb-4">Microservicii Aditionale (optional)</label>
-                                <p class="text-xs text-white/50 mb-3">Am preselectat serviciile recomandate pentru tipul tau de cont. Poti modifica selectia.</p>
-                                <div class="space-y-3">
-                                    @foreach($microservices as $microservice)
-                                    <label class="flex items-start p-4 border rounded-lg border-white/10 hover:bg-white/5 cursor-pointer transition">
-                                        <input
-                                            type="checkbox"
-                                            value="{{ $microservice->id }}"
-                                            :checked="formData.microservices.includes({{ $microservice->id }})"
-                                            @change="toggleMicroservice({{ $microservice->id }})"
-                                            class="mt-1 rounded border-white/20 text-purple-500 focus:ring-purple-500"
-                                        >
-                                        <div class="ml-3 flex-1">
-                                            <div class="flex items-center justify-between">
-                                                <div class="font-medium text-white">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
-                                                <a href="/microservice/{{ $microservice->slug }}" target="_blank" class="text-xs text-purple-400 hover:text-purple-300 underline" @click.stop>
-                                                    Detalii
-                                                </a>
+                                <button
+                                    type="button"
+                                    @click="showMicroservices = !showMicroservices"
+                                    class="w-full flex items-center justify-between p-4 border border-white/10 rounded-lg hover:bg-white/5 transition"
+                                >
+                                    <div>
+                                        <span class="text-sm font-medium text-white/80">Microservicii Aditionale (optional)</span>
+                                        <span x-show="formData.microservices.length > 0" class="ml-2 px-2 py-0.5 text-xs bg-purple-500/20 text-purple-300 rounded-full" x-text="formData.microservices.length + ' selectate'"></span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-white/50 transition-transform" :class="showMicroservices ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div x-show="showMicroservices" x-collapse x-cloak class="mt-3">
+                                    <p class="text-xs text-white/50 mb-3">Am preselectat serviciile recomandate pentru tipul tau de cont. Poti modifica selectia.</p>
+                                    <div class="space-y-3">
+                                        @foreach($microservices as $microservice)
+                                        <label class="flex items-start p-4 border rounded-lg border-white/10 hover:bg-white/5 cursor-pointer transition">
+                                            <input
+                                                type="checkbox"
+                                                value="{{ $microservice->id }}"
+                                                :checked="formData.microservices.includes({{ $microservice->id }})"
+                                                @change="toggleMicroservice({{ $microservice->id }})"
+                                                class="mt-1 rounded border-white/20 text-purple-500 focus:ring-purple-500"
+                                            >
+                                            <div class="ml-3 flex-1">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="font-medium text-white">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
+                                                    <a href="/microservice/{{ $microservice->slug }}" target="_blank" class="text-xs text-purple-400 hover:text-purple-300 underline" @click.stop>
+                                                        Detalii
+                                                    </a>
+                                                </div>
+                                                <div class="text-sm text-white/60">{{ $microservice->getTranslation('short_description', app()->getLocale()) }}</div>
+                                                <div class="text-sm font-semibold text-purple-400 mt-1">
+                                                    {{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}
+                                                </div>
                                             </div>
-                                            <div class="text-sm text-white/60">{{ $microservice->getTranslation('short_description', app()->getLocale()) }}</div>
-                                            <div class="text-sm font-semibold text-purple-400 mt-1">
-                                                {{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}
-                                            </div>
+                                        </label>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                <!-- Cost summary -->
+                                <div x-show="formData.microservices.length > 0" x-cloak class="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                    <h4 class="text-sm font-semibold text-purple-300 mb-3">Sumar costuri microservicii selectate</h4>
+                                    <div class="space-y-2">
+                                        @foreach($microservices as $microservice)
+                                        <div x-show="formData.microservices.includes({{ $microservice->id }})" class="flex items-center justify-between text-sm">
+                                            <span class="text-white/70">{{ $microservice->getTranslation('name', app()->getLocale()) }}</span>
+                                            <span class="text-white font-medium">{{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}</span>
                                         </div>
-                                    </label>
-                                    @endforeach
+                                        @endforeach
+                                    </div>
+                                    <div class="mt-3 pt-3 border-t border-purple-500/20 flex items-center justify-between">
+                                        <span class="text-sm font-semibold text-white">Total lunar estimat:</span>
+                                        <span class="text-lg font-bold text-purple-300" x-text="calculateMicroserviceCost() + ' RON / luna'"></span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1453,6 +1486,9 @@
                 // Artist search
                 artistSearching: false,
                 artistSearchResult: '',
+
+                // Microservices section
+                showMicroservices: false,
 
                 // Modal
                 showModal: false,
@@ -1995,6 +2031,15 @@
                     } else {
                         this.formData.microservices.push(id);
                     }
+                },
+
+                calculateMicroserviceCost() {
+                    const prices = @json($microservices->mapWithKeys(fn ($m) => [$m->id => (float) $m->price]));
+                    let total = 0;
+                    this.formData.microservices.forEach(id => {
+                        total += prices[id] || 0;
+                    });
+                    return total.toFixed(2);
                 },
 
                 async checkDomainAvailability(index) {
