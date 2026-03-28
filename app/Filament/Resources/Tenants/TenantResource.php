@@ -97,7 +97,12 @@ class TenantResource extends Resource
                                         ->searchable(['name', 'slug'])
                                         ->preload()
                                         ->nullable()
-                                        ->visible(fn (callable $get) => in_array($get('tenant_type'), ['tenant-artist', 'artist']))
+                                        ->visible(fn (callable $get) => in_array(
+                                            $get('tenant_type') instanceof \App\Enums\TenantType
+                                                ? $get('tenant_type')->value
+                                                : (string) $get('tenant_type'),
+                                            ['tenant-artist', 'artist']
+                                        ))
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Link this tenant to a global artist profile from the Artists database')
                                         ->columnSpanFull(),
 

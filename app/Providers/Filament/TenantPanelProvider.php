@@ -98,13 +98,16 @@ class TenantPanelProvider extends PanelProvider
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
-            // Custom brand with dynamic logos from settings
-            ->brandLogo(fn () => view('filament.components.sidebar-brand'))
-            ->brandLogoHeight('2rem')
+            // Hide default brand logo (we use sidebar logo instead, like Marketplace)
+            ->brandLogo(fn () => '')
+            ->brandLogoHeight('0')
 
             // Disable default topbar elements (we have custom-topbar)
             ->globalSearch(false)
             ->userMenu(false)
+
+            // Logo at the top of sidebar navigation (same approach as Marketplace)
+            ->renderHook('panels::sidebar.nav.start', fn (): string => view('filament.components.sidebar-brand')->render())
 
             // Custom topbar above fi-main but inside fi-main-ctn (same hook as Marketplace)
             ->renderHook('panels::page.start', fn (): string => view('filament.components.custom-topbar')->render())
@@ -115,9 +118,13 @@ class TenantPanelProvider extends PanelProvider
             // Sticky / floating save button for long forms (same as Marketplace)
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
 
-            // Inline CSS for compact repeaters, tabs, event row colours (same as Marketplace)
+            // Inline CSS: hide default topbar + compact repeaters (same as Marketplace)
             ->renderHook('panels::styles.after', fn () => <<<'HTML'
             <style>
+            /* Hide default Filament topbar (we use custom-topbar via panels::page.start) */
+            .fi-topbar, .fi-topbar-ctn { display: none !important; }
+            /* Sidebar nav: remove row-gap */
+            .fi-sidebar-nav { row-gap: 0 !important; }
             /* Prevent flash of unstyled content during Livewire morph */
             [wire\:loading] { opacity: 1 !important; }
             /* Compact repeater item content */
