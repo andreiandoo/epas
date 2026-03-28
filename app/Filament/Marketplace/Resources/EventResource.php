@@ -3611,25 +3611,16 @@ class EventResource extends Resource
                             Forms\Components\Select::make('venue_id')
                                 ->label('Venue')
                                 ->searchable()
+                                ->preload()
                                 ->required()
-                                ->getSearchResultsUsing(function (string $search) {
-                                    $term = mb_strtolower($search);
-                                    return Venue::query()
-                                        ->where(function ($q) use ($term) {
-                                            $isPgsql = \DB::getDriverName() === 'pgsql';
-                                            $q->whereRaw($isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$term}%"])
-                                              ->orWhereRaw($isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$term}%"])
-                                              ->orWhereRaw('LOWER(city) LIKE ?', ["%{$term}%"]);
-                                        })
-                                        ->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))")
-                                        ->limit(50)
-                                        ->get()
+                                ->options(function () {
+                                    return Venue::all()
                                         ->mapWithKeys(fn ($venue) => [
                                             $venue->id => $venue->getTranslation('name', app()->getLocale())
                                                 . ($venue->city ? ' (' . $venue->city . ')' : '')
-                                        ]);
-                                })
-                                ->getOptionLabelUsing(fn ($value) => Venue::find($value)?->getTranslation('name', app()->getLocale()) ?? $value),
+                                        ])
+                                        ->sort();
+                                }),
                         ])
                         ->action(function (Collection $records, array $data) use ($marketplace) {
                             $venue = Venue::find($data['venue_id']);
