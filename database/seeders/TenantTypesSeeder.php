@@ -25,7 +25,8 @@ class TenantTypesSeeder extends Seeder
         $password = Hash::make('Test1234!');
 
         $tenants = [
-            TenantType::TenantArtist => [
+            [
+                'type' => TenantType::TenantArtist,
                 'name' => 'Demo Tenant SRL',
                 'public_name' => 'Demo Tenant',
                 'email' => 'tenant@test.tixello.com',
@@ -36,7 +37,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'București',
                 'country' => 'RO',
             ],
-            TenantType::Artist => [
+            [
+                'type' => TenantType::Artist,
                 'name' => 'Rock Band SRL',
                 'public_name' => 'The Rockets',
                 'email' => 'artist@test.tixello.com',
@@ -47,7 +49,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Cluj-Napoca',
                 'country' => 'RO',
             ],
-            TenantType::Agency => [
+            [
+                'type' => TenantType::Agency,
                 'name' => 'Star Agency SRL',
                 'public_name' => 'Star Agency',
                 'email' => 'agency@test.tixello.com',
@@ -58,7 +61,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Timișoara',
                 'country' => 'RO',
             ],
-            TenantType::Venue => [
+            [
+                'type' => TenantType::Venue,
                 'name' => 'Club Central SRL',
                 'public_name' => 'Club Central',
                 'email' => 'venue@test.tixello.com',
@@ -69,7 +73,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Iași',
                 'country' => 'RO',
             ],
-            TenantType::Speaker => [
+            [
+                'type' => TenantType::Speaker,
                 'name' => 'TED Talks RO SRL',
                 'public_name' => 'Dr. Elena Voicu',
                 'email' => 'speaker@test.tixello.com',
@@ -80,7 +85,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Brașov',
                 'country' => 'RO',
             ],
-            TenantType::Competition => [
+            [
+                'type' => TenantType::Competition,
                 'name' => 'Sport Events SRL',
                 'public_name' => 'Maratonul României',
                 'email' => 'competition@test.tixello.com',
@@ -91,7 +97,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Sibiu',
                 'country' => 'RO',
             ],
-            TenantType::StadiumArena => [
+            [
+                'type' => TenantType::StadiumArena,
                 'name' => 'Arena Națională SA',
                 'public_name' => 'Arena Națională',
                 'email' => 'stadium@test.tixello.com',
@@ -102,7 +109,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'București',
                 'country' => 'RO',
             ],
-            TenantType::Philharmonic => [
+            [
+                'type' => TenantType::Philharmonic,
                 'name' => 'Filarmonica de Stat',
                 'public_name' => 'Filarmonica George Enescu',
                 'email' => 'philharmonic@test.tixello.com',
@@ -113,7 +121,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'București',
                 'country' => 'RO',
             ],
-            TenantType::Opera => [
+            [
+                'type' => TenantType::Opera,
                 'name' => 'Opera Națională București',
                 'public_name' => 'Opera Națională',
                 'email' => 'opera@test.tixello.com',
@@ -124,7 +133,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'București',
                 'country' => 'RO',
             ],
-            TenantType::Theater => [
+            [
+                'type' => TenantType::Theater,
                 'name' => 'Teatrul Național SRL',
                 'public_name' => 'Teatrul Național',
                 'email' => 'theater@test.tixello.com',
@@ -135,7 +145,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'Craiova',
                 'country' => 'RO',
             ],
-            TenantType::Museum => [
+            [
+                'type' => TenantType::Museum,
                 'name' => 'Muzeul Național de Artă',
                 'public_name' => 'Muzeul de Artă',
                 'email' => 'museum@test.tixello.com',
@@ -146,7 +157,8 @@ class TenantTypesSeeder extends Seeder
                 'city' => 'București',
                 'country' => 'RO',
             ],
-            TenantType::Festival => [
+            [
+                'type' => TenantType::Festival,
                 'name' => 'Festival Productions SRL',
                 'public_name' => 'Summer Vibes Festival',
                 'email' => 'festival@test.tixello.com',
@@ -159,7 +171,9 @@ class TenantTypesSeeder extends Seeder
             ],
         ];
 
-        foreach ($tenants as $type => $data) {
+        foreach ($tenants as $data) {
+            $type = $data['type'];
+
             // Skip if user with this email already exists
             $existingUser = User::where('email', $data['email'])->first();
             if ($existingUser) {
@@ -180,7 +194,6 @@ class TenantTypesSeeder extends Seeder
 
             // Create tenant
             $slug = Str::slug($data['public_name']);
-            // Ensure unique slug
             $originalSlug = $slug;
             $counter = 1;
             while (Tenant::where('slug', $slug)->exists()) {
@@ -234,11 +247,11 @@ class TenantTypesSeeder extends Seeder
         $this->command->newLine();
         $this->command->table(
             ['Type', 'Email', 'Tenant Name'],
-            collect($tenants)->map(fn ($data, $type) => [
-                $type->label(),
+            collect($tenants)->map(fn ($data) => [
+                $data['type']->label(),
                 $data['email'],
                 $data['public_name'],
-            ])->values()->toArray()
+            ])->toArray()
         );
     }
 }
