@@ -123,6 +123,9 @@ class TenantPanelProvider extends PanelProvider
             <style>
             /* Hide default Filament topbar (we use custom-topbar via panels::page.start) */
             .fi-topbar, .fi-topbar-ctn { display: none !important; }
+            /* Fix sidebar height/top when topbar is hidden */
+            .fi-body-has-topbar .fi-sidebar { height: 100dvh !important; top: 0 !important; }
+            .fi-body-has-topbar .fi-main-ctn { min-height: 100dvh !important; padding-top: 0 !important; }
             /* Sidebar nav: remove row-gap */
             .fi-sidebar-nav { row-gap: 0 !important; }
             /* Prevent flash of unstyled content during Livewire morph */
