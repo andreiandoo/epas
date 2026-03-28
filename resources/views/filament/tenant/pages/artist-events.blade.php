@@ -12,11 +12,11 @@
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-emerald-500">{{ $stats['upcoming'] }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Upcoming</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Live</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-gray-400">{{ $stats['past'] }}</p>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Past</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Ended</p>
             </div>
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
                 <p class="text-2xl font-bold text-blue-400">{{ number_format($stats['total_sold']) }}</p>
@@ -28,18 +28,45 @@
             </div>
         </div>
 
+        {{-- Status Filter --}}
+        <div class="flex items-center gap-2 mb-4">
+            @php
+                $filters = [
+                    'all' => ['label' => 'All', 'count' => $stats['total']],
+                    'live' => ['label' => 'Live', 'count' => $stats['upcoming']],
+                    'ended' => ['label' => 'Ended', 'count' => $stats['past']],
+                    'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0],
+                    'postponed' => ['label' => 'Postponed', 'count' => $stats['postponed'] ?? 0],
+                ];
+            @endphp
+            @foreach($filters as $key => $filter)
+                @if($filter['count'] > 0 || $key === 'all')
+                    <button
+                        wire:click="$set('statusFilter', '{{ $key }}')"
+                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
+                            {{ $statusFilter === $key
+                                ? 'bg-primary-500 text-white'
+                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200' }}"
+                    >
+                        {{ $filter['label'] }}
+                        @if($filter['count'] > 0)
+                            <span class="ml-1 opacity-60">{{ $filter['count'] }}</span>
+                        @endif
+                    </button>
+                @endif
+            @endforeach
+        </div>
+
         {{-- Core Events --}}
         @if($events->isNotEmpty())
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Events ({{ $events->count() }})</h3>
-                </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach($events as $event)
                         @php
                             $title = is_array($event->title) ? ($event->title[app()->getLocale()] ?? $event->title['en'] ?? $event->title['ro'] ?? array_values($event->title)[0] ?? '—') : ($event->title ?? '—');
-                            $isUpcoming = $event->event_date && $event->event_date >= now()->toDateString();
+                            $isUpcoming = $event->computed_status === 'live';
                             $ts = $event->ticket_stats;
+                            $eventUrl = $event->public_url;
                         @endphp
                         <div class="px-4 py-3 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                             {{-- Date --}}
@@ -54,13 +81,6 @@
                             </div>
 
                             {{-- Event Info --}}
-                            @php
-                                $slug = is_array($event->slug) ? ($event->slug[app()->getLocale()] ?? $event->slug['en'] ?? $event->slug['ro'] ?? '') : ($event->slug ?? '');
-                                $domain = $event->tenant?->domains()->where('is_primary', true)->first()?->domain;
-                                $eventUrl = ($domain && $slug && $event->is_published)
-                                    ? 'https://' . $domain . '/events/' . $slug
-                                    : null;
-                            @endphp
                             <div class="flex-1 min-w-0">
                                 @if($eventUrl)
                                     <a href="{{ $eventUrl }}" target="_blank" class="font-semibold text-sm text-primary-400 hover:text-primary-300 truncate block transition">{{ $title }}</a>
@@ -69,7 +89,8 @@
                                 @endif
                                 <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
                                     @if($event->venue)
-                                        <span>{{ is_array($event->venue->name) ? ($event->venue->name[app()->getLocale()] ?? $event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '') : $event->venue->name }}</span>
+                                        @php $venueName = is_array($event->venue->name) ? ($event->venue->name[app()->getLocale()] ?? $event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '') : $event->venue->name; @endphp
+                                        <span>{{ $venueName }}</span>
                                     @endif
                                     @if($event->tenant)
                                         <span class="text-gray-400">{{ $event->tenant->public_name ?? $event->tenant->name }}</span>
@@ -81,16 +102,6 @@
                                     @endif
                                 </div>
                             </div>
-
-                            {{-- Buy Tickets button --}}
-                            @if($eventUrl)
-                                <div class="flex-shrink-0">
-                                    <a href="{{ $eventUrl }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 text-xs font-semibold transition">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                                        Tickets
-                                    </a>
-                                </div>
-                            @endif
 
                             {{-- Ticket Sales --}}
                             <div class="flex-shrink-0 text-right">
@@ -116,6 +127,15 @@
                                 @endif
                             </div>
 
+                            {{-- Tickets button --}}
+                            @if($eventUrl)
+                                <div class="flex-shrink-0">
+                                    <a href="{{ $eventUrl }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 text-xs font-semibold transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                        Tickets
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -129,24 +149,39 @@
                     <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Marketplace Events ({{ $marketplaceEvents->count() }})</h3>
                 </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @foreach($marketplaceEvents as $event)
+                    @foreach($marketplaceEvents as $mpEvent)
                         @php
-                            $title = is_array($event->title) ? ($event->title[app()->getLocale()] ?? $event->title['en'] ?? array_values($event->title)[0] ?? '—') : ($event->title ?? '—');
+                            $mpTitle = is_array($mpEvent->title) ? ($mpEvent->title[app()->getLocale()] ?? $mpEvent->title['en'] ?? array_values($mpEvent->title)[0] ?? '—') : ($mpEvent->title ?? '—');
+                            $mpSlug = is_array($mpEvent->slug) ? ($mpEvent->slug[app()->getLocale()] ?? $mpEvent->slug['en'] ?? '') : ($mpEvent->slug ?? '');
+                            $mpDomain = $mpEvent->marketplaceClient?->domain ?? null;
+                            $mpUrl = ($mpDomain && $mpSlug) ? 'https://' . preg_replace('#^https?://#', '', $mpDomain) . '/events/' . $mpSlug : null;
                         @endphp
                         <div class="px-4 py-3 flex items-center gap-4">
                             <div class="flex-shrink-0 w-14 text-center">
-                                @if($event->starts_at)
-                                    <div class="text-xs font-medium text-gray-400 uppercase">{{ $event->starts_at->format('M') }}</div>
-                                    <div class="text-xl font-bold text-gray-400">{{ $event->starts_at->format('d') }}</div>
-                                    <div class="text-xs text-gray-500">{{ $event->starts_at->format('Y') }}</div>
+                                @if($mpEvent->starts_at)
+                                    <div class="text-xs font-medium text-gray-400 uppercase">{{ $mpEvent->starts_at->format('M') }}</div>
+                                    <div class="text-xl font-bold text-gray-400">{{ $mpEvent->starts_at->format('d') }}</div>
+                                    <div class="text-xs text-gray-500">{{ $mpEvent->starts_at->format('Y') }}</div>
                                 @endif
                             </div>
                             <div class="flex-1 min-w-0">
-                                <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $title }}</div>
+                                @if($mpUrl)
+                                    <a href="{{ $mpUrl }}" target="_blank" class="font-semibold text-sm text-primary-400 hover:text-primary-300 truncate block transition">{{ $mpTitle }}</a>
+                                @else
+                                    <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $mpTitle }}</div>
+                                @endif
                                 <div class="text-xs text-gray-500 dark:text-gray-400">
                                     <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold">MARKETPLACE</span>
                                 </div>
                             </div>
+                            @if($mpUrl)
+                                <div class="flex-shrink-0">
+                                    <a href="{{ $mpUrl }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 text-xs font-semibold transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                        Tickets
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
