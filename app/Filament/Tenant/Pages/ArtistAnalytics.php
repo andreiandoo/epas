@@ -180,6 +180,7 @@ class ArtistAnalytics extends Page
                     'upcomingAnalysis' => $this->buildUpcomingEventsAnalysis($eventIds),
                     'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
                     'fanEngagement' => $this->buildFanEngagementScore($orderIds),
+                    'performanceHeatmap' => $this->buildPerformanceHeatmap($eventIds),
                 ]
             );
             } catch (\Exception $e) {

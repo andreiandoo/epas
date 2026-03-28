@@ -403,13 +403,47 @@ trait ArtistAnalyticsMethods
 
         if ($upcoming->isEmpty()) return [];
 
-        return $upcoming->map(function ($e) {
+        // Historical averages for comparison
+        $pastStats = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw('(SELECT tt2.event_id, SUM(tt2.quota_sold) as sold, SUM(CASE WHEN tt2.quota_total > 0 THEN tt2.quota_total ELSE 0 END) as capacity FROM ticket_types tt2 GROUP BY tt2.event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $this->record->id)
+            ->whereNotNull('e.event_date')->where('e.event_date', '<', now()->toDateString())
+            ->select(DB::raw('AVG(ts.sold) as avg_sold'), DB::raw('AVG(CASE WHEN ts.capacity > 0 THEN ts.sold * 100.0 / ts.capacity ELSE NULL END) as avg_sell_through'))
+            ->first();
+
+        $histAvgSold = round((float) ($pastStats?->avg_sold ?? 0));
+        $histAvgSt = round((float) ($pastStats?->avg_sell_through ?? 0), 1);
+
+        return $upcoming->map(function ($e) use ($histAvgSold, $histAvgSt) {
             $title = $e->title;
             if ($title && str_starts_with($title, '{')) { $d = json_decode($title, true); $title = $d['en'] ?? $d['ro'] ?? reset($d) ?: $title; }
             $vn = $e->venue_name;
             if ($vn && str_starts_with($vn, '{')) { $d = json_decode($vn, true); $vn = $d['en'] ?? $d['ro'] ?? reset($d) ?: $vn; }
             $sold = (int) ($e->sold ?? 0); $cap = (int) ($e->capacity ?? 0);
+            $st = $cap > 0 ? round($sold / $cap * 100, 1) : null;
             $daysUntil = $e->event_date ? max(0, now()->diffInDays(Carbon::parse($e->event_date), false)) : null;
+
+            // Forecast
+            $forecastSold = null;
+            if ($daysUntil !== null && $daysUntil > 0 && $sold > 0) {
+                $daysSelling = max(1, 90 - $daysUntil);
+                $dailyRate = $sold / $daysSelling;
+                $forecastSold = min($cap ?: 99999, (int) round($sold + ($dailyRate * $daysUntil)));
+            }
+
+            // Demand Score (0-100)
+            $paceScore = 0; // 0-40: sale pace vs historical
+            if ($histAvgSold > 0 && $sold > 0 && $daysUntil !== null) {
+                $daysSelling = max(1, 90 - $daysUntil);
+                $currentPace = $sold / $daysSelling;
+                $histPace = $histAvgSold / 90;
+                $paceScore = min(40, round(($currentPace / max(0.01, $histPace)) * 20));
+            }
+            $stScore = min(30, round(($st ?? 0) / 100 * 30)); // 0-30: current sell-through
+            $capScore = $cap > 0 ? min(30, round(($sold / $cap) * 30)) : 0; // 0-30: capacity utilization
+            $demandScore = $paceScore + $stScore + $capScore;
+            $demandLabel = match (true) { $demandScore >= 75 => 'Hot', $demandScore >= 50 => 'Strong', $demandScore >= 25 => 'Moderate', default => 'Low' };
 
             return [
                 'id' => $e->id, 'title' => $title, 'date' => $e->event_date,
@@ -417,12 +451,14 @@ trait ArtistAnalyticsMethods
                 'venue_capacity' => (int) ($e->venue_capacity ?? 0),
                 'is_headliner' => (bool) $e->is_headliner,
                 'sold' => $sold, 'capacity' => $cap,
-                'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null,
+                'sell_through' => $st,
                 'revenue_sold' => round((float) ($e->revenue_sold ?? 0), 2),
                 'days_until' => $daysUntil,
-                'hist_avg_sold' => 0,
-                'hist_avg_sell_through' => 0,
-                'forecast_sold' => null,
+                'hist_avg_sold' => $histAvgSold,
+                'hist_avg_sell_through' => $histAvgSt,
+                'forecast_sold' => $forecastSold,
+                'demand_score' => $demandScore,
+                'demand_label' => $demandLabel,
             ];
         })->toArray();
     }
@@ -527,6 +563,44 @@ trait ArtistAnalyticsMethods
             'lead_time' => $leadTimeStats,
             'announcement_window' => $this->buildAnnouncementWindow($leadTimeStats, $leadTimes ?? collect()),
         ];
+    }
+
+    private function buildPerformanceHeatmap(array $eventIds): array
+    {
+        if (empty($eventIds)) return [];
+        $artistId = $this->record->id;
+
+        $data = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)
+            ->whereNotNull('e.event_date')
+            ->where('ts.cap', '>', 0)
+            ->select(
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(DOW FROM e.event_date)::int as dow' : 'DAYOFWEEK(e.event_date) - 1 as dow'),
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM e.event_date)::int as mon' : 'MONTH(e.event_date) as mon'),
+                DB::raw('AVG(LEAST(ts.sold * 100.0 / ts.cap, 100)) as avg_st'),
+                DB::raw('COUNT(DISTINCT e.id) as cnt')
+            )
+            ->groupBy('dow', 'mon')
+            ->get();
+
+        // Build 7x12 matrix (dow 0-6, months 1-12)
+        $matrix = [];
+        $days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+        foreach ($data as $row) {
+            $d = (int) $row->dow; // 0=Sun in PG (EXTRACT DOW), 1=Sun in MySQL (DAYOFWEEK-1)
+            // Normalize to Mon=0, Sun=6
+            if (DB::getDriverName() === 'pgsql') { $d = $d === 0 ? 6 : $d - 1; }
+            $m = (int) $row->mon - 1; // 0-indexed
+            if ($d >= 0 && $d <= 6 && $m >= 0 && $m <= 11) {
+                $matrix[$d][$m] = ['st' => round((float) $row->avg_st, 1), 'cnt' => (int) $row->cnt];
+            }
+        }
+
+        return ['matrix' => $matrix, 'days' => $days, 'months' => $months];
     }
 
     private function buildAnnouncementWindow(array $leadTimeStats, $leadTimes): array

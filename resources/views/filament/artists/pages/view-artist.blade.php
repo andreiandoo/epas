@@ -538,6 +538,35 @@ canvas{width:100%!important;}
                     <div><span style="color:var(--warn);font-size:26px;font-weight:700;">{{ $loyalty['superfan'] ?? 0 }}</span><br><span style="color:var(--muted);font-size:11px;">Superfan</span></div>
                 </div>
             </div>
+            {{-- Performance Heatmap --}}
+            @php $hm = $performanceHeatmap ?? []; @endphp
+            @if(!empty($hm['matrix']))
+            <div class="card" style="margin-bottom:14px;">
+                <div class="card-h">Performance Heatmap — Day × Month (Sell-Through %)</div>
+                <div class="card-b">
+                    <div style="display:grid;grid-template-columns:60px repeat(12,1fr);gap:2px;font-size:10px;">
+                        <div></div>
+                        @foreach($hm['months'] as $m) <div style="text-align:center;color:var(--muted);font-weight:600;">{{ $m }}</div> @endforeach
+                        @for($d = 0; $d < 7; $d++)
+                            <div style="display:flex;align-items:center;color:var(--muted);font-weight:600;">{{ $hm['days'][$d] }}</div>
+                            @for($m = 0; $m < 12; $m++)
+                                @php $cell = $hm['matrix'][$d][$m] ?? null; $st = $cell ? $cell['st'] : null; $cnt = $cell ? $cell['cnt'] : 0; @endphp
+                                <div style="height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:default;{{ $st !== null ? 'background:rgba(' . ($st >= 80 ? '34,197,94' : ($st >= 50 ? '251,191,36' : ($st >= 20 ? '122,162,255' : '148,163,184'))) . ',' . min(0.8, $st / 100 * 0.7 + 0.1) . ');color:#fff;font-weight:700;' : 'background:rgba(122,162,255,.04);color:var(--ring);' }}" title="{{ $hm['days'][$d] }} {{ $hm['months'][$m] }}: {{ $st !== null ? $st . '% (' . $cnt . ' events)' : 'No data' }}">
+                                    {{ $st !== null ? round($st) : '' }}
+                                </div>
+                            @endfor
+                        @endfor
+                    </div>
+                    <div style="display:flex;gap:12px;margin-top:8px;font-size:10px;color:var(--muted);">
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(148,163,184,.4);"></span> &lt;20%</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(122,162,255,.5);"></span> 20-50%</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(251,191,36,.5);"></span> 50-80%</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:rgba(34,197,94,.6);"></span> 80%+</span>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <div class="card"><div class="card-h">Events with Ticket Data ({{ count($perfEvents) }}) <span style="font-weight:400;color:var(--muted);font-size:11px;">— only events with configured ticket types are shown</span></div><div class="card-b" style="overflow-x:auto;">
                 <table class="tbl">
                     <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Sold/Cap</th><th>Sell-Through</th><th>Check-in</th><th>Role</th></tr></thead>
@@ -886,7 +915,7 @@ canvas{width:100%!important;}
         {{-- Upcoming Events Table --}}
         <div class="card" style="margin-top:14px;"><div class="card-h">Upcoming Events ({{ count($upcomingEvents) }})</div><div class="card-b" style="overflow-x:auto;">
             <table class="tbl">
-                <thead><tr><th></th><th>Date</th><th>Event</th><th>Venue</th><th>City</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th><th>Days</th><th>Hist. Avg</th><th>Forecast</th></tr></thead>
+                <thead><tr><th></th><th>Date</th><th>Event</th><th>Venue</th><th>City</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th><th>Days</th><th>Demand</th><th>Hist. Avg</th><th>Forecast</th></tr></thead>
                 <tbody>
                     @foreach($upcomingEvents as $ue)
                     <tr>
@@ -901,6 +930,7 @@ canvas{width:100%!important;}
                         <td>@if($ue['sell_through'] !== null)<div style="display:flex;align-items:center;gap:5px;"><div class="progress"><div class="progress-fill" style="width:{{ min($ue['sell_through'],100) }}%;background:{{ $ue['sell_through']>=80?'var(--success)':($ue['sell_through']>=50?'var(--warn)':'var(--danger)') }};"></div></div><span style="font-size:11px;">{{ $ue['sell_through'] }}%</span></div>@else — @endif</td>
                         <td style="color:var(--success);">{{ number_format($ue['revenue_sold'], 0) }}</td>
                         <td>@if($ue['days_until'] !== null)<span class="chip {{ $ue['days_until'] <= 7 ? 'chip-red' : 'chip-gray' }}">{{ round($ue['days_until']) }}d</span>@else — @endif</td>
+                        <td>@php $ds = $ue['demand_score'] ?? 0; $dc = match(true) { $ds >= 75 => 'green', $ds >= 50 => 'yellow', $ds >= 25 => 'blue', default => 'gray' }; @endphp<span class="chip chip-{{ $dc }}" style="font-size:11px;">{{ $ds }} <span style="font-size:9px;">{{ $ue['demand_label'] ?? '' }}</span></span></td>
                         <td style="font-size:11px;color:var(--muted);">{{ $ue['hist_avg_sold'] }} · {{ $ue['hist_avg_sell_through'] }}%</td>
                         <td>@if($ue['forecast_sold'] !== null)<strong style="color:var(--accent);">~{{ number_format($ue['forecast_sold']) }}</strong>@if($ue['capacity'] > 0)<span style="font-size:10px;color:var(--muted);"> ({{ round($ue['forecast_sold']/$ue['capacity']*100) }}%)</span>@endif @else — @endif</td>
                     </tr>
