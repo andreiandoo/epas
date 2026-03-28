@@ -1959,7 +1959,8 @@
 
                 async loadStates() {
                     if (this.formData.country === 'Romania') {
-                        this.availableStates = @json($romaniaCounties);
+                        const raw = @json($romaniaCounties);
+                        this.availableStates = Array.isArray(raw) ? raw : Object.values(raw);
                     } else {
                         this.availableStates = [];
                     }
