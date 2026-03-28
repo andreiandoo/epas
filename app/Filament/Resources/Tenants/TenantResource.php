@@ -1179,6 +1179,11 @@ class TenantResource extends Resource
                                 ->schema([
                                     Forms\Components\KeyValue::make('settings')
                                         ->label('Custom Settings (JSON)')
+                                        ->afterStateHydrated(function ($component, $state) {
+                                            if (!is_array($state) || (is_array($state) && array_values($state) === $state && empty($state))) {
+                                                $component->state([]);
+                                            }
+                                        })
                                         ->nullable(),
                                 ])->collapsible(),
                         ]),
