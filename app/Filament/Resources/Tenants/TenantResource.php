@@ -111,7 +111,8 @@ class TenantResource extends Resource
                                     Forms\Components\Select::make('owner_id')
                                         ->label('Owner User Account')
                                         ->relationship('owner', 'name')
-                                        ->searchable()
+                                        ->getOptionLabelFromRecordUsing(fn ($record) => trim(($record->first_name ?? '') . ' ' . ($record->last_name ?? '')) ?: ($record->name ?: $record->email))
+                                        ->searchable(['name', 'first_name', 'last_name', 'email'])
                                         ->preload()
                                         ->createOptionForm([
                                             Forms\Components\TextInput::make('name')
@@ -383,7 +384,28 @@ class TenantResource extends Resource
                                         ->default('EUR')
                                         ->required()
                                         ->helperText('Default currency for sales and invoices'),
-                                ])->columns(2),
+
+                                    Forms\Components\Placeholder::make('avg_monthly_tickets')
+                                        ->label('Avg Monthly Tickets')
+                                        ->content(function ($record) {
+                                            if (! $record) {
+                                                return '-';
+                                            }
+                                            $firstTicket = \App\Models\Ticket::where('tenant_id', $record->id)
+                                                ->where('is_cancelled', false)
+                                                ->orderBy('created_at')
+                                                ->first();
+                                            if (! $firstTicket) {
+                                                return '0';
+                                            }
+                                            $monthsSinceFirst = max(1, (int) ceil($firstTicket->created_at->diffInDays(now()) / 30));
+                                            $totalTickets = \App\Models\Ticket::where('tenant_id', $record->id)
+                                                ->where('is_cancelled', false)
+                                                ->count();
+                                            return number_format(round($totalTickets / $monthsSinceFirst));
+                                        })
+                                        ->helperText('Based on actual ticket sales'),
+                                ])->columns(3),
 
                             SC\Section::make('Billing')
                                 ->description('Automated billing configuration')
