@@ -1075,7 +1075,7 @@ class ViewArtist extends Page
                 DB::raw('AVG(ts.sold * (SELECT AVG(tt2.price_cents) FROM ticket_types tt2 WHERE tt2.event_id = e.id) / 100) as avg_revenue')
             )
             ->groupBy('dow', 'day_name')
-            ->orderByDesc('avg_st')
+            ->orderByRaw('avg_st DESC NULLS LAST')
             ->get();
 
         // 2. Best months — which months perform best
@@ -1092,7 +1092,7 @@ class ViewArtist extends Page
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
             )
             ->groupBy('month_num', 'month_name')
-            ->orderByDesc('avg_st')
+            ->orderByRaw('avg_st DESC NULLS LAST')
             ->get();
 
         // 3. Optimal ticket price — find sweet spot (highest sell-through by price bucket)
@@ -1114,7 +1114,7 @@ class ViewArtist extends Page
                 DB::raw('AVG(LEAST(tt.quota_sold * 1.0 / tt.quota_total, 1.0)) as avg_st')
             )
             ->groupBy('price_range')
-            ->orderByDesc('avg_st')
+            ->orderByRaw('avg_st DESC NULLS LAST')
             ->get();
 
         // 4. Lead time analysis — when to start promoting
@@ -1170,7 +1170,7 @@ class ViewArtist extends Page
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
             )
             ->groupBy('cap_range')
-            ->orderByDesc('avg_st')
+            ->orderByRaw('avg_st DESC NULLS LAST')
             ->get();
 
         // Build recommendations

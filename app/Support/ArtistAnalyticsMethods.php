@@ -443,7 +443,7 @@ trait ArtistAnalyticsMethods
                 DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'),
                 DB::raw('AVG(ts.sold * (SELECT AVG(tt2.price_cents) FROM ticket_types tt2 WHERE tt2.event_id = e.id) / 100) as avg_revenue')
-            )->groupBy('dow', 'day_name')->orderByDesc('avg_st')->get();
+            )->groupBy('dow', 'day_name')->orderByRaw('avg_st DESC NULLS LAST')->get();
 
         // Month performance
         $monthPerformance = DB::table('events as e')
@@ -455,7 +455,7 @@ trait ArtistAnalyticsMethods
                 DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Month') as month_name" : 'MONTHNAME(e.event_date) as month_name'),
                 DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
-            )->groupBy('month_num', 'month_name')->orderByDesc('avg_st')->get();
+            )->groupBy('month_num', 'month_name')->orderByRaw('avg_st DESC NULLS LAST')->get();
 
         // Price performance
         $pricePerformance = DB::table('ticket_types as tt')
@@ -464,7 +464,7 @@ trait ArtistAnalyticsMethods
                 DB::raw("CASE WHEN tt.price_cents/100 < 50 THEN '0-50' WHEN tt.price_cents/100 < 100 THEN '50-100' WHEN tt.price_cents/100 < 150 THEN '100-150' WHEN tt.price_cents/100 < 200 THEN '150-200' WHEN tt.price_cents/100 < 300 THEN '200-300' ELSE '300+' END as price_range"),
                 DB::raw('AVG(tt.price_cents/100) as avg_price'), DB::raw('SUM(tt.quota_sold) as total_sold'), DB::raw('SUM(tt.quota_total) as total_cap'),
                 DB::raw('AVG(LEAST(tt.quota_sold * 1.0 / tt.quota_total, 1.0)) as avg_st')
-            )->groupBy('price_range')->orderByDesc('avg_st')->get();
+            )->groupBy('price_range')->orderByRaw('avg_st DESC NULLS LAST')->get();
 
         // Lead time stats
         $leadTimeStats = [];
@@ -487,7 +487,7 @@ trait ArtistAnalyticsMethods
             ->where('ea.artist_id', $artistId)->where('v.capacity', '>', 0)
             ->select(DB::raw("CASE WHEN v.capacity < 200 THEN '< 200' WHEN v.capacity < 500 THEN '200-500' WHEN v.capacity < 1000 THEN '500-1000' WHEN v.capacity < 2000 THEN '1000-2000' WHEN v.capacity < 5000 THEN '2000-5000' ELSE '5000+' END as cap_range"),
                 DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'), DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'))
-            ->groupBy('cap_range')->orderByDesc('avg_st')->get();
+            ->groupBy('cap_range')->orderByRaw('avg_st DESC NULLS LAST')->get();
 
         // Build recommendations
         $recommendations = [];
