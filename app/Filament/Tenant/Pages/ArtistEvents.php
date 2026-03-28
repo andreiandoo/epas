@@ -49,7 +49,7 @@ class ArtistEvents extends Page
         $allEvents = Event::whereHas('artists', function ($q) use ($artist) {
                 $q->where('artists.id', $artist->id);
             })
-            ->with(['venue', 'tenant.domains', 'marketplaceClient', 'ticketTypes'])
+            ->with(['venue', 'tenant.domains', 'marketplaceClient', 'marketplaceOrganizer', 'ticketTypes'])
             ->get()
             ->map(function ($event) {
                 $ticketStats = DB::table('tickets')

@@ -76,9 +76,10 @@
                                 $venueCity = $event->venue->city ?? '';
                             }
 
-                            // Organizer
-                            $orgName = $event->tenant?->public_name ?? $event->tenant?->name ?? '';
-                            $orgCompany = $event->tenant?->company_name ?? '';
+                            // Organizer (from marketplace organizer or tenant)
+                            $mpOrg = $event->marketplaceOrganizer;
+                            $orgName = $mpOrg?->contact_name ?? $mpOrg?->name ?? $event->tenant?->public_name ?? $event->tenant?->name ?? '';
+                            $orgCompany = $mpOrg?->company_name ?? $event->tenant?->company_name ?? '';
                         @endphp
                         <div class="px-4 py-3 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
                             {{-- Date --}}

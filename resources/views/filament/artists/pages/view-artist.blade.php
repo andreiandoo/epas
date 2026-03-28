@@ -439,7 +439,7 @@ canvas{width:100%!important;}
                     <div><span style="color:var(--warn);font-size:26px;font-weight:700;">{{ $loyalty['superfan'] ?? 0 }}</span><br><span style="color:var(--muted);font-size:11px;">Superfan</span></div>
                 </div>
             </div>
-            <div class="card"><div class="card-b" style="overflow-x:auto;">
+            <div class="card"><div class="card-h">Events with Ticket Data ({{ count($perfEvents) }}) <span style="font-weight:400;color:var(--muted);font-size:11px;">— only events with configured ticket types are shown</span></div><div class="card-b" style="overflow-x:auto;">
                 <table class="tbl">
                     <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Sold/Cap</th><th>Sell-Through</th><th>Check-in</th><th>Role</th></tr></thead>
                     <tbody>
@@ -796,7 +796,7 @@ canvas{width:100%!important;}
                 <tbody>
                     @foreach($upcomingEvents as $ue)
                     <tr>
-                        <td><button wire:click="analyzeEvent({{ $ue['id'] }})" title="Analyze this event" style="cursor:pointer;background:none;border:1px solid var(--ring);border-radius:6px;padding:3px 6px;color:var(--accent);font-size:11px;">
+                        <td><button onclick="document.querySelector('[wire\\:change*=analyzeEvent]').value={{ $ue['id'] }};document.querySelector('[wire\\:change*=analyzeEvent]').dispatchEvent(new Event('change'));" title="Analyze this event" style="cursor:pointer;background:none;border:1px solid var(--ring);border-radius:6px;padding:3px 6px;color:var(--accent);font-size:11px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         </button></td>
                         <td style="white-space:nowrap;">{{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '—' }}</td>
