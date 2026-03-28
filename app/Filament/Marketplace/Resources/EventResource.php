@@ -3389,6 +3389,9 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('venue_id')
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
+                    ->limit(25)
+                    ->tooltip(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()))
+                    ->extraAttributes(['style' => 'max-width:175px;'])
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplace_city_id')
