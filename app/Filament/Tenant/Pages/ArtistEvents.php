@@ -51,7 +51,7 @@ class ArtistEvents extends Page
         $allEvents = Event::whereHas('artists', function ($q) use ($artist) {
                 $q->where('artists.id', $artist->id);
             })
-            ->with(['venue', 'tenant.domains', 'ticketTypes'])
+            ->with(['venue', 'tenant.domains', 'marketplaceClient', 'ticketTypes'])
             ->get()
             ->map(function ($event) {
                 $ticketStats = DB::table('tickets')
@@ -73,22 +73,27 @@ class ArtistEvents extends Page
                     'fill_rate' => $capacity > 0 ? round($sold / $capacity * 100) : 0,
                 ];
 
-                // Build public URL with fallback chain
+                // Build public URL
                 $slug = is_array($event->slug)
                     ? ($event->slug[app()->getLocale()] ?? $event->slug['en'] ?? $event->slug['ro'] ?? '')
                     : ($event->slug ?? '');
 
-                $domain = $event->tenant?->domains?->where('is_primary', true)->first()?->domain
-                    ?? $event->tenant?->domains?->where('is_active', true)->first()?->domain
-                    ?? $event->tenant?->domain;
-
-                if ($domain && $slug) {
-                    $event->public_url = 'https://' . preg_replace('#^https?://#', '', $domain) . '/events/' . $slug;
-                } elseif ($slug) {
-                    // Fallback: core public URL
-                    $event->public_url = url('/en/events/' . $slug);
-                } else {
-                    $event->public_url = null;
+                $event->public_url = null;
+                if ($slug) {
+                    // Marketplace events: use marketplace client domain + /bilete/
+                    if ($event->marketplace_client_id && $event->marketplaceClient?->domain) {
+                        $mpDomain = preg_replace('#^https?://#', '', rtrim($event->marketplaceClient->domain, '/'));
+                        $event->public_url = 'https://' . $mpDomain . '/bilete/' . $slug;
+                    }
+                    // Tenant events: use tenant primary/active domain + /events/
+                    elseif ($event->tenant_id) {
+                        $domain = $event->tenant?->domains?->where('is_primary', true)->first()?->domain
+                            ?? $event->tenant?->domains?->where('is_active', true)->first()?->domain
+                            ?? $event->tenant?->domain;
+                        if ($domain) {
+                            $event->public_url = 'https://' . preg_replace('#^https?://#', '', $domain) . '/events/' . $slug;
+                        }
+                    }
                 }
 
                 // Compute status

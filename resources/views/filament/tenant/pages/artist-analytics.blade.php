@@ -228,6 +228,197 @@
         </div>
     @endif
 
+    {{-- Geographic Intelligence --}}
+    @php $geo = $geoIntelligence ?? []; @endphp
+    @if(!empty($geo))
+        <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Geographic Intelligence</div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead><tr class="bg-gray-800/50">
+                        <th class="text-left px-3 py-2 text-gray-400">City</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Events</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Tickets</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Revenue</th>
+                        <th class="text-left px-3 py-2 text-gray-400">Recommended Venue</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-800/50">
+                        @foreach(array_slice($geo, 0, 15) as $g)
+                            <tr>
+                                <td class="px-3 py-2 text-gray-200 font-medium">{{ $g['city'] }} <span class="text-gray-500">{{ $g['country'] }}</span></td>
+                                <td class="px-3 py-2 text-gray-400 text-right">{{ $g['events_count'] }}</td>
+                                <td class="px-3 py-2 text-gray-300 text-right font-mono">{{ number_format($g['tickets_sold']) }}</td>
+                                <td class="px-3 py-2 text-emerald-400 text-right font-mono">{{ number_format($g['total_revenue'], 0) }}</td>
+                                <td class="px-3 py-2 text-gray-400">{{ $g['recommended_venue'] ?? '—' }} @if($g['recommended_capacity'] ?? 0) <span class="text-gray-500">({{ number_format($g['recommended_capacity']) }} cap)</span> @endif</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    {{-- Performance Deep Dive --}}
+    @php $perf = $performanceDeepDive ?? []; $perfEvents = $perf['events'] ?? []; $loyalty = $perf['customer_loyalty'] ?? []; $roleComp = $perf['role_comparison'] ?? []; @endphp
+    @if(!empty($perfEvents))
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {{-- Customer Loyalty --}}
+            @if(!empty($loyalty) && ($loyalty['total'] ?? 0) > 0)
+                <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
+                    <div class="text-sm font-semibold text-gray-300 mb-3">Customer Loyalty</div>
+                    <div class="grid grid-cols-4 gap-3 text-center">
+                        <div><div class="text-lg font-bold text-white">{{ $loyalty['total'] }}</div><div class="text-[10px] text-gray-400">Total</div></div>
+                        <div><div class="text-lg font-bold text-gray-400">{{ $loyalty['one_time'] }}</div><div class="text-[10px] text-gray-400">One-time</div></div>
+                        <div><div class="text-lg font-bold text-blue-400">{{ $loyalty['repeat'] }}</div><div class="text-[10px] text-gray-400">Repeat</div></div>
+                        <div><div class="text-lg font-bold text-amber-400">{{ $loyalty['superfan'] }}</div><div class="text-[10px] text-gray-400">Superfan (3+)</div></div>
+                    </div>
+                    <div class="mt-3 text-center text-xs"><span class="text-emerald-400 font-semibold">{{ $loyalty['repeat_rate'] }}%</span> <span class="text-gray-400">repeat rate</span></div>
+                </div>
+            @endif
+
+            {{-- Role Comparison --}}
+            @if(!empty($roleComp))
+                <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
+                    <div class="text-sm font-semibold text-gray-300 mb-3">Role Comparison</div>
+                    @foreach($roleComp as $role => $stats)
+                        <div class="flex justify-between items-center py-2 border-b border-gray-800/50 text-xs">
+                            <span class="text-gray-200 font-medium">{{ $role }}</span>
+                            <span class="text-gray-400">{{ $stats['events'] }} events, avg {{ $stats['avg_sold'] }} sold, {{ $stats['avg_sell_through'] }}% ST</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endif
+
+    {{-- Sales Intelligence --}}
+    @php $sales = $salesIntelligence ?? []; $priceSens = $sales['price_sensitivity'] ?? []; $purchaseTiming = $sales['purchase_timing'] ?? []; @endphp
+    @if(!empty($priceSens) || !empty($purchaseTiming))
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {{-- Price Sensitivity --}}
+            @if(!empty($priceSens))
+                <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
+                    <div class="text-sm font-semibold text-gray-300 mb-3">Price Sensitivity</div>
+                    @foreach($priceSens as $ps)
+                        <div class="flex justify-between items-center py-1.5 text-xs">
+                            <span class="text-gray-300">{{ $ps['range'] }} RON</span>
+                            <div class="flex items-center gap-2">
+                                <div class="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 rounded-full" style="width: {{ min($ps['sell_through'], 100) }}%"></div></div>
+                                <span class="text-gray-400 font-mono w-12 text-right">{{ $ps['sell_through'] }}%</span>
+                            </div>
+                        </div>
+                    @endforeach
+                    @if($sales['fee_comparison'] ?? null)
+                        <div class="mt-3 pt-2 border-t border-gray-800 text-xs">
+                            <span class="text-gray-400">Fee range:</span>
+                            <span class="text-white font-semibold">{{ number_format($sales['fee_comparison']['min_fee'] ?? 0) }} - {{ number_format($sales['fee_comparison']['max_fee'] ?? 0) }} EUR</span>
+                            <span class="ml-2 {{ ($sales['fee_comparison']['in_range'] ?? false) ? 'text-emerald-400' : 'text-amber-400' }}">Avg revenue: {{ number_format($sales['fee_comparison']['avg_revenue'] ?? 0) }}</span>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            {{-- Purchase Timing --}}
+            @if(!empty($purchaseTiming))
+                <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4">
+                    <div class="text-sm font-semibold text-gray-300 mb-3">Purchase Timing <span class="text-gray-500 text-[10px]">(avg {{ $sales['avg_lead_days'] ?? 0 }}d before event)</span></div>
+                    @php $timingLabels = ['super_early' => '90+ days', 'early_bird' => '31-90 days', 'last_month' => '8-30 days', 'last_week' => '2-7 days', 'last_minute' => 'Last minute']; @endphp
+                    @foreach($timingLabels as $key => $label)
+                        @if(($purchaseTiming[$key] ?? 0) > 0)
+                            <div class="flex justify-between items-center py-1.5 text-xs">
+                                <span class="text-gray-300">{{ $label }}</span>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden"><div class="h-full bg-blue-500 rounded-full" style="width: {{ min($purchaseTiming[$key], 100) }}%"></div></div>
+                                    <span class="text-gray-400 font-mono w-12 text-right">{{ $purchaseTiming[$key] }}%</span>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+        </div>
+    @endif
+
+    {{-- City Expansion Planner --}}
+    @php $expansion = $expansionPlanner ?? []; @endphp
+    @if(!empty($expansion))
+        <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">City Expansion Opportunities</div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead><tr class="bg-gray-800/50">
+                        <th class="text-left px-3 py-2 text-gray-400">City</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Similar Events</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Est. Demand</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Sell-Through</th>
+                        <th class="text-center px-3 py-2 text-gray-400">Confidence</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-800/50">
+                        @foreach(array_slice($expansion, 0, 10) as $exp)
+                            <tr>
+                                <td class="px-3 py-2 text-gray-200 font-medium">{{ $exp['city'] }}</td>
+                                <td class="px-3 py-2 text-gray-400 text-right">{{ $exp['similar_events'] }}</td>
+                                <td class="px-3 py-2 text-gray-300 text-right">{{ number_format($exp['estimated_demand']) }}</td>
+                                <td class="px-3 py-2 text-gray-300 text-right">{{ $exp['similar_sell_through'] }}%</td>
+                                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $exp['confidence'] === 'high' ? 'bg-emerald-500/10 text-emerald-400' : ($exp['confidence'] === 'medium' ? 'bg-amber-500/10 text-amber-400' : 'bg-gray-500/10 text-gray-400') }}">{{ $exp['confidence'] }}</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    {{-- Upcoming Events Analysis --}}
+    @php $upcoming = $upcomingAnalysis ?? []; @endphp
+    @if(!empty($upcoming))
+        <div class="rounded-xl bg-gray-900 border border-gray-700/50 overflow-hidden mb-6">
+            <div class="px-4 py-3 border-b border-gray-700/50 text-sm font-semibold text-gray-300">Upcoming Events Tracker</div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead><tr class="bg-gray-800/50">
+                        <th class="text-left px-3 py-2 text-gray-400">Event</th>
+                        <th class="text-left px-3 py-2 text-gray-400">Venue</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Days Left</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Sold / Cap</th>
+                        <th class="text-right px-3 py-2 text-gray-400">Sell-Through</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-800/50">
+                        @foreach($upcoming as $ue)
+                            <tr>
+                                <td class="px-3 py-2"><span class="text-gray-200 font-medium">{{ \Illuminate\Support\Str::limit($ue['title'], 40) }}</span><br><span class="text-gray-500">{{ $ue['date'] }}</span></td>
+                                <td class="px-3 py-2 text-gray-400">{{ $ue['venue'] ?? '—' }} <span class="text-gray-500">{{ $ue['city'] ?? '' }}</span></td>
+                                <td class="px-3 py-2 text-right {{ ($ue['days_until'] ?? 999) <= 7 ? 'text-red-400 font-semibold' : 'text-gray-300' }}">{{ $ue['days_until'] ?? '—' }}d</td>
+                                <td class="px-3 py-2 text-right text-gray-300 font-mono">{{ $ue['sold'] }} / {{ $ue['capacity'] ?: '—' }}</td>
+                                <td class="px-3 py-2 text-right"><span class="{{ ($ue['sell_through'] ?? 0) >= 80 ? 'text-emerald-400' : (($ue['sell_through'] ?? 0) >= 50 ? 'text-blue-400' : 'text-gray-400') }} font-semibold">{{ $ue['sell_through'] ?? '—' }}%</span></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
+
+    {{-- Opportunities / Recommendations --}}
+    @php $opps = $opportunities ?? []; $recs = $opps['recommendations'] ?? []; @endphp
+    @if(!empty($recs))
+        <div class="rounded-xl bg-gray-900 border border-gray-700/50 p-4 mb-6">
+            <div class="text-sm font-semibold text-gray-300 mb-4">Recommendations</div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                @foreach($recs as $rec)
+                    <div class="rounded-lg bg-gray-800/50 border border-gray-700/30 p-3">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-500/10 text-indigo-300">{{ $rec['category'] }}</span>
+                            <span class="px-1.5 py-0.5 rounded-full text-[10px] {{ $rec['confidence'] === 'high' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400' }}">{{ $rec['confidence'] }}</span>
+                        </div>
+                        <div class="text-sm font-semibold text-white">{{ $rec['title'] }}</div>
+                        <div class="text-xs text-gray-400 mt-1">{{ $rec['detail'] }}</div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Chart.js Scripts --}}
     @if(!empty($months))
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
