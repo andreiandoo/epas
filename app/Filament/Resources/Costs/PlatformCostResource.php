@@ -120,7 +120,7 @@ class PlatformCostResource extends Resource
                     ->boolean(),
 
                 Tables\Columns\TextColumn::make('start_date')
-                    ->date()
+                    ->date('d M Y')
                     ->sortable()
                     ->toggleable(),
 
