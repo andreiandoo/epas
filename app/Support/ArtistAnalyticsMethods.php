@@ -162,7 +162,7 @@ trait ArtistAnalyticsMethods
 
     private function buildPerformanceDeepDive(array $eventIds, array $orderIds): array
     {
-        if (empty($eventIds)) return ['events' => [], 'avg_sell_through' => 0, 'avg_checkin_rate' => 0, 'role_comparison' => [], 'customer_loyalty' => ['one_time' => 0, 'repeat' => 0, 'superfan' => 0, 'repeat_rate' => 0, 'total' => 0]];
+        if (empty($eventIds)) return ['events' => [], 'avg_sell_through' => 0, 'avg_checkin_rate' => 0, 'role_comparison' => [], 'customer_loyalty' => ['one_time' => 0, 'repeat' => 0, 'superfan' => 0, 'repeat_rate' => 0, 'total' => 0], 'superfan_details' => []];
 
         $eventsPerf = DB::table('events as e')
             ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
@@ -178,131 +178,144 @@ trait ArtistAnalyticsMethods
                 $vn = $e->venue_name;
                 if ($vn && str_starts_with($vn, '{')) { $d = json_decode($vn, true); $vn = $d['en'] ?? $d['ro'] ?? reset($d) ?: $vn; }
                 $sold = (int) $e->sold; $cap = (int) $e->capacity;
-                return [
-                    'id' => $e->id, 'title' => $title, 'date' => $e->event_date,
-                    'venue' => $vn, 'city' => $e->venue_city,
-                    'is_headliner' => (bool) $e->is_headliner, 'is_co_headliner' => (bool) $e->is_co_headliner,
-                    'sold' => $sold, 'capacity' => $cap,
-                    'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null,
-                    'checkin_rate' => null, 'checkin_total' => 0, 'checkin_count' => 0,
-                ];
-            })->toArray();
+                return ['id' => $e->id, 'title' => $title, 'date' => $e->event_date, 'venue' => $vn, 'city' => $e->venue_city, 'is_headliner' => (bool) $e->is_headliner, 'is_co_headliner' => (bool) $e->is_co_headliner, 'sold' => $sold, 'capacity' => $cap, 'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null, 'checkin_rate' => null, 'checkin_total' => 0, 'checkin_count' => 0];
+            });
+
+        // Check-in rates
+        $checkinRates = DB::table('tickets as t')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->where('t.status', 'valid')
+            ->where(function ($q) use ($eventIds) { $q->whereIn('tt.event_id', $eventIds)->orWhereIn('t.event_id', $eventIds)->orWhereIn('t.marketplace_event_id', $eventIds); })
+            ->select(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id) as resolved_event_id'), DB::raw('COUNT(t.id) as total_tickets'), DB::raw('SUM(CASE WHEN t.checked_in_at IS NOT NULL THEN 1 ELSE 0 END) as checked_in'))
+            ->groupBy(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
+            ->get()->keyBy('resolved_event_id');
+
+        $eventsPerf = $eventsPerf->map(function ($e) use ($checkinRates) {
+            $ci = $checkinRates->get($e['id']);
+            $e['checkin_total'] = (int) ($ci?->total_tickets ?? 0);
+            $e['checkin_count'] = (int) ($ci?->checked_in ?? 0);
+            $e['checkin_rate'] = $e['checkin_total'] > 0 ? round($e['checkin_count'] / $e['checkin_total'] * 100, 1) : null;
+            return $e;
+        })->toArray();
 
         // Role comparison
         $roleStats = collect($eventsPerf)->groupBy(fn ($e) => $e['is_headliner'] ? 'Headliner' : ($e['is_co_headliner'] ? 'Co-Headliner' : 'Support'))
-            ->map(fn ($group) => [
-                'events' => $group->count(),
-                'avg_sold' => round($group->avg('sold'), 0),
-                'avg_sell_through' => round($group->whereNotNull('sell_through')->avg('sell_through'), 1),
-            ])->toArray();
+            ->map(fn ($group) => ['events' => $group->count(), 'avg_sold' => round($group->avg('sold'), 0), 'avg_sell_through' => round($group->whereNotNull('sell_through')->avg('sell_through'), 1), 'avg_checkin_rate' => round($group->whereNotNull('checkin_rate')->avg('checkin_rate'), 1)])->toArray();
 
         // Repeat customers
-        $loyalty = ['one_time' => 0, 'repeat' => 0, 'superfan' => 0, 'repeat_rate' => 0, 'total' => 0];
-        if (!empty($orderIds)) {
-            $customerEvents = DB::table('orders as o')
-                ->join('tickets as t', 't.order_id', '=', 'o.id')
-                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-                ->whereIn('o.id', $orderIds)
-                ->select(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'), DB::raw('COUNT(DISTINCT COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)) as events_attended'))
-                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))
-                ->get();
+        $customerEvents = !empty($orderIds) ? DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->whereIn('o.id', $orderIds)
+            ->select(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'), DB::raw('COUNT(DISTINCT COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)) as events_attended'))
+            ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))
+            ->get() : collect();
 
-            $loyalty = [
-                'one_time' => $customerEvents->where('events_attended', 1)->count(),
-                'repeat' => $customerEvents->where('events_attended', 2)->count(),
-                'superfan' => $customerEvents->where('events_attended', '>=', 3)->count(),
-            ];
-            $totalBuyers = array_sum($loyalty);
-            $loyalty['repeat_rate'] = $totalBuyers > 0 ? round(($loyalty['repeat'] + $loyalty['superfan']) / $totalBuyers * 100, 1) : 0;
-            $loyalty['total'] = $totalBuyers;
+        $loyalty = ['one_time' => $customerEvents->where('events_attended', 1)->count(), 'repeat' => $customerEvents->where('events_attended', 2)->count(), 'superfan' => $customerEvents->where('events_attended', '>=', 3)->count()];
+        $totalBuyers = array_sum($loyalty);
+        $loyalty['repeat_rate'] = $totalBuyers > 0 ? round(($loyalty['repeat'] + $loyalty['superfan']) / $totalBuyers * 100, 1) : 0;
+        $loyalty['total'] = $totalBuyers;
+
+        // Superfan details
+        $superfanIds = $customerEvents->where('events_attended', '>=', 3)->pluck('buyer_id')->toArray();
+        $superfanDetails = [];
+        if (!empty($superfanIds) && !empty($orderIds)) {
+            $superfanDetails = DB::table('orders as o')
+                ->leftJoin('marketplace_customers as mc', 'mc.id', '=', 'o.marketplace_customer_id')
+                ->leftJoin('customers as c', 'c.id', '=', 'o.customer_id')
+                ->whereIn(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), $superfanIds)
+                ->whereIn('o.id', $orderIds)
+                ->select(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'), DB::raw("COALESCE(mc.first_name, c.first_name, '') as first_name"), DB::raw("COALESCE(mc.last_name, c.last_name, '') as last_name"), DB::raw('COALESCE(mc.email, c.email, o.customer_email) as email'), DB::raw('COALESCE(mc.city, c.city) as city'), DB::raw('SUM(o.total) as total_spent'), DB::raw('COUNT(DISTINCT o.id) as orders'))
+                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw("COALESCE(mc.first_name, c.first_name, '')"), DB::raw("COALESCE(mc.last_name, c.last_name, '')"), DB::raw('COALESCE(mc.email, c.email, o.customer_email)'), DB::raw('COALESCE(mc.city, c.city)'))
+                ->orderByDesc('total_spent')->limit(20)->get()
+                ->map(function ($s) use ($customerEvents) {
+                    $evAtt = $customerEvents->where('buyer_id', $s->buyer_id)->first()?->events_attended ?? 0;
+                    return ['name' => trim($s->first_name . ' ' . $s->last_name) ?: '—', 'email' => $s->email ?? '—', 'city' => $s->city ?? '—', 'events' => (int) $evAtt, 'orders' => (int) $s->orders, 'total_spent' => round((float) $s->total_spent, 2)];
+                })->toArray();
         }
 
         $allWithSt = collect($eventsPerf)->whereNotNull('sell_through');
-        return [
-            'events' => $eventsPerf,
-            'avg_sell_through' => round($allWithSt->avg('sell_through'), 1),
-            'role_comparison' => $roleStats,
-            'customer_loyalty' => $loyalty,
-        ];
+        $allWithCi = collect($eventsPerf)->whereNotNull('checkin_rate');
+        return ['events' => $eventsPerf, 'avg_sell_through' => round($allWithSt->avg('sell_through'), 1), 'avg_checkin_rate' => round($allWithCi->avg('checkin_rate'), 1), 'superfan_details' => $superfanDetails, 'role_comparison' => $roleStats, 'customer_loyalty' => $loyalty];
     }
 
     private function buildSalesIntelligence(array $eventIds, array $orderIds): array
     {
-        $empty = ['channels' => [], 'purchase_timing' => [], 'avg_lead_days' => 0, 'price_sensitivity' => [], 'velocity_curves' => [], 'avg_revenue_per_event' => 0, 'fee_comparison' => null];
+        $empty = ['channels' => [], 'purchase_timing' => [], 'avg_lead_days' => 0, 'price_sensitivity' => [], 'velocity_curves' => [], 'avg_revenue_per_event' => 0, 'total_revenue' => 0, 'fee_comparison' => null];
         if (empty($orderIds)) return $empty;
 
-        // Price sensitivity
-        $priceData = DB::table('ticket_types as tt')
-            ->whereIn('tt.event_id', $eventIds)
-            ->where('tt.quota_total', '>', 0)
-            ->select('tt.price_cents', 'tt.quota_sold', 'tt.quota_total')
-            ->get();
+        // Channel breakdown
+        $channels = DB::table('orders as o')
+            ->whereIn('o.id', $orderIds)
+            ->select('o.source', DB::raw('COUNT(DISTINCT o.id) as orders_count'), DB::raw('SUM(o.total) as revenue'), DB::raw('COUNT(DISTINCT COALESCE(o.marketplace_customer_id, o.customer_id)) as unique_customers'))
+            ->groupBy('o.source')
+            ->get()->keyBy('source')->toArray();
+        $totalChannelOrders = collect($channels)->sum('orders_count');
+        foreach ($channels as &$ch) { $ch->pct = $totalChannelOrders > 0 ? round($ch->orders_count / $totalChannelOrders * 100, 1) : 0; }
 
-        $priceBuckets = ['0-50' => ['t' => 0, 'c' => 0], '50-100' => ['t' => 0, 'c' => 0], '100-200' => ['t' => 0, 'c' => 0], '200-500' => ['t' => 0, 'c' => 0], '500+' => ['t' => 0, 'c' => 0]];
-        foreach ($priceData as $p) {
-            $price = $p->price_cents / 100;
-            $bucket = match (true) { $price < 50 => '0-50', $price < 100 => '50-100', $price < 200 => '100-200', $price < 500 => '200-500', default => '500+' };
-            $priceBuckets[$bucket]['t'] += $p->quota_sold;
-            $priceBuckets[$bucket]['c'] += $p->quota_total;
-        }
-        $priceSensitivity = [];
-        foreach ($priceBuckets as $range => $d) {
-            if ($d['c'] > 0) $priceSensitivity[] = ['range' => $range, 'tickets' => $d['t'], 'sell_through' => round($d['t'] / $d['c'] * 100, 1)];
-        }
-
+        // Revenue
         $totalRevenue = DB::table('orders')->whereIn('id', $orderIds)->sum('total');
-        $totalEvents = count($eventIds);
+        $perEventRevenue = DB::table('orders')->whereIn('id', $orderIds)->whereNotNull('event_id')->select('event_id', DB::raw('SUM(total) as revenue'))->groupBy('event_id')->get();
+        $totalEvents = $perEventRevenue->count() ?: count($eventIds);
         $avgRevenuePerEvent = $totalEvents > 0 ? round($totalRevenue / $totalEvents, 2) : 0;
 
         // Fee comparison
         $feeComparison = null;
         if ($this->record->min_fee_concert || $this->record->max_fee_concert) {
-            $feeComparison = [
-                'min_fee' => $this->record->min_fee_concert,
-                'max_fee' => $this->record->max_fee_concert,
-                'avg_revenue' => $avgRevenuePerEvent,
-                'in_range' => $avgRevenuePerEvent >= ($this->record->min_fee_concert ?? 0) && ($this->record->max_fee_concert ? $avgRevenuePerEvent <= $this->record->max_fee_concert : true),
-            ];
+            $feeComparison = ['min_fee' => $this->record->min_fee_concert, 'max_fee' => $this->record->max_fee_concert, 'avg_revenue' => $avgRevenuePerEvent, 'in_range' => $avgRevenuePerEvent >= ($this->record->min_fee_concert ?? 0) && ($this->record->max_fee_concert ? $avgRevenuePerEvent <= $this->record->max_fee_concert : true)];
         }
 
-        // Purchase timing
-        $purchaseTiming = [];
-        $avgLeadDays = 0;
-        try {
-            $leadTimes = DB::table('orders as o')
-                ->join('tickets as t', 't.order_id', '=', 'o.id')
-                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-                ->join('events as e', function ($join) {
-                    $join->on('e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'));
-                })
-                ->whereIn('o.id', array_slice($orderIds, 0, 5000))
-                ->whereNotNull('e.event_date')
-                ->select(DB::raw(DB::getDriverName() === 'pgsql'
-                    ? '(e.event_date::date - COALESCE(o.paid_at, o.created_at)::date) as days_before'
-                    : 'DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
-                ->get()
-                ->pluck('days_before')
-                ->filter(fn ($d) => $d !== null && $d >= 0);
+        // Purchase lead time
+        $leadTimes = DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', function ($join) { $join->on('e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)')); })
+            ->whereIn('o.id', array_slice($orderIds, 0, 5000))
+            ->whereNotNull('e.event_date')
+            ->select(DB::raw(DB::getDriverName() === 'pgsql' ? '(e.event_date::date - COALESCE(o.paid_at, o.created_at)::date) as days_before' : 'DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at)) as days_before'))
+            ->get()->pluck('days_before')->filter(fn ($d) => $d !== null && $d >= 0);
 
-            $totalLead = $leadTimes->count();
-            $purchaseTiming = [
-                'last_minute' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d <= 1)->count() / $totalLead * 100, 1) : 0,
-                'last_week' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 2 && $d <= 7)->count() / $totalLead * 100, 1) : 0,
-                'last_month' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 8 && $d <= 30)->count() / $totalLead * 100, 1) : 0,
-                'early_bird' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 31 && $d <= 90)->count() / $totalLead * 100, 1) : 0,
-                'super_early' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d > 90)->count() / $totalLead * 100, 1) : 0,
-            ];
-            $avgLeadDays = round($leadTimes->avg() ?? 0, 1);
-        } catch (\Exception $e) {}
-
-        return [
-            'channels' => [], 'purchase_timing' => $purchaseTiming,
-            'avg_lead_days' => $avgLeadDays,
-            'price_sensitivity' => $priceSensitivity,
-            'velocity_curves' => [],
-            'avg_revenue_per_event' => $avgRevenuePerEvent,
-            'fee_comparison' => $feeComparison,
+        $totalLead = $leadTimes->count();
+        $purchaseTiming = [
+            'last_minute' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d <= 1)->count() / $totalLead * 100, 1) : 0,
+            'last_week' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 2 && $d <= 7)->count() / $totalLead * 100, 1) : 0,
+            'last_month' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 8 && $d <= 30)->count() / $totalLead * 100, 1) : 0,
+            'early_bird' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d >= 31 && $d <= 90)->count() / $totalLead * 100, 1) : 0,
+            'super_early' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d > 90)->count() / $totalLead * 100, 1) : 0,
         ];
+
+        // Price sensitivity
+        $priceData = DB::table('ticket_types as tt')->whereIn('tt.event_id', $eventIds)->where('tt.quota_total', '>', 0)->select('tt.price_cents', 'tt.quota_sold', 'tt.quota_total')->get();
+        $priceBuckets = ['0-50' => ['t' => 0, 'c' => 0], '50-100' => ['t' => 0, 'c' => 0], '100-200' => ['t' => 0, 'c' => 0], '200-500' => ['t' => 0, 'c' => 0], '500+' => ['t' => 0, 'c' => 0]];
+        foreach ($priceData as $p) { $price = $p->price_cents / 100; $bucket = match (true) { $price < 50 => '0-50', $price < 100 => '50-100', $price < 200 => '100-200', $price < 500 => '200-500', default => '500+' }; $priceBuckets[$bucket]['t'] += $p->quota_sold; $priceBuckets[$bucket]['c'] += $p->quota_total; }
+        $priceSensitivity = [];
+        foreach ($priceBuckets as $range => $d) { if ($d['c'] > 0) $priceSensitivity[] = ['range' => $range, 'tickets' => $d['t'], 'sell_through' => round($d['t'] / $d['c'] * 100, 1)]; }
+
+        // Sales velocity for last 5 events
+        $lastEventIds = DB::table('events as e')->join('event_artist as ea', 'ea.event_id', '=', 'e.id')->where('ea.artist_id', $this->record->id)->whereNotNull('e.event_date')->where('e.event_date', '<', now())->orderByDesc('e.event_date')->limit(5)->pluck('e.id')->toArray();
+        $velocityCurves = [];
+        if (!empty($lastEventIds)) {
+            foreach ($lastEventIds as $evId) {
+                $ev = DB::table('events')->where('id', $evId)->select('title', 'event_date')->first();
+                if (!$ev || !$ev->event_date) continue;
+                $title = $ev->title;
+                if ($title && str_starts_with($title, '{')) { $d = json_decode($title, true); $title = $d['en'] ?? $d['ro'] ?? reset($d) ?: $title; }
+                $evDateStr = Carbon::parse($ev->event_date)->toDateString();
+                $orderDates = DB::table('orders as o')->join('tickets as t', 't.order_id', '=', 'o.id')->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                    ->where(function ($q) use ($evId) { $q->where('tt.event_id', $evId)->orWhere('t.event_id', $evId)->orWhere('t.marketplace_event_id', $evId); })
+                    ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+                    ->selectRaw(DB::getDriverName() === 'pgsql' ? "GREATEST(0, ('{$evDateStr}'::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before, COUNT(t.id) as cnt" : "GREATEST(0, DATEDIFF('{$evDateStr}', COALESCE(o.paid_at, o.created_at))) as days_before, COUNT(t.id) as cnt")
+                    ->groupBy('days_before')->orderBy('days_before')->get();
+                $total = $orderDates->sum('cnt');
+                if ($total === 0) continue;
+                $milestones = [90, 60, 30, 7, 1];
+                $points = [];
+                foreach ($milestones as $m) { $soldByThen = $orderDates->where('days_before', '>=', $m)->sum('cnt'); $points[] = ['days' => $m, 'pct' => round($soldByThen / $total * 100, 1)]; }
+                $velocityCurves[] = ['event_name' => mb_substr($title, 0, 30), 'total_tickets' => $total, 'points' => $points];
+            }
+        }
+
+        return ['channels' => $channels, 'purchase_timing' => $purchaseTiming, 'avg_lead_days' => round($leadTimes->avg() ?? 0, 1), 'price_sensitivity' => $priceSensitivity, 'velocity_curves' => $velocityCurves, 'avg_revenue_per_event' => $avgRevenuePerEvent, 'total_revenue' => $totalRevenue, 'fee_comparison' => $feeComparison];
     }
 
     private function buildCityExpansionPlanner(array $eventIds, array $orderIds): array
@@ -419,46 +432,99 @@ trait ArtistAnalyticsMethods
         if (empty($eventIds)) return [];
         $artistId = $this->record->id;
 
-        $recommendations = [];
-
-        // Best day of week
+        // Day of week performance
         $dayPerformance = DB::table('events as e')
             ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
             ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
             ->where('ea.artist_id', $artistId)->whereNotNull('e.event_date')
             ->select(
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(DOW FROM e.event_date)::int + 1 as dow' : 'DAYOFWEEK(e.event_date) as dow'),
                 DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Day') as day_name" : 'DAYNAME(e.event_date) as day_name'),
-                DB::raw('COUNT(DISTINCT e.id) as events'),
-                DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
-            )
-            ->groupBy('day_name')
-            ->orderByDesc('avg_st')
-            ->get();
+                DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'),
+                DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'),
+                DB::raw('AVG(ts.sold * (SELECT AVG(tt2.price_cents) FROM ticket_types tt2 WHERE tt2.event_id = e.id) / 100) as avg_revenue')
+            )->groupBy('dow', 'day_name')->orderByDesc('avg_st')->get();
 
-        $bestDay = $dayPerformance->first();
-        if ($bestDay && $dayPerformance->count() >= 2) {
-            $recommendations[] = ['icon' => 'calendar', 'category' => 'Scheduling', 'title' => "Best day: " . trim($bestDay->day_name), 'detail' => round((float) $bestDay->avg_st, 1) . "% avg sell-through across {$bestDay->events} events", 'confidence' => $bestDay->events >= 3 ? 'high' : 'medium'];
-        }
-
-        // Best months
+        // Month performance
         $monthPerformance = DB::table('events as e')
             ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
             ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
             ->where('ea.artist_id', $artistId)->whereNotNull('e.event_date')
             ->select(
+                DB::raw(DB::getDriverName() === 'pgsql' ? 'EXTRACT(MONTH FROM e.event_date)::int as month_num' : 'MONTH(e.event_date) as month_num'),
                 DB::raw(DB::getDriverName() === 'pgsql' ? "TO_CHAR(e.event_date, 'Month') as month_name" : 'MONTHNAME(e.event_date) as month_name'),
-                DB::raw('COUNT(DISTINCT e.id) as events'),
+                DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'),
                 DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st')
-            )
-            ->groupBy('month_name')
-            ->orderByDesc('avg_st')
-            ->get();
+            )->groupBy('month_num', 'month_name')->orderByDesc('avg_st')->get();
 
-        $bestMonths = $monthPerformance->take(3);
-        if ($bestMonths->isNotEmpty()) {
-            $recommendations[] = ['icon' => 'trend', 'category' => 'Seasonality', 'title' => 'Best months: ' . $bestMonths->pluck('month_name')->map(fn ($m) => trim($m))->join(', '), 'detail' => $bestMonths->map(fn ($m) => trim($m->month_name) . ' (' . round((float) $m->avg_st, 1) . '%)')->join(', '), 'confidence' => 'medium'];
+        // Price performance
+        $pricePerformance = DB::table('ticket_types as tt')
+            ->whereIn('tt.event_id', $eventIds)->where('tt.quota_total', '>', 0)->where('tt.price_cents', '>', 0)
+            ->select(
+                DB::raw("CASE WHEN tt.price_cents/100 < 50 THEN '0-50' WHEN tt.price_cents/100 < 100 THEN '50-100' WHEN tt.price_cents/100 < 150 THEN '100-150' WHEN tt.price_cents/100 < 200 THEN '150-200' WHEN tt.price_cents/100 < 300 THEN '200-300' ELSE '300+' END as price_range"),
+                DB::raw('AVG(tt.price_cents/100) as avg_price'), DB::raw('SUM(tt.quota_sold) as total_sold'), DB::raw('SUM(tt.quota_total) as total_cap'),
+                DB::raw('AVG(LEAST(tt.quota_sold * 1.0 / tt.quota_total, 1.0)) as avg_st')
+            )->groupBy('price_range')->orderByDesc('avg_st')->get();
+
+        // Lead time stats
+        $leadTimeStats = [];
+        if (!empty($orderIds)) {
+            $leadTimes = DB::table('orders as o')->join('tickets as t', 't.order_id', '=', 'o.id')->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->join('events as e', function ($join) { $join->on('e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)')); })
+                ->whereIn('o.id', array_slice($orderIds, 0, 5000))->whereNotNull('e.event_date')
+                ->selectRaw(DB::getDriverName() === 'pgsql' ? 'GREATEST(0, (e.event_date::date - COALESCE(o.paid_at, o.created_at)::date)) as days_before' : 'GREATEST(0, DATEDIFF(e.event_date, COALESCE(o.paid_at, o.created_at))) as days_before')
+                ->get()->pluck('days_before')->filter(fn ($d) => $d >= 0);
+            if ($leadTimes->isNotEmpty()) {
+                $sorted = $leadTimes->sort()->values(); $cnt = $sorted->count();
+                $leadTimeStats = ['median' => round($leadTimes->median(), 0), 'p75' => round((float) ($sorted[(int) floor($cnt * 0.75)] ?? $sorted->last()), 0), 'p90' => round((float) ($sorted[(int) floor($cnt * 0.90)] ?? $sorted->last()), 0), 'avg' => round($leadTimes->avg(), 0), 'first_sale_avg' => round($leadTimes->max(), 0)];
+            }
         }
 
-        return ['recommendations' => $recommendations];
+        // Venue capacity performance
+        $venueCapPerf = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')->join('venues as v', 'v.id', '=', 'e.venue_id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)->where('v.capacity', '>', 0)
+            ->select(DB::raw("CASE WHEN v.capacity < 200 THEN '< 200' WHEN v.capacity < 500 THEN '200-500' WHEN v.capacity < 1000 THEN '500-1000' WHEN v.capacity < 2000 THEN '1000-2000' WHEN v.capacity < 5000 THEN '2000-5000' ELSE '5000+' END as cap_range"),
+                DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'), DB::raw('AVG(CASE WHEN ts.cap > 0 THEN ts.sold * 100.0 / ts.cap ELSE NULL END) as avg_st'))
+            ->groupBy('cap_range')->orderByDesc('avg_st')->get();
+
+        // Build recommendations
+        $recommendations = [];
+        $bestDay = $dayPerformance->first(); $worstDay = $dayPerformance->last();
+        if ($bestDay && $dayPerformance->count() >= 2) {
+            $recommendations[] = ['icon' => '📅', 'category' => 'Scheduling', 'title' => "Best day: " . trim($bestDay->day_name), 'detail' => round((float) $bestDay->avg_st, 1) . "% avg sell-through across {$bestDay->events} events" . ($worstDay ? ". Avoid " . trim($worstDay->day_name) . " (" . round((float) $worstDay->avg_st, 1) . "%)" : ''), 'confidence' => $bestDay->events >= 3 ? 'high' : 'medium'];
+        }
+        $bestMonths = $monthPerformance->take(3);
+        if ($bestMonths->isNotEmpty()) {
+            $recommendations[] = ['icon' => '🗓️', 'category' => 'Seasonality', 'title' => "Best months: " . $bestMonths->pluck('month_name')->map(fn ($m) => trim($m))->join(', '), 'detail' => $bestMonths->map(fn ($m) => trim($m->month_name) . ' (' . round((float) $m->avg_st, 1) . '%)')->join(', '), 'confidence' => $bestMonths->sum('events') >= 5 ? 'high' : 'medium'];
+        }
+        $bestPrice = $pricePerformance->first();
+        if ($bestPrice && $pricePerformance->count() >= 2) {
+            $recommendations[] = ['icon' => '💰', 'category' => 'Pricing', 'title' => "Sweet spot: {$bestPrice->price_range} RON", 'detail' => round((float) $bestPrice->avg_st * 100, 1) . "% sell-through at avg " . round((float) $bestPrice->avg_price, 0) . " RON. Sold {$bestPrice->total_sold} tickets.", 'confidence' => $bestPrice->total_sold >= 50 ? 'high' : 'medium'];
+        }
+        if (!empty($leadTimeStats)) {
+            $startPromo = $leadTimeStats['p90'] ?? $leadTimeStats['avg'] ?? 30;
+            $recommendations[] = ['icon' => '📢', 'category' => 'Promotion', 'title' => "Start promoting {$startPromo} days before", 'detail' => "90% of purchases within {$startPromo}d. Median: {$leadTimeStats['median']}d. Earliest: {$leadTimeStats['first_sale_avg']}d.", 'confidence' => 'high'];
+        }
+        $bestVenueCap = $venueCapPerf->first();
+        if ($bestVenueCap && $venueCapPerf->count() >= 2) {
+            $recommendations[] = ['icon' => '🏟️', 'category' => 'Venue Size', 'title' => "Optimal: {$bestVenueCap->cap_range}", 'detail' => round((float) $bestVenueCap->avg_st, 1) . "% sell-through. Avg attendance: " . round((float) $bestVenueCap->avg_sold), 'confidence' => $bestVenueCap->events >= 3 ? 'high' : 'medium'];
+        }
+        $personas = $this->buildAudiencePersonas($orderIds);
+        $topPersona = $personas['personas'][0] ?? null;
+        if ($topPersona) {
+            $topCity = !empty($topPersona['top_cities']) ? array_key_first($topPersona['top_cities']) : null;
+            $recommendations[] = ['icon' => '🎯', 'category' => 'Target Audience', 'title' => "{$topPersona['age_group']}, {$topPersona['gender']} ({$topPersona['percentage']}%)", 'detail' => "Avg spend: " . number_format($topPersona['avg_spend'], 0) . " RON" . ($topCity ? ". Top city: {$topCity}" : ''), 'confidence' => $topPersona['count'] >= 50 ? 'high' : 'medium'];
+        }
+
+        return [
+            'recommendations' => $recommendations,
+            'day_performance' => $dayPerformance->map(fn ($d) => ['day' => $d->day_name, 'events' => (int) $d->events, 'avg_sold' => round((float) $d->avg_sold), 'avg_st' => round((float) ($d->avg_st ?? 0), 1)])->values()->toArray(),
+            'month_performance' => $monthPerformance->map(fn ($m) => ['month' => $m->month_name, 'events' => (int) $m->events, 'avg_sold' => round((float) $m->avg_sold), 'avg_st' => round((float) ($m->avg_st ?? 0), 1)])->values()->toArray(),
+            'price_performance' => $pricePerformance->map(fn ($p) => ['range' => $p->price_range, 'avg_price' => round((float) $p->avg_price, 0), 'total_sold' => (int) $p->total_sold, 'avg_st' => round((float) ($p->avg_st ?? 0) * 100, 1)])->values()->toArray(),
+            'venue_cap_performance' => $venueCapPerf->map(fn ($v) => ['range' => $v->cap_range, 'events' => (int) $v->events, 'avg_sold' => round((float) $v->avg_sold), 'avg_st' => round((float) ($v->avg_st ?? 0), 1)])->values()->toArray(),
+            'lead_time' => $leadTimeStats,
+        ];
     }
 }
