@@ -444,9 +444,13 @@ class CustomerResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('tenant.name')
+                Tables\Columns\TextColumn::make('tenant_display')
                     ->label('Tenant')
-                    ->sortable()
+                    ->state(fn (\App\Models\Customer $record) =>
+                        $record->tenant?->name
+                        ?? $record->marketplaceClient?->name
+                        ?? '-'
+                    )
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('phone')
@@ -476,9 +480,13 @@ class CustomerResource extends Resource
                     })
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('primaryTenant.name')
+                Tables\Columns\TextColumn::make('primary_tenant_display')
                     ->label('Primary Tenant')
-                    ->sortable()
+                    ->state(fn (\App\Models\Customer $record) =>
+                        $record->primaryTenant?->name
+                        ?? $record->marketplaceClient?->name
+                        ?? '-'
+                    )
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('view_orders')
@@ -503,6 +511,11 @@ class CustomerResource extends Resource
                 Tables\Filters\SelectFilter::make('tenant_id')
                     ->label('Tenant')
                     ->relationship('tenant', 'name')
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\SelectFilter::make('marketplace_client_id')
+                    ->label('Marketplace')
+                    ->relationship('marketplaceClient', 'name')
                     ->searchable()
                     ->preload(),
             ])
@@ -532,6 +545,6 @@ class CustomerResource extends Resource
     {
         return parent::getEloquentQuery()
             ->withCount('orders')
-            ->with('primaryTenant'); // pt. afișare rapidă
+            ->with(['tenant', 'primaryTenant', 'marketplaceClient']);
     }
 }

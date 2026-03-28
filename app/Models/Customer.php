@@ -21,6 +21,7 @@ class Customer extends Authenticatable
     protected $fillable = [
         'tenant_id',
         'primary_tenant_id',
+        'marketplace_client_id',
         'email',
         'password',
         'first_name',
@@ -63,6 +64,12 @@ class Customer extends Authenticatable
     public function primaryTenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class, 'primary_tenant_id');
+    }
+
+    // Marketplace client (if customer originated from a marketplace)
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
     }
 
     // Tenants multiple (customerul poate aparține mai multor tenants)

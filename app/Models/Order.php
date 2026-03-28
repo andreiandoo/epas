@@ -161,10 +161,13 @@ class Order extends Model
                 $customer = Customer::where('email', $order->customer_email)->first();
                 if (!$customer) {
                     $customer = Customer::create([
-                        'tenant_id' => $order->tenant_id, // legacy
+                        'tenant_id' => $order->tenant_id,
                         'email'     => $order->customer_email,
                         'primary_tenant_id' => $order->tenant_id,
+                        'marketplace_client_id' => $order->marketplace_client_id ?? null,
                     ]);
+                } elseif (!$customer->marketplace_client_id && $order->marketplace_client_id) {
+                    $customer->update(['marketplace_client_id' => $order->marketplace_client_id]);
                 }
                 $order->customer_id = $customer->id;
             }

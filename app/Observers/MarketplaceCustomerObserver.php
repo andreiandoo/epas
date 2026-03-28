@@ -139,6 +139,7 @@ class MarketplaceCustomerObserver
                 // Create new core customer
                 Customer::create([
                     'tenant_id' => $tenantId,
+                    'marketplace_client_id' => $mc->marketplace_client_id,
                     'email' => $mc->email,
                     'first_name' => $mc->first_name,
                     'last_name' => $mc->last_name,
@@ -151,6 +152,9 @@ class MarketplaceCustomerObserver
             } else {
                 // Update only empty fields on existing customer
                 $updates = [];
+                if (!$customer->marketplace_client_id && $mc->marketplace_client_id) {
+                    $updates['marketplace_client_id'] = $mc->marketplace_client_id;
+                }
                 if (!$customer->first_name && $mc->first_name) $updates['first_name'] = $mc->first_name;
                 if (!$customer->last_name && $mc->last_name) $updates['last_name'] = $mc->last_name;
                 if (!$customer->phone && $mc->phone) $updates['phone'] = $mc->phone;
