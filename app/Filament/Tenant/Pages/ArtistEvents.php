@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\DB;
 class ArtistEvents extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
-    protected static ?string $navigationLabel = 'My Events';
+    protected static ?string $navigationLabel = 'Events Listed';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.artist-events';
 
-    public string $statusFilter = 'all';
+    public string $statusFilter = 'live';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -34,7 +34,7 @@ class ArtistEvents extends Page
 
     public function getTitle(): string
     {
-        return 'My Events';
+        return 'Events Listed';
     }
 
     public function getViewData(): array
@@ -46,8 +46,6 @@ class ArtistEvents extends Page
             return ['events' => collect(), 'marketplaceEvents' => collect(), 'artist' => null, 'stats' => [], 'statusFilter' => $this->statusFilter];
         }
 
-        // Core events where this artist appears (via event_artist pivot)
-        // Eager load tenant.domains for building URLs
         $allEvents = Event::whereHas('artists', function ($q) use ($artist) {
                 $q->where('artists.id', $artist->id);
             })
@@ -80,13 +78,10 @@ class ArtistEvents extends Page
 
                 $event->public_url = null;
                 if ($slug) {
-                    // Marketplace events: use marketplace client domain + /bilete/
                     if ($event->marketplace_client_id && $event->marketplaceClient?->domain) {
                         $mpDomain = preg_replace('#^https?://#', '', rtrim($event->marketplaceClient->domain, '/'));
                         $event->public_url = 'https://' . $mpDomain . '/bilete/' . $slug;
-                    }
-                    // Tenant events: use tenant primary/active domain + /events/
-                    elseif ($event->tenant_id) {
+                    } elseif ($event->tenant_id) {
                         $domain = $event->tenant?->domains?->where('is_primary', true)->first()?->domain
                             ?? $event->tenant?->domains?->where('is_active', true)->first()?->domain
                             ?? $event->tenant?->domain;
@@ -112,21 +107,20 @@ class ArtistEvents extends Page
             });
 
         // Apply status filter
-        $events = $allEvents;
-        if ($this->statusFilter !== 'all') {
-            $events = $allEvents->where('computed_status', $this->statusFilter);
-        }
+        $events = $this->statusFilter !== 'all'
+            ? $allEvents->where('computed_status', $this->statusFilter)
+            : $allEvents;
 
-        // Sort: upcoming first (closest date first), then past (most recent first)
+        // Sort: upcoming first (closest date first), TBD last
         $events = $events->sortBy(function ($event) {
+            $date = $event->event_date;
+            if (!$date) return '2_9999-12-31'; // TBD always last
             $now = now()->toDateString();
-            $date = $event->event_date ?? '9999-12-31';
             if ($date >= $now) {
-                // Upcoming: sort ascending (closest first) — prefix with 0
-                return '0_' . $date;
+                return '0_' . $date; // Upcoming: ascending
             }
-            // Past: sort descending (most recent first) — prefix with 1, invert date
-            return '1_' . str_replace($date, (9999 - (int) substr($date, 0, 4)) . substr($date, 4), $date);
+            // Past: reverse (most recent first)
+            return '1_' . (9999 - (int) substr($date, 0, 4)) . substr($date, 4);
         })->values();
 
         // Marketplace events

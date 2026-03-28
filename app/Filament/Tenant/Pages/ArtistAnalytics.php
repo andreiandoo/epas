@@ -56,12 +56,16 @@ class ArtistAnalytics extends Page
         $this->record = $artist->load(['artistTypes:id,name,slug', 'artistGenres:id,name,slug']);
 
         // Build yearly series (same as ViewArtist mount)
-        if (method_exists($this->record, 'buildYearlySeries')) {
-            [$months, $events, $tickets, $revenue] = $this->record->buildYearlySeries();
-            $this->seriesMonths = $months;
-            $this->seriesEvents = $events;
-            $this->seriesTickets = $tickets;
-            $this->seriesRevenue = $revenue;
+        try {
+            if (method_exists($this->record, 'buildYearlySeries')) {
+                [$months, $events, $tickets, $revenue] = $this->record->buildYearlySeries();
+                $this->seriesMonths = $months;
+                $this->seriesEvents = $events;
+                $this->seriesTickets = $tickets;
+                $this->seriesRevenue = $revenue;
+            }
+        } catch (\Exception $e) {
+            \Log::warning('ArtistAnalytics: buildYearlySeries failed', ['error' => $e->getMessage()]);
         }
     }
 
@@ -82,7 +86,20 @@ class ArtistAnalytics extends Page
             Cache::forget($cacheKey);
         }
 
-        return Cache::remember($cacheKey, 300, function () {
+        $emptyData = [
+            'kpis' => [], 'months' => [], 'events' => [], 'tickets' => [], 'revenue' => [],
+            'from' => now()->subDays(365), 'to' => now(),
+            'artistEvents' => collect(), 'artistVenues' => collect(), 'artistTenants' => collect(),
+            'topVenues' => collect(), 'topCities' => collect(), 'topCounties' => collect(),
+            'coreStats' => ['total_tickets' => 0, 'unique_buyers' => 0, 'total_revenue' => 0],
+            'audiencePersonas' => ['personas' => [], 'totals' => ['total_customers' => 0, 'with_demographics' => 0, 'age_distribution' => [], 'gender_overall' => []]],
+            'geoIntelligence' => [], 'performanceDeepDive' => ['events' => [], 'role_comparison' => [], 'customer_loyalty' => []],
+            'salesIntelligence' => ['channels' => [], 'purchase_timing' => [], 'price_sensitivity' => [], 'velocity_curves' => [], 'fee_comparison' => null],
+            'expansionPlanner' => [], 'upcomingAnalysis' => [], 'opportunities' => [],
+        ];
+
+        return Cache::remember($cacheKey, 300, function () use ($emptyData) {
+            try {
             $from = now()->subDays(365)->startOfDay();
             $to = now()->endOfDay();
 
@@ -164,6 +181,10 @@ class ArtistAnalytics extends Page
                     'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
                 ]
             );
+            } catch (\Exception $e) {
+                \Log::error('ArtistAnalytics: getViewData failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                return $emptyData;
+            }
         });
     }
 

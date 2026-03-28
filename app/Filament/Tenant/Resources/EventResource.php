@@ -30,6 +30,7 @@ class EventResource extends Resource
 {
     protected static ?string $model = Event::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
+    protected static ?string $navigationLabel = 'My Events';
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;
 
