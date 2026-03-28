@@ -165,25 +165,31 @@ canvas{width:100%!important;}
     selectedVenueId: null,
     eventAnalysis: @js($eventAnalysis ?? null),
     selectedEventId: @js($selectedEventId ?? null),
+    _isTenant: {{ isset($tenantEditUrl) ? 'true' : 'false' }},
     searchVenue() {
         if (this.venueQ.length < 2) { this.venueResults = []; return; }
         this.venueLoading = true;
-        $wire.set('venueSearch', this.venueQ).then(() => {
-            this.venueResults = $wire.get('venueResults');
-            this.venueLoading = false;
-        });
+        if (this._isTenant) {
+            $wire.call('searchVenuesApi', this.venueQ).then(r => { this.venueResults = r || []; this.venueLoading = false; });
+        } else {
+            $wire.set('venueSearch', this.venueQ).then(() => { this.venueResults = $wire.get('venueResults'); this.venueLoading = false; });
+        }
     },
     doAnalyzeEvent(id) {
         this.selectedEventId = id;
-        return $wire.call('analyzeEvent', id).then(() => {
-            this.eventAnalysis = $wire.get('eventAnalysis');
-        });
+        if (this._isTenant) {
+            return $wire.call('analyzeEventApi', id).then(r => { this.eventAnalysis = r; });
+        } else {
+            return $wire.call('analyzeEvent', id).then(() => { this.eventAnalysis = $wire.get('eventAnalysis'); });
+        }
     },
     doAnalyzeVenue(id) {
         this.selectedVenueId = id;
-        return $wire.call('analyzeVenue', id).then(() => {
-            this.venueAnalysis = $wire.get('venueAnalysis');
-        });
+        if (this._isTenant) {
+            return $wire.call('analyzeVenueApi', id).then(r => { this.venueAnalysis = r; });
+        } else {
+            return $wire.call('analyzeVenue', id).then(() => { this.venueAnalysis = $wire.get('venueAnalysis'); });
+        }
     }
 }">
 

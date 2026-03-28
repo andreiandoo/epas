@@ -287,6 +287,47 @@ class ArtistAnalytics extends Page
             })->toArray();
     }
 
+    /**
+     * Search venues - returns results directly to Alpine (no re-render).
+     */
+    public function searchVenuesApi(string $query): array
+    {
+        if (mb_strlen($query) < 2) return [];
+        $lower = mb_strtolower($query);
+        return \App\Models\Venue::where(function ($q) use ($query, $lower) {
+                if (DB::getDriverName() === 'pgsql') {
+                    $q->whereRaw("LOWER(COALESCE(name->>'en', name->>'ro', name::text)) ILIKE ?", ["%{$lower}%"])
+                      ->orWhereRaw("LOWER(city) ILIKE ?", ["%{$lower}%"]);
+                } else {
+                    $q->where('name', 'LIKE', "%{$query}%")->orWhere('city', 'LIKE', "%{$query}%");
+                }
+            })
+            ->select('id', 'name', 'city', 'capacity')->orderBy('name')->limit(15)->get()
+            ->map(function ($v) {
+                $name = is_array($v->name) ? ($v->name['en'] ?? $v->name['ro'] ?? reset($v->name) ?: '') : $v->name;
+                if (is_string($name) && str_starts_with($name, '{')) { $d = json_decode($name, true); $name = $d['en'] ?? $d['ro'] ?? reset($d) ?: $name; }
+                return ['id' => $v->id, 'label' => "{$name} ({$v->city})", 'name' => $name, 'city' => $v->city, 'capacity' => (int) ($v->capacity ?? 0)];
+            })->toArray();
+    }
+
+    /**
+     * Analyze event - returns analysis directly to Alpine (no re-render).
+     */
+    public function analyzeEventApi(int $eventId): ?array
+    {
+        $this->analyzeEvent($eventId);
+        return $this->eventAnalysis;
+    }
+
+    /**
+     * Analyze venue - returns analysis directly to Alpine (no re-render).
+     */
+    public function analyzeVenueApi(int $venueId): ?array
+    {
+        $this->analyzeVenue($venueId);
+        return $this->venueAnalysis;
+    }
+
     public function analyzeVenue(int $venueId): void
     {
         $this->selectedVenueId = $venueId;
