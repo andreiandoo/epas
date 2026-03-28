@@ -73,13 +73,23 @@ class ArtistEvents extends Page
                     'fill_rate' => $capacity > 0 ? round($sold / $capacity * 100) : 0,
                 ];
 
-                // Build public URL
+                // Build public URL with fallback chain
                 $slug = is_array($event->slug)
                     ? ($event->slug[app()->getLocale()] ?? $event->slug['en'] ?? $event->slug['ro'] ?? '')
                     : ($event->slug ?? '');
+
                 $domain = $event->tenant?->domains?->where('is_primary', true)->first()?->domain
-                    ?? $event->tenant?->domains?->where('is_active', true)->first()?->domain;
-                $event->public_url = ($domain && $slug) ? 'https://' . $domain . '/events/' . $slug : null;
+                    ?? $event->tenant?->domains?->where('is_active', true)->first()?->domain
+                    ?? $event->tenant?->domain;
+
+                if ($domain && $slug) {
+                    $event->public_url = 'https://' . preg_replace('#^https?://#', '', $domain) . '/events/' . $slug;
+                } elseif ($slug) {
+                    // Fallback: core public URL
+                    $event->public_url = url('/en/events/' . $slug);
+                } else {
+                    $event->public_url = null;
+                }
 
                 // Compute status
                 $now = now()->toDateString();
