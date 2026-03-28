@@ -44,7 +44,7 @@ class EditTenant extends EditRecord
         $toDeactivate = array_diff($currentActiveIds, $selectedIds);
         foreach ($toDeactivate as $microserviceId) {
             $this->record->microservices()->updateExistingPivot($microserviceId, [
-                'is_active' => false,
+                'status' => 'inactive',
             ]);
         }
 
@@ -57,13 +57,13 @@ class EditTenant extends EditRecord
             if ($existing) {
                 // Reactivate existing relationship
                 $this->record->microservices()->updateExistingPivot($microserviceId, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                 ]);
             } else {
                 // Create new relationship
                 $this->record->microservices()->attach($microserviceId, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                 ]);
             }

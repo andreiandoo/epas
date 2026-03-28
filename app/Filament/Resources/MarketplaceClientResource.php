@@ -269,20 +269,17 @@ class MarketplaceClientResource extends Resource
                                             if ($isEnabled && !$existing) {
                                                 // Attach new
                                                 $record->microservices()->attach($microserviceId, [
-                                                    'is_active' => true,
                                                     'status' => 'active',
                                                     'activated_at' => now(),
                                                 ]);
                                             } elseif ($isEnabled && $existing) {
                                                 // Update to active
                                                 $record->microservices()->updateExistingPivot($microserviceId, [
-                                                    'is_active' => true,
                                                     'status' => 'active',
                                                 ]);
                                             } elseif (!$isEnabled && $existing) {
                                                 // Deactivate
                                                 $record->microservices()->updateExistingPivot($microserviceId, [
-                                                    'is_active' => false,
                                                     'status' => 'inactive',
                                                 ]);
                                             }

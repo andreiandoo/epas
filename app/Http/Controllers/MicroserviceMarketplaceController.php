@@ -292,7 +292,7 @@ class MicroserviceMarketplaceController extends Controller
                     ->where('microservice_id', '!=', $microservice->id)
                     ->each(function ($existingProcessor) use ($tenant) {
                         $tenant->microservices()->updateExistingPivot($existingProcessor->id, [
-                            'is_active' => false,
+                            'status' => 'inactive',
                         ]);
                     });
             }
@@ -300,12 +300,12 @@ class MicroserviceMarketplaceController extends Controller
             // Check if already activated
             if ($tenant->microservices()->where('microservice_id', $microservice->id)->exists()) {
                 $tenant->microservices()->updateExistingPivot($microservice->id, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                 ]);
             } else {
                 $tenant->microservices()->attach($microservice->id, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                     'configuration' => $this->stripeService->getDefaultConfiguration($microservice),
                 ]);

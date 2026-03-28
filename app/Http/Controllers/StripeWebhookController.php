@@ -271,7 +271,7 @@ class StripeWebhookController extends Controller
 
                 foreach ($microserviceIds as $microserviceId) {
                     $tenant->microservices()->updateExistingPivot($microserviceId, [
-                        'is_active' => false,
+                        'status' => 'inactive',
                         'expires_at' => now(),
                     ]);
                 }

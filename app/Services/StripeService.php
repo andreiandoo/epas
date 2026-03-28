@@ -210,7 +210,7 @@ class StripeService
                     ->where('microservice_id', '!=', $microservice->id)
                     ->each(function ($existingProcessor) use ($tenant) {
                         $tenant->microservices()->updateExistingPivot($existingProcessor->id, [
-                            'is_active' => false,
+                            'status' => 'inactive',
                         ]);
                     });
             }
@@ -219,13 +219,13 @@ class StripeService
             if ($tenant->microservices()->where('microservice_id', $microservice->id)->exists()) {
                 // Update existing relationship
                 $tenant->microservices()->updateExistingPivot($microservice->id, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                 ]);
             } else {
                 // Attach new microservice
                 $tenant->microservices()->attach($microservice->id, [
-                    'is_active' => true,
+                    'status' => 'active',
                     'activated_at' => now(),
                     'configuration' => $this->getDefaultConfiguration($microservice),
                 ]);

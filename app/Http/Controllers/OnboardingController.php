@@ -389,7 +389,7 @@ class OnboardingController extends Controller
             if (!empty($step4['microservices'])) {
                 foreach ($step4['microservices'] as $microserviceId) {
                     $tenant->microservices()->attach($microserviceId, [
-                        'is_active' => false, // Activate after payment/verification
+                        'status' => 'pending', // Activate after payment/verification
                         'activated_at' => null,
                     ]);
                 }

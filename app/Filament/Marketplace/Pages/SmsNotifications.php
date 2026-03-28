@@ -121,7 +121,6 @@ class SmsNotifications extends Page
             // Activate microservice for this marketplace
             $marketplace->microservices()->attach($microservice->id, [
                 'status' => 'active',
-                'is_active' => true,
                 'activated_at' => now(),
                 'settings' => json_encode([
                     'transactional_enabled' => $this->transactionalEnabled,
@@ -138,7 +137,6 @@ class SmsNotifications extends Page
 
             $marketplace->microservices()->updateExistingPivot($microservice->id, [
                 'status' => 'active',
-                'is_active' => true,
                 'settings' => json_encode($settings),
             ]);
         }
