@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\TenantType;
+use App\Models\Artist;
 use App\Models\Tenant;
+use App\Models\TenantVerificationCode;
 use App\Models\User;
 use App\Models\Domain;
 use App\Models\Microservice;
@@ -38,7 +41,6 @@ class OnboardingController extends Controller
      */
     public function index()
     {
-        // Initialize session data if not exists
         if (!Session::has('onboarding')) {
             Session::put('onboarding', [
                 'step' => 1,
@@ -49,99 +51,136 @@ class OnboardingController extends Controller
         $step = Session::get('onboarding.step', 1);
         $data = Session::get('onboarding.data', []);
 
-        // Get microservices for step 4
         $microservices = Microservice::active()->get();
-
-        // Get Romanian counties for step 2
         $romaniaCounties = $this->locationService->getStates('ro');
-
-        // Get available payment processors for step 2
         $paymentProcessors = PaymentProcessorFactory::getAvailableProcessors();
 
-        return view('onboarding.wizard', compact('step', 'data', 'microservices', 'romaniaCounties', 'paymentProcessors'));
+        // Tenant types for step 2
+        $tenantTypes = collect(TenantType::cases())->map(fn ($t) => [
+            'value' => $t->value,
+            'label' => $t->label(),
+        ])->values();
+
+        return view('onboarding.wizard', compact(
+            'step', 'data', 'microservices', 'romaniaCounties',
+            'paymentProcessors', 'tenantTypes'
+        ));
     }
 
     /**
-     * Store Step 1 - Personal Information
+     * Step 1 - Personal Information (simplified)
      */
     public function storeStepOne(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'public_name' => 'required|string|max:255',
-            'organizer_type' => 'required|string|in:event_organizer,pub_bar,theater,concert_hall,philharmonic,museum,sports,other',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
-            'contact_position' => 'nullable|string|max:255',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'organizer_type', 'email', 'phone', 'contact_position', 'password']);
+        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'email', 'phone', 'password']);
         $onboarding['step'] = 2;
         Session::put('onboarding', $onboarding);
 
-        return response()->json([
-            'success' => true,
-            'next_step' => 2
-        ]);
+        return response()->json(['success' => true, 'next_step' => 2]);
     }
 
     /**
-     * Store Step 2 - Company Information
+     * Step 2 - Account Type
      */
     public function storeStepTwo(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'country' => 'required|string|max:255',
-            'vat_payer' => 'required|boolean',
-            'cui' => 'nullable|string|max:50',
-            'company_name' => 'required|string|max:255',
-            'reg_com' => 'nullable|string|max:255',
-            'address' => 'required|string',
-            'city' => 'required|string|max:255',
-            'state' => 'required|string|max:255',
-            'payment_processor' => 'nullable|in:stripe,netopia,euplatesc,payu,unknown',
-        ]);
+        $validTypes = collect(TenantType::cases())->map(fn ($t) => $t->value)->join(',');
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+        $rules = [
+            'tenant_type' => "required|string|in:{$validTypes}",
+            'entity_name' => 'required|string|max:255',
+            'public_name' => 'required|string|max:255',
+            'matched_artist_id' => 'nullable|integer',
+        ];
+
+        // Artist and Speaker can choose business type
+        $tenantType = $request->input('tenant_type');
+        if (in_array($tenantType, ['artist', 'speaker'])) {
+            $rules['business_type'] = 'required|string|in:srl,pfa,persoana_fizica';
+        } else {
+            // For all other types, default to srl
+            $request->merge(['business_type' => 'srl']);
         }
 
-        // Store in session
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
         $onboarding = Session::get('onboarding', []);
         $onboarding['data']['step2'] = $request->only([
-            'country', 'vat_payer', 'cui', 'company_name', 'reg_com', 'address', 'city', 'state', 'payment_processor'
+            'tenant_type', 'entity_name', 'public_name', 'matched_artist_id', 'business_type'
         ]);
         $onboarding['step'] = 3;
         Session::put('onboarding', $onboarding);
 
-        return response()->json([
-            'success' => true,
-            'next_step' => 3
-        ]);
+        return response()->json(['success' => true, 'next_step' => 3]);
     }
 
     /**
-     * Store Step 3 - Websites
+     * Step 3 - Company Details (conditional on business_type)
      */
     public function storeStepThree(Request $request)
     {
+        $onboarding = Session::get('onboarding', []);
+        $businessType = $onboarding['data']['step2']['business_type'] ?? 'srl';
+
+        $rules = [
+            'country' => 'required|string|max:255',
+            'address' => 'required|string',
+            'city' => 'required|string|max:255',
+            'state' => 'required|string|max:255',
+            'contact_position' => 'nullable|string|max:255',
+            'payment_processor' => 'nullable|in:stripe,netopia,euplatesc,payu,unknown',
+        ];
+
+        if ($businessType !== 'persoana_fizica') {
+            // SRL or PFA - require company fields
+            $rules['vat_payer'] = 'required|boolean';
+            $rules['cui'] = 'nullable|string|max:50';
+            $rules['company_name'] = 'required|string|max:255';
+            $rules['reg_com'] = 'nullable|string|max:255';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        $fields = ['country', 'address', 'city', 'state', 'contact_position', 'payment_processor'];
+        if ($businessType !== 'persoana_fizica') {
+            $fields = array_merge($fields, ['vat_payer', 'cui', 'company_name', 'reg_com']);
+        }
+
+        $onboarding['data']['step3'] = $request->only($fields);
+        $onboarding['step'] = 4;
+        Session::put('onboarding', $onboarding);
+
+        return response()->json(['success' => true, 'next_step' => 4]);
+    }
+
+    /**
+     * Step 4 - Domain & Website
+     */
+    public function storeStepFour(Request $request)
+    {
         $hasNoWebsite = filter_var($request->input('has_no_website'), FILTER_VALIDATE_BOOLEAN);
 
-        // Different validation rules based on whether they have a website
         if ($hasNoWebsite) {
             $validator = Validator::make($request->all(), [
                 'subdomain' => ['required', 'string', 'min:3', 'max:63', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/'],
@@ -160,33 +199,26 @@ class OnboardingController extends Controller
         }
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step3'] = [
+        $onboarding['data']['step4'] = [
             'has_no_website' => $hasNoWebsite,
             'subdomain' => $hasNoWebsite ? strtolower($request->input('subdomain')) : null,
             'domains' => $hasNoWebsite ? [] : $request->input('domains'),
             'estimated_monthly_tickets' => $request->input('estimated_monthly_tickets'),
         ];
-        $onboarding['step'] = 4;
+        $onboarding['step'] = 5;
         Session::put('onboarding', $onboarding);
 
-        return response()->json([
-            'success' => true,
-            'next_step' => 4
-        ]);
+        return response()->json(['success' => true, 'next_step' => 5]);
     }
 
     /**
-     * Store Step 4 - Work Method and Complete Registration
+     * Step 5 - Plan & Microservices + Complete Registration
      */
-    public function storeStepFour(Request $request)
+    public function storeStepFive(Request $request)
     {
         $validator = Validator::make($request->all(), [
             'work_method' => 'required|in:exclusive,mixed,reseller',
@@ -196,21 +228,17 @@ class OnboardingController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        // Get all onboarding data
         $onboarding = Session::get('onboarding', []);
         $step1 = $onboarding['data']['step1'] ?? [];
         $step2 = $onboarding['data']['step2'] ?? [];
         $step3 = $onboarding['data']['step3'] ?? [];
-        $step4 = $request->only(['work_method', 'microservices', 'locale']);
+        $step4 = $onboarding['data']['step4'] ?? [];
+        $step5 = $request->only(['work_method', 'microservices', 'locale']);
 
-        // Validate we have all required data
-        if (empty($step1) || empty($step2) || empty($step3)) {
+        if (empty($step1) || empty($step2) || empty($step3) || empty($step4)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Session expired. Please start the registration process again.',
@@ -225,140 +253,127 @@ class OnboardingController extends Controller
                 'name' => $step1['first_name'] . ' ' . $step1['last_name'],
                 'email' => $step1['email'],
                 'password' => Hash::make($step1['password']),
-                'role' => 'tenant', // Tenant owner role
+                'role' => 'tenant',
             ]);
 
-            // Handle domain based on whether tenant has their own website
-            $hasNoWebsite = $step3['has_no_website'] ?? false;
+            // Resolve domain
+            $hasNoWebsite = $step4['has_no_website'] ?? false;
             $cloudflareService = app(CloudflareService::class);
             $baseDomain = $cloudflareService->getBaseDomain();
 
-            if ($hasNoWebsite && !empty($step3['subdomain'])) {
-                // Subdomain on managed domain (e.g., ticks.ro)
-                $parsedDomain = $step3['subdomain'] . '.' . $baseDomain;
+            if ($hasNoWebsite && !empty($step4['subdomain'])) {
+                $parsedDomain = $step4['subdomain'] . '.' . $baseDomain;
             } else {
-                // Extract domain from first URL
-                $firstDomain = $step3['domains'][0] ?? '';
+                $firstDomain = $step4['domains'][0] ?? '';
                 $parsedDomain = parse_url($firstDomain, PHP_URL_HOST);
                 if (!$parsedDomain) {
-                    // If parse_url fails, try to extract domain manually
                     $parsedDomain = str_replace(['http://', 'https://', 'www.'], '', $firstDomain);
                     $parsedDomain = explode('/', $parsedDomain)[0];
                 }
             }
 
-            // Handle payment processor - 'unknown' means null
-            $paymentProcessor = $step2['payment_processor'] ?? null;
+            $paymentProcessor = $step3['payment_processor'] ?? null;
             if ($paymentProcessor === 'unknown') {
                 $paymentProcessor = null;
             }
 
-            // Convert country name to ISO code
-            $countryCode = $this->getCountryIsoCode($step2['country'] ?? 'Romania');
+            $countryCode = $this->getCountryIsoCode($step3['country'] ?? 'Romania');
+            $businessType = $step2['business_type'] ?? 'srl';
 
-            // Map work_method to plan and commission_rate
             $planMapping = [
                 'exclusive' => ['plan' => '1percent', 'commission_rate' => 1.00],
                 'mixed' => ['plan' => '2percent', 'commission_rate' => 2.00],
                 'reseller' => ['plan' => '3percent', 'commission_rate' => 3.00],
             ];
-            $planData = $planMapping[$step4['work_method']] ?? ['plan' => '2percent', 'commission_rate' => 2.00];
+            $planData = $planMapping[$step5['work_method']] ?? ['plan' => '2percent', 'commission_rate' => 2.00];
 
-            // Create Tenant
+            // For persoana_fizica, use person's name as company_name
+            $companyName = $businessType === 'persoana_fizica'
+                ? $step1['first_name'] . ' ' . $step1['last_name']
+                : ($step3['company_name'] ?? $step2['entity_name']);
+
+            // Resolve TenantType enum
+            $tenantType = TenantType::tryFrom($step2['tenant_type']);
+
             $tenant = Tenant::create([
-                'name' => $step2['company_name'],
-                'public_name' => $step1['public_name'],
+                'name' => $companyName,
+                'public_name' => $step2['public_name'],
                 'owner_id' => $user->id,
-                'slug' => Str::slug($step1['public_name']),
+                'slug' => Str::slug($step2['public_name']),
                 'domain' => $parsedDomain,
-                'status' => 'pending', // Pending until email verification
+                'status' => 'pending',
+                'tenant_type' => $tenantType,
                 'plan' => $planData['plan'],
-                'locale' => $step4['locale'],
+                'locale' => $step5['locale'],
                 'commission_mode' => 'included',
                 'commission_rate' => $planData['commission_rate'],
-                'vat_payer' => filter_var($step2['vat_payer'], FILTER_VALIDATE_BOOLEAN),
-                'work_method' => $step4['work_method'],
-                'organizer_type' => $step1['organizer_type'] ?? null,
-                'estimated_monthly_tickets' => (int)$step3['estimated_monthly_tickets'],
-                'company_name' => $step2['company_name'],
-                'cui' => $step2['cui'] ?? null,
-                'reg_com' => $step2['reg_com'] ?? null,
-                'address' => $step2['address'] ?? null,
-                'city' => $step2['city'] ?? null,
-                'state' => $step2['state'] ?? null,
+                'vat_payer' => $businessType !== 'persoana_fizica' ? filter_var($step3['vat_payer'] ?? false, FILTER_VALIDATE_BOOLEAN) : false,
+                'work_method' => $step5['work_method'],
+                'estimated_monthly_tickets' => (int) ($step4['estimated_monthly_tickets'] ?? 0),
+                'company_name' => $companyName,
+                'cui' => $businessType !== 'persoana_fizica' ? ($step3['cui'] ?? null) : null,
+                'reg_com' => $businessType !== 'persoana_fizica' ? ($step3['reg_com'] ?? null) : null,
+                'address' => $step3['address'] ?? null,
+                'city' => $step3['city'] ?? null,
+                'state' => $step3['state'] ?? null,
                 'country' => $countryCode,
                 'contact_first_name' => $step1['first_name'],
                 'contact_last_name' => $step1['last_name'],
                 'contact_email' => $step1['email'],
                 'contact_phone' => $step1['phone'],
-                'contact_position' => $step1['contact_position'] ?? null,
+                'contact_position' => $step3['contact_position'] ?? null,
                 'payment_processor' => $paymentProcessor,
-                'payment_processor_mode' => 'test', // Start in test mode
+                'payment_processor_mode' => 'test',
                 'has_own_website' => !$hasNoWebsite,
                 'onboarding_completed' => true,
                 'onboarding_completed_at' => now(),
                 'billing_starts_at' => now(),
                 'billing_cycle_days' => 30,
+                'settings' => [
+                    'business_type' => $businessType,
+                ],
             ]);
 
-            // Create Domains
-            if ($hasNoWebsite && !empty($step3['subdomain'])) {
-                // Create managed subdomain with Cloudflare integration
-                $subdomain = $step3['subdomain'];
+            // Create Domains (same logic as before)
+            if ($hasNoWebsite && !empty($step4['subdomain'])) {
+                $subdomain = $step4['subdomain'];
                 $fullDomain = "{$subdomain}.{$baseDomain}";
 
                 try {
-                    // Create DNS record in Cloudflare (optional since wildcard is configured)
                     $dnsRecord = $cloudflareService->createSubdomainRecord($subdomain);
-
-                    // Create domain record - auto-activated since it's managed
                     $domain = Domain::create([
                         'tenant_id' => $tenant->id,
                         'domain' => $fullDomain,
                         'is_primary' => true,
-                        'is_active' => true,  // Auto-activate managed subdomains
+                        'is_active' => true,
                         'is_managed_subdomain' => true,
                         'subdomain' => $subdomain,
                         'base_domain' => $baseDomain,
                         'cloudflare_record_id' => $dnsRecord['id'] ?? null,
                         'activated_at' => now(),
                     ]);
-
-                    // Generate deployment package for this domain
                     GeneratePackageJob::dispatch($domain);
-
-                    Log::info('Managed subdomain created', [
-                        'tenant_id' => $tenant->id,
-                        'domain' => $fullDomain,
-                        'cloudflare_record_id' => $dnsRecord['id'] ?? null,
-                    ]);
-
                 } catch (\Exception $e) {
                     Log::error('Failed to create managed subdomain DNS record', [
                         'tenant_id' => $tenant->id,
                         'subdomain' => $subdomain,
                         'error' => $e->getMessage(),
                     ]);
-
-                    // Still create domain record but mark as active (since wildcard is configured)
                     $domain = Domain::create([
                         'tenant_id' => $tenant->id,
                         'domain' => $fullDomain,
                         'is_primary' => true,
-                        'is_active' => true,  // Still active because of wildcard DNS
+                        'is_active' => true,
                         'is_managed_subdomain' => true,
                         'subdomain' => $subdomain,
                         'base_domain' => $baseDomain,
                         'notes' => 'DNS record creation skipped: ' . $e->getMessage(),
                         'activated_at' => now(),
                     ]);
-
-                    // Generate deployment package for this domain
                     GeneratePackageJob::dispatch($domain);
                 }
             } else {
-                // Process regular domains
-                foreach ($step3['domains'] as $index => $domainUrl) {
+                foreach ($step4['domains'] as $index => $domainUrl) {
                     $domainName = parse_url($domainUrl, PHP_URL_HOST);
                     if (!$domainName) {
                         $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
@@ -369,115 +384,115 @@ class OnboardingController extends Controller
                         'tenant_id' => $tenant->id,
                         'domain' => $domainName,
                         'is_primary' => $index === 0,
-                        'is_active' => false, // Activate after email verification
+                        'is_active' => false,
                         'is_managed_subdomain' => false,
                     ]);
 
-                    // Create verification entry for the domain
                     $domain->verifications()->create([
                         'tenant_id' => $tenant->id,
                         'verification_method' => 'dns_txt',
                         'status' => 'pending',
                     ]);
 
-                    // Generate deployment package for this domain
                     GeneratePackageJob::dispatch($domain);
                 }
             }
 
             // Attach Microservices
-            if (!empty($step4['microservices'])) {
-                foreach ($step4['microservices'] as $microserviceId) {
+            if (!empty($step5['microservices'])) {
+                foreach ($step5['microservices'] as $microserviceId) {
                     $tenant->microservices()->attach($microserviceId, [
-                        'status' => 'pending', // Activate after payment/verification
+                        'status' => 'pending',
                         'activated_at' => null,
                     ]);
                 }
             }
 
+            // Generate verification code for types that need social verification
+            $verificationCode = null;
+            $needsVerification = in_array($step2['tenant_type'], ['artist']);
+
+            if ($needsVerification) {
+                $vc = TenantVerificationCode::create([
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $user->id,
+                    'tenant_type' => $step2['tenant_type'],
+                    'code' => TenantVerificationCode::generateCode(),
+                    'entity_name' => $step2['entity_name'],
+                    'matched_entity_id' => $step2['matched_artist_id'] ?? null,
+                    'matched_entity_type' => !empty($step2['matched_artist_id']) ? Artist::class : null,
+                    'status' => 'pending',
+                    'expires_at' => now()->addDays(30),
+                    'meta' => [
+                        'business_type' => $businessType,
+                        'tenant_type_label' => $tenantType?->label(),
+                    ],
+                ]);
+                $verificationCode = $vc->code;
+            }
+
             \DB::commit();
 
-            // Send emails (non-fatal - registration continues even if emails fail)
+            // Send emails (non-fatal)
             try {
                 $this->sendRegistrationConfirmationEmail($user, $tenant, $step1);
             } catch (\Exception $e) {
                 Log::error('Failed to send registration confirmation email', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage(),
+                    'user_id' => $user->id, 'error' => $e->getMessage(),
                 ]);
             }
 
-            // Only send domain verification email for custom domains (not managed subdomains)
             if (!$hasNoWebsite) {
                 try {
                     $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
                 } catch (\Exception $e) {
                     Log::error('Failed to send domain verification email', [
-                        'user_id' => $user->id,
-                        'error' => $e->getMessage(),
+                        'user_id' => $user->id, 'error' => $e->getMessage(),
                     ]);
                 }
             }
 
-            // Generate and send contract (non-fatal - registration continues even if contract fails)
             try {
                 $contractService = app(ContractPdfService::class);
                 $contractPath = $contractService->generate($tenant);
-
-                // Send contract email
-                Mail::to($tenant->contact_email)
-                    ->send(new ContractMail($tenant, $contractPath));
-
+                Mail::to($tenant->contact_email)->send(new ContractMail($tenant, $contractPath));
                 $tenant->update(['contract_sent_at' => now()]);
-
-                Log::info('Contract generated and sent', [
-                    'tenant_id' => $tenant->id,
-                    'contract_path' => $contractPath,
-                ]);
             } catch (\Exception $e) {
                 Log::error('Failed to generate or send contract', [
-                    'tenant_id' => $tenant->id,
-                    'error' => $e->getMessage(),
+                    'tenant_id' => $tenant->id, 'error' => $e->getMessage(),
                 ]);
             }
 
-            // Log in the user
             Auth::login($user);
-
-            // Clear onboarding session
             Session::forget('onboarding');
 
-            // If microservices were selected, add to cart and redirect to checkout
-            if (!empty($step4['microservices'])) {
-                // Store microservice IDs in cart session (same format as store cart)
-                Session::put('cart', array_map('intval', $step4['microservices']));
+            $response = [
+                'success' => true,
+                'message' => 'Înregistrarea a fost completată cu succes!',
+            ];
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Înregistrarea a fost completată cu succes! Vei fi redirecționat către checkout...',
-                    'redirect' => '/store/checkout'
-                ]);
+            if ($verificationCode) {
+                $response['verification_code'] = $verificationCode;
+                $response['verification_message'] = "Pentru verificarea contului, trimite codul {$verificationCode} ca mesaj pe Instagram, Facebook sau TikTok către @tixello.";
             }
 
-            // No microservices selected, redirect to tenant panel
-            return response()->json([
-                'success' => true,
-                'message' => 'Înregistrarea a fost completată cu succes! Verifică-ți email-ul pentru instrucțiunile de verificare a domeniului.',
-                'redirect' => '/tenant'
-            ]);
+            if (!empty($step5['microservices'])) {
+                Session::put('cart', array_map('intval', $step5['microservices']));
+                $response['redirect'] = '/store/checkout';
+            } else {
+                $response['redirect'] = '/tenant';
+            }
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
             \DB::rollBack();
 
-            Log::error('Onboarding Step 4 error', [
+            Log::error('Onboarding Step 5 error', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
-                'step1' => $step1,
-                'step2' => $step2,
-                'step3' => $step3,
-                'step4' => $step4,
             ]);
 
             $errorResponse = [
@@ -495,6 +510,33 @@ class OnboardingController extends Controller
     }
 
     /**
+     * Search artists by name (for step 2 live search)
+     */
+    public function searchArtists(Request $request)
+    {
+        $query = trim($request->input('q', ''));
+
+        if (strlen($query) < 2) {
+            return response()->json(['results' => []]);
+        }
+
+        $artists = Artist::query()
+            ->where('is_active', true)
+            ->where('name', 'ILIKE', "%{$query}%")
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name', 'image']);
+
+        return response()->json([
+            'results' => $artists->map(fn ($a) => [
+                'id' => $a->id,
+                'name' => $a->name,
+                'image' => $a->image,
+            ]),
+        ]);
+    }
+
+    /**
      * Check if email is available
      */
     public function checkEmail(Request $request)
@@ -504,10 +546,7 @@ class OnboardingController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Format email invalid'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Format email invalid']);
         }
 
         $exists = User::where('email', $request->email)->exists();
@@ -528,13 +567,9 @@ class OnboardingController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Domeniu invalid'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Domeniu invalid']);
         }
 
-        // Parse the domain from URL
         $domainUrl = $request->domain;
         $domainName = parse_url($domainUrl, PHP_URL_HOST);
         if (!$domainName) {
@@ -557,57 +592,37 @@ class OnboardingController extends Controller
     {
         $subdomain = strtolower(trim($request->subdomain ?? ''));
 
-        // Validate format
         if (strlen($subdomain) < 3) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Subdomeniul trebuie să aibă minim 3 caractere'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Subdomeniul trebuie să aibă minim 3 caractere']);
         }
 
         if (strlen($subdomain) > 63) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Subdomeniul nu poate avea mai mult de 63 de caractere'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Subdomeniul nu poate avea mai mult de 63 de caractere']);
         }
 
         if (!preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', $subdomain)) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Subdomeniul poate conține doar litere mici, cifre și cratime (nu poate începe sau termina cu cratimă)'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Subdomeniul poate conține doar litere mici, cifre și cratime']);
         }
 
         $cloudflareService = app(CloudflareService::class);
         $baseDomain = $cloudflareService->getBaseDomain();
         $fullDomain = "{$subdomain}.{$baseDomain}";
 
-        // Check reserved subdomains
         $reserved = $cloudflareService->getReservedSubdomains();
         if (in_array($subdomain, $reserved)) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Acest subdomeniu este rezervat'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Acest subdomeniu este rezervat']);
         }
 
-        // Check if already exists in database
         $exists = Domain::where('domain', $fullDomain)
             ->orWhere(function($query) use ($subdomain, $baseDomain) {
-                $query->where('subdomain', $subdomain)
-                      ->where('base_domain', $baseDomain);
+                $query->where('subdomain', $subdomain)->where('base_domain', $baseDomain);
             })
             ->exists();
 
-        // Also check tenant slugs
         $slugExists = Tenant::where('slug', $subdomain)->exists();
 
         if ($exists || $slugExists) {
-            return response()->json([
-                'available' => false,
-                'message' => 'Acest subdomeniu este deja folosit'
-            ]);
+            return response()->json(['available' => false, 'message' => 'Acest subdomeniu este deja folosit']);
         }
 
         return response()->json([
@@ -622,62 +637,41 @@ class OnboardingController extends Controller
      */
     public function lookupCui(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'cui' => 'required|string',
-        ]);
+        $validator = Validator::make($request->all(), ['cui' => 'required|string']);
 
         if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
         $cui = $request->input('cui');
 
-        // Validate CUI format
         if (!$this->anafService->isValidCui($cui)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid CUI format'
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Invalid CUI format'], 422);
         }
 
         $companyData = $this->anafService->lookupByCui($cui);
 
         if (!$companyData) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Company not found in ANAF database'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Company not found in ANAF database'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $companyData
-        ]);
+        return response()->json(['success' => true, 'data' => $companyData]);
     }
 
     /**
-     * Get cities for a country and state (API endpoint for dynamic loading)
+     * Get cities for a country and state
      */
     public function getCities($country, $state)
     {
         $countryCode = $this->locationService->getCountryCode($country);
 
         if (!$countryCode) {
-            return response()->json([
-                'success' => false,
-                'cities' => []
-            ]);
+            return response()->json(['success' => false, 'cities' => []]);
         }
 
         $cities = $this->locationService->getCities($countryCode, $state);
 
-        return response()->json([
-            'success' => true,
-            'cities' => $cities
-        ]);
+        return response()->json(['success' => true, 'cities' => $cities]);
     }
 
     /**
@@ -695,16 +689,9 @@ class OnboardingController extends Controller
     private function getCountryIsoCode(string $countryName): string
     {
         $mapping = [
-            'Romania' => 'RO',
-            'United States' => 'US',
-            'Germany' => 'DE',
-            'France' => 'FR',
-            'Italy' => 'IT',
-            'Spain' => 'ES',
-            'United Kingdom' => 'GB',
-            'Bulgaria' => 'BG',
-            'Hungary' => 'HU',
-            'Moldova' => 'MD',
+            'Romania' => 'RO', 'United States' => 'US', 'Germany' => 'DE',
+            'France' => 'FR', 'Italy' => 'IT', 'Spain' => 'ES',
+            'United Kingdom' => 'GB', 'Bulgaria' => 'BG', 'Hungary' => 'HU', 'Moldova' => 'MD',
         ];
 
         return $mapping[$countryName] ?? 'RO';
@@ -716,7 +703,6 @@ class OnboardingController extends Controller
     private function sendRegistrationConfirmationEmail(User $user, Tenant $tenant, array $step1): void
     {
         try {
-            // Find the registration confirmation template
             $template = EmailTemplate::where('event_trigger', 'registration_confirmation')
                 ->where('is_active', true)
                 ->first();
@@ -726,26 +712,21 @@ class OnboardingController extends Controller
                 return;
             }
 
-            // Prepare variables for the template
             $variables = [
                 'first_name' => $step1['first_name'],
                 'last_name' => $step1['last_name'],
                 'full_name' => $step1['first_name'] . ' ' . $step1['last_name'],
                 'email' => $step1['email'],
-                'public_name' => $step1['public_name'],
+                'public_name' => $tenant->public_name,
                 'company_name' => $tenant->company_name,
                 'website_url' => config('app.url'),
                 'verification_link' => route('onboarding.verify', ['token' => Str::random(64)]),
             ];
 
-            // Process template
             $processed = $template->processTemplate($variables);
-
-            // Get settings for email sending
             $settings = Setting::current();
 
             if (!empty($settings->brevo_api_key)) {
-                // Send via Brevo API
                 $response = Http::withHeaders([
                     'api-key' => $settings->brevo_api_key,
                     'Content-Type' => 'application/json',
@@ -754,14 +735,11 @@ class OnboardingController extends Controller
                         'name' => $settings->company_name ?? 'Tixello',
                         'email' => $settings->email ?? 'noreply@tixello.com',
                     ],
-                    'to' => [
-                        ['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]
-                    ],
+                    'to' => [['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]],
                     'subject' => $processed['subject'],
                     'htmlContent' => $processed['body'] . ($settings->email_footer ?? ''),
                 ]);
 
-                // Log the email
                 EmailLog::create([
                     'email_template_id' => $template->id,
                     'tenant_id' => $tenant->id,
@@ -781,13 +759,11 @@ class OnboardingController extends Controller
                     ],
                 ]);
             } else {
-                // Fallback to Laravel mail
                 Mail::html($processed['body'] . ($settings->email_footer ?? ''), function ($message) use ($step1, $processed) {
                     $message->to($step1['email'], $step1['first_name'] . ' ' . $step1['last_name'])
                         ->subject($processed['subject']);
                 });
 
-                // Log the email
                 EmailLog::create([
                     'email_template_id' => $template->id,
                     'tenant_id' => $tenant->id,
@@ -820,14 +796,12 @@ class OnboardingController extends Controller
     private function sendDomainVerificationInstructionsEmail(User $user, Tenant $tenant, array $step1): void
     {
         try {
-            // Get all domains with their verification codes
             $domains = $tenant->domains()->with('verifications')->get();
 
             if ($domains->isEmpty()) {
                 return;
             }
 
-            // Build the email content
             $domainsHtml = '';
             foreach ($domains as $domain) {
                 $verification = $domain->verifications()->latest()->first();
@@ -836,87 +810,41 @@ class OnboardingController extends Controller
                 }
 
                 $domainsHtml .= '<div style="margin-bottom: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">';
-                $domainsHtml .= '<h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">🌐 ' . htmlspecialchars($domain->domain) . '</h3>';
+                $domainsHtml .= '<h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">' . htmlspecialchars($domain->domain) . '</h3>';
 
-                // Method 1: DNS TXT Record
                 $domainsHtml .= '<div style="margin-bottom: 20px; padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #007bff;">';
-                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 14px;">Metoda 1: Înregistrare DNS TXT</h4>';
-                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Adaugă o înregistrare TXT în setările DNS ale domeniului tău:</p>';
+                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 14px;">Metoda 1: DNS TXT Record</h4>';
                 $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">';
-                $domainsHtml .= '<strong>Name/Host:</strong> ' . htmlspecialchars($verification->getDnsRecordName()) . '<br>';
-                $domainsHtml .= '<strong>Value/Content:</strong> ' . htmlspecialchars($verification->getDnsRecordValue());
-                $domainsHtml .= '</div>';
-                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Modificările DNS pot dura până la 24-48 ore să se propage.</p>';
-                $domainsHtml .= '</div>';
+                $domainsHtml .= '<strong>Name:</strong> ' . htmlspecialchars($verification->getDnsRecordName()) . '<br>';
+                $domainsHtml .= '<strong>Value:</strong> ' . htmlspecialchars($verification->getDnsRecordValue());
+                $domainsHtml .= '</div></div>';
 
-                // Method 2: Meta Tag
                 $domainsHtml .= '<div style="margin-bottom: 20px; padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #28a745;">';
                 $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #28a745; font-size: 14px;">Metoda 2: Meta Tag HTML</h4>';
-                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Adaugă acest meta tag în secțiunea &lt;head&gt; a paginii principale:</p>';
                 $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; word-break: break-all;">';
                 $domainsHtml .= htmlspecialchars($verification->getMetaTagHtml());
-                $domainsHtml .= '</div>';
-                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Pune tag-ul imediat după &lt;head&gt; sau înainte de &lt;/head&gt;.</p>';
-                $domainsHtml .= '</div>';
+                $domainsHtml .= '</div></div>';
 
-                // Method 3: File Upload
                 $domainsHtml .= '<div style="padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #ffc107;">';
-                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #856404; font-size: 14px;">Metoda 3: Fișier de Verificare</h4>';
-                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Creează un fișier pe serverul tău la această locație:</p>';
+                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #856404; font-size: 14px;">Metoda 3: File Upload</h4>';
                 $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">';
-                $domainsHtml .= '<strong>Cale fișier:</strong> ' . htmlspecialchars($verification->getFileUploadPath()) . '<br>';
-                $domainsHtml .= '<strong>Conținut fișier:</strong> ' . htmlspecialchars($verification->getFileUploadContent());
-                $domainsHtml .= '</div>';
-                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Fișierul trebuie să fie accesibil la: https://' . htmlspecialchars($domain->domain) . $verification->getFileUploadPath() . '</p>';
-                $domainsHtml .= '</div>';
+                $domainsHtml .= '<strong>Path:</strong> ' . htmlspecialchars($verification->getFileUploadPath()) . '<br>';
+                $domainsHtml .= '<strong>Content:</strong> ' . htmlspecialchars($verification->getFileUploadContent());
+                $domainsHtml .= '</div></div>';
 
                 $domainsHtml .= '</div>';
             }
 
-            // Build full email body
-            $emailBody = '
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Instrucțiuni de Verificare Domeniu</h2>
+            $emailBody = '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">'
+                . '<h2 style="color: #333;">Instrucțiuni de Verificare Domeniu</h2>'
+                . '<p>Salut ' . htmlspecialchars($step1['first_name']) . ',</p>'
+                . '<p>Pentru a activa website-ul tău de ticketing, verifică proprietatea domeniilor:</p>'
+                . $domainsHtml
+                . '<p style="margin-top: 30px;">Cu respect,<br>Echipa Tixello</p></div>';
 
-                <p style="color: #555; font-size: 14px; line-height: 1.6;">
-                    Salut ' . htmlspecialchars($step1['first_name']) . ',
-                </p>
-
-                <p style="color: #555; font-size: 14px; line-height: 1.6;">
-                    Pentru a activa website-ul tău de ticketing, trebuie să verifici proprietatea domeniilor înregistrate.
-                    <strong>Alege una dintre cele 3 metode</strong> pentru fiecare domeniu:
-                </p>
-
-                ' . $domainsHtml . '
-
-                <div style="margin-top: 30px; padding: 15px; background-color: #e7f3ff; border-radius: 8px; border: 1px solid #b8daff;">
-                    <h4 style="margin: 0 0 10px 0; color: #004085; font-size: 14px;">⏱️ Informații Importante</h4>
-                    <ul style="margin: 0; padding-left: 20px; color: #004085; font-size: 13px;">
-                        <li>Codul de verificare expiră în <strong>7 zile</strong></li>
-                        <li>Alege <strong>o singură metodă</strong> pentru fiecare domeniu</li>
-                        <li>După ce ai adăugat codul, domeniul va fi verificat automat sau manual de echipa noastră</li>
-                        <li>Vei primi un email de confirmare când domeniul este activat</li>
-                    </ul>
-                </div>
-
-                <div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 8px; border: 1px solid #ffc107;">
-                    <h4 style="margin: 0 0 10px 0; color: #856404; font-size: 14px;">🔧 Ai nevoie de ajutor?</h4>
-                    <p style="margin: 0; color: #856404; font-size: 13px;">
-                        Dacă nu ești sigur cum să adaugi aceste coduri, contactează-ne sau trimite instrucțiunile administratorului tău web/IT.
-                    </p>
-                </div>
-
-                <p style="margin-top: 30px; color: #555; font-size: 14px;">
-                    Cu respect,<br>
-                    Echipa Tixello
-                </p>
-            </div>';
-
-            // Get settings for email sending
             $settings = Setting::current();
 
             if (!empty($settings->brevo_api_key)) {
-                // Send via Brevo API
                 $response = Http::withHeaders([
                     'api-key' => $settings->brevo_api_key,
                     'Content-Type' => 'application/json',
@@ -925,14 +853,11 @@ class OnboardingController extends Controller
                         'name' => $settings->company_name ?? 'Tixello',
                         'email' => $settings->email ?? 'noreply@tixello.com',
                     ],
-                    'to' => [
-                        ['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]
-                    ],
+                    'to' => [['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]],
                     'subject' => 'Instrucțiuni de Verificare Domeniu - Tixello',
                     'htmlContent' => $emailBody . ($settings->email_footer ?? ''),
                 ]);
 
-                // Log the email
                 EmailLog::create([
                     'email_template_id' => null,
                     'tenant_id' => $tenant->id,
@@ -944,22 +869,14 @@ class OnboardingController extends Controller
                     'sent_at' => $response->successful() ? now() : null,
                     'failed_at' => $response->successful() ? null : now(),
                     'error_message' => $response->successful() ? null : ($response->json('message') ?? 'Unknown error'),
-                    'metadata' => [
-                        'type' => 'domain_verification_instructions',
-                        'sender_email' => $settings->email ?? 'noreply@tixello.com',
-                        'sender_name' => $settings->company_name ?? 'Tixello',
-                        'provider' => 'brevo',
-                        'domains_count' => $domains->count(),
-                    ],
+                    'metadata' => ['type' => 'domain_verification_instructions', 'provider' => 'brevo'],
                 ]);
             } else {
-                // Fallback to Laravel mail
                 Mail::html($emailBody . ($settings->email_footer ?? ''), function ($message) use ($step1) {
                     $message->to($step1['email'], $step1['first_name'] . ' ' . $step1['last_name'])
                         ->subject('Instrucțiuni de Verificare Domeniu - Tixello');
                 });
 
-                // Log the email
                 EmailLog::create([
                     'email_template_id' => null,
                     'tenant_id' => $tenant->id,
@@ -969,20 +886,12 @@ class OnboardingController extends Controller
                     'body' => $emailBody . ($settings->email_footer ?? ''),
                     'status' => 'sent',
                     'sent_at' => now(),
-                    'metadata' => [
-                        'type' => 'domain_verification_instructions',
-                        'sender_email' => config('mail.from.address'),
-                        'sender_name' => config('mail.from.name'),
-                        'provider' => 'laravel_mail',
-                        'domains_count' => $domains->count(),
-                    ],
+                    'metadata' => ['type' => 'domain_verification_instructions', 'provider' => 'laravel_mail'],
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to send domain verification instructions email', [
-                'user_id' => $user->id,
-                'tenant_id' => $tenant->id,
-                'error' => $e->getMessage(),
+                'user_id' => $user->id, 'tenant_id' => $tenant->id, 'error' => $e->getMessage(),
             ]);
         }
     }
