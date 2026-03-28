@@ -451,7 +451,7 @@ class EventResource extends Resource
                         ->label('Event types')
                         ->relationship(
                             name: 'eventTypes',
-                            modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
+                            modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
@@ -496,7 +496,7 @@ class EventResource extends Resource
                                         ->from('event_type_event_genre as eteg')
                                         ->whereColumn('eteg.event_genre_id', 'event_genres.id')
                                         ->whereIn('eteg.event_type_id', $typeIds);
-                                })->orderBy('name');
+                                });
                             }
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
@@ -617,7 +617,6 @@ class EventResource extends Resource
                             modifyQueryUsing: fn (Builder $query) => $query
                                 ->where('tenant_id', auth()->user()->tenant?->id)
                                 ->where('status', 'active')
-                                ->orderBy('name')
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                         ->placeholder('Use default template')

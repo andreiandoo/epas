@@ -1098,7 +1098,6 @@ class EventResource extends Resource
                                             modifyQueryUsing: fn (Builder $query) => $query
                                                 ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
                                                 ->where('status', 'active')
-                                                ->orderBy('name')
                                         )
                                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                                         ->placeholder($t('Folosește șablonul implicit', 'Use default template'))

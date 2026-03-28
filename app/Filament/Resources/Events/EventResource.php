@@ -380,7 +380,7 @@ class EventResource extends Resource
                             Forms\Components\Select::make('eventGenres')->label('Event genres')
                                 ->relationship(name: 'eventGenres', modifyQueryUsing: function (Builder $query, SGet $get) {
                                     $typeIds = (array) ($get('eventTypes') ?? []); if (! $typeIds) { $query->whereRaw('1=0'); return; }
-                                    $query->whereExists(function ($sub) use ($typeIds) { $sub->selectRaw('1')->from('event_type_event_genre as eteg')->whereColumn('eteg.event_genre_id', 'event_genres.id')->whereIn('eteg.event_type_id', $typeIds); })->orderBy('name');
+                                    $query->whereExists(function ($sub) use ($typeIds) { $sub->selectRaw('1')->from('event_type_event_genre as eteg')->whereColumn('eteg.event_genre_id', 'event_genres.id')->whereIn('eteg.event_type_id', $typeIds); });
                                 })
                                 ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'en'))
                                 ->multiple()->preload()->searchable()->disabled(fn (SGet $get) => empty($get('eventTypes')))->reactive()->minItems(0)->maxItems(5),
@@ -450,7 +450,7 @@ class EventResource extends Resource
                         ])->columns(1),
                         SC\Section::make('Tickets')->schema([
                             Forms\Components\Select::make('ticket_template_id')->label('Ticket Template')
-                                ->relationship(name: 'ticketTemplate', modifyQueryUsing: fn (Builder $query, SGet $get) => $query->where('tenant_id', $get('tenant_id'))->where('status', 'active')->orderBy('name'))
+                                ->relationship(name: 'ticketTemplate', modifyQueryUsing: fn (Builder $query, SGet $get) => $query->where('tenant_id', $get('tenant_id'))->where('status', 'active'))
                                 ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                                 ->placeholder('Use default template')->helperText('Select a template for tickets. Leave empty for default.')
                                 ->searchable()->preload()->nullable()->live()->disabled(fn (SGet $get) => !$get('tenant_id')),
