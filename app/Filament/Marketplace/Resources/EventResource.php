@@ -3352,7 +3352,12 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('title')
                     ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'ro') ?: $record->getTranslation('title', 'en'))
                     ->searchable(query: function ($query, string $search): void {
-                        $query->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
+                        $term = '%' . mb_strtolower($search) . '%';
+                        $isPgsql = \DB::getDriverName() === 'pgsql';
+                        $query->where(function ($q) use ($term, $isPgsql) {
+                            $q->whereRaw($isPgsql ? "LOWER(title->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
+                              ->orWhereRaw($isPgsql ? "LOWER(title->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
+                        });
                     })
                     ->sortable()
                     ->toggleable()
@@ -3611,7 +3616,9 @@ class EventResource extends Resource
                                     $term = mb_strtolower($search);
                                     return Venue::query()
                                         ->where(function ($q) use ($term) {
-                                            $q->whereRaw('LOWER(name) LIKE ?', ["%{$term}%"])
+                                            $isPgsql = \DB::getDriverName() === 'pgsql';
+                                            $q->whereRaw($isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$term}%"])
+                                              ->orWhereRaw($isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$term}%"])
                                               ->orWhereRaw('LOWER(city) LIKE ?', ["%{$term}%"]);
                                         })
                                         ->orderBy('name')
@@ -3882,8 +3889,11 @@ class EventResource extends Resource
                                     $agName = $ag->getTranslation('name', 'en') ?: $ag->getTranslation('name', 'ro');
                                     $agSlug = $ag->slug;
                                     // Find matching event genre by slug or name
+                                    $isPgsql = \DB::getDriverName() === 'pgsql';
+                                    $nameTerm = '%' . mb_strtolower($agName) . '%';
                                     $match = EventGenre::where('slug', $agSlug)
-                                        ->orWhereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($agName) . '%'])
+                                        ->orWhereRaw($isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", [$nameTerm])
+                                        ->orWhereRaw($isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", [$nameTerm])
                                         ->first();
                                     if ($match) {
                                         $eventGenreIds[] = $match->id;

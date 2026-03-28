@@ -263,8 +263,11 @@ class OrderResource extends Resource
                 Tables\Columns\TextColumn::make('event_names')
                     ->label('Eveniment')
                     ->searchable(query: function ($query, $search) {
-                        $query->whereHas('tickets.event', function ($q) use ($search) {
-                            $q->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%']);
+                        $term = '%' . mb_strtolower($search) . '%';
+                        $isPgsql = \DB::getDriverName() === 'pgsql';
+                        $query->whereHas('tickets.event', function ($q) use ($term, $isPgsql) {
+                            $q->whereRaw($isPgsql ? "LOWER(title->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
+                              ->orWhereRaw($isPgsql ? "LOWER(title->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
                         });
                     })
                     ->getStateUsing(function ($record) {
@@ -378,8 +381,13 @@ class OrderResource extends Resource
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) {
                                 $marketplace = static::getMarketplaceClient();
+                                $term = '%' . mb_strtolower($search) . '%';
+                                $isPgsql = \DB::getDriverName() === 'pgsql';
                                 return \App\Models\Event::where('marketplace_client_id', $marketplace?->id)
-                                    ->whereRaw('LOWER(title) LIKE ?', ['%' . mb_strtolower($search) . '%'])
+                                    ->where(function ($q) use ($term, $isPgsql) {
+                                        $q->whereRaw($isPgsql ? "LOWER(title->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
+                                          ->orWhereRaw($isPgsql ? "LOWER(title->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
+                                    })
                                     ->limit(20)
                                     ->get()
                                     ->mapWithKeys(fn ($e) => [$e->id => $e->getTranslation('title', 'ro') ?: $e->name]);
