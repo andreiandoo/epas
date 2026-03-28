@@ -32,26 +32,25 @@
         <div class="flex items-center gap-2 mb-4">
             @php
                 $filters = [
-                    'all' => ['label' => 'All', 'count' => $stats['total']],
-                    'live' => ['label' => 'Live', 'count' => $stats['upcoming']],
-                    'ended' => ['label' => 'Ended', 'count' => $stats['past']],
-                    'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0],
-                    'postponed' => ['label' => 'Postponed', 'count' => $stats['postponed'] ?? 0],
-                    'unknown' => ['label' => 'Unknown', 'count' => $stats['unknown'] ?? 0],
+                    'all' => ['label' => 'All', 'count' => $stats['total'], 'color' => '#6366f1'],
+                    'live' => ['label' => 'Live', 'count' => $stats['upcoming'], 'color' => '#10b981'],
+                    'ended' => ['label' => 'Ended', 'count' => $stats['past'], 'color' => '#64748b'],
+                    'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0, 'color' => '#ef4444'],
+                    'postponed' => ['label' => 'Postponed', 'count' => $stats['postponed'] ?? 0, 'color' => '#f59e0b'],
+                    'unknown' => ['label' => 'Unknown', 'count' => $stats['unknown'] ?? 0, 'color' => '#94a3b8'],
                 ];
             @endphp
             @foreach($filters as $key => $filter)
                 @if($filter['count'] > 0 || $key === 'all')
                     <button
                         wire:click="$set('statusFilter', '{{ $key }}')"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold transition
-                            {{ $statusFilter === $key
-                                ? 'bg-primary-500 text-white'
-                                : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200' }}"
+                        style="{{ $statusFilter === $key ? 'background:' . $filter['color'] . ';color:white;' : '' }}"
+                        class="px-4 py-2 rounded-xl text-sm font-bold transition
+                            {{ $statusFilter !== $key ? 'text-gray-400 hover:text-white' : '' }}"
                     >
                         {{ $filter['label'] }}
                         @if($filter['count'] > 0)
-                            <span class="ml-1 opacity-60">{{ $filter['count'] }}</span>
+                            <span class="ml-1.5 {{ $statusFilter === $key ? 'opacity-80' : 'opacity-50' }}">{{ $filter['count'] }}</span>
                         @endif
                     </button>
                 @endif
@@ -88,11 +87,16 @@
                                     <div class="text-xs font-medium text-gray-400 uppercase">{{ \Carbon\Carbon::parse($event->event_date)->format('M') }}</div>
                                     <div class="text-xl font-bold {{ $isUpcoming ? 'text-emerald-500' : 'text-gray-400' }}">{{ \Carbon\Carbon::parse($event->event_date)->format('d') }}</div>
                                     <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($event->event_date)->format('Y') }}</div>
-                                    @if($event->days_until !== null)
-                                        <div class="text-[10px] font-semibold mt-0.5 {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-gray-500') }}">{{ $event->days_until }}d</div>
-                                    @endif
                                 @else
                                     <div class="text-xs text-gray-500 mt-2">TBD</div>
+                                @endif
+                            </div>
+
+                            {{-- Days Until (separate column) --}}
+                            <div class="flex-shrink-0 w-16 text-center">
+                                @if($event->days_until !== null)
+                                    <div class="text-lg font-bold {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-emerald-400') }}">{{ $event->days_until }}</div>
+                                    <div class="text-[10px] text-gray-500">days left</div>
                                 @endif
                             </div>
 

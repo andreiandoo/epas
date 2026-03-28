@@ -174,6 +174,7 @@ class ArtistProfile extends Page
                                                 ])
                                                 ->default([])
                                                 ->collapsed()
+                                                ->itemLabel(fn (array $state): ?string => $state['url'] ?? 'New video')
                                                 ->columns(1),
                                         ]),
                                     ]),
@@ -318,10 +319,10 @@ class ArtistProfile extends Page
                                             ['bg' => '#1877F2', 'value' => $artist->facebook_followers, 'label' => 'Facebook'],
                                             ['bg' => '#000000', 'value' => $artist->tiktok_followers, 'label' => 'TikTok'],
                                         ];
-                                        $html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;'>";
+                                        $html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:12px;'>";
                                         foreach ($stats as $s) {
                                             $v = $fmt($s['value']);
-                                            $html .= "<div style='text-align:center;'><div style='width:22px;height:22px;margin:0 auto 4px;border-radius:5px;background:{$s['bg']};display:flex;align-items:center;justify-content:center;'><span style='font-size:10px;color:white;font-weight:700;'>" . strtoupper(mb_substr($s['label'], 0, 1)) . "</span></div><div style='font-size:13px;font-weight:700;color:white;'>{$v}</div><div style='font-size:10px;color:#64748B;'>{$s['label']}</div></div>";
+                                            $html .= "<div style='text-align:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);'><div style='width:32px;height:32px;margin:0 auto 6px;border-radius:8px;background:{$s['bg']};display:flex;align-items:center;justify-content:center;'><span style='font-size:14px;color:white;font-weight:700;'>" . strtoupper(mb_substr($s['label'], 0, 1)) . "</span></div><div style='font-size:16px;font-weight:700;color:white;'>{$v}</div><div style='font-size:11px;color:#64748B;margin-top:2px;'>{$s['label']}</div></div>";
                                         }
                                         return new \Illuminate\Support\HtmlString($html . "</div>");
                                     }),

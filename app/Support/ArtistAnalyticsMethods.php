@@ -38,6 +38,44 @@ trait ArtistAnalyticsMethods
             ->toArray();
     }
 
+    private function buildAudiencePersonas(array $orderIds): array
+    {
+        if (empty($orderIds)) return ['personas' => [], 'totals' => ['total_customers' => 0, 'with_demographics' => 0, 'age_distribution' => [], 'gender_overall' => []]];
+
+        $buyers = DB::table('orders as o')
+            ->leftJoin('marketplace_customers as mc', 'mc.id', '=', 'o.marketplace_customer_id')
+            ->leftJoin('customers as c', 'c.id', '=', 'o.customer_id')
+            ->whereIn('o.id', $orderIds)
+            ->select(
+                DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'),
+                DB::raw('COALESCE(mc.birth_date, c.date_of_birth) as birth_date'),
+                'mc.gender',
+                DB::raw('COALESCE(mc.city, c.city) as city'),
+                DB::raw('SUM(o.total) as total_spent'),
+                DB::raw('COUNT(DISTINCT o.id) as order_count')
+            )
+            ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'), DB::raw('COALESCE(mc.birth_date, c.date_of_birth)'), 'mc.gender', DB::raw('COALESCE(mc.city, c.city)'))
+            ->get()->unique('buyer_id')->values();
+
+        $totalCustomers = $buyers->count();
+        if ($totalCustomers === 0) return ['personas' => [], 'totals' => ['total_customers' => 0, 'with_demographics' => 0, 'age_distribution' => [], 'gender_overall' => []]];
+
+        $withAge = $buyers->map(function ($b) {
+            $age = null;
+            if ($b->birth_date) { try { $age = Carbon::parse($b->birth_date)->age; } catch (\Exception $e) {} }
+            $ageGroup = match (true) { $age === null => 'unknown', $age < 18 => '<18', $age <= 24 => '18-24', $age <= 34 => '25-34', $age <= 44 => '35-44', $age <= 54 => '45-54', default => '55+' };
+            return (object) ['buyer_id' => $b->buyer_id, 'age_group' => $ageGroup, 'gender' => $b->gender ?: 'unknown', 'city' => $b->city, 'total_spent' => (float) $b->total_spent, 'order_count' => (int) $b->order_count];
+        });
+
+        return [
+            'personas' => $withAge->where('age_group', '!=', 'unknown')->groupBy(fn ($b) => $b->age_group . '_' . $b->gender)->map(function ($group, $key) use ($totalCustomers) {
+                [$ageGroup, $gender] = array_pad(explode('_', $key, 2), 2, 'unknown');
+                return ['age_group' => $ageGroup, 'gender' => $gender, 'count' => $group->count(), 'percentage' => round($group->count() / $totalCustomers * 100, 1), 'avg_spend' => round($group->avg('total_spent'), 2), 'avg_orders' => round($group->avg('order_count'), 1), 'top_cities' => $group->whereNotNull('city')->countBy('city')->sortDesc()->take(3)->toArray(), 'label' => ''];
+            })->sortByDesc('count')->values()->take(3)->map(function ($p, $i) { $p['label'] = ['Primary Persona', 'Secondary Persona', 'Tertiary Persona'][$i] ?? 'Other'; return $p; })->toArray(),
+            'totals' => ['total_customers' => $totalCustomers, 'with_demographics' => $withAge->where('age_group', '!=', 'unknown')->count(), 'age_distribution' => $withAge->where('age_group', '!=', 'unknown')->countBy('age_group')->sortKeys()->toArray(), 'gender_overall' => $withAge->where('gender', '!=', 'unknown')->countBy('gender')->toArray()],
+        ];
+    }
+
     private function buildGeographicIntelligence(array $eventIds, array $orderIds): array
     {
         $artistId = $this->record->id;

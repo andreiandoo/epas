@@ -128,6 +128,9 @@ class TenantPanelProvider extends PanelProvider
             .fi-body-has-topbar .fi-main-ctn { min-height: 100dvh !important; padding-top: 0 !important; }
             /* Sidebar nav: remove row-gap */
             .fi-sidebar-nav { row-gap: 0 !important; }
+            /* Page content: no padding on main, padding on header */
+            .fi-main { padding: 0 !important; }
+            .fi-page-header-main-ctn { padding: 1rem !important; }
             /* Prevent flash of unstyled content during Livewire morph */
             [wire\:loading] { opacity: 1 !important; }
             /* Compact repeater item content */
