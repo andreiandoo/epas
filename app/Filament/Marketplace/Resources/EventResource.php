@@ -527,12 +527,12 @@ class EventResource extends Resource
                                                 ->whereNull('marketplace_client_id')
                                                 ->orWhere('marketplace_client_id', $marketplace?->id)
                                                 ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
-                                            ->orderBy('name')
                                             ->get()
                                             ->mapWithKeys(fn ($venue) => [
                                                 $venue->id => $venue->getTranslation('name', app()->getLocale())
                                                     . ($venue->city ? ' (' . $venue->city . ')' : '')
-                                            ]);
+                                            ])
+                                            ->sort();
                                     })
                                     ->getOptionLabelUsing(function ($value) {
                                         $venue = Venue::find($value);
@@ -807,7 +807,7 @@ class EventResource extends Resource
                                     ->label($t('Tipuri eveniment', 'Event types'))
                                     ->relationship(
                                         name: 'eventTypes',
-                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
+                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))")
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                                     ->multiple()
@@ -853,7 +853,7 @@ class EventResource extends Resource
                                                     ->from('event_type_event_genre as eteg')
                                                     ->whereColumn('eteg.event_genre_id', 'event_genres.id')
                                                     ->whereIn('eteg.event_type_id', $typeIds);
-                                            })->orderBy('name');
+                                            })->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))");
                                         }
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
