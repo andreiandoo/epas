@@ -807,7 +807,7 @@ class EventResource extends Resource
                                     ->label($t('Tipuri eveniment', 'Event types'))
                                     ->relationship(
                                         name: 'eventTypes',
-                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))")
+                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                                     ->multiple()
@@ -853,7 +853,7 @@ class EventResource extends Resource
                                                     ->from('event_type_event_genre as eteg')
                                                     ->whereColumn('eteg.event_genre_id', 'event_genres.id')
                                                     ->whereIn('eteg.event_type_id', $typeIds);
-                                            })->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))");
+                                            });
                                         }
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
