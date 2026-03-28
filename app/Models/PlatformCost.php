@@ -42,6 +42,34 @@ class PlatformCost extends Model
     }
 
     /**
+     * Calculate the next payment date based on start_date and billing_cycle.
+     */
+    public function getNextPaymentDateAttribute(): ?\Carbon\Carbon
+    {
+        if ($this->billing_cycle === 'one_time' || !$this->start_date || !$this->is_active) {
+            return null;
+        }
+
+        $interval = $this->billing_cycle === 'yearly' ? 'addYear' : 'addMonth';
+        $next = $this->start_date->copy();
+
+        while ($next->lte(now())) {
+            $next->{$interval}();
+        }
+
+        return $next;
+    }
+
+    /**
+     * Check if payment is due within N days.
+     */
+    public function isDueSoon(int $days = 5): bool
+    {
+        $next = $this->next_payment_date;
+        return $next && $next->diffInDays(now(), absolute: true) <= $days && $next->gte(now());
+    }
+
+    /**
      * Get the monthly equivalent cost
      */
     public function getMonthlyAmountAttribute(): float

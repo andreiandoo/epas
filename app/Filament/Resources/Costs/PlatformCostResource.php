@@ -123,7 +123,19 @@ class PlatformCostResource extends Resource
                     ->date()
                     ->sortable()
                     ->toggleable(),
+
+                Tables\Columns\TextColumn::make('next_payment')
+                    ->label('Next Payment')
+                    ->getStateUsing(fn ($record) => $record->next_payment_date?->format('d M Y'))
+                    ->sortable(false)
+                    ->badge()
+                    ->color(fn ($record) => match (true) {
+                        $record->isDueSoon(5) => 'danger',
+                        $record->next_payment_date && $record->next_payment_date->diffInDays(now(), absolute: true) <= 15 => 'warning',
+                        default => 'gray',
+                    }),
             ])
+            ->recordClasses(fn (PlatformCost $record) => $record->isDueSoon(5) ? 'bg-danger-50 dark:bg-danger-950/30' : '')
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
                     ->options(PlatformCost::CATEGORY_LABELS),
