@@ -345,11 +345,27 @@ trait ArtistAnalyticsMethods
 
         if ($expansionCities->isEmpty()) return [];
 
-        return $expansionCities->map(function ($row) {
+        $expCityNames = $expansionCities->pluck('city')->toArray();
+        $venuesInCities = DB::table('venues')
+            ->whereIn('city', $expCityNames)
+            ->select('id', 'name', 'city', 'capacity', 'capacity_total')
+            ->orderByDesc('capacity')
+            ->get()->groupBy('city');
+
+        return $expansionCities->map(function ($row) use ($venuesInCities) {
+            $venues = ($venuesInCities->get($row->city) ?? collect())->take(3)->map(function ($v) {
+                $name = $v->name;
+                if ($name && str_starts_with($name, '{')) { $d = json_decode($name, true); $name = $d['en'] ?? $d['ro'] ?? reset($d) ?: $name; }
+                return ['name' => $name, 'capacity' => (int) ($v->capacity ?: $v->capacity_total ?: 0)];
+            })->toArray();
+
             return [
                 'city' => $row->city, 'country' => $row->country,
-                'similar_events' => (int) $row->similar_events,
+                'fan_count' => 0,
                 'estimated_demand' => round((float) ($row->avg_attendance ?? 0)),
+                'venues' => $venues,
+                'similar_events' => (int) $row->similar_events,
+                'similar_avg_attendance' => round((float) ($row->avg_attendance ?? 0)),
                 'similar_sell_through' => round((float) ($row->avg_sell_through ?? 0) * 100, 1),
                 'confidence' => $row->similar_events >= 5 ? 'high' : ($row->similar_events >= 3 ? 'medium' : 'low'),
             ];
@@ -366,7 +382,8 @@ trait ArtistAnalyticsMethods
             ->leftJoin(DB::raw('(SELECT tt2.event_id, SUM(tt2.quota_sold) as sold, SUM(CASE WHEN tt2.quota_total > 0 THEN tt2.quota_total ELSE 0 END) as capacity FROM ticket_types tt2 GROUP BY tt2.event_id) as ts'), 'ts.event_id', '=', 'e.id')
             ->where('ea.artist_id', $this->record->id)
             ->where('e.event_date', '>=', now()->toDateString())
-            ->select('e.id', 'e.title', 'e.event_date', 'v.name as venue_name', 'v.city as venue_city', 'ea.is_headliner', 'ts.sold', 'ts.capacity')
+            ->leftJoin(DB::raw('(SELECT tt3.event_id, SUM(tt3.quota_sold * tt3.price_cents) / 100 as revenue_sold FROM ticket_types tt3 GROUP BY tt3.event_id) as rs'), 'rs.event_id', '=', 'e.id')
+            ->select('e.id', 'e.title', 'e.event_date', 'v.name as venue_name', 'v.city as venue_city', 'v.capacity as venue_capacity', 'ea.is_headliner', 'ts.sold', 'ts.capacity', 'rs.revenue_sold')
             ->orderBy('e.event_date')
             ->limit(10)
             ->get();
@@ -384,10 +401,15 @@ trait ArtistAnalyticsMethods
             return [
                 'id' => $e->id, 'title' => $title, 'date' => $e->event_date,
                 'venue' => $vn, 'city' => $e->venue_city,
+                'venue_capacity' => (int) ($e->venue_capacity ?? 0),
                 'is_headliner' => (bool) $e->is_headliner,
                 'sold' => $sold, 'capacity' => $cap,
                 'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null,
+                'revenue_sold' => round((float) ($e->revenue_sold ?? 0), 2),
                 'days_until' => $daysUntil,
+                'hist_avg_sold' => 0,
+                'hist_avg_sell_through' => 0,
+                'forecast_sold' => null,
             ];
         })->toArray();
     }
