@@ -445,12 +445,15 @@ class CustomerResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('tenant_display')
-                    ->label('Tenant')
-                    ->state(fn (\App\Models\Customer $record) =>
-                        $record->tenant?->name
-                        ?? $record->marketplaceClient?->name
-                        ?? '-'
-                    )
+                    ->label('Tenant / Source')
+                    ->state(function (\App\Models\Customer $record) {
+                        $marketplace = $record->marketplaceClient?->name;
+                        $tenant = $record->tenant?->name;
+                        if ($marketplace && $tenant) {
+                            return "{$marketplace} → {$tenant}";
+                        }
+                        return $marketplace ?? $tenant ?? '-';
+                    })
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('phone')
@@ -482,10 +485,14 @@ class CustomerResource extends Resource
 
                 Tables\Columns\TextColumn::make('primary_tenant_display')
                     ->label('Primary Tenant')
-                    ->state(fn (\App\Models\Customer $record) =>
-                        $record->primaryTenant?->name
-                        ?? $record->marketplaceClient?->name
-                        ?? '-'
+                    ->state(function (\App\Models\Customer $record) {
+                        $marketplace = $record->marketplaceClient?->name;
+                        $tenant = $record->primaryTenant?->name;
+                        if ($marketplace && $tenant) {
+                            return "{$marketplace} → {$tenant}";
+                        }
+                        return $marketplace ?? $tenant ?? '-';
+                    }
                     )
                     ->toggleable(),
 
