@@ -3621,7 +3621,7 @@ class EventResource extends Resource
                                               ->orWhereRaw($isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$term}%"])
                                               ->orWhereRaw('LOWER(city) LIKE ?', ["%{$term}%"]);
                                         })
-                                        ->orderBy('name')
+                                        ->orderByRaw(\DB::getDriverName() === 'pgsql' ? "name->>'ro'" : "JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))")
                                         ->limit(50)
                                         ->get()
                                         ->mapWithKeys(fn ($venue) => [
@@ -3761,9 +3761,9 @@ class EventResource extends Resource
                                 ->label('Tipuri eveniment (opțional, override)')
                                 ->options(function () {
                                     return EventType::whereNotNull('parent_id')
-                                        ->orderBy('name')
                                         ->get()
-                                        ->mapWithKeys(fn ($t) => [$t->id => $t->getTranslation('name', app()->getLocale())]);
+                                        ->mapWithKeys(fn ($t) => [$t->id => $t->getTranslation('name', app()->getLocale())])
+                                        ->sort();
                                 })
                                 ->multiple()
                                 ->preload()
@@ -3773,9 +3773,9 @@ class EventResource extends Resource
                             Forms\Components\Select::make('event_genres')
                                 ->label('Genuri eveniment (opțional)')
                                 ->options(function () {
-                                    return EventGenre::orderBy('name')
-                                        ->get()
-                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())]);
+                                    return EventGenre::all()
+                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())])
+                                        ->sort();
                                 })
                                 ->multiple()
                                 ->preload()
@@ -3834,9 +3834,9 @@ class EventResource extends Resource
                             Forms\Components\Select::make('genre_ids')
                                 ->label('Genuri eveniment')
                                 ->options(function () {
-                                    return EventGenre::orderBy('name')
-                                        ->get()
-                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())]);
+                                    return EventGenre::all()
+                                        ->mapWithKeys(fn ($g) => [$g->id => $g->getTranslation('name', app()->getLocale())])
+                                        ->sort();
                                 })
                                 ->multiple()
                                 ->preload()
