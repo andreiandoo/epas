@@ -54,8 +54,19 @@
                             </div>
 
                             {{-- Event Info --}}
+                            @php
+                                $slug = is_array($event->slug) ? ($event->slug[app()->getLocale()] ?? $event->slug['en'] ?? $event->slug['ro'] ?? '') : ($event->slug ?? '');
+                                $domain = $event->tenant?->domains()->where('is_primary', true)->first()?->domain;
+                                $eventUrl = ($domain && $slug && $event->is_published)
+                                    ? 'https://' . $domain . '/events/' . $slug
+                                    : null;
+                            @endphp
                             <div class="flex-1 min-w-0">
-                                <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $title }}</div>
+                                @if($eventUrl)
+                                    <a href="{{ $eventUrl }}" target="_blank" class="font-semibold text-sm text-primary-400 hover:text-primary-300 truncate block transition">{{ $title }}</a>
+                                @else
+                                    <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $title }}</div>
+                                @endif
                                 <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
                                     @if($event->venue)
                                         <span>{{ is_array($event->venue->name) ? ($event->venue->name[app()->getLocale()] ?? $event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '') : $event->venue->name }}</span>
@@ -70,6 +81,16 @@
                                     @endif
                                 </div>
                             </div>
+
+                            {{-- Buy Tickets button --}}
+                            @if($eventUrl)
+                                <div class="flex-shrink-0">
+                                    <a href="{{ $eventUrl }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-500/10 text-primary-400 hover:bg-primary-500/20 text-xs font-semibold transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                        Tickets
+                                    </a>
+                                </div>
+                            @endif
 
                             {{-- Ticket Sales --}}
                             <div class="flex-shrink-0 text-right">
@@ -95,23 +116,6 @@
                                 @endif
                             </div>
 
-                            {{-- Link to public page --}}
-                            <div class="flex-shrink-0">
-                                @if($event->slug && $event->is_published)
-                                    @php
-                                        $domain = $event->tenant?->domains()->where('is_primary', true)->first()?->domain;
-                                        $publicUrl = $domain
-                                            ? 'https://' . $domain . '/events/' . (is_array($event->slug) ? ($event->slug[app()->getLocale()] ?? $event->slug['en'] ?? $event->slug['ro'] ?? '') : $event->slug)
-                                            : null;
-                                    @endphp
-                                    @if($publicUrl)
-                                        <a href="{{ $publicUrl }}" target="_blank" class="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300 transition">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                                            Tickets
-                                        </a>
-                                    @endif
-                                @endif
-                            </div>
                         </div>
                     @endforeach
                 </div>
