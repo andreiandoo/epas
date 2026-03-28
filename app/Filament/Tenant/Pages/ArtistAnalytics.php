@@ -290,7 +290,48 @@ class ArtistAnalytics extends Page
     public function analyzeVenue(int $venueId): void
     {
         $this->selectedVenueId = $venueId;
-        $this->venueAnalysis = null;
+        $artistId = $this->record->id;
+        $venue = \App\Models\Venue::find($venueId);
+        if (!$venue) { $this->venueAnalysis = null; return; }
+
+        $venueName = is_array($venue->name) ? ($venue->name['en'] ?? $venue->name['ro'] ?? reset($venue->name) ?: '') : $venue->name;
+        $cap = $venue->capacity ?: $venue->capacity_total ?: 0;
+
+        $history = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as capacity, SUM(quota_sold*price_cents)/100 as revenue FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artistId)->where('e.venue_id', $venueId)
+            ->select('e.id', 'e.title', 'e.event_date', 'ts.sold', 'ts.capacity', 'ts.revenue')
+            ->orderByDesc('e.event_date')->get()
+            ->map(function ($e) {
+                $t = $e->title; if ($t && str_starts_with($t, '{')) { $d = json_decode($t, true); $t = $d['en'] ?? $d['ro'] ?? reset($d) ?: $t; }
+                $s = (int) ($e->sold ?? 0); $c = (int) ($e->capacity ?? 0);
+                return ['title' => $t, 'date' => $e->event_date, 'sold' => $s, 'capacity' => $c, 'sell_through' => $c > 0 ? round($s / $c * 100, 1) : null, 'revenue' => round((float) ($e->revenue ?? 0), 0)];
+            })->toArray();
+
+        $hasHistory = !empty($history);
+        $venueStats = DB::table('ticket_types as tt')->join('events as e', 'e.id', '=', 'tt.event_id')->where('e.venue_id', $venueId)->where('tt.quota_total', '>', 0)
+            ->select(DB::raw('COUNT(DISTINCT e.id) as total_events'), DB::raw('AVG(LEAST(tt.quota_sold*1.0/tt.quota_total,1.0)) as avg_fill_rate'))->first();
+
+        $forecast = null;
+        if (!$hasHistory) {
+            $eventIds = $this->artistEventIds(); $orderIds = $this->artistOrderIds($eventIds);
+            $fansInCity = 0;
+            if (!empty($orderIds) && $venue->city) {
+                $fansInCity = (int) DB::table('orders as o')->leftJoin('marketplace_customers as mc', 'mc.id', '=', 'o.marketplace_customer_id')->leftJoin('customers as c', 'c.id', '=', 'o.customer_id')
+                    ->whereIn('o.id', $orderIds)->where(DB::raw('COALESCE(mc.city, c.city)'), $venue->city)->count(DB::raw('DISTINCT COALESCE(o.marketplace_customer_id, o.customer_id)'));
+            }
+            $genreIds = DB::table('artist_artist_genre')->where('artist_id', $artistId)->pluck('artist_genre_id')->toArray();
+            $similarAtVenue = null;
+            if (!empty($genreIds)) {
+                $simIds = DB::table('artist_artist_genre')->whereIn('artist_genre_id', $genreIds)->where('artist_id', '!=', $artistId)->pluck('artist_id')->unique()->take(50)->toArray();
+                if (!empty($simIds)) { $similarAtVenue = DB::table('events as e')->join('event_artist as ea', 'ea.event_id', '=', 'e.id')->leftJoin(DB::raw('(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap FROM ticket_types GROUP BY event_id) as ts'), 'ts.event_id', '=', 'e.id')->where('e.venue_id', $venueId)->whereIn('ea.artist_id', $simIds)->select(DB::raw('COUNT(DISTINCT e.id) as events'), DB::raw('AVG(ts.sold) as avg_sold'), DB::raw('AVG(CASE WHEN ts.cap>0 THEN LEAST(ts.sold*1.0/ts.cap,1.0) ELSE NULL END) as avg_st'))->first(); }
+            }
+            $estimatedDemand = $fansInCity * 3;
+            $forecast = ['fans_in_city' => $fansInCity, 'estimated_demand' => $estimatedDemand, 'similar_events' => (int) ($similarAtVenue?->events ?? 0), 'similar_avg_sold' => round((float) ($similarAtVenue?->avg_sold ?? 0)), 'similar_avg_st' => round((float) ($similarAtVenue?->avg_st ?? 0) * 100, 1), 'capacity_utilization' => $cap > 0 ? round(min($estimatedDemand / $cap * 100, 100), 1) : 0];
+        }
+
+        $this->venueAnalysis = ['venue_name' => $venueName, 'city' => $venue->city, 'capacity' => $cap, 'has_history' => $hasHistory, 'history' => $history, 'history_avg_st' => $hasHistory ? round(collect($history)->whereNotNull('sell_through')->avg('sell_through'), 1) : null, 'history_avg_revenue' => $hasHistory ? round(collect($history)->avg('revenue')) : null, 'venue_total_events' => (int) ($venueStats?->total_events ?? 0), 'venue_avg_fill' => round((float) ($venueStats?->avg_fill_rate ?? 0) * 100, 1), 'forecast' => $forecast];
     }
 
 }

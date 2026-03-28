@@ -168,7 +168,7 @@ canvas{width:100%!important;}
     searchVenue() {
         if (this.venueQ.length < 2) { this.venueResults = []; return; }
         this.venueLoading = true;
-        $wire.call('updatedVenueSearch').then(() => {
+        $wire.set('venueSearch', this.venueQ).then(() => {
             this.venueResults = $wire.get('venueResults');
             this.venueLoading = false;
         });
@@ -181,7 +181,7 @@ canvas{width:100%!important;}
     },
     doAnalyzeVenue(id) {
         this.selectedVenueId = id;
-        $wire.call('analyzeVenue', id).then(() => {
+        return $wire.call('analyzeVenue', id).then(() => {
             this.venueAnalysis = $wire.get('venueAnalysis');
         });
     }
@@ -676,57 +676,47 @@ canvas{width:100%!important;}
                         </template>
                     </div>
                     </template>
-                    @if($venueAnalysis)
-                    <div style="margin-top:16px;">
+                    <div x-show="venueAnalysis" x-cloak style="margin-top:16px;">
                         <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
-                            <div class="kpi"><div class="l">{{ $venueAnalysis['venue_name'] }}</div><div class="v" style="font-size:14px;">{{ $venueAnalysis['city'] }}</div></div>
-                            <div class="kpi"><div class="l">Venue Capacity</div><div class="v">{{ number_format($venueAnalysis['capacity']) }}</div></div>
-                            <div class="kpi"><div class="l">Venue Avg Fill</div><div class="v">{{ $venueAnalysis['venue_avg_fill'] }}%</div></div>
-                            <div class="kpi"><div class="l">Total Events at Venue</div><div class="v">{{ $venueAnalysis['venue_total_events'] }}</div></div>
+                            <div class="kpi"><div class="l" x-text="venueAnalysis?.venue_name"></div><div class="v" style="font-size:14px;" x-text="venueAnalysis?.city"></div></div>
+                            <div class="kpi"><div class="l">Venue Capacity</div><div class="v" x-text="venueAnalysis ? Number(venueAnalysis.capacity).toLocaleString() : ''"></div></div>
+                            <div class="kpi"><div class="l">Venue Avg Fill</div><div class="v" x-text="venueAnalysis ? venueAnalysis.venue_avg_fill + '%' : ''"></div></div>
+                            <div class="kpi"><div class="l">Total Events</div><div class="v" x-text="venueAnalysis?.venue_total_events"></div></div>
                         </div>
-                        @if($venueAnalysis['has_history'])
+                        <template x-if="venueAnalysis && venueAnalysis.has_history">
                             <div class="card" style="margin-bottom:14px;border-color:rgba(34,197,94,.2);">
-                                <div class="card-h" style="color:var(--success);">Artist History at this Venue ({{ count($venueAnalysis['history']) }} events)</div>
-                                <div class="card-b">
-                                    <div class="g2" style="margin-bottom:12px;">
-                                        <div class="kpi"><div class="l">Avg Sell-Through</div><div class="v" style="color:var(--success);">{{ $venueAnalysis['history_avg_st'] }}%</div></div>
-                                        <div class="kpi"><div class="l">Avg Revenue</div><div class="v" style="color:var(--success);">{{ number_format($venueAnalysis['history_avg_revenue']) }} RON</div></div>
-                                    </div>
+                                <div class="card-h" style="color:var(--success);">Artist History at this Venue (<span x-text="venueAnalysis.history?.length || 0"></span> events) — Avg ST: <span x-text="venueAnalysis.history_avg_st + '%'"></span></div>
+                                <div class="card-b" style="overflow-x:auto;">
                                     <table class="tbl">
-                                        <thead><tr><th>Date</th><th>Event</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
+                                        <thead><tr><th>Event</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
                                         <tbody>
-                                            @foreach($venueAnalysis['history'] as $h)
+                                            <template x-for="h in venueAnalysis.history" :key="h.title">
                                             <tr>
-                                                <td style="white-space:nowrap;">{{ $h['date'] ? \Carbon\Carbon::parse($h['date'])->format('d M Y') : '—' }}</td>
-                                                <td>{{ $h['title'] }}</td>
-                                                <td>{{ number_format($h['sold']) }}/{{ $h['capacity'] ?: '?' }}</td>
-                                                <td>@if($h['sell_through'] !== null)<div style="display:flex;align-items:center;gap:5px;"><div class="progress"><div class="progress-fill" style="width:{{ min($h['sell_through'],100) }}%;background:{{ $h['sell_through']>=80?'var(--success)':($h['sell_through']>=50?'var(--warn)':'var(--danger)') }};"></div></div><span style="font-size:11px;">{{ $h['sell_through'] }}%</span></div>@else — @endif</td>
-                                                <td>{{ number_format($h['revenue']) }} RON</td>
+                                                <td x-text="h.title"></td>
+                                                <td><span x-text="Number(h.sold).toLocaleString()"></span>/<span x-text="h.capacity || '?'"></span></td>
+                                                <td><span x-text="h.sell_through !== null ? h.sell_through + '%' : '—'"></span></td>
+                                                <td><span x-text="Number(h.revenue).toLocaleString() + ' RON'"></span></td>
                                             </tr>
-                                            @endforeach
+                                            </template>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
-                        @elseif($venueAnalysis['forecast'] ?? null)
-                            @php $fc = $venueAnalysis['forecast']; @endphp
+                        </template>
+                        <template x-if="venueAnalysis && !venueAnalysis.has_history && venueAnalysis.forecast">
                             <div class="card" style="border-color:rgba(34,211,238,.2);">
                                 <div class="card-h" style="color:var(--accent);">Forecast — Artist has not performed here</div>
                                 <div class="card-b">
                                     <div class="kpi-grid kpi-grid-4" style="margin-bottom:12px;">
-                                        <div class="kpi"><div class="l">Fans in {{ $venueAnalysis['city'] }}</div><div class="v">{{ $fc['fans_in_city'] }}</div></div>
-                                        <div class="kpi"><div class="l">Est. Demand</div><div class="v" style="color:var(--accent);">{{ $fc['estimated_demand'] }}</div></div>
-                                        <div class="kpi"><div class="l">Similar Artists</div><div class="v">{{ $fc['similar_events'] }} events</div></div>
-                                        <div class="kpi"><div class="l">Capacity Utilization</div><div class="v">{{ $fc['capacity_utilization'] }}%</div></div>
+                                        <div class="kpi"><div class="l">Fans in <span x-text="venueAnalysis.city"></span></div><div class="v" x-text="venueAnalysis.forecast.fans_in_city"></div></div>
+                                        <div class="kpi"><div class="l">Est. Demand</div><div class="v" style="color:var(--accent);" x-text="venueAnalysis.forecast.estimated_demand"></div></div>
+                                        <div class="kpi"><div class="l">Similar Artists</div><div class="v" x-text="venueAnalysis.forecast.similar_events + ' events'"></div></div>
+                                        <div class="kpi"><div class="l">Capacity Util.</div><div class="v" x-text="venueAnalysis.forecast.capacity_utilization + '%'"></div></div>
                                     </div>
-                                    @if($fc['similar_events'] > 0)
-                                    <div style="font-size:12px;color:var(--muted);">Similar artists averaged <strong style="color:var(--text);">{{ $fc['similar_avg_sold'] }}</strong> tickets sold ({{ $fc['similar_avg_st'] }}% sell-through) at this venue.</div>
-                                    @endif
                                 </div>
                             </div>
-                        @endif
+                        </template>
                     </div>
-                    @endif
                 </div>
             </div>
 
@@ -777,6 +767,12 @@ canvas{width:100%!important;}
                         <option value="{{ $ue['id'] }}" {{ ($selectedEventId ?? null) == $ue['id'] ? 'selected' : '' }}>{{ $ue['title'] }} — {{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '' }} ({{ $ue['venue'] ?? '' }})</option>
                     @endforeach
                 </select>
+                <template x-if="eventAnalysis && eventAnalysis.title">
+                    <div style="margin-top:8px;padding:8px 12px;border-radius:8px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.15);font-size:13px;">
+                        Analyzing: <strong style="color:var(--accent);" x-text="eventAnalysis.title"></strong>
+                        <span style="color:var(--muted);margin-left:8px;" x-text="eventAnalysis.venue ? '@ ' + eventAnalysis.venue : ''"></span>
+                    </div>
+                </template>
                 <div x-show="analyzing" style="padding:16px;text-align:center;color:var(--accent);">
                     <svg style="display:inline;animation:spin 1s linear infinite;" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="32" stroke-linecap="round"/></svg>
                     Loading analysis...
