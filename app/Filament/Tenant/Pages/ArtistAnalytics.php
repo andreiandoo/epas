@@ -179,6 +179,7 @@ class ArtistAnalytics extends Page
                     'expansionPlanner' => $this->buildCityExpansionPlanner($eventIds, $orderIds),
                     'upcomingAnalysis' => $this->buildUpcomingEventsAnalysis($eventIds),
                     'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
+                    'fanEngagement' => $this->buildFanEngagementScore($orderIds),
                 ]
             );
             } catch (\Exception $e) {

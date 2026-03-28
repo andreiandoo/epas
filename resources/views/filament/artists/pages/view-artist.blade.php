@@ -273,6 +273,39 @@ canvas{width:100%!important;}
             <div class="kpi"><div class="l">Avg Lead</div><div class="v">{{ $sales['avg_lead_days'] ?? 0 }}d</div></div>
         </div>
 
+        {{-- Fan Engagement Score --}}
+        @php $fe = $fanEngagement ?? ['score' => 0, 'label' => 'N/A', 'components' => []]; @endphp
+        @if($fe['score'] > 0 || !empty($fe['components']))
+        <div class="card" style="margin-bottom:14px;">
+            <div class="card-b" style="display:flex;align-items:center;gap:24px;">
+                {{-- Radial gauge --}}
+                <div style="flex-shrink:0;position:relative;width:90px;height:90px;">
+                    <div style="width:90px;height:90px;border-radius:50%;background:conic-gradient({{ $fe['score'] >= 75 ? 'var(--success)' : ($fe['score'] >= 50 ? 'var(--warn)' : ($fe['score'] >= 25 ? 'var(--primary)' : 'var(--danger)')) }} {{ $fe['score'] * 3.6 }}deg, rgba(122,162,255,.1) 0);display:flex;align-items:center;justify-content:center;">
+                        <div style="width:70px;height:70px;border-radius:50%;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <span style="font-size:22px;font-weight:800;color:var(--text);">{{ $fe['score'] }}</span>
+                            <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">{{ $fe['label'] }}</span>
+                        </div>
+                    </div>
+                </div>
+                {{-- Component bars --}}
+                <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+                    @foreach(['favorites' => 'Favorites', 'reviews' => 'Reviews', 'loyalty' => 'Loyalty', 'referrals' => 'Referrals'] as $key => $label)
+                        @php $comp = $fe['components'][$key] ?? ['raw' => 0, 'score' => 0, 'max' => 25]; @endphp
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:3px;"><span>{{ $label }}</span><span style="color:var(--text);font-weight:600;">{{ $comp['score'] }}/{{ $comp['max'] }}</span></div>
+                            <div style="height:6px;background:rgba(122,162,255,.1);border-radius:3px;overflow:hidden;"><div style="height:100%;width:{{ $comp['max'] > 0 ? round($comp['score'] / $comp['max'] * 100) : 0 }}%;background:{{ $comp['score'] >= 20 ? 'var(--success)' : ($comp['score'] >= 10 ? 'var(--warn)' : 'var(--primary)') }};border-radius:3px;"></div></div>
+                            <div style="font-size:10px;color:var(--muted);margin-top:2px;">{{ $key === 'reviews' ? ($comp['raw'] ?: '—') . ' avg (' . ($comp['count'] ?? 0) . ')' : number_format($comp['raw'] ?? 0) }}</div>
+                        </div>
+                    @endforeach
+                </div>
+                <div style="flex-shrink:0;text-align:right;">
+                    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;">Fan Engagement</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:2px;">Score</div>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Combined monthly chart --}}
         <div class="card" style="margin-bottom:14px;" wire:ignore>
             <div class="card-h">Monthly Trends — Events · Tickets · Revenue (12 months)</div>
@@ -465,6 +498,21 @@ canvas{width:100%!important;}
                         <div class="kpi"><div class="l">Avg Purchase</div><div class="v">{{ $opps['lead_time']['avg'] ?? '?' }}d before</div></div>
                         <div class="kpi"><div class="l">Earliest Purchase</div><div class="v">{{ $opps['lead_time']['first_sale_avg'] ?? '?' }}d out</div></div>
                     </div>
+                </div>
+            </div>
+            @endif
+
+            {{-- Announcement Window --}}
+            @php $aw = $opps['announcement_window'] ?? []; @endphp
+            @if(!empty($aw['labels']))
+            <div class="card" style="margin-top:14px;" wire:ignore>
+                <div class="card-h" style="color:var(--accent);">Optimal Announcement Timeline</div>
+                <div class="card-b">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:10px;border-radius:8px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.12);">
+                        <span style="font-size:28px;font-weight:800;color:var(--accent);">{{ $aw['optimal_announce_days'] }}d</span>
+                        <div><div style="font-size:13px;color:var(--text);font-weight:600;">Announce {{ $aw['optimal_announce_days'] }} days before the event</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">90% of your audience buys within {{ $aw['p90_days'] }}d · Median purchase: {{ $aw['median_days'] }}d before event</div></div>
+                    </div>
+                    <div style="height:200px;"><canvas id="announceChart"></canvas></div>
                 </div>
             </div>
             @endif
@@ -1106,9 +1154,31 @@ canvas{width:100%!important;}
     const tm = @js($timing ?? []);
     if(Object.values(tm).some(v=>v>0)&&document.getElementById('timingChart')){new Chart(document.getElementById('timingChart'),{type:'bar',data:{labels:['Last min','Last week','Last month','Early bird','Super early'],datasets:[{data:[tm.last_minute||0,tm.last_week||0,tm.last_month||0,tm.early_bird||0,tm.super_early||0],backgroundColor:['#ef4444','#fbbf24','#22c55e','#7aa2ff','#c084fc'],borderWidth:0,borderRadius:6}]},options:{...opts,indexAxis:'y',plugins:{legend:{display:false}}}});}
 
-    // Price sensitivity
+    // Price sensitivity + revenue per ticket
     const ps = @js($priceSens ?? []);
-    if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[{label:'Tickets',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff88',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},{label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e33',tension:.3,pointRadius:4,borderWidth:2,yAxisID:'y1'}]},options:{...opts,scales:{...opts.scales,y1:{position:'right',beginAtZero:true,max:100,ticks:{color:'#22c55e',callback:v=>v+'%'},grid:{display:false}}}}});}
+    if(ps.length&&document.getElementById('priceChart')){new Chart(document.getElementById('priceChart'),{type:'bar',data:{labels:ps.map(p=>p.range+' RON'),datasets:[
+        {label:'Tickets Sold',data:ps.map(p=>p.tickets),backgroundColor:'#7aa2ff55',borderColor:'#7aa2ff',borderWidth:1,borderRadius:4,yAxisID:'y'},
+        {label:'Sell-Through %',data:ps.map(p=>p.sell_through),type:'line',borderColor:'#22c55e',backgroundColor:'#22c55e22',tension:.3,pointRadius:4,borderWidth:2.5,yAxisID:'y1'},
+        {label:'Revenue/Ticket (RON)',data:ps.map(p=>p.revenue_per_ticket||0),type:'line',borderColor:'#fbbf24',backgroundColor:'#fbbf2411',tension:.3,pointRadius:4,borderWidth:2,borderDash:[5,3],yAxisID:'y1',hidden:false}
+    ]},options:{...opts,plugins:{legend:{display:true,position:'top',labels:{color:'#cdd7f6',font:{size:10},usePointStyle:true}}},scales:{...opts.scales,y1:{position:'right',beginAtZero:true,ticks:{color:'#22c55e',font:{size:10}},grid:{display:false}}}}});}
+
+    // Announcement window chart
+    const aw = @js($opps['announcement_window'] ?? ($opportunities['announcement_window'] ?? []));
+    const awEl = document.getElementById('announceChart');
+    if (aw.labels && aw.labels.length && awEl && window.Chart) {
+        const awIdx = aw.announce_week_index || 0;
+        new Chart(awEl, {
+            type:'bar',
+            data:{labels:aw.labels, datasets:[{
+                label:'Ticket purchases',
+                data:aw.values,
+                backgroundColor: aw.values.map((_,i) => i >= (aw.labels.length - awIdx) ? '#22d3ee44' : '#7aa2ff44'),
+                borderColor: aw.values.map((_,i) => i >= (aw.labels.length - awIdx) ? '#22d3ee' : '#7aa2ff'),
+                borderWidth:1, borderRadius:3
+            }]},
+            options:{...opts, plugins:{legend:{display:false}}, scales:{...opts.scales, y:{...opts.scales.y, title:{display:true,text:'Purchases',color:'#64748b',font:{size:10}}}}}
+        });
+    }
 
     // Leaflet geographic map — init when Geographic tab is shown (Leaflet needs visible container)
     const geoPoints = @js(collect($geoData)->filter(fn($g) => ($g['lat'] ?? 0) != 0 && ($g['lng'] ?? 0) != 0)->values()->toArray());

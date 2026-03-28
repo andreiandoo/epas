@@ -284,12 +284,12 @@ trait ArtistAnalyticsMethods
             'super_early' => $totalLead > 0 ? round($leadTimes->filter(fn ($d) => $d > 90)->count() / $totalLead * 100, 1) : 0,
         ];
 
-        // Price sensitivity
+        // Price sensitivity with revenue per ticket
         $priceData = DB::table('ticket_types as tt')->whereIn('tt.event_id', $eventIds)->where('tt.quota_total', '>', 0)->select('tt.price_cents', 'tt.quota_sold', 'tt.quota_total')->get();
-        $priceBuckets = ['0-50' => ['t' => 0, 'c' => 0], '50-100' => ['t' => 0, 'c' => 0], '100-200' => ['t' => 0, 'c' => 0], '200-500' => ['t' => 0, 'c' => 0], '500+' => ['t' => 0, 'c' => 0]];
-        foreach ($priceData as $p) { $price = $p->price_cents / 100; $bucket = match (true) { $price < 50 => '0-50', $price < 100 => '50-100', $price < 200 => '100-200', $price < 500 => '200-500', default => '500+' }; $priceBuckets[$bucket]['t'] += $p->quota_sold; $priceBuckets[$bucket]['c'] += $p->quota_total; }
+        $priceBuckets = ['0-50' => ['t' => 0, 'c' => 0, 'rev' => 0], '50-100' => ['t' => 0, 'c' => 0, 'rev' => 0], '100-200' => ['t' => 0, 'c' => 0, 'rev' => 0], '200-500' => ['t' => 0, 'c' => 0, 'rev' => 0], '500+' => ['t' => 0, 'c' => 0, 'rev' => 0]];
+        foreach ($priceData as $p) { $price = $p->price_cents / 100; $bucket = match (true) { $price < 50 => '0-50', $price < 100 => '50-100', $price < 200 => '100-200', $price < 500 => '200-500', default => '500+' }; $priceBuckets[$bucket]['t'] += $p->quota_sold; $priceBuckets[$bucket]['c'] += $p->quota_total; $priceBuckets[$bucket]['rev'] += $price * $p->quota_sold; }
         $priceSensitivity = [];
-        foreach ($priceBuckets as $range => $d) { if ($d['c'] > 0) $priceSensitivity[] = ['range' => $range, 'tickets' => $d['t'], 'sell_through' => round($d['t'] / $d['c'] * 100, 1)]; }
+        foreach ($priceBuckets as $range => $d) { if ($d['c'] > 0) $priceSensitivity[] = ['range' => $range, 'tickets' => $d['t'], 'sell_through' => round($d['t'] / $d['c'] * 100, 1), 'revenue_per_ticket' => $d['t'] > 0 ? round($d['rev'] / $d['t'], 2) : 0, 'total_revenue' => round($d['rev'], 0)]; }
 
         // Sales velocity for last 5 events
         $lastEventIds = DB::table('events as e')->join('event_artist as ea', 'ea.event_id', '=', 'e.id')->where('ea.artist_id', $this->record->id)->whereNotNull('e.event_date')->where('e.event_date', '<', now())->orderByDesc('e.event_date')->limit(5)->pluck('e.id')->toArray();
@@ -525,6 +525,111 @@ trait ArtistAnalyticsMethods
             'price_performance' => $pricePerformance->map(fn ($p) => ['range' => $p->price_range, 'avg_price' => round((float) $p->avg_price, 0), 'total_sold' => (int) $p->total_sold, 'avg_st' => round((float) ($p->avg_st ?? 0) * 100, 1)])->values()->toArray(),
             'venue_cap_performance' => $venueCapPerf->map(fn ($v) => ['range' => $v->cap_range, 'events' => (int) $v->events, 'avg_sold' => round((float) $v->avg_sold), 'avg_st' => round((float) ($v->avg_st ?? 0), 1)])->values()->toArray(),
             'lead_time' => $leadTimeStats,
+            'announcement_window' => $this->buildAnnouncementWindow($leadTimeStats, $leadTimes ?? collect()),
+        ];
+    }
+
+    private function buildAnnouncementWindow(array $leadTimeStats, $leadTimes): array
+    {
+        if (empty($leadTimeStats) || $leadTimes->isEmpty()) return [];
+
+        $p90 = $leadTimeStats['p90'] ?? 60;
+        $median = $leadTimeStats['median'] ?? 14;
+        $optimalAnnounce = $p90 + 14;
+
+        // Weekly purchase distribution histogram
+        $weeklyBuckets = [];
+        foreach ($leadTimes as $d) {
+            $week = min(12, (int) floor($d / 7));
+            $weeklyBuckets[$week] = ($weeklyBuckets[$week] ?? 0) + 1;
+        }
+        ksort($weeklyBuckets);
+
+        // Fill gaps
+        $labels = []; $values = [];
+        for ($w = 0; $w <= 12; $w++) {
+            $labels[] = $w === 0 ? 'Event week' : ($w === 1 ? '1w before' : "{$w}w before");
+            $values[] = $weeklyBuckets[$w] ?? 0;
+        }
+
+        return [
+            'optimal_announce_days' => $optimalAnnounce,
+            'p90_days' => $p90,
+            'median_days' => $median,
+            'labels' => array_reverse($labels),
+            'values' => array_reverse($values),
+            'announce_week_index' => min(12, (int) ceil($optimalAnnounce / 7)),
+        ];
+    }
+
+    private function buildFanEngagementScore(array $orderIds): array
+    {
+        $artistId = $this->record->id;
+
+        // 1. Favorites (0-25)
+        $favCount = 0;
+        try {
+            $favCount = (int) DB::table('marketplace_customer_favorites')
+                ->where('favoriteable_type', 'LIKE', '%Artist%')
+                ->where('favoriteable_id', $artistId)
+                ->count();
+        } catch (\Exception $e) {}
+        $favScore = min(25, round($favCount / 20)); // 500 favorites = 25
+
+        // 2. Reviews (0-25)
+        $avgRating = 0; $reviewCount = 0;
+        try {
+            $reviewData = DB::table('marketplace_customer_reviews as r')
+                ->join('marketplace_events as me', 'me.id', '=', 'r.marketplace_event_id')
+                ->join('events as e', 'e.id', '=', 'me.event_id')
+                ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+                ->where('ea.artist_id', $artistId)
+                ->where('r.status', 'approved')
+                ->select(DB::raw('AVG(r.rating) as avg_rating'), DB::raw('COUNT(*) as cnt'))
+                ->first();
+            $avgRating = round((float) ($reviewData->avg_rating ?? 0), 1);
+            $reviewCount = (int) ($reviewData->cnt ?? 0);
+        } catch (\Exception $e) {}
+        $reviewScore = min(25, round($avgRating * 5)); // 5.0 rating = 25
+
+        // 3. Repeat rate (0-25) - from existing loyalty data
+        $repeatRate = 0;
+        if (!empty($orderIds)) {
+            $customerEvents = DB::table('orders as o')
+                ->join('tickets as t', 't.order_id', '=', 'o.id')
+                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->whereIn('o.id', $orderIds)
+                ->select(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id'), DB::raw('COUNT(DISTINCT COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)) as events_attended'))
+                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))
+                ->get();
+            $total = $customerEvents->count();
+            $repeaters = $customerEvents->where('events_attended', '>=', 2)->count();
+            $repeatRate = $total > 0 ? round($repeaters / $total * 100, 1) : 0;
+        }
+        $loyaltyScore = min(25, round($repeatRate / 4)); // 100% repeat = 25
+
+        // 4. Referrals (0-25)
+        $refCount = 0;
+        try {
+            $refCount = (int) DB::table('customer_points')
+                ->whereIn('customer_id', function ($q) use ($orderIds) {
+                    $q->select('customer_id')->from('orders')->whereIn('id', array_slice($orderIds, 0, 1000))->whereNotNull('customer_id');
+                })
+                ->sum('referral_count');
+        } catch (\Exception $e) {}
+        $refScore = min(25, round($refCount / 4)); // 100 referrals = 25
+
+        $totalScore = $favScore + $reviewScore + $loyaltyScore + $refScore;
+
+        return [
+            'score' => $totalScore,
+            'label' => match (true) { $totalScore >= 75 => 'Excellent', $totalScore >= 50 => 'Good', $totalScore >= 25 => 'Growing', default => 'Emerging' },
+            'components' => [
+                'favorites' => ['raw' => $favCount, 'score' => $favScore, 'max' => 25],
+                'reviews' => ['raw' => $avgRating, 'count' => $reviewCount, 'score' => $reviewScore, 'max' => 25],
+                'loyalty' => ['raw' => $repeatRate, 'score' => $loyaltyScore, 'max' => 25],
+                'referrals' => ['raw' => $refCount, 'score' => $refScore, 'max' => 25],
+            ],
         ];
     }
 }
