@@ -305,7 +305,7 @@ class ArtistProfile extends Page
                         // Social Stats
                         SC\Section::make('Social Stats')
                             ->icon('heroicon-o-signal')
-                            ->compact()->collapsed()
+                            ->compact()
                             ->schema([
                                 Forms\Components\Placeholder::make('social_stats_visual')
                                     ->hiddenLabel()

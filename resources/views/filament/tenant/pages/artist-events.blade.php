@@ -111,15 +111,35 @@
                                     @if($venueName)
                                         <span class="text-gray-300">{{ $venueName }}@if($venueCity), {{ $venueCity }}@endif</span>
                                     @endif
-                                    @if($orgName)
-                                        <span class="text-gray-500">{{ $orgName }}@if($orgCompany && $orgCompany !== $orgName) <span class="text-gray-600">({{ $orgCompany }})</span>@endif</span>
-                                    @endif
                                     @if($event->is_cancelled)
                                         <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-semibold">CANCELLED</span>
                                     @elseif($event->is_postponed)
                                         <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">POSTPONED</span>
                                     @endif
                                 </div>
+                            </div>
+
+                            {{-- Seller --}}
+                            <div class="flex-shrink-0 w-28 text-xs">
+                                @if($event->marketplace_client_id && $event->marketplaceClient)
+                                    <div class="text-gray-300 truncate">{{ $event->marketplaceClient->name }}</div>
+                                    <div class="text-[10px] text-emerald-400">marketplace</div>
+                                @elseif($event->tenant)
+                                    <div class="text-gray-300 truncate">{{ $event->tenant->public_name ?? $event->tenant->name }}</div>
+                                    <div class="text-[10px] text-gray-500">tenant</div>
+                                @endif
+                            </div>
+
+                            {{-- Organizer --}}
+                            <div class="flex-shrink-0 w-32 text-xs">
+                                @if($orgName)
+                                    <div class="text-gray-300 truncate">{{ $orgName }}</div>
+                                    @if($orgCompany && $orgCompany !== $orgName)
+                                        <div class="text-[10px] text-gray-500 truncate">{{ $orgCompany }}</div>
+                                    @endif
+                                @else
+                                    <div class="text-gray-500">—</div>
+                                @endif
                             </div>
 
                             {{-- Ticket Sales --}}
