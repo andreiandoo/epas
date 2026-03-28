@@ -184,8 +184,6 @@ class TenantTypesSeeder extends Seeder
             // Create owner user
             $user = User::create([
                 'name' => $data['first_name'] . ' ' . $data['last_name'],
-                'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'],
                 'email' => $data['email'],
                 'email_verified_at' => now(),
                 'password' => $password,
