@@ -1293,6 +1293,32 @@
                                 <span x-show="errors.work_method" class="text-red-400 text-sm mt-1 block" x-text="errors.work_method"></span>
                             </div>
 
+                            @php
+                                $categoryLabels = [
+                                    'analytics' => 'Analitica',
+                                    'crm' => 'CRM & Clienti',
+                                    'sales' => 'Vanzari',
+                                    'marketing' => 'Marketing',
+                                    'integration' => 'Integrari',
+                                    'distribution' => 'Distributie',
+                                    'content' => 'Continut',
+                                    'accounting' => 'Contabilitate',
+                                    'productivity' => 'Productivitate',
+                                    'communication' => 'Comunicare',
+                                    'security' => 'Securitate',
+                                    'ticketing' => 'Ticketing',
+                                    'payment' => 'Plati',
+                                ];
+                                $pricingLabels = [
+                                    'recurring' => 'lunar',
+                                    'one_time' => 'o singura data',
+                                    'usage' => 'per utilizare',
+                                    'monthly' => 'lunar',
+                                    'yearly' => 'anual',
+                                ];
+                                $groupedMicroservices = $microservices->groupBy('category');
+                            @endphp
+
                             <div class="mb-8">
                                 <button
                                     type="button"
@@ -1309,41 +1335,84 @@
                                 </button>
                                 <div x-show="showMicroservices" x-collapse x-cloak class="mt-3">
                                     <p class="text-xs text-white/50 mb-3">Am preselectat serviciile recomandate pentru tipul tau de cont. Poti modifica selectia.</p>
-                                    <div class="space-y-3">
-                                        @foreach($microservices as $microservice)
-                                        <label class="flex items-start p-4 border rounded-lg border-white/10 hover:bg-white/5 cursor-pointer transition">
-                                            <input
-                                                type="checkbox"
-                                                value="{{ $microservice->id }}"
-                                                :checked="formData.microservices.includes({{ $microservice->id }})"
-                                                @change="toggleMicroservice({{ $microservice->id }})"
-                                                class="mt-1 rounded border-white/20 text-purple-500 focus:ring-purple-500"
+                                    <div class="space-y-2">
+                                        @foreach($groupedMicroservices as $category => $services)
+                                        <div x-data="{ open: false }" class="border border-white/10 rounded-lg overflow-hidden">
+                                            <button
+                                                type="button"
+                                                @click="open = !open"
+                                                class="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/8 transition"
                                             >
-                                            <div class="ml-3 flex-1">
-                                                <div class="flex items-center justify-between">
-                                                    <div class="font-medium text-white">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
-                                                    <a href="/microservice/{{ $microservice->slug }}" target="_blank" class="text-xs text-purple-400 hover:text-purple-300 underline" @click.stop>
-                                                        Detalii
-                                                    </a>
+                                                <span class="text-sm font-semibold text-white/90">{{ $categoryLabels[$category] ?? ucfirst($category) }}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-white/40">{{ $services->count() }} servicii</span>
+                                                    <svg class="w-4 h-4 text-white/40 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
                                                 </div>
-                                                <div class="text-sm text-white/60">{{ $microservice->getTranslation('short_description', app()->getLocale()) }}</div>
-                                                <div class="text-sm font-semibold text-purple-400 mt-1">
-                                                    {{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}
+                                            </button>
+                                            <div x-show="open" x-collapse x-cloak class="divide-y divide-white/5">
+                                                @foreach($services as $microservice)
+                                                <div x-data="{ showDetails: false }" class="hover:bg-white/5 transition">
+                                                    <label class="flex items-start p-4 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            value="{{ $microservice->id }}"
+                                                            :checked="formData.microservices.includes({{ $microservice->id }})"
+                                                            @change="toggleMicroservice({{ $microservice->id }})"
+                                                            class="mt-1 rounded border-white/20 text-purple-500 focus:ring-purple-500"
+                                                        >
+                                                        <div class="ml-3 flex-1">
+                                                            <div class="flex items-center justify-between">
+                                                                <div class="font-medium text-white text-sm">{{ $microservice->getTranslation('name', 'ro') ?: $microservice->getTranslation('name', 'en') }}</div>
+                                                                <div class="flex items-center gap-3">
+                                                                    <span class="text-sm font-semibold text-purple-400">
+                                                                        {{ number_format($microservice->price, 2) }} RON / {{ $pricingLabels[$microservice->pricing_model] ?? $microservice->pricing_model }}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        @click.prevent.stop="showDetails = !showDetails"
+                                                                        class="text-xs text-purple-400 hover:text-purple-300 underline"
+                                                                    >
+                                                                        <span x-text="showDetails ? 'Ascunde' : 'Detalii'"></span>
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div class="text-xs text-white/50 mt-1">{{ $microservice->getTranslation('short_description', 'ro') ?: $microservice->getTranslation('short_description', 'en') }}</div>
+                                                        </div>
+                                                    </label>
+                                                    <div x-show="showDetails" x-collapse x-cloak class="px-4 pb-4 ml-8">
+                                                        <div class="text-sm text-white/60 mb-2">{!! nl2br(e($microservice->getTranslation('description', 'ro') ?: $microservice->getTranslation('description', 'en'))) !!}</div>
+                                                        @if(!empty($microservice->features))
+                                                        <div class="mt-2">
+                                                            <span class="text-xs font-semibold text-white/40 uppercase">Functionalitati:</span>
+                                                            <ul class="mt-1 space-y-1">
+                                                                @foreach($microservice->features as $feature)
+                                                                <li class="text-xs text-white/50 flex items-center gap-1.5">
+                                                                    <svg class="w-3 h-3 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                                                                    {{ $feature }}
+                                                                </li>
+                                                                @endforeach
+                                                            </ul>
+                                                        </div>
+                                                        @endif
+                                                    </div>
                                                 </div>
+                                                @endforeach
                                             </div>
-                                        </label>
+                                        </div>
                                         @endforeach
                                     </div>
                                 </div>
 
                                 <!-- Cost summary -->
                                 <div x-show="formData.microservices.length > 0" x-cloak class="mt-4 p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                                    <h4 class="text-sm font-semibold text-purple-300 mb-3">Sumar costuri microservicii selectate</h4>
+                                    <h4 class="text-sm font-semibold text-purple-300 mb-3">Sumar costuri servicii selectate</h4>
                                     <div class="space-y-2">
                                         @foreach($microservices as $microservice)
                                         <div x-show="formData.microservices.includes({{ $microservice->id }})" class="flex items-center justify-between text-sm">
-                                            <span class="text-white/70">{{ $microservice->getTranslation('name', app()->getLocale()) }}</span>
-                                            <span class="text-white font-medium">{{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}</span>
+                                            <span class="text-white/70">{{ $microservice->getTranslation('name', 'ro') ?: $microservice->getTranslation('name', 'en') }}</span>
+                                            <span class="text-white font-medium">{{ number_format($microservice->price, 2) }} RON / {{ $pricingLabels[$microservice->pricing_model] ?? $microservice->pricing_model }}</span>
                                         </div>
                                         @endforeach
                                     </div>
