@@ -96,161 +96,161 @@ class ArtistProfile extends Page
         return $form
             ->schema([
                 SC\Grid::make(4)->schema([
-                    // ========== LEFT COLUMN (3/4) ==========
+                    // ========== LEFT COLUMN (3/4) — TABS ==========
                     SC\Group::make()->columnSpan(3)->schema([
+                        SC\Tabs::make('ArtistTabs')
+                            ->persistTabInQueryString()
+                            ->tabs([
+                                // TAB 1: Details
+                                SC\Tabs\Tab::make('Details')
+                                    ->icon('heroicon-o-document-text')
+                                    ->schema([
+                                        SC\Section::make('Basic Info')->schema([
+                                            Forms\Components\TextInput::make('name')
+                                                ->label('Artist name')
+                                                ->required()
+                                                ->maxLength(190)
+                                                ->extraAttributes(['class' => 'ep-title'])
+                                                ->live(onBlur: true)
+                                                ->afterStateUpdated(function ($state, Set $set) {
+                                                    if ($state) $set('slug', Str::slug($state));
+                                                }),
+                                            Forms\Components\TextInput::make('slug')
+                                                ->label('Slug')
+                                                ->maxLength(190)
+                                                ->rule('alpha_dash')
+                                                ->prefixIcon('heroicon-m-link'),
+                                        ])->columns(2),
 
-                        // === BASICS ===
-                        SC\Grid::make(2)->schema([
-                            SC\Group::make()->schema([
-                                Forms\Components\TextInput::make('name')
-                                    ->label('Artist name')
-                                    ->required()
-                                    ->maxLength(190)
-                                    ->extraAttributes(['class' => 'ep-title'])
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function ($state, Set $set) {
-                                        if ($state) $set('slug', Str::slug($state));
-                                    }),
-                                Forms\Components\TextInput::make('slug')
-                                    ->label('Slug')
-                                    ->helperText('URL slug.')
-                                    ->maxLength(190)
-                                    ->rule('alpha_dash')
-                                    ->prefixIcon('heroicon-m-link'),
-                            ]),
-                            SC\Section::make('Media')->compact()->schema([
-                                SC\Grid::make(3)->schema([
-                                    Forms\Components\FileUpload::make('main_image_url')
-                                        ->label('Main (horiz.)')
-                                        ->image()
-                                        ->directory('artists/hero')
-                                        ->disk('public')->visibility('public')
-                                        ->maxSize(4096)
-                                        ->helperText('1600×900+'),
-                                    Forms\Components\FileUpload::make('logo_url')
-                                        ->label('Logo (horiz.)')
-                                        ->image()
-                                        ->directory('artists/logo')
-                                        ->disk('public')->visibility('public')
-                                        ->maxSize(2048)
-                                        ->helperText('800×300+'),
-                                    Forms\Components\FileUpload::make('portrait_url')
-                                        ->label('Portrait (vert.)')
-                                        ->image()
-                                        ->directory('artists/portrait')
-                                        ->disk('public')->visibility('public')
-                                        ->maxSize(4096)
-                                        ->helperText('900×1200+'),
-                                ]),
-                            ]),
-                        ]),
+                                        SC\Section::make('Media')->compact()->schema([
+                                            SC\Grid::make(3)->schema([
+                                                Forms\Components\FileUpload::make('main_image_url')
+                                                    ->label('Main (horiz.)')
+                                                    ->image()->directory('artists/hero')
+                                                    ->disk('public')->visibility('public')
+                                                    ->maxSize(4096)->helperText('1600x900+'),
+                                                Forms\Components\FileUpload::make('logo_url')
+                                                    ->label('Logo (horiz.)')
+                                                    ->image()->directory('artists/logo')
+                                                    ->disk('public')->visibility('public')
+                                                    ->maxSize(2048)->helperText('800x300+'),
+                                                Forms\Components\FileUpload::make('portrait_url')
+                                                    ->label('Portrait (vert.)')
+                                                    ->image()->directory('artists/portrait')
+                                                    ->disk('public')->visibility('public')
+                                                    ->maxSize(4096)->helperText('900x1200+'),
+                                            ]),
+                                        ]),
 
-                        // === CONTENT ===
-                        SC\Section::make('Bio')->compact()->schema([
-                            TranslatableField::richEditor('bio_html', 'Bio')->columnSpanFull(),
-                        ])->columns(1),
+                                        SC\Section::make('Location')->compact()->schema([
+                                            Forms\Components\Select::make('country')
+                                                ->options(Locations::countries())
+                                                ->searchable()->live()->preload(false),
+                                            Forms\Components\Select::make('state')
+                                                ->label('State / County')
+                                                ->options(fn (Get $get) => $get('country') ? Locations::states($get('country')) : [])
+                                                ->searchable()->live()->preload(false),
+                                            Forms\Components\Select::make('city')
+                                                ->options(fn (Get $get) => ($get('country') && $get('state')) ? Locations::cityOptions($get('country'), $get('state')) : [])
+                                                ->searchable()->preload(false),
+                                        ])->columns(3),
+                                    ]),
 
-                        // === LOCATION ===
-                        SC\Section::make('Location')->compact()->schema([
-                            Forms\Components\Select::make('country')
-                                ->label('Country')
-                                ->options(Locations::countries())
-                                ->searchable()->live()->preload(false),
-                            Forms\Components\Select::make('state')
-                                ->label('State / County')
-                                ->options(fn (Get $get) => $get('country') ? Locations::states($get('country')) : [])
-                                ->searchable()->live()->preload(false),
-                            Forms\Components\Select::make('city')
-                                ->label('City')
-                                ->options(fn (Get $get) => ($get('country') && $get('state')) ? Locations::cityOptions($get('country'), $get('state')) : [])
-                                ->searchable()->preload(false),
-                        ])->columns(3),
+                                // TAB 2: Content
+                                SC\Tabs\Tab::make('Content')
+                                    ->icon('heroicon-o-pencil-square')
+                                    ->lazy()
+                                    ->schema([
+                                        SC\Section::make('Bio')->compact()->schema([
+                                            TranslatableField::richEditor('bio_html', 'Bio')->columnSpanFull(),
+                                        ]),
 
-                        // === SOCIAL & IDs ===
-                        SC\Section::make('Social & IDs')->compact()->collapsible()->collapsed()->schema([
-                            Forms\Components\TextInput::make('website')->label('Website')->url()->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
-                            Forms\Components\TextInput::make('facebook_url')->label('Facebook')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('instagram_url')->label('Instagram')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('tiktok_url')->label('TikTok')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('youtube_url')->label('YouTube')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('youtube_id')->label('YouTube ID')->maxLength(190),
-                            Forms\Components\TextInput::make('spotify_url')->label('Spotify')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('spotify_id')->label('Spotify ID')->maxLength(190),
-                            Forms\Components\TextInput::make('twitter_url')->label('Twitter / X')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('wiki_url')->label('Wikipedia')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('lastfm_url')->label('Last.fm')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('itunes_url')->label('Apple Music')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                            Forms\Components\TextInput::make('musicbrainz_url')->label('MusicBrainz')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
-                        ])->columns(2),
+                                        SC\Section::make('YouTube Videos')->compact()->collapsible()->schema([
+                                            Forms\Components\Repeater::make('youtube_videos')
+                                                ->label('Video URLs')
+                                                ->addActionLabel('Add video')
+                                                ->schema([
+                                                    Forms\Components\TextInput::make('url')->label('YouTube URL')->url()->required(),
+                                                ])
+                                                ->default([])
+                                                ->collapsed()
+                                                ->columns(1),
+                                        ]),
+                                    ]),
 
-                        // === YOUTUBE VIDEOS ===
-                        SC\Section::make('YouTube videos')->compact()->collapsible()->collapsed()->schema([
-                            Forms\Components\Repeater::make('youtube_videos')
-                                ->label('Video URLs')
-                                ->addActionLabel('Add video')
-                                ->schema([
-                                    Forms\Components\TextInput::make('url')->label('YouTube URL')->url()->required(),
-                                ])
-                                ->default([])
-                                ->collapsed()
-                                ->columns(1),
-                        ]),
+                                // TAB 3: Social & Links
+                                SC\Tabs\Tab::make('Social & Links')
+                                    ->icon('heroicon-o-link')
+                                    ->lazy()
+                                    ->schema([
+                                        SC\Section::make('Social Links')->schema([
+                                            Forms\Components\TextInput::make('website')->label('Website')->url()->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
+                                            Forms\Components\TextInput::make('facebook_url')->label('Facebook')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('instagram_url')->label('Instagram')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('tiktok_url')->label('TikTok')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('youtube_url')->label('YouTube')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('spotify_url')->label('Spotify')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('twitter_url')->label('Twitter / X')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('wiki_url')->label('Wikipedia')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('lastfm_url')->label('Last.fm')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('itunes_url')->label('Apple Music')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                            Forms\Components\TextInput::make('musicbrainz_url')->label('MusicBrainz')->url()->maxLength(255)->prefixIcon('heroicon-m-link'),
+                                        ])->columns(2),
 
-                        // === CONTACT + MANAGER ===
-                        SC\Grid::make(2)->schema([
-                            SC\Section::make('Contact')
-                                ->icon('heroicon-o-envelope')
-                                ->collapsible()->collapsed()->persistCollapsed()
-                                ->schema([
-                                    Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(190),
-                                    Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120),
-                                ])->columns(2),
-                            SC\Section::make('Manager')
-                                ->icon('heroicon-o-user')
-                                ->collapsible()->collapsed()->persistCollapsed()
-                                ->schema([
-                                    Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
-                                    Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
-                                    Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
-                                    Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120),
-                                    Forms\Components\TextInput::make('manager_website')->label('Website')->url()->maxLength(255),
-                                ])->columns(2),
-                        ]),
+                                        SC\Section::make('Platform IDs')->compact()->schema([
+                                            Forms\Components\TextInput::make('youtube_id')->label('YouTube Channel ID')->maxLength(190)->helperText('Used to fetch channel stats.'),
+                                            Forms\Components\TextInput::make('spotify_id')->label('Spotify Artist ID')->maxLength(190)->helperText('Used to fetch Spotify stats.'),
+                                        ])->columns(2),
+                                    ]),
 
-                        // === AGENT + AGENCY ===
-                        SC\Grid::make(2)->schema([
-                            SC\Section::make('Booking Agent')
-                                ->icon('heroicon-o-briefcase')
-                                ->collapsible()->collapsed()->persistCollapsed()
-                                ->schema([
-                                    Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
-                                    Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
-                                    Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
-                                    Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120),
-                                    Forms\Components\TextInput::make('agent_website')->label('Website')->url()->maxLength(255),
-                                ])->columns(2),
-                            SC\Section::make('Booking Agency')
-                                ->icon('heroicon-o-building-office')
-                                ->collapsible()->collapsed()->persistCollapsed()
-                                ->schema([
-                                    Forms\Components\TextInput::make('booking_agency.name')->label('Agency Name'),
-                                    Forms\Components\TextInput::make('booking_agency.email')->label('Email')->email(),
-                                    Forms\Components\TextInput::make('booking_agency.phone')->label('Phone'),
-                                    Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url(),
-                                ])->columns(2),
-                        ]),
+                                // TAB 4: Contact & Management
+                                SC\Tabs\Tab::make('Contact & Management')
+                                    ->icon('heroicon-o-phone')
+                                    ->lazy()
+                                    ->schema([
+                                        SC\Grid::make(2)->schema([
+                                            SC\Section::make('Contact')->icon('heroicon-o-envelope')->schema([
+                                                Forms\Components\TextInput::make('email')->label('Email')->email()->maxLength(190),
+                                                Forms\Components\TextInput::make('phone')->label('Phone')->maxLength(120),
+                                            ])->columns(2),
+                                            SC\Section::make('Manager')->icon('heroicon-o-user')->schema([
+                                                Forms\Components\TextInput::make('manager_first_name')->label('First name')->maxLength(120),
+                                                Forms\Components\TextInput::make('manager_last_name')->label('Last name')->maxLength(120),
+                                                Forms\Components\TextInput::make('manager_email')->label('Email')->email()->maxLength(190),
+                                                Forms\Components\TextInput::make('manager_phone')->label('Phone')->maxLength(120),
+                                                Forms\Components\TextInput::make('manager_website')->label('Website')->url()->maxLength(255),
+                                            ])->columns(2),
+                                        ]),
 
-                        // === PRICING ===
-                        SC\Section::make('Pricing')
-                            ->icon('heroicon-o-banknotes')
-                            ->collapsible()->collapsed()->persistCollapsed()
-                            ->schema([
-                                SC\Grid::make(2)->schema([
-                                    Forms\Components\TextInput::make('min_fee_concert')->label('Min Fee Concert (€)')->numeric()->minValue(0),
-                                    Forms\Components\TextInput::make('max_fee_concert')->label('Max Fee Concert (€)')->numeric()->minValue(0),
-                                    Forms\Components\TextInput::make('min_fee_festival')->label('Min Fee Festival (€)')->numeric()->minValue(0),
-                                    Forms\Components\TextInput::make('max_fee_festival')->label('Max Fee Festival (€)')->numeric()->minValue(0),
-                                ]),
+                                        SC\Grid::make(2)->schema([
+                                            SC\Section::make('Booking Agent')->icon('heroicon-o-briefcase')->schema([
+                                                Forms\Components\TextInput::make('agent_first_name')->label('First name')->maxLength(120),
+                                                Forms\Components\TextInput::make('agent_last_name')->label('Last name')->maxLength(120),
+                                                Forms\Components\TextInput::make('agent_email')->label('Email')->email()->maxLength(190),
+                                                Forms\Components\TextInput::make('agent_phone')->label('Phone')->maxLength(120),
+                                                Forms\Components\TextInput::make('agent_website')->label('Website')->url()->maxLength(255),
+                                            ])->columns(2),
+                                            SC\Section::make('Booking Agency')->icon('heroicon-o-building-office')->schema([
+                                                Forms\Components\TextInput::make('booking_agency.name')->label('Agency Name'),
+                                                Forms\Components\TextInput::make('booking_agency.email')->label('Email')->email(),
+                                                Forms\Components\TextInput::make('booking_agency.phone')->label('Phone'),
+                                                Forms\Components\TextInput::make('booking_agency.website')->label('Website')->url(),
+                                            ])->columns(2),
+                                        ]),
+                                    ]),
+
+                                // TAB 5: Pricing
+                                SC\Tabs\Tab::make('Pricing')
+                                    ->icon('heroicon-o-banknotes')
+                                    ->lazy()
+                                    ->schema([
+                                        SC\Section::make('Fee Ranges')->schema([
+                                            Forms\Components\TextInput::make('min_fee_concert')->label('Min Fee Concert (EUR)')->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('max_fee_concert')->label('Max Fee Concert (EUR)')->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('min_fee_festival')->label('Min Fee Festival (EUR)')->numeric()->minValue(0),
+                                            Forms\Components\TextInput::make('max_fee_festival')->label('Max Fee Festival (EUR)')->numeric()->minValue(0),
+                                        ])->columns(2),
+                                    ]),
                             ]),
                     ]),
 

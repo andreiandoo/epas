@@ -18,7 +18,7 @@ class ArtistAnalytics extends Page
     protected static ?string $navigationLabel = 'Analytics';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 2;
-    protected string $view = 'filament.tenant.pages.artist-analytics';
+    protected string $view = 'filament.tenant.pages.artist-analytics-wrapper';
 
     public Artist $record;
 

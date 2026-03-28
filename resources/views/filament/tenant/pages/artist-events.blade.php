@@ -37,6 +37,7 @@
                     'ended' => ['label' => 'Ended', 'count' => $stats['past']],
                     'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0],
                     'postponed' => ['label' => 'Postponed', 'count' => $stats['postponed'] ?? 0],
+                    'unknown' => ['label' => 'Unknown', 'count' => $stats['unknown'] ?? 0],
                 ];
             @endphp
             @foreach($filters as $key => $filter)
@@ -87,6 +88,9 @@
                                     <div class="text-xs font-medium text-gray-400 uppercase">{{ \Carbon\Carbon::parse($event->event_date)->format('M') }}</div>
                                     <div class="text-xl font-bold {{ $isUpcoming ? 'text-emerald-500' : 'text-gray-400' }}">{{ \Carbon\Carbon::parse($event->event_date)->format('d') }}</div>
                                     <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($event->event_date)->format('Y') }}</div>
+                                    @if($event->days_until !== null)
+                                        <div class="text-[10px] font-semibold mt-0.5 {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-gray-500') }}">{{ $event->days_until }}d</div>
+                                    @endif
                                 @else
                                     <div class="text-xs text-gray-500 mt-2">TBD</div>
                                 @endif
@@ -138,16 +142,19 @@
                                 @endif
                             </div>
 
-                            {{-- Tickets button --}}
+                            {{-- Action buttons --}}
                             @if($eventUrl)
-                                <div class="flex-shrink-0">
+                                <div class="flex-shrink-0 flex items-center gap-1.5">
+                                    {{-- Copy link --}}
+                                    <button onclick="navigator.clipboard.writeText('{{ $eventUrl }}').then(() => { this.querySelector('.cp-ok').classList.remove('hidden'); setTimeout(() => this.querySelector('.cp-ok').classList.add('hidden'), 1500); })"
+                                            class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition" title="Copy link">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.5 8.25"/></svg>
+                                        <svg class="w-4 h-4 text-emerald-400 hidden cp-ok absolute" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    </button>
+                                    {{-- Tickets --}}
                                     <a href="{{ $eventUrl }}" target="_blank"
-                                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg
-                                              bg-gradient-to-r from-primary-600 to-primary-500
-                                              hover:from-primary-500 hover:to-primary-400
-                                              text-white text-xs font-bold
-                                              shadow-md shadow-primary-500/20 hover:shadow-lg hover:shadow-primary-500/30
-                                              transition-all duration-200 hover:-translate-y-0.5">
+                                       style="background: linear-gradient(135deg, #6366f1, #818cf8); color: white;"
+                                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold shadow-lg hover:opacity-90 transition-all duration-200">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                         Tickets
                                     </a>

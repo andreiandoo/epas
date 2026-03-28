@@ -93,14 +93,18 @@ class ArtistEvents extends Page
 
                 // Compute status
                 $now = now()->toDateString();
+                $event->days_until = null;
                 if ($event->is_cancelled) {
                     $event->computed_status = 'cancelled';
                 } elseif ($event->is_postponed) {
                     $event->computed_status = 'postponed';
-                } elseif ($event->event_date && $event->event_date < $now) {
+                } elseif (!$event->event_date) {
+                    $event->computed_status = 'unknown';
+                } elseif ($event->event_date < $now) {
                     $event->computed_status = 'ended';
                 } else {
                     $event->computed_status = 'live';
+                    $event->days_until = max(0, (int) now()->diffInDays(\Carbon\Carbon::parse($event->event_date), false));
                 }
 
                 return $event;
@@ -139,6 +143,7 @@ class ArtistEvents extends Page
         $pastCount = $allEvents->where('computed_status', 'ended')->count();
         $cancelledCount = $allEvents->where('computed_status', 'cancelled')->count();
         $postponedCount = $allEvents->where('computed_status', 'postponed')->count();
+        $unknownCount = $allEvents->where('computed_status', 'unknown')->count();
         $totalSold = $allEvents->sum('ticket_stats.sold');
         $totalRevenue = $allEvents->sum('ticket_stats.revenue');
 
@@ -153,6 +158,7 @@ class ArtistEvents extends Page
                 'past' => $pastCount,
                 'cancelled' => $cancelledCount,
                 'postponed' => $postponedCount,
+                'unknown' => $unknownCount,
                 'total_sold' => $totalSold,
                 'total_revenue' => $totalRevenue,
             ],
