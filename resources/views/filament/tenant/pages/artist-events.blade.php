@@ -60,6 +60,17 @@
         {{-- Core Events --}}
         @if($events->isNotEmpty())
             <div class="fi-section rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
+                {{-- Table header --}}
+                <div class="px-4 py-2 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <div class="flex-shrink-0 w-14 text-center">Date</div>
+                    <div class="flex-shrink-0 w-16 text-center">Days Left</div>
+                    <div class="flex-1 min-w-0">Event</div>
+                    <div class="flex-shrink-0 w-28">Seller</div>
+                    <div class="flex-shrink-0 w-32">Organizer</div>
+                    <div class="flex-shrink-0 text-right" style="min-width:70px;">Tickets</div>
+                    <div class="flex-shrink-0 w-24 text-right">Revenue</div>
+                    <div class="flex-shrink-0" style="min-width:90px;"></div>
+                </div>
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach($events as $event)
                         @php
@@ -93,9 +104,9 @@
                                 @endif
                             </div>
 
-                            {{-- Days Until (separate column) --}}
+                            {{-- Days Until (only for Live events) --}}
                             <div class="flex-shrink-0 w-16 text-center">
-                                @if($event->days_until !== null)
+                                @if($isUpcoming && $event->days_until !== null)
                                     <div class="text-lg font-bold {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-emerald-400') }}">{{ $event->days_until }}</div>
                                     <div class="text-[10px] text-gray-500">days left</div>
                                 @endif

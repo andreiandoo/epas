@@ -157,7 +157,8 @@ canvas{width:100%!important;}
 
 <div class="db" x-data="{ tab: 'overview' }">
 
-    {{-- ═══════ STICKY HEADER ═══════ --}}
+    {{-- ═══════ STICKY HEADER (hidden in tenant context) ═══════ --}}
+    @if(!isset($tenantEditUrl))
     <div class="db-header">
         <div class="db-header-inner">
             <div>
@@ -173,16 +174,17 @@ canvas{width:100%!important;}
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.51 15a9 9 0 0 0 14.85 3.36L23 14M1 10l4.64 4.36A9 9 0 0 0 20.49 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Refresh
                 </a>
-                <a class="btn" href="{{ $tenantEditUrl ?? \App\Filament\Resources\Artists\ArtistResource::getUrl('edit', ['record' => $record->getKey()]) }}">
+                <a class="btn" href="{{ \App\Filament\Resources\Artists\ArtistResource::getUrl('edit', ['record' => $record->getKey()]) }}">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10-10a2.828 2.828 0 1 0-4-4L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Edit
                 </a>
             </div>
         </div>
     </div>
+    @endif
 
     {{-- ═══════ TABS ═══════ --}}
-    <div class="tabs" style="margin-top:16px;">
+    <div class="tabs" style="margin-top:{{ isset($tenantEditUrl) ? '0' : '16' }}px;">
         @foreach([
             'overview' => 'Overview', 'opportunities' => 'Opportunities', 'performance' => 'Performance',
             'audience' => 'Audience', 'sales' => 'Sales', 'geographic' => 'Geographic',
@@ -222,7 +224,7 @@ canvas{width:100%!important;}
         </div>
 
         {{-- Charts row --}}
-        <div class="g3" style="margin-bottom:14px;">
+        <div class="g3" style="margin-bottom:14px;" wire:ignore>
             <div class="card"><div class="card-h">Events / month</div><div class="card-b"><div class="chart-h"><canvas id="eventsChart"></canvas></div></div></div>
             <div class="card"><div class="card-h">Tickets / month</div><div class="card-b"><div class="chart-h"><canvas id="ticketsChart"></canvas></div></div></div>
             <div class="card"><div class="card-h">Revenue / month</div><div class="card-b"><div class="chart-h"><canvas id="revenueChart"></canvas></div></div></div>
@@ -432,7 +434,7 @@ canvas{width:100%!important;}
                 <div class="kpi"><div class="l">Superfans (3x+)</div><div class="v" style="color:var(--warn);">{{ $loyalty['superfan'] ?? 0 }}</div></div>
             </div>
             <div style="display:flex;gap:14px;margin-bottom:14px;align-items:center;">
-                <div class="card" style="width:170px;"><div class="card-b" style="padding:8px;"><div style="height:150px;"><canvas id="loyaltyChart"></canvas></div></div></div>
+                <div class="card" style="width:170px;" wire:ignore><div class="card-b" style="padding:8px;"><div style="height:150px;"><canvas id="loyaltyChart"></canvas></div></div></div>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;">
                     <div><span style="color:#94a3b8;font-size:26px;font-weight:700;">{{ $loyalty['one_time'] ?? 0 }}</span><br><span style="color:var(--muted);font-size:11px;">One-time</span></div>
                     <div><span style="color:var(--primary);font-size:26px;font-weight:700;">{{ $loyalty['repeat'] ?? 0 }}</span><br><span style="color:var(--muted);font-size:11px;">Repeat</span></div>
@@ -508,8 +510,8 @@ canvas{width:100%!important;}
                 @endforeach
             </div>
             <div class="g2">
-                <div class="card"><div class="card-h">Age Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="ageDistChart"></canvas></div></div></div>
-                <div class="card"><div class="card-h">Gender Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="genderChart"></canvas></div></div></div>
+                <div class="card" wire:ignore><div class="card-h">Age Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="ageDistChart"></canvas></div></div></div>
+                <div class="card" wire:ignore><div class="card-h">Gender Distribution</div><div class="card-b"><div style="height:230px;"><canvas id="genderChart"></canvas></div></div></div>
             </div>
         @endif
 
@@ -566,11 +568,11 @@ canvas{width:100%!important;}
             @endif
 
             <div class="g2" style="margin-bottom:14px;">
-                <div class="card"><div class="card-h">Sales Channels</div><div class="card-b"><div style="height:220px;"><canvas id="channelChart"></canvas></div></div></div>
-                <div class="card"><div class="card-h">Purchase Timing</div><div class="card-b"><div style="height:220px;"><canvas id="timingChart"></canvas></div></div></div>
+                <div class="card" wire:ignore><div class="card-h">Sales Channels</div><div class="card-b"><div style="height:220px;"><canvas id="channelChart"></canvas></div></div></div>
+                <div class="card" wire:ignore><div class="card-h">Purchase Timing</div><div class="card-b"><div style="height:220px;"><canvas id="timingChart"></canvas></div></div></div>
             </div>
             <div class="g2">
-                @if(!empty($priceSens))<div class="card"><div class="card-h">Price Sensitivity</div><div class="card-b"><div style="height:230px;"><canvas id="priceChart"></canvas></div></div></div>@endif
+                @if(!empty($priceSens))<div class="card" wire:ignore><div class="card-h">Price Sensitivity</div><div class="card-b"><div style="height:230px;"><canvas id="priceChart"></canvas></div></div></div>@endif
                 @if(!empty($velocity))
                 <div class="card">
                     <div class="card-h">Sales Pace — How fast tickets sold (last {{ count($velocity) }} events)</div>
