@@ -123,10 +123,11 @@ img{display:block;max-width:100%}
 
 .badge{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#86efac;}
 
-.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--ring);padding-bottom:8px;}
-.tab{padding:7px 14px;border-radius:8px 8px 0 0;font-size:12px;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;transition:all .15s;letter-spacing:.3px;}
+.tabs{display:flex;gap:0;flex-wrap:wrap;margin-bottom:16px;border:1px solid var(--ring);border-radius:12px;overflow:hidden;justify-content:stretch;}
+.tab{flex:1;padding:10px 16px;font-size:13px;font-weight:600;color:var(--muted);background:transparent;border:none;border-right:1px solid var(--ring);cursor:pointer;transition:all .15s;letter-spacing:.3px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;}
+.tab:last-child{border-right:none;}
 .tab:hover{color:var(--text);background:rgba(122,162,255,.06);}
-.tab.active{color:var(--accent);background:rgba(34,211,238,.08);border-bottom:2px solid var(--accent);}
+.tab.active{color:var(--accent);background:rgba(34,211,238,.08);}
 
 .btn{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:10px;border:1px solid var(--ring);background:linear-gradient(180deg,#151f45,#0f1736);color:var(--text);font-weight:600;font-size:12px;cursor:pointer;text-decoration:none;}
 .btn:hover{filter:brightness(1.06);text-decoration:none;}
@@ -155,7 +156,36 @@ canvas{width:100%!important;}
 </style>
 @endpush
 
-<div class="db" x-data="{ tab: 'overview' }">
+<div class="db" wire:ignore x-data="{
+    tab: 'overview',
+    venueQ: '',
+    venueResults: [],
+    venueLoading: false,
+    venueAnalysis: null,
+    selectedVenueId: null,
+    eventAnalysis: @js($eventAnalysis ?? null),
+    selectedEventId: @js($selectedEventId ?? null),
+    searchVenue() {
+        if (this.venueQ.length < 2) { this.venueResults = []; return; }
+        this.venueLoading = true;
+        $wire.call('updatedVenueSearch').then(() => {
+            this.venueResults = $wire.get('venueResults');
+            this.venueLoading = false;
+        });
+    },
+    doAnalyzeEvent(id) {
+        this.selectedEventId = id;
+        return $wire.call('analyzeEvent', id).then(() => {
+            this.eventAnalysis = $wire.get('eventAnalysis');
+        });
+    },
+    doAnalyzeVenue(id) {
+        this.selectedVenueId = id;
+        $wire.call('analyzeVenue', id).then(() => {
+            this.venueAnalysis = $wire.get('venueAnalysis');
+        });
+    }
+}">
 
     {{-- ═══════ STICKY HEADER (hidden in tenant context) ═══════ --}}
     @if(!isset($tenantEditUrl))
@@ -184,13 +214,27 @@ canvas{width:100%!important;}
     @endif
 
     {{-- ═══════ TABS ═══════ --}}
+    @php
+        $tabIcons = [
+            'overview' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>',
+            'opportunities' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>',
+            'performance' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>',
+            'audience' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
+            'sales' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+            'geographic' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+            'upcoming' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>',
+            'expansion' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
+            'media' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>',
+            'history' => '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+        ];
+    @endphp
     <div class="tabs" style="margin-top:{{ isset($tenantEditUrl) ? '0' : '16' }}px;">
         @foreach([
             'overview' => 'Overview', 'opportunities' => 'Opportunities', 'performance' => 'Performance',
             'audience' => 'Audience', 'sales' => 'Sales', 'geographic' => 'Geographic',
             'upcoming' => 'Upcoming', 'expansion' => 'Expansion', 'media' => 'Media & Social', 'history' => 'Events History',
         ] as $tabKey => $tabLabel)
-            <button @click="tab = '{{ $tabKey }}'" :class="tab === '{{ $tabKey }}' ? 'active' : ''" class="tab">{{ $tabLabel }}</button>
+            <button @click="tab = '{{ $tabKey }}'" :class="tab === '{{ $tabKey }}' ? 'active' : ''" class="tab">{!! $tabIcons[$tabKey] ?? '' !!} {{ $tabLabel }}</button>
         @endforeach
     </div>
 
@@ -622,15 +666,16 @@ canvas{width:100%!important;}
                 <div class="card-h">Venue Forecast — Analyze artist × venue potential</div>
                 <div class="card-b">
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <input type="text" wire:model.live.debounce.300ms="venueSearch" placeholder="Search venue by name..." style="flex:1;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                        <input type="text" x-model="venueQ" @input.debounce.400ms="searchVenue()" placeholder="Search venue by name..." style="flex:1;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                        <template x-if="venueLoading"><span style="color:var(--accent);font-size:12px;">Searching...</span></template>
                     </div>
-                    @if(!empty($venueResults))
+                    <template x-if="venueResults.length > 0">
                     <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
-                        @foreach($venueResults as $vr)
-                            <button wire:click="analyzeVenue({{ $vr['id'] }})" class="chip {{ $selectedVenueId == $vr['id'] ? 'chip-green' : 'chip-blue' }}" style="cursor:pointer;border:1px solid var(--ring);background:{{ $selectedVenueId == $vr['id'] ? 'rgba(34,197,94,.15)' : 'rgba(122,162,255,.1)' }};">{{ $vr['label'] }}</button>
-                        @endforeach
+                        <template x-for="vr in venueResults" :key="vr.id">
+                            <button @click="doAnalyzeVenue(vr.id)" class="chip chip-blue" style="cursor:pointer;border:1px solid var(--ring);" x-text="vr.label" :class="selectedVenueId == vr.id ? 'chip-green' : 'chip-blue'"></button>
+                        </template>
                     </div>
-                    @endif
+                    </template>
                     @if($venueAnalysis)
                     <div style="margin-top:16px;">
                         <div class="kpi-grid kpi-grid-4" style="margin-bottom:14px;">
@@ -725,69 +770,65 @@ canvas{width:100%!important;}
         <div class="card" style="margin-top:14px;">
             <div class="card-h">Event Analyzer — Select an event for deep analysis</div>
             <div class="card-b">
-                <div style="position:relative;">
-                <select wire:change="analyzeEvent($event.target.value)" wire:loading.attr="disabled" style="width:100%;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
+                <div style="position:relative;" x-data="{ analyzing: false }">
+                <select @change="if($event.target.value) { analyzing=true; doAnalyzeEvent(parseInt($event.target.value)).then(()=>analyzing=false); }" style="width:100%;padding:8px 12px;border-radius:8px;background:#0b122a;border:1px solid var(--ring);color:var(--text);font-size:13px;">
                     <option value="">Choose an upcoming event...</option>
                     @foreach($upcomingEvents as $ue)
-                        <option value="{{ $ue['id'] }}" {{ $selectedEventId == $ue['id'] ? 'selected' : '' }}>{{ $ue['title'] }} — {{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '' }} ({{ $ue['venue'] ?? '' }})</option>
+                        <option value="{{ $ue['id'] }}" {{ ($selectedEventId ?? null) == $ue['id'] ? 'selected' : '' }}>{{ $ue['title'] }} — {{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '' }} ({{ $ue['venue'] ?? '' }})</option>
                     @endforeach
                 </select>
-
-                <div wire:loading wire:target="analyzeEvent" style="padding:16px;text-align:center;color:var(--accent);">
+                <div x-show="analyzing" style="padding:16px;text-align:center;color:var(--accent);">
                     <svg style="display:inline;animation:spin 1s linear infinite;" width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="32" stroke-linecap="round"/></svg>
                     Loading analysis...
                 </div>
                 </div>
-                @if($eventAnalysis)
-                <div style="margin-top:16px;">
+                <div x-show="eventAnalysis" x-cloak style="margin-top:16px;">
                     <div class="kpi-grid kpi-grid-5" style="margin-bottom:14px;">
-                        <div class="kpi"><div class="l">Current Sold</div><div class="v">{{ number_format($eventAnalysis['sold']) }}</div></div>
-                        <div class="kpi"><div class="l">Capacity</div><div class="v">{{ $eventAnalysis['capacity'] ?: '?' }}</div></div>
-                        <div class="kpi"><div class="l">Sell-Through</div><div class="v">{{ $eventAnalysis['sell_through'] ?? 0 }}%</div></div>
-                        <div class="kpi"><div class="l">Revenue</div><div class="v" style="color:var(--success);">{{ number_format($eventAnalysis['revenue']) }} RON</div></div>
-                        <div class="kpi"><div class="l">Days Left</div><div class="v">{{ $eventAnalysis['days_until'] ?? '?' }}d</div></div>
+                        <div class="kpi"><div class="l">Current Sold</div><div class="v" x-text="eventAnalysis ? Number(eventAnalysis.sold).toLocaleString() : ''"></div></div>
+                        <div class="kpi"><div class="l">Capacity</div><div class="v" x-text="eventAnalysis ? (eventAnalysis.capacity || '?') : ''"></div></div>
+                        <div class="kpi"><div class="l">Sell-Through</div><div class="v" x-text="eventAnalysis ? (eventAnalysis.sell_through ?? 0) + '%' : ''"></div></div>
+                        <div class="kpi"><div class="l">Revenue</div><div class="v" style="color:var(--success);" x-text="eventAnalysis ? Number(eventAnalysis.revenue).toLocaleString() + ' RON' : ''"></div></div>
+                        <div class="kpi"><div class="l">Days Left</div><div class="v" x-text="eventAnalysis ? (eventAnalysis.days_until ?? '?') + 'd' : ''"></div></div>
                     </div>
 
                     {{-- Prediction --}}
-                    @if(!empty($eventAnalysis['prediction']['avg_sell_through']))
+                    <template x-if="eventAnalysis && eventAnalysis.prediction && eventAnalysis.prediction.avg_sell_through">
                     <div class="card" style="margin-bottom:14px;border-color:rgba(34,211,238,.2);">
-                        <div class="card-h" style="color:var(--accent);">Prediction (based on {{ count($eventAnalysis['comparables']) }} comparable events)</div>
+                        <div class="card-h" style="color:var(--accent);">Prediction (based on <span x-text="eventAnalysis.comparables ? eventAnalysis.comparables.length : 0"></span> comparable events)</div>
                         <div class="card-b">
                             <div class="kpi-grid kpi-grid-4">
-                                <div class="kpi"><div class="l">Min Scenario</div><div class="v" style="color:var(--danger);">{{ $eventAnalysis['prediction']['min_sell_through'] }}%</div></div>
-                                <div class="kpi"><div class="l">Avg Scenario</div><div class="v" style="color:var(--warn);">{{ $eventAnalysis['prediction']['avg_sell_through'] }}%</div></div>
-                                <div class="kpi"><div class="l">Max Scenario</div><div class="v" style="color:var(--success);">{{ $eventAnalysis['prediction']['max_sell_through'] }}%</div></div>
-                                <div class="kpi"><div class="l">Pace Forecast</div><div class="v" style="color:var(--accent);">~{{ number_format($eventAnalysis['prediction']['pace_forecast'] ?? 0) }}</div></div>
+                                <div class="kpi"><div class="l">Min Scenario</div><div class="v" style="color:var(--danger);" x-text="eventAnalysis.prediction.min_sell_through + '%'"></div></div>
+                                <div class="kpi"><div class="l">Avg Scenario</div><div class="v" style="color:var(--warn);" x-text="eventAnalysis.prediction.avg_sell_through + '%'"></div></div>
+                                <div class="kpi"><div class="l">Max Scenario</div><div class="v" style="color:var(--success);" x-text="eventAnalysis.prediction.max_sell_through + '%'"></div></div>
+                                <div class="kpi"><div class="l">Pace Forecast</div><div class="v" style="color:var(--accent);" x-text="'~' + Number(eventAnalysis.prediction.pace_forecast || 0).toLocaleString()"></div></div>
                             </div>
                         </div>
                     </div>
-                    @endif
+                    </template>
 
                     {{-- Comparable events --}}
-                    @if(!empty($eventAnalysis['comparables']))
+                    <template x-if="eventAnalysis && eventAnalysis.comparables && eventAnalysis.comparables.length > 0">
                     <div class="card">
                         <div class="card-h">Comparable Past Events</div>
                         <div class="card-b" style="overflow-x:auto;">
                             <table class="tbl">
-                                <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
+                                <thead><tr><th>Event</th><th>Venue</th><th>Sold/Cap</th><th>Sell-Through</th><th>Revenue</th></tr></thead>
                                 <tbody>
-                                    @foreach($eventAnalysis['comparables'] as $comp)
+                                    <template x-for="comp in eventAnalysis.comparables" :key="comp.title">
                                     <tr>
-                                        <td style="white-space:nowrap;">{{ $comp['date'] ? \Carbon\Carbon::parse($comp['date'])->format('d M Y') : '—' }}</td>
-                                        <td>{{ $comp['title'] }}</td>
-                                        <td>{{ $comp['venue'] ?? '—' }} <span style="color:var(--muted);font-size:10px;">{{ $comp['city'] ?? '' }}</span></td>
-                                        <td>{{ number_format($comp['sold']) }}/{{ $comp['capacity'] ?: '?' }}</td>
-                                        <td>@if($comp['sell_through'] !== null)<div style="display:flex;align-items:center;gap:5px;"><div class="progress"><div class="progress-fill" style="width:{{ min($comp['sell_through'],100) }}%;background:{{ $comp['sell_through']>=80?'var(--success)':($comp['sell_through']>=50?'var(--warn)':'var(--danger)') }};"></div></div><span style="font-size:11px;">{{ $comp['sell_through'] }}%</span></div>@else — @endif</td>
-                                        <td>{{ number_format($comp['revenue']) }} RON</td>
+                                        <td x-text="comp.title"></td>
+                                        <td><span x-text="comp.venue || '—'"></span> <span style="color:var(--muted);font-size:10px;" x-text="comp.city || ''"></span></td>
+                                        <td><span x-text="Number(comp.sold).toLocaleString()"></span>/<span x-text="comp.capacity || '?'"></span></td>
+                                        <td><span x-text="comp.sell_through !== null ? comp.sell_through + '%' : '—'"></span></td>
+                                        <td><span x-text="Number(comp.revenue).toLocaleString() + ' RON'"></span></td>
                                     </tr>
-                                    @endforeach
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                    @endif
+                    </template>
                 </div>
-                @endif
             </div>
         </div>
 
@@ -798,7 +839,7 @@ canvas{width:100%!important;}
                 <tbody>
                     @foreach($upcomingEvents as $ue)
                     <tr>
-                        <td><button onclick="document.querySelector('[wire\\:change*=analyzeEvent]').value={{ $ue['id'] }};document.querySelector('[wire\\:change*=analyzeEvent]').dispatchEvent(new Event('change'));" title="Analyze this event" style="cursor:pointer;background:none;border:1px solid var(--ring);border-radius:6px;padding:3px 6px;color:var(--accent);font-size:11px;">
+                        <td><button @click="doAnalyzeEvent({{ $ue['id'] }})" title="Analyze this event" style="cursor:pointer;background:none;border:1px solid var(--ring);border-radius:6px;padding:3px 6px;color:var(--accent);font-size:11px;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         </button></td>
                         <td style="white-space:nowrap;">{{ $ue['date'] ? \Carbon\Carbon::parse($ue['date'])->format('d M Y') : '—' }}</td>
