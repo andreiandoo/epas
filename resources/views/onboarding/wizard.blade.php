@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Înregistrare - Tixello</title>
+    <title>Inregistrare - Tixello</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="icon" href="/favicon.ico">
@@ -328,7 +328,7 @@
         }
 
         .dark-checkbox:checked::after {
-            content: '\\2713';
+            content: '\2713';
             display: flex;
             align-items: center;
             justify-content: center;
@@ -385,6 +385,57 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(139, 92, 246, 0.7);
         }
+
+        /* Tenant type grid cards */
+        .tenant-type-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tenant-type-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .tenant-type-card.selected {
+            background: rgba(139, 92, 246, 0.15);
+            border-color: #8B5CF6;
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+        }
+
+        /* Business type radio cards */
+        .biz-type-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .biz-type-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(139, 92, 246, 0.3);
+        }
+
+        .biz-type-card.selected {
+            background: rgba(139, 92, 246, 0.12);
+            border-color: #8B5CF6;
+        }
+
+        /* Success state */
+        .success-card {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .verification-code {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.15em;
+            background: rgba(139, 92, 246, 0.15);
+            border: 2px dashed rgba(139, 92, 246, 0.4);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-animated text-white">
@@ -410,15 +461,12 @@
                 <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
                     <div>
                         <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full" :class="modalType === 'success' ? 'bg-green-100' : (modalType === 'error' ? 'bg-red-100' : 'bg-blue-100')">
-                            <!-- Success icon -->
                             <svg x-show="modalType === 'success'" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
-                            <!-- Error icon -->
                             <svg x-show="modalType === 'error'" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
-                            <!-- Info icon -->
                             <svg x-show="modalType === 'info'" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -438,6 +486,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Header -->
         <header class="glass-card border-b border-white/10">
             <div class="max-w-5xl mx-auto px-4 py-6">
@@ -447,18 +496,18 @@
                         <p class="text-sm text-white/60">Platforma ta de ticketing pentru evenimente</p>
                     </div>
                     <div class="text-sm text-white/60">
-                        Ai deja cont? <a href="/admin" class="text-purple-400 hover:text-purple-300 font-medium transition-colors">Autentifică-te</a>
+                        Ai deja cont? <a href="/admin" class="text-purple-400 hover:text-purple-300 font-medium transition-colors">Autentifica-te</a>
                     </div>
                 </div>
             </div>
         </header>
 
         <!-- Progress Steps -->
-        <div class="glass-card border-b border-white/10 py-6">
+        <div class="glass-card border-b border-white/10 py-6" x-show="!completed">
             <div class="max-w-5xl mx-auto px-4">
                 <div class="flex items-center justify-between">
-                    <template x-for="i in 4" :key="i">
-                        <div class="flex items-center" :class="{'flex-1': i < 4}">
+                    <template x-for="i in totalSteps" :key="i">
+                        <div class="flex items-center" :class="{'flex-1': i < totalSteps}">
                             <div class="flex items-center">
                                 <div
                                     class="step-indicator w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white"
@@ -467,7 +516,7 @@
                                         'completed': currentStep > i
                                     }"
                                 >
-                                    <span x-show="currentStep < i || currentStep === i" x-text="i"></span>
+                                    <span x-show="currentStep <= i" x-text="i"></span>
                                     <svg x-show="currentStep > i" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                     </svg>
@@ -480,7 +529,7 @@
                                 </div>
                             </div>
                             <div
-                                x-show="i < 4"
+                                x-show="i < totalSteps"
                                 class="flex-1 h-1 mx-4 progress-line rounded-full"
                                 :class="currentStep > i ? 'completed' : ''"
                             ></div>
@@ -494,9 +543,12 @@
         <main class="flex-1 py-12 px-4">
             <div class="max-w-3xl mx-auto">
                 <div class="glass-card rounded-2xl p-8 glow-purple">
-                    <!-- Step 1: Personal Info -->
+
+                    <!-- ============================================================ -->
+                    <!-- STEP 1: Date personale -->
+                    <!-- ============================================================ -->
                     <div x-show="currentStep === 1" x-cloak class="step-content">
-                        <h2 class="text-2xl font-bold text-white mb-2">Informații Personale</h2>
+                        <h2 class="text-2xl font-bold text-white mb-2">Date Personale</h2>
                         <p class="text-white/60 mb-6">Introdu datele tale de contact pentru crearea contului</p>
 
                         <form @submit.prevent="submitStep1()">
@@ -507,6 +559,7 @@
                                         type="text"
                                         x-model="formData.first_name"
                                         class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="Ion"
                                         required
                                     >
                                     <span x-show="errors.first_name" class="text-red-400 text-sm" x-text="errors.first_name"></span>
@@ -517,41 +570,11 @@
                                         type="text"
                                         x-model="formData.last_name"
                                         class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="Popescu"
                                         required
                                     >
                                     <span x-show="errors.last_name" class="text-red-400 text-sm" x-text="errors.last_name"></span>
                                 </div>
-                            </div>
-
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Nume Public Organizație *</label>
-                                <input
-                                    type="text"
-                                    x-model="formData.public_name"
-                                    class="w-full px-4 py-3 dark-input rounded-lg"
-                                    placeholder="ex: Teatrul Odeon"
-                                    required
-                                >
-                                <p class="text-xs text-white/50 mt-1">Numele sub care va fi afișată organizația (poate fi diferit de denumirea legală)</p>
-                                <span x-show="errors.public_name" class="text-red-400 text-sm" x-text="errors.public_name"></span>
-                            </div>
-
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-white/80 mb-3">Ce tip de activitate desfășurați? *</label>
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    <template x-for="type in organizerTypes" :key="type.value">
-                                        <div
-                                            @click="formData.organizer_type = type.value"
-                                            class="selection-card rounded-xl p-4 text-center"
-                                            :class="formData.organizer_type === type.value ? 'selected' : ''"
-                                        >
-                                            <span class="text-3xl block mb-2" x-text="type.icon"></span>
-                                            <div class="font-medium text-white text-sm" x-text="type.label"></div>
-                                            <p class="text-xs text-white/50 mt-1" x-text="type.description"></p>
-                                        </div>
-                                    </template>
-                                </div>
-                                <span x-show="errors.organizer_type" class="text-red-400 text-sm mt-1 block" x-text="errors.organizer_type"></span>
                             </div>
 
                             <div class="mt-6">
@@ -563,6 +586,7 @@
                                         @input.debounce.500ms="checkEmailAvailability()"
                                         class="w-full px-4 py-3 dark-input rounded-lg pr-10"
                                         :class="emailStatus === 'available' ? 'border-emerald-500' : (emailStatus === 'taken' ? 'border-red-500' : '')"
+                                        placeholder="email@exemplu.com"
                                         required
                                     >
                                     <div class="absolute right-3 top-3.5">
@@ -578,7 +602,7 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <span x-show="emailStatus === 'taken'" class="text-red-400 text-sm">Această adresă de email este deja înregistrată</span>
+                                <span x-show="emailStatus === 'taken'" class="text-red-400 text-sm">Aceasta adresa de email este deja inregistrata</span>
                                 <span x-show="errors.email" class="text-red-400 text-sm" x-text="errors.email"></span>
                             </div>
 
@@ -589,21 +613,21 @@
                                         x-model="formData.phone_country"
                                         class="w-28 px-2 py-2 border border-white/20 rounded-l-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/5"
                                     >
-                                        <option value="+40">🇷🇴 +40</option>
-                                        <option value="+49">🇩🇪 +49</option>
-                                        <option value="+33">🇫🇷 +33</option>
-                                        <option value="+44">🇬🇧 +44</option>
-                                        <option value="+1">🇺🇸 +1</option>
-                                        <option value="+36">🇭🇺 +36</option>
-                                        <option value="+359">🇧🇬 +359</option>
-                                        <option value="+373">🇲🇩 +373</option>
-                                        <option value="+39">🇮🇹 +39</option>
-                                        <option value="+34">🇪🇸 +34</option>
+                                        <option value="+40">+40</option>
+                                        <option value="+49">+49</option>
+                                        <option value="+33">+33</option>
+                                        <option value="+44">+44</option>
+                                        <option value="+1">+1</option>
+                                        <option value="+36">+36</option>
+                                        <option value="+359">+359</option>
+                                        <option value="+373">+373</option>
+                                        <option value="+39">+39</option>
+                                        <option value="+34">+34</option>
                                     </select>
                                     <input
                                         type="tel"
                                         x-model="formData.phone_number"
-                                        class="flex-1 px-4 py-2 border border-l-0 border-white/20 rounded-r-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        class="flex-1 px-4 py-2 border border-l-0 border-white/20 rounded-r-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/5"
                                         placeholder="xxx xxx xxx"
                                         required
                                     >
@@ -611,21 +635,9 @@
                                 <span x-show="errors.phone" class="text-red-400 text-sm" x-text="errors.phone"></span>
                             </div>
 
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Funcție în Companie</label>
-                                <input
-                                    type="text"
-                                    x-model="formData.contact_position"
-                                    class="w-full px-4 py-3 dark-input rounded-lg"
-                                    placeholder="ex: Director General, Administrator"
-                                >
-                                <p class="text-xs text-white/50 mt-1">Funcția pe care o ocupi în companie (opțional)</p>
-                                <span x-show="errors.contact_position" class="text-red-400 text-sm" x-text="errors.contact_position"></span>
-                            </div>
-
                             <div class="mt-6 grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-white/80 mb-2">Parolă *</label>
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Parola *</label>
                                     <input
                                         type="password"
                                         x-model="formData.password"
@@ -641,7 +653,7 @@
                                     <span x-show="errors.password" class="text-red-400 text-sm" x-text="errors.password"></span>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-white/80 mb-2">Confirmă Parola *</label>
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Confirma Parola *</label>
                                     <input
                                         type="password"
                                         x-model="formData.password_confirmation"
@@ -657,21 +669,232 @@
                                     :disabled="loading"
                                     class="px-6 py-3 btn-primary text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                                 >
-                                    <span x-show="!loading">Continuă →</span>
-                                    <span x-show="loading">Se procesează...</span>
+                                    <span x-show="!loading">Continua</span>
+                                    <span x-show="loading">Se proceseaza...</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Step 2: Company Info -->
+                    <!-- ============================================================ -->
+                    <!-- STEP 2: Tip cont -->
+                    <!-- ============================================================ -->
                     <div x-show="currentStep === 2" x-cloak class="step-content">
-                        <h2 class="text-2xl font-bold text-white mb-2">Informații Companie</h2>
-                        <p class="text-white/60 mb-6">Detalii despre firma ta pentru facturare și contracte</p>
+                        <h2 class="text-2xl font-bold text-white mb-2">Tip Cont</h2>
+                        <p class="text-white/60 mb-6">Ce tip de activitate desfasurati?</p>
 
                         <form @submit.prevent="submitStep2()">
+                            <!-- Tenant type cards -->
                             <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Țară *</label>
+                                <label class="block text-sm font-medium text-white/80 mb-3">Selecteaza tipul contului *</label>
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                    <template x-for="tt in tenantTypes" :key="tt.value">
+                                        <div
+                                            @click="selectTenantType(tt.value)"
+                                            class="tenant-type-card rounded-xl p-4 text-center"
+                                            :class="formData.tenant_type === tt.value ? 'selected' : ''"
+                                        >
+                                            <span class="text-3xl block mb-2" x-text="getTenantTypeIcon(tt.value)"></span>
+                                            <div class="font-medium text-white text-sm" x-text="tt.label"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <span x-show="errors.tenant_type" class="text-red-400 text-sm mt-1 block" x-text="errors.tenant_type"></span>
+                            </div>
+
+                            <!-- Conditional entity name fields -->
+                            <div x-show="formData.tenant_type" class="mb-6" x-cloak>
+
+                                <!-- Artist: name + search -->
+                                <div x-show="formData.tenant_type === 'artist'">
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Numele artistului / formatiei *</label>
+                                    <input
+                                        type="text"
+                                        x-model="formData.entity_name"
+                                        @input.debounce.500ms="searchArtists()"
+                                        class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="ex: Carla's Dreams"
+                                    >
+                                    <!-- Artist search result -->
+                                    <div x-show="artistSearchResult" x-cloak class="mt-2 flex items-center gap-2 text-emerald-400 text-sm">
+                                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span x-text="artistSearchResult"></span>
+                                    </div>
+                                    <div x-show="artistSearching" class="mt-2 flex items-center gap-2 text-white/50 text-sm">
+                                        <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Se cauta...</span>
+                                    </div>
+                                    <input type="hidden" x-model="formData.matched_artist_id">
+                                </div>
+
+                                <!-- Venue types: name + city -->
+                                <div x-show="['venue','stadium-arena','philharmonic','opera','theater','museum'].includes(formData.tenant_type)">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-white/80 mb-2">Numele locatiei *</label>
+                                            <input
+                                                type="text"
+                                                x-model="formData.entity_name"
+                                                class="w-full px-4 py-3 dark-input rounded-lg"
+                                                placeholder="ex: Sala Palatului"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-white/80 mb-2">Orasul *</label>
+                                            <input
+                                                type="text"
+                                                x-model="formData.entity_city"
+                                                class="w-full px-4 py-3 dark-input rounded-lg"
+                                                placeholder="ex: Bucuresti"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Agency -->
+                                <div x-show="formData.tenant_type === 'agency'">
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Numele agentiei *</label>
+                                    <input
+                                        type="text"
+                                        x-model="formData.entity_name"
+                                        class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="ex: Global Artist Agency"
+                                    >
+                                </div>
+
+                                <!-- Speaker -->
+                                <div x-show="formData.tenant_type === 'speaker'">
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Numele dvs. complet sau pseudonim *</label>
+                                    <input
+                                        type="text"
+                                        x-model="formData.entity_name"
+                                        class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="ex: Dr. Alexandru Ionescu"
+                                    >
+                                </div>
+
+                                <!-- Festival / Competition -->
+                                <div x-show="['festival','competition'].includes(formData.tenant_type)">
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Numele evenimentului / festivalului *</label>
+                                    <input
+                                        type="text"
+                                        x-model="formData.entity_name"
+                                        class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="ex: Untold Festival"
+                                    >
+                                </div>
+
+                                <!-- Tenant-artist (generic) -->
+                                <div x-show="formData.tenant_type === 'tenant-artist'">
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Numele organizatiei *</label>
+                                    <input
+                                        type="text"
+                                        x-model="formData.entity_name"
+                                        class="w-full px-4 py-3 dark-input rounded-lg"
+                                        placeholder="ex: Entertainment SRL"
+                                    >
+                                </div>
+
+                                <span x-show="errors.entity_name" class="text-red-400 text-sm mt-1 block" x-text="errors.entity_name"></span>
+                            </div>
+
+                            <!-- Public name - auto-filled from entity_name -->
+                            <div x-show="formData.tenant_type" class="mb-6" x-cloak>
+                                <label class="block text-sm font-medium text-white/80 mb-2">Nume Public *</label>
+                                <input
+                                    type="text"
+                                    x-model="formData.public_name"
+                                    class="w-full px-4 py-3 dark-input rounded-lg"
+                                    placeholder="Numele afisat public"
+                                >
+                                <p class="text-xs text-white/50 mt-1">Numele sub care veti fi afisati pe platforma (poate fi diferit de denumirea legala)</p>
+                                <span x-show="errors.public_name" class="text-red-400 text-sm" x-text="errors.public_name"></span>
+                            </div>
+
+                            <!-- Business type - only for artist/speaker -->
+                            <div x-show="['artist','speaker'].includes(formData.tenant_type)" class="mb-6" x-cloak>
+                                <label class="block text-sm font-medium text-white/80 mb-3">Forma juridica *</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div
+                                        @click="formData.business_type = 'srl'"
+                                        class="biz-type-card rounded-xl p-4 text-center"
+                                        :class="formData.business_type === 'srl' ? 'selected' : ''"
+                                    >
+                                        <div class="text-2xl mb-1">🏢</div>
+                                        <div class="font-medium text-white text-sm">SRL</div>
+                                        <p class="text-xs text-white/50 mt-1">Societate cu Raspundere Limitata</p>
+                                    </div>
+                                    <div
+                                        @click="formData.business_type = 'pfa'"
+                                        class="biz-type-card rounded-xl p-4 text-center"
+                                        :class="formData.business_type === 'pfa' ? 'selected' : ''"
+                                    >
+                                        <div class="text-2xl mb-1">📋</div>
+                                        <div class="font-medium text-white text-sm">PFA</div>
+                                        <p class="text-xs text-white/50 mt-1">Persoana Fizica Autorizata</p>
+                                    </div>
+                                    <div
+                                        @click="formData.business_type = 'persoana_fizica'"
+                                        class="biz-type-card rounded-xl p-4 text-center"
+                                        :class="formData.business_type === 'persoana_fizica' ? 'selected' : ''"
+                                    >
+                                        <div class="text-2xl mb-1">👤</div>
+                                        <div class="font-medium text-white text-sm">Persoana fizica</div>
+                                        <p class="text-xs text-white/50 mt-1">Fara forma juridica</p>
+                                    </div>
+                                </div>
+                                <span x-show="errors.business_type" class="text-red-400 text-sm mt-1 block" x-text="errors.business_type"></span>
+                            </div>
+
+                            <div class="mt-8 flex justify-between">
+                                <button
+                                    type="button"
+                                    @click="currentStep = 1"
+                                    class="px-6 py-3 btn-secondary text-white rounded-lg font-medium"
+                                >
+                                    Inapoi
+                                </button>
+                                <button
+                                    type="submit"
+                                    :disabled="loading"
+                                    class="px-6 py-3 btn-primary text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                                >
+                                    <span x-show="!loading">Continua</span>
+                                    <span x-show="loading">Se proceseaza...</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ============================================================ -->
+                    <!-- STEP 3: Date companie -->
+                    <!-- ============================================================ -->
+                    <div x-show="currentStep === 3" x-cloak class="step-content">
+                        <h2 class="text-2xl font-bold text-white mb-2">Date Companie</h2>
+                        <p class="text-white/60 mb-6">Detalii pentru facturare si contracte</p>
+
+                        <form @submit.prevent="submitStep3()">
+                            <!-- Contact position (optional, all types) -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-white/80 mb-2">Functie in companie</label>
+                                <input
+                                    type="text"
+                                    x-model="formData.contact_position"
+                                    class="w-full px-4 py-3 dark-input rounded-lg"
+                                    placeholder="ex: Director General, Administrator"
+                                >
+                                <p class="text-xs text-white/50 mt-1">Optional - functia pe care o ocupi</p>
+                                <span x-show="errors.contact_position" class="text-red-400 text-sm" x-text="errors.contact_position"></span>
+                            </div>
+
+                            <!-- Country (all types) -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-white/80 mb-2">Tara *</label>
                                 <select
                                     x-model="formData.country"
                                     @change="loadStates()"
@@ -681,106 +904,148 @@
                                     <option value="Romania">Romania</option>
                                     <option value="United States">United States</option>
                                     <option value="Germany">Germany</option>
+                                    <option value="France">France</option>
+                                    <option value="United Kingdom">United Kingdom</option>
+                                    <option value="Hungary">Hungary</option>
+                                    <option value="Bulgaria">Bulgaria</option>
+                                    <option value="Moldova">Moldova</option>
+                                    <option value="Italy">Italy</option>
+                                    <option value="Spain">Spain</option>
                                 </select>
+                                <span x-show="errors.country" class="text-red-400 text-sm" x-text="errors.country"></span>
                             </div>
 
-                            <div class="mb-6">
-                                <label class="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        x-model="formData.vat_payer"
-                                        class="rounded border-white/20 text-purple-500 focus:ring-purple-500"
-                                    >
-                                    <span class="ml-2 text-sm text-white/80">Plătitor de TVA</span>
-                                </label>
-                            </div>
+                            <!-- SRL/PFA: full company fields -->
+                            <template x-if="formData.business_type === 'srl' || formData.business_type === 'pfa'">
+                                <div>
+                                    <div class="mb-6">
+                                        <label class="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                x-model="formData.vat_payer"
+                                                class="rounded border-white/20 text-purple-500 focus:ring-purple-500"
+                                            >
+                                            <span class="ml-2 text-sm text-white/80">Platitor de TVA</span>
+                                        </label>
+                                    </div>
 
-                            <div class="mb-6" x-show="formData.country === 'Romania'">
-                                <label class="block text-sm font-medium text-white/80 mb-2">CUI / CIF</label>
-                                <div class="flex gap-2">
-                                    <input
-                                        type="text"
-                                        x-model="formData.cui"
-                                        class="flex-1 px-4 py-2 border border-white/20 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="ex: RO12345678"
-                                    >
-                                    <button
-                                        type="button"
-                                        @click="lookupCui()"
-                                        :disabled="!formData.cui || cuiLoading"
-                                        class="px-4 py-2 btn-success text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <span x-show="!cuiLoading">Verifică ANAF</span>
-                                        <span x-show="cuiLoading">...</span>
-                                    </button>
+                                    <div class="mb-6" x-show="formData.country === 'Romania'">
+                                        <label class="block text-sm font-medium text-white/80 mb-2">CUI / CIF</label>
+                                        <div class="flex gap-2">
+                                            <input
+                                                type="text"
+                                                x-model="formData.cui"
+                                                class="flex-1 px-4 py-3 dark-input rounded-lg"
+                                                placeholder="ex: RO12345678"
+                                            >
+                                            <button
+                                                type="button"
+                                                @click="lookupCui()"
+                                                :disabled="!formData.cui || cuiLoading"
+                                                class="px-4 py-2 btn-success text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <span x-show="!cuiLoading">Verifica ANAF</span>
+                                                <span x-show="cuiLoading">...</span>
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-white/50 mt-1">Completeaza CUI-ul pentru a prelua automat datele firmei din ANAF</p>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="block text-sm font-medium text-white/80 mb-2">Nume Companie *</label>
+                                        <input
+                                            type="text"
+                                            x-model="formData.company_name"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            required
+                                        >
+                                        <span x-show="errors.company_name" class="text-red-400 text-sm" x-text="errors.company_name"></span>
+                                    </div>
+
+                                    <div class="mb-6">
+                                        <label class="block text-sm font-medium text-white/80 mb-2">Registrul Comertului</label>
+                                        <input
+                                            type="text"
+                                            x-model="formData.reg_com"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            placeholder="ex: J40/12345/2020"
+                                        >
+                                    </div>
                                 </div>
-                                <p class="text-xs text-white/50 mt-1">Completează CUI-ul pentru a prelua automat datele firmei din ANAF</p>
-                            </div>
+                            </template>
 
+                            <!-- Address (all types) -->
                             <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Nume Companie *</label>
-                                <input
-                                    type="text"
-                                    x-model="formData.company_name"
-                                    class="w-full px-4 py-3 dark-input rounded-lg"
-                                    required
-                                >
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Registrul Comerțului</label>
-                                <input
-                                    type="text"
-                                    x-model="formData.reg_com"
-                                    class="w-full px-4 py-3 dark-input rounded-lg"
-                                    placeholder="ex: J40/12345/2020"
-                                >
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Adresă *</label>
+                                <label class="block text-sm font-medium text-white/80 mb-2">Adresa *</label>
                                 <textarea
                                     x-model="formData.address"
                                     rows="2"
                                     class="w-full px-4 py-3 dark-input rounded-lg"
                                     required
                                 ></textarea>
+                                <span x-show="errors.address" class="text-red-400 text-sm" x-text="errors.address"></span>
                             </div>
 
+                            <!-- State / City -->
                             <div class="grid grid-cols-2 gap-6 mb-6">
                                 <div>
-                                    <label class="block text-sm font-medium text-white/80 mb-2">Județ / Sector *</label>
-                                    <select
-                                        x-model="formData.state"
-                                        @change="loadCities()"
-                                        class="w-full px-4 py-3 dark-input rounded-lg"
-                                        required
-                                    >
-                                        <option value="">Selectează...</option>
-                                        <template x-for="state in availableStates" :key="state">
-                                            <option :value="state" x-text="state"></option>
-                                        </template>
-                                    </select>
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Judet / Sector *</label>
+                                    <template x-if="formData.country === 'Romania'">
+                                        <select
+                                            x-model="formData.state"
+                                            @change="loadCities()"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            required
+                                        >
+                                            <option value="">Selecteaza...</option>
+                                            <template x-for="state in availableStates" :key="state">
+                                                <option :value="state" x-text="state"></option>
+                                            </template>
+                                        </select>
+                                    </template>
+                                    <template x-if="formData.country !== 'Romania'">
+                                        <input
+                                            type="text"
+                                            x-model="formData.state"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            placeholder="Stat / Regiune"
+                                            required
+                                        >
+                                    </template>
+                                    <span x-show="errors.state" class="text-red-400 text-sm" x-text="errors.state"></span>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-white/80 mb-2">Oraș *</label>
-                                    <select
-                                        x-model="formData.city"
-                                        class="w-full px-4 py-3 dark-input rounded-lg"
-                                        :disabled="!formData.state"
-                                        required
-                                    >
-                                        <option value="">Selectează...</option>
-                                        <template x-for="city in availableCities" :key="city">
-                                            <option :value="city" x-text="city"></option>
-                                        </template>
-                                    </select>
+                                    <label class="block text-sm font-medium text-white/80 mb-2">Oras *</label>
+                                    <template x-if="formData.country === 'Romania'">
+                                        <select
+                                            x-model="formData.city"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            :disabled="!formData.state"
+                                            required
+                                        >
+                                            <option value="">Selecteaza...</option>
+                                            <template x-for="city in availableCities" :key="city">
+                                                <option :value="city" x-text="city"></option>
+                                            </template>
+                                        </select>
+                                    </template>
+                                    <template x-if="formData.country !== 'Romania'">
+                                        <input
+                                            type="text"
+                                            x-model="formData.city"
+                                            class="w-full px-4 py-3 dark-input rounded-lg"
+                                            placeholder="Oras"
+                                            required
+                                        >
+                                    </template>
+                                    <span x-show="errors.city" class="text-red-400 text-sm" x-text="errors.city"></span>
                                 </div>
                             </div>
 
+                            <!-- Payment processor -->
                             <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-3">Procesor de Plată</label>
-                                <p class="text-sm text-white/60 mb-4">Selectează sistemul de plăți pe care dorești să-l folosești pentru procesarea plăților de la clienții tăi</p>
+                                <label class="block text-sm font-medium text-white/80 mb-3">Procesor de Plata</label>
+                                <p class="text-sm text-white/60 mb-4">Selecteaza sistemul de plati pe care doresti sa-l folosesti pentru procesarea platilor de la clientii tai</p>
                                 <div class="grid grid-cols-2 gap-4">
                                     @foreach($paymentProcessors as $key => $processor)
                                     <div
@@ -805,7 +1070,7 @@
                                         </div>
                                     </div>
                                     @endforeach
-                                    <!-- Nu știu option -->
+                                    <!-- Nu stiu option -->
                                     <div
                                         @click="formData.payment_processor = 'unknown'"
                                         class="border-2 rounded-lg p-4 cursor-pointer transition hover:shadow-md col-span-2"
@@ -819,9 +1084,9 @@
                                                 x-model="formData.payment_processor"
                                                 class="mr-2"
                                             >
-                                            <div class="font-semibold text-white">🤔 Nu știu acum</div>
+                                            <div class="font-semibold text-white">Nu stiu acum</div>
                                         </div>
-                                        <p class="text-xs text-white/60">Voi decide și configura procesorul de plăți mai târziu din panoul de administrare.</p>
+                                        <p class="text-xs text-white/60">Voi decide si configura procesorul de plati mai tarziu din panoul de administrare.</p>
                                     </div>
                                 </div>
                                 <span x-show="errors.payment_processor" class="text-red-400 text-sm" x-text="errors.payment_processor"></span>
@@ -830,29 +1095,31 @@
                             <div class="mt-8 flex justify-between">
                                 <button
                                     type="button"
-                                    @click="currentStep = 1"
+                                    @click="currentStep = 2"
                                     class="px-6 py-3 btn-secondary text-white rounded-lg font-medium"
                                 >
-                                    ← Înapoi
+                                    Inapoi
                                 </button>
                                 <button
                                     type="submit"
                                     :disabled="loading"
                                     class="px-6 py-3 btn-primary text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                                 >
-                                    <span x-show="!loading">Continuă →</span>
-                                    <span x-show="loading">Se procesează...</span>
+                                    <span x-show="!loading">Continua</span>
+                                    <span x-show="loading">Se proceseaza...</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Step 3: Websites -->
-                    <div x-show="currentStep === 3" x-cloak class="step-content">
-                        <h2 class="text-2xl font-bold text-white mb-2">Website-uri și Estimare</h2>
-                        <p class="text-white/60 mb-6">Adaugă domeniile pe care vei vinde bilete</p>
+                    <!-- ============================================================ -->
+                    <!-- STEP 4: Domeniu & Website -->
+                    <!-- ============================================================ -->
+                    <div x-show="currentStep === 4" x-cloak class="step-content">
+                        <h2 class="text-2xl font-bold text-white mb-2">Domeniu & Website</h2>
+                        <p class="text-white/60 mb-6">Adauga domeniile pe care vei vinde bilete</p>
 
-                        <form @submit.prevent="submitStep3()">
+                        <form @submit.prevent="submitStep4()">
                             <!-- No website option -->
                             <div class="mb-6">
                                 <label class="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all duration-200"
@@ -863,22 +1130,22 @@
                                         class="w-5 h-5 text-purple-500 rounded focus:ring-purple-500"
                                     >
                                     <div>
-                                        <div class="font-medium text-white">🌐 Nu am website propriu</div>
-                                        <p class="text-sm text-white/60">Vreau să primesc un subdomeniu gratuit pe tics.ro</p>
+                                        <div class="font-medium text-white">Nu am website propriu</div>
+                                        <p class="text-sm text-white/60">Vreau sa primesc un subdomeniu gratuit pe tics.ro</p>
                                     </div>
                                 </label>
                             </div>
 
-                            <!-- Subdomain input (shown when no website is checked) -->
-                            <div x-show="formData.has_no_website" x-cloak class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Alege-ți subdomeniul gratuit pe tics.ro</label>
+                            <!-- Subdomain input -->
+                            <div x-show="formData.has_no_website" x-cloak class="mb-6 p-4 rounded-lg border border-purple-500/20 bg-purple-500/5">
+                                <label class="block text-sm font-medium text-white/80 mb-2">Alege-ti subdomeniul gratuit pe tics.ro</label>
                                 <div class="flex items-center gap-2">
                                     <input
                                         type="text"
                                         x-model="formData.subdomain"
                                         @input.debounce.500ms="checkSubdomainAvailability()"
-                                        class="flex-1 px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-                                        :class="subdomainError ? 'border-red-500' : (subdomainAvailable ? 'border-green-500' : 'border-white/20')"
+                                        class="flex-1 px-4 py-3 dark-input rounded-lg text-lg"
+                                        :class="subdomainError ? 'border-red-500' : (subdomainAvailable ? 'border-green-500' : '')"
                                         placeholder="organizatia-ta"
                                     >
                                     <span class="text-lg font-medium text-white/80">.tics.ro</span>
@@ -888,19 +1155,19 @@
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    <span class="text-sm text-white/60">Se verifică disponibilitatea...</span>
+                                    <span class="text-sm text-white/60">Se verifica disponibilitatea...</span>
                                 </div>
-                                <div class="mt-2 flex items-center gap-2 text-green-600" x-show="subdomainAvailable && !subdomainChecking && formData.subdomain">
+                                <div class="mt-2 flex items-center gap-2 text-emerald-400" x-show="subdomainAvailable && !subdomainChecking && formData.subdomain">
                                     <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                     </svg>
                                     <span class="text-sm" x-text="formData.subdomain + '.tics.ro este disponibil!'"></span>
                                 </div>
-                                <span x-show="subdomainError" class="text-red-500 text-sm mt-2 block" x-text="subdomainError"></span>
-                                <p class="text-xs text-white/50 mt-2">Website-ul tău va fi accesibil la adresa <strong x-text="(formData.subdomain || 'subdomeniu') + '.tics.ro'"></strong></p>
+                                <span x-show="subdomainError" class="text-red-400 text-sm mt-2 block" x-text="subdomainError"></span>
+                                <p class="text-xs text-white/50 mt-2">Website-ul tau va fi accesibil la adresa <strong x-text="(formData.subdomain || 'subdomeniu') + '.tics.ro'"></strong></p>
                             </div>
 
-                            <!-- Domains input (shown when has website) -->
+                            <!-- Domains input -->
                             <div x-show="!formData.has_no_website" class="mb-6">
                                 <label class="block text-sm font-medium text-white/80 mb-2">Domenii Website *</label>
                                 <div class="space-y-3">
@@ -911,8 +1178,8 @@
                                                     type="url"
                                                     x-model="formData.domains[index]"
                                                     @input.debounce.500ms="checkDomainAvailability(index)"
-                                                    class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                                    :class="domainErrors[index] ? 'border-red-500' : 'border-white/20'"
+                                                    class="flex-1 px-4 py-3 dark-input rounded-lg"
+                                                    :class="domainErrors[index] ? 'border-red-500' : ''"
                                                     placeholder="https://example.com"
                                                     :required="!formData.has_no_website"
                                                 >
@@ -920,9 +1187,9 @@
                                                     type="button"
                                                     @click="formData.domains.splice(index, 1); delete domainErrors[index]"
                                                     x-show="formData.domains.length > 1"
-                                                    class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                                                    class="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition"
                                                 >
-                                                    Șterge
+                                                    Sterge
                                                 </button>
                                             </div>
                                             <span x-show="domainErrors[index]" class="text-red-400 text-sm" x-text="domainErrors[index]"></span>
@@ -932,9 +1199,9 @@
                                 <button
                                     type="button"
                                     @click="formData.domains.push('')"
-                                    class="mt-3 text-sm text-purple-500 hover:text-blue-800"
+                                    class="mt-3 text-sm text-purple-400 hover:text-purple-300 transition"
                                 >
-                                    + Adaugă alt domeniu
+                                    + Adauga alt domeniu
                                 </button>
                             </div>
 
@@ -945,42 +1212,45 @@
                                     class="w-full px-4 py-3 dark-input rounded-lg"
                                     required
                                 >
-                                    <option value="">Selectează...</option>
-                                    <option value="0">0 - 100 bilete/lună</option>
-                                    <option value="100">100 - 500 bilete/lună</option>
-                                    <option value="500">500 - 1.000 bilete/lună</option>
-                                    <option value="1000">1.000 - 5.000 bilete/lună</option>
-                                    <option value="5000">5.000 - 10.000 bilete/lună</option>
-                                    <option value="10000">peste 10.000 bilete/lună</option>
+                                    <option value="">Selecteaza...</option>
+                                    <option value="0">0 - 100 bilete/luna</option>
+                                    <option value="100">100 - 500 bilete/luna</option>
+                                    <option value="500">500 - 1.000 bilete/luna</option>
+                                    <option value="1000">1.000 - 5.000 bilete/luna</option>
+                                    <option value="5000">5.000 - 10.000 bilete/luna</option>
+                                    <option value="10000">peste 10.000 bilete/luna</option>
                                 </select>
+                                <span x-show="errors.estimated_monthly_tickets" class="text-red-400 text-sm" x-text="errors.estimated_monthly_tickets"></span>
                             </div>
 
                             <div class="mt-8 flex justify-between">
                                 <button
                                     type="button"
-                                    @click="currentStep = 2"
+                                    @click="currentStep = 3"
                                     class="px-6 py-3 btn-secondary text-white rounded-lg font-medium"
                                 >
-                                    ← Înapoi
+                                    Inapoi
                                 </button>
                                 <button
                                     type="submit"
                                     :disabled="loading"
                                     class="px-6 py-3 btn-primary text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                                 >
-                                    <span x-show="!loading">Continuă →</span>
-                                    <span x-show="loading">Se procesează...</span>
+                                    <span x-show="!loading">Continua</span>
+                                    <span x-show="loading">Se proceseaza...</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Step 4: Work Method & Microservices -->
-                    <div x-show="currentStep === 4" x-cloak class="step-content">
-                        <h2 class="text-2xl font-bold text-white mb-2">Metoda de Lucru și Servicii</h2>
-                        <p class="text-white/60 mb-6">Alege modul în care vei utiliza platforma</p>
+                    <!-- ============================================================ -->
+                    <!-- STEP 5: Plan & Microservicii -->
+                    <!-- ============================================================ -->
+                    <div x-show="currentStep === 5" x-cloak class="step-content">
+                        <h2 class="text-2xl font-bold text-white mb-2">Metoda de Lucru si Servicii</h2>
+                        <p class="text-white/60 mb-6">Alege modul in care vei utiliza platforma</p>
 
-                        <form @submit.prevent="submitStep4()">
+                        <form @submit.prevent="submitStep5()">
                             <div class="mb-8">
                                 <label class="block text-sm font-medium text-white/80 mb-4">Metoda de Lucru *</label>
                                 <div class="grid grid-cols-3 gap-4">
@@ -990,9 +1260,9 @@
                                         :class="formData.work_method === 'exclusive' ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'"
                                     >
                                         <div class="text-center">
-                                            <div class="text-4xl font-bold text-purple-500 mb-2">1%</div>
+                                            <div class="text-4xl font-bold text-purple-500 mb-2 method-percentage">1%</div>
                                             <div class="font-semibold mb-1">Exclusiv</div>
-                                            <div class="text-xs text-white/50">Vânzări exclusiv prin ePas</div>
+                                            <div class="text-xs text-white/50">Vanzari exclusiv prin Tixello</div>
                                         </div>
                                     </div>
                                     <div
@@ -1001,9 +1271,9 @@
                                         :class="formData.work_method === 'mixed' ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'"
                                     >
                                         <div class="text-center">
-                                            <div class="text-4xl font-bold text-green-600 mb-2">2%</div>
+                                            <div class="text-4xl font-bold text-green-500 mb-2 method-percentage">2%</div>
                                             <div class="font-semibold mb-1">Mixt</div>
-                                            <div class="text-xs text-white/50">ePas + alte platforme</div>
+                                            <div class="text-xs text-white/50">Tixello + alte platforme</div>
                                         </div>
                                     </div>
                                     <div
@@ -1012,49 +1282,37 @@
                                         :class="formData.work_method === 'reseller' ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'"
                                     >
                                         <div class="text-center">
-                                            <div class="text-4xl font-bold text-orange-600 mb-2">3%</div>
+                                            <div class="text-4xl font-bold text-orange-500 mb-2 method-percentage">3%</div>
                                             <div class="font-semibold mb-1">Reseller</div>
-                                            <div class="text-xs text-white/50">Revânzare bilete</div>
+                                            <div class="text-xs text-white/50">Revanzare bilete</div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="mb-6">
-                                <label class="block text-sm font-medium text-white/80 mb-2">Limbă Preferată *</label>
-                                <select
-                                    x-model="formData.locale"
-                                    class="w-full px-4 py-3 dark-input rounded-lg"
-                                    required
-                                >
-                                    <option value="ro">Română</option>
-                                    <option value="en">English</option>
-                                    <option value="hu">Magyar</option>
-                                    <option value="de">Deutsch</option>
-                                    <option value="fr">Français</option>
-                                </select>
+                                <span x-show="errors.work_method" class="text-red-400 text-sm mt-1 block" x-text="errors.work_method"></span>
                             </div>
 
                             <div class="mb-8">
-                                <label class="block text-sm font-medium text-white/80 mb-4">Microservicii Adiționale (opțional)</label>
+                                <label class="block text-sm font-medium text-white/80 mb-4">Microservicii Aditionale (optional)</label>
+                                <p class="text-xs text-white/50 mb-3">Am preselectat serviciile recomandate pentru tipul tau de cont. Poti modifica selectia.</p>
                                 <div class="space-y-3">
                                     @foreach($microservices as $microservice)
-                                    <label class="flex items-start p-4 border rounded-lg hover:bg-white/5 cursor-pointer">
+                                    <label class="flex items-start p-4 border rounded-lg border-white/10 hover:bg-white/5 cursor-pointer transition">
                                         <input
                                             type="checkbox"
                                             value="{{ $microservice->id }}"
+                                            :checked="formData.microservices.includes({{ $microservice->id }})"
                                             @change="toggleMicroservice({{ $microservice->id }})"
                                             class="mt-1 rounded border-white/20 text-purple-500 focus:ring-purple-500"
                                         >
                                         <div class="ml-3 flex-1">
                                             <div class="flex items-center justify-between">
-                                                <div class="font-medium">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
-                                                <a href="/microservice/{{ $microservice->slug }}" target="_blank" class="text-xs text-purple-500 hover:text-blue-800 underline" @click.stop>
-                                                    Detalii →
+                                                <div class="font-medium text-white">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
+                                                <a href="/microservice/{{ $microservice->slug }}" target="_blank" class="text-xs text-purple-400 hover:text-purple-300 underline" @click.stop>
+                                                    Detalii
                                                 </a>
                                             </div>
                                             <div class="text-sm text-white/60">{{ $microservice->getTranslation('short_description', app()->getLocale()) }}</div>
-                                            <div class="text-sm font-semibold text-purple-500 mt-1">
+                                            <div class="text-sm font-semibold text-purple-400 mt-1">
                                                 {{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}
                                             </div>
                                         </div>
@@ -1063,7 +1321,22 @@
                                 </div>
                             </div>
 
-                            <!-- Terms & Conditions and GDPR Agreements -->
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-white/80 mb-2">Limba Preferata *</label>
+                                <select
+                                    x-model="formData.locale"
+                                    class="w-full px-4 py-3 dark-input rounded-lg"
+                                    required
+                                >
+                                    <option value="ro">Romana</option>
+                                    <option value="en">English</option>
+                                    <option value="hu">Magyar</option>
+                                    <option value="de">Deutsch</option>
+                                    <option value="fr">Francais</option>
+                                </select>
+                            </div>
+
+                            <!-- Terms & Conditions -->
                             <div class="mb-8 space-y-4 p-4 bg-white/5 rounded-lg">
                                 <label class="flex items-start cursor-pointer">
                                     <input
@@ -1073,8 +1346,8 @@
                                         required
                                     >
                                     <span class="ml-3 text-sm text-white/80">
-                                        Am citit și sunt de acord cu
-                                        <a href="/termeni-si-conditii" target="_blank" class="text-purple-500 hover:text-blue-800 underline">Termenii și Condițiile</a> *
+                                        Am citit si sunt de acord cu
+                                        <a href="/termeni-si-conditii" target="_blank" class="text-purple-400 hover:text-purple-300 underline">Termenii si Conditiile</a> *
                                     </span>
                                 </label>
                                 <label class="flex items-start cursor-pointer">
@@ -1086,7 +1359,7 @@
                                     >
                                     <span class="ml-3 text-sm text-white/80">
                                         Sunt de acord cu
-                                        <a href="/politica-confidentialitate" target="_blank" class="text-purple-500 hover:text-blue-800 underline">Procesarea Datelor cu Caracter Personal (GDPR)</a> *
+                                        <a href="/politica-confidentialitate" target="_blank" class="text-purple-400 hover:text-purple-300 underline">Procesarea Datelor cu Caracter Personal (GDPR)</a> *
                                     </span>
                                 </label>
                             </div>
@@ -1094,22 +1367,59 @@
                             <div class="mt-8 flex justify-between">
                                 <button
                                     type="button"
-                                    @click="currentStep = 3"
+                                    @click="currentStep = 4"
                                     class="px-6 py-3 btn-secondary text-white rounded-lg font-medium"
                                 >
-                                    ← Înapoi
+                                    Inapoi
                                 </button>
                                 <button
                                     type="submit"
                                     :disabled="loading || !formData.agree_terms || !formData.agree_gdpr"
                                     class="px-6 py-3 btn-success text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
                                 >
-                                    <span x-show="!loading">Finalizează Înregistrarea ✓</span>
-                                    <span x-show="loading">Se procesează...</span>
+                                    <span x-show="!loading">Finalizeaza Inregistrarea</span>
+                                    <span x-show="loading">Se proceseaza...</span>
                                 </button>
                             </div>
                         </form>
                     </div>
+
+                    <!-- ============================================================ -->
+                    <!-- SUCCESS STATE -->
+                    <!-- ============================================================ -->
+                    <div x-show="completed" x-cloak class="step-content">
+                        <div class="text-center py-8">
+                            <div class="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-emerald-500/20 mb-6">
+                                <svg class="h-10 w-10 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </div>
+                            <h2 class="text-3xl font-bold text-white mb-3">Inregistrare finalizata!</h2>
+                            <p class="text-white/60 mb-8 max-w-md mx-auto" x-text="successMessage"></p>
+
+                            <!-- Verification code -->
+                            <div x-show="verificationCode" x-cloak class="mb-8">
+                                <div class="success-card rounded-2xl p-8 max-w-md mx-auto">
+                                    <p class="text-sm text-white/60 mb-3">Codul tau de verificare:</p>
+                                    <div class="verification-code rounded-xl px-6 py-4 text-3xl font-bold text-purple-300 mb-4" x-text="verificationCode"></div>
+                                    <p class="text-sm text-white/60">
+                                        Trimite acest cod ca mesaj pe
+                                        <span class="text-purple-400 font-medium">Instagram</span>,
+                                        <span class="text-purple-400 font-medium">Facebook</span> sau
+                                        <span class="text-purple-400 font-medium">TikTok</span>
+                                        catre <span class="font-bold text-white">@tixello</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div x-show="successRedirect">
+                                <a :href="successRedirect" class="inline-block px-8 py-3 btn-primary text-white rounded-lg font-medium text-lg">
+                                    Mergi la panoul de administrare
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </main>
@@ -1118,37 +1428,73 @@
     <script>
         function wizardData() {
             return {
-                currentStep: {{ $step }},
+                currentStep: {{ $step ?? 1 }},
+                totalSteps: 5,
                 loading: false,
                 cuiLoading: false,
                 errors: {},
+                completed: false,
+                successMessage: '',
+                successRedirect: '',
+                verificationCode: '',
+
+                // Email check
                 emailChecking: false,
-                emailStatus: '', // 'available', 'taken', ''
+                emailStatus: '',
+
+                // Domain check
                 domainErrors: {},
-                // Subdomain checking state
+
+                // Subdomain check
                 subdomainChecking: false,
                 subdomainAvailable: false,
                 subdomainError: '',
-                // Modal state
+
+                // Artist search
+                artistSearching: false,
+                artistSearchResult: '',
+
+                // Modal
                 showModal: false,
                 modalTitle: '',
                 modalMessage: '',
-                modalType: 'info', // 'success', 'error', 'info'
+                modalType: 'info',
                 modalCallback: null,
+
+                // Password
+                passwordStrength: 0,
+                passwordStrengthClass: '',
+                passwordStrengthText: '',
+
+                // Location
+                availableStates: [],
+                availableCities: [],
+
+                // Tenant types from server
+                tenantTypes: @json($tenantTypes),
+
+                // Microservice slug-to-id map (built at init)
+                microserviceSlugToId: {},
+
                 formData: {
                     // Step 1
                     first_name: '',
                     last_name: '',
-                    public_name: '',
-                    organizer_type: '',
                     email: '',
                     phone: '',
                     phone_country: '+40',
                     phone_number: '',
-                    contact_position: '',
                     password: '',
                     password_confirmation: '',
                     // Step 2
+                    tenant_type: '',
+                    entity_name: '',
+                    entity_city: '',
+                    matched_artist_id: '',
+                    public_name: '',
+                    business_type: 'srl',
+                    // Step 3
+                    contact_position: '',
                     country: 'Romania',
                     vat_payer: true,
                     cui: '',
@@ -1158,54 +1504,116 @@
                     city: '',
                     state: '',
                     payment_processor: '',
-                    // Step 3
+                    // Step 4
                     has_no_website: false,
                     subdomain: '',
                     domains: [''],
                     estimated_monthly_tickets: '',
-                    // Step 4
+                    // Step 5
                     work_method: 'mixed',
                     microservices: [],
                     locale: 'ro',
                     agree_terms: false,
                     agree_gdpr: false
                 },
-                organizerTypes: [
-                    { value: 'event_organizer', icon: '🎪', label: 'Organizator evenimente', description: 'Organizez concerte, festivaluri, conferințe' },
-                    { value: 'pub_bar', icon: '🍺', label: 'Pub / Bar / Club', description: 'Dețin sau administrez un local' },
-                    { value: 'theater', icon: '🎭', label: 'Teatru', description: 'Dețin sau lucrez pentru un teatru' },
-                    { value: 'concert_hall', icon: '🎵', label: 'Sală de spectacole', description: 'Dețin sau administrez o sală' },
-                    { value: 'philharmonic', icon: '🎻', label: 'Filarmonică / Operă', description: 'Instituție culturală' },
-                    { value: 'museum', icon: '🏛️', label: 'Muzeu / Galerie', description: 'Expoziții și evenimente culturale' },
-                    { value: 'sports', icon: '⚽', label: 'Evenimente sportive', description: 'Competiții și meciuri' },
-                    { value: 'other', icon: '📋', label: 'Altceva', description: 'Alt tip de activitate' }
-                ],
-                passwordStrength: 0,
-                passwordStrengthClass: '',
-                passwordStrengthText: '',
-                availableStates: [],
-                availableCities: [],
 
                 init() {
-                    // Load existing data from session if any
+                    // Load existing data from session
                     @if(isset($data) && !empty($data))
                         this.formData = Object.assign(this.formData, @json($data));
                     @endif
+
+                    // Build microservice slug-to-id map
+                    @foreach($microservices as $ms)
+                        this.microserviceSlugToId['{{ $ms->slug }}'] = {{ $ms->id }};
+                    @endforeach
 
                     // Load states for Romania by default
                     if (this.formData.country === 'Romania') {
                         this.loadStates();
                     }
+
+                    // Watch entity_name to auto-fill public_name
+                    this.$watch('formData.entity_name', (val) => {
+                        if (val && (!this.formData.public_name || this._lastAutoPublicName === this.formData.public_name)) {
+                            this.formData.public_name = val;
+                            this._lastAutoPublicName = val;
+                        }
+                    });
+
+                    this._lastAutoPublicName = '';
                 },
 
                 getStepTitle(step) {
                     const titles = {
-                        1: 'Date Personale',
-                        2: 'Companie',
-                        3: 'Website-uri',
-                        4: 'Metoda de Lucru'
+                        1: 'Date personale',
+                        2: 'Tip cont',
+                        3: 'Date companie',
+                        4: 'Domeniu',
+                        5: 'Plan'
                     };
                     return titles[step];
+                },
+
+                getTenantTypeIcon(value) {
+                    const icons = {
+                        'tenant-artist': '🎪',
+                        'artist': '🎸',
+                        'agency': '🏢',
+                        'venue': '📍',
+                        'speaker': '🎤',
+                        'competition': '🏆',
+                        'stadium-arena': '🏟️',
+                        'philharmonic': '🎻',
+                        'opera': '🎭',
+                        'theater': '🎭',
+                        'museum': '🏛️',
+                        'festival': '🎪'
+                    };
+                    return icons[value] || '📋';
+                },
+
+                selectTenantType(value) {
+                    this.formData.tenant_type = value;
+                    // Reset entity fields
+                    this.formData.entity_name = '';
+                    this.formData.entity_city = '';
+                    this.formData.matched_artist_id = '';
+                    this.artistSearchResult = '';
+
+                    // Set default business_type for non-artist/speaker types
+                    if (!['artist', 'speaker'].includes(value)) {
+                        this.formData.business_type = 'srl';
+                    }
+
+                    // Pre-select microservices based on tenant type
+                    this.preselectMicroservices(value);
+                },
+
+                preselectMicroservices(tenantType) {
+                    const defaults = {
+                        'tenant-artist': ['analytics', 'crm', 'shop', 'affiliate-tracking'],
+                        'artist': ['analytics', 'crm', 'shop', 'affiliate-tracking'],
+                        'agency': ['analytics', 'crm', 'efactura', 'accounting'],
+                        'venue': ['analytics', 'crm', 'door-sales', 'ticket-customizer'],
+                        'stadium-arena': ['analytics', 'crm', 'door-sales', 'ticket-customizer'],
+                        'speaker': ['analytics', 'crm'],
+                        'competition': ['analytics', 'crm', 'shop'],
+                        'philharmonic': ['analytics', 'crm', 'door-sales', 'ticket-customizer', 'efactura'],
+                        'opera': ['analytics', 'crm', 'door-sales', 'ticket-customizer', 'efactura'],
+                        'theater': ['analytics', 'crm', 'door-sales', 'ticket-customizer', 'efactura'],
+                        'museum': ['analytics', 'crm', 'door-sales', 'ticket-customizer'],
+                        'festival': ['analytics', 'crm', 'shop', 'door-sales', 'affiliate-tracking', 'efactura'],
+                    };
+
+                    const slugs = defaults[tenantType] || [];
+                    this.formData.microservices = [];
+                    slugs.forEach(slug => {
+                        const id = this.microserviceSlugToId[slug];
+                        if (id) {
+                            this.formData.microservices.push(id);
+                        }
+                    });
                 },
 
                 // Modal functions
@@ -1239,27 +1647,86 @@
 
                     if (strength <= 2) {
                         this.passwordStrengthClass = 'strength-weak';
-                        this.passwordStrengthText = 'Parolă slabă';
+                        this.passwordStrengthText = 'Parola slaba';
                     } else if (strength <= 4) {
                         this.passwordStrengthClass = 'strength-medium';
-                        this.passwordStrengthText = 'Parolă medie';
+                        this.passwordStrengthText = 'Parola medie';
                     } else {
                         this.passwordStrengthClass = 'strength-strong';
-                        this.passwordStrengthText = 'Parolă puternică';
+                        this.passwordStrengthText = 'Parola puternica';
+                    }
+                },
+
+                async checkEmailAvailability() {
+                    if (!this.formData.email || !this.formData.email.includes('@')) {
+                        this.emailStatus = '';
+                        return;
+                    }
+
+                    this.emailChecking = true;
+                    this.emailStatus = '';
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.check-email") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ email: this.formData.email })
+                        });
+
+                        const data = await response.json();
+                        this.emailStatus = data.available ? 'available' : 'taken';
+                    } catch (error) {
+                        console.error('Error checking email:', error);
+                        this.emailStatus = '';
+                    } finally {
+                        this.emailChecking = false;
+                    }
+                },
+
+                async searchArtists() {
+                    const q = this.formData.entity_name;
+                    this.artistSearchResult = '';
+                    this.formData.matched_artist_id = '';
+
+                    if (!q || q.length < 2) return;
+
+                    this.artistSearching = true;
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.search-artists") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ q: q })
+                        });
+
+                        const data = await response.json();
+                        if (data.found && data.artist) {
+                            this.artistSearchResult = 'Am gasit ' + data.artist.name + ' in biblioteca noastra!';
+                            this.formData.matched_artist_id = data.artist.id;
+                        }
+                    } catch (error) {
+                        console.error('Error searching artists:', error);
+                    } finally {
+                        this.artistSearching = false;
                     }
                 },
 
                 async submitStep1() {
-                    // Check if email is taken
                     if (this.emailStatus === 'taken') {
-                        this.openModal('Email indisponibil', 'Această adresă de email este deja înregistrată. Te rugăm să folosești altă adresă.', 'error');
+                        this.openModal('Email indisponibil', 'Aceasta adresa de email este deja inregistrata. Te rugam sa folosesti alta adresa.', 'error');
                         return;
                     }
 
                     this.loading = true;
                     this.errors = {};
 
-                    // Combine phone number
+                    // Combine phone
                     this.formData.phone = this.formData.phone_country + this.formData.phone_number.replace(/\s/g, '');
 
                     try {
@@ -1275,13 +1742,13 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.currentStep = data.next_step;
+                            this.currentStep = data.next_step || 2;
                         } else {
                             this.errors = data.errors || {};
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                        this.openModal('Eroare', 'A aparut o eroare. Te rugam sa incerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -1304,13 +1771,13 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.currentStep = data.next_step;
+                            this.currentStep = data.next_step || 3;
                         } else {
                             this.errors = data.errors || {};
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                        this.openModal('Eroare', 'A aparut o eroare. Te rugam sa incerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -1333,13 +1800,13 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.currentStep = data.next_step;
+                            this.currentStep = data.next_step || 4;
                         } else {
                             this.errors = data.errors || {};
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                        this.openModal('Eroare', 'A aparut o eroare. Te rugam sa incerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -1362,25 +1829,53 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            this.openModal('Succes', data.message, 'success', () => {
-                                if (data.redirect) {
-                                    window.location.href = data.redirect;
-                                }
-                            });
+                            this.currentStep = data.next_step || 5;
                         } else {
                             this.errors = data.errors || {};
-                            let errorMsg = data.message || 'A apărut o eroare.';
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        this.openModal('Eroare', 'A aparut o eroare. Te rugam sa incerci din nou.', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async submitStep5() {
+                    this.loading = true;
+                    this.errors = {};
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.step5") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify(this.formData)
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.completed = true;
+                            this.successMessage = data.message || 'Contul tau a fost creat cu succes!';
+                            this.successRedirect = data.redirect || '';
+                            this.verificationCode = data.verification_code || '';
+                        } else {
+                            this.errors = data.errors || {};
+                            let errorMsg = data.message || 'A aparut o eroare.';
                             if (data.error) {
                                 errorMsg += '\n\nDetalii: ' + data.error;
                                 if (data.file) {
-                                    errorMsg += '\nFișier: ' + data.file;
+                                    errorMsg += '\nFisier: ' + data.file;
                                 }
                             }
                             this.openModal('Eroare', errorMsg, 'error');
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                        this.openModal('Eroare', 'A aparut o eroare. Te rugam sa incerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -1410,7 +1905,6 @@
                             this.formData.address = data.address || this.formData.address;
                             this.formData.vat_payer = data.vat_payer;
 
-                            // Match state from ANAF with available states (case-insensitive)
                             if (data.state) {
                                 const anafState = data.state.toLowerCase().trim();
                                 const matchedState = this.availableStates.find(s =>
@@ -1421,10 +1915,8 @@
 
                                 if (matchedState) {
                                     this.formData.state = matchedState;
-                                    // Load cities for the matched state
                                     await this.loadCities();
 
-                                    // Now try to match the city (case-insensitive)
                                     if (data.city && this.availableCities.length > 0) {
                                         const anafCity = data.city.toLowerCase().trim();
                                         const matchedCity = this.availableCities.find(c =>
@@ -1436,19 +1928,17 @@
                                         if (matchedCity) {
                                             this.formData.city = matchedCity;
                                         } else {
-                                            // Use ANAF city value if no exact match
                                             this.formData.city = data.city;
                                         }
                                     }
                                 } else {
-                                    // Use ANAF state value if no match found
                                     this.formData.state = data.state;
                                 }
                             }
 
                             this.openModal('Succes', 'Datele au fost preluate cu succes din ANAF!', 'success');
                         } else {
-                            this.openModal('ANAF', result.message || 'Nu s-au găsit date în ANAF pentru acest CUI.', 'info');
+                            this.openModal('ANAF', result.message || 'Nu s-au gasit date in ANAF pentru acest CUI.', 'info');
                         }
                     } catch (error) {
                         console.error('Error:', error);
@@ -1459,7 +1949,6 @@
                 },
 
                 async loadStates() {
-                    // For Romania, load counties
                     if (this.formData.country === 'Romania') {
                         this.availableStates = @json($romaniaCounties);
                     } else {
@@ -1498,35 +1987,6 @@
                     }
                 },
 
-                async checkEmailAvailability() {
-                    if (!this.formData.email || !this.formData.email.includes('@')) {
-                        this.emailStatus = '';
-                        return;
-                    }
-
-                    this.emailChecking = true;
-                    this.emailStatus = '';
-
-                    try {
-                        const response = await fetch('{{ route("onboarding.check-email") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                            },
-                            body: JSON.stringify({ email: this.formData.email })
-                        });
-
-                        const data = await response.json();
-                        this.emailStatus = data.available ? 'available' : 'taken';
-                    } catch (error) {
-                        console.error('Error checking email:', error);
-                        this.emailStatus = '';
-                    } finally {
-                        this.emailChecking = false;
-                    }
-                },
-
                 async checkDomainAvailability(index) {
                     const domain = this.formData.domains[index];
                     if (!domain) {
@@ -1555,20 +2015,18 @@
                 async checkSubdomainAvailability() {
                     const subdomain = this.formData.subdomain;
 
-                    // Reset state
                     this.subdomainAvailable = false;
                     this.subdomainError = '';
 
                     if (!subdomain || subdomain.length < 3) {
                         if (subdomain && subdomain.length < 3) {
-                            this.subdomainError = 'Subdomeniul trebuie să aibă cel puțin 3 caractere';
+                            this.subdomainError = 'Subdomeniul trebuie sa aiba cel putin 3 caractere';
                         }
                         return;
                     }
 
-                    // Validate subdomain format
                     if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(subdomain.toLowerCase())) {
-                        this.subdomainError = 'Subdomeniul poate conține doar litere, cifre și cratimă (nu la început sau sfârșit)';
+                        this.subdomainError = 'Subdomeniul poate contine doar litere, cifre si cratima (nu la inceput sau sfarsit)';
                         return;
                     }
 
@@ -1589,7 +2047,7 @@
                         this.subdomainError = data.available ? '' : data.message;
                     } catch (error) {
                         console.error('Error checking subdomain:', error);
-                        this.subdomainError = 'Eroare la verificarea disponibilității';
+                        this.subdomainError = 'Eroare la verificarea disponibilitatii';
                     } finally {
                         this.subdomainChecking = false;
                     }
