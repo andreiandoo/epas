@@ -2594,8 +2594,12 @@ class EventResource extends Resource
                                         $blockedSeats = \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeating->id)
                                             ->where('status', 'blocked')
                                             ->orderBy('section_name')
-                                            ->orderByRaw('CAST(row_label AS UNSIGNED), row_label')
-                                            ->orderByRaw('CAST(seat_label AS UNSIGNED), seat_label')
+                                            ->orderByRaw(\DB::getDriverName() === 'pgsql'
+                                                ? "CASE WHEN row_label ~ '^[0-9]+$' THEN CAST(row_label AS INTEGER) ELSE 0 END, row_label"
+                                                : "CAST(row_label AS UNSIGNED), row_label")
+                                            ->orderByRaw(\DB::getDriverName() === 'pgsql'
+                                                ? "CASE WHEN seat_label ~ '^[0-9]+$' THEN CAST(seat_label AS INTEGER) ELSE 0 END, seat_label"
+                                                : "CAST(seat_label AS UNSIGNED), seat_label")
                                             ->get();
 
                                         if ($blockedSeats->isEmpty()) {
