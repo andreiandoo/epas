@@ -1671,6 +1671,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({ email: this.formData.email })
@@ -1700,15 +1701,17 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({ q: q })
                         });
 
                         const data = await response.json();
-                        if (data.found && data.artist) {
-                            this.artistSearchResult = 'Am gasit ' + data.artist.name + ' in biblioteca noastra!';
-                            this.formData.matched_artist_id = data.artist.id;
+                        if (data.results && data.results.length > 0) {
+                            const artist = data.results[0];
+                            this.artistSearchResult = 'Am gasit "' + artist.name + '" in biblioteca noastra!';
+                            this.formData.matched_artist_id = artist.id;
                         }
                     } catch (error) {
                         console.error('Error searching artists:', error);
@@ -1734,6 +1737,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify(this.formData)
@@ -1763,6 +1767,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify(this.formData)
@@ -1792,6 +1797,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify(this.formData)
@@ -1821,6 +1827,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify(this.formData)
@@ -1850,6 +1857,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify(this.formData)
@@ -1891,6 +1899,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({ cui: this.formData.cui })
@@ -1999,6 +2008,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({ domain: domain })
@@ -2037,6 +2047,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
+                                'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
                             body: JSON.stringify({ subdomain: subdomain })
