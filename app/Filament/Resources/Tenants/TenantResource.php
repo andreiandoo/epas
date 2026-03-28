@@ -91,6 +91,16 @@ class TenantResource extends Resource
                                         ->visible(fn (callable $get) => $get('tenant_type') === 'theater')
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Specific type of performing arts institution'),
 
+                                    Forms\Components\Select::make('artist_id')
+                                        ->label('Linked Artist Profile')
+                                        ->relationship('artist', 'name')
+                                        ->searchable(['name', 'slug'])
+                                        ->preload()
+                                        ->nullable()
+                                        ->visible(fn (callable $get) => in_array($get('tenant_type'), ['tenant-artist', 'artist']))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Link this tenant to a global artist profile from the Artists database')
+                                        ->columnSpanFull(),
+
                                     Forms\Components\Select::make('locale')
                                         ->label('Language / Locale')
                                         ->options([
@@ -162,6 +172,292 @@ class TenantResource extends Resource
                                         ->label('Position in Company')
                                         ->maxLength(255),
                                 ])->columns(2),
+                        ]),
+
+                    // TAB: Artist Profile (visible only when artist is linked)
+                    SC\Tabs\Tab::make('Artist Profile')
+                        ->icon('heroicon-o-user')
+                        ->visible(fn (?Tenant $record) => $record?->artist_id !== null)
+                        ->schema([
+                            // Artist Preview Card + Link
+                            SC\Section::make('Linked Artist')
+                                ->description(fn (?Tenant $record) => $record?->artist
+                                    ? 'Linked to: ' . $record->artist->name . ' (ID: ' . $record->artist->id . ')'
+                                    : 'No artist linked')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('artist_preview_card')
+                                        ->hiddenLabel()
+                                        ->content(function (?Tenant $record) {
+                                            if (!$record?->artist) return '';
+                                            $artist = $record->artist;
+                                            $image = $artist->main_image_url
+                                                ? asset('storage/' . $artist->main_image_url)
+                                                : 'https://ui-avatars.com/api/?name=' . urlencode($artist->name) . '&color=7F9CF5&background=EBF4FF';
+                                            $location = collect([$artist->city, $artist->country])->filter()->join(', ') ?: '—';
+                                            $editUrl = \App\Filament\Resources\Artists\ArtistResource::getUrl('edit', ['record' => $artist->id]);
+
+                                            $badges = '';
+                                            if ($artist->is_active) {
+                                                $badges .= '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.15);color:#10B981;margin-right:4px;">✓ Active</span>';
+                                            }
+                                            $types = $artist->artistTypes->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->filter();
+                                            foreach ($types as $type) {
+                                                $badges .= '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#334155;color:#E2E8F0;margin-right:4px;">' . e($type) . '</span>';
+                                            }
+                                            $genres = $artist->artistGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->filter();
+                                            foreach ($genres as $genre) {
+                                                $badges .= '<span style="display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;background:#1e293b;color:#94a3b8;margin-right:4px;">' . e($genre) . '</span>';
+                                            }
+
+                                            return new \Illuminate\Support\HtmlString("
+                                                <div style='display:flex;gap:16px;align-items:center;margin-bottom:12px;'>
+                                                    <img src='{$image}' alt='" . e($artist->name) . "' style='width:80px;height:80px;border-radius:50%;object-fit:cover;border:3px solid #334155;'>
+                                                    <div>
+                                                        <div style='font-size:20px;font-weight:700;color:white;'>" . e($artist->name) . "</div>
+                                                        <div style='font-size:13px;color:#64748B;margin-top:2px;'>{$location}</div>
+                                                        <a href='{$editUrl}' target='_blank' style='display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;color:#818cf8;text-decoration:none;'>
+                                                            <svg style='width:14px;height:14px;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'/></svg>
+                                                            Open in Artists
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div style='display:flex;flex-wrap:wrap;gap:4px;'>{$badges}</div>
+                                            ");
+                                        }),
+                                ]),
+
+                            // Artist Stats
+                            SC\Grid::make(4)->schema([
+                                SC\Section::make('Performance Stats')
+                                    ->icon('heroicon-o-chart-bar')
+                                    ->compact()
+                                    ->columnSpan(1)
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_stats')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $artist = $record->artist;
+                                                $eventsCount = $artist->eventsLastYearCount();
+                                                $tickets = $artist->ticketsSoldLastYear();
+                                                $sold = (int) ($tickets['sold'] ?? 0);
+                                                $listed = (int) ($tickets['listed'] ?? 0);
+                                                $avg = $tickets['avg_per_event'] ?? 0;
+                                                $price = ($tickets['avg_price'] !== null) ? number_format($tickets['avg_price'], 2) : '—';
+
+                                                $row = fn ($label, $value, $color = '#E2E8F0') => "
+                                                    <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                        <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                                        <span style='font-size:12px;font-weight:600;color:{$color};'>{$value}</span>
+                                                    </div>";
+
+                                                return new \Illuminate\Support\HtmlString(
+                                                    $row('Events (12 months)', $eventsCount) .
+                                                    $row('Tickets sold / listed', "{$sold} / {$listed}") .
+                                                    $row('Avg per event', $avg) .
+                                                    $row('Avg price', $price)
+                                                );
+                                            }),
+                                    ]),
+
+                                SC\Section::make('Social Stats')
+                                    ->icon('heroicon-o-signal')
+                                    ->compact()
+                                    ->columnSpan(1)
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_social_stats')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $artist = $record->artist;
+                                                $fmt = fn (?int $n) => (!$n) ? '-' : ($n >= 1000000 ? round($n/1000000,1).'M' : ($n >= 1000 ? round($n/1000,1).'K' : (string)$n));
+                                                $stats = [
+                                                    ['bg' => '#1DB954', 'value' => $artist->spotify_monthly_listeners, 'label' => 'Spotify'],
+                                                    ['bg' => '#FF0000', 'value' => $artist->followers_youtube, 'label' => 'YouTube'],
+                                                    ['bg' => '#E4405F', 'value' => $artist->instagram_followers, 'label' => 'Instagram'],
+                                                    ['bg' => '#1877F2', 'value' => $artist->facebook_followers, 'label' => 'Facebook'],
+                                                    ['bg' => '#000000', 'value' => $artist->tiktok_followers, 'label' => 'TikTok'],
+                                                ];
+                                                $html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:8px;'>";
+                                                foreach ($stats as $s) {
+                                                    $v = $fmt($s['value']);
+                                                    $html .= "<div style='text-align:center;'><div style='width:22px;height:22px;margin:0 auto 4px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:{$s['bg']};'><span style='font-size:10px;color:white;font-weight:700;'>" . strtoupper(mb_substr($s['label'], 0, 1)) . "</span></div><div style='font-size:13px;font-weight:700;color:white;'>{$v}</div><div style='font-size:10px;color:#64748B;'>{$s['label']}</div></div>";
+                                                }
+                                                $html .= "</div>";
+                                                return new \Illuminate\Support\HtmlString($html);
+                                            }),
+                                    ]),
+
+                                SC\Section::make('Events')
+                                    ->icon('heroicon-o-calendar')
+                                    ->compact()
+                                    ->columnSpan(1)
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_events_stats')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $artist = $record->artist;
+                                                $total = $artist->events()->count();
+                                                $upcoming = $artist->events()->where('event_date', '>=', now())->count();
+                                                $past = $artist->events()->where('event_date', '<', now())->count();
+                                                $row = fn ($label, $value, $color = '#E2E8F0') => "
+                                                    <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                        <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                                        <span style='font-size:12px;font-weight:600;color:{$color};'>{$value}</span>
+                                                    </div>";
+                                                return new \Illuminate\Support\HtmlString(
+                                                    $row('Total', $total) .
+                                                    $row('Upcoming', $upcoming, '#10B981') .
+                                                    $row('Past', $past, '#64748B')
+                                                );
+                                            }),
+                                    ]),
+
+                                SC\Section::make('Info')
+                                    ->icon('heroicon-o-information-circle')
+                                    ->compact()
+                                    ->columnSpan(1)
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_meta')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $artist = $record->artist;
+                                                $row = fn ($label, $value) => "
+                                                    <div style='display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                                                        <span style='font-size:12px;color:#64748B;'>{$label}</span>
+                                                        <span style='font-size:12px;font-weight:600;color:#E2E8F0;'>{$value}</span>
+                                                    </div>";
+                                                return new \Illuminate\Support\HtmlString(
+                                                    $row('Artist ID', "<span style='font-family:monospace;color:#64748B;'>{$artist->id}</span>") .
+                                                    $row('Created', $artist->created_at?->format('d M Y') ?? '—') .
+                                                    $row('Modified', $artist->updated_at?->diffForHumans() ?? '—')
+                                                );
+                                            }),
+                                    ]),
+                            ]),
+
+                            // Contact & Management Info
+                            SC\Grid::make(2)->schema([
+                                SC\Section::make('Contact')
+                                    ->icon('heroicon-o-envelope')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_contact')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $row = fn ($label, $value) => $value ? "<div style='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:12px;color:#64748B;'>{$label}</span><span style='font-size:12px;color:#E2E8F0;'>" . e($value) . "</span></div>" : '';
+                                                return new \Illuminate\Support\HtmlString(
+                                                    ($row('Email', $a->email) . $row('Phone', $a->phone) . $row('Website', $a->website)) ?: '<span style="color:#64748B;font-size:12px;">No contact info</span>'
+                                                );
+                                            }),
+                                    ]),
+                                SC\Section::make('Manager')
+                                    ->icon('heroicon-o-user')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_manager')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $row = fn ($label, $value) => $value ? "<div style='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:12px;color:#64748B;'>{$label}</span><span style='font-size:12px;color:#E2E8F0;'>" . e($value) . "</span></div>" : '';
+                                                $name = trim(($a->manager_first_name ?? '') . ' ' . ($a->manager_last_name ?? ''));
+                                                return new \Illuminate\Support\HtmlString(
+                                                    ($row('Name', $name) . $row('Email', $a->manager_email) . $row('Phone', $a->manager_phone) . $row('Website', $a->manager_website)) ?: '<span style="color:#64748B;font-size:12px;">No manager info</span>'
+                                                );
+                                            }),
+                                    ]),
+                            ]),
+
+                            SC\Grid::make(2)->schema([
+                                SC\Section::make('Booking Agent')
+                                    ->icon('heroicon-o-briefcase')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_agent')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $row = fn ($label, $value) => $value ? "<div style='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:12px;color:#64748B;'>{$label}</span><span style='font-size:12px;color:#E2E8F0;'>" . e($value) . "</span></div>" : '';
+                                                $name = trim(($a->agent_first_name ?? '') . ' ' . ($a->agent_last_name ?? ''));
+                                                return new \Illuminate\Support\HtmlString(
+                                                    ($row('Name', $name) . $row('Email', $a->agent_email) . $row('Phone', $a->agent_phone) . $row('Website', $a->agent_website)) ?: '<span style="color:#64748B;font-size:12px;">No agent info</span>'
+                                                );
+                                            }),
+                                    ]),
+                                SC\Section::make('Booking Agency')
+                                    ->icon('heroicon-o-building-office')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_agency')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $agency = $a->booking_agency ?? [];
+                                                $row = fn ($label, $value) => $value ? "<div style='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:12px;color:#64748B;'>{$label}</span><span style='font-size:12px;color:#E2E8F0;'>" . e($value) . "</span></div>" : '';
+                                                return new \Illuminate\Support\HtmlString(
+                                                    ($row('Name', $agency['name'] ?? null) . $row('Email', $agency['email'] ?? null) . $row('Phone', $agency['phone'] ?? null) . $row('Website', $agency['website'] ?? null)) ?: '<span style="color:#64748B;font-size:12px;">No agency info</span>'
+                                                );
+                                            }),
+                                    ]),
+                            ]),
+
+                            // Pricing & Social Links
+                            SC\Grid::make(2)->schema([
+                                SC\Section::make('Pricing')
+                                    ->icon('heroicon-o-banknotes')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_pricing')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $row = fn ($label, $value) => "<div style='display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:12px;color:#64748B;'>{$label}</span><span style='font-size:12px;font-weight:600;color:#E2E8F0;'>{$value}</span></div>";
+                                                $fmt = fn ($v) => $v ? number_format($v, 0) . ' €' : '—';
+                                                return new \Illuminate\Support\HtmlString(
+                                                    $row('Min Fee Concert', $fmt($a->min_fee_concert)) .
+                                                    $row('Max Fee Concert', $fmt($a->max_fee_concert)) .
+                                                    $row('Min Fee Festival', $fmt($a->min_fee_festival)) .
+                                                    $row('Max Fee Festival', $fmt($a->max_fee_festival))
+                                                );
+                                            }),
+                                    ]),
+                                SC\Section::make('Social Links')
+                                    ->icon('heroicon-o-link')
+                                    ->compact()
+                                    ->schema([
+                                        Forms\Components\Placeholder::make('artist_social_links')
+                                            ->hiddenLabel()
+                                            ->content(function (?Tenant $record) {
+                                                if (!$record?->artist) return '';
+                                                $a = $record->artist;
+                                                $links = collect([
+                                                    'Website' => $a->website,
+                                                    'Facebook' => $a->facebook_url,
+                                                    'Instagram' => $a->instagram_url,
+                                                    'TikTok' => $a->tiktok_url,
+                                                    'YouTube' => $a->youtube_url,
+                                                    'Spotify' => $a->spotify_url,
+                                                    'Twitter/X' => $a->twitter_url,
+                                                ])->filter();
+                                                if ($links->isEmpty()) {
+                                                    return new \Illuminate\Support\HtmlString('<span style="color:#64748B;font-size:12px;">No social links</span>');
+                                                }
+                                                $html = '';
+                                                foreach ($links as $label => $url) {
+                                                    $html .= "<div style='padding:4px 0;border-bottom:1px solid rgba(51,65,85,0.3);'><span style='font-size:11px;color:#64748B;'>{$label}:</span> <a href='" . e($url) . "' target='_blank' style='font-size:12px;color:#818cf8;text-decoration:none;word-break:break-all;'>" . e($url) . "</a></div>";
+                                                }
+                                                return new \Illuminate\Support\HtmlString($html);
+                                            }),
+                                    ]),
+                            ]),
                         ]),
 
                     // TAB 2: Company & Legal

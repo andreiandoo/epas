@@ -22,6 +22,7 @@ class Tenant extends Model
         'type',
         'tenant_type',
         'theater_subtype',
+        'artist_id',
         'type_settings',
         'donations_enabled',
         'donation_settings',
@@ -228,6 +229,14 @@ class Tenant extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * Global artist profile linked to this tenant (for artist-type tenants)
+     */
+    public function artist(): BelongsTo
+    {
+        return $this->belongsTo(Artist::class);
     }
 
     public function paymentConfigs(): HasMany
@@ -472,6 +481,19 @@ class Tenant extends Model
     public function isTenantArtist(): bool
     {
         return $this->tenant_type === TenantType::TenantArtist;
+    }
+
+    public function isArtist(): bool
+    {
+        return $this->tenant_type === TenantType::Artist;
+    }
+
+    /**
+     * Check if this tenant type can be linked to a global artist profile
+     */
+    public function isArtistType(): bool
+    {
+        return in_array($this->tenant_type, [TenantType::TenantArtist, TenantType::Artist]);
     }
 
     public function isAgency(): bool

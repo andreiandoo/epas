@@ -106,8 +106,33 @@ class TenantPanelProvider extends PanelProvider
             ->globalSearch(false)
             ->userMenu(false)
 
-            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
+            // Custom topbar above fi-main but inside fi-main-ctn (same hook as Marketplace)
+            ->renderHook('panels::page.start', fn (): string => view('filament.components.custom-topbar')->render())
+
+            // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render())
+
+            // Sticky / floating save button for long forms (same as Marketplace)
+            ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
+
+            // Inline CSS for compact repeaters, tabs, event row colours (same as Marketplace)
+            ->renderHook('panels::styles.after', fn () => <<<'HTML'
+            <style>
+            /* Prevent flash of unstyled content during Livewire morph */
+            [wire\:loading] { opacity: 1 !important; }
+            /* Compact repeater item content */
+            .fi-fo-repeater-item-content { padding: 0 !important; }
+            .fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap { gap: 0 !important; }
+            .fi-fo-repeater .fi-section.fi-section-compact { padding: 0 !important; }
+            .fi-fo-repeater .fi-section .fi-section-header-ctn { padding: 0.5rem 1rem !important; }
+            .fi-fo-repeater .fi-section .fi-section-header-heading { font-size: 0.875rem !important; }
+            .fi-fo-repeater-item-header-label { font-size: 1.125rem !important; }
+            /* Allow dropdowns to overflow inside repeaters */
+            .fi-fo-repeater-item-content,
+            .fi-fo-repeater-item-content .fi-section,
+            .fi-fo-repeater-item-content .fi-section-content-ctn { overflow: visible !important; }
+            </style>
+            HTML)
 
             // Set dark mode as default if not already set
             ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>');

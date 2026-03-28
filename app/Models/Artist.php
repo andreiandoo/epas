@@ -152,6 +152,14 @@ class Artist extends Model
         return $this->belongsToMany(Event::class, 'event_artist');
     }
 
+    /**
+     * Tenants linked to this artist (artist-type tenants)
+     */
+    public function tenants(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Tenant::class);
+    }
+
     // --- Helpers pentru statistici / serii ---
 
     public function eventsLastYearCount(): int

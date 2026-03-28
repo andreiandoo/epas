@@ -13,17 +13,160 @@
  * ═══════════════════════════════════════════════════════════════════════════
  * TENANT PANEL THEME
  * Clean, professional theme for tenant dashboard
+ * Aligned with Marketplace panel styling
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-/* Custom body styling */
+/* Custom body styling - Indigo accent */
 body {
-    border-top: 2px solid rgba(0,0,0,.06);
+    border-top: 3px solid #6366f1;
+}
+
+/* Hide default topbar and its container (we use custom-topbar via panels::page.start) */
+.fi-topbar,
+.fi-topbar-ctn {
+    display: none !important;
+}
+
+/* Remove row-gap from sidebar navigation */
+.fi-sidebar-nav {
+    row-gap: 0 !important;
+}
+
+/* Sticky tabs navigation for EventResource */
+.fi-sc-tabs > nav.fi-tabs {
+    position: sticky;
+    top: 4.5rem;
+    background: #111827 !important;
+    z-index: 19;
+    border-radius: var(--radius-xl);
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* ─── EventResource tabs styling ─────────────────────────────────── */
+
+/* Tab content panels: no padding */
+.fi-sc-tabs .fi-tabs-tab-panel {
+    padding: 0 !important;
+}
+
+/* Sections inside tabs: no rounded corners */
+.fi-sc-tabs .fi-section {
+    border-radius: 0 !important;
+    overflow: hidden;
+}
+
+/* Section headers: same dark background as tab nav bar */
+.fi-sc-tabs .fi-section-header-ctn {
+    background: #111827 !important;
+    border-radius: 0 !important;
+}
+.fi-sc-tabs .fi-section-header-ctn h3,
+.fi-sc-tabs .fi-section-header-ctn p {
+    color: rgb(229 231 235) !important;
+}
+
+/* Header: stack title and actions vertically on edit/view pages */
+.fi-resource-edit-record-page .fi-header,
+.fi-resource-view-record-page .fi-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.fi-resource-edit-record-page .fi-header .fi-header-actions-ctn,
+.fi-resource-view-record-page .fi-header .fi-header-actions-ctn {
+    flex-wrap: wrap;
+}
+
+/* List pages: header row with title left, actions right */
+.fi-resource-list-records-page .fi-header {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}
+
+/* ─── Tabs / header actions moved inside table toolbar ──────────── */
+
+.fi-ta-header-toolbar > .fi-tabs {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.fi-ta-header-toolbar > .fi-tabs .fi-tabs-item-button {
+    padding: 0.375rem 0.75rem !important;
+    font-size: 0.8125rem !important;
+}
+
+.fi-ta-header-toolbar > .fi-header-actions-ctn {
+    flex-shrink: 0;
+}
+
+/* Hide the empty tabs wrapper left behind after moving .fi-tabs out */
+.fi-resource-list-records-page .fi-sc-tabs:not(:has(.fi-tabs)) {
+    display: none !important;
+}
+
+/* ─── Ticket type sections inside repeater ───────────────────────── */
+
+.ep-tt-section .fi-section,
+.fi-fo-repeater .fi-section.fi-section-compact {
+    padding: 0 !important;
+}
+
+.fi-fo-repeater-item-content {
+    padding: 0 !important;
+}
+
+.fi-fo-repeater-item-header-label {
+    font-size: 1.125rem !important;
+}
+
+.fi-fo-repeater .fi-section .fi-section-header-ctn {
+    padding: 0.5rem 1rem !important;
+}
+
+.fi-fo-repeater .fi-section .fi-section-header-heading {
+    font-size: 0.875rem !important;
+}
+
+.fi-fo-repeater-item-content,
+.fi-fo-repeater-item-content .fi-section,
+.fi-fo-repeater-item-content .fi-section-content-ctn {
+    overflow: visible !important;
+}
+
+.fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
+    gap: 0 !important;
+}
+
+/* ─── Event row status colours ───────────────────────────────────── */
+
+tr.event-row-unpublished > td {
+    background-color: rgb(255 237 213) !important;
+}
+.dark tr.event-row-unpublished > td {
+    background-color: rgb(124 45 18 / 0.15) !important;
+}
+
+tr.event-row-ended > td {
+    background-color: rgb(243 244 246) !important;
+}
+.dark tr.event-row-ended > td {
+    background-color: rgb(31 41 55 / 0.5) !important;
+}
+
+/* Prevent underline on sidebar action buttons */
+.fi-section-sales-live a.no-underline:hover,
+.fi-section-sales-live button.no-underline:hover {
+    text-decoration: none !important;
 }
 
 /* Fix dropdown/select option styling */
 @layer components {
-    /* Remove thick borders from select dropdown options */
     .fi-fo-select [role="listbox"],
     .choices__list--dropdown,
     [data-headlessui-state] [role="listbox"] {
@@ -38,7 +181,6 @@ body {
         outline: none !important;
     }
 
-    /* Dark mode support */
     .dark .fi-fo-select [role="listbox"],
     .dark .choices__list--dropdown,
     .dark [data-headlessui-state] [role="listbox"] {

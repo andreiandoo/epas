@@ -11,6 +11,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\TenantType;
 
 class VendorEmployeeResource extends Resource
 {
@@ -21,6 +22,12 @@ class VendorEmployeeResource extends Resource
     protected static ?string $navigationLabel = 'Angajati vendori';
     protected static ?string $modelLabel = 'Angajat';
     protected static ?string $pluralModelLabel = 'Angajati vendori';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
 
     public static function getEloquentQuery(): Builder
     {

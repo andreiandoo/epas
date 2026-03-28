@@ -13,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\TenantType;
 
 class VendorResource extends Resource
 {
@@ -23,6 +24,12 @@ class VendorResource extends Resource
     protected static ?string $navigationLabel = 'Vendori';
     protected static ?string $modelLabel = 'Vendor';
     protected static ?string $pluralModelLabel = 'Vendori';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
 
     public static function getEloquentQuery(): Builder
     {

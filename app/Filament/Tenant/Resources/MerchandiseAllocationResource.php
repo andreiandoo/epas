@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\TenantType;
 
 class MerchandiseAllocationResource extends Resource
 {
@@ -22,6 +23,12 @@ class MerchandiseAllocationResource extends Resource
     protected static ?string $navigationLabel = 'Alocare marfa';
     protected static ?string $modelLabel = 'Alocare';
     protected static ?string $pluralModelLabel = 'Alocari marfa';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
 
     public static function getEloquentQuery(): Builder
     {

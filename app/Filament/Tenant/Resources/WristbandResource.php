@@ -11,6 +11,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\TenantType;
 
 class WristbandResource extends Resource
 {
@@ -21,6 +22,12 @@ class WristbandResource extends Resource
     protected static ?string $navigationLabel = 'Bratari';
     protected static ?string $modelLabel = 'Bratara';
     protected static ?string $pluralModelLabel = 'Bratari';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
 
     public static function getEloquentQuery(): Builder
     {
