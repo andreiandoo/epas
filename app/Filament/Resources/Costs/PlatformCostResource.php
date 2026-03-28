@@ -34,15 +34,9 @@ class PlatformCostResource extends Resource
 
                     Forms\Components\Select::make('category')
                         ->label('Category')
-                        ->options([
-                            'server' => 'Server / Hosting',
-                            'domain' => 'Domain',
-                            'cdn' => 'CDN',
-                            'service' => 'Service / SaaS',
-                            'marketing' => 'Marketing',
-                            'other' => 'Other',
-                        ])
-                        ->required(),
+                        ->options(PlatformCost::CATEGORY_LABELS)
+                        ->required()
+                        ->searchable(),
 
                     Forms\Components\Textarea::make('description')
                         ->label('Description')
@@ -132,14 +126,7 @@ class PlatformCostResource extends Resource
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('category')
-                    ->options([
-                        'server' => 'Server / Hosting',
-                        'domain' => 'Domain',
-                        'cdn' => 'CDN',
-                        'service' => 'Service / SaaS',
-                        'marketing' => 'Marketing',
-                        'other' => 'Other',
-                    ]),
+                    ->options(PlatformCost::CATEGORY_LABELS),
 
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active')
@@ -152,6 +139,12 @@ class PlatformCostResource extends Resource
                         'one_time' => 'One-time',
                     ]),
             ])
+            ->groups([
+                Tables\Grouping\Group::make('category')
+                    ->label('Category')
+                    ->getTitleFromRecordUsing(fn ($record) => $record->category_label),
+            ])
+            ->defaultGroup('category')
             ->recordUrl(fn ($record) => static::getUrl('edit', ['record' => $record]))
             ->defaultSort('name', 'asc');
     }

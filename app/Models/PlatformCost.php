@@ -27,6 +27,20 @@ class PlatformCost extends Model
         'metadata' => 'array',
     ];
 
+    public const CATEGORY_LABELS = [
+        'server' => 'Server / Hosting',
+        'domain' => 'Domain',
+        'cdn' => 'CDN',
+        'service' => 'Service / SaaS',
+        'marketing' => 'Marketing',
+        'other' => 'Other',
+    ];
+
+    public function getCategoryLabelAttribute(): string
+    {
+        return self::CATEGORY_LABELS[$this->category] ?? $this->category;
+    }
+
     /**
      * Get the monthly equivalent cost
      */
