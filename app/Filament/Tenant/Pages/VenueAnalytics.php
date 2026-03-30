@@ -91,6 +91,7 @@ class VenueAnalytics extends Page
             'kpis' => ['total_events' => 0, 'total_tickets' => 0, 'total_revenue' => 0, 'avg_occupancy' => 0, 'avg_revenue_per_event' => 0, 'avg_ticket_price' => 0],
             'eventPerformance' => [], 'revenueBreakdown' => ['revenue_by_genre' => [], 'revenue_by_channel' => [], 'revenue_by_day_type' => [], 'top_artists_by_revenue' => [], 'yoy' => []],
             'pricingIntelligence' => ['price_buckets' => [], 'sweet_spot' => null, 'underpriced' => [], 'overpriced' => []], 'competitorBenchmark' => [], 'churnAlerts' => [], 'revenuePerSeat' => [], 'genreLoyalty' => [], 'checkinAnalysis' => [],
+            'venueHealthScore' => ['score' => 0, 'label' => 'No Data', 'color' => '#ef4444', 'components' => []], 'refundAnalysis' => [], 'monthlyMomentum' => [], 'actionPriority' => [],
             'audiencePersonas' => ['personas' => [], 'totals' => ['total_customers' => 0, 'with_demographics' => 0, 'age_distribution' => [], 'gender_overall' => []]],
             'customerLoyalty' => ['one_time' => 0, 'repeat' => 0, 'regulars' => 0, 'superfan' => 0, 'repeat_rate' => 0, 'total' => 0, 'superfan_details' => []],
             'geographicOrigin' => ['cities' => [], 'out_of_town_ratio' => 0],
@@ -134,6 +135,10 @@ class VenueAnalytics extends Page
                     'revenuePerSeat' => $this->buildRevenuePerSeat($eventIds),
                     'genreLoyalty' => $this->buildGenreLoyalty($eventIds, $orderIds),
                     'checkinAnalysis' => $this->buildCheckinTimeAnalysis($eventIds),
+                    'venueHealthScore' => $this->buildVenueHealthScore($eventIds, $orderIds),
+                    'refundAnalysis' => $this->buildRefundAnalysis($eventIds),
+                    'monthlyMomentum' => $this->buildMonthlyMomentum($eventIds, $orderIds),
+                    'actionPriority' => $this->buildActionPriority($eventIds, $orderIds),
                 ];
             } catch (\Exception $e) {
                 \Log::error('VenueAnalytics: getViewData failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

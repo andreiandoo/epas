@@ -1292,4 +1292,257 @@ trait VenueAnalyticsMethods
             'hourly' => $hourly,
         ];
     }
+
+    private function buildVenueHealthScore(array $eventIds, array $orderIds): array
+    {
+        if (empty($eventIds)) return ['score' => 0, 'label' => 'No Data', 'components' => []];
+
+        $components = [];
+
+        // 1. Occupancy Score (0-25): avg sell-through
+        $avgSt = (float) (DB::table('ticket_types')->whereIn('event_id', $eventIds)->where('quota_total', '>', 0)
+            ->selectRaw('AVG(LEAST(quota_sold::float / quota_total, 1.0) * 100) as avg_st')->value('avg_st') ?? 0);
+        $occupancyScore = min(25, round($avgSt / 4));
+        $components[] = ['name' => 'Occupancy', 'score' => $occupancyScore, 'max' => 25, 'detail' => round($avgSt, 1) . '% avg sell-through'];
+
+        // 2. Revenue Growth (0-25): YoY trend
+        $last6 = (float) DB::table('ticket_types as tt')->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->whereIn('e.id', $eventIds)->where('e.event_date', '>=', now()->subMonths(6)->toDateString())
+            ->selectRaw('COALESCE(SUM(tt.quota_sold * tt.price_cents / 100), 0) as rev')->value('rev');
+        $prev6 = (float) DB::table('ticket_types as tt')->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->whereIn('e.id', $eventIds)->where('e.event_date', '>=', now()->subMonths(12)->toDateString())->where('e.event_date', '<', now()->subMonths(6)->toDateString())
+            ->selectRaw('COALESCE(SUM(tt.quota_sold * tt.price_cents / 100), 0) as rev')->value('rev');
+        $growthRate = $prev6 > 0 ? ($last6 - $prev6) / $prev6 : 0;
+        $growthScore = min(25, max(0, round(12.5 + $growthRate * 50))); // 0% growth = 12.5, +25% = 25, -25% = 0
+        $growthPct = $prev6 > 0 ? round($growthRate * 100, 1) : null;
+        $components[] = ['name' => 'Revenue Growth', 'score' => $growthScore, 'max' => 25, 'detail' => $growthPct !== null ? ($growthPct >= 0 ? '+' : '') . $growthPct . '% (6m vs prev 6m)' : 'No prior data'];
+
+        // 3. Customer Loyalty (0-25): repeat rate
+        $repeatRate = 0;
+        if (!empty($orderIds)) {
+            $ce = DB::table('orders as o')->join('tickets as t', 't.order_id', '=', 'o.id')->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->whereIn('o.id', array_slice($orderIds, 0, 5000))
+                ->selectRaw('COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id, COUNT(DISTINCT COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)) as ev')
+                ->groupBy(DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))->get();
+            $total = $ce->count(); $repeaters = $ce->where('ev', '>=', 2)->count();
+            $repeatRate = $total > 0 ? round($repeaters / $total * 100, 1) : 0;
+        }
+        $loyaltyScore = min(25, round($repeatRate));
+        $components[] = ['name' => 'Customer Loyalty', 'score' => $loyaltyScore, 'max' => 25, 'detail' => $repeatRate . '% repeat rate'];
+
+        // 4. Activity / Utilization (0-25): events per month + idle days
+        $eventsLast6 = DB::table('events')->whereIn('id', $eventIds)->where('event_date', '>=', now()->subMonths(6)->toDateString())->count();
+        $eventsPerMonth = $eventsLast6 / 6;
+        $activityScore = min(25, round($eventsPerMonth * 5)); // 5 events/month = 25
+        $components[] = ['name' => 'Activity', 'score' => $activityScore, 'max' => 25, 'detail' => round($eventsPerMonth, 1) . ' events/month (last 6m)'];
+
+        $totalScore = array_sum(array_column($components, 'score'));
+        $label = match (true) { $totalScore >= 80 => 'Excellent', $totalScore >= 60 => 'Good', $totalScore >= 40 => 'Average', $totalScore >= 20 => 'Below Average', default => 'Critical' };
+        $color = match (true) { $totalScore >= 80 => '#22c55e', $totalScore >= 60 => '#22d3ee', $totalScore >= 40 => '#fbbf24', $totalScore >= 20 => '#f97316', default => '#ef4444' };
+
+        return ['score' => $totalScore, 'label' => $label, 'color' => $color, 'components' => $components];
+    }
+
+    private function buildRefundAnalysis(array $eventIds): array
+    {
+        if (empty($eventIds)) return ['total_refunds' => 0, 'refund_rate' => 0, 'refund_revenue_lost' => 0, 'by_event' => [], 'monthly' => []];
+
+        // Total orders vs refunded orders for venue events
+        $allOrders = DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->where(function ($q) use ($eventIds) { $q->whereIn('tt.event_id', $eventIds)->orWhereIn('t.event_id', $eventIds)->orWhereIn('t.marketplace_event_id', $eventIds); })
+            ->select(DB::raw('COUNT(DISTINCT o.id) as total_orders'), DB::raw("COUNT(DISTINCT CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.id END) as refunded_orders"),
+                DB::raw("SUM(CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.total ELSE 0 END) as refund_amount"),
+                DB::raw("SUM(CASE WHEN o.status NOT IN ('refunded', 'cancelled') THEN o.total ELSE 0 END) as valid_revenue"))
+            ->first();
+
+        $totalOrders = (int) ($allOrders->total_orders ?? 0);
+        $refundedOrders = (int) ($allOrders->refunded_orders ?? 0);
+        $refundAmount = round((float) ($allOrders->refund_amount ?? 0), 0);
+        $validRevenue = round((float) ($allOrders->valid_revenue ?? 0), 0);
+        $refundRate = $totalOrders > 0 ? round($refundedOrders / $totalOrders * 100, 1) : 0;
+
+        // By event (top offenders)
+        $byEvent = DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'))
+            ->whereIn(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'), $eventIds)
+            ->selectRaw("e.id, e.title, e.event_date, COUNT(DISTINCT o.id) as total_orders, COUNT(DISTINCT CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.id END) as refunds, SUM(CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.total ELSE 0 END) as lost_rev")
+            ->groupBy('e.id', 'e.title', 'e.event_date')
+            ->havingRaw("COUNT(DISTINCT CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.id END) > 0")
+            ->orderByDesc('refunds')->limit(10)->get()
+            ->map(fn ($r) => [
+                'title' => $this->decodeJsonName($r->title), 'date' => $r->event_date,
+                'total_orders' => (int) $r->total_orders, 'refunds' => (int) $r->refunds,
+                'refund_rate' => (int) $r->total_orders > 0 ? round($r->refunds / $r->total_orders * 100, 1) : 0,
+                'lost_revenue' => round((float) $r->lost_rev, 0),
+            ])->toArray();
+
+        // Monthly trend
+        $monthly = DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->where(function ($q) use ($eventIds) { $q->whereIn('tt.event_id', $eventIds)->orWhereIn('t.event_id', $eventIds); })
+            ->where('o.created_at', '>=', now()->subYear()->toDateString())
+            ->selectRaw("TO_CHAR(o.created_at, 'YYYY-MM') as ym, COUNT(DISTINCT o.id) as total_orders, COUNT(DISTINCT CASE WHEN o.status IN ('refunded', 'cancelled') THEN o.id END) as refunds")
+            ->groupBy('ym')->orderBy('ym')->get()
+            ->map(fn ($r) => ['month' => $r->ym, 'total' => (int) $r->total_orders, 'refunds' => (int) $r->refunds, 'rate' => (int) $r->total_orders > 0 ? round($r->refunds / $r->total_orders * 100, 1) : 0])->toArray();
+
+        return [
+            'total_orders' => $totalOrders, 'total_refunds' => $refundedOrders,
+            'refund_rate' => $refundRate, 'refund_revenue_lost' => $refundAmount,
+            'valid_revenue' => $validRevenue,
+            'by_event' => $byEvent, 'monthly' => $monthly,
+        ];
+    }
+
+    private function buildMonthlyMomentum(array $eventIds, array $orderIds): array
+    {
+        if (empty($eventIds)) return [];
+
+        // Current month vs previous month for key metrics
+        $thisMonth = now()->startOfMonth()->toDateString();
+        $lastMonth = now()->subMonth()->startOfMonth()->toDateString();
+        $lastMonthEnd = now()->subMonth()->endOfMonth()->toDateString();
+        $twoMonthsAgo = now()->subMonths(2)->startOfMonth()->toDateString();
+        $twoMonthsAgoEnd = now()->subMonths(2)->endOfMonth()->toDateString();
+
+        $getMonthStats = function (string $from, string $to) use ($eventIds) {
+            $mEventIds = DB::table('events')->whereIn('id', $eventIds)->whereBetween('event_date', [$from, $to])->pluck('id')->toArray();
+            if (empty($mEventIds)) return ['events' => 0, 'tickets' => 0, 'revenue' => 0, 'avg_st' => 0];
+            $stats = DB::table('ticket_types')->whereIn('event_id', $mEventIds)
+                ->selectRaw("COUNT(DISTINCT event_id) as events, COALESCE(SUM(quota_sold), 0) as tickets, COALESCE(SUM(quota_sold * price_cents / 100), 0) as revenue, AVG(CASE WHEN quota_total > 0 THEN LEAST(quota_sold::float / quota_total, 1.0) * 100 ELSE NULL END) as avg_st")
+                ->first();
+            return ['events' => (int) ($stats->events ?? 0), 'tickets' => (int) ($stats->tickets ?? 0), 'revenue' => round((float) ($stats->revenue ?? 0), 0), 'avg_st' => round((float) ($stats->avg_st ?? 0), 1)];
+        };
+
+        $current = $getMonthStats($lastMonth, $lastMonthEnd); // last full month
+        $previous = $getMonthStats($twoMonthsAgo, $twoMonthsAgoEnd);
+
+        $calcTrend = function ($curr, $prev) {
+            if ($prev == 0 && $curr == 0) return ['value' => 0, 'direction' => 'flat', 'pct' => 0];
+            if ($prev == 0) return ['value' => $curr, 'direction' => 'up', 'pct' => 100];
+            $pct = round(($curr - $prev) / $prev * 100, 1);
+            return ['value' => $curr, 'direction' => $pct > 2 ? 'up' : ($pct < -2 ? 'down' : 'flat'), 'pct' => $pct];
+        };
+
+        $lastMonthLabel = now()->subMonth()->format('M Y');
+        $prevMonthLabel = now()->subMonths(2)->format('M Y');
+
+        return [
+            'current_label' => $lastMonthLabel,
+            'previous_label' => $prevMonthLabel,
+            'metrics' => [
+                ['name' => 'Events', 'current' => $current['events'], 'previous' => $previous['events'], 'trend' => $calcTrend($current['events'], $previous['events'])],
+                ['name' => 'Tickets Sold', 'current' => $current['tickets'], 'previous' => $previous['tickets'], 'trend' => $calcTrend($current['tickets'], $previous['tickets'])],
+                ['name' => 'Revenue', 'current' => $current['revenue'], 'previous' => $previous['revenue'], 'trend' => $calcTrend($current['revenue'], $previous['revenue']), 'format' => 'currency'],
+                ['name' => 'Avg Occupancy', 'current' => $current['avg_st'], 'previous' => $previous['avg_st'], 'trend' => $calcTrend($current['avg_st'], $previous['avg_st']), 'format' => 'pct'],
+            ],
+        ];
+    }
+
+    private function buildActionPriority(array $eventIds, array $orderIds): array
+    {
+        $actions = [];
+
+        // 1. Churn risk alerts (highest priority)
+        $churn = $this->buildChurnRiskAlerts($eventIds, $orderIds);
+        foreach ($churn as $ca) {
+            $priority = match ($ca['risk']) { 'critical' => 1, 'high' => 2, default => 3 };
+            $actions[] = [
+                'priority' => $priority,
+                'urgency' => $ca['risk'],
+                'category' => 'Event at Risk',
+                'title' => $ca['title'] . " — {$ca['sell_through']}% ST, {$ca['days_until']}d left",
+                'action' => $ca['suggestions'][0] ?? 'Review event performance',
+                'impact' => "Fill {$ca['gap']} seats = ~" . number_format($ca['gap'] * ($ca['capacity'] > 0 ? round(($this->computeVenueKpis($eventIds, $orderIds)['avg_ticket_price'] ?? 80), 0) : 80)) . " RON",
+            ];
+        }
+
+        // 2. Idle weekend revenue opportunity
+        $idle = $this->buildIdleDaysAnalysis($eventIds);
+        if (($idle['total_idle_weekend_days'] ?? 0) > 15) {
+            $actions[] = [
+                'priority' => 3,
+                'urgency' => 'medium',
+                'category' => 'Revenue Opportunity',
+                'title' => "{$idle['total_idle_weekend_days']} idle weekend days (last 12m)",
+                'action' => 'Book events for empty Fri/Sat/Sun slots. Start with top-performing genres.',
+                'impact' => "Potential: ~" . number_format($idle['estimated_lost_revenue']) . " RON",
+            ];
+        }
+
+        // 3. Low repeat rate
+        $loyalty = $this->buildVenueCustomerLoyalty($eventIds, $orderIds);
+        if (($loyalty['total'] ?? 0) > 50 && ($loyalty['repeat_rate'] ?? 0) < 15) {
+            $potentialReturn = round($loyalty['one_time'] * 0.15);
+            $avgTicket = $this->computeVenueKpis($eventIds, $orderIds)['avg_ticket_price'] ?? 80;
+            $actions[] = [
+                'priority' => 4,
+                'urgency' => 'medium',
+                'category' => 'Loyalty',
+                'title' => "Repeat rate only {$loyalty['repeat_rate']}% ({$loyalty['one_time']} one-time buyers)",
+                'action' => 'Launch email remarketing campaign. Offer 10% loyalty discount for 2nd event.',
+                'impact' => "If 15% return = +{$potentialReturn} customers (~" . number_format($potentialReturn * $avgTicket) . " RON)",
+            ];
+        }
+
+        // 4. Underpriced events
+        $pricing = $this->buildPricingIntelligence($eventIds);
+        if (count($pricing['underpriced'] ?? []) >= 2) {
+            $actions[] = [
+                'priority' => 4,
+                'urgency' => 'low',
+                'category' => 'Pricing',
+                'title' => count($pricing['underpriced']) . " events sold out too fast (>90% ST)",
+                'action' => 'Raise base price by 15-20% for similar future events. Add VIP tier.',
+                'impact' => 'Higher revenue per event without reducing demand',
+            ];
+        }
+
+        // 5. Competitor gap
+        $bench = $this->buildCompetitorBenchmark($eventIds);
+        if (!empty($bench) && ($bench['vs_city'] ?? 0) < -10) {
+            $actions[] = [
+                'priority' => 5,
+                'urgency' => 'low',
+                'category' => 'Competitive',
+                'title' => "Sell-through " . abs($bench['vs_city']) . "% below city average",
+                'action' => 'Analyze top competitor pricing and genres. Consider adjusting event mix.',
+                'impact' => "Closing gap could increase revenue by ~" . round(abs($bench['vs_city']) * 0.5) . "%",
+            ];
+        }
+
+        // 6. High refund rate
+        $refunds = $this->buildRefundAnalysis($eventIds);
+        if (($refunds['refund_rate'] ?? 0) > 5) {
+            $actions[] = [
+                'priority' => 3,
+                'urgency' => 'medium',
+                'category' => 'Refunds',
+                'title' => "Refund rate at {$refunds['refund_rate']}% ({$refunds['total_refunds']} refunds)",
+                'action' => 'Investigate top-refunded events. Review event descriptions and expectations.',
+                'impact' => "Reducing refunds by 50% saves ~" . number_format(round($refunds['refund_revenue_lost'] / 2)) . " RON",
+            ];
+        }
+
+        // 7. Promotion timing
+        $promo = $this->buildPromotionPlanner($eventIds, $orderIds);
+        $p90 = $promo['announcement_window']['p90_days'] ?? null;
+        if ($p90 && $p90 < 21) {
+            $actions[] = [
+                'priority' => 5,
+                'urgency' => 'low',
+                'category' => 'Marketing',
+                'title' => "Most sales within {$p90} days — very short window",
+                'action' => 'Start campaigns earlier. Test announcing events 8+ weeks before.',
+                'impact' => 'Longer sales window = more time for organic + paid reach',
+            ];
+        }
+
+        usort($actions, fn ($a, $b) => $a['priority'] <=> $b['priority']);
+        return $actions;
+    }
 }

@@ -118,9 +118,66 @@ canvas{width:100%!important;}
         @endforeach
     </div>
 
+    {{-- VENUE HEALTH SCORE + MONTHLY MOMENTUM --}}
+    @php $healthScore = $venueHealthScore ?? []; $momentum = $monthlyMomentum ?? []; @endphp
+    @if(!empty($healthScore['components']) || !empty($momentum['metrics']))
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;margin-bottom:16px;">
+        @if(!empty($healthScore['components']))
+        <div class="card" style="min-width:200px;"><div class="card-b" style="text-align:center;">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Venue Health Score</div>
+            <div style="position:relative;width:110px;height:110px;margin:0 auto;">
+                <svg viewBox="0 0 36 36" style="width:110px;height:110px;transform:rotate(-90deg);">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(122,162,255,.1)" stroke-width="3"/>
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="{{ $healthScore['color'] }}" stroke-width="3" stroke-dasharray="{{ $healthScore['score'] }}, 100" stroke-linecap="round"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                    <span style="font-size:28px;font-weight:800;color:{{ $healthScore['color'] }};">{{ $healthScore['score'] }}</span>
+                    <span style="font-size:10px;color:var(--muted);">/ 100</span>
+                </div>
+            </div>
+            <div style="font-size:13px;font-weight:700;color:{{ $healthScore['color'] }};margin-top:6px;">{{ $healthScore['label'] }}</div>
+            <div style="margin-top:10px;text-align:left;">
+                @foreach($healthScore['components'] as $comp)
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:11px;">
+                        <span style="color:var(--muted);">{{ $comp['name'] }}</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <div style="width:50px;height:4px;background:rgba(122,162,255,.1);border-radius:2px;overflow:hidden;"><div style="height:100%;width:{{ round($comp['score'] / $comp['max'] * 100) }}%;background:{{ $healthScore['color'] }};border-radius:2px;"></div></div>
+                            <span style="color:var(--text);font-weight:600;width:30px;text-align:right;">{{ $comp['score'] }}/{{ $comp['max'] }}</span>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div></div>
+        @endif
+
+        @if(!empty($momentum['metrics']))
+        <div class="card"><div class="card-h">Monthly Momentum — {{ $momentum['current_label'] ?? '' }} vs {{ $momentum['previous_label'] ?? '' }}</div><div class="card-b">
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+                @foreach($momentum['metrics'] as $mm)
+                    @php
+                        $arrow = match($mm['trend']['direction']) { 'up' => '↑', 'down' => '↓', default => '→' };
+                        $tColor = match($mm['trend']['direction']) { 'up' => 'var(--success)', 'down' => 'var(--danger)', default => 'var(--muted)' };
+                        $fmt = ($mm['format'] ?? '') === 'currency' ? number_format($mm['current']) . ' RON' : (($mm['format'] ?? '') === 'pct' ? $mm['current'] . '%' : $mm['current']);
+                        $fmtPrev = ($mm['format'] ?? '') === 'currency' ? number_format($mm['previous']) . ' RON' : (($mm['format'] ?? '') === 'pct' ? $mm['previous'] . '%' : $mm['previous']);
+                    @endphp
+                    <div class="kpi">
+                        <div class="l">{{ $mm['name'] }}</div>
+                        <div class="v" style="display:flex;align-items:center;gap:8px;">
+                            <span>{{ $fmt }}</span>
+                            <span style="font-size:14px;color:{{ $tColor }};">{{ $arrow }} {{ $mm['trend']['pct'] >= 0 ? '+' : '' }}{{ $mm['trend']['pct'] }}%</span>
+                        </div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:2px;">prev: {{ $fmtPrev }}</div>
+                    </div>
+                @endforeach
+            </div>
+        </div></div>
+        @endif
+    </div>
+    @endif
+
     {{-- TABS --}}
     @php
-        $tabList = ['overview' => 'Overview', 'financial' => 'Financial', 'audience' => 'Audience', 'artists' => 'Artists', 'scheduling' => 'Scheduling', 'opportunities' => 'Opportunities', 'promotion' => 'Promotion', 'upcoming' => 'Upcoming'];
+        $tabList = ['overview' => 'Overview', 'financial' => 'Financial', 'audience' => 'Audience', 'artists' => 'Artists', 'scheduling' => 'Scheduling', 'opportunities' => 'Opportunities', 'promotion' => 'Promotion', 'upcoming' => 'Upcoming', 'actions' => 'Actions'];
     @endphp
     <div class="tabs">
         @foreach($tabList as $key => $label)
@@ -361,6 +418,41 @@ canvas{width:100%!important;}
             @endforeach
             </tbody></table>
         </div>
+        @endif
+
+        {{-- Refund Analysis --}}
+        @php $refunds = $refundAnalysis ?? []; @endphp
+        @if(($refunds['total_refunds'] ?? 0) > 0)
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Refund & Cancellation Analysis</div><div class="card-b">
+            <div style="display:flex;gap:20px;margin-bottom:14px;">
+                <div><div style="color:var(--muted);font-size:11px;">Total Orders</div><div style="font-size:20px;font-weight:700;">{{ number_format($refunds['total_orders']) }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">Refunds</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['total_refunds']) }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">Refund Rate</div><div style="font-size:20px;font-weight:700;color:{{ $refunds['refund_rate'] > 5 ? 'var(--danger)' : ($refunds['refund_rate'] > 2 ? 'var(--warn)' : 'var(--success)') }};">{{ $refunds['refund_rate'] }}%</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">Revenue Lost</div><div style="font-size:20px;font-weight:700;color:var(--danger);">{{ number_format($refunds['refund_revenue_lost']) }} RON</div></div>
+            </div>
+            @if(!empty($refunds['by_event']))
+                <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Top Refunded Events</div>
+                <table class="tbl"><thead><tr><th>Event</th><th style="text-align:right">Orders</th><th style="text-align:right">Refunds</th><th style="text-align:right">Rate</th><th style="text-align:right">Lost Revenue</th></tr></thead>
+                <tbody>
+                @foreach(array_slice($refunds['by_event'], 0, 8) as $re)
+                    <tr><td style="font-weight:600">{{ \Illuminate\Support\Str::limit($re['title'], 35) }} <span style="color:var(--muted);font-size:11px;">{{ $re['date'] ? \Carbon\Carbon::parse($re['date'])->format('d M y') : '' }}</span></td><td style="text-align:right">{{ $re['total_orders'] }}</td><td style="text-align:right;color:var(--danger)">{{ $re['refunds'] }}</td><td style="text-align:right;font-weight:700;color:{{ $re['refund_rate'] > 10 ? 'var(--danger)' : 'var(--muted)' }}">{{ $re['refund_rate'] }}%</td><td style="text-align:right;font-family:monospace;color:var(--danger)">{{ number_format($re['lost_revenue']) }}</td></tr>
+                @endforeach
+                </tbody></table>
+            @endif
+            @if(!empty($refunds['monthly']))
+                <div style="font-size:12px;font-weight:600;color:var(--muted);margin:12px 0 6px;">Monthly Refund Trend</div>
+                <div style="display:flex;align-items:flex-end;gap:3px;height:60px;">
+                    @php $maxRefRate = collect($refunds['monthly'])->max('rate') ?: 1; @endphp
+                    @foreach($refunds['monthly'] as $mr)
+                        @php $barH = $mr['rate'] > 0 ? max(4, round($mr['rate'] / $maxRefRate * 50)) : 0; @endphp
+                        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="{{ $mr['month'] }}: {{ $mr['refunds'] }}/{{ $mr['total'] }} ({{ $mr['rate'] }}%)">
+                            <div style="width:100%;height:{{ $barH }}px;background:{{ $mr['rate'] > 5 ? 'var(--danger)' : ($mr['rate'] > 2 ? 'var(--warn)' : 'rgba(122,162,255,.3)') }};border-radius:3px 3px 0 0;"></div>
+                            <span style="font-size:8px;color:var(--muted);">{{ substr($mr['month'], 5) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div></div>
         @endif
     </div>
 
@@ -978,6 +1070,36 @@ canvas{width:100%!important;}
                 </div>
             @endforeach
         </div></div>
+        @endif
+    </div>
+
+    {{-- ═══ TAB: ACTIONS ═══ --}}
+    <div x-show="tab === 'actions'" x-cloak>
+        @php $actions = $actionPriority ?? []; @endphp
+        @if(!empty($actions))
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Action Priority Dashboard — What to Do Next ({{ count($actions) }} items)</div><div class="card-b">
+            @foreach($actions as $ai => $act)
+                @php $urgColor = match($act['urgency']) { 'critical' => 'var(--danger)', 'high' => '#f97316', 'medium' => 'var(--warn)', default => 'var(--muted)' }; @endphp
+                <div style="display:flex;gap:14px;padding:14px;border-radius:10px;background:{{ $urgColor }}08;border:1px solid {{ $urgColor }}22;margin-bottom:10px;">
+                    <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:{{ $urgColor }}15;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:{{ $urgColor }};">{{ $ai + 1 }}</div>
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                            <span class="chip" style="color:{{ $urgColor }};border-color:{{ $urgColor }}33;background:{{ $urgColor }}10;text-transform:uppercase;font-size:10px;">{{ $act['urgency'] }}</span>
+                            <span class="chip" style="background:rgba(122,162,255,.06);border-color:var(--ring);color:var(--accent);font-size:10px;">{{ $act['category'] }}</span>
+                        </div>
+                        <div style="font-weight:700;font-size:14px;margin-bottom:4px;">{{ $act['title'] }}</div>
+                        <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">
+                            <span style="color:var(--accent);font-weight:600;">Action:</span> {{ $act['action'] }}
+                        </div>
+                        <div style="font-size:12px;padding:4px 10px;border-radius:6px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.1);display:inline-block;">
+                            <span style="color:var(--success);font-weight:600;">Impact:</span> <span style="color:var(--text);">{{ $act['impact'] }}</span>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div></div>
+        @else
+        <div class="card"><div class="card-b" style="text-align:center;color:var(--success);padding:40px;font-size:14px;font-weight:600;">No urgent actions needed. Your venue is performing well!</div></div>
         @endif
     </div>
 
