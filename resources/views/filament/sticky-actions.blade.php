@@ -73,6 +73,10 @@
 (function () {
     'use strict';
 
+    /* ── Skip on login/register pages ── */
+    var path = window.location.pathname;
+    if (path.match(/\/(login|register|password)/)) return;
+
     /* ── Create floating save button ── */
     var floatBtn = document.getElementById('ep-float-save');
     if (!floatBtn) {
