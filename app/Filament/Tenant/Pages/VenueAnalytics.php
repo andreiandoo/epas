@@ -21,6 +21,8 @@ class VenueAnalytics extends Page
 
     public Venue $venue;
     public array $venueIds = [];
+    public array $allVenues = [];
+    public ?int $selectedVenueId = null;
 
     // Series for charts
     public array $seriesMonths = [];
@@ -44,7 +46,13 @@ class VenueAnalytics extends Page
             abort(404, 'No venues linked to this tenant.');
         }
 
+        $this->allVenues = $venues->map(function ($v) {
+            $name = is_array($v->name) ? ($v->name['en'] ?? $v->name['ro'] ?? reset($v->name) ?: '—') : $v->name;
+            if (is_string($name) && str_starts_with($name, '{')) { $d = json_decode($name, true); $name = $d['en'] ?? $d['ro'] ?? reset($d) ?: $name; }
+            return ['id' => $v->id, 'name' => $name, 'city' => $v->city, 'capacity' => $v->capacity ?: $v->capacity_total ?: 0];
+        })->toArray();
         $this->venue = $venues->first();
+        $this->selectedVenueId = $this->venue->id;
         $this->venueIds = $venues->pluck('id')->toArray();
 
         try {
@@ -127,5 +135,63 @@ class VenueAnalytics extends Page
                 return $emptyData;
             }
         });
+    }
+
+    /**
+     * Switch to a specific venue (for multi-venue tenants).
+     */
+    public function switchVenueApi(int $venueId): array
+    {
+        $tenant = auth()->user()->tenant;
+        $newVenue = $tenant->venues()->find($venueId);
+        if (!$newVenue) return ['error' => 'Venue not found'];
+
+        $this->venue = $newVenue;
+        $this->selectedVenueId = $newVenue->id;
+        $this->venueIds = [$newVenue->id];
+
+        // Clear cache
+        Cache::forget("venue_analytics_tenant_{$newVenue->id}");
+
+        // Rebuild series
+        $eventIds = $this->venueEventIds();
+        [$months, $events, $tickets, $revenue, $occupancy] = $this->buildVenueYearlySeries($eventIds);
+        $this->seriesMonths = $months;
+        $this->seriesEvents = $events;
+        $this->seriesTickets = $tickets;
+        $this->seriesRevenue = $revenue;
+        $this->seriesOccupancy = $occupancy;
+
+        return ['success' => true, 'venue_id' => $newVenue->id];
+    }
+
+    /**
+     * Event Simulator: predict performance for a hypothetical event.
+     */
+    public function simulateEventApi(string $genre, string $dayOfWeek, float $ticketPrice): array
+    {
+        $eventIds = $this->venueEventIds();
+        $orderIds = $this->venueOrderIds($eventIds);
+        return $this->simulateEvent($eventIds, $orderIds, $genre, $dayOfWeek, $ticketPrice);
+    }
+
+    /**
+     * Generate event suggestions based on venue data.
+     */
+    public function getEventSuggestionsApi(): array
+    {
+        $eventIds = $this->venueEventIds();
+        $orderIds = $this->venueOrderIds($eventIds);
+        return $this->buildEventSuggestions($eventIds, $orderIds);
+    }
+
+    /**
+     * Generate creative calendar for an upcoming event.
+     */
+    public function getCreativeCalendarApi(int $eventId): array
+    {
+        $eventIds = $this->venueEventIds();
+        $orderIds = $this->venueOrderIds($eventIds);
+        return $this->buildCreativeCalendar($eventId, $eventIds, $orderIds);
     }
 }

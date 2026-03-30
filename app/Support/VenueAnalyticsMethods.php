@@ -786,4 +786,248 @@ trait VenueAnalyticsMethods
                 ];
             })->toArray();
     }
+
+    private function simulateEvent(array $eventIds, array $orderIds, string $genre, string $dayOfWeek, float $ticketPrice): array
+    {
+        if (empty($eventIds)) return ['error' => 'No historical data', 'predicted_sell_through' => 0, 'predicted_revenue' => 0, 'demand_score' => 0];
+
+        $cap = $this->venue->capacity ?: $this->venue->capacity_total ?: 500;
+
+        // Genre baseline
+        $genrePerf = collect($this->buildGenrePerformance($eventIds));
+        $genreMatch = $genrePerf->first(fn ($g) => mb_strtolower($g['genre']) === mb_strtolower($genre));
+        $genreSt = $genreMatch ? $genreMatch['avg_sell_through'] : ($genrePerf->avg('avg_sell_through') ?: 50);
+
+        // Day of week modifier
+        $dowPerf = collect($this->buildDayOfWeekAnalysis($eventIds));
+        $dowMatch = $dowPerf->first(fn ($d) => mb_strtolower(trim($d['day'])) === mb_strtolower(trim($dayOfWeek)));
+        $avgDowSt = $dowPerf->avg('avg_sell_through') ?: 50;
+        $dowModifier = $dowMatch ? ($dowMatch['avg_sell_through'] / max($avgDowSt, 1)) : 1.0;
+
+        // Price modifier
+        $pricing = $this->buildPricingIntelligence($eventIds);
+        $priceBucket = match (true) { $ticketPrice < 50 => '0-50', $ticketPrice < 100 => '50-100', $ticketPrice < 200 => '100-200', $ticketPrice < 500 => '200-500', default => '500+' };
+        $bucketMatch = collect($pricing['price_buckets'])->first(fn ($b) => $b['range'] === $priceBucket);
+        $avgBucketSt = collect($pricing['price_buckets'])->avg('sell_through') ?: 50;
+        $priceModifier = $bucketMatch ? ($bucketMatch['sell_through'] / max($avgBucketSt, 1)) : 1.0;
+
+        $predictedSt = min(100, round($genreSt * $dowModifier * $priceModifier, 1));
+        $predictedTickets = round($cap * $predictedSt / 100);
+        $predictedRevenue = round($predictedTickets * $ticketPrice, 0);
+
+        $demandScore = min(100, round($predictedSt));
+        $demandLabel = match (true) { $demandScore >= 75 => 'Hot', $demandScore >= 50 => 'Strong', $demandScore >= 25 => 'Moderate', default => 'Low' };
+
+        // Comparable events
+        $comparables = DB::table('events as e')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->join('artist_artist_genre as aag', 'aag.artist_id', '=', 'ea.artist_id')
+            ->join('artist_genres as ag', 'ag.id', '=', 'aag.artist_genre_id')
+            ->leftJoin(DB::raw("(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap, AVG(price_cents/100) as avg_price FROM ticket_types GROUP BY event_id) as ts"), 'ts.event_id', '=', 'e.id')
+            ->whereIn('e.id', $eventIds)
+            ->whereRaw("LOWER(ag.name::text) LIKE ?", ['%' . mb_strtolower($genre) . '%'])
+            ->where('e.event_date', '<', now()->toDateString())
+            ->select('e.title', 'e.event_date', 'ts.sold', 'ts.cap', 'ts.avg_price')
+            ->orderByDesc('e.event_date')->limit(5)->get()
+            ->map(fn ($e) => ['title' => $this->decodeJsonName($e->title), 'date' => $e->event_date, 'sold' => (int) ($e->sold ?? 0), 'capacity' => (int) ($e->cap ?? 0), 'sell_through' => (int) $e->cap > 0 ? round($e->sold / $e->cap * 100, 1) : null, 'avg_price' => round((float) ($e->avg_price ?? 0), 0)])->toArray();
+
+        // Suggested artists
+        $suggestedArtists = $this->buildNeverPlayedArtists($eventIds);
+
+        return [
+            'genre' => $genre, 'day_of_week' => $dayOfWeek, 'ticket_price' => $ticketPrice,
+            'venue_capacity' => $cap,
+            'predicted_sell_through' => $predictedSt,
+            'predicted_tickets' => $predictedTickets,
+            'predicted_revenue' => $predictedRevenue,
+            'demand_score' => $demandScore, 'demand_label' => $demandLabel,
+            'genre_baseline_st' => round($genreSt, 1),
+            'dow_modifier' => round($dowModifier, 2), 'price_modifier' => round($priceModifier, 2),
+            'comparables' => array_slice($comparables, 0, 5),
+            'suggested_artists' => array_slice($suggestedArtists, 0, 5),
+        ];
+    }
+
+    private function buildEventSuggestions(array $eventIds, array $orderIds): array
+    {
+        if (empty($eventIds)) return [];
+
+        $genrePerf = collect($this->buildGenrePerformance($eventIds))->sortByDesc('avg_sell_through')->values();
+        $dowPerf = collect($this->buildDayOfWeekAnalysis($eventIds))->sortByDesc('avg_sell_through')->values();
+        $seasonPerf = collect($this->buildSeasonalityAnalysis($eventIds))->sortByDesc('avg_sell_through')->values();
+        $pricing = $this->buildPricingIntelligence($eventIds);
+        $neverPlayed = $this->buildNeverPlayedArtists($eventIds);
+        $personas = $this->buildVenueAudiencePersonas($orderIds);
+        $primaryPersona = $personas['personas'][0] ?? null;
+
+        $cap = $this->venue->capacity ?: $this->venue->capacity_total ?: 500;
+        $suggestions = [];
+
+        $topGenres = $genrePerf->take(3);
+        $topDays = $dowPerf->take(2);
+        $topMonths = $seasonPerf->take(3);
+
+        foreach ($topGenres as $gi => $genre) {
+            $bestDay = $topDays->first();
+            $bestMonth = $topMonths[$gi] ?? $topMonths->first();
+
+            // Find sweet spot price for this genre
+            $genreEventIds = DB::table('event_artist as ea')
+                ->join('artist_artist_genre as aag', 'aag.artist_id', '=', 'ea.artist_id')
+                ->join('artist_genres as ag', 'ag.id', '=', 'aag.artist_genre_id')
+                ->whereIn('ea.event_id', $eventIds)
+                ->whereRaw("LOWER(ag.name::text) LIKE ?", ['%' . mb_strtolower(is_string($genre['genre']) ? $genre['genre'] : '') . '%'])
+                ->pluck('ea.event_id')->unique()->toArray();
+
+            $avgPrice = 0;
+            if (!empty($genreEventIds)) {
+                $avgPrice = round((float) (DB::table('ticket_types')->whereIn('event_id', $genreEventIds)->where('price_cents', '>', 0)->avg('price_cents') ?? 0) / 100, 0);
+            }
+            if ($avgPrice <= 0) $avgPrice = 100;
+
+            $targetCap = round($cap * 0.85);
+            $estRevenue = round($targetCap * $avgPrice);
+
+            // Match artists
+            $matchedArtists = collect($neverPlayed)->take(3)->map(fn ($a) => [
+                'name' => $a['artist_name'],
+                'avg_sell_through' => $a['avg_sell_through'],
+                'estimated_draw' => $a['estimated_draw'],
+            ])->toArray();
+
+            $suggestions[] = [
+                'rank' => $gi + 1,
+                'when' => trim($bestDay['day'] ?? 'Saturday') . ', ' . trim($bestMonth['month'] ?? 'June'),
+                'why_when' => trim($bestMonth['month'] ?? '') . " has {$bestMonth['avg_sell_through']}% avg ST. " . trim($bestDay['day'] ?? '') . " has {$bestDay['avg_sell_through']}% avg ST.",
+                'genre' => $genre['genre'],
+                'why_genre' => "{$genre['avg_sell_through']}% sell-through, avg revenue " . number_format($genre['avg_revenue']) . " RON across {$genre['events_count']} events.",
+                'target_capacity' => $targetCap . " / {$cap} (85%)",
+                'pricing' => [
+                    'recommended' => $avgPrice . ' RON',
+                    'early_bird' => round($avgPrice * 0.75) . ' RON (first 50 tickets)',
+                    'vip' => round($avgPrice * 2.5) . ' RON',
+                    'sweet_spot' => $pricing['sweet_spot'] ?? '—',
+                ],
+                'suggested_artists' => $matchedArtists,
+                'estimated_revenue' => number_format($estRevenue) . ' RON',
+                'target_audience' => $primaryPersona ? "{$primaryPersona['age_group']}, {$primaryPersona['gender']}" : '—',
+                'confidence' => $genre['events_count'] >= 3 && ($bestDay['events'] ?? 0) >= 3 ? 'high' : 'medium',
+            ];
+        }
+
+        return $suggestions;
+    }
+
+    private function buildCreativeCalendar(int $eventId, array $eventIds, array $orderIds): array
+    {
+        $event = DB::table('events as e')
+            ->leftJoin(DB::raw("(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap, AVG(price_cents/100) as avg_price FROM ticket_types GROUP BY event_id) as ts"), 'ts.event_id', '=', 'e.id')
+            ->leftJoin(DB::raw("(SELECT ea.event_id, string_agg(a.name, ', ') as artists FROM event_artist ea JOIN artists a ON a.id=ea.artist_id GROUP BY ea.event_id) as ar"), 'ar.event_id', '=', 'e.id')
+            ->where('e.id', $eventId)
+            ->select('e.id', 'e.title', 'e.event_date', 'ar.artists', 'ts.sold', 'ts.cap', 'ts.avg_price')
+            ->first();
+
+        if (!$event || !$event->event_date) return ['error' => 'Event not found'];
+
+        $eventDate = Carbon::parse($event->event_date);
+        $title = $this->decodeJsonName($event->title);
+        $cap = (int) ($event->cap ?? 0);
+        $sold = (int) ($event->sold ?? 0);
+        $avgPrice = round((float) ($event->avg_price ?? 100), 0);
+        $estRevenue = $cap > 0 ? $cap * $avgPrice : $sold * $avgPrice;
+
+        $promo = $this->buildPromotionPlanner($eventIds, $orderIds);
+        $announce = $promo['announcement_window']['optimal_announce_days'] ?? 60;
+        $budget = round($estRevenue * 0.12);
+        $personas = $promo['personas_for_targeting'] ?? [];
+        $platforms = $promo['platform_strategy'] ?? [];
+
+        $primaryAge = $personas[0]['age_range'] ?? '25-34';
+        $isYoung = in_array($primaryAge, ['<18', '18-24', '25-34']);
+
+        $phases = [];
+
+        // Phase 1: Announce
+        $d1 = $eventDate->copy()->subDays($announce);
+        $phases[] = [
+            'phase' => 'Announce', 'date' => $d1->format('d M Y'),
+            'days_before' => $announce,
+            'budget' => round($budget * 0.20),
+            'actions' => [
+                'Organic post on all socials (artwork + lineup)',
+                'Email blast to full subscriber list',
+                'Early bird tickets live (25% discount, limited qty)',
+                'Press release / PR outreach',
+            ],
+            'ads' => ['FB/IG: 1 awareness video ad (daily ' . round($budget * 0.20 / max(1, $announce - 45) ) . ' RON)'],
+        ];
+
+        // Phase 2: Peak Campaign
+        $d2 = $eventDate->copy()->subDays(45);
+        $phases[] = [
+            'phase' => 'Peak Campaign', 'date' => $d2->format('d M Y'),
+            'days_before' => 45,
+            'budget' => round($budget * 0.40),
+            'actions' => [
+                'FB/IG: 2 conversion ads (carousel + retargeting)',
+                'Google Search: brand + genre keywords live',
+                $isYoung ? 'TikTok: In-feed video ad, Spark Ads' : 'Skip TikTok, boost FB budget',
+                'Second email blast (lineup details + early bird ending)',
+                'If sell-through < 30%: consider adding support act or price adjustment',
+            ],
+            'ads' => [
+                'FB/IG: daily ' . round($budget * 0.40 * 0.45 / 31) . ' RON (Lookalike + retargeting)',
+                'Google: daily ' . round($budget * 0.40 * 0.30 / 31) . ' RON (Search)',
+                $isYoung ? 'TikTok: daily ' . round($budget * 0.40 * 0.25 / 31) . ' RON' : 'Email/SMS: segment by genre',
+            ],
+        ];
+
+        // Phase 3: Urgency
+        $d3 = $eventDate->copy()->subDays(14);
+        $phases[] = [
+            'phase' => 'Urgency Push', 'date' => $d3->format('d M Y'),
+            'days_before' => 14,
+            'budget' => round($budget * 0.25),
+            'actions' => [
+                '"Ultimele bilete" creative on all platforms',
+                'SMS blast to past 6-month buyers',
+                'YouTube pre-roll (if sell-through < 60%)',
+                'Retargeting on all channels (website visitors + cart abandoners)',
+                'Influencer / partner share push',
+            ],
+            'ads' => [
+                'FB/IG: daily ' . round($budget * 0.25 * 0.50 / 7) . ' RON (urgency creatives)',
+                'Google: daily ' . round($budget * 0.25 * 0.30 / 7) . ' RON (Display + YouTube)',
+                'SMS: ' . round($budget * 0.25 * 0.20) . ' RON total',
+            ],
+        ];
+
+        // Phase 4: Last Call
+        $d4 = $eventDate->copy()->subDays(7);
+        $phases[] = [
+            'phase' => 'Last Call', 'date' => $d4->format('d M Y'),
+            'days_before' => 7,
+            'budget' => round($budget * 0.15),
+            'actions' => [
+                '"Mai sunt X bilete" countdown on Stories/Reels',
+                'Door price announcement (+20-30% increase)',
+                'Push notification (if app exists)',
+                'Aggressive retargeting: all website visitors last 30 days',
+                'Final email: scarcity + social proof',
+            ],
+            'ads' => [
+                'All platforms: daily ' . round($budget * 0.15 / 7) . ' RON total (max urgency)',
+            ],
+        ];
+
+        return [
+            'event_title' => $title, 'event_date' => $eventDate->format('d M Y'),
+            'artists' => $event->artists ?? '—',
+            'capacity' => $cap, 'sold' => $sold, 'avg_price' => $avgPrice,
+            'estimated_revenue' => round($estRevenue),
+            'total_ad_budget' => $budget,
+            'target_audience' => $primaryAge . ($personas[0]['gender'] ?? ''),
+            'phases' => $phases,
+        ];
+    }
 }

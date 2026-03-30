@@ -47,14 +47,42 @@ a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 canvas{width:100%!important;}
 </style>
 
-<div class="db" x-data="{ tab: 'overview' }">
+<div class="db" wire:ignore x-data="{
+    tab: 'overview',
+    simGenre: '', simDay: 'Saturday', simPrice: 100, simResult: null, simLoading: false,
+    suggestions: null, sugLoading: false,
+    calendarResult: null, calLoading: false,
+    runSimulation() {
+        if (!this.simGenre) return;
+        this.simLoading = true;
+        $wire.call('simulateEventApi', this.simGenre, this.simDay, parseFloat(this.simPrice)).then(r => { this.simResult = r; this.simLoading = false; });
+    },
+    loadSuggestions() {
+        this.sugLoading = true;
+        $wire.call('getEventSuggestionsApi').then(r => { this.suggestions = r; this.sugLoading = false; });
+    },
+    loadCalendar(eventId) {
+        this.calLoading = true;
+        $wire.call('getCreativeCalendarApi', eventId).then(r => { this.calendarResult = r; this.calLoading = false; });
+    }
+}">
 
     {{-- VENUE HEADER --}}
     <div class="card" style="margin-bottom:16px;">
         <div class="card-b" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
             <div style="width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,#1e293b,#334155);display:flex;align-items:center;justify-content:center;font-size:28px;border:1px solid var(--ring);">🏛️</div>
             <div style="flex:1;">
-                <h2 style="font-size:22px;font-weight:700;margin:0;">{{ $venueName }}</h2>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <h2 style="font-size:22px;font-weight:700;margin:0;">{{ $venueName }}</h2>
+                    @if(count($allVenues) > 1)
+                        <select onchange="if(this.value) Livewire.find('{{ $_instance->getId() }}').call('switchVenueApi', parseInt(this.value)).then(() => location.reload())"
+                            style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:4px 8px;font-size:12px;cursor:pointer;">
+                            @foreach($allVenues as $av)
+                                <option value="{{ $av['id'] }}" {{ $av['id'] === $selectedVenueId ? 'selected' : '' }}>{{ $av['name'] }} ({{ $av['city'] }})</option>
+                            @endforeach
+                        </select>
+                    @endif
+                </div>
                 <div style="color:var(--muted);font-size:13px;margin-top:4px;">
                     {{ $venue->city ?? '' }}{{ $venue->country ? ', ' . $venue->country : '' }}
                     @if($cap) <span style="margin-left:12px;">Capacity: <strong style="color:var(--text);">{{ number_format($cap) }}</strong></span> @endif
@@ -280,6 +308,50 @@ canvas{width:100%!important;}
         </div></div>
         @endif
 
+        {{-- Age/Gender Distribution --}}
+        @php $ageDist = $aTotals['age_distribution'] ?? []; $genderDist = $aTotals['gender_overall'] ?? []; @endphp
+        @if(!empty($ageDist) || !empty($genderDist))
+        <div class="g2" style="margin-bottom:14px;">
+            @if(!empty($ageDist))
+            <div class="card"><div class="card-h">Age Distribution</div><div class="card-b">
+                @php $maxAge = max(1, max($ageDist)); @endphp
+                @foreach($ageDist as $ageGroup => $count)
+                    <div style="display:flex;align-items:center;gap:10px;padding:5px 0;">
+                        <span style="width:50px;font-size:12px;font-weight:600;">{{ $ageGroup }}</span>
+                        <div class="progress" style="flex:1;height:18px;border-radius:6px;">
+                            <div class="progress-fill" style="width:{{ round($count / $maxAge * 100) }}%;background:linear-gradient(90deg,rgba(99,102,241,0.6),rgba(34,211,238,0.6));border-radius:6px;display:flex;align-items:center;padding-left:6px;">
+                                <span style="font-size:10px;font-weight:600;color:white;">{{ number_format($count) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div></div>
+            @endif
+            @if(!empty($genderDist))
+            <div class="card"><div class="card-h">Gender Distribution</div><div class="card-b">
+                @php $totalGender = max(1, array_sum($genderDist)); @endphp
+                <div style="display:flex;gap:16px;align-items:center;justify-content:center;padding:10px 0;">
+                    @foreach($genderDist as $gender => $count)
+                        @php $pct = round($count / $totalGender * 100, 1); $color = match(strtolower($gender)) { 'male' => 'var(--primary)', 'female' => '#c084fc', default => 'var(--muted)' }; @endphp
+                        <div style="text-align:center;">
+                            <div style="font-size:36px;font-weight:700;color:{{ $color }};">{{ $pct }}%</div>
+                            <div style="font-size:12px;color:var(--muted);margin-top:4px;">{{ ucfirst($gender) }}</div>
+                            <div style="font-size:11px;color:var(--muted);">{{ number_format($count) }} buyers</div>
+                        </div>
+                    @endforeach
+                </div>
+                {{-- Visual bar --}}
+                <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:8px;">
+                    @foreach($genderDist as $gender => $count)
+                        @php $pct = round($count / $totalGender * 100, 1); $color = match(strtolower($gender)) { 'male' => 'var(--primary)', 'female' => '#c084fc', default => 'var(--muted)' }; @endphp
+                        <div style="width:{{ $pct }}%;background:{{ $color }};"></div>
+                    @endforeach
+                </div>
+            </div></div>
+            @endif
+        </div>
+        @endif
+
         {{-- Loyalty + Geographic --}}
         <div class="g2" style="margin-bottom:14px;">
             @if(($loyalty['total'] ?? 0) > 0)
@@ -493,6 +565,99 @@ canvas{width:100%!important;}
         @else
         <div class="card" style="margin-bottom:14px;"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">Not enough data to generate recommendations. More events needed.</div></div>
         @endif
+
+        {{-- Event Simulator --}}
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Event Simulator — Predict Performance</div><div class="card-b">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Genre</label>
+                    <input x-model="simGenre" placeholder="e.g. Hip-Hop, Rock, Pop..." style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;width:180px;"></div>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Day of Week</label>
+                    <select x-model="simDay" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;">
+                        <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option selected>Friday</option><option>Saturday</option><option>Sunday</option>
+                    </select></div>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Ticket Price (RON)</label>
+                    <input x-model="simPrice" type="number" min="10" max="5000" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 12px;font-size:13px;width:120px;"></div>
+                <button @click="runSimulation()" style="padding:8px 20px;border-radius:8px;background:linear-gradient(180deg,rgba(34,211,238,.2),rgba(34,211,238,.1));border:1px solid rgba(34,211,238,.3);color:var(--accent);font-weight:600;font-size:13px;cursor:pointer;" :disabled="simLoading">
+                    <span x-show="!simLoading">Simulate</span><span x-show="simLoading">...</span>
+                </button>
+            </div>
+
+            <template x-if="simResult && !simResult.error">
+                <div>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;">
+                        <div class="kpi"><div class="l">Predicted ST</div><div class="v" :style="'color:' + (simResult.predicted_sell_through >= 75 ? 'var(--success)' : simResult.predicted_sell_through >= 50 ? 'var(--warn)' : 'var(--danger)')" x-text="simResult.predicted_sell_through + '%'"></div></div>
+                        <div class="kpi"><div class="l">Est. Tickets</div><div class="v" style="color:var(--accent)" x-text="simResult.predicted_tickets"></div></div>
+                        <div class="kpi"><div class="l">Est. Revenue</div><div class="v" style="color:var(--warn)" x-text="Number(simResult.predicted_revenue).toLocaleString() + ' RON'"></div></div>
+                        <div class="kpi"><div class="l">Demand</div><div class="v" :style="'color:' + (simResult.demand_score >= 75 ? 'var(--success)' : simResult.demand_score >= 50 ? 'var(--primary)' : 'var(--muted)')" x-text="simResult.demand_label + ' (' + simResult.demand_score + ')'"></div></div>
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+                        Genre baseline: <span x-text="simResult.genre_baseline_st + '%'" style="color:var(--text);"></span> ·
+                        Day modifier: <span x-text="simResult.dow_modifier + 'x'" style="color:var(--text);"></span> ·
+                        Price modifier: <span x-text="simResult.price_modifier + 'x'" style="color:var(--text);"></span>
+                    </div>
+                    <template x-if="simResult.comparables && simResult.comparables.length">
+                        <div><div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px;">Comparable Past Events</div>
+                            <template x-for="c in simResult.comparables" :key="c.title + c.date">
+                                <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(122,162,255,.08);font-size:12px;">
+                                    <span x-text="c.title"></span>
+                                    <span style="color:var(--muted);"><span x-text="c.sell_through + '%'"></span> ST · <span x-text="c.avg_price"></span> RON</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div></div>
+
+        {{-- Event Suggestions --}}
+        <div class="card" style="margin-bottom:14px;"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Event Suggestions — What to Book Next</span>
+            <button @click="loadSuggestions()" style="padding:5px 14px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;" :disabled="sugLoading">
+                <span x-show="!sugLoading">Generate Suggestions</span><span x-show="sugLoading">Analyzing...</span>
+            </button>
+        </div><div class="card-b">
+            <template x-if="!suggestions"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Click "Generate Suggestions" to get data-driven booking recommendations.</div></template>
+            <template x-if="suggestions && suggestions.length">
+                <div>
+                    <template x-for="s in suggestions" :key="s.rank">
+                        <div style="padding:16px;border-radius:10px;background:rgba(122,162,255,.04);border:1px solid var(--ring);margin-bottom:12px;">
+                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                                <span class="chip" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--accent);" x-text="'#' + s.rank"></span>
+                                <span style="font-weight:700;font-size:16px;" x-text="s.genre"></span>
+                                <span class="chip" :style="s.confidence === 'high' ? 'background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.2);color:var(--success)' : 'background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.2);color:var(--warn)'" x-text="s.confidence"></span>
+                            </div>
+                            <div class="g3" style="font-size:12px;">
+                                <div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">When</div>
+                                    <div style="font-weight:700;" x-text="s.when"></div>
+                                    <div style="color:var(--muted);margin-top:2px;" x-text="s.why_when"></div>
+                                </div>
+                                <div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">Pricing</div>
+                                    <div>Regular: <strong x-text="s.pricing.recommended"></strong></div>
+                                    <div style="color:var(--muted);" x-text="'Early bird: ' + s.pricing.early_bird"></div>
+                                    <div style="color:var(--muted);" x-text="'VIP: ' + s.pricing.vip"></div>
+                                </div>
+                                <div>
+                                    <div style="color:var(--accent);font-weight:600;margin-bottom:4px;">Expected</div>
+                                    <div>Revenue: <strong style="color:var(--warn);" x-text="s.estimated_revenue"></strong></div>
+                                    <div style="color:var(--muted);" x-text="'Target: ' + s.target_capacity"></div>
+                                    <div style="color:var(--muted);" x-text="'Audience: ' + s.target_audience"></div>
+                                </div>
+                            </div>
+                            <template x-if="s.suggested_artists && s.suggested_artists.length">
+                                <div style="margin-top:8px;padding-top:8px;border-top:1px dashed rgba(122,162,255,.08);">
+                                    <div style="color:var(--accent);font-weight:600;font-size:12px;margin-bottom:4px;">Suggested Artists</div>
+                                    <template x-for="a in s.suggested_artists" :key="a.name">
+                                        <span style="display:inline-block;padding:3px 10px;border-radius:8px;background:rgba(122,162,255,.06);border:1px solid var(--ring);font-size:12px;margin:2px 4px 2px 0;" x-text="a.name + ' (' + a.avg_sell_through + '% ST)'"></span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </template>
+        </div></div>
     </div>
 
     {{-- ═══ TAB: PROMOTION ═══ --}}
@@ -577,6 +742,70 @@ canvas{width:100%!important;}
             </div></div>
             @endforeach
         </div>
+        @endif
+
+        {{-- Creative Calendar Generator --}}
+        @php $upcomingForCal = $upcomingEvents ?? []; @endphp
+        @if(!empty($upcomingForCal))
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Creative Calendar — Generate Campaign Timeline</div><div class="card-b">
+            <div style="margin-bottom:12px;font-size:12px;color:var(--muted);">Select an upcoming event to generate a day-by-day promotion campaign:</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                @foreach(array_slice($upcomingForCal, 0, 8) as $ucal)
+                    <button @click="loadCalendar({{ $ucal['id'] }})" style="padding:6px 14px;border-radius:8px;background:rgba(122,162,255,.06);border:1px solid var(--ring);color:var(--text);font-size:12px;cursor:pointer;font-weight:600;" :disabled="calLoading">
+                        {{ \Illuminate\Support\Str::limit($ucal['title'], 25) }} <span style="color:var(--muted);">· {{ $ucal['date'] ? \Carbon\Carbon::parse($ucal['date'])->format('d M') : '' }}</span>
+                    </button>
+                @endforeach
+            </div>
+
+            <template x-if="calendarResult && !calendarResult.error">
+                <div>
+                    <div style="padding:14px;border-radius:10px;background:rgba(34,211,238,.04);border:1px solid rgba(34,211,238,.15);margin-bottom:14px;">
+                        <div style="font-size:16px;font-weight:700;" x-text="calendarResult.event_title"></div>
+                        <div style="color:var(--muted);font-size:12px;margin-top:4px;">
+                            <span x-text="calendarResult.event_date"></span> · <span x-text="calendarResult.artists"></span> ·
+                            Cap: <span x-text="calendarResult.capacity"></span> · Sold: <span x-text="calendarResult.sold"></span> ·
+                            Est. Revenue: <strong style="color:var(--warn);" x-text="Number(calendarResult.estimated_revenue).toLocaleString() + ' RON'"></strong> ·
+                            Ad Budget: <strong style="color:var(--accent);" x-text="Number(calendarResult.total_ad_budget).toLocaleString() + ' RON'"></strong>
+                        </div>
+                    </div>
+
+                    <template x-for="phase in calendarResult.phases" :key="phase.phase">
+                        <div style="position:relative;padding-left:30px;margin-bottom:20px;">
+                            {{-- Timeline dot + line --}}
+                            <div style="position:absolute;left:8px;top:0;bottom:-20px;width:2px;background:var(--ring);"></div>
+                            <div style="position:absolute;left:3px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);z-index:1;"></div>
+
+                            <div style="font-weight:700;font-size:14px;color:var(--accent);" x-text="phase.phase"></div>
+                            <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">
+                                <span x-text="phase.date"></span> · <span x-text="phase.days_before + 'd before'"></span> · Budget: <strong x-text="Number(phase.budget).toLocaleString() + ' RON'"></strong>
+                            </div>
+
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                <div>
+                                    <div style="font-size:11px;color:var(--accent);font-weight:600;margin-bottom:4px;">Actions</div>
+                                    <template x-for="action in phase.actions" :key="action">
+                                        <div style="font-size:12px;color:var(--text);margin-bottom:3px;padding-left:10px;position:relative;">
+                                            <span style="position:absolute;left:0;color:var(--muted);">•</span>
+                                            <span x-text="action"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div>
+                                    <div style="font-size:11px;color:var(--warn);font-weight:600;margin-bottom:4px;">Ad Spend</div>
+                                    <template x-for="ad in phase.ads" :key="ad">
+                                        <div style="font-size:12px;color:var(--muted);margin-bottom:3px;padding-left:10px;position:relative;">
+                                            <span style="position:absolute;left:0;color:var(--warn);">›</span>
+                                            <span x-text="ad"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+            <template x-if="calLoading"><div style="text-align:center;color:var(--muted);padding:20px;">Generating campaign timeline...</div></template>
+        </div></div>
         @endif
     </div>
 
