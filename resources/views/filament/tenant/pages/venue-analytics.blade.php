@@ -715,10 +715,19 @@ canvas{width:100%!important;}
             @if(!empty($velCurves))
             <div class="card"><div class="card-h">Sales Velocity (Last 5 Events)</div><div class="card-b" style="font-size:12px;">
                 @foreach($velCurves as $vc)
-                    <div style="margin-bottom:8px;"><strong>{{ $vc['event_name'] }}</strong> <span style="color:var(--muted);">({{ $vc['total_tickets'] }} tix)</span>
-                        <div style="display:flex;gap:6px;margin-top:4px;">
+                    <div style="margin-bottom:14px;padding-bottom:14px;{{ !$loop->last ? 'border-bottom:1px dashed var(--ring);' : '' }}">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                            <strong>{{ \Illuminate\Support\Str::limit($vc['event_name'], 35) }}</strong>
+                            <span style="color:var(--muted);font-size:11px;">{{ $vc['total_tickets'] }} bilete</span>
+                        </div>
+                        <div style="display:flex;align-items:flex-end;gap:3px;height:40px;">
                         @foreach($vc['points'] as $pt)
-                            <span style="padding:2px 6px;border-radius:6px;background:rgba(122,162,255,.08);font-size:11px;">{{ $pt['days'] }}d: {{ $pt['pct'] }}%</span>
+                            @php $h = max(4, (int) round($pt['pct'] * 0.4)); @endphp
+                            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+                                <span style="font-size:9px;color:var(--muted);">{{ $pt['pct'] }}%</span>
+                                <div style="width:100%;height:{{ $h }}px;background:var(--primary);border-radius:3px;opacity:{{ 0.3 + ($pt['pct'] / 100 * 0.7) }};"></div>
+                                <span style="font-size:9px;color:var(--muted);">{{ $pt['days'] }}z</span>
+                            </div>
                         @endforeach
                         </div>
                     </div>
@@ -759,7 +768,20 @@ canvas{width:100%!important;}
     <div x-show="tab === 'opportunities'" x-cloak>
         @php $opps = $opportunities ?? []; $recs = $opps['recommendations'] ?? []; @endphp
         @if(!empty($recs))
-        <div class="card" style="margin-bottom:14px;"><div class="card-h">Actionable Recommendations ({{ count($recs) }})</div><div class="card-b">
+        {{-- Human-readable insights summary --}}
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Ce am descoperit</div><div class="card-b">
+            <div style="font-size:14px;line-height:1.8;color:var(--text);">
+                @foreach($recs as $rec)
+                    <p style="margin-bottom:8px;">
+                        <span style="font-weight:700;color:var(--accent);">{{ $rec['category'] }}:</span>
+                        {{ $rec['title'] }}.
+                        <span style="color:var(--muted);">{{ $rec['detail'] }}</span>
+                    </p>
+                @endforeach
+            </div>
+        </div></div>
+
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Recomandari detaliate ({{ count($recs) }})</div><div class="card-b">
             <div class="g2">
             @foreach($recs as $rec)
                 <div style="padding:14px;border-radius:10px;background:rgba(122,162,255,.04);border:1px solid var(--ring);">

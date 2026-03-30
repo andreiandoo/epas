@@ -764,7 +764,7 @@ trait VenueAnalyticsMethods
             ->map(function ($e) use ($histAvgSold) {
                 $sold = (int) ($e->sold ?? 0); $cap = (int) ($e->capacity ?? 0);
                 $st = $cap > 0 ? round($sold / $cap * 100, 1) : null;
-                $daysUntil = $e->event_date ? max(0, now()->diffInDays(Carbon::parse($e->event_date), false)) : null;
+                $daysUntil = $e->event_date ? (int) max(0, now()->diffInDays(Carbon::parse($e->event_date), false)) : null;
                 $paceScore = 0;
                 if ($histAvgSold > 0 && $sold > 0 && $daysUntil !== null) {
                     $daysSelling = max(1, 90 - $daysUntil); $paceScore = min(40, round(($sold / $daysSelling) / max(0.01, $histAvgSold / 90) * 20));

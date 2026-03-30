@@ -365,7 +365,7 @@ class VenueResource extends Resource
                         return $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
                     })
                     ->sortable()
-                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record->slug])),
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('venueTypes.slug')
                     ->label('Types')
@@ -424,10 +424,17 @@ class VenueResource extends Resource
                     ->since()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('analytics_link')
+                    ->label('Analytics')
+                    ->state('Analytics')
+                    ->url(fn ($record) => static::getUrl('analytics', ['record' => $record]))
+                    ->badge()
+                    ->color('info'),
+
                 Tables\Columns\TextColumn::make('edit_link')
                     ->label('Edit')
                     ->state('Open')
-                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record->slug]))
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record]))
                     ->openUrlInNewTab(false),
             ])
             ->filters([
