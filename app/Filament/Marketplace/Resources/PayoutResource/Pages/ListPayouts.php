@@ -71,15 +71,23 @@ class ListPayouts extends ListRecords
                         if (!$organizerId) return [];
 
                         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
-                        return Event::where('marketplace_organizer_id', $organizerId)
+                        $events = Event::where('marketplace_organizer_id', $organizerId)
                             ->where('marketplace_client_id', $marketplaceAdmin->marketplace_client_id)
-                            ->orderByDesc('event_date')
-                            ->get()
-                            ->mapWithKeys(function ($event) {
+                            ->get();
+
+                        $now = now()->toDateString();
+
+                        // Split into live (upcoming) and ended (past)
+                        $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
+                        $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
+                        $noDate = $events->filter(fn ($e) => !$e->event_date);
+
+                        return $live->concat($ended)->concat($noDate)
+                            ->mapWithKeys(function ($event) use ($now) {
                                 $title = is_array($event->title)
                                     ? ($event->title['ro'] ?? $event->title['en'] ?? array_values($event->title)[0] ?? 'Untitled')
                                     : ($event->title ?? 'Untitled');
-                                $status = $event->isPast() ? '🔴 Încheiat' : '🟢 Live';
+                                $status = (!$event->event_date) ? '⚪ TBD' : ($event->event_date >= $now ? '🟢 Live' : '🔴 Încheiat');
                                 $date = $event->event_date?->format('d.m.Y') ?? '';
                                 return [$event->id => "{$title} ({$date}) — {$status}"];
                             })

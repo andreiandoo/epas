@@ -341,7 +341,13 @@ class PayoutResource extends Resource
 
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label('Organizer')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $term = '%' . mb_strtolower($search) . '%';
+                        return $query->whereHas('organizer', function ($q) use ($term) {
+                            $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                              ->orWhereRaw('LOWER(COALESCE(company_name, \'\')) LIKE ?', [$term]);
+                        });
+                    })
                     ->sortable()
                     ->toggleable(),
 
@@ -352,7 +358,18 @@ class PayoutResource extends Resource
                         ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
                         : $state)
                     ->limit(25)
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $term = '%' . mb_strtolower($search) . '%';
+                        return $query->whereHas('event', function ($q) use ($term) {
+                            $isPgsql = \DB::getDriverName() === 'pgsql';
+                            $q->whereRaw(
+                                $isPgsql
+                                    ? "LOWER(title->>'ro') LIKE ? OR LOWER(title->>'en') LIKE ?"
+                                    : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?",
+                                [$term, $term]
+                            );
+                        });
+                    })
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('amount')
@@ -481,8 +498,33 @@ class PayoutResource extends Resource
                     }),
 
                 ViewAction::make(),
+
+                Action::make('delete')
+                    ->label('Șterge')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalDescription('Decontul va fi șters și valorile (sold, bilete decontate) vor fi returnate organizatorului.')
+                    ->action(function (MarketplacePayout $record): void {
+                        static::reversePayout($record);
+                    }),
             ])
-            ->toolbarActions([])
+            ->toolbarActions([
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\BulkAction::make('bulk_delete')
+                        ->label('Șterge selectate')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalDescription('Deconturile selectate vor fi șterse și valorile returnate organizatorilor.')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                            foreach ($records as $record) {
+                                static::reversePayout($record);
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -499,5 +541,73 @@ class PayoutResource extends Resource
             'index' => Pages\ListPayouts::route('/'),
             'view' => Pages\ViewPayout::route('/{record}'),
         ];
+    }
+
+    /**
+     * Reverse a payout: return balance, delete related documents, invoices, transactions.
+     */
+    public static function reversePayout(MarketplacePayout $payout): void
+    {
+        \DB::beginTransaction();
+        try {
+            $organizer = $payout->organizer;
+
+            // 1. Return balance to organizer if payout was approved/completed
+            if (in_array($payout->status, ['approved', 'processing', 'completed']) && $organizer) {
+                $organizer->returnPendingBalance($payout->amount);
+            }
+
+            // 2. Reverse ticket_breakdown: decrement quota_sold on ticket types
+            $ticketBreakdown = $payout->ticket_breakdown ?? [];
+            foreach ($ticketBreakdown as $item) {
+                $ticketTypeId = $item['ticket_type_id'] ?? null;
+                $qty = $item['quantity'] ?? $item['tickets'] ?? 0;
+                if ($ticketTypeId && $qty > 0) {
+                    \DB::table('ticket_types')
+                        ->where('id', $ticketTypeId)
+                        ->where('quota_sold', '>=', $qty)
+                        ->decrement('quota_sold', $qty);
+                }
+            }
+
+            // 3. Delete decont document + PDF file
+            $decont = $payout->decontDocument;
+            if ($decont) {
+                if ($decont->file_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($decont->file_path);
+                }
+                $decont->delete();
+            }
+
+            // 4. Delete associated invoice
+            $invoice = $payout->invoice;
+            if ($invoice) {
+                $invoice->delete();
+            }
+
+            // 5. Delete transactions
+            $payout->transactions()->delete();
+
+            // 6. Delete the payout itself
+            $payout->delete();
+
+            \DB::commit();
+
+            \Filament\Notifications\Notification::make()
+                ->title('Decont șters')
+                ->body('Valorile au fost returnate organizatorului.')
+                ->success()
+                ->send();
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Log::error('Failed to reverse payout', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
+
+            \Filament\Notifications\Notification::make()
+                ->title('Eroare la ștergere')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 }
