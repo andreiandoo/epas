@@ -226,7 +226,7 @@ trait HasEventImport
                         ->multiple()
                         ->searchable()
                         ->preload()
-                        ->options(function (Forms\Get $get) {
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $typeIds = $get('event_type_ids') ?? [];
                             if (empty($typeIds)) {
                                 return EventGenre::all()->mapWithKeys(fn ($g) => [
