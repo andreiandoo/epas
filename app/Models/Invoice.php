@@ -12,6 +12,7 @@ class Invoice extends Model
         'tenant_id',
         'marketplace_client_id',
         'marketplace_organizer_id',
+        'marketplace_payout_id',
         'number',
         'type',
         'description',
@@ -59,6 +60,11 @@ class Invoice extends Model
     public function organizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketplacePayout::class, 'marketplace_payout_id');
     }
 
     public function anafQueue(): HasOne

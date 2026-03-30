@@ -18,7 +18,7 @@ class MarketplacePayoutObserver
     public function updated(MarketplacePayout $payout): void
     {
         // Generate decont when status changes to completed
-        if ($payout->isDirty('status') && $payout->status === 'completed') {
+        if ($payout->isDirty('status') && in_array($payout->status, ['approved', 'completed'])) {
             $this->generateDecont($payout);
         }
     }

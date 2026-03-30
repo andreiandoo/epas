@@ -128,6 +128,11 @@ class MarketplacePayout extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\Invoice::class, 'marketplace_payout_id');
+    }
+
     // =========================================
     // Status Checks
     // =========================================

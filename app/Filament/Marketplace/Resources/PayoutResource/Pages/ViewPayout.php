@@ -3,10 +3,18 @@
 namespace App\Filament\Marketplace\Resources\PayoutResource\Pages;
 
 use App\Filament\Marketplace\Resources\PayoutResource;
+use App\Filament\Marketplace\Resources\OrganizerDocumentResource;
+use App\Filament\Marketplace\Resources\OrganizerInvoiceResource;
+use App\Models\Invoice;
+use App\Models\OrganizerDocument;
+use App\Services\EFactura\EFacturaService;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class ViewPayout extends ViewRecord
 {
@@ -14,7 +22,11 @@ class ViewPayout extends ViewRecord
 
     protected function getHeaderActions(): array
     {
+        $decont = $this->record->decontDocument;
+        $invoice = $this->record->invoice;
+
         return [
+            // ========== STATUS ACTIONS ==========
             Actions\Action::make('approve')
                 ->label('Approve')
                 ->icon('heroicon-o-check')
@@ -67,8 +79,7 @@ class ViewPayout extends ViewRecord
                     Forms\Components\Textarea::make('reason')
                         ->label('Rejection Reason')
                         ->required()
-                        ->rows(3)
-                        ->helperText('Explain why this payout request is being rejected'),
+                        ->rows(3),
                 ])
                 ->action(function (array $data) {
                     $admin = Auth::guard('marketplace_admin')->user();
@@ -77,7 +88,7 @@ class ViewPayout extends ViewRecord
                 }),
 
             Actions\Action::make('add_note')
-                ->label('Add Admin Note')
+                ->label('Admin Note')
                 ->icon('heroicon-o-pencil-square')
                 ->form([
                     Forms\Components\Textarea::make('admin_notes')
@@ -90,44 +101,227 @@ class ViewPayout extends ViewRecord
                     $this->refreshFormData(['admin_notes']);
                 }),
 
-            Actions\Action::make('view_decont')
-                ->label('Vezi Decont')
-                ->icon('heroicon-o-document-arrow-down')
-                ->color('info')
-                ->visible(fn () => $this->record->decontDocument !== null)
-                ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
+            // ========== DECONT ACTIONS ==========
+            Actions\ActionGroup::make([
+                Actions\Action::make('view_decont')
+                    ->label('Vezi decont')
+                    ->icon('heroicon-o-eye')
+                    ->visible(fn () => $this->record->decontDocument !== null)
+                    ->url(fn () => OrganizerDocumentResource::getUrl('edit', ['record' => $this->record->decontDocument]))
+                    ->openUrlInNewTab(),
 
-            Actions\Action::make('regenerate_decont')
-                ->label('Regenerează Decont')
-                ->icon('heroicon-o-arrow-path')
+                Actions\Action::make('download_decont')
+                    ->label('Descarca decont')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->visible(fn () => $this->record->decontDocument?->file_path !== null)
+                    ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
+
+                Actions\Action::make('send_decont')
+                    ->label('Trimite decont')
+                    ->icon('heroicon-o-envelope')
+                    ->visible(fn () => $this->record->decontDocument !== null)
+                    ->form([
+                        Forms\Components\TextInput::make('email')
+                            ->label('Adresa email')
+                            ->email()
+                            ->required()
+                            ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
+                    ])
+                    ->action(function (array $data) {
+                        $this->sendDocumentByEmail($this->record->decontDocument, $data['email'], 'Decont');
+                    }),
+
+                Actions\Action::make('regenerate_decont')
+                    ->label('Regenereaza decont')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalDescription('Decontul existent va fi sters si regenerat.')
+                    ->visible(fn () => $this->record->decontDocument !== null)
+                    ->action(function () {
+                        $existingDecont = $this->record->decontDocument;
+                        if ($existingDecont) {
+                            if ($existingDecont->file_path) {
+                                Storage::disk('public')->delete($existingDecont->file_path);
+                            }
+                            $existingDecont->delete();
+                        }
+                        $observer = new \App\Observers\MarketplacePayoutObserver();
+                        $method = new \ReflectionMethod($observer, 'generateDecont');
+                        $method->setAccessible(true);
+                        $method->invoke($observer, $this->record);
+
+                        Notification::make()->title('Decont regenerat')->success()->send();
+                        $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                    }),
+            ])
+                ->label('Decont')
+                ->icon('heroicon-o-document-text')
+                ->color('info')
+                ->button()
+                ->visible(fn () => $this->record->decontDocument !== null),
+
+            // ========== INVOICE ACTIONS ==========
+            Actions\Action::make('generate_invoice')
+                ->label('Genereaza factura')
+                ->icon('heroicon-o-document-plus')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Decontul existent va fi șters și regenerat din template-ul activ.')
-                ->visible(fn () => $this->record->isCompleted() && $this->record->decontDocument !== null)
+                ->modalDescription('Se va genera o factura asociata acestui decont.')
+                ->visible(fn () => $this->record->decontDocument !== null && $this->record->invoice === null)
                 ->action(function () {
-                    // Delete existing decont
-                    $existingDecont = $this->record->decontDocument;
-                    if ($existingDecont) {
-                        if ($existingDecont->file_path) {
-                            \Illuminate\Support\Facades\Storage::disk('public')->delete($existingDecont->file_path);
-                        }
-                        $existingDecont->delete();
-                    }
+                    $payout = $this->record;
+                    $organizer = $payout->organizer;
+                    $marketplace = $payout->marketplaceClient;
 
-                    // Trigger regeneration via observer by dispatching a job-like call
-                    $observer = new \App\Observers\MarketplacePayoutObserver();
-                    // Use reflection to call protected method
-                    $method = new \ReflectionMethod($observer, 'generateDecont');
-                    $method->setAccessible(true);
-                    $method->invoke($observer, $this->record);
+                    $lastInvoice = Invoice::where('marketplace_client_id', $marketplace->id)
+                        ->orderByDesc('id')
+                        ->first();
+                    $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
+                    $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
-                    \Filament\Notifications\Notification::make()
-                        ->title('Decont regenerat')
-                        ->success()
-                        ->send();
+                    $invoice = Invoice::create([
+                        'marketplace_client_id' => $marketplace->id,
+                        'marketplace_organizer_id' => $organizer->id,
+                        'marketplace_payout_id' => $payout->id,
+                        'number' => $invoiceNumber,
+                        'type' => 'fiscal',
+                        'description' => 'Factura pentru decont ' . $payout->reference,
+                        'issue_date' => now(),
+                        'period_start' => $payout->period_start,
+                        'period_end' => $payout->period_end,
+                        'due_date' => now()->addDays(30),
+                        'subtotal' => $payout->commission_amount ?? 0,
+                        'vat_rate' => 19,
+                        'vat_amount' => round(($payout->commission_amount ?? 0) * 0.19, 2),
+                        'amount' => round(($payout->commission_amount ?? 0) * 1.19, 2),
+                        'currency' => $payout->currency ?? 'RON',
+                        'status' => 'outstanding',
+                        'meta' => [
+                            'payout_reference' => $payout->reference,
+                            'issuer' => [
+                                'name' => $marketplace->company_name ?? $marketplace->name,
+                                'cui' => $marketplace->cui ?? '',
+                                'address' => $marketplace->address ?? '',
+                            ],
+                            'client' => [
+                                'name' => $organizer->company_name ?? $organizer->name,
+                                'cui' => $organizer->cui ?? '',
+                                'address' => $organizer->address ?? '',
+                            ],
+                            'items' => [[
+                                'description' => 'Comision servicii ticketing - ' . $payout->reference,
+                                'quantity' => 1,
+                                'unit_price' => $payout->commission_amount ?? 0,
+                                'amount' => $payout->commission_amount ?? 0,
+                            ]],
+                        ],
+                    ]);
 
+                    Notification::make()->title('Factura generata: ' . $invoiceNumber)->success()->send();
                     $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
                 }),
+
+            Actions\ActionGroup::make([
+                Actions\Action::make('view_invoice')
+                    ->label('Vezi factura')
+                    ->icon('heroicon-o-eye')
+                    ->visible(fn () => $this->record->invoice !== null)
+                    ->url(fn () => OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record->invoice]))
+                    ->openUrlInNewTab(),
+
+                Actions\Action::make('download_invoice')
+                    ->label('Descarca factura')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->visible(fn () => $this->record->invoice !== null)
+                    ->url(fn () => $this->record->invoice?->proforma_pdf_url ?? $this->record->invoice?->fiscal_pdf_url, shouldOpenInNewTab: true),
+
+                Actions\Action::make('register_invoice')
+                    ->label('Inregistreaza eFactura')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('info')
+                    ->requiresConfirmation()
+                    ->modalDescription('Factura va fi trimisa catre sistemul eFactura ANAF.')
+                    ->visible(fn () => $this->record->invoice !== null)
+                    ->action(function () {
+                        try {
+                            $efacturaService = app(EFacturaService::class);
+                            $efacturaService->queueMarketplaceInvoice($this->record->invoice);
+                            Notification::make()->title('Factura trimisa in eFactura')->success()->send();
+                        } catch (\Exception $e) {
+                            Notification::make()->title('Eroare eFactura')->body($e->getMessage())->danger()->send();
+                        }
+                    }),
+
+                Actions\Action::make('send_invoice')
+                    ->label('Trimite factura')
+                    ->icon('heroicon-o-envelope')
+                    ->visible(fn () => $this->record->invoice !== null)
+                    ->form([
+                        Forms\Components\TextInput::make('email')
+                            ->label('Adresa email')
+                            ->email()
+                            ->required()
+                            ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
+                    ])
+                    ->action(function (array $data) {
+                        $this->sendInvoiceByEmail($this->record->invoice, $data['email']);
+                    }),
+            ])
+                ->label('Factura')
+                ->icon('heroicon-o-document-currency-dollar')
+                ->color('success')
+                ->button()
+                ->visible(fn () => $this->record->invoice !== null),
         ];
+    }
+
+    /**
+     * Send a document (decont) PDF by email.
+     */
+    protected function sendDocumentByEmail(OrganizerDocument $document, string $email, string $docType): void
+    {
+        try {
+            $filePath = Storage::disk('public')->path($document->file_path);
+
+            if (!file_exists($filePath)) {
+                Notification::make()->title('Fisierul nu a fost gasit')->danger()->send();
+                return;
+            }
+
+            $subject = "{$docType} {$document->title} — {$this->record->reference}";
+
+            Mail::raw("Buna ziua,\n\nAtasat gasiti {$docType} pentru decontul {$this->record->reference}.\n\nCu respect,\n" . ($this->record->marketplaceClient?->name ?? 'Tixello'), function ($message) use ($email, $subject, $filePath, $document) {
+                $message->to($email)
+                    ->subject($subject)
+                    ->attach($filePath, [
+                        'as' => $document->file_name,
+                        'mime' => 'application/pdf',
+                    ]);
+            });
+
+            Notification::make()->title("{$docType} trimis la {$email}")->success()->send();
+        } catch (\Exception $e) {
+            Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    /**
+     * Send an invoice by email (HTML content or PDF attachment).
+     */
+    protected function sendInvoiceByEmail(Invoice $invoice, string $email): void
+    {
+        try {
+            $subject = "Factura #{$invoice->number} — {$this->record->reference}";
+            $body = "Buna ziua,\n\nAtasat gasiti factura #{$invoice->number} pentru decontul {$this->record->reference}.\n\nSuma: {$invoice->amount} {$invoice->currency}\nScadenta: " . ($invoice->due_date?->format('d.m.Y') ?? '-') . "\n\nCu respect,\n" . ($this->record->marketplaceClient?->name ?? 'Tixello');
+
+            Mail::raw($body, function ($message) use ($email, $subject) {
+                $message->to($email)->subject($subject);
+            });
+
+            Notification::make()->title("Factura trimisa la {$email}")->success()->send();
+        } catch (\Exception $e) {
+            Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
+        }
     }
 }
