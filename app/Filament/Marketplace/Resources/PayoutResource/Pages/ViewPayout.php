@@ -101,17 +101,34 @@ class ViewPayout extends ViewRecord
                     $this->refreshFormData(['admin_notes']);
                 }),
 
-            // ========== DECONT ACTIONS ==========
+            // ========== GENERATE DECONT (when none exists) ==========
+            Actions\Action::make('generate_decont')
+                ->label('Generează Decont')
+                ->icon('heroicon-o-document-text')
+                ->color('info')
+                ->requiresConfirmation()
+                ->modalDescription('Se va genera documentul de decont pentru acest payout.')
+                ->visible(fn () => $this->record->decontDocument === null && in_array($this->record->status, ['approved', 'processing', 'completed']))
+                ->action(function () {
+                    $observer = new \App\Observers\MarketplacePayoutObserver();
+                    $method = new \ReflectionMethod($observer, 'generateDecont');
+                    $method->setAccessible(true);
+                    $method->invoke($observer, $this->record);
+
+                    Notification::make()->title('Decont generat')->success()->send();
+                    $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                }),
+
+            // ========== DECONT ACTIONS (when decont exists) ==========
             Actions\ActionGroup::make([
                 Actions\Action::make('view_decont')
                     ->label('Vezi decont')
                     ->icon('heroicon-o-eye')
-                    ->visible(fn () => $this->record->decontDocument !== null)
                     ->url(fn () => OrganizerDocumentResource::getUrl('edit', ['record' => $this->record->decontDocument]))
                     ->openUrlInNewTab(),
 
                 Actions\Action::make('download_decont')
-                    ->label('Descarca decont')
+                    ->label('Descarcă decont')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->visible(fn () => $this->record->decontDocument?->file_path !== null)
                     ->url(fn () => $this->record->decontDocument?->download_url, shouldOpenInNewTab: true),
@@ -119,7 +136,6 @@ class ViewPayout extends ViewRecord
                 Actions\Action::make('send_decont')
                     ->label('Trimite decont')
                     ->icon('heroicon-o-envelope')
-                    ->visible(fn () => $this->record->decontDocument !== null)
                     ->form([
                         Forms\Components\TextInput::make('email')
                             ->label('Adresa email')
@@ -132,12 +148,11 @@ class ViewPayout extends ViewRecord
                     }),
 
                 Actions\Action::make('regenerate_decont')
-                    ->label('Regenereaza decont')
+                    ->label('Regenerează decont')
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('Decontul existent va fi sters si regenerat.')
-                    ->visible(fn () => $this->record->decontDocument !== null)
+                    ->modalDescription('Decontul existent va fi șters și regenerat.')
                     ->action(function () {
                         $existingDecont = $this->record->decontDocument;
                         if ($existingDecont) {
@@ -161,13 +176,13 @@ class ViewPayout extends ViewRecord
                 ->button()
                 ->visible(fn () => $this->record->decontDocument !== null),
 
-            // ========== INVOICE ACTIONS ==========
+            // ========== GENERATE INVOICE (when decont exists but no invoice) ==========
             Actions\Action::make('generate_invoice')
-                ->label('Genereaza factura')
+                ->label('Generează factură')
                 ->icon('heroicon-o-document-plus')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Se va genera o factura asociata acestui decont.')
+                ->modalDescription('Se va genera o factură asociată acestui decont.')
                 ->visible(fn () => $this->record->decontDocument !== null && $this->record->invoice === null)
                 ->action(function () {
                     $payout = $this->record;
