@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Event;
 use App\Models\Invoice;
+use App\Models\MarketplacePayout;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
@@ -403,6 +404,9 @@ class MarketplaceTaxTemplate extends Model
                 : '';
             $variables['guarantor_address'] = $organizer->guarantor_address ?? '';
             $variables['guarantor_city'] = $organizer->guarantor_city ?? '';
+
+            // Organizer phone
+            $variables['organizer_phone'] = $organizer->phone ?? $organizer->contact_phone ?? '';
         }
 
         // Event variables
@@ -577,6 +581,61 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_bank_name'] = $payoutMethod['bank_name'] ?? $organizer?->bank_name ?? '';
             $variables['payout_iban'] = $payoutMethod['iban'] ?? $organizer?->iban ?? '';
             $variables['payout_account_holder'] = $payoutMethod['account_holder'] ?? '';
+
+            // === NEW VARIABLES FOR DECONT TEMPLATE ===
+
+            // Payout sequence number: how many payouts exist for same event+organizer before this one
+            $sequenceNumber = 1;
+            if ($payout->event_id && $payout->marketplace_organizer_id) {
+                $sequenceNumber = MarketplacePayout::where('event_id', $payout->event_id)
+                    ->where('marketplace_organizer_id', $payout->marketplace_organizer_id)
+                    ->where('id', '<=', $payout->id)
+                    ->count();
+            }
+            $variables['payout_sequence_number'] = $sequenceNumber;
+
+            // Tickets breakdown label: (50lei*2+60lei*16) format
+            $breakdownParts = [];
+            $ticketBreakdown = $payout->ticket_breakdown ?? [];
+            $totalTicketsSold = 0;
+            $totalTicketsRefunded = 0;
+            foreach ($ticketBreakdown as $item) {
+                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+                $totalTicketsSold += $qty;
+                if ($qty > 0 && $price > 0) {
+                    $breakdownParts[] = number_format($price, 0) . 'lei*' . $qty;
+                }
+            }
+            $variables['tickets_breakdown_label'] = !empty($breakdownParts) ? ' (' . implode('+', $breakdownParts) . ')' : '';
+            $variables['total_tickets_sold'] = $variables['total_tickets_sold'] ?? $totalTicketsSold;
+            $variables['total_tickets_refunded'] = 0; // TODO: calculate from refund data if available
+
+            // Preprinted tickets (physical tickets sent by courier)
+            $preprintedData = $payout->payout_method['preprinted'] ?? [];
+            $variables['payout_preprinted_ticket_fee'] = number_format((float) ($preprintedData['fee_per_ticket'] ?? 0), 2);
+            $variables['total_preprinted_tickets'] = (int) ($preprintedData['count'] ?? 0);
+            $variables['payout_preprinted_amount'] = number_format((float) ($preprintedData['total_amount'] ?? 0), 2);
+            $variables['payout_preprinted_shipping_date'] = $preprintedData['shipping_date'] ?? '';
+            $variables['payout_shipping_amount'] = number_format((float) ($preprintedData['shipping_cost'] ?? 0), 2);
+
+            // Advance amount (previously settled amount)
+            $variables['payout_advance_amount'] = number_format((float) ($payout->payout_method['advance_amount'] ?? 0), 2);
+
+            // Marketplace invoice preparer
+            $variables['marketplace_invoice_preparer'] = $marketplace?->settings['invoice_preparer'] ?? $marketplace?->contact_name ?? '';
+
+            // Marketplace logo URL
+            if ($marketplace?->logo) {
+                $variables['marketplace_logo_url'] = \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->logo);
+            } elseif ($marketplace?->settings['logo_url'] ?? null) {
+                $variables['marketplace_logo_url'] = $marketplace->settings['logo_url'];
+            } else {
+                $variables['marketplace_logo_url'] = '';
+            }
+
+            // Organizer phone (ensure it's available)
+            $variables['organizer_phone'] = $variables['organizer_phone'] ?? $organizer?->phone ?? $organizer?->contact_phone ?? '';
         }
 
         // Date/Time variables (always available)
