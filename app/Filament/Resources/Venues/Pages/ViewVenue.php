@@ -43,19 +43,6 @@ class ViewVenue extends ViewRecord
                 ->label('Edit')
                 ->icon('heroicon-o-pencil-square')
                 ->url(fn () => static::getResource()::getUrl('edit', ['record' => $this->record])),
-
-            Action::make('openPublic')
-                ->label('Open public page')
-                ->icon('heroicon-o-arrow-top-right-on-square')
-                ->url(function () {
-                    $locale = request()->route('locale') ?? app()->getLocale();
-                    // explicit pe slug pentru public
-                    return route('public.venues.show', [
-                        'locale' => $locale,
-                        'venue'  => $this->record->slug,
-                    ]);
-                })
-                ->openUrlInNewTab(),
         ];
     }
 

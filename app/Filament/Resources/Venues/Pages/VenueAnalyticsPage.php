@@ -28,7 +28,7 @@ class VenueAnalyticsPage extends Page
 
     public function mount(int|string $record): void
     {
-        $this->venue = Venue::findOrFail($record);
+        $this->venue = Venue::where('slug', $record)->firstOrFail();
         $this->selectedVenueId = $this->venue->id;
         $this->venueIds = [$this->venue->id];
 
