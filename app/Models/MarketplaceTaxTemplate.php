@@ -652,18 +652,29 @@ class MarketplaceTaxTemplate extends Model
                 $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($logoPath) ?: 'image/png';
                 $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
             } elseif ($logoUrl) {
-                // Try to fetch external URL and convert to base64
+                // Try to fetch external URL and convert to base64 PNG (DomPDF doesn't support WebP)
                 try {
                     $content = @file_get_contents($logoUrl);
                     if ($content) {
                         $finfo = new \finfo(FILEINFO_MIME_TYPE);
                         $mime = $finfo->buffer($content) ?: 'image/png';
+
+                        // Convert WebP to PNG for DomPDF compatibility
+                        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
+                            $img = @imagecreatefromstring($content);
+                            if ($img) {
+                                ob_start();
+                                imagepng($img);
+                                $content = ob_get_clean();
+                                imagedestroy($img);
+                                $mime = 'image/png';
+                            }
+                        }
+
                         $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
-                    } else {
-                        $variables['marketplace_logo_url'] = $logoUrl; // Fallback to URL
                     }
                 } catch (\Exception $e) {
-                    $variables['marketplace_logo_url'] = $logoUrl; // Fallback to URL
+                    \Log::warning('Failed to load marketplace logo', ['url' => $logoUrl, 'error' => $e->getMessage()]);
                 }
             }
 
