@@ -97,7 +97,7 @@ class MarketplacePayoutResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->visible(fn ($record) => $record?->isRejected()),
-            ]);
+            ])->columns(1);
     }
 
     public static function table(Table $table): Table
