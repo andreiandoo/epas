@@ -1181,6 +1181,7 @@ class EventResource extends Resource
             'edit' => Pages\EditEvent::route('/{record}/edit'),
             'statistics' => Pages\EventStatistics::route('/{record}/statistics'),
             'view-guest' => Pages\ViewGuestEvent::route('/{record}/view'),
+            'import' => Pages\ImportEvents::route('/import'),
         ];
     }
 }

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Events;
 
 use App\Filament\Resources\Events\Pages\CreateEvent;
 use App\Filament\Resources\Events\Pages\EditEvent;
+use App\Filament\Resources\Events\Pages\ImportEvents;
 use App\Filament\Resources\Events\Pages\ListEvents;
 use App\Models\Event;
 use App\Models\EventGenre;
@@ -879,6 +880,7 @@ class EventResource extends Resource
             'index'  => ListEvents::route('/'),
             'create' => CreateEvent::route('/create'),
             'edit'   => EditEvent::route('/{record}/edit'),
+            'import' => ImportEvents::route('/import'),
         ];
     }
 }
