@@ -106,6 +106,31 @@ class TenantResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Link this tenant to a global artist profile from the Artists database')
                                         ->columnSpanFull(),
 
+                                    Forms\Components\Select::make('linked_venue_id')
+                                        ->label('Linked Venue')
+                                        ->options(fn () => \App\Models\Venue::all()->mapWithKeys(fn ($v) => [
+                                            $v->id => ($v->getTranslation('name', 'ro') ?: $v->getTranslation('name', 'en') ?: $v->name)
+                                                . ($v->city ? ' (' . $v->city . ')' : '')
+                                        ])->sort())
+                                        ->searchable()
+                                        ->preload()
+                                        ->nullable()
+                                        ->visible(fn (callable $get) => in_array(
+                                            $get('tenant_type') instanceof \App\Enums\TenantType
+                                                ? $get('tenant_type')->value
+                                                : (string) $get('tenant_type'),
+                                            ['venue', 'stadium-arena', 'philharmonic', 'opera', 'theater', 'museum']
+                                        ))
+                                        ->afterStateHydrated(function ($component, $record) {
+                                            if ($record) {
+                                                $venue = \App\Models\Venue::where('tenant_id', $record->id)->first();
+                                                $component->state($venue?->id);
+                                            }
+                                        })
+                                        ->dehydrated(false)
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Associate a venue from the database with this tenant. This sets the tenant_id on the venue.')
+                                        ->columnSpanFull(),
+
                                     Forms\Components\Select::make('locale')
                                         ->label('Language / Locale')
                                         ->options([

@@ -28,7 +28,7 @@ class VenueAnalyticsPage extends Page
 
     public function mount(int|string $record): void
     {
-        $this->venue = Venue::where('slug', $record)->firstOrFail();
+        $this->venue = Venue::findOrFail($record);
         $this->selectedVenueId = $this->venue->id;
         $this->venueIds = [$this->venue->id];
 
@@ -93,8 +93,11 @@ class VenueAnalyticsPage extends Page
         return Cache::remember($cacheKey, 300, function () use ($emptyData) {
             try {
                 $eventIds = $this->venueEventIds();
+                \Log::info('VenueAnalytics debug', ['venue_id' => $this->venue->id, 'event_count' => count($eventIds)]);
                 $orderIds = $this->venueOrderIds($eventIds);
+                \Log::info('VenueAnalytics debug orders', ['order_count' => count($orderIds)]);
                 $kpis = $this->computeVenueKpis($eventIds, $orderIds);
+                \Log::info('VenueAnalytics debug kpis', $kpis);
 
                 return [
                     'kpis' => $kpis,

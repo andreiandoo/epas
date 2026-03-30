@@ -475,6 +475,6 @@ class VenueResource extends Resource
 
     public static function getRecordRouteKeyName(): ?string
     {
-        return 'slug';
+        return null; // Use default (id)
     }
 }
