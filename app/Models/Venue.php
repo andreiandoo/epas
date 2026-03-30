@@ -455,8 +455,8 @@ class Venue extends Model
         return $options;
     }
 
-    // public route binding by slug
-    public function getRouteKeyName(): string { return 'slug'; }
+    // Route key removed - Filament admin uses ID via getRecordRouteKeyName
+    // Public routes use explicit slug binding: Route::get('/venue/{venue:slug}', ...)
 
     protected static function booted(): void
     {

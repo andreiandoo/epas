@@ -29,7 +29,7 @@ a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
 .kpi{padding:14px;border-radius:12px;background:linear-gradient(180deg,#0f1634,#0d1330);border:1px solid var(--ring);}
 .kpi .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
 .kpi .v{margin-top:4px;font-size:20px;font-weight:700;}
-.tbl{width:100%;border-collapse:separate;border-spacing:0;border-radius:10px;border:1px solid var(--ring);overflow:hidden;font-size:13px;}
+.tbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--ring);overflow:hidden;font-size:13px;}
 .tbl thead th{background:#0f1736;color:#cdd7f6;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--ring);}
 .tbl tbody td{padding:8px 10px;border-bottom:1px dashed rgba(122,162,255,.08);color:#dbe6ff;}
 .tbl tbody tr:last-child td{border-bottom:0;}
@@ -121,7 +121,7 @@ canvas{width:100%!important;}
     {{-- VENUE HEALTH SCORE + MONTHLY MOMENTUM --}}
     @php $healthScore = $venueHealthScore ?? []; $momentum = $monthlyMomentum ?? []; @endphp
     @if(!empty($healthScore['components']) || !empty($momentum['metrics']))
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:14px;margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 5fr;gap:14px;margin-bottom:16px;">
         @if(!empty($healthScore['components']))
         <div class="card" style="min-width:200px;"><div class="card-b" style="text-align:center;">
             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Venue Health Score</div>

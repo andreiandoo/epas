@@ -343,7 +343,7 @@ $registerPublicRoutes = function ($prefix = '') {
         Route::get('/events', [\App\Http\Controllers\Public\EventController::class, 'index'])->name($prefix ? '' : 'public.events.index');
 
         Route::get('/venues', [PublicVenueController::class, 'index'])->name($prefix ? '' : 'public.venues.index');
-        Route::get('/venue/{venue}', [PublicVenueController::class, 'show'])->name($prefix ? '' : 'public.venues.show');
+        Route::get('/venue/{venue:slug}', [PublicVenueController::class, 'show'])->name($prefix ? '' : 'public.venues.show');
 
         Route::get('/compare/{country}/{slug}', [\App\Http\Controllers\Public\CompareController::class, 'show'])
             ->where('country', '[a-z]{2}')
@@ -376,7 +376,7 @@ foreach (['en', 'ro', 'de', 'fr', 'es'] as $locale) {
         Route::get('/events', [\App\Http\Controllers\Public\EventController::class, 'index']);
 
         Route::get('/venues', [PublicVenueController::class, 'index']);
-        Route::get('/venue/{venue}', [PublicVenueController::class, 'show']);
+        Route::get('/venue/{venue:slug}', [PublicVenueController::class, 'show']);
 
         Route::get('/compare/{country}/{slug}', [\App\Http\Controllers\Public\CompareController::class, 'show'])
             ->where('country', '[a-z]{2}')
