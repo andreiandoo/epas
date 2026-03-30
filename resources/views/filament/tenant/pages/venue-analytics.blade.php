@@ -19,7 +19,7 @@
 .fi-page > .fi-header,.fi-page-header-ctn,header.fi-header{display:none!important;}
 [x-cloak]{display:none!important;}
 a{color:var(--primary);text-decoration:none}a:hover{text-decoration:underline}
-.db{max-width:100%;margin:0 auto;padding:0;}
+.db{max-width:100%;width:100%;margin:0 auto;padding:0;}
 .card{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--ring);border-radius:12px;}
 .card-h{padding:12px 16px;border-bottom:1px solid var(--ring);font-weight:600;font-size:13px;color:#cdd7f6;}
 .card-b{padding:14px 16px;}

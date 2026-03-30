@@ -426,10 +426,6 @@ trait VenueAnalyticsMethods
 
         $avgRevPerEvent = 0;
         if (!empty($eventIds)) {
-            $avgRevPerEvent = round((float) DB::table('ticket_types')
-                ->whereIn('event_id', $eventIds)->selectRaw('AVG(sub.rev) as avg_rev FROM (SELECT event_id, SUM(quota_sold * price_cents / 100) as rev FROM ticket_types WHERE event_id = ANY(?) GROUP BY event_id) sub', ['{' . implode(',', $eventIds) . '}'])
-                ->value('avg_rev') ?? 0, 0);
-            // Simpler approach
             $totalRev = (float) DB::table('ticket_types')->whereIn('event_id', $eventIds)->selectRaw('SUM(quota_sold * price_cents / 100) as rev')->value('rev');
             $totalEv = count(array_unique($eventIds));
             $avgRevPerEvent = $totalEv > 0 ? round($totalRev / $totalEv, 0) : 0;
