@@ -13,7 +13,7 @@ class VenueAnalyticsPage extends Page
     use VenueAnalyticsMethods;
 
     protected static string $resource = VenueResource::class;
-    protected static string $view = 'filament.tenant.pages.venue-analytics';
+    protected string $view = 'filament.tenant.pages.venue-analytics';
 
     public Venue $venue;
     public array $venueIds = [];
