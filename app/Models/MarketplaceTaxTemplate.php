@@ -352,7 +352,7 @@ class MarketplaceTaxTemplate extends Model
 
         // Marketplace variables
         if ($marketplace) {
-            $variables['marketplace_legal_name'] = $marketplace->legal_name ?? $marketplace->name ?? '';
+            $variables['marketplace_legal_name'] = $marketplace->company_name ?? $marketplace->name ?? '';
             $variables['marketplace_vat'] = $marketplace->vat_number ?? '';
             $variables['marketplace_trade_register'] = $marketplace->trade_register ?? '';
             $variables['marketplace_address'] = $marketplace->address ?? '';
@@ -642,13 +642,29 @@ class MarketplaceTaxTemplate extends Model
             // Marketplace invoice preparer
             $variables['marketplace_invoice_preparer'] = $marketplace?->settings['invoice_preparer'] ?? $marketplace?->contact_name ?? '';
 
-            // Marketplace logo URL
-            if ($marketplace?->logo) {
-                $variables['marketplace_logo_url'] = \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->logo);
-            } elseif ($marketplace?->settings['logo_url'] ?? null) {
-                $variables['marketplace_logo_url'] = $marketplace->settings['logo_url'];
-            } else {
-                $variables['marketplace_logo_url'] = '';
+            // Marketplace logo - convert to base64 data URI for PDF compatibility
+            $variables['marketplace_logo_url'] = '';
+            $logoPath = $marketplace?->logo ?? null;
+            $logoUrl = $marketplace?->settings['logo_url'] ?? null;
+
+            if ($logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($logoPath)) {
+                $content = \Illuminate\Support\Facades\Storage::disk('public')->get($logoPath);
+                $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($logoPath) ?: 'image/png';
+                $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
+            } elseif ($logoUrl) {
+                // Try to fetch external URL and convert to base64
+                try {
+                    $content = @file_get_contents($logoUrl);
+                    if ($content) {
+                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                        $mime = $finfo->buffer($content) ?: 'image/png';
+                        $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
+                    } else {
+                        $variables['marketplace_logo_url'] = $logoUrl; // Fallback to URL
+                    }
+                } catch (\Exception $e) {
+                    $variables['marketplace_logo_url'] = $logoUrl; // Fallback to URL
+                }
             }
 
             // Organizer phone (ensure it's available)
