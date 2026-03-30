@@ -156,176 +156,235 @@ class PayoutResource extends Resource
     {
         return $infolist
             ->components([
-                Section::make('Payout Request')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('reference')
-                            ->copyable()
-                            ->copyMessage('Reference copied!')
-                            ->copyMessageDuration(1500)
-                            ->icon('heroicon-o-clipboard-document')
-                            ->iconPosition(IconPosition::After),
+                // ========== MAIN INFO ==========
+                \Filament\Schemas\Components\Grid::make(3)->schema([
+                    // LEFT: Payout details (2/3)
+                    \Filament\Schemas\Components\Group::make()->columnSpan(2)->schema([
+                        Section::make('Decont')
+                            ->icon('heroicon-o-banknotes')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('reference')
+                                    ->label('Referință')
+                                    ->copyable()
+                                    ->icon('heroicon-o-clipboard-document')
+                                    ->iconPosition(IconPosition::After),
 
-                        Infolists\Components\TextEntry::make('organizer.name')
-                            ->label('Organizer')
-                            ->url(fn ($record) => $record->marketplace_organizer_id
-                                ? OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
-                                : null)
-                            ->color('primary'),
+                                Infolists\Components\TextEntry::make('status')
+                                    ->label('Status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'pending' => 'warning',
+                                        'approved' => 'info',
+                                        'processing' => 'primary',
+                                        'completed' => 'success',
+                                        'rejected' => 'danger',
+                                        'cancelled' => 'gray',
+                                        default => 'gray',
+                                    }),
 
-                        Infolists\Components\TextEntry::make('event.title')
-                            ->label('Event')
-                            ->placeholder('General payout (no specific event)')
-                            ->formatStateUsing(fn ($state) => is_array($state)
-                                ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
-                                : $state)
-                            ->url(fn ($record) => $record->event_id
-                                ? EventResource::getUrl('edit', ['record' => $record->event_id])
-                                : null)
-                            ->color('primary'),
+                                Infolists\Components\TextEntry::make('organizer.name')
+                                    ->label('Organizator')
+                                    ->url(fn ($record) => $record->marketplace_organizer_id
+                                        ? OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
+                                        : null)
+                                    ->color('primary'),
 
-                        Infolists\Components\TextEntry::make('amount')
-                            ->money('RON')
-                            ->copyable()
-                            ->copyMessage('Amount copied!')
-                            ->copyMessageDuration(1500)
-                            ->icon('heroicon-o-clipboard-document')
-                            ->iconPosition(IconPosition::After),
+                                Infolists\Components\TextEntry::make('event.title')
+                                    ->label('Eveniment')
+                                    ->placeholder('Decont general')
+                                    ->formatStateUsing(fn ($state) => is_array($state)
+                                        ? ($state['ro'] ?? $state['en'] ?? reset($state) ?? 'Untitled')
+                                        : $state)
+                                    ->url(fn ($record) => $record->event_id
+                                        ? EventResource::getUrl('edit', ['record' => $record->event_id])
+                                        : null)
+                                    ->color('primary'),
 
-                        Infolists\Components\TextEntry::make('status')
-                            ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'pending' => 'warning',
-                                'approved' => 'info',
-                                'processing' => 'primary',
-                                'completed' => 'success',
-                                'rejected' => 'danger',
-                                'cancelled' => 'gray',
-                                default => 'gray',
-                            }),
+                                Infolists\Components\TextEntry::make('source')
+                                    ->label('Sursă')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'organizer' => 'primary', 'manual' => 'warning', default => 'gray',
+                                    }),
 
-                        Infolists\Components\TextEntry::make('created_at')
-                            ->label('Requested At')
-                            ->dateTime('d.m.Y H:i'),
-                    ])
-                    ->columns(3),
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->label('Creat la')
+                                    ->dateTime('d.m.Y H:i'),
+                            ])
+                            ->columns(3),
 
-                Section::make('Amount Breakdown')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('gross_amount')
-                            ->money('RON')
-                            ->label('Gross Amount'),
+                        // Ticket breakdown table
+                        Section::make('Detalii bilete')
+                            ->icon('heroicon-o-ticket')
+                            ->schema([
+                                Infolists\Components\ViewEntry::make('ticket_breakdown_view')
+                                    ->label('')
+                                    ->view('filament.infolists.payout-ticket-breakdown')
+                                    ->columnSpanFull(),
+                            ])
+                            ->visible(fn ($record) => !empty($record->ticket_breakdown)),
 
-                        Infolists\Components\TextEntry::make('commission_amount')
-                            ->money('RON')
-                            ->label('Commission'),
+                        // Financial summary
+                        Section::make('Rezumat financiar')
+                            ->icon('heroicon-o-calculator')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('gross_amount')
+                                    ->label('Suma brută')
+                                    ->money('RON'),
 
-                        Infolists\Components\TextEntry::make('fees_amount')
-                            ->money('RON')
-                            ->label('Fees'),
+                                Infolists\Components\TextEntry::make('commission_amount')
+                                    ->label('Comision')
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger'),
 
-                        Infolists\Components\TextEntry::make('amount')
-                            ->money('RON')
-                            ->label('Net Amount')
-                            ->weight('bold'),
-                    ])
-                    ->columns(4),
+                                Infolists\Components\TextEntry::make('fees_amount')
+                                    ->label('Taxe')
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger')
+                                    ->visible(fn ($record) => (float) $record->fees_amount > 0),
 
-                Section::make('Payout Method')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('payout_method.bank_name')
-                            ->label('Bank'),
+                                Infolists\Components\TextEntry::make('adjustments_amount')
+                                    ->label('Ajustări')
+                                    ->formatStateUsing(fn ($state, $record) => ($state >= 0 ? '+' : '') . number_format((float) $state, 2) . ' RON' . ($record->adjustments_note ? " ({$record->adjustments_note})" : ''))
+                                    ->visible(fn ($record) => (float) $record->adjustments_amount != 0),
 
-                        Infolists\Components\TextEntry::make('payout_method.iban')
-                            ->label('IBAN')
-                            ->copyable()
-                            ->copyMessage('IBAN copied!')
-                            ->copyMessageDuration(1500)
-                            ->icon('heroicon-o-clipboard-document')
-                            ->iconPosition(IconPosition::After),
+                                Infolists\Components\TextEntry::make('amount')
+                                    ->label('Sumă netă (de plată)')
+                                    ->money('RON')
+                                    ->weight('bold')
+                                    ->size('lg')
+                                    ->color('success'),
+                            ])
+                            ->columns(4),
 
-                        Infolists\Components\TextEntry::make('payout_method.account_holder')
-                            ->label('Account Holder')
-                            ->copyable()
-                            ->copyMessage('Account holder copied!')
-                            ->copyMessageDuration(1500)
-                            ->icon('heroicon-o-clipboard-document')
-                            ->iconPosition(IconPosition::After),
-                    ])
-                    ->columns(3),
+                        // Payment info (for completed)
+                        Section::make('Plată')
+                            ->icon('heroicon-o-credit-card')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('payment_reference')
+                                    ->label('Referință plată')
+                                    ->copyable(),
+                                Infolists\Components\TextEntry::make('payment_method')
+                                    ->label('Metodă plată'),
+                                Infolists\Components\TextEntry::make('completed_at')
+                                    ->label('Finalizat la')
+                                    ->dateTime('d.m.Y H:i'),
+                                Infolists\Components\TextEntry::make('payment_notes')
+                                    ->label('Note plată')
+                                    ->columnSpanFull()
+                                    ->visible(fn ($record) => !empty($record->payment_notes)),
+                            ])
+                            ->columns(3)
+                            ->visible(fn ($record) => $record->payment_reference),
 
-                Section::make('Organizer Notes')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('organizer_notes')
-                            ->label('')
-                            ->placeholder('No notes from organizer')
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsed(fn ($record): bool => empty($record?->organizer_notes)),
+                        // Rejection details
+                        Section::make('Respingere')
+                            ->icon('heroicon-o-x-circle')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('rejection_reason')
+                                    ->label('Motiv')
+                                    ->columnSpanFull(),
+                                Infolists\Components\TextEntry::make('rejectedByUser.name')
+                                    ->label('Respins de'),
+                                Infolists\Components\TextEntry::make('rejected_at')
+                                    ->label('Data')
+                                    ->dateTime('d.m.Y H:i'),
+                            ])
+                            ->columns(2)
+                            ->visible(fn ($record) => $record->status === 'rejected'),
 
-                Section::make('Admin Notes')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('admin_notes')
-                            ->label('')
-                            ->placeholder('No admin notes')
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsed(fn ($record): bool => empty($record?->admin_notes)),
+                        // Notes
+                        Section::make('Note')
+                            ->schema([
+                                Infolists\Components\TextEntry::make('organizer_notes')
+                                    ->label('Note organizator')
+                                    ->placeholder('—')
+                                    ->columnSpanFull(),
+                                Infolists\Components\TextEntry::make('admin_notes')
+                                    ->label('Note admin')
+                                    ->placeholder('—')
+                                    ->columnSpanFull(),
+                            ])
+                            ->collapsible()
+                            ->collapsed(fn ($record) => empty($record->organizer_notes) && empty($record->admin_notes)),
+                    ]),
 
-                Section::make('Rejection Details')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('rejection_reason')
-                            ->columnSpanFull(),
-                        Infolists\Components\TextEntry::make('rejectedByUser.name')
-                            ->label('Rejected By'),
-                        Infolists\Components\TextEntry::make('rejected_at')
-                            ->dateTime('d.m.Y H:i'),
-                    ])
-                    ->columns(2)
-                    ->visible(fn ($record) => $record->isRejected()),
+                    // RIGHT: Sidebar (1/3)
+                    \Filament\Schemas\Components\Group::make()->columnSpan(1)->schema([
+                        // Payout method
+                        Section::make('Cont bancar')
+                            ->icon('heroicon-o-building-library')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('payout_method.bank_name')
+                                    ->label('Bancă'),
+                                Infolists\Components\TextEntry::make('payout_method.iban')
+                                    ->label('IBAN')
+                                    ->copyable(),
+                                Infolists\Components\TextEntry::make('payout_method.account_holder')
+                                    ->label('Titular')
+                                    ->copyable(),
+                            ]),
 
-                Section::make('Payment Confirmation')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('payment_reference')
-                            ->copyable()
-                            ->icon('heroicon-o-clipboard-document')
-                            ->iconPosition(IconPosition::After),
-                        Infolists\Components\TextEntry::make('payment_method'),
-                        Infolists\Components\TextEntry::make('payment_notes')
-                            ->columnSpanFull(),
-                    ])
-                    ->columns(2)
-                    ->visible(fn ($record) => $record->payment_reference),
+                        // Timeline
+                        Section::make('Cronologie')
+                            ->icon('heroicon-o-clock')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->label('Solicitat')
+                                    ->dateTime('d.m.Y H:i'),
+                                Infolists\Components\TextEntry::make('approved_at')
+                                    ->label('Aprobat')
+                                    ->dateTime('d.m.Y H:i')
+                                    ->visible(fn ($record) => $record->approved_at),
+                                Infolists\Components\TextEntry::make('processed_at')
+                                    ->label('Procesat')
+                                    ->dateTime('d.m.Y H:i')
+                                    ->visible(fn ($record) => $record->processed_at),
+                                Infolists\Components\TextEntry::make('completed_at')
+                                    ->label('Finalizat')
+                                    ->dateTime('d.m.Y H:i')
+                                    ->visible(fn ($record) => $record->completed_at),
+                                Infolists\Components\TextEntry::make('period_start')
+                                    ->label('Perioadă')
+                                    ->formatStateUsing(fn ($state, $record) => ($record->period_start?->format('d.m.Y') ?? '—') . ' → ' . ($record->period_end?->format('d.m.Y') ?? '—'))
+                                    ->visible(fn ($record) => $record->period_start),
+                            ]),
 
-                Section::make('Decont Document')
-                    ->icon('heroicon-o-document-text')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('decontDocument.title')
-                            ->label('Document'),
-                        Infolists\Components\TextEntry::make('decontDocument.issued_at')
-                            ->label('Generated At')
-                            ->dateTime('d.m.Y H:i'),
-                        Infolists\Components\TextEntry::make('decontDocument.formatted_file_size')
-                            ->label('Size'),
-                    ])
-                    ->columns(3)
-                    ->visible(fn ($record) => $record->decontDocument !== null),
+                        // Decont document
+                        Section::make('Document decont')
+                            ->icon('heroicon-o-document-text')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('decontDocument.title')
+                                    ->label('Titlu'),
+                                Infolists\Components\TextEntry::make('decontDocument.issued_at')
+                                    ->label('Generat la')
+                                    ->dateTime('d.m.Y H:i'),
+                                Infolists\Components\TextEntry::make('decontDocument.formatted_file_size')
+                                    ->label('Mărime'),
+                            ])
+                            ->visible(fn ($record) => $record->decontDocument !== null),
 
-                Section::make('Timeline')
-                    ->schema([
-                        Infolists\Components\TextEntry::make('created_at')
-                            ->label('Requested')
-                            ->dateTime('d.m.Y H:i'),
-                        Infolists\Components\TextEntry::make('approved_at')
-                            ->dateTime('d.m.Y H:i')
-                            ->visible(fn ($record) => $record->approved_at),
-                        Infolists\Components\TextEntry::make('processed_at')
-                            ->dateTime('d.m.Y H:i')
-                            ->visible(fn ($record) => $record->processed_at),
-                        Infolists\Components\TextEntry::make('completed_at')
-                            ->dateTime('d.m.Y H:i')
-                            ->visible(fn ($record) => $record->completed_at),
-                    ])
-                    ->columns(4),
+                        // Invoice
+                        Section::make('Factură')
+                            ->icon('heroicon-o-document-currency-dollar')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('invoice.number')
+                                    ->label('Număr'),
+                                Infolists\Components\TextEntry::make('invoice.amount')
+                                    ->label('Suma')
+                                    ->money('RON'),
+                                Infolists\Components\TextEntry::make('invoice.status')
+                                    ->label('Status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => $state === 'paid' ? 'success' : 'warning'),
+                            ])
+                            ->visible(fn ($record) => $record->invoice !== null),
+                    ]),
+                ]),
             ]);
     }
 
