@@ -34,8 +34,9 @@ class EditTaxTemplate extends EditRecord
                             $marketplace = static::getMarketplaceClient();
                             if (!$marketplace) return [];
                             return MarketplaceOrganizer::where('marketplace_client_id', $marketplace->id)
-                                ->orderBy('company_name')
-                                ->pluck('company_name', 'id')
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($o) => [$o->id => ($o->company_name ?? $o->name ?? 'Organizator #' . $o->id)])
                                 ->toArray();
                         })
                         ->searchable()
@@ -52,7 +53,7 @@ class EditTaxTemplate extends EditRecord
                                 ->orderByDesc('starts_at')
                                 ->get()
                                 ->mapWithKeys(fn ($e) => [
-                                    $e->id => $e->name . ' (' . ($e->starts_at?->format('d.m.Y') ?? 'N/A') . ')',
+                                    $e->id => ($e->name ?? 'Event #' . $e->id) . ' (' . ($e->starts_at?->format('d.m.Y') ?? 'N/A') . ')',
                                 ])
                                 ->toArray();
                         })
