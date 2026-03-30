@@ -32,6 +32,13 @@ class ImportEvents extends Page implements HasForms
         return auth()->user()->tenant_id ?? Tenant::first()?->id;
     }
 
+    protected function getForms(): array
+    {
+        return [
+            'eventSetupForm',
+        ];
+    }
+
     protected function getExtraEventFormFields(): array
     {
         return [

@@ -20,6 +20,13 @@ class ImportEvents extends Page implements HasForms
 
     protected string $view = 'filament.pages.import-events';
 
+    protected function getForms(): array
+    {
+        return [
+            'eventSetupForm',
+        ];
+    }
+
     protected function resolveImportTenantId(): ?int
     {
         return auth()->user()->tenant_id ?? auth()->user()->tenant?->id;

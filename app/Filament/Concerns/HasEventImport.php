@@ -73,13 +73,6 @@ trait HasEventImport
         return null;
     }
 
-    protected function getForms(): array
-    {
-        return [
-            'eventSetupForm',
-        ];
-    }
-
     /**
      * Override in panel-specific pages to prepend extra fields (e.g. tenant selector).
      */
