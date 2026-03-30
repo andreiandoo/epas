@@ -73,11 +73,28 @@ trait HasEventImport
         return null;
     }
 
+    protected function getForms(): array
+    {
+        return [
+            'eventSetupForm',
+        ];
+    }
+
+    /**
+     * Override in panel-specific pages to prepend extra fields (e.g. tenant selector).
+     */
+    protected function getExtraEventFormFields(): array
+    {
+        return [];
+    }
+
     public function eventSetupForm(Schema $schema): Schema
     {
+        $fields = $this->getExtraEventFormFields();
+
         return $schema
             ->statePath('eventFormData')
-            ->schema([
+            ->schema(array_merge($fields, [
                 SC\Grid::make(2)->schema([
                     Forms\Components\Select::make('import_source')
                         ->label('Sursă import')
@@ -204,7 +221,6 @@ trait HasEventImport
                         ->multiple()
                         ->searchable()
                         ->preload()
-                        ->relationship('', 'name')
                         ->options(function () {
                             return EventType::all()->mapWithKeys(fn ($t) => [
                                 $t->id => $t->getTranslation('name', 'en') ?: $t->getTranslation('name', 'ro'),
@@ -253,7 +269,7 @@ trait HasEventImport
                             ->native(false),
                     ]),
                 ]),
-            ]);
+            ]));
     }
 
     public function goToStage2(): void
