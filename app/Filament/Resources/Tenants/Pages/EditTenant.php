@@ -24,20 +24,22 @@ class EditTenant extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {
         unset($data['microservice_ids']);
-        unset($data['linked_venue_id']);
+        unset($data['linked_venue_ids']);
 
         return $data;
     }
 
     protected function afterSave(): void
     {
-        // Handle linked venue
-        $linkedVenueId = $this->data['linked_venue_id'] ?? null;
-        // Unlink any previously linked venue
+        // Handle linked venues (multi-select)
+        $linkedVenueIds = $this->data['linked_venue_ids'] ?? [];
+        $linkedVenueIds = array_filter(array_map('intval', (array) $linkedVenueIds));
+
+        // Unlink all previously linked venues
         \App\Models\Venue::where('tenant_id', $this->record->id)->update(['tenant_id' => null]);
-        // Link the selected venue
-        if ($linkedVenueId) {
-            \App\Models\Venue::where('id', $linkedVenueId)->update(['tenant_id' => $this->record->id]);
+        // Link selected venues
+        if (!empty($linkedVenueIds)) {
+            \App\Models\Venue::whereIn('id', $linkedVenueIds)->update(['tenant_id' => $this->record->id]);
         }
 
         // Handle microservices sync
