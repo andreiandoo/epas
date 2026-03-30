@@ -28,6 +28,8 @@ class EditVenue extends EditRecord
                 ->label('View')
                 ->icon('heroicon-o-eye')
                 ->url(fn () => static::getResource()::getUrl('view', ['record' => $this->record])),
+
+            Actions\DeleteAction::make(),
         ];
     }
 }
