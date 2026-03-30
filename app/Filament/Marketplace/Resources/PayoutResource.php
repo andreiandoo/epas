@@ -149,7 +149,7 @@ class PayoutResource extends Resource
                             ->columnSpanFull(),
                     ])
                     ->collapsed(),
-            ]);
+            ])->columns(1);
     }
 
     public static function infolist(Schema $infolist): Schema
@@ -385,7 +385,7 @@ class PayoutResource extends Resource
                             ->visible(fn ($record) => $record->invoice !== null),
                     ]),
                 ]),
-            ]);
+            ])->columns(1);
     }
 
     public static function table(Table $table): Table
