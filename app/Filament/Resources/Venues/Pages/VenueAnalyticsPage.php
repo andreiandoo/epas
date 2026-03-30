@@ -90,47 +90,58 @@ class VenueAnalyticsPage extends Page
             'upcomingEvents' => [],
         ];
 
-        return Cache::remember($cacheKey, 300, function () use ($emptyData) {
-            try {
-                $eventIds = $this->venueEventIds();
-                $orderIds = $this->venueOrderIds($eventIds);
-                $kpis = $this->computeVenueKpis($eventIds, $orderIds);
+        try {
+            $eventIds = $this->venueEventIds();
+            $orderIds = $this->venueOrderIds($eventIds);
+            $kpis = $this->computeVenueKpis($eventIds, $orderIds);
 
-                return [
-                    'kpis' => $kpis,
-                    'eventPerformance' => $this->buildEventPerformanceTable($eventIds),
-                    'revenueBreakdown' => $this->buildRevenueBreakdown($eventIds, $orderIds),
-                    'pricingIntelligence' => $this->buildPricingIntelligence($eventIds),
-                    'audiencePersonas' => $this->buildVenueAudiencePersonas($orderIds),
-                    'customerLoyalty' => $this->buildVenueCustomerLoyalty($eventIds, $orderIds),
-                    'geographicOrigin' => $this->buildGeographicOrigin($orderIds),
-                    'artistPerformance' => $this->buildArtistPerformanceAtVenue($eventIds),
-                    'genrePerformance' => $this->buildGenrePerformance($eventIds),
-                    'neverPlayed' => $this->buildNeverPlayedArtists($eventIds),
-                    'schedulingHeatmap' => $this->buildSchedulingHeatmap($eventIds),
-                    'dayOfWeek' => $this->buildDayOfWeekAnalysis($eventIds),
-                    'seasonality' => $this->buildSeasonalityAnalysis($eventIds),
-                    'idleDays' => $this->buildIdleDaysAnalysis($eventIds),
-                    'salesIntelligence' => $this->buildSalesIntelligence($eventIds, $orderIds),
-                    'opportunities' => $this->buildOpportunities($eventIds, $orderIds),
-                    'promotionPlanner' => $this->buildPromotionPlanner($eventIds, $orderIds),
-                    'revenueForecast' => $this->buildRevenueForecast($eventIds),
-                    'upcomingEvents' => $this->buildUpcomingVenueEvents($eventIds),
-                    'competitorBenchmark' => $this->buildCompetitorBenchmark($eventIds),
-                    'churnAlerts' => $this->buildChurnRiskAlerts($eventIds, $orderIds),
-                    'revenuePerSeat' => $this->buildRevenuePerSeat($eventIds),
-                    'genreLoyalty' => $this->buildGenreLoyalty($eventIds, $orderIds),
-                    'checkinAnalysis' => $this->buildCheckinTimeAnalysis($eventIds),
-                    'venueHealthScore' => $this->buildVenueHealthScore($eventIds, $orderIds),
-                    'refundAnalysis' => $this->buildRefundAnalysis($eventIds),
-                    'monthlyMomentum' => $this->buildMonthlyMomentum($eventIds, $orderIds),
-                    'actionPriority' => $this->buildActionPriority($eventIds, $orderIds),
-                ];
-            } catch (\Exception $e) {
-                \Log::error('VenueAnalyticsPage: getViewData failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                return $emptyData;
+            $data = ['kpis' => $kpis];
+
+            // Build each section individually, catching errors per section
+            $sections = [
+                'eventPerformance' => fn() => $this->buildEventPerformanceTable($eventIds),
+                'revenueBreakdown' => fn() => $this->buildRevenueBreakdown($eventIds, $orderIds),
+                'pricingIntelligence' => fn() => $this->buildPricingIntelligence($eventIds),
+                'audiencePersonas' => fn() => $this->buildVenueAudiencePersonas($orderIds),
+                'customerLoyalty' => fn() => $this->buildVenueCustomerLoyalty($eventIds, $orderIds),
+                'geographicOrigin' => fn() => $this->buildGeographicOrigin($orderIds),
+                'artistPerformance' => fn() => $this->buildArtistPerformanceAtVenue($eventIds),
+                'genrePerformance' => fn() => $this->buildGenrePerformance($eventIds),
+                'neverPlayed' => fn() => $this->buildNeverPlayedArtists($eventIds),
+                'schedulingHeatmap' => fn() => $this->buildSchedulingHeatmap($eventIds),
+                'dayOfWeek' => fn() => $this->buildDayOfWeekAnalysis($eventIds),
+                'seasonality' => fn() => $this->buildSeasonalityAnalysis($eventIds),
+                'idleDays' => fn() => $this->buildIdleDaysAnalysis($eventIds),
+                'salesIntelligence' => fn() => $this->buildSalesIntelligence($eventIds, $orderIds),
+                'opportunities' => fn() => $this->buildOpportunities($eventIds, $orderIds),
+                'promotionPlanner' => fn() => $this->buildPromotionPlanner($eventIds, $orderIds),
+                'revenueForecast' => fn() => $this->buildRevenueForecast($eventIds),
+                'upcomingEvents' => fn() => $this->buildUpcomingVenueEvents($eventIds),
+                'competitorBenchmark' => fn() => $this->buildCompetitorBenchmark($eventIds),
+                'churnAlerts' => fn() => $this->buildChurnRiskAlerts($eventIds, $orderIds),
+                'revenuePerSeat' => fn() => $this->buildRevenuePerSeat($eventIds),
+                'genreLoyalty' => fn() => $this->buildGenreLoyalty($eventIds, $orderIds),
+                'checkinAnalysis' => fn() => $this->buildCheckinTimeAnalysis($eventIds),
+                'venueHealthScore' => fn() => $this->buildVenueHealthScore($eventIds, $orderIds),
+                'refundAnalysis' => fn() => $this->buildRefundAnalysis($eventIds),
+                'monthlyMomentum' => fn() => $this->buildMonthlyMomentum($eventIds, $orderIds),
+                'actionPriority' => fn() => $this->buildActionPriority($eventIds, $orderIds),
+            ];
+
+            foreach ($sections as $key => $builder) {
+                try {
+                    $data[$key] = $builder();
+                } catch (\Exception $e) {
+                    \Log::warning("VenueAnalytics section '{$key}' failed", ['error' => $e->getMessage()]);
+                    $data[$key] = $emptyData[$key] ?? [];
+                }
             }
-        });
+
+            return $data;
+        } catch (\Exception $e) {
+            \Log::error('VenueAnalyticsPage: getViewData failed completely', ['error' => $e->getMessage()]);
+            return $emptyData;
+        }
     }
 
     public function switchVenueApi(int $venueId): array
