@@ -1,225 +1,233 @@
 <x-filament-panels::page>
-    @if(!$tenant || $venues->isEmpty())
-        <div class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-            <x-heroicon-o-building-office-2 class="w-12 h-12 mx-auto text-yellow-500 dark:text-yellow-400 mb-3" />
-            <p class="text-yellow-800 dark:text-yellow-200 font-medium">No venues found.</p>
-            <p class="text-yellow-600 dark:text-yellow-300 text-sm mt-1">You need to own at least one venue to see venue usage.</p>
+    @if($venues->isEmpty())
+        <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-6 text-center">
+            <p class="text-gray-500 dark:text-gray-400">No venues found for this tenant.</p>
         </div>
     @else
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <!-- Total Events -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <x-heroicon-o-calendar class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_events']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Events</p>
-                    </div>
-                </div>
+        {{-- Summary Stats --}}
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $stats['total'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Total Events</p>
             </div>
-
-            <!-- Your Events -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                        <x-heroicon-o-calendar-days class="w-5 h-5 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['own_events']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Your Events</p>
-                    </div>
-                </div>
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
+                <p class="text-2xl font-bold text-emerald-500">{{ $stats['upcoming'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Live</p>
             </div>
-
-            <!-- Hosted Events -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <x-heroicon-o-users class="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['hosted_events']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hosted Events</p>
-                    </div>
-                </div>
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
+                <p class="text-2xl font-bold text-gray-400">{{ $stats['ended'] }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Ended</p>
             </div>
-
-            <!-- Upcoming -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <x-heroicon-o-clock class="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['upcoming_events']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Upcoming</p>
-                    </div>
-                </div>
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
+                <p class="text-2xl font-bold text-blue-400">{{ number_format($stats['total_sold']) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Tickets Sold</p>
             </div>
-
-            <!-- Hosted Tickets Sold -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-pink-100 dark:bg-pink-900/30 rounded-lg">
-                        <x-heroicon-o-ticket class="w-5 h-5 text-pink-600 dark:text-pink-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['hosted_tickets_sold']) }}</p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hosted Tickets</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hosted Revenue -->
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2.5 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                        <x-heroicon-o-banknotes class="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['hosted_revenue'], 2) }} <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $tenant->currency ?? 'EUR' }}</span></p>
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hosted Revenue</p>
-                    </div>
-                </div>
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-4 text-center">
+                <p class="text-2xl font-bold text-amber-400">{{ number_format($stats['total_revenue'], 2) }}</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Total Revenue</p>
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-6">
-            <div class="flex flex-wrap items-center gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Venue</label>
-                    <select
-                        wire:model.live="venueFilter"
-                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                    >
-                        <option value="all">All Venues</option>
-                        @foreach($venues as $venue)
-                            <option value="{{ $venue->id }}">{{ $venue->getTranslation('name', app()->getLocale()) }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-                    <select
-                        wire:model.live="statusFilter"
-                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                    >
-                        <option value="upcoming">Upcoming</option>
-                        <option value="past">Past</option>
-                        <option value="all">All</option>
-                    </select>
-                </div>
+        {{-- Venue Filter (only if multiple venues) --}}
+        @if($showVenueFilter)
+            <div class="flex items-center gap-3 mb-4">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Venue</span>
+                <select
+                    wire:model.live="venueFilter"
+                    class="text-sm rounded-xl border-0 bg-white dark:bg-gray-900 text-gray-300 py-2 px-3 focus:ring-2 focus:ring-primary-500"
+                >
+                    <option value="all">All Venues</option>
+                    @foreach($venueOptions as $id => $label)
+                        <option value="{{ $id }}">{{ $label }}</option>
+                    @endforeach
+                </select>
             </div>
+        @endif
+
+        {{-- Status Filter --}}
+        <div class="flex items-center gap-2 mb-4">
+            @php
+                $filters = [
+                    'all' => ['label' => 'All', 'count' => $stats['total'], 'color' => '#6366f1'],
+                    'live' => ['label' => 'Upcoming/Live', 'count' => $stats['upcoming'], 'color' => '#10b981'],
+                    'ended' => ['label' => 'Ended', 'count' => $stats['ended'], 'color' => '#64748b'],
+                    'cancelled' => ['label' => 'Cancelled', 'count' => $stats['cancelled'] ?? 0, 'color' => '#ef4444'],
+                    'unknown' => ['label' => 'Unknown', 'count' => $stats['unknown'] ?? 0, 'color' => '#94a3b8'],
+                ];
+            @endphp
+            @foreach($filters as $key => $filter)
+                @if($filter['count'] > 0 || $key === 'all')
+                    <button
+                        wire:click="$set('statusFilter', '{{ $key }}')"
+                        style="{{ $statusFilter === $key ? 'background:' . $filter['color'] . ';color:white;' : '' }}"
+                        class="px-4 py-2 rounded-xl text-sm font-bold transition
+                            {{ $statusFilter !== $key ? 'text-gray-400 hover:text-white' : '' }}"
+                    >
+                        {{ $filter['label'] }}
+                        @if($filter['count'] > 0)
+                            <span class="ml-1.5 {{ $statusFilter === $key ? 'opacity-80' : 'opacity-50' }}">{{ $filter['count'] }}</span>
+                        @endif
+                    </button>
+                @endif
+            @endforeach
         </div>
 
-        <!-- Events List -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Events at Your Venues</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ $events->count() }} event{{ $events->count() !== 1 ? 's' : '' }} found</p>
-            </div>
-
-            @if($events->isEmpty())
-                <div class="p-8 text-center">
-                    <x-heroicon-o-calendar class="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-3" />
-                    <p class="text-gray-500 dark:text-gray-400">No events found matching your filters.</p>
+        {{-- Events Table --}}
+        @if($events->isNotEmpty())
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 overflow-hidden">
+                {{-- Table header --}}
+                <div class="px-4 py-2 flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    <div class="flex-shrink-0 w-14 text-center">Date</div>
+                    <div class="flex-shrink-0 w-16 text-center">Days Left</div>
+                    <div class="flex-1 min-w-0">Event</div>
+                    <div class="flex-shrink-0 w-28">Seller</div>
+                    <div class="flex-shrink-0 w-32">Organizer</div>
+                    <div class="flex-shrink-0 text-right" style="min-width:70px;">Tickets</div>
+                    <div class="flex-shrink-0 w-24 text-right">Revenue</div>
+                    <div class="flex-shrink-0" style="min-width:90px;"></div>
                 </div>
-            @else
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @foreach($events as $event)
                         @php
-                            $eventStats = $this->getEventStats($event);
-                            $isOwn = $this->isOwnEvent($event);
+                            $title = is_array($event->title) ? ($event->title[app()->getLocale()] ?? $event->title['en'] ?? $event->title['ro'] ?? array_values($event->title)[0] ?? '—') : ($event->title ?? '—');
+                            $isUpcoming = $event->computed_status === 'live';
+                            $ts = $event->ticket_stats;
+                            $eventUrl = $event->public_url;
+
+                            // Venue + City
+                            $venueName = '';
+                            $venueCity = '';
+                            if ($event->venue) {
+                                $venueName = is_array($event->venue->name) ? ($event->venue->name[app()->getLocale()] ?? $event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '') : $event->venue->name;
+                                $venueCity = $event->venue->city ?? '';
+                            }
+
+                            // Organizer (from marketplace organizer or tenant)
+                            $mpOrg = $event->marketplaceOrganizer;
+                            $orgName = $mpOrg?->contact_name ?? $mpOrg?->name ?? $event->tenant?->public_name ?? $event->tenant?->name ?? '';
+                            $orgCompany = $mpOrg?->company_name ?? $event->tenant?->company_name ?? '';
+
+                            // Artists
+                            $artistNames = $event->artist_names ?? '';
                         @endphp
-                        <div class="p-5 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                            <div class="flex flex-wrap items-start justify-between gap-4">
-                                <!-- Event Info -->
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        @if($isOwn)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                Your Event
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
-                                                Hosted
-                                            </span>
-                                        @endif
-                                        @if($event->is_cancelled)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                                Cancelled
-                                            </span>
-                                        @elseif($event->is_sold_out)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                                Sold Out
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white truncate">
-                                        {{ $event->getTranslation('title', app()->getLocale()) }}
-                                    </h4>
-                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        <span class="flex items-center gap-1">
-                                            <x-heroicon-o-calendar class="w-4 h-4" />
-                                            {{ $event->start_date?->format('M d, Y') ?? 'TBD' }}
-                                            @if($event->start_time)
-                                                at {{ $event->start_time }}
-                                            @endif
-                                        </span>
-                                        <span class="flex items-center gap-1">
-                                            <x-heroicon-o-building-office-2 class="w-4 h-4" />
-                                            {{ $event->venue?->getTranslation('name', app()->getLocale()) ?? 'No venue' }}
-                                        </span>
-                                        @if(!$isOwn && $event->tenant)
-                                            <span class="flex items-center gap-1">
-                                                <x-heroicon-o-user-circle class="w-4 h-4" />
-                                                Organized by: <strong>{{ $event->tenant->public_name ?? $event->tenant->name }}</strong>
-                                            </span>
-                                        @endif
-                                    </div>
-                                </div>
+                        <div class="px-4 py-3 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
+                            {{-- Date --}}
+                            <div class="flex-shrink-0 w-14 text-center">
+                                @if($event->event_date)
+                                    <div class="text-xs font-medium text-gray-400 uppercase">{{ \Carbon\Carbon::parse($event->event_date)->format('M') }}</div>
+                                    <div class="text-xl font-bold {{ $isUpcoming ? 'text-emerald-500' : 'text-gray-400' }}">{{ \Carbon\Carbon::parse($event->event_date)->format('d') }}</div>
+                                    <div class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($event->event_date)->format('Y') }}</div>
+                                @else
+                                    <div class="text-xs text-gray-500 mt-2">TBD</div>
+                                @endif
+                            </div>
 
-                                <!-- Event Stats -->
-                                <div class="flex items-center gap-6">
-                                    <div class="text-center">
-                                        <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($eventStats['tickets_sold']) }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Tickets</p>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($eventStats['revenue'], 2) }}</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">{{ $tenant->currency ?? 'EUR' }}</p>
-                                    </div>
-                                    <div class="text-center">
-                                        <p class="text-xl font-bold {{ $eventStats['occupancy'] >= 80 ? 'text-green-600 dark:text-green-400' : ($eventStats['occupancy'] >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white') }}">{{ $eventStats['occupancy'] }}%</p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">Occupancy</p>
-                                    </div>
+                            {{-- Days Until (only for Live events) --}}
+                            <div class="flex-shrink-0 w-16 text-center">
+                                @if($isUpcoming && $event->days_until !== null)
+                                    <div class="text-lg font-bold {{ $event->days_until <= 7 ? 'text-red-400' : ($event->days_until <= 30 ? 'text-amber-400' : 'text-emerald-400') }}">{{ $event->days_until }}</div>
+                                    <div class="text-[10px] text-gray-500">days left</div>
+                                @endif
+                            </div>
 
-                                    <!-- Action Button -->
-                                    <div>
-                                        @if($isOwn)
-                                            <a href="{{ route('filament.tenant.resources.events.edit', ['record' => $event->id]) }}"
-                                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors">
-                                                <x-heroicon-o-pencil class="w-4 h-4" />
-                                                Edit
-                                            </a>
-                                        @else
-                                            <a href="{{ route('filament.tenant.resources.events.view-guest', ['record' => $event->id]) }}"
-                                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                                <x-heroicon-o-eye class="w-4 h-4" />
-                                                View Details
-                                            </a>
-                                        @endif
-                                    </div>
+                            {{-- Event Info --}}
+                            <div class="flex-1 min-w-0">
+                                @if($eventUrl)
+                                    <a href="{{ $eventUrl }}" target="_blank" class="font-semibold text-sm text-primary-400 hover:text-primary-300 truncate block transition">{{ $title }}</a>
+                                @else
+                                    <div class="font-semibold text-sm text-gray-900 dark:text-white truncate">{{ $title }}</div>
+                                @endif
+                                <div class="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
+                                    @if($venueName)
+                                        <span class="text-gray-300">{{ $venueName }}@if($venueCity), {{ $venueCity }}@endif</span>
+                                    @endif
+                                    @if($artistNames)
+                                        <span class="text-gray-500">{{ $artistNames }}</span>
+                                    @endif
+                                    @if($event->is_cancelled)
+                                        <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-400 text-[10px] font-semibold">CANCELLED</span>
+                                    @elseif($event->is_postponed)
+                                        <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px] font-semibold">POSTPONED</span>
+                                    @endif
                                 </div>
                             </div>
+
+                            {{-- Seller --}}
+                            <div class="flex-shrink-0 w-28 text-xs">
+                                @if($event->marketplace_client_id && $event->marketplaceClient)
+                                    <div class="text-gray-300 truncate">{{ $event->marketplaceClient->name }}</div>
+                                    <div class="text-[10px] text-emerald-400">marketplace</div>
+                                @elseif($event->tenant)
+                                    <div class="text-gray-300 truncate">{{ $event->tenant->public_name ?? $event->tenant->name }}</div>
+                                    <div class="text-[10px] text-gray-500">tenant</div>
+                                @endif
+                            </div>
+
+                            {{-- Organizer --}}
+                            <div class="flex-shrink-0 w-32 text-xs">
+                                @if($orgName)
+                                    <div class="text-gray-300 truncate">{{ $orgName }}</div>
+                                    @if($orgCompany && $orgCompany !== $orgName)
+                                        <div class="text-[10px] text-gray-500 truncate">{{ $orgCompany }}</div>
+                                    @endif
+                                @else
+                                    <div class="text-gray-500">—</div>
+                                @endif
+                            </div>
+
+                            {{-- Ticket Sales --}}
+                            <div class="flex-shrink-0 text-right">
+                                <div class="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {{ $ts['sold'] }} / {{ $ts['capacity'] ?: '—' }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    @if($ts['fill_rate'] > 0)
+                                        <span class="{{ $ts['fill_rate'] >= 80 ? 'text-emerald-400' : ($ts['fill_rate'] >= 50 ? 'text-blue-400' : 'text-gray-400') }}">{{ $ts['fill_rate'] }}% sold</span>
+                                    @else
+                                        <span class="text-gray-400">No sales</span>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Revenue --}}
+                            <div class="flex-shrink-0 w-24 text-right">
+                                @if($ts['revenue'] > 0)
+                                    <div class="text-sm font-semibold text-emerald-400">{{ number_format($ts['revenue'], 2) }}</div>
+                                    <div class="text-xs text-gray-500">RON</div>
+                                @else
+                                    <div class="text-xs text-gray-400">—</div>
+                                @endif
+                            </div>
+
+                            {{-- Action buttons --}}
+                            @if($eventUrl)
+                                <div class="flex-shrink-0 flex items-center gap-1.5">
+                                    {{-- Copy link --}}
+                                    <button onclick="navigator.clipboard.writeText('{{ $eventUrl }}').then(() => { this.querySelector('.cp-ok').classList.remove('hidden'); setTimeout(() => this.querySelector('.cp-ok').classList.add('hidden'), 1500); })"
+                                            class="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition" title="Copy link">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m9.86-2.54a4.5 4.5 0 00-6.364-6.364L4.5 8.25"/></svg>
+                                        <svg class="w-4 h-4 text-emerald-400 hidden cp-ok absolute" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                    </button>
+                                    {{-- Tickets --}}
+                                    <a href="{{ $eventUrl }}" target="_blank"
+                                       style="background: linear-gradient(135deg, #6366f1, #818cf8); color: white;"
+                                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold shadow-lg hover:opacity-90 transition-all duration-200">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                        Tickets
+                                    </a>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
-            @endif
-        </div>
+            </div>
+        @endif
+
+        @if($events->isEmpty())
+            <div class="fi-section rounded-xl bg-white dark:bg-gray-900 p-8 text-center">
+                <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+                <p class="text-gray-500 dark:text-gray-400">No events found for this filter.</p>
+            </div>
+        @endif
     @endif
 </x-filament-panels::page>
