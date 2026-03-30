@@ -4,8 +4,10 @@ namespace App\Filament\Marketplace\Resources\TaxTemplateResource\Pages;
 
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\TaxTemplateResource;
+use App\Models\Event;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplacePayout;
 use App\Models\MarketplaceTaxRegistry;
 use App\Models\MarketplaceTaxTemplate;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -42,29 +44,72 @@ class EditTaxTemplate extends EditRecord
                         ->searchable()
                         ->required()
                         ->live()
-                        ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('event_id', null)),
+                        ->afterStateUpdated(function (\Filament\Schemas\Components\Utilities\Set $set) {
+                            $set('event_id', null);
+                            $set('payout_id', null);
+                        }),
 
                     Forms\Components\Select::make('event_id')
                         ->label('Eveniment')
                         ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $organizerId = $get('organizer_id');
                             if (!$organizerId) return [];
-                            return MarketplaceEvent::where('marketplace_organizer_id', $organizerId)
-                                ->orderByDesc('starts_at')
-                                ->get()
-                                ->mapWithKeys(fn ($e) => [
-                                    $e->id => ($e->name ?? 'Event #' . $e->id) . ' (' . ($e->starts_at?->format('d.m.Y') ?? 'N/A') . ')',
+                            $marketplace = static::getMarketplaceClient();
+                            $now = now()->toDateString();
+
+                            $events = Event::where('marketplace_organizer_id', $organizerId)
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->get();
+
+                            $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
+                            $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
+                            $noDate = $events->filter(fn ($e) => !$e->event_date);
+
+                            return $live->concat($ended)->concat($noDate)
+                                ->mapWithKeys(function ($e) use ($now) {
+                                    $title = is_array($e->title)
+                                        ? ($e->title['ro'] ?? $e->title['en'] ?? array_values($e->title)[0] ?? 'Untitled')
+                                        : ($e->title ?? 'Event #' . $e->id);
+                                    $status = (!$e->event_date) ? 'TBD' : ($e->event_date >= $now ? '🟢' : '🔴');
+                                    $date = $e->event_date?->format('d.m.Y') ?? '';
+                                    return [$e->id => "{$status} {$title} ({$date})"];
+                                })
+                                ->toArray();
+                        })
+                        ->searchable()
+                        ->live()
+                        ->helperText('Opțional — lasă gol pentru test fără date de eveniment.'),
+
+                    Forms\Components\Select::make('payout_id')
+                        ->label('Decont existent')
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                            $organizerId = $get('organizer_id');
+                            if (!$organizerId) return [];
+                            $marketplace = static::getMarketplaceClient();
+
+                            $query = MarketplacePayout::where('marketplace_client_id', $marketplace?->id)
+                                ->where('marketplace_organizer_id', $organizerId)
+                                ->orderByDesc('created_at');
+
+                            if ($get('event_id')) {
+                                $query->where('event_id', $get('event_id'));
+                            }
+
+                            return $query->get()
+                                ->mapWithKeys(fn ($p) => [
+                                    $p->id => $p->reference . ' — ' . number_format($p->amount, 2) . ' ' . ($p->currency ?? 'RON') . ' (' . ($p->status ?? '') . ')',
                                 ])
                                 ->toArray();
                         })
                         ->searchable()
-                        ->helperText('Opțional — lasă gol pentru test fără date de eveniment.'),
+                        ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).'),
                 ])
                 ->action(function (array $data) {
                     $template = $this->record;
                     $marketplace = static::getMarketplaceClient();
                     $organizer = MarketplaceOrganizer::find($data['organizer_id']);
-                    $event = !empty($data['event_id']) ? MarketplaceEvent::with(['ticketTypes', 'venue'])->find($data['event_id']) : null;
+                    $event = !empty($data['event_id']) ? Event::with(['ticketTypes', 'venue'])->find($data['event_id']) : null;
+                    $payout = !empty($data['payout_id']) ? MarketplacePayout::find($data['payout_id']) : null;
                     $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)->active()->first();
 
                     // Build variables from real data
@@ -72,7 +117,8 @@ class EditTaxTemplate extends EditRecord
                         taxRegistry: $taxRegistry,
                         marketplace: $marketplace,
                         organizer: $organizer,
-                        event: $event,
+                        event: $event ?? $payout?->event,
+                        payout: $payout,
                     );
 
                     // Generate PDF pages
