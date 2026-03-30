@@ -3658,9 +3658,21 @@ class EventResource extends Resource
                                 }
                             }
 
+                            $count = 0;
                             foreach ($records as $record) {
-                                $record->update($updateData);
+                                $record->venue_id = $updateData['venue_id'];
+                                $record->address = $updateData['address'] ?? $record->address;
+                                if (isset($updateData['marketplace_city_id'])) {
+                                    $record->marketplace_city_id = $updateData['marketplace_city_id'];
+                                }
+                                $record->save();
+                                $count++;
                             }
+
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title("Venue alocat pentru {$count} evenimente")
+                                ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
 
