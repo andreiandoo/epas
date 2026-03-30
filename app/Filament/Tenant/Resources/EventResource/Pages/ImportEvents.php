@@ -15,7 +15,7 @@ class ImportEvents extends Page implements HasForms
 
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Import Evenimente';
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?string $navigationLabel = 'Import Events';
 
     protected string $view = 'filament.pages.import-events';
