@@ -1,65 +1,45 @@
 <?php
 
-namespace App\Filament\Tenant\Pages;
+namespace App\Filament\Resources\Venues\Pages;
 
+use App\Filament\Resources\Venues\VenueResource;
 use App\Models\Venue;
 use App\Support\VenueAnalyticsMethods;
-use Filament\Pages\Page;
-use Illuminate\Support\Carbon;
+use Filament\Resources\Pages\Page;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
-class VenueAnalytics extends Page
+class VenueAnalyticsPage extends Page
 {
     use VenueAnalyticsMethods;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
-    protected static ?string $navigationLabel = 'Venue Analytics';
-    protected static \UnitEnum|string|null $navigationGroup = 'Venue';
-    protected static ?int $navigationSort = 51;
-    protected string $view = 'filament.tenant.pages.venue-analytics';
+    protected static string $resource = VenueResource::class;
+    protected static string $view = 'filament.tenant.pages.venue-analytics';
 
     public Venue $venue;
     public array $venueIds = [];
     public array $allVenues = [];
     public ?int $selectedVenueId = null;
 
-    // Series for charts
     public array $seriesMonths = [];
     public array $seriesEvents = [];
     public array $seriesTickets = [];
     public array $seriesRevenue = [];
     public array $seriesOccupancy = [];
 
-    public static function shouldRegisterNavigation(): bool
+    public function mount(int|string $record): void
     {
-        $tenant = auth()->user()?->tenant;
-        if (!$tenant) return false;
-
-        // Show for Venue tenant types OR any tenant that owns venues
-        $venueTypes = ['venue', 'stadium-arena', 'philharmonic', 'opera', 'theater', 'museum'];
-        $isVenueType = $tenant->tenant_type && in_array($tenant->tenant_type->value, $venueTypes);
-
-        return $isVenueType || $tenant->ownsVenues();
-    }
-
-    public function mount(): void
-    {
-        $tenant = auth()->user()->tenant;
-        $venues = $tenant->venues()->orderBy('name')->get();
-
-        if ($venues->isEmpty()) {
-            abort(404, 'No venues linked to this tenant.');
-        }
-
-        $this->allVenues = $venues->map(function ($v) {
-            $name = is_array($v->name) ? ($v->name['en'] ?? $v->name['ro'] ?? reset($v->name) ?: '—') : $v->name;
-            if (is_string($name) && str_starts_with($name, '{')) { $d = json_decode($name, true); $name = $d['en'] ?? $d['ro'] ?? reset($d) ?: $name; }
-            return ['id' => $v->id, 'name' => $name, 'city' => $v->city, 'capacity' => $v->capacity ?: $v->capacity_total ?: 0];
-        })->toArray();
-        $this->venue = $venues->first();
+        $this->venue = Venue::findOrFail($record);
         $this->selectedVenueId = $this->venue->id;
-        $this->venueIds = $venues->pluck('id')->toArray();
+        $this->venueIds = [$this->venue->id];
+
+        // Build all venues list (just this one for admin context)
+        $name = $this->venue->getTranslation('name', 'ro') ?: $this->venue->getTranslation('name', 'en') ?: 'Venue';
+        $this->allVenues = [[
+            'id' => $this->venue->id,
+            'name' => is_string($name) ? $name : (is_array($name) ? ($name['ro'] ?? $name['en'] ?? reset($name) ?: 'Venue') : 'Venue'),
+            'city' => $this->venue->city,
+            'capacity' => $this->venue->capacity ?: $this->venue->capacity_total ?: 0,
+        ]];
 
         try {
             $eventIds = $this->venueEventIds();
@@ -70,15 +50,15 @@ class VenueAnalytics extends Page
             $this->seriesRevenue = $revenue;
             $this->seriesOccupancy = $occupancy;
         } catch (\Exception $e) {
-            \Log::warning('VenueAnalytics: buildVenueYearlySeries failed', ['error' => $e->getMessage()]);
+            \Log::warning('VenueAnalyticsPage: buildVenueYearlySeries failed', ['error' => $e->getMessage()]);
         }
     }
 
     public function getHeading(): string
     {
-        $name = $this->venue->name;
-        if (is_array($name)) $name = $name['en'] ?? $name['ro'] ?? reset($name) ?: 'Venue';
-        return $name;
+        $name = $this->venue->getTranslation('name', 'ro') ?: $this->venue->getTranslation('name', 'en');
+        if (is_array($name)) $name = $name['ro'] ?? $name['en'] ?? reset($name) ?: 'Venue';
+        return 'Analytics: ' . ($name ?: 'Venue');
     }
 
     public function getTitle(): string
@@ -88,7 +68,7 @@ class VenueAnalytics extends Page
 
     public function getViewData(): array
     {
-        $cacheKey = "venue_analytics_tenant_" . implode('_', $this->venueIds);
+        $cacheKey = "venue_analytics_admin_{$this->venue->id}";
         if (request()->has('refresh_analytics')) {
             Cache::forget($cacheKey);
         }
@@ -147,43 +127,17 @@ class VenueAnalytics extends Page
                     'actionPriority' => $this->buildActionPriority($eventIds, $orderIds),
                 ];
             } catch (\Exception $e) {
-                \Log::error('VenueAnalytics: getViewData failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                \Log::error('VenueAnalyticsPage: getViewData failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                 return $emptyData;
             }
         });
     }
 
-    /**
-     * Switch to a specific venue (for multi-venue tenants).
-     */
     public function switchVenueApi(int $venueId): array
     {
-        $tenant = auth()->user()->tenant;
-        $newVenue = $tenant->venues()->find($venueId);
-        if (!$newVenue) return ['error' => 'Venue not found'];
-
-        $this->venue = $newVenue;
-        $this->selectedVenueId = $newVenue->id;
-        $this->venueIds = [$newVenue->id];
-
-        // Clear cache
-        Cache::forget("venue_analytics_tenant_{$newVenue->id}");
-
-        // Rebuild series
-        $eventIds = $this->venueEventIds();
-        [$months, $events, $tickets, $revenue, $occupancy] = $this->buildVenueYearlySeries($eventIds);
-        $this->seriesMonths = $months;
-        $this->seriesEvents = $events;
-        $this->seriesTickets = $tickets;
-        $this->seriesRevenue = $revenue;
-        $this->seriesOccupancy = $occupancy;
-
-        return ['success' => true, 'venue_id' => $newVenue->id];
+        return ['error' => 'Not available in admin context'];
     }
 
-    /**
-     * Event Simulator: predict performance for a hypothetical event.
-     */
     public function simulateEventApi(string $genre, string $dayOfWeek, float $ticketPrice): array
     {
         $eventIds = $this->venueEventIds();
@@ -191,9 +145,6 @@ class VenueAnalytics extends Page
         return $this->simulateEvent($eventIds, $orderIds, $genre, $dayOfWeek, $ticketPrice);
     }
 
-    /**
-     * Generate event suggestions based on venue data.
-     */
     public function getEventSuggestionsApi(): array
     {
         $eventIds = $this->venueEventIds();
@@ -201,9 +152,6 @@ class VenueAnalytics extends Page
         return $this->buildEventSuggestions($eventIds, $orderIds);
     }
 
-    /**
-     * Generate creative calendar for an upcoming event.
-     */
     public function getCreativeCalendarApi(int $eventId): array
     {
         $eventIds = $this->venueEventIds();
@@ -211,9 +159,6 @@ class VenueAnalytics extends Page
         return $this->buildCreativeCalendar($eventId, $eventIds, $orderIds);
     }
 
-    /**
-     * Compare two events side-by-side.
-     */
     public function compareEventsApi(int $eventA, int $eventB): array
     {
         return $this->buildEventComparison($eventA, $eventB);

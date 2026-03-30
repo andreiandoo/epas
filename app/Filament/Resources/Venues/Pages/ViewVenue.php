@@ -27,6 +27,12 @@ class ViewVenue extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('analytics')
+                ->label('Analytics Dashboard')
+                ->icon('heroicon-o-chart-bar-square')
+                ->color('primary')
+                ->url(fn () => static::getResource()::getUrl('analytics', ['record' => $this->record])),
+
             Action::make('stats')
                 ->label('View Statistics')
                 ->icon('heroicon-o-chart-bar')

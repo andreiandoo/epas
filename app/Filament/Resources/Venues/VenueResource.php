@@ -464,6 +464,7 @@ class VenueResource extends Resource
             'view'   => Pages\ViewVenue::route('/{record}'),
             'edit'   => Pages\EditVenue::route('/{record}/edit'),
             'stats'  => Pages\VenueStats::route('/{record}/stats'),
+            'analytics' => Pages\VenueAnalyticsPage::route('/{record}/analytics'),
         ];
     }
 
