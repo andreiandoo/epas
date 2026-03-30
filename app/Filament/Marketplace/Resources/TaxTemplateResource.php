@@ -455,9 +455,9 @@ class TaxTemplateResource extends Resource
             'tax_registry_siruta_code' => '179141',
 
             // Marketplace
-            'marketplace_legal_name' => $marketplace?->legal_name ?? $marketplace?->company_name ?? 'Marketplace SRL',
-            'marketplace_vat' => $marketplace?->cui ?? $marketplace?->vat_number ?? 'RO98765432',
-            'marketplace_trade_register' => $marketplace?->reg_com ?? $marketplace?->trade_register ?? 'J40/1234/2024',
+            'marketplace_legal_name' => $marketplace?->company_name ?? $marketplace?->name ?? 'Marketplace SRL',
+            'marketplace_vat' => $marketplace?->cui ?? 'RO98765432',
+            'marketplace_trade_register' => $marketplace?->reg_com ?? 'J40/1234/2024',
             'marketplace_address' => $marketplace?->address ?? 'Bulevardul Central Nr. 1',
             'marketplace_city' => $marketplace?->city ?? 'București',
             'marketplace_state' => $marketplace?->state ?? 'București',
@@ -468,11 +468,14 @@ class TaxTemplateResource extends Resource
             'marketplace_contract_number' => $marketplace?->getCurrentContractNumber() ?? '1',
             'marketplace_signature_image' => $marketplace?->signature_image
                 ? '<img src="' . \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />'
-                : '<span style="color:#999;font-style:italic;">[Signature Image]</span>',
+                : '<span style="color:#999;font-style:italic;">[Semnătura]</span>',
+            'marketplace_logo_url' => $marketplace?->settings['logo_url'] ?? '',
+            'marketplace_invoice_preparer' => $marketplace?->settings['invoice_preparer'] ?? 'Nume Prenume',
 
             // Organizer
             'organizer_name' => 'Sample Organizer',
             'organizer_email' => 'organizer@sample.ro',
+            'organizer_phone' => '+40 721 123 456',
             'organizer_company_name' => 'Event Organizer SRL',
             'organizer_tax_id' => 'RO11223344',
             'organizer_registration_number' => 'J40/5678/2024',
@@ -541,6 +544,26 @@ class TaxTemplateResource extends Resource
             'payout_fees_amount' => '0.00',
             'payout_adjustments_amount' => '118.00',
             'payout_payment_reference' => 'VB-2024-00123',
+            'payout_payment_method' => 'virament bancar',
+            'payout_bank_name' => 'Banca Transilvania',
+            'payout_iban' => 'RO49BTRL1234567890123456',
+            'payout_account_holder' => 'Event Organizer SRL',
+            'payout_period_start' => date('01.m.Y'),
+            'payout_period_end' => date('d.m.Y'),
+            'payout_adjustments_note' => 'Bilete returnate',
+            'payout_sequence_number' => '1',
+            'payout_advance_amount' => '0.00',
+
+            // Payout - Bilete
+            'tickets_breakdown_label' => ' (150lei*2+350lei*1)',
+            'total_tickets_refunded' => '0',
+
+            // Payout - Bilete Pretipărite
+            'payout_preprinted_ticket_fee' => '2.00',
+            'total_preprinted_tickets' => '0',
+            'payout_preprinted_amount' => '0.00',
+            'payout_preprinted_shipping_date' => '',
+            'payout_shipping_amount' => '0.00',
 
             // Invoice
             'invoice_number' => 'FACT-00456',
