@@ -52,6 +52,7 @@ canvas{width:100%!important;}
     simGenre: '', simDay: 'Saturday', simPrice: 100, simResult: null, simLoading: false,
     suggestions: null, sugLoading: false,
     calendarResult: null, calLoading: false,
+    cmpA: null, cmpB: null, cmpResult: null, cmpLoading: false,
     runSimulation() {
         if (!this.simGenre) return;
         this.simLoading = true;
@@ -64,6 +65,11 @@ canvas{width:100%!important;}
     loadCalendar(eventId) {
         this.calLoading = true;
         $wire.call('getCreativeCalendarApi', eventId).then(r => { this.calendarResult = r; this.calLoading = false; });
+    },
+    runComparison() {
+        if (!this.cmpA || !this.cmpB) return;
+        this.cmpLoading = true;
+        $wire.call('compareEventsApi', parseInt(this.cmpA), parseInt(this.cmpB)).then(r => { this.cmpResult = r; this.cmpLoading = false; });
     }
 }">
 
@@ -188,6 +194,79 @@ canvas{width:100%!important;}
             </div></div>
             @endif
         </div>
+
+        {{-- Competitor Benchmark + Revenue per Seat --}}
+        @php $bench = $competitorBenchmark ?? []; $rps = $revenuePerSeat ?? []; @endphp
+        <div class="g2" style="margin-bottom:14px;">
+            @if(!empty($bench) && $bench['city_avg'])
+            <div class="card"><div class="card-h">Competitor Benchmark — {{ $venue->city ?? '' }}</div><div class="card-b">
+                <div style="display:flex;gap:20px;margin-bottom:12px;">
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">Your Avg ST</div><div style="font-size:24px;font-weight:700;color:var(--accent);">{{ $bench['my']['avg_st'] }}%</div></div>
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">City Avg ST</div><div style="font-size:24px;font-weight:700;color:var(--muted);">{{ $bench['city_avg']['avg_st'] }}%</div></div>
+                    @if($bench['vs_city'] !== null)
+                    <div style="text-align:center;"><div style="color:var(--muted);font-size:11px;">Difference</div><div style="font-size:24px;font-weight:700;color:{{ $bench['vs_city'] >= 0 ? 'var(--success)' : 'var(--danger)' }}">{{ $bench['vs_city'] >= 0 ? '+' : '' }}{{ $bench['vs_city'] }}%</div></div>
+                    @endif
+                </div>
+                @if(!empty($bench['competitors']))
+                    <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;">Other venues in city</div>
+                    @foreach(array_slice($bench['competitors'], 0, 5) as $comp)
+                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(122,162,255,.08);font-size:12px;">
+                            <span>{{ $comp['name'] }} <span style="color:var(--muted);">({{ number_format($comp['capacity']) }} cap)</span></span>
+                            <span>{{ $comp['events'] }} ev · <span style="color:{{ $comp['avg_st'] > $bench['my']['avg_st'] ? 'var(--danger)' : 'var(--success)' }};font-weight:600;">{{ $comp['avg_st'] }}% ST</span> · {{ $comp['avg_price'] }} RON</span>
+                        </div>
+                    @endforeach
+                @endif
+            </div></div>
+            @endif
+
+            @if(!empty($rps) && ($rps['avg_rev_per_seat'] ?? 0) > 0)
+            <div class="card"><div class="card-h">Revenue per Seat</div><div class="card-b">
+                <div style="display:flex;gap:20px;margin-bottom:12px;">
+                    <div><div style="color:var(--muted);font-size:11px;">Avg Rev / Seat / Event</div><div style="font-size:24px;font-weight:700;color:var(--warn);">{{ number_format($rps['avg_rev_per_seat'], 0) }} RON</div></div>
+                    <div><div style="color:var(--muted);font-size:11px;">Venue Capacity</div><div style="font-size:24px;font-weight:700;">{{ number_format($rps['capacity']) }}</div></div>
+                </div>
+                @if($rps['best_event'])
+                    <div style="padding:8px 12px;border-radius:8px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.15);font-size:12px;">
+                        Best: <strong>{{ $rps['best_event']['title'] }}</strong> — {{ number_format($rps['best_event']['rev_per_seat'], 0) }} RON/seat ({{ number_format($rps['best_event']['revenue']) }} RON total)
+                    </div>
+                @endif
+            </div></div>
+            @endif
+        </div>
+
+        {{-- Event Comparison Tool --}}
+        @if(!empty($evPerf) && count($evPerf) >= 2)
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Event Comparison — Side by Side</div><div class="card-b">
+            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Event A</label>
+                    <select x-model="cmpA" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;max-width:280px;">
+                        <option value="">Select event...</option>
+                        @foreach(array_slice($evPerf, 0, 30) as $ev)<option value="{{ $ev['id'] }}">{{ \Illuminate\Support\Str::limit($ev['title'], 35) }} ({{ $ev['date'] ? \Carbon\Carbon::parse($ev['date'])->format('d M y') : '' }})</option>@endforeach
+                    </select></div>
+                <div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">Event B</label>
+                    <select x-model="cmpB" style="background:var(--card);border:1px solid var(--ring);border-radius:8px;color:var(--text);padding:8px 10px;font-size:12px;max-width:280px;">
+                        <option value="">Select event...</option>
+                        @foreach(array_slice($evPerf, 0, 30) as $ev)<option value="{{ $ev['id'] }}">{{ \Illuminate\Support\Str::limit($ev['title'], 35) }} ({{ $ev['date'] ? \Carbon\Carbon::parse($ev['date'])->format('d M y') : '' }})</option>@endforeach
+                    </select></div>
+                <button @click="runComparison()" style="padding:8px 18px;border-radius:8px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);color:var(--accent);font-weight:600;font-size:12px;cursor:pointer;" :disabled="cmpLoading || !cmpA || !cmpB">Compare</button>
+            </div>
+            <template x-if="cmpResult && !cmpResult.error">
+                <div>
+                    <table class="tbl"><thead><tr><th>Metric</th><th style="text-align:right" x-text="cmpResult.event_a.title"></th><th style="text-align:right" x-text="cmpResult.event_b.title"></th></tr></thead>
+                    <tbody>
+                        <tr><td style="font-weight:600;">Date</td><td style="text-align:right" x-text="cmpResult.event_a.date"></td><td style="text-align:right" x-text="cmpResult.event_b.date"></td></tr>
+                        <tr><td style="font-weight:600;">Artists</td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_a.artists"></td><td style="text-align:right;color:var(--muted);font-size:12px;" x-text="cmpResult.event_b.artists"></td></tr>
+                        <tr><td style="font-weight:600;">Sold / Cap</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.sold + ' / ' + cmpResult.event_a.capacity"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.sold + ' / ' + cmpResult.event_b.capacity"></td></tr>
+                        <tr><td style="font-weight:600;">Sell-Through</td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_a.sell_through||0) >= (cmpResult.event_b.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_a.sell_through ?? '—') + '%'"></td><td style="text-align:right;font-weight:700;" :style="'color:' + ((cmpResult.event_b.sell_through||0) >= (cmpResult.event_a.sell_through||0) ? 'var(--success)' : 'var(--danger)')" x-text="(cmpResult.event_b.sell_through ?? '—') + '%'"></td></tr>
+                        <tr><td style="font-weight:600;">Revenue</td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_a.revenue).toLocaleString() + ' RON'"></td><td style="text-align:right;color:var(--warn);font-family:monospace;" x-text="Number(cmpResult.event_b.revenue).toLocaleString() + ' RON'"></td></tr>
+                        <tr><td style="font-weight:600;">Avg Ticket Price</td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_a.avg_price + ' RON'"></td><td style="text-align:right;font-family:monospace;" x-text="cmpResult.event_b.avg_price + ' RON'"></td></tr>
+                        <tr><td style="font-weight:600;">Avg Lead Time</td><td style="text-align:right;" x-text="cmpResult.event_a.avg_lead_days + 'd'"></td><td style="text-align:right;" x-text="cmpResult.event_b.avg_lead_days + 'd'"></td></tr>
+                        <tr><td style="font-weight:600;">Check-in Rate</td><td style="text-align:right;" x-text="(cmpResult.event_a.checkin_rate ?? '—') + '%'"></td><td style="text-align:right;" x-text="(cmpResult.event_b.checkin_rate ?? '—') + '%'"></td></tr>
+                    </tbody></table>
+                </div>
+            </template>
+        </div></div>
+        @endif
     </div>
 
     {{-- ═══ TAB: FINANCIAL ═══ --}}
@@ -390,6 +469,19 @@ canvas{width:100%!important;}
             </tbody></table>
         </div>
         @endif
+
+        {{-- Genre Loyalty --}}
+        @php $gLoyalty = $genreLoyalty ?? []; @endphp
+        @if(!empty($gLoyalty))
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Recurring Customers by Genre — Which genres build loyalty?</div>
+            <table class="tbl"><thead><tr><th>Genre</th><th style="text-align:right">Total Buyers</th><th style="text-align:right">Repeat Buyers</th><th style="text-align:right">Repeat Rate</th><th style="text-align:right">Avg Events/Buyer</th></tr></thead>
+            <tbody>
+            @foreach($gLoyalty as $gl)
+                <tr><td style="font-weight:600">{{ $gl['genre'] }}</td><td style="text-align:right">{{ number_format($gl['total_buyers']) }}</td><td style="text-align:right;color:var(--accent)">{{ number_format($gl['repeat_buyers']) }}</td><td style="text-align:right;font-weight:700;color:{{ $gl['repeat_rate'] >= 20 ? 'var(--success)' : ($gl['repeat_rate'] >= 10 ? 'var(--warn)' : 'var(--muted)') }}">{{ $gl['repeat_rate'] }}%</td><td style="text-align:right;font-family:monospace">{{ $gl['avg_events_per_buyer'] }}</td></tr>
+            @endforeach
+            </tbody></table>
+        </div>
+        @endif
     </div>
 
     {{-- ═══ TAB: ARTISTS ═══ --}}
@@ -542,6 +634,33 @@ canvas{width:100%!important;}
             </div></div>
             @endif
         </div>
+
+        {{-- Check-in Time Analysis --}}
+        @php $ciAnalysis = $checkinAnalysis ?? []; @endphp
+        @if(!empty($ciAnalysis) && ($ciAnalysis['total_checkins'] ?? 0) > 0)
+        <div class="card" style="margin-bottom:14px;"><div class="card-h">Check-in / Arrival Time Analysis ({{ number_format($ciAnalysis['total_checkins']) }} check-ins)</div><div class="card-b">
+            <div style="display:flex;gap:20px;margin-bottom:14px;">
+                <div><div style="color:var(--muted);font-size:11px;">Peak Hour</div><div style="font-size:22px;font-weight:700;color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">50% Arrived By</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p50_arrival'] }}</div></div>
+                <div><div style="color:var(--muted);font-size:11px;">80% Arrived By</div><div style="font-size:22px;font-weight:700;">{{ $ciAnalysis['p80_arrival'] }}</div></div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:2px;height:80px;">
+                @foreach($ciAnalysis['hourly'] as $h)
+                    @php $maxPct = collect($ciAnalysis['hourly'])->max('pct') ?: 1; $barH = $h['pct'] > 0 ? max(4, round($h['pct'] / $maxPct * 70)) : 0; @endphp
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;" title="{{ $h['hour'] }}: {{ $h['count'] }} check-ins ({{ $h['pct'] }}%)">
+                        <div style="width:100%;height:{{ $barH }}px;background:{{ $h['pct'] > 0 ? 'linear-gradient(180deg, var(--accent), rgba(34,211,238,0.3))' : 'transparent' }};border-radius:3px 3px 0 0;min-width:4px;"></div>
+                        @if($h['pct'] > 5)<span style="font-size:8px;color:var(--muted);">{{ substr($h['hour'], 0, 2) }}</span>@endif
+                    </div>
+                @endforeach
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:2px;">
+                <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+            </div>
+            <div style="margin-top:10px;padding:8px 12px;border-radius:8px;background:rgba(34,211,238,.04);border:1px solid rgba(34,211,238,.1);font-size:12px;color:var(--muted);">
+                Tip: Open F&B service by <strong style="color:var(--text);">{{ $ciAnalysis['p50_arrival'] }}</strong>. Staff peak needed at <strong style="color:var(--accent);">{{ $ciAnalysis['peak_hour'] }}</strong>. Security can scale down after <strong style="color:var(--text);">{{ $ciAnalysis['p80_arrival'] }}</strong>.
+            </div>
+        </div></div>
+        @endif
     </div>
 
     {{-- ═══ TAB: OPPORTUNITIES ═══ --}}
@@ -834,6 +953,31 @@ canvas{width:100%!important;}
         </div>
         @else
         <div class="card"><div class="card-b" style="text-align:center;color:var(--muted);padding:40px;">No upcoming events at this venue.</div></div>
+        @endif
+
+        {{-- Churn Risk Alerts --}}
+        @php $churn = $churnAlerts ?? []; @endphp
+        @if(!empty($churn))
+        <div class="card" style="margin-bottom:14px;"><div class="card-h" style="color:var(--danger);">Churn Risk Alerts ({{ count($churn) }} events need attention)</div><div class="card-b">
+            @foreach($churn as $ca)
+                @php $riskColor = match($ca['risk']) { 'critical' => 'var(--danger)', 'high' => 'var(--warn)', default => 'var(--muted)' }; @endphp
+                <div style="padding:14px;border-radius:10px;border:1px solid {{ $riskColor }}33;background:{{ $riskColor }}08;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div>
+                            <span class="chip" style="color:{{ $riskColor }};border-color:{{ $riskColor }}33;background:{{ $riskColor }}15;text-transform:uppercase;">{{ $ca['risk'] }}</span>
+                            <strong style="margin-left:8px;">{{ \Illuminate\Support\Str::limit($ca['title'], 40) }}</strong>
+                            <span style="color:var(--muted);font-size:12px;margin-left:8px;">{{ $ca['days_until'] }}d left · {{ $ca['sold'] }}/{{ $ca['capacity'] }} ({{ $ca['sell_through'] }}%)</span>
+                        </div>
+                        <span style="font-size:12px;color:{{ $riskColor }};font-weight:700;">{{ $ca['gap'] }} tickets to fill</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--muted);">
+                        @foreach($ca['suggestions'] as $sug)
+                            <div style="padding:3px 0;padding-left:14px;position:relative;"><span style="position:absolute;left:0;color:{{ $riskColor }};">→</span> {{ $sug }}</div>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
+        </div></div>
         @endif
     </div>
 

@@ -1030,4 +1030,266 @@ trait VenueAnalyticsMethods
             'phases' => $phases,
         ];
     }
+
+    private function buildCompetitorBenchmark(array $eventIds): array
+    {
+        $venueCity = $this->venue->city ?? null;
+        if (!$venueCity || empty($eventIds)) return [];
+
+        // This venue's stats
+        $myStats = DB::table('ticket_types as tt')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->whereIn('e.id', $eventIds)->where('tt.quota_total', '>', 0)
+            ->selectRaw("AVG(LEAST(tt.quota_sold::float / tt.quota_total, 1.0) * 100) as avg_st, AVG(tt.price_cents / 100) as avg_price, AVG(tt.quota_sold * tt.price_cents / 100) as avg_rev_per_tt, COUNT(DISTINCT e.id) as events")
+            ->first();
+
+        // Other venues in same city
+        $otherVenueIds = DB::table('venues')
+            ->whereRaw('LOWER(city) = LOWER(?)', [$venueCity])
+            ->whereNotIn('id', $this->venueIds)
+            ->pluck('id')->toArray();
+
+        if (empty($otherVenueIds)) return ['my' => ['avg_st' => round((float) ($myStats->avg_st ?? 0), 1), 'avg_price' => round((float) ($myStats->avg_price ?? 0), 0), 'events' => (int) ($myStats->events ?? 0)], 'city_avg' => null, 'competitors' => []];
+
+        $cityStats = DB::table('ticket_types as tt')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->whereIn('e.venue_id', $otherVenueIds)->where('tt.quota_total', '>', 0)
+            ->where('e.event_date', '>=', now()->subYear()->toDateString())
+            ->selectRaw("AVG(LEAST(tt.quota_sold::float / tt.quota_total, 1.0) * 100) as avg_st, AVG(tt.price_cents / 100) as avg_price, COUNT(DISTINCT e.id) as events")
+            ->first();
+
+        // Top competitors
+        $competitors = DB::table('venues as v')
+            ->join('events as e', 'e.venue_id', '=', 'v.id')
+            ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
+            ->whereIn('v.id', $otherVenueIds)->where('tt.quota_total', '>', 0)
+            ->where('e.event_date', '>=', now()->subYear()->toDateString())
+            ->selectRaw("v.id, v.name, v.capacity, COUNT(DISTINCT e.id) as events, AVG(LEAST(tt.quota_sold::float / tt.quota_total, 1.0) * 100) as avg_st, AVG(tt.price_cents / 100) as avg_price")
+            ->groupBy('v.id', 'v.name', 'v.capacity')
+            ->havingRaw('COUNT(DISTINCT e.id) >= 3')
+            ->orderByDesc('events')->limit(8)->get()
+            ->map(fn ($r) => ['name' => $this->decodeJsonName($r->name), 'capacity' => (int) ($r->capacity ?? 0), 'events' => (int) $r->events, 'avg_st' => round((float) ($r->avg_st ?? 0), 1), 'avg_price' => round((float) ($r->avg_price ?? 0), 0)])->toArray();
+
+        $mySt = round((float) ($myStats->avg_st ?? 0), 1);
+        $citySt = round((float) ($cityStats->avg_st ?? 0), 1);
+
+        return [
+            'my' => ['avg_st' => $mySt, 'avg_price' => round((float) ($myStats->avg_price ?? 0), 0), 'events' => (int) ($myStats->events ?? 0)],
+            'city_avg' => ['avg_st' => $citySt, 'avg_price' => round((float) ($cityStats->avg_price ?? 0), 0), 'events' => (int) ($cityStats->events ?? 0)],
+            'vs_city' => $citySt > 0 ? round($mySt - $citySt, 1) : null,
+            'competitors' => $competitors,
+        ];
+    }
+
+    private function buildChurnRiskAlerts(array $eventIds, array $orderIds): array
+    {
+        $upcoming = $this->buildUpcomingVenueEvents($eventIds);
+        if (empty($upcoming)) return [];
+
+        $alerts = [];
+        foreach ($upcoming as $ue) {
+            $daysLeft = $ue['days_until'] ?? 999;
+            $st = $ue['sell_through'] ?? 0;
+            $sold = $ue['sold'] ?? 0;
+            $cap = $ue['capacity'] ?? 0;
+
+            $risk = null; $suggestions = [];
+
+            if ($daysLeft <= 14 && $st < 30 && $cap > 0) {
+                $risk = 'critical';
+                $suggestions = [
+                    'Reduce ticket price by 20-30% for remaining tickets',
+                    'Launch aggressive retargeting campaign (all website visitors last 30d)',
+                    'SMS blast to past buyers with discount code',
+                    'Consider adding a support act to boost appeal',
+                    'Partner with influencers for last-push promotion',
+                ];
+            } elseif ($daysLeft <= 30 && $st < 40 && $cap > 0) {
+                $risk = 'high';
+                $suggestions = [
+                    'Increase ad spend by 50% for next 2 weeks',
+                    'Launch "early urgency" campaign — limited seats messaging',
+                    'Email blast to genre-specific segment from past buyers',
+                    'Consider flash sale / group discount (4+ tickets)',
+                ];
+            } elseif ($daysLeft <= 45 && $st < 25 && $cap > 0) {
+                $risk = 'medium';
+                $suggestions = [
+                    'Review pricing — may be overpriced for this genre/day',
+                    'Boost organic social posting frequency',
+                    'Consider cross-promotion with related upcoming events',
+                ];
+            }
+
+            if ($risk) {
+                $alerts[] = [
+                    'event_id' => $ue['id'], 'title' => $ue['title'], 'date' => $ue['date'],
+                    'days_until' => $daysLeft, 'sold' => $sold, 'capacity' => $cap,
+                    'sell_through' => $st, 'risk' => $risk,
+                    'gap' => $cap > 0 ? $cap - $sold : 0,
+                    'suggestions' => $suggestions,
+                ];
+            }
+        }
+        return $alerts;
+    }
+
+    private function buildRevenuePerSeat(array $eventIds): array
+    {
+        if (empty($eventIds)) return [];
+        $cap = $this->venue->capacity ?: $this->venue->capacity_total ?: 0;
+        if ($cap <= 0) return [];
+
+        $totalRev = (float) DB::table('ticket_types')->whereIn('event_id', $eventIds)
+            ->selectRaw('COALESCE(SUM(quota_sold * price_cents / 100), 0) as rev')->value('rev');
+        $totalEvents = count(array_unique($eventIds));
+        $revPerSeat = $totalEvents > 0 ? round($totalRev / ($cap * $totalEvents), 2) : 0;
+
+        // Best event by rev/seat
+        $bestEvent = DB::table('events as e')
+            ->leftJoin(DB::raw("(SELECT event_id, SUM(quota_sold * price_cents / 100) as rev FROM ticket_types GROUP BY event_id) as ts"), 'ts.event_id', '=', 'e.id')
+            ->whereIn('e.id', $eventIds)->where('ts.rev', '>', 0)
+            ->selectRaw("e.id, e.title, e.event_date, ts.rev, (ts.rev / {$cap}) as rev_per_seat")
+            ->orderByDesc('rev_per_seat')->first();
+
+        // Monthly trend
+        $monthlyRps = DB::table('events as e')
+            ->leftJoin(DB::raw("(SELECT event_id, SUM(quota_sold * price_cents / 100) as rev FROM ticket_types GROUP BY event_id) as ts"), 'ts.event_id', '=', 'e.id')
+            ->whereIn('e.id', $eventIds)->whereNotNull('e.event_date')
+            ->where('e.event_date', '>=', now()->subYear()->toDateString())
+            ->selectRaw("TO_CHAR(e.event_date, 'YYYY-MM') as ym, SUM(ts.rev) / (COUNT(DISTINCT e.id) * {$cap}) as rps")
+            ->groupBy('ym')->orderBy('ym')->get()
+            ->map(fn ($r) => ['month' => $r->ym, 'rev_per_seat' => round((float) $r->rps, 2)])->toArray();
+
+        return [
+            'capacity' => $cap,
+            'avg_rev_per_seat' => $revPerSeat,
+            'best_event' => $bestEvent ? ['title' => $this->decodeJsonName($bestEvent->title), 'date' => $bestEvent->event_date, 'rev_per_seat' => round((float) $bestEvent->rev_per_seat, 2), 'revenue' => round((float) $bestEvent->rev, 0)] : null,
+            'monthly_trend' => $monthlyRps,
+        ];
+    }
+
+    private function buildEventComparison(int $eventIdA, int $eventIdB): array
+    {
+        $getEventData = function (int $eid) {
+            $e = DB::table('events as e')
+                ->leftJoin(DB::raw("(SELECT event_id, SUM(quota_sold) as sold, SUM(CASE WHEN quota_total>0 THEN quota_total ELSE 0 END) as cap, SUM(quota_sold * price_cents / 100) as rev, AVG(price_cents/100) as avg_price FROM ticket_types GROUP BY event_id) as ts"), 'ts.event_id', '=', 'e.id')
+                ->leftJoin(DB::raw("(SELECT ea.event_id, string_agg(a.name, ', ' ORDER BY ea.is_headliner DESC) as artists FROM event_artist ea JOIN artists a ON a.id=ea.artist_id GROUP BY ea.event_id) as ar"), 'ar.event_id', '=', 'e.id')
+                ->where('e.id', $eid)
+                ->select('e.id', 'e.title', 'e.event_date', 'ar.artists', 'ts.sold', 'ts.cap', 'ts.rev', 'ts.avg_price')
+                ->first();
+            if (!$e) return null;
+            $sold = (int) ($e->sold ?? 0); $cap = (int) ($e->cap ?? 0);
+
+            // Lead time
+            $avgLead = DB::table('orders as o')
+                ->join('tickets as t', 't.order_id', '=', 'o.id')
+                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->where(function ($q) use ($eid) { $q->where('tt.event_id', $eid)->orWhere('t.event_id', $eid); })
+                ->whereIn('o.status', ['paid', 'confirmed', 'completed'])
+                ->whereNotNull('o.paid_at')
+                ->selectRaw("AVG(GREATEST(0, ('{$e->event_date}'::date - o.paid_at::date))) as avg_lead")
+                ->value('avg_lead');
+
+            // Check-in
+            $ci = DB::table('tickets as t')
+                ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+                ->where('t.status', 'valid')
+                ->where(function ($q) use ($eid) { $q->where('tt.event_id', $eid)->orWhere('t.event_id', $eid); })
+                ->selectRaw("COUNT(t.id) as tot, SUM(CASE WHEN t.checked_in_at IS NOT NULL THEN 1 ELSE 0 END) as ci")
+                ->first();
+
+            return [
+                'id' => $e->id, 'title' => $this->decodeJsonName($e->title), 'date' => $e->event_date,
+                'artists' => $e->artists ?? '—',
+                'sold' => $sold, 'capacity' => $cap,
+                'sell_through' => $cap > 0 ? round($sold / $cap * 100, 1) : null,
+                'revenue' => round((float) ($e->rev ?? 0), 0),
+                'avg_price' => round((float) ($e->avg_price ?? 0), 0),
+                'avg_lead_days' => round((float) ($avgLead ?? 0), 0),
+                'checkin_rate' => ($ci && $ci->tot > 0) ? round($ci->ci / $ci->tot * 100, 1) : null,
+            ];
+        };
+
+        $a = $getEventData($eventIdA);
+        $b = $getEventData($eventIdB);
+        if (!$a || !$b) return ['error' => 'Event not found'];
+        return ['event_a' => $a, 'event_b' => $b];
+    }
+
+    private function buildGenreLoyalty(array $eventIds, array $orderIds): array
+    {
+        if (empty($orderIds)) return [];
+
+        // Get buyer → events → genres
+        $buyerEvents = DB::table('orders as o')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('event_artist as ea', function ($join) { $join->on('ea.event_id', '=', DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)')); })
+            ->join('artist_artist_genre as aag', 'aag.artist_id', '=', 'ea.artist_id')
+            ->join('artist_genres as ag', 'ag.id', '=', 'aag.artist_genre_id')
+            ->whereIn('o.id', array_slice($orderIds, 0, 5000))
+            ->selectRaw("ag.name as genre, COALESCE(o.marketplace_customer_id, o.customer_id) as buyer_id, COUNT(DISTINCT COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)) as events_attended")
+            ->groupBy('ag.name', DB::raw('COALESCE(o.marketplace_customer_id, o.customer_id)'))
+            ->get();
+
+        $byGenre = $buyerEvents->groupBy('genre');
+
+        return $byGenre->map(function ($buyers, $genre) {
+            $total = $buyers->count();
+            $repeaters = $buyers->where('events_attended', '>=', 2)->count();
+            $avgEvents = round($buyers->avg('events_attended'), 1);
+            return [
+                'genre' => $this->decodeJsonName($genre),
+                'total_buyers' => $total,
+                'repeat_buyers' => $repeaters,
+                'repeat_rate' => $total > 0 ? round($repeaters / $total * 100, 1) : 0,
+                'avg_events_per_buyer' => $avgEvents,
+            ];
+        })->sortByDesc('repeat_rate')->values()->take(10)->toArray();
+    }
+
+    private function buildCheckinTimeAnalysis(array $eventIds): array
+    {
+        if (empty($eventIds)) return [];
+
+        $checkins = DB::table('tickets as t')
+            ->leftJoin('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->whereIn(DB::raw('COALESCE(tt.event_id, t.event_id, t.marketplace_event_id)'), $eventIds)
+            ->whereNotNull('t.checked_in_at')
+            ->selectRaw("EXTRACT(HOUR FROM t.checked_in_at)::int as hour, COUNT(*) as cnt")
+            ->groupBy('hour')->orderBy('hour')->get();
+
+        if ($checkins->isEmpty()) return [];
+
+        $totalCheckins = $checkins->sum('cnt');
+        $peakHour = $checkins->sortByDesc('cnt')->first();
+
+        // Build 24h distribution
+        $hourly = [];
+        for ($h = 0; $h < 24; $h++) {
+            $row = $checkins->firstWhere('hour', $h);
+            $cnt = $row ? (int) $row->cnt : 0;
+            $hourly[] = ['hour' => sprintf('%02d:00', $h), 'count' => $cnt, 'pct' => $totalCheckins > 0 ? round($cnt / $totalCheckins * 100, 1) : 0];
+        }
+
+        // Door-to-peak: when did most people arrive relative to event start?
+        $earlyHours = $checkins->where('hour', '>=', 12)->where('hour', '<=', 23);
+        $cumulative = 0;
+        $p50Hour = null; $p80Hour = null;
+        foreach ($earlyHours->sortBy('hour') as $row) {
+            $cumulative += $row->cnt;
+            if ($p50Hour === null && $cumulative >= $totalCheckins * 0.5) $p50Hour = $row->hour;
+            if ($p80Hour === null && $cumulative >= $totalCheckins * 0.8) { $p80Hour = $row->hour; break; }
+        }
+
+        return [
+            'total_checkins' => $totalCheckins,
+            'peak_hour' => $peakHour ? sprintf('%02d:00', $peakHour->hour) : '—',
+            'peak_count' => $peakHour ? (int) $peakHour->cnt : 0,
+            'p50_arrival' => $p50Hour !== null ? sprintf('%02d:00', $p50Hour) : '—',
+            'p80_arrival' => $p80Hour !== null ? sprintf('%02d:00', $p80Hour) : '—',
+            'hourly' => $hourly,
+        ];
+    }
 }
