@@ -56,16 +56,30 @@ class VenueUsage extends Page
             ->whereIn('venue_id', $filteredVenueIds)
             ->get()
             ->map(function ($event) {
-                // Ticket stats from ticket_types directly
-                $sold = $event->ticketTypes->sum('quota_sold');
-                $capacity = $event->ticketTypes->sum('quota_total');
+                // Ticket stats: prefer quota_sold, fall back to tickets table count
+                $quotaSold = (int) $event->ticketTypes->sum('quota_sold');
+                $capacity = (int) $event->ticketTypes->sum('quota_total');
+
+                // If quota_sold is 0 but event has actual tickets, count from tickets table
+                if ($quotaSold === 0) {
+                    $quotaSold = (int) \App\Models\Ticket::where('event_id', $event->id)
+                        ->where(fn ($q) => $q->where('is_cancelled', false)->orWhereNull('is_cancelled'))
+                        ->count();
+                }
+
                 $revenue = $event->ticketTypes->sum(fn ($tt) => ($tt->quota_sold ?? 0) * ($tt->price_cents ?? 0) / 100);
+                // If revenue is 0 but we have tickets, estimate from order totals
+                if ($revenue == 0 && $quotaSold > 0) {
+                    $revenue = (float) \App\Models\Order::whereHas('tickets', fn ($q) => $q->where('event_id', $event->id))
+                        ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                        ->sum('total');
+                }
 
                 $event->ticket_stats = [
-                    'sold' => (int) $sold,
-                    'capacity' => (int) $capacity,
-                    'revenue' => round((float) $revenue, 2),
-                    'fill_rate' => $capacity > 0 ? round($sold / $capacity * 100) : 0,
+                    'sold' => $quotaSold,
+                    'capacity' => $capacity,
+                    'revenue' => round($revenue, 2),
+                    'fill_rate' => $capacity > 0 ? round($quotaSold / $capacity * 100) : 0,
                 ];
 
                 // Status
