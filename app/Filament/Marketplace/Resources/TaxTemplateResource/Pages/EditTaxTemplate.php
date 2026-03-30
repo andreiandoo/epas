@@ -105,7 +105,7 @@ class EditTaxTemplate extends EditRecord
                         ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).'),
                 ])
                 ->action(function (array $data) {
-                    $template = $this->record;
+                    $template = $this->record->fresh();
                     $marketplace = static::getMarketplaceClient();
                     $organizer = MarketplaceOrganizer::find($data['organizer_id']);
                     $event = !empty($data['event_id']) ? Event::with(['ticketTypes', 'venue'])->find($data['event_id']) : null;
