@@ -257,8 +257,9 @@ function ReportsOnlyPlaceholder({ onViewReports }) {
 
 // ─── Ticket Type Card ─────────────────────────────────────────────────────────
 
-function TicketTypeCard({ ticket, onAdd, hasSeating }) {
+function TicketTypeCard({ ticket, onAdd }) {
   const isSoldOut = ticket.available <= 0;
+  const isSeated = ticket.has_seats === true;
 
   return (
     <TouchableOpacity
@@ -277,7 +278,7 @@ function TicketTypeCard({ ticket, onAdd, hasSeating }) {
         <Text style={styles.ticketPrice}>{formatCurrency(ticket.price)}</Text>
         {isSoldOut ? (
           <Text style={styles.soldOutText}>Epuizat</Text>
-        ) : hasSeating ? (
+        ) : isSeated ? (
           <Text style={styles.ticketAvailable}>Alege locuri pe harta</Text>
         ) : (
           <Text style={styles.ticketAvailable}>{ticket.available} disponibile</Text>
@@ -289,7 +290,7 @@ function TicketTypeCard({ ticket, onAdd, hasSeating }) {
           onPress={() => onAdd(ticket)}
           activeOpacity={0.7}
         >
-          {hasSeating ? (
+          {isSeated ? (
             <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
               <Path d="M9 18l6-6-6-6" stroke={colors.white} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
@@ -481,8 +482,9 @@ export default function SalesScreen({ navigation }) {
 
   // Cart actions
   const addToCart = (ticket) => {
-    // For seated events, open the seating map filtered by this ticket type
-    if (hasSeating) {
+    // For seated ticket types, open the seating map filtered by this ticket type
+    // For non-seated ticket types (even in events with seating), add directly to cart
+    if (hasSeating && ticket.has_seats) {
       setSeatingMapTicketTypeId(ticket.id);
       setShowSeatingMap(true);
       return;
@@ -1027,7 +1029,6 @@ export default function SalesScreen({ navigation }) {
               key={ticket.id}
               ticket={ticket}
               onAdd={addToCart}
-              hasSeating={hasSeating}
             />
           ))}
           {ticketTypes.length === 0 && (
