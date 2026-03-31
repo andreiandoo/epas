@@ -20,6 +20,7 @@ class CouponCode extends Model
 
     protected $fillable = [
         'marketplace_client_id',
+        'marketplace_organizer_id',
         'tenant_id',
         'campaign_id',
         'code',

@@ -111,20 +111,10 @@ class CouponCodeResource extends Resource
                             })
                             ->searchable()
                             ->preload()
-                            ->dehydrated(false)
                             ->live()
                             ->afterStateUpdated(function (Set $set) {
                                 $set('applicable_events', []);
                                 $set('applicable_ticket_types', []);
-                            })
-                            ->afterStateHydrated(function (Set $set, $record) {
-                                if ($record && !empty($record->applicable_events)) {
-                                    $organizerId = Event::whereIn('id', $record->applicable_events)
-                                        ->value('marketplace_organizer_id');
-                                    if ($organizerId) {
-                                        $set('marketplace_organizer_id', $organizerId);
-                                    }
-                                }
                             }),
 
                         Forms\Components\Select::make('applicable_events')
