@@ -40,17 +40,18 @@ class SeatingLayoutResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
 
-        // Return layouts belonging to this marketplace
-        // Use try-catch in case migration hasn't run yet
+        // Return layouts belonging to this marketplace + core Tixello library
         try {
             return parent::getEloquentQuery()
-                ->withoutGlobalScopes() // Remove TenantScope for marketplace access
-                ->where('marketplace_client_id', $marketplace?->id);
+                ->withoutGlobalScopes()
+                ->where(function ($query) use ($marketplace) {
+                    $query->where('marketplace_client_id', $marketplace?->id)
+                          ->orWhereNull('marketplace_client_id');
+                });
         } catch (\Exception $e) {
-            // If column doesn't exist yet, return empty query
             return parent::getEloquentQuery()
                 ->withoutGlobalScopes()
-                ->whereRaw('1 = 0'); // Return empty result
+                ->whereRaw('1 = 0');
         }
     }
 
@@ -488,6 +489,21 @@ class SeatingLayoutResource extends Resource
                     ->sortable(query: fn ($query, $direction) => $query)
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('source')
+                    ->label('Sursă')
+                    ->badge()
+                    ->getStateUsing(fn (SeatingLayout $record) => $record->marketplace_client_id ? 'proprie' : 'biblioteca')
+                    ->color(fn (string $state): string => match ($state) {
+                        'proprie' => 'primary',
+                        'biblioteca' => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'proprie' => 'Proprie',
+                        'biblioteca' => 'Biblioteca Tixello',
+                        default => $state,
+                    }),
+
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -531,6 +547,16 @@ class SeatingLayoutResource extends Resource
                         'draft' => 'Draft',
                         'published' => 'Publicat',
                     ]),
+
+                Tables\Filters\TernaryFilter::make('source')
+                    ->label('Sursă')
+                    ->placeholder('Toate')
+                    ->trueLabel('Doar proprii')
+                    ->falseLabel('Doar biblioteca Tixello')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('marketplace_client_id'),
+                        false: fn (Builder $query) => $query->whereNull('marketplace_client_id'),
+                    ),
 
                 Tables\Filters\TernaryFilter::make('is_partner')
                     ->label('Doar parteneri'),
