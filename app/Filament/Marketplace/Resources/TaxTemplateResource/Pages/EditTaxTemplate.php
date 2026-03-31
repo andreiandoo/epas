@@ -150,10 +150,16 @@ class EditTaxTemplate extends EditRecord
                     $combinedContent = implode('<div style="page-break-before:always;"></div>', array_column($pages, 'content'));
                     $orientation = $pages[0]['orientation'];
 
-                    $pdf = Pdf::loadView('pdfs.tax-template', [
-                        'content' => $combinedContent,
-                        'orientation' => $orientation,
-                    ]);
+                    $fullHtml = '<!DOCTYPE html><html lang="ro"><head>'
+                        . '<meta charset="UTF-8">'
+                        . '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>'
+                        . '<style>'
+                        . '@page { size: ' . ($orientation === 'landscape' ? 'A4 landscape' : 'A4') . '; margin: 10mm 12mm; }'
+                        . '* { font-family: DejaVu Sans, Arial, sans-serif; }'
+                        . 'body { margin: 0; padding: 0; background: #fff; color: #000; }'
+                        . '</style></head><body>' . $combinedContent . '</body></html>';
+
+                    $pdf = Pdf::loadHTML($fullHtml);
                     $pdf->setPaper('a4', $orientation);
                     $pdf->setOption('isHtml5ParserEnabled', true);
                     $pdf->setOption('isRemoteEnabled', true);
