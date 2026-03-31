@@ -799,6 +799,7 @@ class EventResource extends Resource
                                     ->options([
                                         'muzicala' => $t('Muzicală', 'Musical'),
                                         'artistica' => $t('Artistică', 'Artistic'),
+                                        'teatrala' => $t('Teatrală', 'Theatrical'),
                                         'sportiva' => $t('Sportivă', 'Sports'),
                                         'altele' => $t('Altele', 'Other'),
                                     ])
@@ -3852,6 +3853,7 @@ class EventResource extends Resource
                                 ->options([
                                     'muzicala' => 'Muzicală',
                                     'artistica' => 'Artistică',
+                                    'teatrala' => 'Teatrală',
                                     'sportiva' => 'Sportivă',
                                     'altele' => 'Altele',
                                 ])
