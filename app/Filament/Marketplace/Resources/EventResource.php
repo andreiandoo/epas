@@ -1122,9 +1122,10 @@ class EventResource extends Resource
                                         ->label($t('Stoc general', 'General Stock'))
                                         ->numeric()
                                         ->minValue(0)
-                                        ->nullable()
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru seria de bilete când un tip de bilet nu are stoc setat.', 'Default stock used for ticket series when a ticket type has no stock set.'))
-                                        ->placeholder($t('ex: 500', 'e.g. 500')),
+                                        ->required()
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru tipurile de bilete noi. Obligatoriu.', 'Default stock for new ticket types. Required.'))
+                                        ->placeholder($t('ex: 500', 'e.g. 500'))
+                                        ->live(onBlur: true),
                                     Forms\Components\TextInput::make('target_price')
                                         ->label($t('Preț la intrare', 'Door Price'))
                                         ->numeric()
@@ -1357,10 +1358,24 @@ class EventResource extends Resource
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                         ->live(onBlur: true)
                                                         ->skipRenderAfterStateUpdated()
+                                                        ->afterStateHydrated(function ($component, $state, SGet $get) {
+                                                            // Only set default from general_stock for NEW ticket types (no existing state)
+                                                            if ($state === null || $state === '') {
+                                                                $generalStock = $get('../../general_stock');
+                                                                if ($generalStock && (int) $generalStock > 0) {
+                                                                    $component->state((int) $generalStock);
+                                                                }
+                                                            }
+                                                        })
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
                                                             if ($record && $record->quota_sold > 0) {
-                                                                $hints[] = '<span class="text-xs">' . $t('Vândute', 'Sold') . ": {$record->quota_sold}</span>";
+                                                                $capacity = $record->quota_total ?? $record->capacity ?? null;
+                                                                $soldText = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
+                                                                if ($capacity !== null && (int) $capacity > 0) {
+                                                                    $soldText .= "/{$capacity}";
+                                                                }
+                                                                $hints[] = '<span class="text-xs">' . $soldText . '</span>';
                                                             }
                                                             $generalStock = (int) ($get('../../general_stock') ?: 0);
                                                             $capacity = (int) ($get('capacity') ?: 0);
