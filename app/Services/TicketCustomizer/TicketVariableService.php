@@ -615,7 +615,7 @@ class TicketVariableService
                 'name' => $eventTitle,
                 'description' => $eventDescription,
                 'category' => $marketplaceEvent?->category ?? '',
-                'image' => $marketplaceEvent?->image_url ?? '',
+                'image' => $this->resolveEventImageUrl($event, $marketplaceEvent),
             ],
             'venue' => [
                 'name' => $venueName,
@@ -741,6 +741,32 @@ class TicketVariableService
     /**
      * Build serial number from ticket type series configuration
      */
+    private function resolveEventImageUrl($event, $marketplaceEvent): string
+    {
+        // Try marketplace event image first
+        if ($marketplaceEvent?->image_url) {
+            $url = $marketplaceEvent->image_url;
+            if (str_starts_with($url, 'http')) return $url;
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($url);
+        }
+
+        // Try event hero image
+        if ($event?->hero_image_url) {
+            $url = $event->hero_image_url;
+            if (str_starts_with($url, 'http')) return $url;
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($url);
+        }
+
+        // Try event poster
+        if ($event?->poster_url) {
+            $url = $event->poster_url;
+            if (str_starts_with($url, 'http')) return $url;
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($url);
+        }
+
+        return '';
+    }
+
     private function buildSerialNumber(Ticket $ticket): string
     {
         $ticketType = $ticket->ticketType;
