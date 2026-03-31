@@ -288,6 +288,11 @@ class CouponCodeResource extends Resource
                 Tables\Columns\TextColumn::make('organizer_name')
                     ->label('Organizator')
                     ->getStateUsing(function ($record) {
+                        // Try direct column first
+                        if ($record->marketplace_organizer_id) {
+                            return MarketplaceOrganizer::where('id', $record->marketplace_organizer_id)->value('name');
+                        }
+                        // Fallback: derive from events
                         $eventIds = $record->applicable_events ?? [];
                         if (empty($eventIds)) {
                             return null;
