@@ -67,7 +67,7 @@ class VenueResource extends Resource
                     SC\Section::make('Caută locații existente')
                         ->description('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.')
                         ->icon('heroicon-o-magnifying-glass')
-                        ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
+                        ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30', 'style' => 'overflow: visible;'])
                         ->visible(fn ($operation) => $operation === 'create')
                         ->columnSpanFull()
                         ->schema([
