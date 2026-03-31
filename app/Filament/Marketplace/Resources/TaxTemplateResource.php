@@ -525,6 +525,12 @@ class TaxTemplateResource extends Resource
             'total_tickets_sold' => '297',
             'total_sales_value' => '54,950.00',
             'total_sales_currency' => 'RON',
+
+            // PV Distrugere - unsold tickets
+            'unsold_tickets_rows' => '<tr><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">AMB-100-GA-00298 — AMB-100-GA-00500</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">203</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">150.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">30,450.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">General Admission</td></tr><tr><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">AMB-100-VIP-00068 — AMB-100-VIP-00100</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">33</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">350.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">11,550.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">VIP</td></tr>',
+            'total_unsold_tickets' => '236',
+            'total_unsold_value' => '42,000.00',
+
             'ticket_series_from' => 'GA001',
             'ticket_series_to' => 'GA500',
             'ticket_unit_price' => '150.00',
