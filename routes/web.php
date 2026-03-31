@@ -272,9 +272,53 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
 
     Route::get('/tickets/{ticket}/download-pdf', function (\App\Models\Ticket $ticket) {
         $ticket->load(['order.marketplaceClient', 'marketplaceEvent', 'marketplaceTicketType']);
+        $event = $ticket->resolveEvent();
+
+        // Resolve template: event → marketplace client default → generic fallback
+        $template = null;
+        if ($event?->ticketTemplate && $event->ticketTemplate->status === 'active' && !empty($event->ticketTemplate->template_data)) {
+            $template = $event->ticketTemplate;
+        } else {
+            $clientId = $ticket->marketplace_client_id ?? $event?->marketplace_client_id ?? $ticket->order?->marketplace_client_id;
+            if ($clientId) {
+                $template = \App\Models\TicketTemplate::where('marketplace_client_id', $clientId)
+                    ->where('status', 'active')
+                    ->orderByDesc('is_default')
+                    ->orderByDesc('last_used_at')
+                    ->get()
+                    ->first(fn ($t) => !empty($t->template_data['layers'] ?? []));
+            }
+        }
+
+        // Custom template PDF
+        if ($template && !empty($template->template_data)) {
+            $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
+            $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
+            $data = $variableService->resolveTicketData($ticket);
+            $content = $generator->renderToHtml($template->template_data, $data);
+
+            if (!empty(trim($content))) {
+                $size = $template->getSize();
+                $widthPt = round($size['width'] * 2.8346, 2);
+                $heightPt = round($size['height'] * 2.8346, 2);
+                $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+                $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;width:{$widthPt}pt;height:{$heightPt}pt;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;overflow:hidden;}</style></head><body>{$content}</body></html>";
+
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+                    ->setPaper([0, 0, $widthPt, $heightPt])
+                    ->setOption('isRemoteEnabled', true)
+                    ->setOption('isHtml5ParserEnabled', true);
+
+                $template->markAsUsed();
+                $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
+                return $pdf->download("bilet-{$ticketCode}.pdf");
+            }
+        }
+
+        // Generic fallback
         $order = $ticket->order;
         $client = $order?->marketplaceClient;
-
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('marketplace-tickets-pdf', [
             'order' => $order,
             'tickets' => collect([$ticket]),

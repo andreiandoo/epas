@@ -1390,7 +1390,18 @@ class OrderResource extends Resource
 
     protected static function downloadAllTicketsPdf(Order $record)
     {
-        $tickets = $record->tickets()->with(['marketplaceEvent', 'marketplaceTicketType'])->get();
+        $tickets = $record->tickets()->with(['order.marketplaceClient', 'marketplaceEvent', 'marketplaceTicketType'])->get();
+        if ($tickets->isEmpty()) return null;
+
+        // Use ViewTicket's template resolution logic for each ticket
+        $viewTicket = app(\App\Filament\Marketplace\Resources\TicketResource\Pages\ViewTicket::class);
+        $pdfOutputs = [];
+
+        foreach ($tickets as $ticket) {
+            // For "download all", use the generic combined template
+        }
+
+        // Use generic combined template for all tickets
         $client = $record->marketplaceClient;
         $eventName = $tickets->first()?->marketplaceEvent?->name ?? 'Eveniment';
         $marketplaceName = $client?->public_name ?? $client?->name ?? 'Marketplace';
@@ -1411,35 +1422,6 @@ class OrderResource extends Resource
         return response()->streamDownload(
             fn () => print($pdf->output()),
             "bilete-{$orderNumber}.pdf"
-        );
-    }
-
-    protected static function downloadSingleTicketPdf(int $ticketId)
-    {
-        $ticket = \App\Models\Ticket::with(['order', 'marketplaceEvent', 'marketplaceTicketType'])->find($ticketId);
-        if (!$ticket) return null;
-
-        $order = $ticket->order;
-        $client = $order?->marketplaceClient;
-        $eventName = $ticket->marketplaceEvent?->name ?? 'Eveniment';
-        $marketplaceName = $client?->public_name ?? $client?->name ?? 'Marketplace';
-        $primaryColor = $client?->settings['theme']['primary_color'] ?? '#1a1a2e';
-
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('marketplace-tickets-pdf', [
-            'order' => $order,
-            'tickets' => collect([$ticket]),
-            'eventName' => $eventName,
-            'marketplaceName' => $marketplaceName,
-            'primaryColor' => $primaryColor,
-        ])
-            ->setOption('isRemoteEnabled', true)
-            ->setPaper([0, 0, 396, 700], 'portrait');
-
-        $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
-
-        return response()->streamDownload(
-            fn () => print($pdf->output()),
-            "bilet-{$ticketCode}.pdf"
         );
     }
 
