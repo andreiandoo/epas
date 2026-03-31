@@ -367,9 +367,12 @@ class VenueResource extends Resource
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('venueTypes.slug')
+                Tables\Columns\TextColumn::make('venue_types_display')
                     ->label('Types')
-                    ->formatStateUsing(fn ($record) => $record->venueTypes->map(fn ($t) => ($t->icon ?? '') . ' ' . ($t->name['en'] ?? $t->slug))->join(', ') ?: '-')
+                    ->getStateUsing(fn ($record) => $record->venueTypes->unique('id')->map(fn ($t) => ($t->icon ?? '') . ' ' . ($t->name['en'] ?? $t->slug))->join(', ') ?: '-')
+                    ->wrap()
+                    ->tooltip(fn ($record) => $record->venueTypes->unique('id')->map(fn ($t) => ($t->icon ?? '') . ' ' . ($t->name['en'] ?? $t->slug))->join(', ') ?: null)
+                    ->extraAttributes(['style' => 'max-width:175px; overflow:hidden; text-overflow:ellipsis;'])
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('venue_tag')
