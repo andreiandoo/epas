@@ -1657,11 +1657,28 @@ class MarketplaceEventsController extends BaseController
                         'base_status' => $baseStatus, // Include base status for display
                     ];
                 }
-                $rows[] = [
+                $rowData = [
                     'id' => $row->id,
                     'label' => $row->label,
                     'seats' => $seats,
                 ];
+
+                // Include table metadata if this row is a table
+                $rowMeta = $row->metadata ?? [];
+                if (!empty($rowMeta['is_table'])) {
+                    $rowData['is_table'] = true;
+                    $rowData['table_type'] = $rowMeta['table_type'] ?? 'round';
+                    $rowData['center_x'] = (float) ($rowMeta['center_x'] ?? 0);
+                    $rowData['center_y'] = (float) ($rowMeta['center_y'] ?? 0);
+                    if (($rowMeta['table_type'] ?? 'round') === 'round') {
+                        $rowData['radius'] = (float) ($rowMeta['radius'] ?? 30);
+                    } else {
+                        $rowData['table_width'] = (float) ($rowMeta['width'] ?? 80);
+                        $rowData['table_height'] = (float) ($rowMeta['height'] ?? 30);
+                    }
+                }
+
+                $rows[] = $rowData;
             }
             $sectionData = [
                 'id' => $section->id,

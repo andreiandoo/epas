@@ -3455,12 +3455,32 @@ const EventPage = {
                 section.rows.forEach(function(row) {
                     if (!row.seats || row.seats.length === 0) return;
 
-                    // Row label near first seat
-                    var firstSeat = row.seats[0];
-                    if (firstSeat) {
-                        var rlX = section.x + firstSeat.x - seatRadius2 - 6;
-                        var rlY = section.y + firstSeat.y;
-                        svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
+                    // Draw table shape if this row is a table
+                    if (row.is_table) {
+                        var tableColor = section.background_color || '#6B7280';
+                        var tcx = section.x + (row.center_x || 0);
+                        var tcy = section.y + (row.center_y || 0);
+
+                        if (row.table_type === 'round') {
+                            var tr = row.radius || 30;
+                            svg += '<circle cx="' + tcx + '" cy="' + tcy + '" r="' + tr + '" fill="' + tableColor + '" fill-opacity="0.25" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                        } else {
+                            var tw = row.table_width || 80;
+                            var th = row.table_height || 30;
+                            svg += '<rect x="' + (tcx - tw/2) + '" y="' + (tcy - th/2) + '" width="' + tw + '" height="' + th + '" rx="4" fill="' + tableColor + '" fill-opacity="0.25" stroke="' + tableColor + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                        }
+                        // Table label
+                        svg += '<text x="' + tcx + '" y="' + (tcy + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.4)" class="pointer-events-none select-none">' + row.label + '</text>';
+                    }
+
+                    // Row label near first seat (only for non-table rows)
+                    if (!row.is_table) {
+                        var firstSeat = row.seats[0];
+                        if (firstSeat) {
+                            var rlX = section.x + firstSeat.x - seatRadius2 - 6;
+                            var rlY = section.y + firstSeat.y;
+                            svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
+                        }
                     }
 
                     row.seats.forEach(function(seat) {
@@ -3661,6 +3681,23 @@ const EventPage = {
                 section.rows.forEach(function(row) {
                     if (!row.seats || row.seats.length === 0) return;
 
+                    // Draw table shape if this row is a table
+                    if (row.is_table) {
+                        var tableColor2 = section.background_color || '#6B7280';
+                        var tcx2 = section.x + (row.center_x || 0);
+                        var tcy2 = section.y + (row.center_y || 0);
+
+                        if (row.table_type === 'round') {
+                            var tr2 = row.radius || 30;
+                            svg += '<circle cx="' + tcx2 + '" cy="' + tcy2 + '" r="' + tr2 + '" fill="' + tableColor2 + '" fill-opacity="0.25" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                        } else {
+                            var tw2 = row.table_width || 80;
+                            var th2 = row.table_height || 30;
+                            svg += '<rect x="' + (tcx2 - tw2/2) + '" y="' + (tcy2 - th2/2) + '" width="' + tw2 + '" height="' + th2 + '" rx="4" fill="' + tableColor2 + '" fill-opacity="0.25" stroke="' + tableColor2 + '" stroke-width="1.5" stroke-opacity="0.5"/>';
+                        }
+                        svg += '<text x="' + tcx2 + '" y="' + (tcy2 + 4) + '" text-anchor="middle" font-size="10" font-weight="700" fill="rgba(0,0,0,0.4)" class="pointer-events-none select-none">' + row.label + '</text>';
+                    }
+
                     // Row-based ticket type lookup (keep original order — first assigned type determines color)
                     var ticketTypesForRow = self.rowToTicketTypeMap[row.id] || [];
                     var isRowAssigned = ticketTypesForRow.length > 0;
@@ -3668,12 +3705,14 @@ const EventPage = {
                     // Seat color from the first ticket type assigned to this row
                     var availableSeatColor = isRowAssigned ? self.getTicketTypeColor(ticketTypesForRow[0]) : '#E5E7EB';
 
-                    // Row label near first seat
-                    var firstSeat = row.seats[0];
-                    if (firstSeat) {
-                        var rlX = section.x + firstSeat.x - seatRadius - 6;
-                        var rlY = section.y + firstSeat.y;
-                        svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
+                    // Row label near first seat (only for non-table rows)
+                    if (!row.is_table) {
+                        var firstSeat = row.seats[0];
+                        if (firstSeat) {
+                            var rlX = section.x + firstSeat.x - seatRadius - 6;
+                            var rlY = section.y + firstSeat.y;
+                            svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
+                        }
                     }
 
                     row.seats.forEach(function(seat) {

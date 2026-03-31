@@ -67,7 +67,42 @@
 
                     <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
                         @foreach($section->rows as $row)
+                            @php
+                                $rowMeta = $row->metadata ?? [];
+                                $isTable = $rowMeta['is_table'] ?? false;
+                            @endphp
                             <g>
+                                {{-- Draw table shape if this row is a table --}}
+                                @if($isTable)
+                                    @php
+                                        $tableType = $rowMeta['table_type'] ?? 'round';
+                                        $tableCx = $sX + ($rowMeta['center_x'] ?? 0);
+                                        $tableCy = $sY + ($rowMeta['center_y'] ?? 0);
+                                        $tableColor = $section->background_color ?? '#6B7280';
+                                    @endphp
+                                    @if($tableType === 'round')
+                                        @php $tableRadius = $rowMeta['radius'] ?? 30; @endphp
+                                        <circle cx="{{ $tableCx }}" cy="{{ $tableCy }}" r="{{ $tableRadius }}"
+                                                fill="{{ $tableColor }}" fill-opacity="0.3"
+                                                stroke="{{ $tableColor }}" stroke-width="1.5" stroke-opacity="0.6"/>
+                                    @else
+                                        @php
+                                            $tableW = $rowMeta['width'] ?? 80;
+                                            $tableH = $rowMeta['height'] ?? 30;
+                                            $tableRx = $tableCx - $tableW / 2;
+                                            $tableRy = $tableCy - $tableH / 2;
+                                        @endphp
+                                        <rect x="{{ $tableRx }}" y="{{ $tableRy }}"
+                                              width="{{ $tableW }}" height="{{ $tableH }}" rx="4"
+                                              fill="{{ $tableColor }}" fill-opacity="0.3"
+                                              stroke="{{ $tableColor }}" stroke-width="1.5" stroke-opacity="0.6"/>
+                                    @endif
+                                    {{-- Table label --}}
+                                    <text x="{{ $tableCx }}" y="{{ $tableCy + 4 }}"
+                                          font-size="{{ max(10, $seatFontSize) }}" text-anchor="middle" font-weight="700"
+                                          fill="rgba(0,0,0,0.5)" class="pointer-events-none select-none">{{ $row->label }}</text>
+                                @endif
+
                                 @foreach($row->seats as $seat)
                                     @php
                                         $seatX = $sX + ($seat->x ?? 0);
@@ -86,16 +121,19 @@
                                     @endif
                                 @endforeach
 
-                                @php
-                                    $firstSeat = $row->seats->first();
-                                    $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
-                                @endphp
-                                <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
-                                      font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
-                                      fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">{{ $row->label }}</text>
-                                <text x="{{ $rightLabelX }}" y="{{ $rowLabelY }}"
-                                      font-size="{{ $rowLabelSize }}" text-anchor="start" font-weight="600"
-                                      fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">{{ $row->label }}</text>
+                                {{-- Row labels (only for non-table rows) --}}
+                                @if(!$isTable)
+                                    @php
+                                        $firstSeat = $row->seats->first();
+                                        $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
+                                    @endphp
+                                    <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
+                                          font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
+                                          fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">{{ $row->label }}</text>
+                                    <text x="{{ $rightLabelX }}" y="{{ $rowLabelY }}"
+                                          font-size="{{ $rowLabelSize }}" text-anchor="start" font-weight="600"
+                                          fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">{{ $row->label }}</text>
+                                @endif
                             </g>
                         @endforeach
                     </g>
