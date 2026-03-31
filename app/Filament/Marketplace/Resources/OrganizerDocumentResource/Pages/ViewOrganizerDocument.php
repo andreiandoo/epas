@@ -85,6 +85,13 @@ class ViewOrganizerDocument extends ViewRecord
                     // Decode HTML entities to UTF-8 characters for DomPDF
                     $htmlContent = html_entity_decode($htmlContent, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
+                    // Replace comma-below variants with cedilla variants for DomPDF
+                    $htmlContent = str_replace(
+                        ['ș', 'Ș', 'ț', 'Ț'],
+                        ['ş', 'Ş', 'ţ', 'Ţ'],
+                        $htmlContent
+                    );
+
                     // Ensure proper UTF-8 encoding
                     if (stripos($htmlContent, '<html') === false) {
                         $htmlContent = '<!DOCTYPE html>

@@ -229,6 +229,14 @@ class EditTaxTemplate extends EditRecord
         // Decode HTML entities to UTF-8 for DomPDF compatibility
         $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
+        // Replace comma-below variants (U+0219/U+021B) with cedilla variants (U+015F/U+015E)
+        // DomPDF's DejaVu Sans often lacks the comma-below glyphs
+        $html = str_replace(
+            ['ș', 'Ș', 'ț', 'Ț'],
+            ['ş', 'Ş', 'ţ', 'Ţ'],
+            $html
+        );
+
         return $html;
     }
 }

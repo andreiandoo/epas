@@ -366,6 +366,13 @@ class ListOrganizerDocuments extends ListRecords
         // Decode HTML entities to UTF-8 characters for DomPDF compatibility
         $htmlContent = html_entity_decode($htmlContent, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
+        // Replace comma-below variants with cedilla variants for DomPDF
+        $htmlContent = str_replace(
+            ['ș', 'Ș', 'ț', 'Ț'],
+            ['ş', 'Ş', 'ţ', 'Ţ'],
+            $htmlContent
+        );
+
         if (stripos($htmlContent, '<html') === false) {
             $htmlContent = '<!DOCTYPE html>
 <html>
