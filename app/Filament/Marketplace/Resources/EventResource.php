@@ -3383,8 +3383,8 @@ class EventResource extends Resource
                         $isPgsql = \DB::getDriverName() === 'pgsql';
                         $query->where(function ($q) use ($term, $isPgsql) {
                             if ($isPgsql) {
-                                $q->whereRaw("unaccent(LOWER(title->>'ro')) LIKE unaccent(?)", [$term])
-                                  ->orWhereRaw("unaccent(LOWER(title->>'en')) LIKE unaccent(?)", [$term]);
+                                $q->whereRaw("unaccent(LOWER(title::jsonb->>'ro')) LIKE unaccent(?)", [$term])
+                                  ->orWhereRaw("unaccent(LOWER(title::jsonb->>'en')) LIKE unaccent(?)", [$term]);
                             } else {
                                 $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
                                   ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);

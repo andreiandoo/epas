@@ -711,7 +711,7 @@ class VenueResource extends Resource
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
                         $term = '%' . mb_strtolower($search) . '%';
                         if (DB::getDriverName() === 'pgsql') {
-                            $query->whereRaw("unaccent(LOWER(name->>'{$lang}')) LIKE unaccent(?)", [$term])
+                            $query->whereRaw("unaccent(LOWER(name::jsonb->>'{$lang}')) LIKE unaccent(?)", [$term])
                                 ->orWhereRaw("unaccent(LOWER(city)) LIKE unaccent(?)", [$term]);
                         } else {
                             $query->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?", [$term])
