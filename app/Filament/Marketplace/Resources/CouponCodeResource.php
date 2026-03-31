@@ -101,6 +101,7 @@ class CouponCodeResource extends Resource
                     ])->columns(3),
 
                 SC\Section::make('Event & Ticket Targeting')
+                    ->extraAttributes(['style' => 'overflow: visible;'])
                     ->schema([
                         Forms\Components\Select::make('marketplace_organizer_id')
                             ->label('Organizer')
