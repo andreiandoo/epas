@@ -3099,6 +3099,7 @@ class EventsController extends BaseController
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
                     'is_visible' => $tt->status === 'active',
                     'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
+                    'has_seats' => (bool) $tt->hasSeatingAssigned(),
                     'color' => $tt->color ?? null,
                     'checked_in' => $checkedIn,
                 ];
