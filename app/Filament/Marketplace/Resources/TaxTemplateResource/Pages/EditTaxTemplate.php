@@ -30,48 +30,6 @@ class EditTaxTemplate extends EditRecord
                 ->icon('heroicon-o-document-arrow-down')
                 ->color('info')
                 ->form([
-                    Forms\Components\Select::make('event_id')
-                        ->label('Eveniment')
-                        ->options(function () {
-                            $marketplace = static::getMarketplaceClient();
-                            if (!$marketplace) return [];
-                            $now = now()->toDateString();
-
-                            $events = Event::where('marketplace_client_id', $marketplace->id)
-                                ->with('marketplaceOrganizer')
-                                ->get();
-
-                            $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
-                            $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
-                            $noDate = $events->filter(fn ($e) => !$e->event_date);
-
-                            return $live->concat($ended)->concat($noDate)
-                                ->mapWithKeys(function ($e) use ($now) {
-                                    $title = is_array($e->title)
-                                        ? ($e->title['ro'] ?? $e->title['en'] ?? array_values($e->title)[0] ?? 'Untitled')
-                                        : ($e->title ?? 'Event #' . $e->id);
-                                    $status = (!$e->event_date) ? 'TBD' : ($e->event_date >= $now ? '🟢' : '🔴');
-                                    $date = $e->event_date?->format('d.m.Y') ?? '';
-                                    $orgName = $e->marketplaceOrganizer?->company_name ?? $e->marketplaceOrganizer?->name ?? '';
-                                    $orgLabel = $orgName ? " [{$orgName}]" : '';
-                                    return [$e->id => "{$status} {$title} ({$date}){$orgLabel}"];
-                                })
-                                ->toArray();
-                        })
-                        ->searchable()
-                        ->required()
-                        ->live()
-                        ->afterStateUpdated(function (\Filament\Schemas\Components\Utilities\Set $set, $state) {
-                            $set('payout_id', null);
-                            if ($state) {
-                                $event = Event::find($state);
-                                if ($event?->marketplace_organizer_id) {
-                                    $set('organizer_id', $event->marketplace_organizer_id);
-                                }
-                            }
-                        })
-                        ->helperText('Selectează evenimentul pentru care se generează documentul.'),
-
                     Forms\Components\Select::make('organizer_id')
                         ->label('Organizator')
                         ->options(function () {
@@ -85,7 +43,42 @@ class EditTaxTemplate extends EditRecord
                         })
                         ->searchable()
                         ->required()
-                        ->helperText('Se completează automat la selectarea evenimentului.'),
+                        ->live()
+                        ->afterStateUpdated(function (\Filament\Schemas\Components\Utilities\Set $set) {
+                            $set('event_id', null);
+                            $set('payout_id', null);
+                        }),
+
+                    Forms\Components\Select::make('event_id')
+                        ->label('Eveniment')
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                            $organizerId = $get('organizer_id');
+                            if (!$organizerId) return [];
+                            $marketplace = static::getMarketplaceClient();
+                            $now = now()->toDateString();
+
+                            $events = Event::where('marketplace_organizer_id', $organizerId)
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->get();
+
+                            $live = $events->filter(fn ($e) => $e->event_date && $e->event_date >= $now)->sortBy('event_date');
+                            $ended = $events->filter(fn ($e) => $e->event_date && $e->event_date < $now)->sortByDesc('event_date');
+                            $noDate = $events->filter(fn ($e) => !$e->event_date);
+
+                            return $live->concat($ended)->concat($noDate)
+                                ->mapWithKeys(function ($e) use ($now) {
+                                    $title = is_array($e->title)
+                                        ? ($e->title['ro'] ?? $e->title['en'] ?? array_values($e->title)[0] ?? 'Untitled')
+                                        : ($e->title ?? 'Event #' . $e->id);
+                                    $status = (!$e->event_date) ? 'TBD' : ($e->event_date >= $now ? '🟢' : '🔴');
+                                    $date = $e->event_date?->format('d.m.Y') ?? '';
+                                    return [$e->id => "{$status} {$title} ({$date})"];
+                                })
+                                ->toArray();
+                        })
+                        ->searchable()
+                        ->live()
+                        ->helperText('Opțional — lasă gol pentru test fără date de eveniment.'),
 
                     Forms\Components\Select::make('payout_id')
                         ->label('Decont existent')
@@ -109,7 +102,7 @@ class EditTaxTemplate extends EditRecord
                                 ->toArray();
                         })
                         ->searchable()
-                        ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale.'),
+                        ->helperText('Opțional — selectează un decont pentru a folosi datele lui reale (bilete, comision etc).'),
                 ])
                 ->action(function (array $data) {
                     $template = $this->record->fresh();
