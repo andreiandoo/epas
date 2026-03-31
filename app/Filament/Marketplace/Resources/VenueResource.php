@@ -45,9 +45,10 @@ class VenueResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
         $venueCountries = $marketplace?->settings['venue_countries'] ?? [];
+        $expandedCountries = self::expandCountryVariants($venueCountries);
         return parent::getEloquentQuery()
             ->whereHas('marketplaceClients', fn (Builder $q) => $q->where('marketplace_client_id', $marketplace?->id))
-            ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries));
+            ->when(!empty($expandedCountries), fn ($q) => $q->whereIn('country', $expandedCountries));
     }
 
     public static function form(Schema $schema): Schema

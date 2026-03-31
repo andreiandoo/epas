@@ -522,7 +522,7 @@ class EventResource extends Resource
                                     ->preload()
                                     ->live()
                                     ->options(function () use ($marketplace) {
-                                        $venueCountries = $marketplace?->settings['venue_countries'] ?? [];
+                                        $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
                                         return Venue::query()
                                             ->where(fn($q) => $q
                                                 ->whereNull('marketplace_client_id')
@@ -870,7 +870,7 @@ class EventResource extends Resource
                                 Forms\Components\Select::make('artists')
                                     ->label($t('Artiști', 'Artists'))
                                     ->relationship('artists', 'name', function ($query) use ($marketplace) {
-                                        $artistCountries = $marketplace?->settings['artist_countries'] ?? [];
+                                        $artistCountries = self::expandCountryVariants($marketplace?->settings['artist_countries'] ?? []);
                                         if (!empty($artistCountries)) {
                                             $query->whereIn('country', $artistCountries);
                                         }
@@ -3662,7 +3662,7 @@ class EventResource extends Resource
                                 ->preload()
                                 ->required()
                                 ->options(function () use ($marketplace) {
-                                    $venueCountries = $marketplace?->settings['venue_countries'] ?? [];
+                                    $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
                                     return Venue::query()
                                         ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
                                         ->get()
@@ -3915,7 +3915,7 @@ class EventResource extends Resource
                             Forms\Components\Select::make('artist_ids')
                                 ->label('Artiști')
                                 ->options(function () use ($marketplace) {
-                                    $artistCountries = $marketplace?->settings['artist_countries'] ?? [];
+                                    $artistCountries = self::expandCountryVariants($marketplace?->settings['artist_countries'] ?? []);
                                     return Artist::withoutGlobalScopes()
                                         ->where('is_active', true)
                                         ->when(!empty($artistCountries), fn ($q) => $q->whereIn('country', $artistCountries))

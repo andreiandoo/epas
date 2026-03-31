@@ -39,7 +39,7 @@ class ArtistResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
-        $artistCountries = $marketplace?->settings['artist_countries'] ?? [];
+        $artistCountries = self::expandCountryVariants($marketplace?->settings['artist_countries'] ?? []);
         return parent::getEloquentQuery()
             ->whereHas('marketplaceClients', fn (Builder $q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id))
             ->when(!empty($artistCountries), fn ($q) => $q->whereIn('country', $artistCountries));

@@ -52,4 +52,61 @@ trait HasMarketplaceContext
 
         return $client->hasMicroservice($slug);
     }
+
+    /**
+     * Expand country names to include ISO code variants and vice versa.
+     * e.g. ["Romania"] → ["Romania", "RO", "ro"]
+     */
+    protected static function expandCountryVariants(array $countries): array
+    {
+        if (empty($countries)) return [];
+
+        $map = [
+            'Romania' => ['RO', 'ro', 'România'],
+            'Germany' => ['DE', 'de', 'Deutschland'],
+            'France' => ['FR', 'fr'],
+            'Spain' => ['ES', 'es', 'España'],
+            'Italy' => ['IT', 'it', 'Italia'],
+            'United Kingdom' => ['GB', 'gb', 'UK', 'uk'],
+            'United States' => ['US', 'us', 'USA'],
+            'Austria' => ['AT', 'at', 'Österreich'],
+            'Hungary' => ['HU', 'hu', 'Magyarország'],
+            'Bulgaria' => ['BG', 'bg'],
+            'Moldova' => ['MD', 'md'],
+            'Serbia' => ['RS', 'rs'],
+            'Ukraine' => ['UA', 'ua'],
+        ];
+
+        // Build reverse map (ISO → full name)
+        $reverseMap = [];
+        foreach ($map as $name => $codes) {
+            foreach ($codes as $code) {
+                $reverseMap[strtoupper($code)] = $name;
+            }
+        }
+
+        $expanded = [];
+        foreach ($countries as $country) {
+            $expanded[] = $country;
+
+            // If it's a full name, add ISO codes
+            if (isset($map[$country])) {
+                foreach ($map[$country] as $variant) {
+                    $expanded[] = $variant;
+                }
+            }
+
+            // If it's an ISO code, add full name + other variants
+            $upper = strtoupper($country);
+            if (isset($reverseMap[$upper])) {
+                $fullName = $reverseMap[$upper];
+                $expanded[] = $fullName;
+                foreach ($map[$fullName] ?? [] as $variant) {
+                    $expanded[] = $variant;
+                }
+            }
+        }
+
+        return array_unique($expanded);
+    }
 }
