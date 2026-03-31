@@ -800,6 +800,7 @@ class EventResource extends Resource
                                         'muzicala' => $t('Muzicală', 'Musical'),
                                         'artistica' => $t('Artistică', 'Artistic'),
                                         'teatrala' => $t('Teatrală', 'Theatrical'),
+                                        'standup' => $t('Stand-up', 'Stand-up'),
                                         'sportiva' => $t('Sportivă', 'Sports'),
                                         'altele' => $t('Altele', 'Other'),
                                     ])
@@ -3854,6 +3855,7 @@ class EventResource extends Resource
                                     'muzicala' => 'Muzicală',
                                     'artistica' => 'Artistică',
                                     'teatrala' => 'Teatrală',
+                                    'standup' => 'Stand-up',
                                     'sportiva' => 'Sportivă',
                                     'altele' => 'Altele',
                                 ])
