@@ -359,8 +359,8 @@ class MarketplaceTaxTemplate extends Model
         // Marketplace variables
         if ($marketplace) {
             $variables['marketplace_legal_name'] = $marketplace->company_name ?? $marketplace->name ?? '';
-            $variables['marketplace_vat'] = $marketplace->vat_number ?? '';
-            $variables['marketplace_trade_register'] = $marketplace->trade_register ?? '';
+            $variables['marketplace_vat'] = $marketplace->cui ?? $marketplace->vat_number ?? '';
+            $variables['marketplace_trade_register'] = $marketplace->reg_com ?? $marketplace->trade_register ?? '';
             $variables['marketplace_address'] = $marketplace->address ?? '';
             $variables['marketplace_city'] = $marketplace->city ?? '';
             $variables['marketplace_state'] = $marketplace->state ?? '';
@@ -389,8 +389,8 @@ class MarketplaceTaxTemplate extends Model
             $variables['organizer_tax_id'] = $organizer->tax_id ?? $organizer->company_tax_id ?? '';
             $variables['organizer_registration_number'] = $organizer->registration_number ?? $organizer->company_registration ?? '';
             $variables['organizer_address'] = $organizer->company_address ?? $organizer->address ?? '';
-            $variables['organizer_city'] = $organizer->city ?? '';
-            $variables['organizer_county'] = $organizer->state ?? '';
+            $variables['organizer_city'] = $organizer->company_city ?? $organizer->city ?? '';
+            $variables['organizer_county'] = $organizer->company_county ?? $organizer->state ?? '';
 
             // VAT status - check tax_settings or marketplace settings
             $taxSettings = $organizer->tax_settings ?? [];

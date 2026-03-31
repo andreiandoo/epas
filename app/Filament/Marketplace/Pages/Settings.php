@@ -58,6 +58,7 @@ class Settings extends Page
                 'bank_name' => $marketplace->bank_name,
                 'bank_account' => $marketplace->bank_account,
                 'currency' => $marketplace->currency ?? 'EUR',
+                'invoice_preparer' => $settings['invoice_preparer'] ?? '',
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $marketplace->name ?? $marketplace->name ?? '',
@@ -176,6 +177,11 @@ class Settings extends Page
                                             ->default('EUR')
                                             ->required()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
+
+                                        Forms\Components\TextInput::make('invoice_preparer')
+                                            ->label('Persoana care completează documentele')
+                                            ->maxLength(255)
+                                            ->helperText('Numele persoanei care semnează/completează facturile și documentele fiscale.'),
                                     ])->columns(3),
 
                                 SC\Section::make('Address')
@@ -627,6 +633,7 @@ class Settings extends Page
             'secondary_color' => $data['secondary_color'],
         ];
         $settings['site_template'] = $data['site_template'];
+        $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
 
         // Document Series
         $settings['order_prefix'] = $data['order_prefix'] ?? 'CMD';
