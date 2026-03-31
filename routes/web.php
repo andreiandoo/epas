@@ -269,6 +269,25 @@ Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->gro
         ->name('marketplace.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])
         ->name('marketplace.ticket-customizer.update');
+
+    Route::get('/tickets/{ticket}/download-pdf', function (\App\Models\Ticket $ticket) {
+        $ticket->load(['order.marketplaceClient', 'marketplaceEvent', 'marketplaceTicketType']);
+        $order = $ticket->order;
+        $client = $order?->marketplaceClient;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('marketplace-tickets-pdf', [
+            'order' => $order,
+            'tickets' => collect([$ticket]),
+            'eventName' => $ticket->marketplaceEvent?->name ?? 'Eveniment',
+            'marketplaceName' => $client?->public_name ?? $client?->name ?? 'Marketplace',
+            'primaryColor' => $client?->settings['theme']['primary_color'] ?? '#1a1a2e',
+        ])
+            ->setOption('isRemoteEnabled', true)
+            ->setPaper([0, 0, 396, 700], 'portrait');
+
+        $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
+        return $pdf->download("bilet-{$ticketCode}.pdf");
+    })->name('marketplace.ticket.download-pdf');
 });
 
 // Public Ticket Verification (QR code landing page)
