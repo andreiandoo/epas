@@ -522,11 +522,13 @@ class EventResource extends Resource
                                     ->preload()
                                     ->live()
                                     ->options(function () use ($marketplace) {
+                                        $venueCountries = $marketplace?->settings['venue_countries'] ?? [];
                                         return Venue::query()
                                             ->where(fn($q) => $q
                                                 ->whereNull('marketplace_client_id')
                                                 ->orWhere('marketplace_client_id', $marketplace?->id)
                                                 ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
+                                            ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
                                             ->get()
                                             ->mapWithKeys(fn ($venue) => [
                                                 $venue->id => $venue->getTranslation('name', app()->getLocale())
@@ -865,7 +867,12 @@ class EventResource extends Resource
 
                                 Forms\Components\Select::make('artists')
                                     ->label($t('Artiști', 'Artists'))
-                                    ->relationship('artists', 'name')
+                                    ->relationship('artists', 'name', function ($query) use ($marketplace) {
+                                        $artistCountries = $marketplace?->settings['artist_countries'] ?? [];
+                                        if (!empty($artistCountries)) {
+                                            $query->whereIn('country', $artistCountries);
+                                        }
+                                    })
                                     ->multiple()
                                     ->preload()
                                     ->searchable()
@@ -3619,8 +3626,11 @@ class EventResource extends Resource
                                 ->searchable()
                                 ->preload()
                                 ->required()
-                                ->options(function () {
-                                    return Venue::all()
+                                ->options(function () use ($marketplace) {
+                                    $venueCountries = $marketplace?->settings['venue_countries'] ?? [];
+                                    return Venue::query()
+                                        ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
+                                        ->get()
                                         ->mapWithKeys(fn ($venue) => [
                                             $venue->id => $venue->getTranslation('name', app()->getLocale())
                                                 . ($venue->city ? ' (' . $venue->city . ')' : '')
@@ -3867,9 +3877,11 @@ class EventResource extends Resource
                         ->form([
                             Forms\Components\Select::make('artist_ids')
                                 ->label('Artiști')
-                                ->options(function () {
+                                ->options(function () use ($marketplace) {
+                                    $artistCountries = $marketplace?->settings['artist_countries'] ?? [];
                                     return Artist::withoutGlobalScopes()
                                         ->where('is_active', true)
+                                        ->when(!empty($artistCountries), fn ($q) => $q->whereIn('country', $artistCountries))
                                         ->orderBy('name')
                                         ->pluck('name', 'id');
                                 })

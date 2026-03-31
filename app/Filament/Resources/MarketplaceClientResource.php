@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Models\MarketplaceClient;
 use App\Models\Microservice;
+use App\Services\LocationService;
 use Filament\Actions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -155,6 +156,28 @@ class MarketplaceClientResource extends Resource
                                         ),
                                 ])
                                 ->columns(2),
+
+                            SC\Section::make('Content Filters')
+                                ->description('Restrict which venues and artists appear in this marketplace by country.')
+                                ->schema([
+                                    Forms\Components\Select::make('settings.venue_countries')
+                                        ->label('Venue Countries')
+                                        ->helperText('Only venues from these countries will be available. Leave empty for all.')
+                                        ->options(fn (LocationService $locationService) => $locationService->getCountries())
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload(),
+
+                                    Forms\Components\Select::make('settings.artist_countries')
+                                        ->label('Artist Countries')
+                                        ->helperText('Only artists from these countries will be available. Leave empty for all.')
+                                        ->options(fn (LocationService $locationService) => $locationService->getCountries())
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload(),
+                                ])
+                                ->columns(2)
+                                ->collapsed(),
 
                             SC\Section::make('Notes')
                                 ->schema([
