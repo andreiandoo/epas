@@ -373,7 +373,7 @@ class ListOrganizerDocuments extends ListRecords
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; }
+        * { font-family: DejaVu Sans, sans-serif; }
     </style>
 </head>
 <body>' . $htmlContent . '</body>
@@ -389,7 +389,7 @@ class ListOrganizerDocuments extends ListRecords
             if (stripos($htmlContent, 'font-family') === false) {
                 $htmlContent = preg_replace(
                     '/<\/head>/i',
-                    '<style>body { font-family: DejaVu Sans, sans-serif; }</style></head>',
+                    '<style>* { font-family: DejaVu Sans, sans-serif; }</style></head>',
                     $htmlContent
                 );
             }

@@ -8,8 +8,10 @@
             size: {{ $orientation === 'landscape' ? 'A4 landscape' : 'A4' }};
             margin: 10mm 12mm;
         }
-        body {
+        * {
             font-family: DejaVu Sans, Arial, sans-serif;
+        }
+        body {
             margin: 0;
             padding: 0;
             background: #fff;
