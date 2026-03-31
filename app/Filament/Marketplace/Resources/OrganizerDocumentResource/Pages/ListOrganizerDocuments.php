@@ -363,6 +363,9 @@ class ListOrganizerDocuments extends ListRecords
      */
     protected function ensureUtf8Html(string $htmlContent): string
     {
+        // Decode HTML entities to UTF-8 characters for DomPDF compatibility
+        $htmlContent = html_entity_decode($htmlContent, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
         if (stripos($htmlContent, '<html') === false) {
             $htmlContent = '<!DOCTYPE html>
 <html>

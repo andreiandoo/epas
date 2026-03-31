@@ -82,6 +82,9 @@ class ViewOrganizerDocument extends ViewRecord
                     // Process template
                     $htmlContent = $template->processTemplate($variables);
 
+                    // Decode HTML entities to UTF-8 characters for DomPDF
+                    $htmlContent = html_entity_decode($htmlContent, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
                     // Ensure proper UTF-8 encoding
                     if (stripos($htmlContent, '<html') === false) {
                         $htmlContent = '<!DOCTYPE html>

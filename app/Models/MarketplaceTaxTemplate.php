@@ -746,7 +746,12 @@ class MarketplaceTaxTemplate extends Model
         $now = now();
         $variables['current_day'] = $now->format('d');
         $variables['current_month'] = $now->format('m');
-        $variables['current_month_name'] = $now->translatedFormat('F');
+        $variables['current_month_name'] = match ((int) $now->format('m')) {
+            1 => 'Ianuarie', 2 => 'Februarie', 3 => 'Martie', 4 => 'Aprilie',
+            5 => 'Mai', 6 => 'Iunie', 7 => 'Iulie', 8 => 'August',
+            9 => 'Septembrie', 10 => 'Octombrie', 11 => 'Noiembrie', 12 => 'Decembrie',
+            default => $now->format('F'),
+        };
         $variables['current_year'] = $now->format('Y');
         $variables['current_date'] = $now->format('d.m.Y');
         $variables['current_datetime'] = $now->format('d.m.Y H:i');

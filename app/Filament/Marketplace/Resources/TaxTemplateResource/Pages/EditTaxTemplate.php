@@ -218,6 +218,11 @@ class EditTaxTemplate extends EditRecord
         }
 
         // Remove any remaining unreplaced variables
-        return preg_replace('/\{\{\s*\w+\s*\}\}/', '', $html);
+        $html = preg_replace('/\{\{\s*\w+\s*\}\}/', '', $html);
+
+        // Decode HTML entities to UTF-8 for DomPDF compatibility
+        $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return $html;
     }
 }
