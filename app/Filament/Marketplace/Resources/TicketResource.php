@@ -181,8 +181,8 @@ class TicketResource extends Resource
                                 $isPgsql = \DB::getDriverName() === 'pgsql';
                                 return \App\Models\Event::where('marketplace_client_id', $marketplace?->id)
                                     ->where(function ($q) use ($term, $isPgsql) {
-                                        $q->whereRaw($isPgsql ? "LOWER(title->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
-                                          ->orWhereRaw($isPgsql ? "LOWER(title->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
+                                        $q->whereRaw($isPgsql ? "LOWER(title::jsonb->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
+                                          ->orWhereRaw($isPgsql ? "LOWER(title::jsonb->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
                                     })
                                     ->limit(20)
                                     ->get()

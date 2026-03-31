@@ -423,7 +423,7 @@ class PayoutResource extends Resource
                             $isPgsql = \DB::getDriverName() === 'pgsql';
                             $q->whereRaw(
                                 $isPgsql
-                                    ? "LOWER(title->>'ro') LIKE ? OR LOWER(title->>'en') LIKE ?"
+                                    ? "LOWER(title::jsonb->>'ro') LIKE ? OR LOWER(title::jsonb->>'en') LIKE ?"
                                     : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ? OR LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?",
                                 [$term, $term]
                             );

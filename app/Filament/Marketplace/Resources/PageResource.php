@@ -181,7 +181,7 @@ class PageResource extends Resource
                     ->searchable(query: function (Builder $query, string $search): Builder {
                         return $query->whereRaw(
                             DB::getDriverName() === 'pgsql'
-                                ? "title->>'en' LIKE ?"
+                                ? "title::jsonb->>'en' LIKE ?"
                                 : "JSON_EXTRACT(title, '$.en') LIKE ?",
                             ["%{$search}%"]
                         );

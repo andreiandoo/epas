@@ -347,7 +347,7 @@ class KbArticleResource extends Resource
                         return $query->where(function ($q) use ($search, $marketplaceLanguage) {
                             $isPgsql = DB::getDriverName() === 'pgsql';
                             $q->whereRaw(
-                                $isPgsql ? "title->>'{$marketplaceLanguage}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?",
+                                $isPgsql ? "title::jsonb->>'{$marketplaceLanguage}' LIKE ?" : "JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$marketplaceLanguage}')) LIKE ?",
                                 ["%{$search}%"]
                             )
                               ->orWhereRaw(
