@@ -709,15 +709,14 @@ class VenueResource extends Resource
                 Tables\Columns\TextColumn::make("name.{$lang}")
                     ->label('Nume')
                     ->searchable(query: function (\Illuminate\Database\Eloquent\Builder $query, string $search) use ($lang): void {
-                        $query->whereRaw(
-                            DB::getDriverName() === 'pgsql'
-                                ? "LOWER(name->>'{$lang}') LIKE ?"
-                                : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?",
-                            ['%' . mb_strtolower($search) . '%']
-                        )->orWhereRaw(
-                            "LOWER(`city`) LIKE ?",
-                            ['%' . mb_strtolower($search) . '%']
-                        );
+                        $term = '%' . mb_strtolower($search) . '%';
+                        if (DB::getDriverName() === 'pgsql') {
+                            $query->whereRaw("unaccent(LOWER(name->>'{$lang}')) LIKE unaccent(?)", [$term])
+                                ->orWhereRaw("unaccent(LOWER(city)) LIKE unaccent(?)", [$term]);
+                        } else {
+                            $query->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(`name`, '$.{$lang}'))) LIKE ?", [$term])
+                                ->orWhereRaw("LOWER(`city`) LIKE ?", [$term]);
+                        }
                     })
                     ->sortable()
                     ->toggleable(),

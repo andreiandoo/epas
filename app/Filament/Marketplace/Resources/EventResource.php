@@ -3365,8 +3365,13 @@ class EventResource extends Resource
                         $term = '%' . mb_strtolower($search) . '%';
                         $isPgsql = \DB::getDriverName() === 'pgsql';
                         $query->where(function ($q) use ($term, $isPgsql) {
-                            $q->whereRaw($isPgsql ? "LOWER(title->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
-                              ->orWhereRaw($isPgsql ? "LOWER(title->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
+                            if ($isPgsql) {
+                                $q->whereRaw("unaccent(LOWER(title->>'ro')) LIKE unaccent(?)", [$term])
+                                  ->orWhereRaw("unaccent(LOWER(title->>'en')) LIKE unaccent(?)", [$term]);
+                            } else {
+                                $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro'))) LIKE ?", [$term])
+                                  ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(title, '$.en'))) LIKE ?", [$term]);
+                            }
                         });
                     })
                     ->sortable()
@@ -3390,7 +3395,20 @@ class EventResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
-                    ->searchable()
+                    ->searchable(query: function ($query, string $search): void {
+                        $term = '%' . mb_strtolower($search) . '%';
+                        if (\DB::getDriverName() === 'pgsql') {
+                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
+                                $q->whereRaw('unaccent(LOWER(name)) LIKE unaccent(?)', [$term])
+                                  ->orWhereRaw('unaccent(LOWER(company_name)) LIKE unaccent(?)', [$term])
+                            );
+                        } else {
+                            $query->whereHas('marketplaceOrganizer', fn ($q) =>
+                                $q->whereRaw('LOWER(name) LIKE ?', [$term])
+                                  ->orWhereRaw('LOWER(company_name) LIKE ?', [$term])
+                            );
+                        }
+                    })
                     ->sortable()
                     ->toggleable()
                     ->url(fn (Event $record) => $record->marketplace_organizer_id
