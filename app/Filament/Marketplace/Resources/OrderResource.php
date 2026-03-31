@@ -397,6 +397,53 @@ class OrderResource extends Resource
                             ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('change_status')
+                        ->label('Schimbă status')
+                        ->icon('heroicon-o-arrow-path')
+                        ->form([
+                            \Filament\Forms\Components\Select::make('status')
+                                ->label('Status nou')
+                                ->options([
+                                    'pending' => 'În așteptare',
+                                    'paid' => 'Plătită',
+                                    'confirmed' => 'Confirmată',
+                                    'completed' => 'Finalizată',
+                                    'cancelled' => 'Anulată',
+                                    'refunded' => 'Rambursată',
+                                    'failed' => 'Eșuată',
+                                    'expired' => 'Expirată',
+                                ])
+                                ->required(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            $records->each(fn ($record) => $record->update(['status' => $data['status']]));
+                            \Filament\Notifications\Notification::make()
+                                ->title('Status actualizat pentru ' . $records->count() . ' comenzi')
+                                ->success()
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    Tables\Actions\BulkAction::make('bulk_delete')
+                        ->label('Șterge')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Șterge comenzile selectate')
+                        ->modalDescription('Comenzile finalizate sau plătite nu pot fi șterse. Doar comenzile cu alte statusuri vor fi șterse.')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $protected = ['completed', 'paid'];
+                            $deletable = $records->filter(fn ($r) => !in_array($r->status, $protected));
+                            $skipped = $records->count() - $deletable->count();
+                            $deletable->each(fn ($r) => $r->delete());
+                            $msg = $deletable->count() . ' comenzi șterse.';
+                            if ($skipped > 0) $msg .= " {$skipped} comenzi protejate (finalizate/plătite) au fost ignorate.";
+                            \Filament\Notifications\Notification::make()->title($msg)->success()->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 
