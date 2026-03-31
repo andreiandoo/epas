@@ -26,6 +26,7 @@ class MarketplaceTaxTemplate extends Model
         'trigger',
         'is_default',
         'is_active',
+        'by_proxy',
     ];
 
     protected $attributes = [
@@ -35,6 +36,7 @@ class MarketplaceTaxTemplate extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+        'by_proxy' => 'boolean',
     ];
 
     /**

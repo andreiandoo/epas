@@ -76,6 +76,10 @@ class TaxTemplateResource extends Resource
                             ->label('Active')
                             ->default(true),
 
+                        Forms\Components\Toggle::make('by_proxy')
+                            ->label('Prin împuternicit')
+                            ->default(false),
+
                         Forms\Components\Select::make('page_orientation')
                             ->label('Orientare pagină')
                             ->options([
