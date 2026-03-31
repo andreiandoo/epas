@@ -111,6 +111,21 @@ class MarketplaceCustomerResource extends Resource
                                     'fr' => 'French',
                                     'es' => 'Spanish',
                                 ]),
+
+                            Forms\Components\TextInput::make('new_password')
+                                ->label('New Password')
+                                ->password()
+                                ->revealable()
+                                ->minLength(8)
+                                ->dehydrated(false)
+                                ->helperText('Leave empty to keep current password.'),
+
+                            Forms\Components\TextInput::make('new_password_confirmation')
+                                ->label('Confirm Password')
+                                ->password()
+                                ->revealable()
+                                ->dehydrated(false)
+                                ->same('new_password'),
                         ])->columns(2),
 
                     SC\Section::make('Address')
