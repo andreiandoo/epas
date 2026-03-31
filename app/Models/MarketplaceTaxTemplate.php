@@ -70,6 +70,7 @@ class MarketplaceTaxTemplate extends Model
         'decont' => 'Decont',
         'decont_ontop' => 'Decont On-Top',
         'decont_inclus' => 'Decont Inclus',
+        'pv_distrugere' => 'PV Distrugere',
         'other' => 'Other',
     ];
 
