@@ -1393,17 +1393,52 @@ class OrderResource extends Resource
         $tickets = $record->tickets()->with(['order.marketplaceClient', 'marketplaceEvent', 'marketplaceTicketType'])->get();
         if ($tickets->isEmpty()) return null;
 
-        // Use ViewTicket's template resolution logic for each ticket
-        $viewTicket = app(\App\Filament\Marketplace\Resources\TicketResource\Pages\ViewTicket::class);
-        $pdfOutputs = [];
+        $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
+        $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
 
-        foreach ($tickets as $ticket) {
-            // For "download all", use the generic combined template
+        // Resolve template once (all tickets in an order usually share the same event)
+        $firstTicket = $tickets->first();
+        $event = $firstTicket->resolveEvent();
+        $template = static::resolveTicketTemplate($firstTicket, $event);
+
+        if ($template && !empty($template->template_data)) {
+            // Generate combined PDF using custom template for each ticket
+            $size = $template->getSize();
+            $widthPt = round($size['width'] * 2.8346, 2);
+            $heightPt = round($size['height'] * 2.8346, 2);
+            $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+            $pages = [];
+            foreach ($tickets as $ticket) {
+                $data = $variableService->resolveTicketData($ticket);
+                $content = $generator->renderToHtml($template->template_data, $data);
+                if (!empty(trim($content))) {
+                    $pages[] = $content;
+                }
+            }
+
+            if (!empty($pages)) {
+                $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
+                $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'><style>@page{margin:0;size:{$widthPt}pt {$heightPt}pt;}*{margin:0;padding:0;}body{margin:0;padding:0;width:{$widthPt}pt;background-color:{$bgColor};font-family:'DejaVu Sans',sans-serif;overflow:hidden;}</style></head><body>{$pagesHtml}</body></html>";
+
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+                    ->setPaper([0, 0, $widthPt, $heightPt])
+                    ->setOption('isRemoteEnabled', true)
+                    ->setOption('isHtml5ParserEnabled', true);
+
+                $template->markAsUsed();
+                $orderNumber = $record->order_number ?? $record->id;
+
+                return response()->streamDownload(
+                    fn () => print($pdf->output()),
+                    "bilete-{$orderNumber}.pdf"
+                );
+            }
         }
 
-        // Use generic combined template for all tickets
+        // Fallback: generic combined template
         $client = $record->marketplaceClient;
-        $eventName = $tickets->first()?->marketplaceEvent?->name ?? 'Eveniment';
+        $eventName = $firstTicket->marketplaceEvent?->name ?? 'Eveniment';
         $marketplaceName = $client?->public_name ?? $client?->name ?? 'Marketplace';
         $primaryColor = $client?->settings['theme']['primary_color'] ?? '#1a1a2e';
 
@@ -1423,6 +1458,32 @@ class OrderResource extends Resource
             fn () => print($pdf->output()),
             "bilete-{$orderNumber}.pdf"
         );
+    }
+
+    protected static function resolveTicketTemplate(\App\Models\Ticket $ticket, ?\App\Models\Event $event): ?\App\Models\TicketTemplate
+    {
+        // 1. Event's assigned template
+        if ($event?->ticketTemplate && $event->ticketTemplate->status === 'active' && !empty($event->ticketTemplate->template_data)) {
+            $layers = $event->ticketTemplate->template_data['layers'] ?? [];
+            if (!empty(array_filter($layers, fn($l) => !isset($l['visible']) || $l['visible'] !== false))) {
+                return $event->ticketTemplate;
+            }
+        }
+
+        // 2. Marketplace client default template
+        $clientId = $ticket->marketplace_client_id ?? $event?->marketplace_client_id ?? $ticket->order?->marketplace_client_id;
+        if ($clientId) {
+            $template = \App\Models\TicketTemplate::where('marketplace_client_id', $clientId)
+                ->where('status', 'active')
+                ->orderByDesc('is_default')
+                ->orderByDesc('last_used_at')
+                ->get()
+                ->first(fn ($t) => !empty($t->template_data['layers'] ?? []));
+
+            if ($template) return $template;
+        }
+
+        return null;
     }
 
     protected static function printInvoice(Order $record)
