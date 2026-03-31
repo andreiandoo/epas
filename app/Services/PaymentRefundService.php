@@ -2,8 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\MarketplaceRefundItem;
 use App\Models\MarketplaceRefundRequest;
 use App\Models\Order;
+use App\Models\Ticket;
+use App\Models\TicketType;
+use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentRefundService
@@ -124,17 +129,287 @@ class PaymentRefundService
     }
 
     /**
-     * Process refund through Netopia (Romanian payment processor)
+     * Process refund through Netopia via SOAP API
      */
     protected function processNetopiaRefund(MarketplaceRefundRequest $refund, Order $order): RefundResult
     {
-        // Netopia doesn't support automatic refunds via API for most merchants
-        // This would require specific integration with their refund endpoint
-        return new RefundResult(
-            success: false,
-            error: 'Netopia automatic refunds not yet implemented. Please process via Netopia admin panel.',
-            requiresManual: true
-        );
+        $paymentReference = $order->payment_reference ?? $order->order_number;
+
+        if (empty($paymentReference)) {
+            return new RefundResult(
+                success: false,
+                error: 'No payment reference found for this order.',
+                requiresManual: true
+            );
+        }
+
+        try {
+            $client = $order->marketplaceClient;
+            if (!$client) {
+                return new RefundResult(success: false, error: 'Marketplace client not found.', requiresManual: true);
+            }
+
+            // Get Netopia config from marketplace microservice settings
+            $netopiaMs = $client->microservices()->where('slug', 'payment-netopia')->first();
+            $settings = $netopiaMs?->pivot?->settings ?? [];
+            if (is_string($settings)) $settings = json_decode($settings, true) ?? [];
+
+            if (empty($settings)) {
+                return new RefundResult(success: false, error: 'Netopia payment not configured.', requiresManual: true);
+            }
+
+            $processor = PaymentProcessorFactory::makeFromArray('netopia', $settings);
+            $result = $processor->refundPayment($paymentReference, (float) $refund->approved_amount, $refund->reason);
+
+            if ($result['success'] ?? false) {
+                return new RefundResult(
+                    success: true,
+                    refundId: $result['refund_id'] ?? null,
+                    response: $result['response'] ?? null
+                );
+            }
+
+            return new RefundResult(
+                success: false,
+                error: $result['error'] ?? 'Netopia refund failed.',
+                requiresManual: $result['requires_manual'] ?? true
+            );
+
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->error("Netopia refund exception for {$refund->reference}: {$e->getMessage()}");
+            return new RefundResult(success: false, error: "Error: {$e->getMessage()}", requiresManual: true);
+        }
+    }
+
+    /**
+     * Process a ticket-level refund with per-ticket commission tracking.
+     */
+    public function processTicketLevelRefund(
+        Order $order,
+        array $ticketIds,
+        bool $refundCommission,
+        string $reason,
+        ?string $reasonCategory = null
+    ): RefundResult {
+        // Validate order is paid
+        if (!in_array($order->status, ['completed', 'paid', 'confirmed'])) {
+            return new RefundResult(success: false, error: 'Comanda nu este plătită. Refund imposibil.');
+        }
+
+        // Load tickets
+        $tickets = $order->tickets()->whereIn('id', $ticketIds)->get();
+        if ($tickets->isEmpty()) {
+            return new RefundResult(success: false, error: 'Niciun bilet valid selectat.');
+        }
+
+        // Check for already refunded
+        $alreadyRefunded = $tickets->filter(fn (Ticket $t) => $t->isRefunded());
+        if ($alreadyRefunded->isNotEmpty()) {
+            return new RefundResult(success: false, error: 'Unele bilete sunt deja rambursate: ' . $alreadyRefunded->pluck('code')->implode(', '));
+        }
+
+        // Calculate amounts per ticket
+        $commissionRate = (float) ($order->commission_rate ?? 0);
+        $items = [];
+        $totalRefund = 0;
+
+        foreach ($tickets as $ticket) {
+            $ticketPrice = (float) ($ticket->price ?? 0);
+            $commission = round($ticketPrice * ($commissionRate / 100), 2);
+            $faceValue = $ticketPrice - $commission;
+            $refundAmount = $refundCommission ? $ticketPrice : $faceValue;
+
+            $items[] = [
+                'ticket' => $ticket,
+                'face_value' => round($faceValue, 2),
+                'commission_amount' => round($commission, 2),
+                'refund_amount' => round($refundAmount, 2),
+                'commission_refunded' => $refundCommission,
+            ];
+            $totalRefund += $refundAmount;
+        }
+
+        $totalRefund = round($totalRefund, 2);
+
+        // Validate total doesn't exceed remaining
+        $alreadyRefundedAmount = (float) ($order->refunded_amount ?? 0);
+        $maxRefundable = (float) $order->total - $alreadyRefundedAmount;
+        if ($totalRefund > $maxRefundable + 0.01) {
+            return new RefundResult(success: false, error: "Suma de refund ({$totalRefund}) depășește maximul disponibil ({$maxRefundable}).");
+        }
+
+        // Determine if this is full or partial
+        $allOrderTicketIds = $order->tickets()->pluck('id')->toArray();
+        $nonRefundedTicketIds = $order->tickets()->where('refund_status', '!=', 'refunded')->pluck('id')->toArray();
+        $isFullRefund = count($ticketIds) >= count($nonRefundedTicketIds);
+
+        $processorResult = null;
+
+        DB::beginTransaction();
+
+        try {
+            // Create refund request
+            $refundRequest = MarketplaceRefundRequest::create([
+                'reference' => 'REF-' . now()->format('Ymd') . '-' . strtoupper(substr(uniqid(), -6)),
+                'marketplace_client_id' => $order->marketplace_client_id,
+                'marketplace_organizer_id' => $order->marketplace_organizer_id,
+                'marketplace_customer_id' => $order->marketplace_customer_id,
+                'order_id' => $order->id,
+                'marketplace_event_id' => $order->marketplace_event_id ?? $order->event_id,
+                'type' => $isFullRefund ? 'full_refund' : 'partial_refund',
+                'reason' => $reason,
+                'reason_category' => $reasonCategory,
+                'ticket_ids' => $ticketIds,
+                'requested_amount' => $totalRefund,
+                'approved_amount' => $totalRefund,
+                'currency' => $order->currency ?? 'RON',
+                'status' => 'processing',
+                'refund_method' => 'original_payment',
+                'payment_processor' => $order->payment_processor,
+                'commission_refund' => $refundCommission ? collect($items)->sum('commission_amount') : 0,
+                'organizer_deduction' => collect($items)->sum('face_value'),
+                'requested_at' => now(),
+            ]);
+
+            // Create refund items
+            foreach ($items as $item) {
+                MarketplaceRefundItem::create([
+                    'refund_request_id' => $refundRequest->id,
+                    'ticket_id' => $item['ticket']->id,
+                    'ticket_type_id' => $item['ticket']->ticket_type_id,
+                    'face_value' => $item['face_value'],
+                    'commission_amount' => $item['commission_amount'],
+                    'refund_amount' => $item['refund_amount'],
+                    'commission_refunded' => $item['commission_refunded'],
+                    'status' => 'pending',
+                ]);
+            }
+
+            // Call payment processor
+            $processorResult = $this->processRefund($refundRequest);
+
+            if (!$processorResult->success && !$processorResult->requiresManual) {
+                DB::rollBack();
+                return $processorResult;
+            }
+
+            // If success or requires manual processing, update records
+            if ($processorResult->success) {
+                $refundRequest->update([
+                    'status' => $isFullRefund ? 'refunded' : 'partially_refunded',
+                    'payment_refund_id' => $processorResult->refundId,
+                    'payment_response' => $processorResult->response,
+                    'is_automatic' => true,
+                    'processed_at' => now(),
+                    'completed_at' => now(),
+                ]);
+
+                // Update refund items
+                $refundRequest->refundItems()->update(['status' => 'refunded']);
+            } else {
+                // Manual processing needed
+                $refundRequest->update([
+                    'status' => 'approved',
+                    'admin_notes' => 'Automatic refund requires manual processing: ' . ($processorResult->error ?? ''),
+                ]);
+            }
+
+            // Update tickets
+            foreach ($tickets as $ticket) {
+                $ticket->update([
+                    'status' => 'refunded',
+                    'refund_status' => 'refunded',
+                    'is_cancelled' => true,
+                    'cancelled_at' => now(),
+                    'cancellation_reason' => "Refund: {$refundRequest->reference}",
+                    'refund_request_id' => $refundRequest->id,
+                ]);
+            }
+
+            // Update order
+            $newRefundedAmount = $alreadyRefundedAmount + $totalRefund;
+            $refundStatus = $isFullRefund ? 'full' : 'partial';
+            $order->update([
+                'refund_status' => $refundStatus,
+                'refunded_amount' => round($newRefundedAmount, 2),
+                'refunded_at' => now(),
+                'refund_amount' => round($newRefundedAmount, 2),
+                'refund_reason' => $reason,
+            ]);
+
+            if ($isFullRefund) {
+                $order->update(['status' => 'refunded']);
+            }
+
+            // Restore stock for affected tickets
+            $order->releaseStockForTickets($tickets);
+
+            DB::commit();
+
+            return $processorResult;
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            // If processor already succeeded but DB failed — critical discrepancy
+            if ($processorResult?->success) {
+                Log::channel('marketplace')->critical('REFUND DISCREPANCY: Processor refunded but DB failed', [
+                    'order_id' => $order->id,
+                    'refund_id' => $processorResult->refundId,
+                    'amount' => $totalRefund,
+                    'error' => $e->getMessage(),
+                ]);
+
+                // Attempt minimal recovery record
+                try {
+                    MarketplaceRefundRequest::create([
+                        'reference' => 'REF-RECOVERY-' . now()->format('YmdHis'),
+                        'marketplace_client_id' => $order->marketplace_client_id,
+                        'order_id' => $order->id,
+                        'type' => 'full_refund',
+                        'reason' => 'AUTO-RECOVERY: DB failed after processor refund',
+                        'requested_amount' => $totalRefund,
+                        'approved_amount' => $totalRefund,
+                        'currency' => $order->currency ?? 'RON',
+                        'status' => 'refunded',
+                        'payment_refund_id' => $processorResult->refundId,
+                        'admin_notes' => "CRITICAL: Processor refunded {$totalRefund} but DB transaction failed: {$e->getMessage()}",
+                        'requested_at' => now(),
+                        'completed_at' => now(),
+                    ]);
+                } catch (\Throwable $inner) {
+                    Log::channel('marketplace')->emergency('REFUND DISCREPANCY: Recovery record also failed', [
+                        'order_id' => $order->id,
+                        'refund_id' => $processorResult->refundId,
+                        'amount' => $totalRefund,
+                    ]);
+                }
+            }
+
+            Log::channel('marketplace')->error('Refund processing exception', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return new RefundResult(success: false, error: 'Eroare la procesare: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Process a full order refund (all non-refunded tickets).
+     */
+    public function processOrderLevelRefund(Order $order, bool $refundCommission, string $reason, ?string $reasonCategory = null): RefundResult
+    {
+        $ticketIds = $order->tickets()
+            ->where('refund_status', '!=', 'refunded')
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($ticketIds)) {
+            return new RefundResult(success: false, error: 'Toate biletele sunt deja rambursate.');
+        }
+
+        return $this->processTicketLevelRefund($order, $ticketIds, $refundCommission, $reason, $reasonCategory);
     }
 
     /**

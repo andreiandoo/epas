@@ -318,6 +318,67 @@ class Order extends Model
     }
 
     /**
+     * Release stock for specific tickets (used for partial refunds).
+     */
+    public function releaseStockForTickets(\Illuminate\Support\Collection $tickets): void
+    {
+        try {
+            // 1. Release seats for specific tickets
+            foreach ($tickets as $ticket) {
+                $meta = $ticket->meta ?? [];
+                $seatUid = $meta['seat_uid'] ?? null;
+                $eventSeatingId = $meta['event_seating_id'] ?? null;
+
+                if ($seatUid && $eventSeatingId) {
+                    EventSeat::where('event_seating_id', $eventSeatingId)
+                        ->where('seat_uid', $seatUid)
+                        ->whereIn('status', ['held', 'sold'])
+                        ->update([
+                            'status' => 'available',
+                            'version' => DB::raw('version + 1'),
+                            'last_change_at' => now(),
+                        ]);
+
+                    SeatHold::where('event_seating_id', $eventSeatingId)
+                        ->where('seat_uid', $seatUid)
+                        ->delete();
+                }
+            }
+
+            // 2. Restore stock grouped by ticket_type_id
+            $ticketsByType = $tickets->groupBy('ticket_type_id');
+
+            foreach ($ticketsByType as $typeId => $typeTickets) {
+                if (!$typeId) continue;
+                $count = $typeTickets->count();
+
+                $mtt = MarketplaceTicketType::find($typeId);
+                if ($mtt) {
+                    $mtt->decrement('quantity_sold', min($count, $mtt->quantity_sold ?? 0));
+                    if ($mtt->status === 'sold_out' && $mtt->quantity_sold < ($mtt->quantity ?? PHP_INT_MAX)) {
+                        $mtt->update(['status' => 'active']);
+                    }
+                } else {
+                    TicketType::where('id', $typeId)
+                        ->where('quota_sold', '>=', $count)
+                        ->decrement('quota_sold', $count);
+                }
+            }
+
+            Log::channel('marketplace')->info('Order: Released stock for specific tickets', [
+                'order_id' => $this->id,
+                'ticket_count' => $tickets->count(),
+                'ticket_types' => $ticketsByType->keys()->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Order: Failed to release stock for tickets', [
+                'order_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Configure activity logging
      */
     public function getActivitylogOptions(): LogOptions

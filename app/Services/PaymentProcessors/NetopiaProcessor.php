@@ -53,6 +53,12 @@ class NetopiaProcessor implements PaymentProcessorInterface
                         ? ($arrayConfig['live_public_key'] ?? $arrayConfig['test_public_key'] ?? null)
                         : ($arrayConfig['test_public_key'] ?? $arrayConfig['live_public_key'] ?? null))
                     ?? null,
+                'soap_username' => $isLive
+                    ? ($arrayConfig['live_soap_username'] ?? $arrayConfig['test_soap_username'] ?? null)
+                    : ($arrayConfig['test_soap_username'] ?? $arrayConfig['live_soap_username'] ?? null),
+                'soap_password' => $isLive
+                    ? ($arrayConfig['live_soap_password'] ?? $arrayConfig['test_soap_password'] ?? null)
+                    : ($arrayConfig['test_soap_password'] ?? $arrayConfig['live_soap_password'] ?? null),
             ];
         } else {
             throw new \Exception('Either config or arrayConfig must be provided');
@@ -234,7 +240,127 @@ class NetopiaProcessor implements PaymentProcessorInterface
             throw new \Exception('Netopia is not properly configured');
         }
 
-        throw new \Exception('Refunds for Netopia must be processed manually through the dashboard');
+        $soapUsername = $this->keys['soap_username'] ?? null;
+        $soapPassword = $this->keys['soap_password'] ?? null;
+
+        if (!$soapUsername || !$soapPassword) {
+            return [
+                'success' => false,
+                'error' => 'Netopia SOAP credentials not configured. Add SOAP username and password in Payment Config to enable automatic refunds.',
+                'requires_manual' => true,
+            ];
+        }
+
+        $sacId = $this->keys['signature'] ?? null;
+        if (!$sacId) {
+            return [
+                'success' => false,
+                'error' => 'Netopia Merchant ID (Signature) not configured.',
+                'requires_manual' => true,
+            ];
+        }
+
+        try {
+            $wsdlUrl = $this->baseUrl . '/api/payment2/?wsdl';
+
+            $soapClient = new \SoapClient($wsdlUrl, [
+                'trace' => true,
+                'exceptions' => true,
+                'connection_timeout' => 30,
+                'cache_wsdl' => WSDL_CACHE_NONE,
+            ]);
+
+            // Step 1: Login to get sessionId
+            $loginResult = $soapClient->logIn([
+                'username' => $soapUsername,
+                'password' => $soapPassword,
+            ]);
+
+            $sessionId = $loginResult->logInResult->id ?? $loginResult->id ?? null;
+            if (!$sessionId) {
+                return [
+                    'success' => false,
+                    'error' => 'Netopia SOAP login failed: could not obtain sessionId.',
+                    'requires_manual' => true,
+                ];
+            }
+
+            // Step 2: Call credit (refund)
+            $creditAmount = $amount ? number_format($amount, 2, '.', '') : null;
+
+            $creditParams = [
+                'sessionId' => $sessionId,
+                'sacId' => $sacId,
+                'orderId' => $paymentId,
+            ];
+
+            if ($creditAmount !== null) {
+                $creditParams['amount'] = (float) $creditAmount;
+            }
+
+            $creditResult = $soapClient->credit($creditParams);
+
+            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia SOAP credit result', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'result' => json_encode($creditResult),
+            ]);
+
+            return [
+                'success' => true,
+                'refund_id' => 'netopia-credit-' . $paymentId,
+                'amount' => $amount,
+                'response' => json_decode(json_encode($creditResult), true),
+                'requires_manual' => false,
+            ];
+
+        } catch (\SoapFault $e) {
+            $errorCode = $e->faultcode ?? '';
+            $errorMessage = $e->getMessage();
+
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia SOAP credit failed', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'fault_code' => $errorCode,
+                'fault_message' => $errorMessage,
+            ]);
+
+            // Known Netopia error codes
+            if (str_contains($errorMessage, '53') || str_contains($errorMessage, 'confirmed')) {
+                return [
+                    'success' => false,
+                    'error' => 'Netopia: Comanda nu este confirmată — refund imposibil (error 53).',
+                    'requires_manual' => true,
+                ];
+            }
+
+            if (str_contains($errorMessage, '54') || str_contains($errorMessage, 'higher than')) {
+                return [
+                    'success' => false,
+                    'error' => 'Netopia: Suma de refund depășește suma plătită (error 54).',
+                    'requires_manual' => false,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => "Netopia SOAP error: {$errorMessage}",
+                'requires_manual' => true,
+            ];
+
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia SOAP refund exception', [
+                'payment_id' => $paymentId,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Netopia refund error: ' . $e->getMessage(),
+                'requires_manual' => true,
+            ];
+        }
     }
 
     public function isConfigured(): bool

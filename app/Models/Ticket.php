@@ -83,6 +83,16 @@ class Ticket extends Model
         return $this->belongsTo(MarketplaceRefundRequest::class, 'refund_request_id');
     }
 
+    public function refundItem(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MarketplaceRefundItem::class);
+    }
+
+    public function isRefunded(): bool
+    {
+        return ($this->refund_status ?? 'none') === 'refunded';
+    }
+
     /**
      * Resolve the Event model through all available paths.
      * Marketplace tickets may have ticket_type_id=null, so we fall back to event_id.

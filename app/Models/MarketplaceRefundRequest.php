@@ -172,6 +172,11 @@ class MarketplaceRefundRequest extends Model
         return $this->hasMany(Ticket::class, 'refund_request_id');
     }
 
+    public function refundItems(): HasMany
+    {
+        return $this->hasMany(MarketplaceRefundItem::class, 'refund_request_id');
+    }
+
     /**
      * Status checks
      */
