@@ -68,11 +68,10 @@ require_once __DIR__ . '/includes/header.php';
                     <li><a href="#dupa-eveniment" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">5. După eveniment</a></li>
                     <li><a href="#calcul-impozit" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">6. Calculul impozitului</a></li>
                     <li><a href="#tva" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">7. TVA</a></li>
-                    <li><a href="#timbru-crucea-rosie" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">8. Timbrul Crucea Roșie</a></li>
-                    <li><a href="#timbru-monumente" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">9. Timbrul monumentelor</a></li>
-                    <li><a href="#taxa-timbru" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">10. Taxa de timbru</a></li>
-                    <li><a href="#timbru-divertisment" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">11. Timbrul de divertisment</a></li>
-                    <li><a href="#drepturi-autor" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">12. Drepturi de autor</a></li>
+                    <li><a href="#timbru-monumente" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">8. Timbrul monumentelor</a></li>
+                    <li><a href="#taxa-timbru" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">9. Taxa de timbru</a></li>
+                    <li><a href="#timbru-divertisment" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">10. Timbrul de divertisment</a></li>
+                    <li><a href="#drepturi-autor" class="block px-3 py-3 text-sm font-medium text-gray-600 transition-colors rounded-lg nav-link hover:bg-gray-50 hover:text-gray-900">11. Drepturi de autor</a></li>
                 </ul>
             </nav>
         </div>
@@ -151,7 +150,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Afise -->
-            <div class="p-5 my-5 border-l-4 bg-blue-50 border-blue-500 rounded-r-xl">
+            <div class="p-5 my-5 border-l-4 border-blue-500 bg-blue-50 rounded-r-xl">
                 <p class="text-[15px] leading-[1.8] text-blue-900 mb-0">
                     <strong class="text-blue-700">Afișe necesare:</strong>
                     Afiș orizontal <strong>obligatoriu</strong> (dimensiune minimă: 680 × 357 px, format .jpg sau .png) și/sau afiș vertical — opțional (dimensiune minimă: 600 × 840 px).
@@ -186,7 +185,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Se depune o <strong>Cerere de înregistrare / vizare</strong> la autoritatea competentă (Direcția Locală de Taxe și Impozite — DGITL — din orașul / sectorul în care urmează să fie organizat evenimentul), cu numărul maxim de bilete ce vor fi puse în vânzare.</p>
 
-            <div class="p-5 my-5 border-l-4 bg-red-50 border-red-400 rounded-r-xl">
+            <div class="p-5 my-5 border-l-4 border-red-400 bg-red-50 rounded-r-xl">
                 <p class="text-[15px] leading-[1.8] text-red-900 mb-0">
                     <strong class="text-red-700">Atenție:</strong>
                     În cazul în care contribuabilii organizează spectacole în raza teritorială de competență a altor autorități ale administrației publice locale decât cele de la domiciliul sau sediul lor, acestora le revine obligația de a înregistra abonamentele și biletele de intrare la compartimentele de specialitate ale autorităților publice locale în a căror rază teritorială se desfășoară spectacolele.
@@ -242,17 +241,17 @@ require_once __DIR__ . '/includes/header.php';
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-3">Conform legislației actuale, informațiile minime obligatorii ce trebuie să existe pe biletul de spectacol sunt:</p>
             <div class="p-5 my-5 bg-gray-50 rounded-xl">
                 <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">a</span>Numele organizatorului de spectacole</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">b</span>CIF / CUI al organizatorului</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">c</span>Numele spectacolului</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">d</span>Data spectacolului</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">e</span>Tariful biletului (lei)</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">f</span>Categoria locului (lojă, stal, etc.)</span>
-                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="w-5 h-5 inline-flex items-center justify-center bg-primary/10 text-primary text-xs font-bold rounded flex-shrink-0">g</span>Seria fiscală a biletului</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">a</span>Numele organizatorului de spectacole</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">b</span>CIF / CUI al organizatorului</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">c</span>Numele spectacolului</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">d</span>Data spectacolului</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">e</span>Tariful biletului (lei)</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">f</span>Categoria locului (lojă, stal, etc.)</span>
+                    <span class="flex items-center gap-2 text-sm text-gray-600"><span class="inline-flex items-center justify-center flex-shrink-0 w-5 h-5 text-xs font-bold rounded bg-primary/10 text-primary">g</span>Seria fiscală a biletului</span>
                 </div>
             </div>
 
-            <div class="p-5 my-5 border-l-4 bg-red-50 border-red-400 rounded-r-xl">
+            <div class="p-5 my-5 border-l-4 border-red-400 bg-red-50 rounded-r-xl">
                 <p class="text-[15px] leading-[1.8] text-red-900 mb-0">
                     <strong class="text-red-700">Sancțiuni:</strong>
                     Încălcarea normelor tehnice privind tipărirea, înregistrarea, vânzarea, evidența și gestionarea abonamentelor și biletelor de intrare la spectacole constituie contravenție și se sancționează cu amendă de la 325 lei la 1.578 lei.
@@ -306,7 +305,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Impozitul pe spectacole se calculează prin aplicarea cotei de impozit la suma încasată din vânzarea biletelor de intrare și a abonamentelor. Consiliile locale hotărăsc cota de impozit după cum urmează:</p>
 
-            <div class="overflow-x-auto my-5 border border-gray-200 rounded-xl">
+            <div class="my-5 overflow-x-auto border border-gray-200 rounded-xl">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="bg-gray-50">
@@ -340,22 +339,7 @@ require_once __DIR__ . '/includes/header.php';
                 <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">7</span>
                 TVA (taxa pe valoarea adăugată)
             </h2>
-            <p class="text-[15px] leading-[1.8] text-gray-600">Asupra biletelor / abonamentelor vândute pentru târguri, expoziții și evenimente culturale, evenimente sportive, cinematografe etc., se aplică un TVA de <strong>9%</strong>. TVA-ul este inclus în prețul biletului.</p>
-        </section>
-
-        <!-- Section 8: Timbrul Crucea Roșie -->
-        <section id="timbru-crucea-rosie" class="mb-10">
-            <h2 class="flex items-center gap-3 pb-3 mb-5 text-2xl font-bold text-gray-900 border-b-2 border-gray-100">
-                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">8</span>
-                Timbrul pentru Crucea Roșie
-            </h2>
-            <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Toate instituțiile de cultură, de divertisment, federațiile și organizațiile sportive — asociațiile, cluburile sportive și fundațiile care organizează manifestări sportive sunt obligate să perceapă un timbru al Crucii Roșii pentru fiecare bilet vândut pentru evenimente culturale, de divertisment și sportive, concerte, festivaluri, spectacole, filme la cinematografe, întreceri sportive la nivel local, național și internațional etc., reprezentând un procent de <strong>1%</strong>, ce se va adăuga peste prețul de vânzare al biletului.</p>
-
-            <div class="p-5 my-5 bg-gray-50 rounded-xl">
-                <p class="text-[15px] leading-[1.8] text-gray-600 mb-0">
-                    <strong>Cont de virament:</strong> Societatea Națională de Cruce Roșie din România: <span class="font-mono text-sm bg-gray-100 px-2 py-0.5 rounded">RO93BRDE410SV50290514100</span>, cont deschis la Banca Română pentru Dezvoltare — Agenția Piața Romană.
-                </p>
-            </div>
+            <p class="text-[15px] leading-[1.8] text-gray-600">Asupra biletelor / abonamentelor vândute pentru târguri, expoziții și evenimente culturale, evenimente sportive, cinematografe etc., se aplică un TVA de <strong>21%</strong>. TVA-ul este inclus în prețul biletului.</p>
         </section>
 
         <!-- Section 9: Timbrul monumentelor istorice -->

@@ -700,8 +700,8 @@ function getEventDisplayStatus(event) {
         (eventEndDate && new Date(eventEndDate) < new Date());
     if (event.is_cancelled || event.status === 'cancelled') return 'cancelled';
     if (event.is_postponed || event.status === 'postponed') return 'postponed';
-    if (event.status === 'draft' || event.status === 'pending_review') return 'draft';
     if (isEnded) return 'ended';
+    if (event.status === 'draft' || event.status === 'pending_review') return 'draft';
     return 'ongoing';
 }
 
