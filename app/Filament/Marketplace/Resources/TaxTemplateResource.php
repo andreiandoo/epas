@@ -345,6 +345,10 @@ class TaxTemplateResource extends Resource
                     ->label('Active')
                     ->boolean(),
 
+                Tables\Columns\IconColumn::make('by_proxy')
+                    ->label('Împuternicit')
+                    ->boolean(),
+
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Last Modified')
                     ->dateTime('d M Y, H:i')
