@@ -41,6 +41,7 @@ class MarketplaceEmailTemplate extends Model
         'refund_approved' => 'Refund Approved',
         'refund_rejected' => 'Refund Rejected',
         'refund_completed' => 'Refund Completed',
+        'refund_processed' => 'Refund Processed (Admin-initiated)',
         'ticket_cancelled' => 'Ticket Cancelled',
         'event_reminder' => 'Event Reminder',
         'event_updated' => 'Event Updated',
@@ -137,6 +138,14 @@ class MarketplaceEmailTemplate extends Model
                 'refund_amount' => 'Refund amount',
                 'refund_reason' => 'Reason for refund',
                 'rejection_reason' => 'Reason for rejection (if rejected)',
+            ],
+            'refund_processed' => [
+                'refund_reference' => 'Referință rambursare',
+                'order_number' => 'Număr comandă',
+                'refund_amount' => 'Sumă rambursată',
+                'refund_reason' => 'Motiv rambursare',
+                'refunded_tickets' => 'Lista biletelor rambursate',
+                'marketplace_email' => 'Email contact marketplace',
             ],
             'welcome' => [
                 'login_url' => 'Login URL',

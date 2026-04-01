@@ -356,6 +356,21 @@ class PaymentRefundService
 
             DB::commit();
 
+            // Send refund notification email (after commit, non-blocking)
+            try {
+                $client = $order->marketplaceClient;
+                if ($client) {
+                    $emailService = new \App\Services\MarketplaceEmailService($client);
+                    $emailService->sendRefundProcessedEmail($refundRequest);
+                }
+            } catch (\Throwable $emailError) {
+                Log::channel('marketplace')->warning('Failed to send refund email', [
+                    'order_id' => $order->id,
+                    'refund_id' => $refundRequest->id,
+                    'error' => $emailError->getMessage(),
+                ]);
+            }
+
             return $processorResult;
 
         } catch (\Throwable $e) {
