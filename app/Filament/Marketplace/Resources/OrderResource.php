@@ -1616,6 +1616,33 @@ class OrderResource extends Resource
                 $html .= "</div>";
             }
 
+            // Email notification log
+            $emailLog = \App\Models\MarketplaceEmailLog::where('marketplace_client_id', $record->marketplace_client_id)
+                ->where('template_slug', 'refund_processed')
+                ->where('to_email', $record->customer_email ?? $record->marketplaceCustomer?->email ?? '')
+                ->where('created_at', '>=', $refReq->created_at ?? now()->subDay())
+                ->orderByDesc('id')
+                ->first();
+
+            if ($emailLog) {
+                $emailUrl = \App\Filament\Marketplace\Resources\EmailLogResource::getUrl('view', ['record' => $emailLog->id]);
+                $emailStatusBadge = match($emailLog->status) {
+                    'sent' => '<span style="color:#10B981;">✓ Trimis</span>',
+                    'delivered' => '<span style="color:#10B981;">✓ Livrat</span>',
+                    'opened' => '<span style="color:#3B82F6;">👁 Deschis</span>',
+                    'clicked' => '<span style="color:#8B5CF6;">🔗 Click</span>',
+                    'bounced' => '<span style="color:#EF4444;">✕ Bounced</span>',
+                    'failed' => '<span style="color:#EF4444;">✕ Eșuat</span>',
+                    default => '<span style="color:#94A3B8;">' . $emailLog->status . '</span>',
+                };
+                $html .= "
+                    <div style='margin-top:8px;padding:6px 8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:6px;display:flex;justify-content:space-between;align-items:center;'>
+                        <span style='font-size:11px;color:#94A3B8;'>📧 Email rambursare: {$emailStatusBadge}</span>
+                        <a href='{$emailUrl}' style='font-size:11px;color:#60A5FA;text-decoration:none;'>Vezi email →</a>
+                    </div>
+                ";
+            }
+
             $html .= "</div>";
         }
 
