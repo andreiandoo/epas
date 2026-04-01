@@ -3500,6 +3500,9 @@ class EventResource extends Resource
                     })
                     ->sortable()
                     ->toggleable()
+                    ->limit(25)
+                    ->tooltip(fn ($record) => $record->marketplaceOrganizer?->name)
+                    ->extraAttributes(['style' => 'max-width:175px; overflow:hidden; text-overflow:ellipsis;'])
                     ->url(fn (Event $record) => $record->marketplace_organizer_id
                         ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
                         : null),
