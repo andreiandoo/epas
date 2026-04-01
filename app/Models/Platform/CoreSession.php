@@ -170,7 +170,7 @@ class CoreSession extends Model
 
     public function endSession(): void
     {
-        $duration = $this->started_at->diffInSeconds(now());
+        $duration = (int) $this->started_at->diffInSeconds(now());
 
         $this->update([
             'ended_at' => now(),

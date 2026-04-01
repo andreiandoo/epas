@@ -334,7 +334,7 @@ class MarketplaceTrackingController extends Controller
                 'ended_at' => now(),
                 'exit_page' => $event->page_url,
                 'exit_page_type' => $event->page_type,
-                'duration_seconds' => $session->started_at->diffInSeconds(now()),
+                'duration_seconds' => (int) $session->started_at->diffInSeconds(now()),
                 'is_bounce' => $session->pageviews <= 1,
             ]);
 
