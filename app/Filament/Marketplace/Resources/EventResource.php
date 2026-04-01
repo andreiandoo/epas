@@ -3469,17 +3469,21 @@ class EventResource extends Resource
                     ->getStateUsing(fn ($record) => !empty($record->seating_layout_id))
                     ->sortable()
                     ->toggleable(),
-                Tables\Columns\IconColumn::make('general_quota')
+                Tables\Columns\TextColumn::make('general_quota')
                     ->label('Cap.')
-                    ->boolean()
-                    ->getStateUsing(fn ($record) => $record->general_quota !== null)
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->tooltip(fn ($record) => $record->general_quota !== null
-                        ? "Capacitate: {$record->general_quota}"
-                        : 'Fără capacitate generală')
+                    ->getStateUsing(function ($record) {
+                        if ($record->general_quota === null) return '—';
+                        $nonIndepIds = $record->ticketTypes
+                            ->where('is_independent_stock', false)
+                            ->pluck('id');
+                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+                            ->whereNotIn('status', ['cancelled', 'refunded'])
+                            ->count();
+                        $remaining = max(0, $record->general_quota - $activeCount);
+                        return $remaining . '/' . $record->general_quota;
+                    })
+                    ->color(fn ($record) => $record->general_quota === null ? 'gray' : 'success')
+                    ->badge()
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')

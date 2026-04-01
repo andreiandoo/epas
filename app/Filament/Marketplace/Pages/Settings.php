@@ -107,6 +107,10 @@ class Settings extends Page
                 'mail_from_name' => $settings['mail']['from_name'] ?? '',
                 'mail_domain' => $settings['mail']['domain'] ?? '',
                 'mail_region' => $settings['mail']['region'] ?? '',
+
+                // Stock alert settings
+                'stock_alert_threshold' => $settings['stock_alert_threshold'] ?? null,
+                'stock_alert_email' => $settings['stock_alert_email'] ?? null,
             ]);
         }
     }
@@ -570,6 +574,24 @@ class Settings extends Page
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('mail_driver')))
                                         ->columnSpanFull(),
                                     ])->columns(2),
+
+                                SC\Section::make('Alerte stoc bilete')
+                                    ->description('Primește notificări automate când stocul unui tip de bilet scade sub un anumit prag.')
+                                    ->icon('heroicon-o-bell-alert')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('stock_alert_threshold')
+                                            ->label('Prag alertă stoc')
+                                            ->helperText('Când un tip de bilet are mai puțin sau egal cu acest număr de bilete disponibile, se trimite o alertă.')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->placeholder('ex: 5')
+                                            ->suffix('bilete'),
+                                        Forms\Components\TextInput::make('stock_alert_email')
+                                            ->label('Email notificări stoc')
+                                            ->helperText('Adresa pe care se trimit alertele de stoc scăzut.')
+                                            ->email()
+                                            ->placeholder('alerts@exemplu.ro'),
+                                    ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Domains')
@@ -716,6 +738,10 @@ class Settings extends Page
         }
 
         $settings['mail'] = $mailSettings;
+
+        // Stock alert settings
+        $settings['stock_alert_threshold'] = !empty($data['stock_alert_threshold']) ? (int) $data['stock_alert_threshold'] : null;
+        $settings['stock_alert_email'] = $data['stock_alert_email'] ?? null;
 
         $marketplace->update([
             'settings' => $settings,

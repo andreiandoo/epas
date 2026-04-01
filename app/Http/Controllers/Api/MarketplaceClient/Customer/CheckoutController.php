@@ -280,6 +280,9 @@ class CheckoutController extends BaseController
 
                         if ($ticketType->quota_total !== null && $ticketType->quota_total >= 0) {
                             $ticketType->increment('quota_sold', $quantity);
+
+                            // Check low stock alert
+                            $this->checkLowStockAlert($ticketType);
                         }
                     }
                 }
@@ -980,5 +983,57 @@ class CheckoutController extends BaseController
             'marketplace_customer_id' => $customer->id,
             'template_slug' => 'account_created',
         ]);
+    }
+
+    /**
+     * Check if ticket type stock dropped below alert threshold and send notification.
+     */
+    protected function checkLowStockAlert(TicketType $ticketType): void
+    {
+        try {
+            $event = $ticketType->event;
+            if (!$event) return;
+
+            $client = $event->marketplaceClient ?? \App\Models\MarketplaceClient::find($event->marketplace_client_id);
+            if (!$client) return;
+
+            $settings = $client->settings ?? [];
+            $threshold = $settings['stock_alert_threshold'] ?? null;
+            $alertEmail = $settings['stock_alert_email'] ?? null;
+
+            if (!$threshold || !$alertEmail) return;
+
+            // Calculate remaining
+            $remaining = $event->getAvailableForTicketType($ticketType);
+
+            // Only alert when crossing the threshold (remaining <= threshold AND remaining + qty_just_sold > threshold)
+            if ($remaining > (int) $threshold) return;
+
+            $ttName = is_array($ticketType->name) ? ($ticketType->name['ro'] ?? $ticketType->name['en'] ?? '') : $ticketType->name;
+            $eventName = is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? '') : ($event->title ?? '');
+
+            $subject = "⚠ Alertă stoc: {$ttName} — {$eventName}";
+            $body = "Stocul pentru tipul de bilet <strong>{$ttName}</strong> din evenimentul "
+                . "<strong>{$eventName}</strong> a scăzut la <strong>{$remaining}</strong> bilete disponibile "
+                . "(prag alertă: {$threshold})."
+                . "<br><br>Verifică stocul și ia măsurile necesare.";
+
+            \Illuminate\Support\Facades\Mail::html(
+                "<div style='font-family:sans-serif;font-size:14px;color:#333;'>{$body}</div>",
+                function ($message) use ($alertEmail, $subject) {
+                    $message->to($alertEmail)->subject($subject);
+                }
+            );
+
+            \Log::info('Low stock alert sent', [
+                'ticket_type_id' => $ticketType->id,
+                'event_id' => $event->id,
+                'remaining' => $remaining,
+                'threshold' => $threshold,
+                'email' => $alertEmail,
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to send low stock alert', ['error' => $e->getMessage()]);
+        }
     }
 }
