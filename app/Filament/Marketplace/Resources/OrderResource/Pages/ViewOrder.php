@@ -124,7 +124,7 @@ class ViewOrder extends ViewRecord
                 ->helperText($commissionRate > 0
                     ? "Comision: {$commissionRate}%. Dacă dezactivat, comisionul va fi reținut."
                     : 'Fără comision configurat pe această comandă.')
-                ->default(true)
+                ->default(false)
                 ->live(),
 
             Forms\Components\Placeholder::make('refund_summary')
@@ -195,22 +195,24 @@ class ViewOrder extends ViewRecord
                     ");
                 }),
 
-            Forms\Components\Textarea::make('reason')
-                ->label('Motiv rambursare')
-                ->required()
-                ->rows(2),
-
             Forms\Components\Select::make('reason_category')
-                ->label('Categorie motiv')
+                ->label('Motiv rambursare')
                 ->options([
                     'event_cancelled' => 'Eveniment anulat',
                     'event_postponed' => 'Eveniment amânat',
                     'personal_reason' => 'Motiv personal client',
                     'duplicate_purchase' => 'Achiziție duplicat',
                     'technical_issue' => 'Problemă tehnică',
-                    'other' => 'Altul',
+                    'other' => 'Alt motiv (specificați mai jos)',
                 ])
+                ->live()
                 ->nullable(),
+
+            Forms\Components\Textarea::make('reason')
+                ->label('Detalii suplimentare')
+                ->rows(2)
+                ->nullable()
+                ->visible(fn (Get $get) => $get('reason_category') === 'other'),
         ];
     }
 
@@ -218,9 +220,17 @@ class ViewOrder extends ViewRecord
     {
         $order = $this->record;
         $refundService = app(PaymentRefundService::class);
-        $refundCommission = (bool) ($data['refund_commission'] ?? true);
-        $reason = $data['reason'] ?? 'Refund requested';
+        $refundCommission = (bool) ($data['refund_commission'] ?? false);
         $reasonCategory = $data['reason_category'] ?? null;
+
+        $reasonLabels = [
+            'event_cancelled' => 'Eveniment anulat',
+            'event_postponed' => 'Eveniment amânat',
+            'personal_reason' => 'Motiv personal client',
+            'duplicate_purchase' => 'Achiziție duplicat',
+            'technical_issue' => 'Problemă tehnică',
+        ];
+        $reason = $reasonLabels[$reasonCategory] ?? $data['reason'] ?? 'Rambursare';
 
         if ($data['refund_type'] === 'full') {
             $result = $refundService->processOrderLevelRefund($order, $refundCommission, $reason, $reasonCategory);
