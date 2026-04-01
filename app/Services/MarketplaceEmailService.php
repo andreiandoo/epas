@@ -321,9 +321,10 @@ class MarketplaceEmailService
                 $email->text($bodyText);
             }
 
-            $transport->send($email);
+            $sentMessage = $transport->send($email);
+            $messageId = $sentMessage?->getMessageId();
 
-            $log->markSent();
+            $log->markSent($messageId);
             return true;
 
         } catch (\Exception $e) {
@@ -380,9 +381,10 @@ class MarketplaceEmailService
                 $email->text($bodyText);
             }
 
-            $transport->send($email);
+            $sentMessage = $transport->send($email);
+            $messageId = $sentMessage?->getMessageId();
 
-            $log->markSent();
+            $log->markSent($messageId);
             return true;
 
         } catch (\Exception $e) {
