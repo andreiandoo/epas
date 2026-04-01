@@ -507,6 +507,19 @@ class TaxTemplateResource extends Resource
             'guarantor_address' => 'Str. Exemplu Nr. 10, Ap. 5',
             'guarantor_city' => 'București',
 
+            // Proxy (împuternicit)
+            'proxy_full_name' => 'Maria Ionescu',
+            'proxy_role' => 'Administrator',
+            'proxy_address' => 'Str. Libertății Nr. 25, Bl. A3, Sc. 2, Ap. 10',
+            'proxy_country' => 'Romania',
+            'proxy_county' => 'București',
+            'proxy_city' => 'București',
+            'proxy_sector' => '3',
+            'proxy_id_series' => 'RD',
+            'proxy_id_number' => '654321',
+            'proxy_cnp' => '2850315400123',
+            'proxy_phone' => '+40 721 234 567',
+
             // Event
             'event_name' => 'Sample Concert 2024',
             'event_date' => date('d.m.Y H:i', strtotime('+30 days')),

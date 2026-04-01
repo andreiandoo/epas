@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Event;
 use App\Models\Invoice;
+use App\Models\MarketplaceAdmin;
 use App\Models\MarketplacePayout;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -139,6 +140,19 @@ class MarketplaceTaxTemplate extends Model
             '{{guarantor_id_issued_date}}' => 'ID Issue Date (La data de)',
             '{{guarantor_address}}' => 'Guarantor Address',
             '{{guarantor_city}}' => 'Guarantor City',
+        ],
+        'Împuternicit (admin sau organizator)' => [
+            '{{proxy_full_name}}' => 'Nume și prenume împuternicit',
+            '{{proxy_role}}' => 'Calitate (ex: Administrator)',
+            '{{proxy_address}}' => 'Adresa împuternicit',
+            '{{proxy_country}}' => 'Țara',
+            '{{proxy_county}}' => 'Județ',
+            '{{proxy_city}}' => 'Oraș',
+            '{{proxy_sector}}' => 'Sector (doar București)',
+            '{{proxy_id_series}}' => 'Serie CI',
+            '{{proxy_id_number}}' => 'Număr CI',
+            '{{proxy_cnp}}' => 'CNP',
+            '{{proxy_phone}}' => 'Telefon',
         ],
         'Event' => [
             '{{event_name}}' => 'Event Name',
@@ -347,7 +361,8 @@ class MarketplaceTaxTemplate extends Model
         MarketplaceEvent|Event|null $event = null,
         ?Order $order = null,
         bool $incrementContractNumber = false,
-        ?MarketplacePayout $payout = null
+        ?MarketplacePayout $payout = null,
+        ?MarketplaceAdmin $generatedBy = null
     ): array {
         $variables = [];
 
@@ -430,6 +445,50 @@ class MarketplaceTaxTemplate extends Model
 
             // Organizer phone
             $variables['organizer_phone'] = $organizer->phone ?? $organizer->contact_phone ?? '';
+        }
+
+        // Proxy (împuternicit) variables — from logged-in admin or fallback to organizer guarantor
+        $proxyAdmin = $generatedBy ?? \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+
+        if ($proxyAdmin instanceof MarketplaceAdmin && $proxyAdmin->proxy_full_name) {
+            // Use marketplace admin proxy data
+            $variables['proxy_full_name'] = $proxyAdmin->proxy_full_name ?? '';
+            $variables['proxy_role'] = $proxyAdmin->proxy_role ?? '';
+            $variables['proxy_address'] = $proxyAdmin->proxy_address ?? '';
+            $variables['proxy_country'] = $proxyAdmin->proxy_country ?? '';
+            $variables['proxy_county'] = $proxyAdmin->proxy_county ?? '';
+            $variables['proxy_city'] = $proxyAdmin->proxy_city ?? '';
+            $variables['proxy_sector'] = $proxyAdmin->proxy_sector ?? '';
+            $variables['proxy_id_series'] = $proxyAdmin->proxy_id_series ?? '';
+            $variables['proxy_id_number'] = $proxyAdmin->proxy_id_number ?? '';
+            $variables['proxy_cnp'] = $proxyAdmin->proxy_cnp ?? '';
+            $variables['proxy_phone'] = $proxyAdmin->proxy_phone ?? '';
+        } elseif ($organizer) {
+            // Fallback to organizer guarantor data
+            $variables['proxy_full_name'] = trim(($organizer->guarantor_first_name ?? '') . ' ' . ($organizer->guarantor_last_name ?? ''));
+            $variables['proxy_role'] = '';
+            $variables['proxy_address'] = $organizer->guarantor_address ?? '';
+            $variables['proxy_country'] = '';
+            $variables['proxy_county'] = '';
+            $variables['proxy_city'] = $organizer->guarantor_city ?? '';
+            $variables['proxy_sector'] = '';
+            $variables['proxy_id_series'] = $organizer->guarantor_id_series ?? '';
+            $variables['proxy_id_number'] = $organizer->guarantor_id_number ?? '';
+            $variables['proxy_cnp'] = $organizer->guarantor_cnp ?? '';
+            $variables['proxy_phone'] = $organizer->phone ?? $organizer->contact_phone ?? '';
+        } else {
+            // Empty defaults
+            $variables['proxy_full_name'] = '';
+            $variables['proxy_role'] = '';
+            $variables['proxy_address'] = '';
+            $variables['proxy_country'] = '';
+            $variables['proxy_county'] = '';
+            $variables['proxy_city'] = '';
+            $variables['proxy_sector'] = '';
+            $variables['proxy_id_series'] = '';
+            $variables['proxy_id_number'] = '';
+            $variables['proxy_cnp'] = '';
+            $variables['proxy_phone'] = '';
         }
 
         // Event variables
