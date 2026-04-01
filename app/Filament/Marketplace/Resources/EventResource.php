@@ -2547,7 +2547,7 @@ class EventResource extends Resource
                                             ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
                                             ->count();
 
-                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
+                                        $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
                                         $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
