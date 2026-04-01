@@ -56,7 +56,7 @@ class OrderResource extends Resource
                     // Refund Details (visible only if refunded)
                     SC\Section::make('Detalii rambursare')
                         ->icon('heroicon-o-arrow-uturn-left')
-                        ->visible(fn ($record) => in_array($record->refund_status ?? 'none', ['partial', 'full']))
+                        ->visible(fn ($record) => in_array($record->refund_status ?? 'none', ['partial', 'full']) || in_array($record->status, ['refunded', 'partially_refunded']))
                         ->schema([
                             Forms\Components\Placeholder::make('refund_details')
                                 ->hiddenLabel()
