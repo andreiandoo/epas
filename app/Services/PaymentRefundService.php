@@ -208,10 +208,10 @@ class PaymentRefundService
             return new RefundResult(success: false, error: 'Unele bilete sunt deja rambursate: ' . $alreadyRefunded->pluck('code')->implode(', '));
         }
 
-        // Calculate amounts per ticket (with proportional discount)
-        $commissionRate = (float) ($order->commission_rate ?? 0);
+        // Calculate amounts per ticket using stored order values
         $orderSubtotal = (float) ($order->subtotal ?? 0);
         $orderDiscount = (float) ($order->discount_amount ?? 0);
+        $orderCommission = (float) ($order->commission_amount ?? 0);
         $discountRatio = ($orderSubtotal > 0 && $orderDiscount > 0) ? ($orderDiscount / $orderSubtotal) : 0;
 
         $items = [];
@@ -220,10 +220,12 @@ class PaymentRefundService
         foreach ($tickets as $ticket) {
             $originalPrice = (float) ($ticket->price ?? 0);
             $ticketDiscount = round($originalPrice * $discountRatio, 2);
-            $ticketPrice = round($originalPrice - $ticketDiscount, 2); // price after discount
-            $commission = round($ticketPrice * ($commissionRate / 100), 2);
-            $faceValue = $ticketPrice - $commission;
-            $refundAmount = $refundCommission ? $ticketPrice : $faceValue;
+            $faceValue = round($originalPrice - $ticketDiscount, 2); // price after discount
+            // Proportional commission from stored order commission
+            $commission = ($orderSubtotal > 0)
+                ? round($orderCommission * ($originalPrice / $orderSubtotal), 2)
+                : 0;
+            $refundAmount = $refundCommission ? ($faceValue + $commission) : $faceValue;
 
             $items[] = [
                 'ticket' => $ticket,

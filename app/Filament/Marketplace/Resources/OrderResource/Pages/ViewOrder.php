@@ -140,7 +140,7 @@ class ViewOrder extends ViewRecord
 
             Forms\Components\Placeholder::make('refund_summary')
                 ->label('Sumar rambursare')
-                ->content(function (Get $get) use ($order, $tickets, $commissionRate, $discountRatio) {
+                ->content(function (Get $get) use ($order, $tickets, $discountRatio) {
                     $refundType = $get('refund_type') ?? 'full';
                     $selectedIds = $get('ticket_ids') ?? [];
                     $refundCommission = (bool) $get('refund_commission');
@@ -153,6 +153,17 @@ class ViewOrder extends ViewRecord
                         return new HtmlString('<p style="color:#94A3B8;">Selectează biletele pentru a vedea sumarul.</p>');
                     }
 
+                    // Use stored order amounts for accurate proportional calculation
+                    $orderTotal = (float) ($order->total ?? 0);
+                    $orderCommission = (float) ($order->commission_amount ?? 0);
+                    $orderSubtotal = (float) ($order->subtotal ?? 0);
+                    $allTicketCount = $tickets->count();
+                    $refundTicketCount = $refundTickets->count();
+
+                    // Proportional amounts based on ticket share
+                    // For partial refund: proportional to selected tickets vs all tickets
+                    $ticketShareRatio = $allTicketCount > 0 ? ($refundTicketCount / $allTicketCount) : 1;
+
                     $rows = '';
                     $totalFace = 0;
                     $totalCommission = 0;
@@ -162,10 +173,13 @@ class ViewOrder extends ViewRecord
                     foreach ($refundTickets as $ticket) {
                         $originalPrice = (float) ($ticket->price ?? 0);
                         $ticketDiscount = round($originalPrice * $discountRatio, 2);
-                        $price = round($originalPrice - $ticketDiscount, 2); // price after discount
-                        $commission = round($price * ($commissionRate / 100), 2);
-                        $faceValue = round($price - $commission, 2);
-                        $refundAmount = $refundCommission ? $price : $faceValue;
+                        $priceAfterDiscount = round($originalPrice - $ticketDiscount, 2);
+                        // Proportional commission from stored order commission
+                        $commission = ($orderSubtotal > 0)
+                            ? round($orderCommission * ($originalPrice / $orderSubtotal), 2)
+                            : 0;
+                        $faceValue = $priceAfterDiscount;
+                        $refundAmount = $refundCommission ? ($faceValue + $commission) : $faceValue;
 
                         $totalFace += $faceValue;
                         $totalCommission += $commission;
