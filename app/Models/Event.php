@@ -105,6 +105,7 @@ class Event extends Model
         'target_price',
         'general_stock',
         'general_quota',
+        'organizer_notifications',
         'views_count',
         'interested_count',
 
@@ -154,6 +155,7 @@ class Event extends Model
 
         // json
         'multi_slots'       => 'array',
+        'organizer_notifications' => 'array',
         'seo'               => 'array',
 
         // marketplace pricing & tracking

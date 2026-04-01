@@ -2866,6 +2866,28 @@ class EventResource extends Resource
                                             </div>
                                         ");
                                     }),
+
+                                Forms\Components\Toggle::make('organizer_notify_enabled')
+                                    ->label($t('Trimite notificări automate organizator', 'Send automatic notifications to organizer'))
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->afterStateHydrated(function ($component, $record) {
+                                        $notifications = $record?->organizer_notifications ?? [];
+                                        $component->state(!empty($notifications) && count(array_filter($notifications)) > 0);
+                                    }),
+
+                                Forms\Components\CheckboxList::make('organizer_notifications')
+                                    ->label($t('Tipuri de notificări', 'Notification types'))
+                                    ->visible(fn (SGet $get) => (bool) $get('organizer_notify_enabled'))
+                                    ->options(function () use ($marketplace) {
+                                        return \App\Models\MarketplaceEmailTemplate::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('notify_organizer', true)
+                                            ->where('is_active', true)
+                                            ->pluck('name', 'slug')
+                                            ->toArray();
+                                    })
+                                    ->columns(1)
+                                    ->helperText($t('Selectează ce notificări primește organizatorul pentru acest eveniment.', 'Select which notifications the organizer receives for this event.')),
                             ]),
 
                         // 4. Quick Actions

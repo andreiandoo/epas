@@ -1019,11 +1019,20 @@ class CheckoutController extends BaseController
                 ->where('is_active', true)
                 ->first();
 
+            $venue = $event->venue;
+            $venueName = $venue ? (is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? '') : $venue->name) : '';
+            $venueCity = $venue?->city ?? '';
+            $eventDate = $event->event_date?->format('d.m.Y') ?? '';
+
             $variables = [
                 'ticket_type' => $ttName,
                 'event_name' => $eventName,
+                'event_date' => $eventDate,
+                'venue_name' => $venueName,
+                'venue_city' => $venueCity,
                 'remaining_stock' => $remaining,
                 'organizer_name' => $organizer?->name ?? $organizer?->company_name ?? 'Organizator',
+                'organizer_email' => $organizer?->email ?? '',
                 'admin_url' => "https://{$client->domain}/marketplace/events/{$event->id}/edit?tab=bilete",
             ];
 
@@ -1037,8 +1046,19 @@ class CheckoutController extends BaseController
                     . "</div>";
             }
 
-            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($alertEmail, $subject) {
-                $message->to($alertEmail)->subject($subject);
+            // Build recipient list: admin alert email + optionally organizer
+            $recipients = array_filter([$alertEmail]);
+
+            // Check if organizer should also be notified
+            $orgNotifications = $event->organizer_notifications ?? [];
+            if (!empty($orgNotifications['stock_low_alert']) && $organizer?->email) {
+                $recipients[] = $organizer->email;
+            }
+
+            $recipients = array_unique($recipients);
+
+            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($recipients, $subject) {
+                $message->to($recipients)->subject($subject);
             });
 
             \Log::info('Low stock alert sent', [
@@ -1046,6 +1066,7 @@ class CheckoutController extends BaseController
                 'event_id' => $event->id,
                 'remaining' => $remaining,
                 'threshold' => $threshold,
+                'recipients' => $recipients,
                 'email' => $alertEmail,
             ]);
         } catch (\Exception $e) {

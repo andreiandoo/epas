@@ -94,6 +94,10 @@ class EmailTemplateResource extends Resource
                                     Forms\Components\Toggle::make('is_active')
                                         ->label('Active')
                                         ->default(true),
+                                    Forms\Components\Toggle::make('notify_organizer')
+                                        ->label('Se trimite și organizatorului')
+                                        ->helperText('Dacă e activat, acest tip de email poate fi trimis și pe adresa organizatorului (dacă evenimentul are notificările activate).')
+                                        ->default(false),
                                 ]),
 
                             SC\Section::make('Variabile disponibile')
@@ -148,6 +152,14 @@ class EmailTemplateResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('notify_organizer')
+                    ->label('Org.')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-user-plus')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->tooltip(fn ($record) => $record->notify_organizer ? 'Se trimite și organizatorului' : 'Doar admin'),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->label('Last Updated')
                     ->dateTime()

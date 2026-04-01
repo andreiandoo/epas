@@ -18,12 +18,14 @@ class MarketplaceEmailTemplate extends Model
         'category',
         'is_active',
         'is_default',
+        'notify_organizer',
     ];
 
     protected $casts = [
         'variables' => 'array',
         'is_active' => 'boolean',
         'is_default' => 'boolean',
+        'notify_organizer' => 'boolean',
     ];
 
     /**

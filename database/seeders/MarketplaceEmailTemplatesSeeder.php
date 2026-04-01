@@ -466,7 +466,7 @@ CONTENT),
             [
                 'slug' => 'stock_low_alert',
                 'name' => 'Alertă stoc redus',
-                'subject' => '⚠ Stoc redus: {{ticket_type}} — {{event_name}}',
+                'subject' => '⚠ Stoc redus: {{ticket_type}} — {{event_name}} ({{event_date}}, {{venue_name}}, {{venue_city}})',
                 'category' => 'notification',
                 'body_html' => $this->wrap($name, $domain, $logoUrl, $primaryColor, $primaryDark, false, <<<CONTENT
 <h2 style="color:#d97706;font-size:22px;margin:0 0 16px;">⚠ Stoc redus de bilete</h2>
