@@ -104,6 +104,7 @@ class Event extends Model
         // marketplace pricing & tracking
         'target_price',
         'general_stock',
+        'general_quota',
         'views_count',
         'interested_count',
 
@@ -727,6 +728,41 @@ class Event extends Model
             return -1;
         }
         return $this->ticketTypes()->sum('quota_total') ?: 0;
+    }
+
+    /**
+     * Get remaining shared pool capacity (non-independent tickets only).
+     * Returns null if general_quota is not set (no shared pool).
+     */
+    public function getSharedPoolRemainingAttribute(): ?int
+    {
+        if ($this->general_quota === null) {
+            return null;
+        }
+
+        $soldNonIndependent = $this->ticketTypes()
+            ->where('is_independent_stock', false)
+            ->sum('quota_sold');
+
+        return max(0, $this->general_quota - (int) $soldNonIndependent);
+    }
+
+    /**
+     * Get available quantity for a specific ticket type, respecting shared pool.
+     */
+    public function getAvailableForTicketType(TicketType $ticketType): int
+    {
+        $ownAvailable = $ticketType->quota_total < 0
+            ? PHP_INT_MAX
+            : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+
+        // No shared pool or independent stock → own availability only
+        if ($this->general_quota === null || $ticketType->is_independent_stock) {
+            return $ownAvailable;
+        }
+
+        $poolRemaining = $this->shared_pool_remaining;
+        return min($ownAvailable, $poolRemaining);
     }
 
     /**

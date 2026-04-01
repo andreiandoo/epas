@@ -1098,8 +1098,8 @@ class EventResource extends Resource
                                     ))
                                     ->columnSpanFull(),
 
-                                // Ticket Template, General Stock, and Door Price row
-                                SC\Grid::make(3)->schema([
+                                // Ticket Template, General Stock, General Quota, Door Price row
+                                SC\Grid::make(4)->schema([
                                     Forms\Components\Select::make('ticket_template_id')
                                         ->label($t('Șablon bilet', 'Ticket Template'))
                                         ->relationship(
@@ -1119,13 +1119,32 @@ class EventResource extends Resource
                                             ->wherePivot('is_active', true)
                                             ->exists() ?? false),
                                     Forms\Components\TextInput::make('general_stock')
-                                        ->label($t('Stoc general', 'General Stock'))
+                                        ->label($t('Stoc implicit', 'Default Stock'))
                                         ->numeric()
                                         ->minValue(0)
                                         ->required()
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stoc implicit folosit pentru tipurile de bilete noi. Obligatoriu.', 'Default stock for new ticket types. Required.'))
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stocul implicit aplicat la crearea unui tip de bilet nou.', 'Default stock applied when creating a new ticket type.'))
                                         ->placeholder($t('ex: 500', 'e.g. 500'))
                                         ->live(onBlur: true),
+                                    Forms\Components\TextInput::make('general_quota')
+                                        ->label($t('Capacitate generală', 'General Capacity'))
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->nullable()
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim total de bilete care pot fi vândute (pool partajat). Lasă gol dacă nu vrei limită generală.', 'Maximum total tickets that can be sold (shared pool). Leave empty for no general limit.'))
+                                        ->placeholder($t('ex: 500 sau gol', 'e.g. 500 or empty'))
+                                        ->live(onBlur: true)
+                                        ->hint(function (SGet $get, ?Event $record) use ($t) {
+                                            $quota = $get('general_quota');
+                                            if (!$quota || !$record) return null;
+                                            $soldNonIndep = $record->ticketTypes()
+                                                ->where('is_independent_stock', false)
+                                                ->sum('quota_sold');
+                                            $remaining = max(0, (int) $quota - (int) $soldNonIndep);
+                                            return new HtmlString(
+                                                '<span class="text-xs">' . $t('Disponibil', 'Available') . ': <strong>' . $remaining . '</strong> / ' . $quota . '</span>'
+                                            );
+                                        }),
                                     Forms\Components\TextInput::make('target_price')
                                         ->label($t('Preț la intrare', 'Door Price'))
                                         ->numeric()
@@ -1311,8 +1330,8 @@ class EventResource extends Resource
                                         SC\Section::make($t('Identificare', 'Identification'))
                                             ->extraAttributes(['class' => 'ep-tt-section'])
                                             ->schema([
-                                                // Row 1: Name, SKU, Price, Stock, Currency
-                                                SC\Grid::make(5)->schema([
+                                                // Row 1: Name, SKU, Price, Stock, Independent, Currency
+                                                SC\Grid::make(6)->schema([
                                                     Forms\Components\TextInput::make('name')
                                                         ->label($t('Nume', 'Name'))
                                                         ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
@@ -1377,13 +1396,22 @@ class EventResource extends Resource
                                                                 }
                                                                 $hints[] = '<span class="text-xs">' . $soldText . '</span>';
                                                             }
-                                                            $generalStock = (int) ($get('../../general_stock') ?: 0);
+                                                            $generalQuota = (int) ($get('../../general_quota') ?: 0);
+                                                            $isIndependent = (bool) $get('is_independent_stock');
                                                             $capacity = (int) ($get('capacity') ?: 0);
-                                                            if ($generalStock > 0 && $capacity > $generalStock) {
-                                                                $hints[] = '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește stocul general', 'Exceeds general stock') . ' (' . $generalStock . ')</span>';
+                                                            if ($generalQuota > 0 && !$isIndependent && $capacity > $generalQuota) {
+                                                                $hints[] = '<span style="color:#dc2626;font-weight:600;">⚠ ' . $t('Depășește capacitatea generală', 'Exceeds general capacity') . ' (' . $generalQuota . ')</span>';
+                                                            }
+                                                            if ($isIndependent) {
+                                                                $hints[] = '<span class="text-xs" style="color:#059669;">🔓 ' . $t('Independent', 'Independent') . '</span>';
                                                             }
                                                             return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
                                                         }),
+                                                    Forms\Components\Checkbox::make('is_independent_stock')
+                                                        ->label($t('Independent', 'Independent'))
+                                                        ->inline()
+                                                        ->default(false)
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Biletele independente nu consumă din capacitatea generală (ex: merch, parcare, VIP separat).', 'Independent tickets do not consume from general capacity (e.g. merch, parking, separate VIP).')),
                                                     Forms\Components\TextInput::make('currency')
                                                         ->label($t('Monedă', 'Currency'))
                                                         ->inlineLabel($il)

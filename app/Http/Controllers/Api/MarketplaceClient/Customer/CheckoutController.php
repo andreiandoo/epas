@@ -258,9 +258,21 @@ class CheckoutController extends BaseController
                             $mktTicketType->update(['status' => 'sold_out']);
                         }
                     } elseif ($ticketType) {
-                        $available = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
+                        // Own stock availability
+                        $ownAvailable = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
                             ? PHP_INT_MAX
                             : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+
+                        // Shared pool check
+                        $available = $ownAvailable;
+                        $event = $ticketType->event;
+                        if ($event && $event->general_quota !== null && !$ticketType->is_independent_stock) {
+                            $soldNonIndep = $event->ticketTypes()
+                                ->where('is_independent_stock', false)
+                                ->sum('quota_sold');
+                            $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndep);
+                            $available = min($ownAvailable, $poolRemaining);
+                        }
 
                         if ($available < $quantity) {
                             throw new \Exception("Not enough tickets for {$ticketType->name}");
@@ -864,9 +876,19 @@ class CheckoutController extends BaseController
                 continue;
             }
 
-            $available = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
+            $ownAvailable = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
                 ? PHP_INT_MAX
                 : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+
+            $available = $ownAvailable;
+            $event = $ticketType->event;
+            if ($event && $event->general_quota !== null && !$ticketType->is_independent_stock) {
+                $soldNonIndep = $event->ticketTypes()
+                    ->where('is_independent_stock', false)
+                    ->sum('quota_sold');
+                $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndep);
+                $available = min($ownAvailable, $poolRemaining);
+            }
 
             $quantity = $item['quantity'] ?? 1;
             if ($quantity > $available) {

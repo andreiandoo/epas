@@ -484,7 +484,8 @@ class EventsController extends BaseController
                 'image' => $this->formatImageUrl($event->venue->image_url),
                 'capacity' => $event->venue->capacity,
             ] : null,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
+            'general_quota' => $event->general_quota,
+            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language, $event) {
                 $priceCents = $tt->price_cents ?? 0;
                 $salePriceCents = $tt->sale_price_cents;
                 $hasDiscount = $salePriceCents !== null && $salePriceCents < $priceCents;
@@ -493,6 +494,18 @@ class EventsController extends BaseController
 
                 $ttName = is_array($tt->name) ? ($tt->name[$language] ?? $tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name;
                 $ttDesc = is_array($tt->description) ? ($tt->description[$language] ?? $tt->description['ro'] ?? $tt->description['en'] ?? '') : ($tt->description ?? '');
+
+                // Calculate availability respecting shared pool
+                $ownAvailable = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
+                $available = $ownAvailable;
+                if ($event->general_quota !== null && !$tt->is_independent_stock) {
+                    $soldNonIndep = $event->ticketTypes
+                        ->where('is_independent_stock', false)
+                        ->sum('quota_sold');
+                    $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndep);
+                    $available = min($ownAvailable, $poolRemaining);
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $ttName,
@@ -501,7 +514,8 @@ class EventsController extends BaseController
                     'original_price' => $originalPrice,
                     'discount_percent' => $hasDiscount ? round((1 - $salePriceCents / $priceCents) * 100) : null,
                     'price_formatted' => number_format($displayPrice, 2) . ' ' . ($tt->currency ?? 'RON'),
-                    'available_quantity' => ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0))),
+                    'available_quantity' => $available,
+                    'is_independent_stock' => (bool) $tt->is_independent_stock,
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'min_per_order' => $tt->min_per_order ?? 1,
                     'sale_starts_at' => $tt->sales_start_at,

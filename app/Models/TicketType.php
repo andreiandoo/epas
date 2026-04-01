@@ -21,6 +21,7 @@ class TicketType extends Model
         'description',
         'currency',
         'quota_sold',
+        'is_independent_stock',
         // Order quantity limits
         'min_per_order',
         'max_per_order',
@@ -83,6 +84,7 @@ class TicketType extends Model
         'is_refundable'  => 'boolean',
         'is_entry_ticket' => 'boolean',
         'is_declarable' => 'boolean',
+        'is_independent_stock' => 'boolean',
         'valid_date'     => 'date',
         'min_per_order'    => 'integer',
         'max_per_order'    => 'integer',

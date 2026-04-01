@@ -619,15 +619,31 @@ class CartController extends BaseController
     }
 
     /**
-     * Get available quantity for a ticket type
+     * Get available quantity for a ticket type, respecting shared pool if set.
      */
     protected function getAvailableQuantity(TicketType $ticketType): int
     {
-        if ($ticketType->quota_total === null || $ticketType->quota_total < 0) {
-            return PHP_INT_MAX;
+        $ownAvailable = ($ticketType->quota_total === null || $ticketType->quota_total < 0)
+            ? PHP_INT_MAX
+            : max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+
+        // If independent stock or no shared pool, return own availability
+        if ($ticketType->is_independent_stock) {
+            return $ownAvailable;
         }
 
-        return max(0, $ticketType->quota_total - ($ticketType->quota_sold ?? 0));
+        // Check shared pool (general_quota on event)
+        $event = $ticketType->event;
+        if (!$event || $event->general_quota === null) {
+            return $ownAvailable;
+        }
+
+        $soldNonIndependent = $event->ticketTypes()
+            ->where('is_independent_stock', false)
+            ->sum('quota_sold');
+        $poolRemaining = max(0, $event->general_quota - (int) $soldNonIndependent);
+
+        return min($ownAvailable, $poolRemaining);
     }
 
     /**
