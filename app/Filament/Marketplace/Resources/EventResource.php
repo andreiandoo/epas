@@ -1375,19 +1375,45 @@ class EventResource extends Resource
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                         ->live(onBlur: true)
                                                         ->skipRenderAfterStateUpdated()
-                                                        ->afterStateHydrated(function ($component, $state, SGet $get) {
-                                                            // Default from general_quota for NEW ticket types
+                                                        ->afterStateHydrated(function ($component, $state, SGet $get, ?Event $record) {
+                                                            // Default for NEW ticket types: remaining pool capacity
                                                             if ($state === null || $state === '') {
-                                                                $generalQuota = $get('../../general_quota');
-                                                                if ($generalQuota && (int) $generalQuota > 0) {
-                                                                    $component->state((int) $generalQuota);
+                                                                $generalQuota = (int) ($get('../../general_quota') ?: 0);
+                                                                if ($generalQuota > 0) {
+                                                                    // Get parent event record to calculate remaining pool
+                                                                    $eventRecord = $record?->event ?? (function () use ($get) {
+                                                                        $eventId = $get('../../id');
+                                                                        return $eventId ? Event::find($eventId) : null;
+                                                                    })();
+                                                                    if ($eventRecord) {
+                                                                        $nonIndepIds = $eventRecord->ticketTypes()
+                                                                            ->where('is_independent_stock', false)
+                                                                            ->pluck('id');
+                                                                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+                                                                            ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                                            ->count();
+                                                                        $remaining = max(0, $generalQuota - $activeCount);
+                                                                        $component->state($remaining);
+                                                                    } else {
+                                                                        $component->state($generalQuota);
+                                                                    }
                                                                 }
                                                             }
                                                         })
+                                                        ->suffixAction(
+                                                            Action::make('toggle_independent')
+                                                                ->icon(fn (SGet $get) => $get('is_independent_stock') ? 'heroicon-s-lock-open' : 'heroicon-s-lock-closed')
+                                                                ->color(fn (SGet $get) => $get('is_independent_stock') ? 'success' : 'gray')
+                                                                ->tooltip(fn (SGet $get) => $get('is_independent_stock')
+                                                                    ? $t('Stoc independent (nu consumă din capacitatea generală). Click pentru a dezactiva.', 'Independent stock. Click to disable.')
+                                                                    : $t('Stoc partajat (consumă din capacitatea generală). Click pentru a face independent.', 'Shared stock. Click to make independent.'))
+                                                                ->action(function (SGet $get, SSet $set) {
+                                                                    $set('is_independent_stock', !$get('is_independent_stock'));
+                                                                })
+                                                        )
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
                                                             if ($record && $record->quota_sold > 0) {
-                                                                // Count active tickets (exclude cancelled/refunded)
                                                                 $activeCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
                                                                     ->whereNotIn('status', ['cancelled', 'refunded'])
                                                                     ->count();
@@ -1413,13 +1439,16 @@ class EventResource extends Resource
                                                             }
                                                             return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
                                                         }),
+                                                    Forms\Components\Hidden::make('is_independent_stock')
+                                                        ->default(false)
+                                                        ->dehydrated(true),
                                                     Forms\Components\Hidden::make('currency')
                                                         ->default($marketplace?->currency ?? 'RON')
                                                         ->dehydrated(true),
                                                 ])->columnSpan(12),
 
-                                                // Row 2: Ticket group, Min/order, Max/order, Multiplier, Independent
-                                                SC\Grid::make(5)->schema([
+                                                // Row 2: Ticket group, Min/order, Max/order, Multiplier
+                                                SC\Grid::make(4)->schema([
                                                     Forms\Components\Select::make('ticket_group')
                                                         ->label($t('Grup', 'Group'))
                                                         ->placeholder($t('Selectează sau creează un grup...', 'Select or create a group...'))
@@ -1471,10 +1500,6 @@ class EventResource extends Resource
                                                         ->minValue(1)
                                                         ->default(1)
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
-                                                    Forms\Components\Toggle::make('is_independent_stock')
-                                                        ->label($t('Stoc independent', 'Independent stock'))
-                                                        ->default(false)
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Nu consumă din capacitatea generală (ex: merch, parcare).', 'Does not consume from general capacity (e.g. merch, parking).')),
                                                 ])->columnSpan(12),
 
                                                 // Row 3: Description + Admin notes side by side
