@@ -215,8 +215,8 @@ class TicketResource extends Resource
                                     'valid' => 'Valid',
                                     'used' => 'Utilizat',
                                     'cancelled' => 'Anulat',
-                                    'refunded' => 'Rambursat',
                                 ])
+                                ->helperText('Statusul Rambursat se setează automat la rambursarea comenzii.')
                                 ->required(),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
