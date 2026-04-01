@@ -399,7 +399,7 @@ class OrderResource extends Resource
             ])
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('change_status')
+                    \Filament\Actions\BulkAction::make('change_status')
                         ->label('Schimbă status')
                         ->icon('heroicon-o-arrow-path')
                         ->form([
@@ -425,7 +425,7 @@ class OrderResource extends Resource
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
-                    Tables\Actions\BulkAction::make('bulk_delete')
+                    \Filament\Actions\BulkAction::make('bulk_delete')
                         ->label('Șterge')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
