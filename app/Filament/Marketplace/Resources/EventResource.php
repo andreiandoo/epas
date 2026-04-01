@@ -3469,6 +3469,19 @@ class EventResource extends Resource
                     ->getStateUsing(fn ($record) => !empty($record->seating_layout_id))
                     ->sortable()
                     ->toggleable(),
+                Tables\Columns\IconColumn::make('general_quota')
+                    ->label('Cap.')
+                    ->boolean()
+                    ->getStateUsing(fn ($record) => $record->general_quota !== null)
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->tooltip(fn ($record) => $record->general_quota !== null
+                        ? "Capacitate: {$record->general_quota}"
+                        : 'Fără capacitate generală')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
                     ->searchable(query: function ($query, string $search): void {
