@@ -423,8 +423,14 @@ class OrderResource extends Resource
                     ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']))
                     ->requiresConfirmation()
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
-                    ->modalDescription(fn ($record) => 'Se va procesa rambursarea completă de ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON') . ' (fără comision). Suma va fi returnată clientului prin procesatorul de plăți.')
+                    ->modalDescription(fn ($record) => 'Rambursare completă pentru comanda ' . ($record->order_number ?? '#' . $record->id) . '. Total: ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON'))
                     ->form([
+                        \Filament\Forms\Components\Toggle::make('refund_commission')
+                            ->label('Include comisionul în rambursare')
+                            ->helperText(fn ($record) => ($record->commission_rate ?? 0) > 0
+                                ? 'Comision: ' . number_format($record->commission_rate, 1) . '%. Dacă dezactivat, comisionul va fi reținut.'
+                                : 'Fără comision configurat.')
+                            ->default(false),
                         \Filament\Forms\Components\Select::make('reason_category')
                             ->label('Motiv')
                             ->options([
@@ -439,6 +445,7 @@ class OrderResource extends Resource
                     ])
                     ->action(function ($record, array $data) {
                         $refundService = app(\App\Services\PaymentRefundService::class);
+                        $refundCommission = (bool) ($data['refund_commission'] ?? false);
                         $reasonLabels = [
                             'event_cancelled' => 'Eveniment anulat',
                             'event_postponed' => 'Eveniment amânat',
@@ -447,7 +454,7 @@ class OrderResource extends Resource
                             'technical_issue' => 'Problemă tehnică',
                         ];
                         $reason = $reasonLabels[$data['reason_category'] ?? ''] ?? 'Rambursare';
-                        $result = $refundService->processOrderLevelRefund($record, false, $reason, $data['reason_category'] ?? null);
+                        $result = $refundService->processOrderLevelRefund($record, $refundCommission, $reason, $data['reason_category'] ?? null);
 
                         if ($result->success) {
                             \Filament\Notifications\Notification::make()
