@@ -322,17 +322,17 @@ class NetopiaProcessor implements PaymentProcessorInterface
             $wsdlUrl = $this->baseUrl . '/api/payment2/?wsdl';
             $soapClient = new \SoapClient($wsdlUrl, ['trace' => true, 'exceptions' => true, 'connection_timeout' => 30, 'cache_wsdl' => WSDL_CACHE_NONE]);
 
-            $loginResult = $soapClient->logIn(['username' => $username, 'password' => $password]);
-            $sessionId = $loginResult->logInResult->id ?? $loginResult->id ?? null;
+            $loginResult = $soapClient->logIn(['request' => ['username' => $username, 'password' => $password]]);
+            $sessionId = $loginResult->logInResult->id ?? null;
 
             if (!$sessionId) {
                 return ['success' => false, 'error' => 'Netopia SOAP: Login eșuat.', 'requires_manual' => true];
             }
 
-            $creditParams = ['sessionId' => $sessionId, 'sacId' => $sacId, 'orderId' => $orderId];
-            if ($amount !== null) $creditParams['amount'] = (float) number_format($amount, 2, '.', '');
+            $creditRequest = ['sessionId' => $sessionId, 'sacId' => $sacId, 'orderId' => $orderId];
+            if ($amount !== null) $creditRequest['amount'] = (float) number_format($amount, 2, '.', '');
 
-            $creditResult = $soapClient->credit($creditParams);
+            $creditResult = $soapClient->credit(['request' => $creditRequest]);
 
             \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia SOAP credit result', [
                 'order_id' => $orderId, 'amount' => $amount, 'result' => json_encode($creditResult),
