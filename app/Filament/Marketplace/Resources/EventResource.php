@@ -1375,16 +1375,19 @@ class EventResource extends Resource
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                         ->live(onBlur: true)
                                                         ->skipRenderAfterStateUpdated()
-                                                        ->afterStateHydrated(function ($component, $state, SGet $get, ?Event $record) {
+                                                        ->afterStateHydrated(function ($component, $state, SGet $get, $record) {
                                                             // Default for NEW ticket types: remaining pool capacity
                                                             if ($state === null || $state === '') {
                                                                 $generalQuota = (int) ($get('../../general_quota') ?: 0);
                                                                 if ($generalQuota > 0) {
-                                                                    // Get parent event record to calculate remaining pool
-                                                                    $eventRecord = $record?->event ?? (function () use ($get) {
+                                                                    // $record is TicketType inside repeater, get parent event
+                                                                    $eventRecord = ($record instanceof \App\Models\TicketType)
+                                                                        ? $record->event
+                                                                        : (($record instanceof Event) ? $record : null);
+                                                                    if (!$eventRecord) {
                                                                         $eventId = $get('../../id');
-                                                                        return $eventId ? Event::find($eventId) : null;
-                                                                    })();
+                                                                        $eventRecord = $eventId ? Event::find($eventId) : null;
+                                                                    }
                                                                     if ($eventRecord) {
                                                                         $nonIndepIds = $eventRecord->ticketTypes()
                                                                             ->where('is_independent_stock', false)
