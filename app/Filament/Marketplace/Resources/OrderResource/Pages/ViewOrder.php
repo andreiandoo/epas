@@ -245,7 +245,7 @@ class ViewOrder extends ViewRecord
                 ->label('Detalii suplimentare')
                 ->rows(2)
                 ->nullable()
-                ->visible(fn (Get $get) => $get('reason_category') === 'other'),
+                ->hidden(fn (Get $get) => $get('reason_category') !== 'other'),
         ];
     }
 
