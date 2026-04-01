@@ -204,7 +204,7 @@ class TicketResource extends Resource
                     ),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
+                \Filament\Actions\BulkActionGroup::make([
                     Tables\Actions\BulkAction::make('change_status')
                         ->label('Schimbă status')
                         ->icon('heroicon-o-arrow-path')
