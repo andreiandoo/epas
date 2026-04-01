@@ -415,7 +415,7 @@ class OrderResource extends Resource
             ])
             ->actions([
                 \Filament\Actions\ViewAction::make()->iconButton(),
-                Tables\Actions\Action::make('quick_refund')
+                \Filament\Actions\Action::make('quick_refund')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
                     ->iconButton()
