@@ -509,8 +509,8 @@ class OrderResource extends Resource
         }
         $updatedAt = $record->updated_at->format('d M H:i');
 
-        // Calculate savings (promo discount + target price savings)
-        $savings = (float) ($record->promo_discount ?? $record->discount_amount ?? 0);
+        // Calculate savings (discount + target price savings)
+        $savings = (float) ($record->discount_amount ?? 0);
 
         // Add target price savings
         $targetPrice = 0;
@@ -881,18 +881,17 @@ class OrderResource extends Resource
         // POS/mobile app orders: commission is never added on top of customer price
         $isPosOrder = $record->source === 'pos_app';
 
-        // Get commission info from event
-        $event = $record->event;
-        $commissionRate = $event?->commission_rate
-            ?? $event?->marketplaceOrganizer?->commission_rate
-            ?? 0;
-        $commissionMode = $event?->commission_mode
-            ?? $event?->marketplaceOrganizer?->default_commission_mode
+        // Get commission info — prefer stored order values over current event settings
+        $commissionRate = (float) ($record->commission_rate ?? 0);
+        $commissionAmount = (float) ($record->commission_amount ?? 0);
+        $commissionMode = $record->meta['commission_mode']
+            ?? $record->event?->commission_mode
+            ?? $record->event?->marketplaceOrganizer?->default_commission_mode
             ?? $record->marketplaceClient?->commission_mode
             ?? 'included';
 
         $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
-        $commission = $ticketsValue * ($commissionRate / 100);
+        $commission = $commissionAmount > 0 ? $commissionAmount : $ticketsValue * ($commissionRate / 100);
 
         $html = '<div>';
 
@@ -927,8 +926,8 @@ class OrderResource extends Resource
 
         // Discount (if any)
         if ($discount > 0) {
-            $promoCode = $record->promo_code ?? $record->meta['coupon_code'] ?? '';
-            $promoLabel = $promoCode ? " ({$promoCode})" : '';
+            $promoCode = $record->meta['promo_code']['code'] ?? $record->promo_code ?? $record->meta['coupon_code'] ?? '';
+            $promoLabel = $promoCode ? " (cod: {$promoCode})" : '';
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                     <span style='font-size: 13px; color: #94A3B8;'>Reducere{$promoLabel}</span>
@@ -1295,11 +1294,14 @@ class OrderResource extends Resource
 
         // Payment Status
         $statusBadge = match($record->status) {
-            'paid', 'confirmed' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10B981;">✓ Plătit</span>',
+            'paid', 'confirmed', 'completed' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10B981;">✓ Plătit</span>',
             'pending' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(245, 158, 11, 0.15); color: #F59E0B;">⏳ În așteptare</span>',
             'refunded' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(59, 130, 246, 0.15); color: #60A5FA;">↩ Rambursat</span>',
+            'partially_refunded' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(99, 102, 241, 0.15); color: #818CF8;">↩ Rambursat parțial</span>',
             'cancelled' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: #EF4444;">✕ Anulat</span>',
-            default => '',
+            'failed' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: #EF4444;">✕ Eșuat</span>',
+            'expired' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(107, 114, 128, 0.15); color: #9CA3AF;">⏱ Expirat</span>',
+            default => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(107, 114, 128, 0.15); color: #9CA3AF;">' . ucfirst($record->status) . '</span>',
         };
 
         $html .= "
