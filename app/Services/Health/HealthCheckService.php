@@ -71,7 +71,7 @@ class HealthCheckService
 
             return [
                 'status' => $status,
-                'response_time_ms' => round($responseTime, 2),
+                'response_time_ms' => (int) round($responseTime),
                 'disk_usage_percent' => round($diskUsagePercent, 2),
                 'memory_usage_percent' => round($memoryUsagePercent, 2),
                 'php_version' => PHP_VERSION,
@@ -106,7 +106,7 @@ class HealthCheckService
                 'status' => 'healthy',
                 'connection' => DB::connection()->getDatabaseName(),
                 'driver' => DB::connection()->getDriverName(),
-                'response_time_ms' => round($responseTime, 2),
+                'response_time_ms' => (int) round($responseTime),
             ];
 
         } catch (\Exception $e) {
@@ -142,7 +142,7 @@ class HealthCheckService
             return [
                 'status' => 'healthy',
                 'driver' => config('cache.default'),
-                'response_time_ms' => round($responseTime, 2),
+                'response_time_ms' => (int) round($responseTime),
             ];
 
         } catch (\Exception $e) {

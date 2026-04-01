@@ -305,7 +305,7 @@ class PlatformTrackingService
         // End the session
         $session->update([
             'ended_at' => now(),
-            'duration_seconds' => $duration,
+            'duration_seconds' => (int) ($duration ?? 0),
             'is_bounce' => $session->pageviews <= 1,
             'exit_page' => $data['page_url'] ?? $session->exit_page,
         ]);

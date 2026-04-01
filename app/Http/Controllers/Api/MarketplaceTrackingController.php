@@ -57,7 +57,8 @@ class MarketplaceTrackingController extends Controller
 
         // Generate or use provided visitor/session IDs
         $visitorId = $request->input('visitor_id') ?: $this->generateVisitorId($request);
-        $sessionId = $request->input('session_id') ?: Str::uuid()->toString();
+        $rawSessionId = $request->input('session_id');
+        $sessionId = ($rawSessionId && Str::isUuid($rawSessionId)) ? $rawSessionId : Str::uuid()->toString();
 
         // Parse user agent
         $this->userAgent = $request->userAgent() ?? '';
