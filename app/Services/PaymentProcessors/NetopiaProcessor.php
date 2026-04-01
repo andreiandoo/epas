@@ -243,86 +243,113 @@ class NetopiaProcessor implements PaymentProcessorInterface
             throw new \Exception('Netopia is not properly configured');
         }
 
-        // V2 REST API uses API key for authentication
-        $apiKey = $this->keys['api_key'] ?? $this->keys['soap_username'] ?? null;
+        $apiKey = $this->keys['api_key'] ?? null;
+        $soapUsername = $this->keys['soap_username'] ?? null;
+        $soapPassword = $this->keys['soap_password'] ?? null;
 
-        if (!$apiKey) {
+        // Try V2 REST API first (if API key configured and paymentId looks like ntpID)
+        if ($apiKey) {
+            $v2Result = $this->refundViaV2Rest($paymentId, $amount, $apiKey);
+            if ($v2Result['success'] || !str_contains($v2Result['error'] ?? '', 'ntpID')) {
+                return $v2Result;
+            }
+            // V2 failed with ntpID error — fall through to SOAP
+            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia V2 failed with ntpID error, trying SOAP V1', [
+                'payment_id' => $paymentId,
+            ]);
+        }
+
+        // SOAP V1 fallback (uses orderId = our order number)
+        if ($soapUsername && $soapPassword) {
+            return $this->refundViaSoapV1($paymentId, $amount, $soapUsername, $soapPassword);
+        }
+
+        if (!$apiKey && !$soapUsername) {
             return [
                 'success' => false,
-                'error' => 'Netopia API Key nu este configurat. Adaugă API Key în Payment Config (generat din Netopia admin: Profile > Security).',
+                'error' => 'Netopia: Configurează API Key sau SOAP credentials în Payment Config pentru a activa rambursări automate.',
                 'requires_manual' => true,
             ];
         }
 
-        // V2 REST API endpoint
+        return [
+            'success' => false,
+            'error' => 'Netopia: Rambursarea automată nu a reușit. Procesați manual din panoul Netopia.',
+            'requires_manual' => true,
+        ];
+    }
+
+    protected function refundViaV2Rest(string $paymentId, ?float $amount, string $apiKey): array
+    {
         $isSandbox = str_contains($this->baseUrl, 'sandbox');
         $apiBaseUrl = $isSandbox
             ? 'https://secure.sandbox.netopia-payments.com'
             : 'https://secure.mobilpay.ro/pay';
 
         try {
-            $body = [
-                'ntpID' => $paymentId,
-            ];
-
-            if ($amount !== null) {
-                $body['amount'] = round($amount, 2);
-            }
-
-            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia V2 credit request', [
-                'url' => $apiBaseUrl . '/operation/credit',
-                'payment_id' => $paymentId,
-                'amount' => $amount,
-                'is_sandbox' => $isSandbox,
-            ]);
+            $body = ['ntpID' => $paymentId];
+            if ($amount !== null) $body['amount'] = round($amount, 2);
 
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Authorization' => $apiKey,
                 'Content-Type' => 'application/json',
-            ])
-                ->timeout(30)
-                ->post($apiBaseUrl . '/operation/credit', $body);
+            ])->timeout(30)->post($apiBaseUrl . '/operation/credit', $body);
 
             $data = $response->json();
 
             \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia V2 credit response', [
-                'payment_id' => $paymentId,
-                'status' => $response->status(),
-                'body' => $data,
+                'payment_id' => $paymentId, 'status' => $response->status(), 'body' => $data,
             ]);
 
             if ($response->successful() && empty($data['error'])) {
-                return [
-                    'success' => true,
-                    'refund_id' => 'netopia-credit-' . $paymentId,
-                    'amount' => $amount,
-                    'response' => $data,
-                    'requires_manual' => false,
-                ];
+                return ['success' => true, 'refund_id' => 'netopia-v2-' . $paymentId, 'amount' => $amount, 'response' => $data, 'requires_manual' => false];
             }
 
-            $errorMsg = $data['error']['message'] ?? $data['message'] ?? 'Unknown error';
-            $errorCode = $data['error']['code'] ?? $response->status();
-
-            return [
-                'success' => false,
-                'error' => "Netopia credit error ({$errorCode}): {$errorMsg}",
-                'response' => $data,
-                'requires_manual' => ($errorCode == 500 || $errorCode == 503),
-            ];
-
+            return ['success' => false, 'error' => "Netopia V2: " . ($data['error']['message'] ?? $data['message'] ?? 'Unknown error'), 'response' => $data, 'requires_manual' => false];
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia V2 refund exception', [
-                'payment_id' => $paymentId,
-                'amount' => $amount,
-                'error' => $e->getMessage(),
+            return ['success' => false, 'error' => 'Netopia V2 error: ' . $e->getMessage(), 'requires_manual' => true];
+        }
+    }
+
+    protected function refundViaSoapV1(string $orderId, ?float $amount, string $username, string $password): array
+    {
+        $sacId = $this->keys['signature'] ?? null;
+        if (!$sacId) {
+            return ['success' => false, 'error' => 'Netopia: Merchant ID (Signature) lipsește.', 'requires_manual' => true];
+        }
+
+        try {
+            $wsdlUrl = $this->baseUrl . '/api/payment2/?wsdl';
+            $soapClient = new \SoapClient($wsdlUrl, ['trace' => true, 'exceptions' => true, 'connection_timeout' => 30, 'cache_wsdl' => WSDL_CACHE_NONE]);
+
+            $loginResult = $soapClient->logIn(['username' => $username, 'password' => $password]);
+            $sessionId = $loginResult->logInResult->id ?? $loginResult->id ?? null;
+
+            if (!$sessionId) {
+                return ['success' => false, 'error' => 'Netopia SOAP: Login eșuat.', 'requires_manual' => true];
+            }
+
+            $creditParams = ['sessionId' => $sessionId, 'sacId' => $sacId, 'orderId' => $orderId];
+            if ($amount !== null) $creditParams['amount'] = (float) number_format($amount, 2, '.', '');
+
+            $creditResult = $soapClient->credit($creditParams);
+
+            \Illuminate\Support\Facades\Log::channel('marketplace')->info('Netopia SOAP credit result', [
+                'order_id' => $orderId, 'amount' => $amount, 'result' => json_encode($creditResult),
             ]);
 
-            return [
-                'success' => false,
-                'error' => 'Netopia refund error: ' . $e->getMessage(),
-                'requires_manual' => true,
-            ];
+            return ['success' => true, 'refund_id' => 'netopia-soap-' . $orderId, 'amount' => $amount, 'response' => json_decode(json_encode($creditResult), true), 'requires_manual' => false];
+
+        } catch (\SoapFault $e) {
+            $msg = $e->getMessage();
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('Netopia SOAP credit failed', ['order_id' => $orderId, 'error' => $msg]);
+
+            if (str_contains($msg, '53')) return ['success' => false, 'error' => 'Netopia: Comanda nu este confirmată (error 53).', 'requires_manual' => true];
+            if (str_contains($msg, '54')) return ['success' => false, 'error' => 'Netopia: Suma depășește plata (error 54).', 'requires_manual' => false];
+
+            return ['success' => false, 'error' => "Netopia SOAP: {$msg}", 'requires_manual' => true];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => 'Netopia SOAP error: ' . $e->getMessage(), 'requires_manual' => true];
         }
     }
 
