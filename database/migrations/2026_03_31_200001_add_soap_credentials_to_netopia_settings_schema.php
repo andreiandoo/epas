@@ -13,12 +13,15 @@ return new class extends Migration
         $metadata = json_decode($netopia->metadata, true) ?? [];
         $schema = $metadata['settings_schema'] ?? [];
 
-        // Add SOAP credential fields for refund capability
+        // Add API key fields for V2 REST refund capability
         $soapFields = [
-            ['key' => 'test_soap_username', 'label' => 'Sandbox SOAP Username', 'type' => 'text', 'required' => false, 'section' => 'test', 'placeholder' => 'Netopia admin panel username'],
-            ['key' => 'test_soap_password', 'label' => 'Sandbox SOAP Password', 'type' => 'password', 'required' => false, 'section' => 'test', 'placeholder' => 'Netopia admin panel password'],
-            ['key' => 'live_soap_username', 'label' => 'Live SOAP Username', 'type' => 'text', 'required' => false, 'section' => 'live', 'placeholder' => 'Netopia admin panel username'],
-            ['key' => 'live_soap_password', 'label' => 'Live SOAP Password', 'type' => 'password', 'required' => false, 'section' => 'live', 'placeholder' => 'Netopia admin panel password'],
+            ['key' => 'test_api_key', 'label' => 'Sandbox API Key (for refunds)', 'type' => 'password', 'required' => false, 'section' => 'test', 'placeholder' => 'Generated from Netopia admin: Profile > Security'],
+            ['key' => 'live_api_key', 'label' => 'Live API Key (for refunds)', 'type' => 'password', 'required' => false, 'section' => 'live', 'placeholder' => 'Generated from Netopia admin: Profile > Security'],
+            // Keep SOAP fields for backward compatibility
+            ['key' => 'test_soap_username', 'label' => 'Sandbox SOAP Username (legacy)', 'type' => 'text', 'required' => false, 'section' => 'test', 'placeholder' => 'Only needed if API key not available'],
+            ['key' => 'test_soap_password', 'label' => 'Sandbox SOAP Password (legacy)', 'type' => 'password', 'required' => false, 'section' => 'test', 'placeholder' => 'Only needed if API key not available'],
+            ['key' => 'live_soap_username', 'label' => 'Live SOAP Username (legacy)', 'type' => 'text', 'required' => false, 'section' => 'live', 'placeholder' => 'Only needed if API key not available'],
+            ['key' => 'live_soap_password', 'label' => 'Live SOAP Password (legacy)', 'type' => 'password', 'required' => false, 'section' => 'live', 'placeholder' => 'Only needed if API key not available'],
         ];
 
         // Check if already added
