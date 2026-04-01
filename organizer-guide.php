@@ -345,17 +345,17 @@ require_once __DIR__ . '/includes/header.php';
         <!-- Section 9: Timbrul monumentelor istorice -->
         <section id="timbru-monumente" class="mb-10">
             <h2 class="flex items-center gap-3 pb-3 mb-5 text-2xl font-bold text-gray-900 border-b-2 border-gray-100">
-                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">9</span>
+                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">8</span>
                 Timbrul monumentelor istorice
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Timbrul monumentelor istorice se aplică biletelor de intrare pentru manifestările culturale, sportive sau de agrement, târguri și expoziții desfășurate în spații situate în <strong>zona de protecție a monumentelor istorice</strong> sau zona învecinată monumentelor istorice.</p>
             <p class="text-[15px] leading-[1.8] text-gray-600">Timbrul monumentelor istorice este în cuantum de <strong>2%</strong> din toate încasările provenite din vânzarea de bilete.</p>
         </section>
 
-        <!-- Section 10: Taxa de timbru -->
+        <!-- Section 9: Taxa de timbru -->
         <section id="taxa-timbru" class="mb-10">
             <h2 class="flex items-center gap-3 pb-3 mb-5 text-2xl font-bold text-gray-900 border-b-2 border-gray-100">
-                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">10</span>
+                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">9</span>
                 Taxa de timbru (cinematografic, muzical, folcloric)
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Taxa de timbru se aplică încasărilor din biletele și abonamentele vândute la spectacol.</p>
@@ -389,20 +389,20 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </section>
 
-        <!-- Section 11: Timbrul de divertisment -->
+        <!-- Section 10: Timbrul de divertisment -->
         <section id="timbru-divertisment" class="mb-10">
             <h2 class="flex items-center gap-3 pb-3 mb-5 text-2xl font-bold text-gray-900 border-b-2 border-gray-100">
-                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">11</span>
+                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">10</span>
                 Timbrul de divertisment — 3%
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Timbrul de divertisment se percepe pentru spectacolele artistico-sportive, altele decât cele la care se aplică alte timbre, și pentru spectacolele de circ organizate în țară.</p>
             <p class="text-sm text-gray-500"><strong>Beneficiari:</strong> UNITER, U.C.M.R., U.C.I.M.R.</p>
         </section>
 
-        <!-- Section 12: Drepturi de autor -->
+        <!-- Section 11: Drepturi de autor -->
         <section id="drepturi-autor" class="mb-10">
             <h2 class="flex items-center gap-3 pb-3 mb-5 text-2xl font-bold text-gray-900 border-b-2 border-gray-100">
-                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">12</span>
+                <span class="inline-flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-lg bg-gradient-to-br from-primary to-primary-light">11</span>
                 Drepturi de autor și drepturi conexe
             </h2>
 
