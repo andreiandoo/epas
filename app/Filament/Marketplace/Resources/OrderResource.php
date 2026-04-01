@@ -413,6 +413,63 @@ class OrderResource extends Resource
                             ->getOptionLabelUsing(fn ($value) => \App\Models\Event::find($value)?->getTranslation('title', 'ro') ?? $value),
                     ]),
             ])
+            ->actions([
+                Tables\Actions\ViewAction::make()->iconButton(),
+                Tables\Actions\Action::make('quick_refund')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('danger')
+                    ->iconButton()
+                    ->tooltip('Rambursează comanda')
+                    ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']))
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
+                    ->modalDescription(fn ($record) => 'Se va procesa rambursarea completă de ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON') . ' (fără comision). Suma va fi returnată clientului prin procesatorul de plăți.')
+                    ->form([
+                        \Filament\Forms\Components\Select::make('reason_category')
+                            ->label('Motiv')
+                            ->options([
+                                'event_cancelled' => 'Eveniment anulat',
+                                'event_postponed' => 'Eveniment amânat',
+                                'personal_reason' => 'Motiv personal client',
+                                'duplicate_purchase' => 'Achiziție duplicat',
+                                'technical_issue' => 'Problemă tehnică',
+                                'other' => 'Alt motiv',
+                            ])
+                            ->nullable(),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $refundService = app(\App\Services\PaymentRefundService::class);
+                        $reasonLabels = [
+                            'event_cancelled' => 'Eveniment anulat',
+                            'event_postponed' => 'Eveniment amânat',
+                            'personal_reason' => 'Motiv personal client',
+                            'duplicate_purchase' => 'Achiziție duplicat',
+                            'technical_issue' => 'Problemă tehnică',
+                        ];
+                        $reason = $reasonLabels[$data['reason_category'] ?? ''] ?? 'Rambursare';
+                        $result = $refundService->processOrderLevelRefund($record, false, $reason, $data['reason_category'] ?? null);
+
+                        if ($result->success) {
+                            \Filament\Notifications\Notification::make()
+                                ->success()
+                                ->title('Rambursare procesată')
+                                ->body(($record->order_number ?? '#' . $record->id) . ' — ' . ($result->refundId ?? ''))
+                                ->send();
+                        } elseif ($result->requiresManual) {
+                            \Filament\Notifications\Notification::make()
+                                ->warning()
+                                ->title('Procesare manuală necesară')
+                                ->body($result->error ?? '')
+                                ->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()
+                                ->danger()
+                                ->title('Eroare rambursare')
+                                ->body($result->error ?? '')
+                                ->send();
+                        }
+                    }),
+            ])
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
                     \Filament\Actions\BulkAction::make('change_status')
