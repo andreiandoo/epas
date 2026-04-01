@@ -62,6 +62,19 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderCustomerCard($record)),
                         ]),
 
+                    // Beneficiaries (right after Customer)
+                    SC\Section::make('Beneficiari')
+                        ->icon('heroicon-o-users')
+                        ->compact()
+                        ->collapsible()
+                        ->collapsed()
+                        ->visible(fn ($record) => !empty($record->meta['beneficiaries']) || $record->tickets->whereNotNull('beneficiary_name')->isNotEmpty())
+                        ->schema([
+                            Forms\Components\Placeholder::make('beneficiaries_top')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderBeneficiaries($record)),
+                        ]),
+
                     // Event Section
                     SC\Section::make('Eveniment')
                         ->icon('heroicon-o-calendar')
@@ -175,19 +188,6 @@ class OrderResource extends Resource
                             Forms\Components\Placeholder::make('timeline')
                                 ->hiddenLabel()
                                 ->content(fn ($record) => self::renderTimeline($record)),
-                        ]),
-
-                    // Beneficiaries (if any)
-                    SC\Section::make('Beneficiari')
-                        ->icon('heroicon-o-users')
-                        ->compact()
-                        ->collapsible()
-                        ->collapsed()
-                        ->visible(fn ($record) => !empty($record->meta['beneficiaries']) || $record->tickets->whereNotNull('beneficiary_name')->isNotEmpty())
-                        ->schema([
-                            Forms\Components\Placeholder::make('beneficiaries')
-                                ->hiddenLabel()
-                                ->content(fn ($record) => self::renderBeneficiaries($record)),
                         ]),
 
                     // Payment Details
@@ -881,14 +881,23 @@ class OrderResource extends Resource
         // POS/mobile app orders: commission is never added on top of customer price
         $isPosOrder = $record->source === 'pos_app';
 
-        // Get commission info — prefer stored order values over current event settings
+        // Get commission info — prefer per-ticket-type details over order-level meta
         $commissionRate = (float) ($record->commission_rate ?? 0);
         $commissionAmount = (float) ($record->commission_amount ?? 0);
-        $commissionMode = $record->meta['commission_mode']
-            ?? $record->event?->commission_mode
-            ?? $record->event?->marketplaceOrganizer?->default_commission_mode
-            ?? $record->marketplaceClient?->commission_mode
-            ?? 'included';
+        $commissionDetails = $record->meta['commission_details'] ?? [];
+
+        // Determine commission mode from commission_details (per ticket type) — more accurate
+        $commissionMode = 'included';
+        if (!empty($commissionDetails)) {
+            $firstDetail = $commissionDetails[0] ?? [];
+            $commissionMode = $firstDetail['commission_mode'] ?? $record->meta['commission_mode'] ?? 'included';
+        } else {
+            $commissionMode = $record->meta['commission_mode']
+                ?? $record->event?->commission_mode
+                ?? $record->event?->marketplaceOrganizer?->default_commission_mode
+                ?? $record->marketplaceClient?->commission_mode
+                ?? 'included';
+        }
 
         $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
         $commission = $commissionAmount > 0 ? $commissionAmount : $ticketsValue * ($commissionRate / 100);
@@ -926,7 +935,8 @@ class OrderResource extends Resource
 
         // Discount (if any)
         if ($discount > 0) {
-            $promoCode = $record->meta['promo_code']['code'] ?? $record->promo_code ?? $record->meta['coupon_code'] ?? '';
+            $promoData = $record->meta['promo_code'] ?? null;
+            $promoCode = $promoData['code'] ?? $record->promo_code ?? $record->meta['coupon_code'] ?? '';
             $promoLabel = $promoCode ? " (cod: {$promoCode})" : '';
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
@@ -934,6 +944,58 @@ class OrderResource extends Resource
                     <span style='font-size: 13px; font-weight: 600; color: #10B981;'>-" . number_format($discount, 2) . " {$currency}</span>
                 </div>
             ";
+
+            // Promo code details
+            if ($promoData) {
+                $promoType = match($promoData['type'] ?? '') {
+                    'percentage' => $promoData['value'] . '%',
+                    'fixed' => number_format($promoData['value'] ?? 0, 2) . ' ' . $currency,
+                    default => $promoData['type'] ?? '',
+                };
+                $promoSource = match($promoData['source'] ?? '') {
+                    'coupon' => 'Cod promoțional',
+                    'organizer' => 'Cod organizator',
+                    'affiliate' => 'Cod afiliat',
+                    default => $promoData['source'] ?? '',
+                };
+
+                // Try to get coupon details (organizer, event, ticket type restrictions)
+                $couponDetails = '';
+                if (!empty($promoData['id'])) {
+                    $coupon = \App\Models\Coupon\CouponCode::find($promoData['id']);
+                    if ($coupon) {
+                        $parts = [];
+                        if ($coupon->marketplace_organizer_id) {
+                            $orgName = \App\Models\MarketplaceOrganizer::where('id', $coupon->marketplace_organizer_id)->value('name');
+                            if ($orgName) $parts[] = "Org: " . e($orgName);
+                        }
+                        $applicableEvents = $coupon->applicable_events ?? [];
+                        if (!empty($applicableEvents)) {
+                            $eventNames = \App\Models\Event::whereIn('id', $applicableEvents)->get()->map(fn($e) => $e->getTranslation('title', 'ro') ?: 'Event #'.$e->id)->implode(', ');
+                            if ($eventNames) $parts[] = "Ev: " . e($eventNames);
+                        }
+                        $applicableTT = $coupon->applicable_ticket_types ?? [];
+                        if (!empty($applicableTT)) {
+                            $ttNames = \App\Models\TicketType::whereIn('id', $applicableTT)->pluck('name')->implode(', ');
+                            if ($ttNames) $parts[] = "Tip: " . e($ttNames);
+                        }
+                        if (!empty($parts)) {
+                            $couponDetails = implode(' · ', $parts);
+                        }
+                    }
+                }
+
+                $detailsHtml = $couponDetails
+                    ? "<div style='font-size: 11px; color: #64748B; margin-top: 2px;'>{$couponDetails}</div>"
+                    : '';
+
+                $html .= "
+                    <div style='padding: 4px 0 8px 12px; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                        <div style='font-size: 11px; color: #64748B;'>{$promoSource} · {$promoType}</div>
+                        {$detailsHtml}
+                    </div>
+                ";
+            }
         }
 
         // Insurance / Taxa de retur (if any)
