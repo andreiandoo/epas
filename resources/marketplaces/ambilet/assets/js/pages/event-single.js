@@ -606,6 +606,15 @@ const EventPage = {
             return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
         }
 
+        // For range events, use explicit time fields; for single_day, parse from starts_at
+        var durationMode = eventData.duration_mode || 'single_day';
+        var resolvedStartTime = (durationMode === 'range')
+            ? (eventData.range_start_time || eventData.start_time || formatTime(startsAt))
+            : (eventData.start_time || formatTime(startsAt));
+        var resolvedDoorsTime = eventData.doors_time || eventData.door_time || formatTime(doorsAt);
+        // Skip showing 00:00 if it came from a date-only starts_at
+        if (resolvedStartTime === '00:00') resolvedStartTime = null;
+
         // poster_url / image_url = vertical poster (mobile), cover_image_url / hero_image_url = horizontal hero (desktop)
         var posterImage = eventData.poster_url || eventData.image_url || null;
         var heroImage = eventData.hero_image_url || eventData.cover_image_url || eventData.image_url || null;
@@ -636,8 +645,8 @@ const EventPage = {
             multi_slots: eventData.multi_slots,
             performances: performancesData,
             selectedPerformanceId: eventData.selected_performance_id || null,
-            start_time: formatTime(startsAt),
-            doors_time: formatTime(doorsAt),
+            start_time: resolvedStartTime,
+            doors_time: resolvedDoorsTime,
             is_popular: eventData.is_featured,
             is_featured: eventData.is_featured,
             interested_count: eventData.interested_count || 0,
