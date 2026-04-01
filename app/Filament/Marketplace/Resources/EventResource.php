@@ -1098,8 +1098,8 @@ class EventResource extends Resource
                                     ))
                                     ->columnSpanFull(),
 
-                                // Ticket Template, General Stock, General Quota, Door Price row
-                                SC\Grid::make(4)->schema([
+                                // Ticket Template, General Quota, Door Price row
+                                SC\Grid::make(3)->schema([
                                     Forms\Components\Select::make('ticket_template_id')
                                         ->label($t('Șablon bilet', 'Ticket Template'))
                                         ->relationship(
@@ -1118,14 +1118,6 @@ class EventResource extends Resource
                                             ->where('slug', 'ticket-customizer')
                                             ->wherePivot('is_active', true)
                                             ->exists() ?? false),
-                                    Forms\Components\TextInput::make('general_stock')
-                                        ->label($t('Stoc implicit', 'Default Stock'))
-                                        ->numeric()
-                                        ->minValue(0)
-                                        ->required()
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Stocul implicit aplicat la crearea unui tip de bilet nou.', 'Default stock applied when creating a new ticket type.'))
-                                        ->placeholder($t('ex: 500', 'e.g. 500'))
-                                        ->live(onBlur: true),
                                     Forms\Components\TextInput::make('general_quota')
                                         ->label($t('Capacitate generală', 'General Capacity'))
                                         ->numeric()
@@ -1330,8 +1322,8 @@ class EventResource extends Resource
                                         SC\Section::make($t('Identificare', 'Identification'))
                                             ->extraAttributes(['class' => 'ep-tt-section'])
                                             ->schema([
-                                                // Row 1: Name, SKU, Price, Stock, Independent, Currency
-                                                SC\Grid::make(6)->schema([
+                                                // Row 1: Name, SKU, Price, Stock, Independent
+                                                SC\Grid::make(5)->schema([
                                                     Forms\Components\TextInput::make('name')
                                                         ->label($t('Nume', 'Name'))
                                                         ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
@@ -1355,6 +1347,7 @@ class EventResource extends Resource
                                                         ->numeric()
                                                         ->minValue(0)
                                                         ->required()
+                                                        ->suffix($marketplace?->currency ?? 'RON')
                                                         ->live(onBlur: true)
                                                         ->partiallyRenderAfterStateUpdated()
                                                         ->hint(function (SGet $get) use ($t) {
@@ -1378,21 +1371,29 @@ class EventResource extends Resource
                                                         ->live(onBlur: true)
                                                         ->skipRenderAfterStateUpdated()
                                                         ->afterStateHydrated(function ($component, $state, SGet $get) {
-                                                            // Only set default from general_stock for NEW ticket types (no existing state)
+                                                            // Default from general_quota for NEW ticket types
                                                             if ($state === null || $state === '') {
-                                                                $generalStock = $get('../../general_stock');
-                                                                if ($generalStock && (int) $generalStock > 0) {
-                                                                    $component->state((int) $generalStock);
+                                                                $generalQuota = $get('../../general_quota');
+                                                                if ($generalQuota && (int) $generalQuota > 0) {
+                                                                    $component->state((int) $generalQuota);
                                                                 }
                                                             }
                                                         })
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
                                                             if ($record && $record->quota_sold > 0) {
+                                                                // Count active tickets (exclude cancelled/refunded)
+                                                                $activeCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
+                                                                    ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                                    ->count();
+                                                                $cancelledCount = $record->quota_sold - $activeCount;
                                                                 $capacity = $record->quota_total ?? $record->capacity ?? null;
-                                                                $soldText = $t('Vândute', 'Sold') . ": {$record->quota_sold}";
+                                                                $soldText = $t('Active', 'Active') . ": {$activeCount}";
+                                                                if ($cancelledCount > 0) {
+                                                                    $soldText .= ' · <span style="color:#dc2626;">' . $t('Anulate', 'Cancelled') . ": {$cancelledCount}</span>";
+                                                                }
                                                                 if ($capacity !== null && (int) $capacity > 0) {
-                                                                    $soldText .= "/{$capacity}";
+                                                                    $soldText .= " / {$capacity}";
                                                                 }
                                                                 $hints[] = '<span class="text-xs">' . $soldText . '</span>';
                                                             }
@@ -1412,11 +1413,8 @@ class EventResource extends Resource
                                                         ->inline()
                                                         ->default(false)
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Biletele independente nu consumă din capacitatea generală (ex: merch, parcare, VIP separat).', 'Independent tickets do not consume from general capacity (e.g. merch, parking, separate VIP).')),
-                                                    Forms\Components\TextInput::make('currency')
-                                                        ->label($t('Monedă', 'Currency'))
-                                                        ->inlineLabel($il)
+                                                    Forms\Components\Hidden::make('currency')
                                                         ->default($marketplace?->currency ?? 'RON')
-                                                        ->disabled()
                                                         ->dehydrated(true),
                                                 ])->columnSpan(12),
 
@@ -1754,6 +1752,7 @@ class EventResource extends Resource
                                                     ->placeholder($t('lasă gol dacă nu e reducere', 'leave empty if no sale'))
                                                     ->numeric()
                                                     ->minValue(0)
+                                                    ->suffix($marketplace?->currency ?? 'RON')
                                                     ->live(onBlur: true)
                                                     ->skipRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
