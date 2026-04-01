@@ -58,7 +58,7 @@ body {
 /* Sections inside tabs: no rounded corners */
 .fi-sc-tabs .fi-section {
     border-radius: 0 !important;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Section headers: same dark background as tab nav bar */
@@ -150,7 +150,9 @@ body {
     font-size: 0.875rem !important;
 }
 
-/* Allow dropdowns to overflow inside repeater sections */
+/* Allow dropdowns to overflow inside all sections */
+.fi-section,
+.fi-section-content-ctn,
 .fi-fo-repeater-item-content,
 .fi-fo-repeater-item-content .fi-section,
 .fi-fo-repeater-item-content .fi-section-content-ctn {

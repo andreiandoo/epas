@@ -30,6 +30,18 @@ class MarketplaceAdmin extends Authenticatable implements FilamentUser
         'settings',
         'locale',
         'timezone',
+        'proxy_full_name',
+        'proxy_role',
+        'proxy_address',
+        'proxy_country',
+        'proxy_county',
+        'proxy_city',
+        'proxy_id_series',
+        'proxy_id_number',
+        'proxy_cnp',
+        'proxy_phone',
+        'proxy_id_card_file',
+        'proxy_authorization_file',
     ];
 
     protected $hidden = [

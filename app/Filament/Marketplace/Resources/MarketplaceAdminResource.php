@@ -140,6 +140,88 @@ class MarketplaceAdminResource extends Resource
                             ->default('Europe/Bucharest'),
                     ])->columns(2)
                     ->collapsed(),
+
+                Section::make('Date Împuternicit')
+                    ->description('Datele persoanei împuternicite pentru operațiuni fiscale și documente.')
+                    ->schema([
+                        Forms\Components\TextInput::make('proxy_full_name')
+                            ->label('Nume și prenume')
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('proxy_role')
+                            ->label('Calitate')
+                            ->placeholder('ex: Administrator, Director, Reprezentant legal')
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('proxy_address')
+                            ->label('Adresa')
+                            ->maxLength(500)
+                            ->columnSpanFull(),
+
+                        Forms\Components\Select::make('proxy_country')
+                            ->label('Țara')
+                            ->options([
+                                'Romania' => 'România',
+                                'Germany' => 'Germania',
+                                'France' => 'Franța',
+                                'Italy' => 'Italia',
+                                'Spain' => 'Spania',
+                                'Austria' => 'Austria',
+                                'Hungary' => 'Ungaria',
+                                'Bulgaria' => 'Bulgaria',
+                                'Moldova' => 'Moldova',
+                            ])
+                            ->default('Romania')
+                            ->searchable(),
+
+                        Forms\Components\TextInput::make('proxy_county')
+                            ->label('Județ')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('proxy_city')
+                            ->label('Oraș')
+                            ->maxLength(100),
+
+                        Forms\Components\TextInput::make('proxy_id_series')
+                            ->label('Serie CI')
+                            ->placeholder('ex: XY')
+                            ->maxLength(10),
+
+                        Forms\Components\TextInput::make('proxy_id_number')
+                            ->label('Număr CI')
+                            ->placeholder('ex: 123456')
+                            ->maxLength(20),
+
+                        Forms\Components\TextInput::make('proxy_cnp')
+                            ->label('CNP')
+                            ->maxLength(13),
+
+                        Forms\Components\TextInput::make('proxy_phone')
+                            ->label('Telefon')
+                            ->tel()
+                            ->maxLength(20),
+
+                        Forms\Components\FileUpload::make('proxy_id_card_file')
+                            ->label('Buletin / Carte de identitate')
+                            ->disk('public')
+                            ->directory('proxy-documents')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
+
+                        Forms\Components\FileUpload::make('proxy_authorization_file')
+                            ->label('Împuternicire')
+                            ->disk('public')
+                            ->directory('proxy-documents')
+                            ->acceptedFileTypes(['image/*', 'application/pdf'])
+                            ->maxSize(5120)
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
+                    ])->columns(3)
+                    ->collapsed(),
             ]);
     }
 
