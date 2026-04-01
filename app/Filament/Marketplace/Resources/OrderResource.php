@@ -368,6 +368,15 @@ class OrderResource extends Resource
                         'expired' => 'Expirată',
                         default => ucfirst($state),
                     })
+                    ->tooltip(function ($record) {
+                        if ($record->status !== 'pending' || !$record->expires_at) return null;
+                        $expiresAt = $record->expires_at;
+                        if ($expiresAt->isPast()) return 'Expirat — se va actualiza automat';
+                        $diff = now()->diff($expiresAt);
+                        if ($diff->h > 0) return "Expiră în {$diff->h}h {$diff->i}min";
+                        if ($diff->i > 0) return "Expiră în {$diff->i} min {$diff->s}s";
+                        return "Expiră în {$diff->s}s";
+                    })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Data')
