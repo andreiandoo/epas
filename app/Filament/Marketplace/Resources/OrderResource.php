@@ -427,18 +427,57 @@ class OrderResource extends Resource
                                     'confirmed' => 'Confirmată',
                                     'completed' => 'Finalizată',
                                     'cancelled' => 'Anulată',
-                                    'refunded' => 'Rambursată',
-                                    'partially_refunded' => 'Rambursată parțial',
                                     'failed' => 'Eșuată',
                                     'expired' => 'Expirată',
                                 ])
+                                ->helperText('Rambursarea nu poate fi setată manual — folosește acțiunea dedicată.')
                                 ->required(),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
-                            $records->each(fn ($record) => $record->update(['status' => $data['status']]));
+                            $skipped = $records->filter(fn ($r) => in_array($r->status, ['refunded', 'partially_refunded']))->count();
+                            $updatable = $records->filter(fn ($r) => !in_array($r->status, ['refunded', 'partially_refunded']));
+                            $updatable->each(fn ($record) => $record->update(['status' => $data['status']]));
+                            $msg = $updatable->count() . ' comenzi actualizate.';
+                            if ($skipped > 0) $msg .= " {$skipped} comenzi rambursate au fost ignorate.";
+                            \Filament\Notifications\Notification::make()->title($msg)->success()->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    \Filament\Actions\BulkAction::make('bulk_refund')
+                        ->label('Rambursează')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('danger')
+                        ->requiresConfirmation()
+                        ->modalHeading('Rambursare comenzi selectate')
+                        ->modalDescription('Se va procesa rambursarea completă (fără comision) pentru toate comenzile selectate care au status plătit/completat. Comenzile deja rambursate vor fi ignorate.')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $refundService = app(\App\Services\PaymentRefundService::class);
+                            $success = 0;
+                            $failed = 0;
+                            $skipped = 0;
+
+                            foreach ($records as $order) {
+                                if (in_array($order->status, ['refunded', 'partially_refunded'])) {
+                                    $skipped++;
+                                    continue;
+                                }
+                                if (!in_array($order->status, ['completed', 'paid', 'confirmed'])) {
+                                    $skipped++;
+                                    continue;
+                                }
+                                $result = $refundService->processOrderLevelRefund($order, false, 'Rambursare bulk');
+                                if ($result->success || $result->requiresManual) {
+                                    $success++;
+                                } else {
+                                    $failed++;
+                                }
+                            }
+
+                            $msg = "{$success} comenzi rambursate.";
+                            if ($failed > 0) $msg .= " {$failed} eșuate.";
+                            if ($skipped > 0) $msg .= " {$skipped} ignorate (deja rambursate sau neplătite).";
                             \Filament\Notifications\Notification::make()
-                                ->title('Status actualizat pentru ' . $records->count() . ' comenzi')
-                                ->success()
+                                ->title($msg)
+                                ->color($failed > 0 ? 'warning' : 'success')
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
@@ -448,14 +487,14 @@ class OrderResource extends Resource
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Șterge comenzile selectate')
-                        ->modalDescription('Comenzile finalizate sau plătite nu pot fi șterse. Doar comenzile cu alte statusuri vor fi șterse.')
+                        ->modalDescription('Comenzile finalizate, plătite sau rambursate nu pot fi șterse.')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
-                            $protected = ['completed', 'paid'];
+                            $protected = ['completed', 'paid', 'refunded', 'partially_refunded'];
                             $deletable = $records->filter(fn ($r) => !in_array($r->status, $protected));
                             $skipped = $records->count() - $deletable->count();
                             $deletable->each(fn ($r) => $r->delete());
                             $msg = $deletable->count() . ' comenzi șterse.';
-                            if ($skipped > 0) $msg .= " {$skipped} comenzi protejate (finalizate/plătite) au fost ignorate.";
+                            if ($skipped > 0) $msg .= " {$skipped} comenzi protejate au fost ignorate.";
                             \Filament\Notifications\Notification::make()->title($msg)->success()->send();
                         })
                         ->deselectRecordsAfterCompletion(),
