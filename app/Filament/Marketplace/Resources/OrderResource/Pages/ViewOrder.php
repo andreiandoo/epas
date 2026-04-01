@@ -95,9 +95,20 @@ class ViewOrder extends ViewRecord
             ->where('refund_status', '!=', 'refunded')
             ->get();
 
-        $ticketOptions = $tickets->mapWithKeys(fn ($t) => [
-            $t->id => "#{$t->code} — " . ($t->ticketType?->name ?? 'Bilet') . " — " . number_format($t->price ?? 0, 2) . ' ' . ($order->currency ?? 'RON'),
-        ])->toArray();
+        // Calculate per-ticket discount proportionally
+        $orderSubtotal = (float) ($order->subtotal ?? 0);
+        $orderDiscount = (float) ($order->discount_amount ?? 0);
+        $discountRatio = ($orderSubtotal > 0 && $orderDiscount > 0) ? ($orderDiscount / $orderSubtotal) : 0;
+
+        $ticketOptions = $tickets->mapWithKeys(function ($t) use ($discountRatio, $order) {
+            $price = (float) ($t->price ?? 0);
+            $discountedPrice = round($price * (1 - $discountRatio), 2);
+            $label = "#{$t->code} — " . ($t->ticketType?->name ?? 'Bilet') . " — " . number_format($discountedPrice, 2) . ' ' . ($order->currency ?? 'RON');
+            if ($discountRatio > 0) {
+                $label .= " (original: " . number_format($price, 2) . ")";
+            }
+            return [$t->id => $label];
+        })->toArray();
 
         $commissionRate = (float) ($order->commission_rate ?? 0);
 
@@ -129,7 +140,7 @@ class ViewOrder extends ViewRecord
 
             Forms\Components\Placeholder::make('refund_summary')
                 ->label('Sumar rambursare')
-                ->content(function (Get $get) use ($order, $tickets, $commissionRate) {
+                ->content(function (Get $get) use ($order, $tickets, $commissionRate, $discountRatio) {
                     $refundType = $get('refund_type') ?? 'full';
                     $selectedIds = $get('ticket_ids') ?? [];
                     $refundCommission = (bool) $get('refund_commission');
@@ -146,9 +157,12 @@ class ViewOrder extends ViewRecord
                     $totalFace = 0;
                     $totalCommission = 0;
                     $totalRefund = 0;
+                    $totalDiscount = 0;
 
                     foreach ($refundTickets as $ticket) {
-                        $price = (float) ($ticket->price ?? 0);
+                        $originalPrice = (float) ($ticket->price ?? 0);
+                        $ticketDiscount = round($originalPrice * $discountRatio, 2);
+                        $price = round($originalPrice - $ticketDiscount, 2); // price after discount
                         $commission = round($price * ($commissionRate / 100), 2);
                         $faceValue = round($price - $commission, 2);
                         $refundAmount = $refundCommission ? $price : $faceValue;
@@ -156,13 +170,18 @@ class ViewOrder extends ViewRecord
                         $totalFace += $faceValue;
                         $totalCommission += $commission;
                         $totalRefund += $refundAmount;
+                        $totalDiscount += $ticketDiscount;
 
                         $typeName = e($ticket->ticketType?->name ?? 'Bilet');
                         $code = e($ticket->code ?? '—');
                         $currency = $order->currency ?? 'RON';
 
+                        $discountNote = $ticketDiscount > 0
+                            ? " <span style='color:#F59E0B;font-size:11px;'>(-" . number_format($ticketDiscount, 2) . " discount)</span>"
+                            : '';
+
                         $rows .= "<tr>
-                            <td style='padding:4px 8px;font-size:13px;'>{$typeName} <span style='color:#64748B;'>#{$code}</span></td>
+                            <td style='padding:4px 8px;font-size:13px;'>{$typeName} <span style='color:#64748B;'>#{$code}</span>{$discountNote}</td>
                             <td style='padding:4px 8px;text-align:right;font-size:13px;'>" . number_format($faceValue, 2) . "</td>
                             <td style='padding:4px 8px;text-align:right;font-size:13px;'>" . number_format($commission, 2) . "</td>
                             <td style='padding:4px 8px;text-align:right;font-size:13px;font-weight:600;'>" . number_format($refundAmount, 2) . "</td>
