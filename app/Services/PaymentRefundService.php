@@ -263,7 +263,7 @@ class PaymentRefundService
                 'marketplace_organizer_id' => $order->marketplace_organizer_id,
                 'marketplace_customer_id' => $order->marketplace_customer_id,
                 'order_id' => $order->id,
-                'marketplace_event_id' => $order->marketplace_event_id ?? $order->event_id,
+                'marketplace_event_id' => $order->marketplace_event_id,
                 'type' => $isFullRefund ? 'full_refund' : 'partial_refund',
                 'reason' => $reason,
                 'reason_category' => $reasonCategory,
