@@ -347,6 +347,8 @@ class PaymentRefundService
 
             if ($isFullRefund) {
                 $order->update(['status' => 'refunded']);
+            } else {
+                $order->update(['status' => 'partially_refunded']);
             }
 
             // Restore stock for affected tickets

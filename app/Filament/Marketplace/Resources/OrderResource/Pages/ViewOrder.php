@@ -39,11 +39,15 @@ class ViewOrder extends ViewRecord
                     Forms\Components\Select::make('status')
                         ->label('New Status')
                         ->options([
-                            'pending' => 'Pending',
-                            'paid' => 'Paid',
-                            'confirmed' => 'Confirmed',
-                            'cancelled' => 'Cancelled',
-                            'refunded' => 'Refunded',
+                            'pending' => 'În așteptare',
+                            'paid' => 'Plătită',
+                            'confirmed' => 'Confirmată',
+                            'completed' => 'Finalizată',
+                            'cancelled' => 'Anulată',
+                            'refunded' => 'Rambursată',
+                            'partially_refunded' => 'Rambursată parțial',
+                            'failed' => 'Eșuată',
+                            'expired' => 'Expirată',
                         ])
                         ->default(fn () => $this->record->status)
                         ->required(),

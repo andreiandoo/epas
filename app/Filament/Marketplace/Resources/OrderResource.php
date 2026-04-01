@@ -147,8 +147,10 @@ class OrderResource extends Resource
                                             ->options([
                                                 'pending' => 'În așteptare',
                                                 'confirmed' => 'Confirmată',
+                                                'completed' => 'Finalizată',
                                                 'cancelled' => 'Anulată',
                                                 'refunded' => 'Rambursată',
+                                                'partially_refunded' => 'Rambursată parțial',
                                             ])
                                             ->required(),
                                     ])
@@ -341,6 +343,7 @@ class OrderResource extends Resource
                         'success' => fn ($state) => in_array($state, ['completed', 'paid', 'confirmed']),
                         'danger' => fn ($state) => in_array($state, ['cancelled', 'failed']),
                         'gray' => fn ($state) => in_array($state, ['refunded', 'expired']),
+                        'info' => 'partially_refunded',
                     ])
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending' => 'În așteptare',
@@ -349,6 +352,7 @@ class OrderResource extends Resource
                         'completed' => 'Finalizată',
                         'cancelled' => 'Anulată',
                         'refunded' => 'Rambursată',
+                        'partially_refunded' => 'Rambursată parțial',
                         'failed' => 'Eșuată',
                         'expired' => 'Expirată',
                         default => ucfirst($state),
@@ -369,6 +373,7 @@ class OrderResource extends Resource
                         'completed' => 'Finalizată',
                         'cancelled' => 'Anulată',
                         'refunded' => 'Rambursată',
+                        'partially_refunded' => 'Rambursată parțial',
                         'failed' => 'Eșuată',
                         'expired' => 'Expirată',
                     ]),
@@ -412,6 +417,7 @@ class OrderResource extends Resource
                                     'completed' => 'Finalizată',
                                     'cancelled' => 'Anulată',
                                     'refunded' => 'Rambursată',
+                                    'partially_refunded' => 'Rambursată parțial',
                                     'failed' => 'Eșuată',
                                     'expired' => 'Expirată',
                                 ])
