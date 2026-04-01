@@ -1327,8 +1327,8 @@ class EventResource extends Resource
                                         SC\Section::make($t('Identificare', 'Identification'))
                                             ->extraAttributes(['class' => 'ep-tt-section'])
                                             ->schema([
-                                                // Row 1: Name, SKU, Price, Stock, Independent
-                                                SC\Grid::make(5)->schema([
+                                                // Row 1: Name, SKU, Price, Stock
+                                                SC\Grid::make(4)->schema([
                                                     Forms\Components\TextInput::make('name')
                                                         ->label($t('Nume', 'Name'))
                                                         ->placeholder($t('ex: Early Bird, Standard, VIP', 'e.g. Early Bird, Standard, VIP'))
@@ -1413,18 +1413,13 @@ class EventResource extends Resource
                                                             }
                                                             return !empty($hints) ? new \Illuminate\Support\HtmlString(implode(' · ', $hints)) : null;
                                                         }),
-                                                    Forms\Components\Checkbox::make('is_independent_stock')
-                                                        ->label($t('Independent', 'Independent'))
-                                                        ->inline()
-                                                        ->default(false)
-                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Biletele independente nu consumă din capacitatea generală (ex: merch, parcare, VIP separat).', 'Independent tickets do not consume from general capacity (e.g. merch, parking, separate VIP).')),
                                                     Forms\Components\Hidden::make('currency')
                                                         ->default($marketplace?->currency ?? 'RON')
                                                         ->dehydrated(true),
                                                 ])->columnSpan(12),
 
-                                                // Row 2: Ticket group, Min/order, Max/order, Multiplier
-                                                SC\Grid::make(4)->schema([
+                                                // Row 2: Ticket group, Min/order, Max/order, Multiplier, Independent
+                                                SC\Grid::make(5)->schema([
                                                     Forms\Components\Select::make('ticket_group')
                                                         ->label($t('Grup', 'Group'))
                                                         ->placeholder($t('Selectează sau creează un grup...', 'Select or create a group...'))
@@ -1476,6 +1471,10 @@ class EventResource extends Resource
                                                         ->minValue(1)
                                                         ->default(1)
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Pasul de incrementare la +/- pe frontend. Ex: 2 = se adaugă câte 2 bilete per click.', 'Step increment for +/- on frontend. E.g. 2 = adds 2 tickets per click.')),
+                                                    Forms\Components\Toggle::make('is_independent_stock')
+                                                        ->label($t('Stoc independent', 'Independent stock'))
+                                                        ->default(false)
+                                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Nu consumă din capacitatea generală (ex: merch, parcare).', 'Does not consume from general capacity (e.g. merch, parking).')),
                                                 ])->columnSpan(12),
 
                                                 // Row 3: Description + Admin notes side by side
