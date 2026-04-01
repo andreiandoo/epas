@@ -1123,8 +1123,9 @@ class EventResource extends Resource
                                         ->numeric()
                                         ->minValue(1)
                                         ->nullable()
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim total de bilete care pot fi vândute (pool partajat). Lasă gol dacă nu vrei limită generală.', 'Maximum total tickets that can be sold (shared pool). Leave empty for no general limit.'))
-                                        ->placeholder($t('ex: 500 sau gol', 'e.g. 500 or empty'))
+                                        ->required(fn ($operation) => $operation === 'create')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim total de bilete care pot fi vândute (pool partajat). Obligatoriu la creare. La editare, lasă gol pentru fără limită.', 'Maximum total tickets that can be sold (shared pool). Required on create. On edit, leave empty for no limit.'))
+                                        ->placeholder(fn ($operation) => $operation === 'create' ? $t('obligatoriu', 'required') : $t('gol = fără limită', 'empty = no limit'))
                                         ->live(onBlur: true)
                                         ->hint(function (SGet $get, ?Event $record) use ($t) {
                                             $quota = $get('general_quota');
