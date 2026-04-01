@@ -2841,3 +2841,12 @@ Route::prefix('web-templates')->middleware('throttle:120,1')->group(function () 
     Route::get('/{templateSlug}/data/{token?}', [\App\Http\Controllers\WebTemplatePreviewController::class, 'templateData'])
         ->name('api.web-template.data');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Email Tracking Webhooks (Brevo / Sendinblue)
+|--------------------------------------------------------------------------
+*/
+Route::post('/webhooks/brevo', [\App\Http\Controllers\Api\BrevoWebhookController::class, 'handle'])
+    ->name('api.webhooks.brevo')
+    ->withoutMiddleware(['throttle:api']);
