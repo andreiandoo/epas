@@ -88,7 +88,8 @@ class ViewOrder extends ViewRecord
                         ->send();
                 }),
 
-            Actions\EditAction::make(),
+            Actions\EditAction::make()
+                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded'])),
         ];
     }
 
