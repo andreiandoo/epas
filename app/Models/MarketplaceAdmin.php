@@ -36,6 +36,7 @@ class MarketplaceAdmin extends Authenticatable implements FilamentUser
         'proxy_country',
         'proxy_county',
         'proxy_city',
+        'proxy_sector',
         'proxy_id_series',
         'proxy_id_number',
         'proxy_cnp',

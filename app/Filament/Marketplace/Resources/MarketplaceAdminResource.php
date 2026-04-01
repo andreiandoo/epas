@@ -182,7 +182,23 @@ class MarketplaceAdminResource extends Resource
 
                         Forms\Components\TextInput::make('proxy_city')
                             ->label('Oraș')
-                            ->maxLength(100),
+                            ->maxLength(100)
+                            ->live(onBlur: true),
+
+                        Forms\Components\Select::make('proxy_sector')
+                            ->label('Sector')
+                            ->options([
+                                '1' => 'Sector 1',
+                                '2' => 'Sector 2',
+                                '3' => 'Sector 3',
+                                '4' => 'Sector 4',
+                                '5' => 'Sector 5',
+                                '6' => 'Sector 6',
+                            ])
+                            ->visible(fn ($get) => in_array(
+                                mb_strtolower(trim($get('proxy_city') ?? '')),
+                                ['bucuresti', 'bucurești', 'bucharest']
+                            )),
 
                         Forms\Components\TextInput::make('proxy_id_series')
                             ->label('Serie CI')
