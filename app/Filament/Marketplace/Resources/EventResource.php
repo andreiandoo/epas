@@ -1130,10 +1130,14 @@ class EventResource extends Resource
                                         ->hint(function (SGet $get, ?Event $record) use ($t) {
                                             $quota = $get('general_quota');
                                             if (!$quota || !$record) return null;
-                                            $soldNonIndep = $record->ticketTypes()
+                                            // Count active tickets (exclude cancelled/refunded) from non-independent types
+                                            $nonIndepIds = $record->ticketTypes()
                                                 ->where('is_independent_stock', false)
-                                                ->sum('quota_sold');
-                                            $remaining = max(0, (int) $quota - (int) $soldNonIndep);
+                                                ->pluck('id');
+                                            $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+                                                ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                ->count();
+                                            $remaining = max(0, (int) $quota - $activeCount);
                                             return new HtmlString(
                                                 '<span class="text-xs">' . $t('Disponibil', 'Available') . ': <strong>' . $remaining . '</strong> / ' . $quota . '</span>'
                                             );
