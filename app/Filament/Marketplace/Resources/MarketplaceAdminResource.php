@@ -63,10 +63,10 @@ class MarketplaceAdminResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                Section::make('User Information')
+                Section::make('Informații utilizator')
                     ->schema([
                         Forms\Components\TextInput::make('name')
-                            ->label('Full Name')
+                            ->label('Nume complet')
                             ->required()
                             ->maxLength(255),
 
@@ -77,25 +77,24 @@ class MarketplaceAdminResource extends Resource
                             ->unique(ignoreRecord: true),
 
                         Forms\Components\TextInput::make('password')
+                            ->label('Parolă')
                             ->password()
                             ->revealable()
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrateStateUsing(fn ($state) => $state ? Hash::make($state) : null)
                             ->dehydrated(fn ($state) => filled($state))
                             ->maxLength(255)
-                            ->helperText(fn (string $operation): string => $operation === 'edit' ? 'Leave blank to keep current password' : ''),
+                            ->helperText(fn (string $operation): string => $operation === 'edit' ? 'Lasă gol pentru a păstra parola curentă' : ''),
 
                         Forms\Components\TextInput::make('phone')
+                            ->label('Telefon')
                             ->tel()
                             ->maxLength(50),
-                    ])->columns(2),
 
-                Section::make('Role & Permissions')
-                    ->schema([
                         Forms\Components\Select::make('role')
+                            ->label('Rol')
                             ->options(function () use ($currentAdmin) {
                                 $roles = MarketplaceAdmin::roles();
-                                // Only super admins can create other super admins
                                 if (!$currentAdmin?->isSuperAdmin()) {
                                     unset($roles['super_admin']);
                                 }
@@ -106,40 +105,39 @@ class MarketplaceAdminResource extends Resource
                             ->live(),
 
                         Forms\Components\Select::make('status')
+                            ->label('Status')
                             ->options([
-                                'active' => 'Active',
-                                'inactive' => 'Inactive',
-                                'suspended' => 'Suspended',
+                                'active' => 'Activ',
+                                'inactive' => 'Inactiv',
+                                'suspended' => 'Suspendat',
                             ])
                             ->required()
                             ->default('active'),
 
-                        Forms\Components\CheckboxList::make('permissions')
-                            ->label('Permissions')
-                            ->options(MarketplaceAdmin::availablePermissions())
-                            ->columns(2)
-                            ->visible(fn ($get) => $get('role') !== 'super_admin')
-                            ->helperText('Super Admins have all permissions automatically'),
-                    ])->columns(1),
-
-                Section::make('Preferences')
-                    ->schema([
                         Forms\Components\Select::make('locale')
+                            ->label('Limbă')
                             ->options([
                                 'en' => 'English',
-                                'ro' => 'Romanian',
+                                'ro' => 'Română',
                             ])
-                            ->default('en'),
+                            ->default('ro'),
 
                         Forms\Components\Select::make('timezone')
+                            ->label('Fus orar')
                             ->options([
                                 'Europe/Bucharest' => 'Europe/Bucharest',
                                 'Europe/London' => 'Europe/London',
                                 'UTC' => 'UTC',
                             ])
                             ->default('Europe/Bucharest'),
-                    ])->columns(2)
-                    ->collapsed(),
+
+                        Forms\Components\CheckboxList::make('permissions')
+                            ->label('Permisiuni')
+                            ->options(MarketplaceAdmin::availablePermissions())
+                            ->columns(2)
+                            ->visible(fn ($get) => $get('role') !== 'super_admin')
+                            ->helperText('Super Admins au toate permisiunile automat.'),
+                    ])->columns(1),
 
                 Section::make('Date Împuternicit')
                     ->description('Datele persoanei împuternicite pentru operațiuni fiscale și documente.')
@@ -153,10 +151,14 @@ class MarketplaceAdminResource extends Resource
                             ->placeholder('ex: Administrator, Director, Reprezentant legal')
                             ->maxLength(255),
 
+                        Forms\Components\TextInput::make('proxy_phone')
+                            ->label('Telefon')
+                            ->tel()
+                            ->maxLength(20),
+
                         Forms\Components\TextInput::make('proxy_address')
                             ->label('Adresa')
-                            ->maxLength(500)
-                            ->columnSpanFull(),
+                            ->maxLength(500),
 
                         Forms\Components\Select::make('proxy_country')
                             ->label('Țara')
@@ -196,11 +198,6 @@ class MarketplaceAdminResource extends Resource
                             ->label('CNP')
                             ->maxLength(13),
 
-                        Forms\Components\TextInput::make('proxy_phone')
-                            ->label('Telefon')
-                            ->tel()
-                            ->maxLength(20),
-
                         Forms\Components\FileUpload::make('proxy_id_card_file')
                             ->label('Buletin / Carte de identitate')
                             ->disk('public')
@@ -208,8 +205,7 @@ class MarketplaceAdminResource extends Resource
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120)
                             ->downloadable()
-                            ->openable()
-                            ->columnSpanFull(),
+                            ->openable(),
 
                         Forms\Components\FileUpload::make('proxy_authorization_file')
                             ->label('Împuternicire')
@@ -218,10 +214,8 @@ class MarketplaceAdminResource extends Resource
                             ->acceptedFileTypes(['image/*', 'application/pdf'])
                             ->maxSize(5120)
                             ->downloadable()
-                            ->openable()
-                            ->columnSpanFull(),
-                    ])->columns(3)
-                    ->collapsed(),
+                            ->openable(),
+                    ])->columns(1),
             ]);
     }
 
