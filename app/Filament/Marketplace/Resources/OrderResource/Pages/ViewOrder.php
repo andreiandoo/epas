@@ -35,6 +35,7 @@ class ViewOrder extends ViewRecord
                 ->label('Change Status')
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
+                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']))
                 ->form([
                     Forms\Components\Select::make('status')
                         ->label('New Status')

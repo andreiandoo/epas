@@ -53,6 +53,16 @@ class OrderResource extends Resource
                         ->hiddenLabel()
                         ->content(fn ($record) => self::renderOrderHero($record)),
 
+                    // Refund Details (visible only if refunded)
+                    SC\Section::make('Detalii rambursare')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->visible(fn ($record) => in_array($record->refund_status ?? 'none', ['partial', 'full']))
+                        ->schema([
+                            Forms\Components\Placeholder::make('refund_details')
+                                ->hiddenLabel()
+                                ->content(fn ($record) => self::renderRefundDetails($record)),
+                        ]),
+
                     // Customer Section
                     SC\Section::make('Client')
                         ->icon('heroicon-o-user')
@@ -155,6 +165,7 @@ class OrderResource extends Resource
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('warning')
+                                    ->visible(fn ($record) => !in_array($record->status, ['refunded', 'partially_refunded']))
                                     ->form([
                                         Forms\Components\Select::make('status')
                                             ->options([
@@ -1375,6 +1386,128 @@ class OrderResource extends Resource
 
         $html .= '</div>';
 
+        return new HtmlString($html);
+    }
+
+    protected static function renderRefundDetails(Order $record): HtmlString
+    {
+        $currency = $record->currency ?? 'RON';
+        $refundedAmount = (float) ($record->refunded_amount ?? $record->refund_amount ?? 0);
+        $orderTotal = (float) ($record->total ?? 0);
+        $remaining = max(0, $orderTotal - $refundedAmount);
+        $refundStatus = $record->refund_status ?? 'none';
+        $refundedAt = $record->refunded_at;
+
+        // Get refund requests for this order
+        $refundRequests = $record->refundRequests()
+            ->with(['refundItems.ticket.ticketType', 'refundItems.ticket'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $isFullRefund = $refundStatus === 'full';
+        $typeLabel = $isFullRefund ? 'Completă' : 'Parțială';
+        $typeColor = $isFullRefund ? '#60A5FA' : '#818CF8';
+
+        $html = '<div>';
+
+        // Summary row
+        $html .= "
+            <div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;'>
+                <div style='padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;'>
+                    <div style='font-size:11px;color:#94A3B8;margin-bottom:4px;'>Tip rambursare</div>
+                    <div style='font-size:14px;font-weight:600;color:{$typeColor};'>{$typeLabel}</div>
+                </div>
+                <div style='padding:12px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:8px;'>
+                    <div style='font-size:11px;color:#94A3B8;margin-bottom:4px;'>Data rambursării</div>
+                    <div style='font-size:14px;font-weight:600;color:#E2E8F0;'>" . ($refundedAt ? $refundedAt->format('d.m.Y H:i') : '—') . "</div>
+                </div>
+            </div>
+        ";
+
+        // Amounts
+        $html .= "
+            <div style='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                <span style='font-size:13px;color:#94A3B8;'>Sumă rambursată</span>
+                <span style='font-size:14px;font-weight:700;color:#60A5FA;'>" . number_format($refundedAmount, 2) . " {$currency}</span>
+            </div>
+            <div style='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                <span style='font-size:13px;color:#94A3B8;'>Sumă rămasă</span>
+                <span style='font-size:14px;font-weight:600;color:" . ($remaining > 0 ? '#F59E0B' : '#10B981') . ";'>" . number_format($remaining, 2) . " {$currency}</span>
+            </div>
+        ";
+
+        // Motiv
+        $refundReason = $record->refund_reason ?? '';
+        if ($refundReason) {
+            $html .= "
+                <div style='display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(51,65,85,0.5);'>
+                    <span style='font-size:13px;color:#94A3B8;'>Motiv</span>
+                    <span style='font-size:13px;color:#E2E8F0;'>" . e($refundReason) . "</span>
+                </div>
+            ";
+        }
+
+        // Per-refund request details
+        foreach ($refundRequests as $refReq) {
+            $statusBadge = match($refReq->status) {
+                'refunded' => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(16,185,129,0.15);color:#10B981;">Procesată</span>',
+                'partially_refunded' => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(99,102,241,0.15);color:#818CF8;">Parțial</span>',
+                'processing' => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(245,158,11,0.15);color:#F59E0B;">Se procesează</span>',
+                'approved' => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(59,130,246,0.15);color:#60A5FA;">Aprobată (manual)</span>',
+                'failed' => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(239,68,68,0.15);color:#EF4444;">Eșuată</span>',
+                default => '<span style="padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:rgba(107,114,128,0.15);color:#9CA3AF;">' . ucfirst($refReq->status) . '</span>',
+            };
+
+            $refId = $refReq->payment_refund_id ? "<span style='font-size:11px;color:#64748B;font-family:monospace;'>{$refReq->payment_refund_id}</span>" : '';
+
+            $html .= "
+                <div style='margin-top:12px;padding:10px;background:rgba(15,23,42,0.5);border:1px solid rgba(51,65,85,0.5);border-radius:8px;'>
+                    <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'>
+                        <span style='font-size:12px;font-weight:600;color:#E2E8F0;'>{$refReq->reference}</span>
+                        {$statusBadge}
+                    </div>
+                    <div style='font-size:11px;color:#64748B;margin-bottom:6px;'>
+                        " . number_format($refReq->approved_amount ?? $refReq->requested_amount ?? 0, 2) . " {$currency}
+                        · " . ($refReq->created_at?->format('d.m.Y H:i') ?? '') . "
+                        {$refId}
+                    </div>
+            ";
+
+            // Refunded tickets
+            $refundItems = $refReq->refundItems ?? collect();
+            if ($refundItems->isNotEmpty()) {
+                $html .= "<div style='margin-top:6px;'>";
+                foreach ($refundItems as $item) {
+                    $ticket = $item->ticket;
+                    if (!$ticket) continue;
+
+                    $event = $ticket->resolveEvent();
+                    $eventTitle = '';
+                    if ($event) {
+                        $eventTitle = is_array($event->title) ? ($event->title['ro'] ?? reset($event->title) ?? '') : ($event->title ?? '');
+                    }
+                    $eventDate = $event?->event_date?->format('d.m.Y') ?? '';
+                    $venueName = $event?->venue ? (is_array($event->venue->name) ? ($event->venue->name['ro'] ?? '') : ($event->venue->name ?? '')) : '';
+                    $venueCity = $event?->venue?->city ?? '';
+
+                    $eventInfo = array_filter([$eventDate, $venueName, $venueCity]);
+                    $eventLine = $eventTitle ? e($eventTitle) . ($eventInfo ? ' <span style="color:#64748B;">(' . e(implode(', ', $eventInfo)) . ')</span>' : '') : '';
+
+                    $html .= "
+                        <div style='display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid rgba(51,65,85,0.3);'>
+                            <span style='font-size:11px;font-family:monospace;color:#94A3B8;background:rgba(51,65,85,0.5);padding:1px 6px;border-radius:4px;'>" . e($ticket->code ?? '—') . "</span>
+                            <span style='font-size:11px;color:#E2E8F0;flex:1;'>{$eventLine}</span>
+                            <span style='font-size:11px;font-weight:600;color:#60A5FA;'>" . number_format($item->refund_amount, 2) . "</span>
+                        </div>
+                    ";
+                }
+                $html .= "</div>";
+            }
+
+            $html .= "</div>";
+        }
+
+        $html .= '</div>';
         return new HtmlString($html);
     }
 
