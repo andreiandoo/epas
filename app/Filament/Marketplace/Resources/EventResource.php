@@ -869,12 +869,7 @@ class EventResource extends Resource
 
                                 Forms\Components\Select::make('artists')
                                     ->label($t('Artiști', 'Artists'))
-                                    ->relationship('artists', 'name', function ($query) use ($marketplace) {
-                                        $artistCountries = self::expandCountryVariants($marketplace?->settings['artist_countries'] ?? []);
-                                        if (!empty($artistCountries)) {
-                                            $query->whereIn('country', $artistCountries);
-                                        }
-                                    })
+                                    ->relationship('artists', 'name')
                                     ->multiple()
                                     ->preload()
                                     ->searchable()
