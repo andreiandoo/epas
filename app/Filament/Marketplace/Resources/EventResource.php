@@ -3482,7 +3482,16 @@ class EventResource extends Resource
                         $remaining = max(0, $record->general_quota - $activeCount);
                         return $remaining . '/' . $record->general_quota;
                     })
-                    ->color(fn ($record) => $record->general_quota === null ? 'gray' : 'success')
+                    ->color(function ($record) {
+                        if ($record->general_quota === null) return 'gray';
+                        $nonIndepIds = $record->ticketTypes->where('is_independent_stock', false)->pluck('id');
+                        $activeCount = $nonIndepIds->isEmpty() ? 0 : \App\Models\Ticket::whereIn('ticket_type_id', $nonIndepIds)
+                            ->whereNotIn('status', ['cancelled', 'refunded'])->count();
+                        $pct = ($record->general_quota > 0) ? ($activeCount / $record->general_quota) * 100 : 0;
+                        if ($pct >= 80) return 'success';
+                        if ($pct >= 50) return 'warning';
+                        return 'danger';
+                    })
                     ->badge()
                     ->sortable()
                     ->toggleable(),
@@ -3504,18 +3513,18 @@ class EventResource extends Resource
                     })
                     ->sortable()
                     ->toggleable()
-                    ->limit(25)
+                    ->limit(20)
                     ->tooltip(fn ($record) => $record->marketplaceOrganizer?->name)
-                    ->extraAttributes(['style' => 'max-width:175px; overflow:hidden; text-overflow:ellipsis;'])
+                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
                     ->url(fn (Event $record) => $record->marketplace_organizer_id
                         ? \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $record->marketplace_organizer_id])
                         : null),
                 Tables\Columns\TextColumn::make('venue_id')
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
-                    ->limit(25)
+                    ->limit(20)
                     ->tooltip(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()))
-                    ->extraAttributes(['style' => 'max-width:175px;'])
+                    ->extraAttributes(['style' => 'max-width:140px; overflow:hidden; text-overflow:ellipsis; font-size:0.75rem;'])
                     ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('marketplace_city_id')
@@ -3569,6 +3578,8 @@ class EventResource extends Resource
                             ?? $record->range_start_date?->format('d M Y')
                             ?? '-';
                     })
+                    ->badge()
+                    ->color('gray')
                     ->sortable(query: function ($query, string $direction) {
                         $query->orderByRaw('COALESCE(event_date, range_start_date) ' . $direction);
                     })

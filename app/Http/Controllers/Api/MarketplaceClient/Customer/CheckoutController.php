@@ -1011,19 +1011,35 @@ class CheckoutController extends BaseController
 
             $ttName = is_array($ticketType->name) ? ($ticketType->name['ro'] ?? $ticketType->name['en'] ?? '') : $ticketType->name;
             $eventName = is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? '') : ($event->title ?? '');
+            $organizer = $event->marketplaceOrganizer;
 
-            $subject = "⚠ Alertă stoc: {$ttName} — {$eventName}";
-            $body = "Stocul pentru tipul de bilet <strong>{$ttName}</strong> din evenimentul "
-                . "<strong>{$eventName}</strong> a scăzut la <strong>{$remaining}</strong> bilete disponibile "
-                . "(prag alertă: {$threshold})."
-                . "<br><br>Verifică stocul și ia măsurile necesare.";
+            // Try to use email template
+            $template = \App\Models\MarketplaceEmailTemplate::where('marketplace_client_id', $client->id)
+                ->where('slug', 'stock_low_alert')
+                ->where('is_active', true)
+                ->first();
 
-            \Illuminate\Support\Facades\Mail::html(
-                "<div style='font-family:sans-serif;font-size:14px;color:#333;'>{$body}</div>",
-                function ($message) use ($alertEmail, $subject) {
-                    $message->to($alertEmail)->subject($subject);
-                }
-            );
+            $variables = [
+                'ticket_type' => $ttName,
+                'event_name' => $eventName,
+                'remaining_stock' => $remaining,
+                'organizer_name' => $organizer?->name ?? $organizer?->company_name ?? 'Organizator',
+                'admin_url' => "https://{$client->domain}/marketplace/events/{$event->id}/edit?tab=bilete",
+            ];
+
+            if ($template) {
+                $subject = $template->processSubject($variables);
+                $html = $template->processBody($variables);
+            } else {
+                $subject = "⚠ Alertă stoc: {$ttName} — {$eventName}";
+                $html = "<div style='font-family:sans-serif;font-size:14px;color:#333;'>"
+                    . "Stocul pentru <strong>{$ttName}</strong> ({$eventName}) a scăzut la <strong>{$remaining}</strong> bilete."
+                    . "</div>";
+            }
+
+            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($alertEmail, $subject) {
+                $message->to($alertEmail)->subject($subject);
+            });
 
             \Log::info('Low stock alert sent', [
                 'ticket_type_id' => $ticketType->id,
