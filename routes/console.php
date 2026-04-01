@@ -18,6 +18,11 @@ Schedule::command('ticket-types:expire-sales')
     ->everyMinute()
     ->timezone('Europe/Bucharest');
 
+// Expire pending orders that have passed their expires_at time (every 2 minutes)
+Schedule::command('orders:expire-pending')
+    ->everyTwoMinutes()
+    ->timezone('Europe/Bucharest');
+
 // Schedule automatic invoice generation for tenants
 Schedule::command('invoices:generate-tenant')
     ->dailyAt('02:00')

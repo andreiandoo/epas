@@ -394,8 +394,10 @@ class PaymentController extends BaseController
             } else {
                 // Payment failed or pending
                 $errorMessage = $result['metadata']['error_message'] ?? $result['message'] ?? 'Payment failed';
+                $isFailed = $result['status'] !== 'pending';
                 $order->update([
-                    'payment_status' => $result['status'] === 'pending' ? 'pending' : 'failed',
+                    'status' => $isFailed ? 'failed' : $order->status,
+                    'payment_status' => $isFailed ? 'failed' : 'pending',
                     'payment_error' => $errorMessage,
                     'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
