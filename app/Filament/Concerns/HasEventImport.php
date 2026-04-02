@@ -26,7 +26,34 @@ trait HasEventImport
     public int $stage = 1;
 
     // Stage 1: Event setup form
-    public ?array $eventFormData = [];
+    public ?array $eventFormData = [
+        'import_existing' => false,
+        'existing_event_id' => null,
+        'external_platform_name' => null,
+        'import_source' => 'iabilet',
+        'event_status' => 'completed',
+        'title' => null,
+        'event_date' => null,
+        'start_time' => null,
+        'end_time' => null,
+        'duration_mode' => 'single_day',
+        'range_start_date' => null,
+        'range_end_date' => null,
+        'description' => null,
+        'venue_id' => null,
+        'venue_city' => null,
+        'venue_address' => null,
+        'website_url' => null,
+        'facebook_url' => null,
+        'artist_ids' => [],
+        'marketplace_event_category_id' => null,
+        'event_type_ids' => [],
+        'event_genre_ids' => [],
+        'commission_rate' => 0,
+        'commission_mode' => 'included',
+        'marketplace_organizer_id' => null,
+        'tenant_id' => null,
+    ];
 
     // Stage 2: File upload & preview
     public $uploadedFile = null;
