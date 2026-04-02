@@ -30,22 +30,28 @@ class EventImportService
         $customersEnriched = 0;
         $anonymousOrders = 0;
 
-        return DB::transaction(function () use ($rows, $eventConfig, $tenantId, $sourceKey, &$errors, &$customersCreated, &$customersEnriched, &$anonymousOrders) {
+        // Not wrapped in a single DB::transaction — each order is its own transaction
+        // to prevent one failure from rolling back all other successful imports
+        return (function () use ($rows, $eventConfig, $tenantId, $sourceKey, &$errors, &$customersCreated, &$customersEnriched, &$anonymousOrders) {
 
             $isExternalImport = !empty($eventConfig['existing_event_id']);
             $externalPlatform = $eventConfig['external_platform_name'] ?? $sourceKey;
 
-            // 1. Create or use existing Event
-            if ($isExternalImport) {
-                $event = Event::findOrFail($eventConfig['existing_event_id']);
-                // Override source key for external imports
-                $sourceKey = $externalPlatform;
-            } else {
-                $event = $this->createEvent($eventConfig, $tenantId, $sourceKey);
-            }
+            // 1. Create or use existing Event + TicketTypes (in transaction)
+            [$event, $ticketTypeMap] = DB::transaction(function () use ($eventConfig, $tenantId, $sourceKey, $rows, $isExternalImport, $externalPlatform) {
+                if ($isExternalImport) {
+                    $event = Event::findOrFail($eventConfig['existing_event_id']);
+                    $sourceKey = $externalPlatform;
+                } else {
+                    $event = $this->createEvent($eventConfig, $tenantId, $sourceKey);
+                }
+                $ticketTypeMap = $this->createTicketTypes($rows, $event, $tenantId, $isExternalImport ? $externalPlatform : null);
+                return [$event, $ticketTypeMap];
+            });
 
-            // 2. Discover and create TicketTypes (with platform prefix for external imports)
-            $ticketTypeMap = $this->createTicketTypes($rows, $event, $tenantId, $isExternalImport ? $externalPlatform : null);
+            if ($isExternalImport) {
+                $sourceKey = $externalPlatform;
+            }
 
             // 3. Group rows by orderId and process
             $orderGroups = $this->groupByOrder($rows);
@@ -55,6 +61,8 @@ class EventImportService
 
             foreach ($orderGroups as $orderId => $orderRows) {
                 try {
+                    DB::beginTransaction();
+
                     $result = $this->processOrderGroup(
                         $orderId,
                         $orderRows,
@@ -69,9 +77,11 @@ class EventImportService
                         $isExternalImport,
                     );
 
+                    DB::commit();
                     $totalTickets += $result['tickets'];
                     $totalOrders++;
                 } catch (\Throwable $e) {
+                    DB::rollBack();
                     $errors[] = "Order {$orderId}: {$e->getMessage()}";
                 }
             }
@@ -97,7 +107,7 @@ class EventImportService
                 anonymousOrders: $anonymousOrders,
                 errors: $errors,
             );
-        });
+        })();
     }
 
     protected function createEvent(array $config, int $tenantId, string $sourceKey): Event
@@ -325,8 +335,8 @@ class EventImportService
         $order->event_id = $event->id;
         $order->customer_id = $customerId;
         $order->order_number = strtoupper(substr($sourceKey, 0, 3)) . '-' . $orderId;
-        $order->customer_email = $customerEmail;
-        $order->customer_name = $customerName;
+        $order->customer_email = $customerEmail ?: 'anonymous@import.local';
+        $order->customer_name = $customerName ?: 'Anonim';
         $order->customer_phone = $customerPhone;
         $order->total = $orderTotal;
         $order->subtotal = $orderTotal;
