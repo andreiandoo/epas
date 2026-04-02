@@ -799,6 +799,37 @@ Schedule::call(function () {
     \Log::info('Cashless GDPR anonymization completed', $result);
 })->monthlyOn(1, '05:00')->timezone('Europe/Bucharest');
 
+// Reset daily spending limits (midnight)
+Schedule::job(new \App\Jobs\ResetDailySpendingLimitsJob)
+    ->dailyAt('00:00')
+    ->timezone('Europe/Bucharest')
+    ->name('cashless-reset-spending-limits');
+
+// Allocate daily credits for staff/artist/sponsor (every day at 08:00)
+Schedule::call(function () {
+    $editions = \App\Models\FestivalEdition::where('status', 'active')->get();
+    foreach ($editions as $edition) {
+        \App\Jobs\AllocateDailyCreditJob::dispatch($edition->id);
+    }
+})->dailyAt('08:00')->timezone('Europe/Bucharest')->name('cashless-daily-credit');
+
+// Retry failed webhook deliveries (every 5 minutes)
+Schedule::call(function () {
+    $service = app(\App\Services\Cashless\CashlessWebhookService::class);
+    $result = $service->processRetries();
+    if ($result['retried'] > 0) {
+        \Log::info('Cashless webhook retries processed', $result);
+    }
+})->everyFiveMinutes()->name('cashless-webhook-retries');
+
+// Expire pending inventory transfer requests (every 30 minutes)
+Schedule::call(function () {
+    \App\Models\Cashless\InventoryTransferRequest::where('status', 'pending')
+        ->whereNotNull('expires_at')
+        ->where('expires_at', '<', now())
+        ->update(['status' => 'expired']);
+})->everyThirtyMinutes()->name('cashless-expire-transfers');
+
 // Refresh materialized views every 5 minutes (PostgreSQL only)
 Schedule::command('views:refresh')
     ->everyFiveMinutes()
