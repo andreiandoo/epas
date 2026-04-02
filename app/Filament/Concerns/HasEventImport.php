@@ -555,6 +555,10 @@ trait HasEventImport
 
     public function processImport(): void
     {
+        // Allow longer execution for large imports
+        set_time_limit(300);
+        ini_set('max_execution_time', '300');
+
         $cacheKey = 'event_import_rows_' . session()->getId();
         $serialized = Cache::get($cacheKey);
 
