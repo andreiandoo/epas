@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\Auth;
 
 class CashlessDashboard extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-presentation-chart-bar';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-presentation-chart-bar';
 
     protected static ?string $navigationLabel = 'Cashless Dashboard';
 
-    protected static ?string $navigationGroup = 'Cashless';
+    protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
 
     protected static ?int $navigationSort = 1;
 

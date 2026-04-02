@@ -9,11 +9,11 @@ use App\Models\FestivalEdition;
 
 class CashlessReports extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-document-chart-bar';
 
     protected static ?string $navigationLabel = 'Cashless Reports';
 
-    protected static ?string $navigationGroup = 'Cashless';
+    protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
 
     protected static ?int $navigationSort = 2;
 
