@@ -188,6 +188,21 @@ class EventImportService
             // Prefix ticket type name with platform for external imports
             $displayName = $externalPlatform ? "{$name} ({$externalPlatform})" : $name;
 
+            // Check if ticket type already exists on this event (prevent duplicates on re-import)
+            $existingTT = TicketType::where('event_id', $event->id)->where('name', $displayName)->first();
+            if ($existingTT) {
+                // Reuse existing, update quota
+                $existingTT->increment('quota_total', $data['count']);
+                $existingTT->increment('quota_sold', $data['count']);
+
+                $map[$name] = [
+                    'id' => $existingTT->id,
+                    'count' => $data['count'],
+                    'price' => $price,
+                ];
+                continue;
+            }
+
             $meta = [];
             if ($externalPlatform) {
                 $meta['external_platform'] = $externalPlatform;

@@ -2534,15 +2534,17 @@ class EventResource extends Resource
                                             return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
                                         }
 
-                                        // Calculate real revenue from actual orders (not from quota_sold × price)
+                                        // Calculate real revenue from actual orders — EXCLUDE external imports
                                         $eventId = $record->id;
                                         $totalRevenue = (float) \App\Models\Order::whereIn('status', ['paid', 'confirmed', 'completed'])
                                             ->where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->where('source', '!=', 'external_import')
                                             ->sum('total');
 
-                                        // Count valid tickets (not cancelled/refunded)
+                                        // Count valid tickets (not cancelled/refunded) — EXCLUDE external imports
                                         $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'))
                                             ->count();
 
                                         $totalCapacity = $record->general_quota ?? $record->capacity ?? $record->ticketTypes->sum(fn ($tt) => $tt->capacity ?? 0) ?? 0;
@@ -2564,16 +2566,17 @@ class EventResource extends Resource
                                         $statisticsLabel = $t('Statistici', 'Statistics');
                                         $analyticsLabel = $t('Analiză', 'Analytics');
 
-                                        // Tickets & Orders counts and URLs
+                                        // Tickets & Orders counts and URLs — EXCLUDE external imports
                                         $eventId = $record->id;
-                                        $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId));
+                                        $ticketsQuery = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'));
                                         $ticketCountValid = (clone $ticketsQuery)->whereIn('status', ['valid', 'used'])->count();
                                         $ticketCountCancelled = (clone $ticketsQuery)->where('status', 'cancelled')->count();
                                         $ticketCountRefunded = (clone $ticketsQuery)->whereIn('status', ['refunded', 'void'])->count();
                                         $ordersQuery = \App\Models\Order::where(fn ($q) => $q
                                             ->where('event_id', $eventId)
                                             ->orWhereHas('tickets', fn ($tq) => $tq->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                        );
+                                        )->where('source', '!=', 'external_import');
                                         $orderCountCompleted = (clone $ordersQuery)->whereIn('status', ['completed', 'confirmed'])->count();
                                         $ticketsUrl = \App\Filament\Marketplace\Resources\TicketResource::getUrl('index') . '?event_id=' . $eventId;
                                         $ordersUrl = \App\Filament\Marketplace\Resources\OrderResource::getUrl('index') . '?event_id=' . $eventId;
@@ -2640,6 +2643,71 @@ class EventResource extends Resource
                                                     <svg class='w-3.5 h-3.5' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z'/></svg>
                                                     {$analyticsLabel}
                                                 </a>
+                                            </div>
+                                        ");
+                                    }),
+                            ]),
+
+                        // External Sales Section (only if external imports exist)
+                        SC\Section::make(fn () => new HtmlString($t('Vânzări terți', 'Third-party Sales') . ' <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-500/20 text-indigo-400 ring-1 ring-inset ring-indigo-500/30">EXTERN</span>'))
+                            ->icon('heroicon-o-globe-alt')
+                            ->compact()
+                            ->visible(function (?Event $record) {
+                                if (!$record?->exists) return false;
+                                return \App\Models\Order::where('event_id', $record->id)
+                                    ->where('source', 'external_import')
+                                    ->exists();
+                            })
+                            ->schema([
+                                Forms\Components\Placeholder::make('external_sales')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record?->exists) return '';
+                                        $eventId = $record->id;
+
+                                        $extRevenue = (float) \App\Models\Order::where('event_id', $eventId)
+                                            ->where('source', 'external_import')
+                                            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                            ->sum('total');
+
+                                        $extTickets = \App\Models\Ticket::where('event_id', $eventId)
+                                            ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                                            ->whereHas('order', fn($q) => $q->where('source', 'external_import'))
+                                            ->count();
+
+                                        $extOrders = \App\Models\Order::where('event_id', $eventId)
+                                            ->where('source', 'external_import')
+                                            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                            ->count();
+
+                                        // Get platforms
+                                        $platforms = \App\Models\Order::where('event_id', $eventId)
+                                            ->where('source', 'external_import')
+                                            ->get()
+                                            ->pluck('meta.external_platform')
+                                            ->filter()
+                                            ->unique()
+                                            ->implode(', ');
+
+                                        $ticketsLabel = $t('Bilete', 'Tickets');
+                                        $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
+                                        $ordersLabel = $t('Comenzi', 'Orders');
+
+                                        return new HtmlString("
+                                            <div style='font-size:11px;color:#818CF8;margin-bottom:8px;'>🌐 {$platforms}</div>
+                                            <div class='grid grid-cols-3 gap-2'>
+                                                <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-lg font-bold text-indigo-400'>" . number_format($extTickets) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$ticketsLabel}</div>
+                                                </div>
+                                                <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-lg font-bold text-indigo-400'>" . number_format($extRevenue, 2, ',', '.') . "</div>
+                                                    <div class='text-xs text-gray-400'>{$revenueLabel}</div>
+                                                </div>
+                                                <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-lg font-bold text-indigo-400'>" . number_format($extOrders) . "</div>
+                                                    <div class='text-xs text-gray-400'>{$ordersLabel}</div>
+                                                </div>
                                             </div>
                                         ");
                                     }),
