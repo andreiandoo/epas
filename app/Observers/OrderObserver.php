@@ -44,6 +44,11 @@ class OrderObserver
      */
     public function created(Order $order): void
     {
+        // Skip tracking for imported orders (legacy/external)
+        if (in_array($order->source, ['legacy_import', 'external_import'])) {
+            return;
+        }
+
         // Track new orders if they're already paid/confirmed
         if (in_array($order->status, ['paid', 'confirmed', 'completed'])) {
             $this->trackPurchaseConversion($order);
