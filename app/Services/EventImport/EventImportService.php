@@ -65,8 +65,8 @@ class EventImportService
                         $eventConfig,
                         $customersCreated,
                         $customersEnriched,
-                        isExternalImport: $isExternalImport,
                         $anonymousOrders,
+                        $isExternalImport,
                     );
 
                     $totalTickets += $result['tickets'];
