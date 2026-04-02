@@ -7,13 +7,13 @@ use Filament\Widgets\ChartWidget;
 
 class HourlySalesChart extends ChartWidget
 {
-    protected static ?string $heading = 'Sales per Hour (Today)';
+    protected ?string $heading = 'Sales per Hour (Today)';
 
     protected static ?int $sort = 4;
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $maxHeight = '250px';
+    protected ?string $maxHeight = '250px';
 
     protected ?string $pollingInterval = '60s';
 

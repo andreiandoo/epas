@@ -7,13 +7,13 @@ use Filament\Widgets\ChartWidget;
 
 class TopVendorsChart extends ChartWidget
 {
-    protected static ?string $heading = 'Top Vendors by Revenue';
+    protected ?string $heading = 'Top Vendors by Revenue';
 
     protected static ?int $sort = 3;
 
     protected int|string|array $columnSpan = 1;
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
     public int $editionId = 0;
 

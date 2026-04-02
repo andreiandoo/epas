@@ -9,13 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 class SalesByCategoryChart extends ChartWidget
 {
-    protected static ?string $heading = 'Sales by Category';
+    protected ?string $heading = 'Sales by Category';
 
     protected static ?int $sort = 2;
 
     protected int|string|array $columnSpan = 1;
 
-    protected static ?string $maxHeight = '300px';
+    protected ?string $maxHeight = '300px';
 
     public int $editionId = 0;
 
