@@ -1236,4 +1236,800 @@ class CalculateCustomerProfilesJob
 
 ---
 
-*Acest plan acoperă toate cele 10 cerințe specificate. Fiecare secțiune poate fi implementată independent, cu dependențe minime între faze.*
+---
+
+## 14. Portal Vendor (Panou Dedicat Vendori)
+
+### 14.1 De ce e nevoie de un portal separat
+
+Filament Tenant panel este pentru **admin-ul festivalului**. Vendorii (manager, supervisor, member) au nevoie de propriul panou cu acces limitat la datele lor. Opțiuni:
+
+**Recomandare: Filament Panel separat** – `VendorPanel`
+
+```php
+// app/Providers/Filament/VendorPanelProvider.php
+class VendorPanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->id('vendor')
+            ->path('vendor')            // /vendor/login, /vendor/dashboard
+            ->login(VendorLogin::class)  // login cu email + parolă VendorEmployee
+            ->authGuard('vendor')        // guard separat
+            ->tenant(Vendor::class)      // multi-vendor isolation
+            ->resources([...])
+            ->widgets([...]);
+    }
+}
+```
+
+**Guard nou în `config/auth.php`:**
+```php
+'guards' => [
+    'vendor' => [
+        'driver' => 'session',
+        'provider' => 'vendor_employees',
+    ],
+],
+'providers' => [
+    'vendor_employees' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\VendorEmployee::class,
+    ],
+],
+```
+
+### 14.2 Ecrane per rol
+
+#### Manager vede:
+| Ecran | Descriere |
+|-------|-----------|
+| **Dashboard** | KPI-uri: vânzări azi, total ediție, top produse, grafic orar |
+| **Produse** | CRUD complet + import CSV + vizualizare prețuri impuse |
+| **Categorii** | CRUD categorii produse |
+| **Staff** | CRUD angajați (supervisor, member) + resetare parolă |
+| **Shift-uri** | Vizualizare + management shift-uri |
+| **Vânzări** | Lista completă vânzări + filtre + export |
+| **Stocuri** | Stoc curent per produs, istoric mișcări |
+| **Rapoarte** | Vânzări per produs/categorie/oră/zi/angajat |
+| **Finance** | Comisioane, taxe, estimare payout |
+| **Profil vendor** | Date companie, setări |
+
+#### Supervisor vede:
+| Ecran | Descriere |
+|-------|-----------|
+| **Dashboard** | KPI-uri simplificate |
+| **Shift-uri** | Start/stop shift-uri, management |
+| **Vânzări** | Lista vânzări (read-only) |
+| **Stocuri** | Vizualizare stoc curent |
+| **Rapoarte** | Rapoarte de bază |
+
+#### Member vede:
+| Ecran | Descriere |
+|-------|-----------|
+| **Dashboard** | Vânzări proprii azi |
+| **POS** | Interfață de vânzare (scanare wristband + selectare produse) |
+| **Shift** | Start/stop shift propriu |
+
+### 14.3 POS Interface (pentru Member/Supervisor)
+
+Ecran dedicat de vânzare optimizat pentru tabletă:
+```
+┌─────────────────────────────────────────────┐
+│  VENDOR POS - Food Corner                    │
+├──────────────────────┬──────────────────────┤
+│  [Categorii]         │  Coș curent          │
+│  ┌──────┐ ┌──────┐  │  ──────────────────  │
+│  │ Bere │ │ Food │  │  2x Ursus 500ml  30  │
+│  └──────┘ └──────┘  │  1x Hot Dog      13  │
+│  ┌──────┐ ┌──────┐  │  ──────────────────  │
+│  │Sucuri│ │Desert│  │  TOTAL:        43 RON │
+│  └──────┘ └──────┘  │                       │
+│                      │  [SCAN WRISTBAND]     │
+│  Ursus 500ml   15.00│  [ANULEAZĂ]           │
+│  Heineken 330  12.00│                       │
+│  Cola 330ml    10.49│                       │
+│  ...                 │                       │
+└──────────────────────┴──────────────────────┘
+```
+
+---
+
+## 15. API Mobile App Client + Notificări
+
+### 15.1 Endpoints client (app/website)
+
+Toate rutele sub prefix `/api/cashless/client/` cu autentificare Sanctum (Customer token).
+
+#### Cont & Sold
+```
+GET    /client/account                  → sold curent, status cont, wristband info
+GET    /client/account/history          → istoric complet tranzacții (paginat)
+GET    /client/account/history?type=topup   → doar top-ups
+GET    /client/account/history?type=purchase → doar achiziții
+GET    /client/account/history?type=cashout  → doar retrageri
+```
+
+#### Top-up online
+```
+POST   /client/topup/initiate          → { amount_cents, payment_method: 'card' }
+POST   /client/topup/confirm           → { payment_intent_id } (callback Stripe)
+GET    /client/topup/methods           → metode de plată salvate
+```
+
+#### Cashout online
+```
+POST   /client/cashout/request         → { amount_cents, method: 'bank_transfer', iban }
+GET    /client/cashout/status/{id}     → status cerere cashout
+```
+
+#### Achiziții & Receipts
+```
+GET    /client/purchases               → lista achiziții (CashlessSales) paginată
+GET    /client/purchases/{id}          → detalii achiziție cu items
+GET    /client/purchases/{id}/receipt  → receipt digital (JSON sau PDF)
+```
+
+#### Profil & Preferințe
+```
+GET    /client/profile                 → profil complet (date + stats + segment)
+PUT    /client/profile                 → update date personale
+GET    /client/profile/spending        → breakdown cheltuieli per categorie
+GET    /client/profile/badges          → badge-uri/achievements (dacă gamification e activ)
+```
+
+#### Vendor Discovery
+```
+GET    /client/vendors                 → lista vendori cu locație, status, categorii
+GET    /client/vendors/{id}/menu       → meniul vendor-ului (produse disponibile)
+GET    /client/vendors/{id}/menu?category=Bere → filtru categorie
+```
+
+#### Transfer între conturi
+```
+POST   /client/transfer                → { to_account_number, amount_cents }
+```
+
+### 15.2 Notificări
+
+**Model: Folosim sistemul existent Laravel Notifications + canale multiple.**
+
+#### Canale de notificare:
+- **Push** (Firebase FCM) – mobil
+- **Email** – confirmare tranzacții, receipt
+- **SMS** (SendSMS.ro – deja integrat) – OTP, confirmare top-up mare
+- **In-app** (database notifications) – vizibile în app
+
+#### Notificări Client:
+
+| Trigger | Canal | Mesaj |
+|---------|-------|-------|
+| Top-up reușit | Push + Email | "Ai alimentat contul cu {sumă}. Sold: {sold}" |
+| Achiziție | Push | "Achiziție {sumă} la {vendor}. Sold: {sold}" |
+| Cashout aprobat | Push + Email | "Retragere {sumă} procesată. Transfer în 1-3 zile." |
+| Sold scăzut (<20 RON) | Push | "Sold scăzut: {sold}. Alimentează contul." |
+| Receipt disponibil | Email | Receipt digital PDF atașat |
+| Transfer primit | Push | "{nume} ți-a transferat {sumă}. Sold: {sold}" |
+| Cont activat | Push + Email | "Contul cashless e activ! Alimentează pentru a cumpăra." |
+| End of festival reminder | Push + Email | "Festivalul se termină mâine. Sold neretras: {sold}." |
+| Auto-cashout completat | Email | "Soldul rămas de {sumă} a fost returnat pe cardul tău." |
+
+#### Notificări Vendor (către Manager/Supervisor):
+
+| Trigger | Canal | Mesaj |
+|---------|-------|-------|
+| Stoc scăzut (<20% rămas) | Push + Email | "Stoc scăzut: {produs} - {cantitate} rămase" |
+| Stoc epuizat | Push + Email | "STOC EPUIZAT: {produs}!" |
+| Raport zilnic | Email | Sumar vânzări + top produse + stocuri |
+| Shift neterminat | Push | "Shift-ul lui {angajat} a depășit 12h fără închidere" |
+| Alocație primită | Push | "Ai primit {cantitate} x {produs} de la festival" |
+
+#### Notificări Admin Festival:
+
+| Trigger | Canal | Mesaj |
+|---------|-------|-------|
+| Alertă fraud | Push + Email | "Activitate suspectă pe wristband {uid}: {detalii}" |
+| POS offline >30min | Push | "POS {device} al {vendor} e offline de {minute} min" |
+| Volum tranzacții scăzut brusc | Push | "Volum tranzacții -50% față de aceeași oră ieri" |
+| Threshold revenue | Email | "Revenue a depășit {sumă} pentru ediția curentă!" |
+| Cashout mare solicitat | Push | "Cashout de {sumă} solicitat de {client}" |
+| Reconciliere completă | Email | "Reconciliere offline: {N} tranzacții procesate, {M} conflicte" |
+
+### 15.3 Configurare notificări
+
+**Tabel `cashless_notification_preferences`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+notifiable_type         VARCHAR(50) -- 'customer', 'vendor_employee', 'user'
+notifiable_id           BIGINT
+channel                 ENUM('push','email','sms','in_app')
+notification_type       VARCHAR(100) -- 'topup_success', 'low_balance', etc.
+is_enabled              BOOLEAN DEFAULT true
+threshold_value         INT NULL -- ex: low_balance threshold = 2000 (20 RON)
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+Clienții pot dezactiva anumite notificări din app (ex: dezactivează push la fiecare achiziție, păstrează doar sold scăzut).
+
+---
+
+## 16. Cashless Settings per Ediție + Voucher/Promo Credits
+
+### 16.1 Cashless Settings centralizate
+
+Configurări per ediție de festival, stocate în `FestivalEdition.settings` JSON sau într-un model dedicat.
+
+**Recomandare: model dedicat `CashlessSettings`**
+
+**Tabel `cashless_settings`:**
+```
+id                          BIGINT PK AUTO
+tenant_id                   BIGINT FK
+festival_edition_id         BIGINT FK UNIQUE
+
+-- Top-up limits
+min_topup_cents             INT DEFAULT 1000 -- minim 10 RON
+max_topup_cents             INT DEFAULT 100000 -- maxim 1000 RON per tranzacție
+max_balance_cents           INT DEFAULT 500000 -- sold maxim 5000 RON
+daily_topup_limit_cents     INT NULL -- limită zilnică per client (NULL = fără limită)
+
+-- Cashout settings
+allow_online_cashout        BOOLEAN DEFAULT true
+allow_physical_cashout      BOOLEAN DEFAULT true
+min_cashout_cents           INT DEFAULT 100 -- minim 1 RON
+cashout_fee_cents           INT DEFAULT 0 -- taxă fixă per cashout
+cashout_fee_percentage      DECIMAL(5,2) DEFAULT 0 -- taxă procentuală
+auto_cashout_after_festival BOOLEAN DEFAULT true -- returnare automată sold la final
+auto_cashout_delay_days     INT DEFAULT 7 -- zile după final festival
+auto_cashout_method         ENUM('bank_transfer','card_refund') DEFAULT 'bank_transfer'
+
+-- Transfer settings
+allow_account_transfer      BOOLEAN DEFAULT true
+max_transfer_cents          INT NULL -- limită per transfer
+transfer_fee_cents          INT DEFAULT 0
+
+-- POS settings
+require_pin_above_cents     INT NULL -- cere PIN pentru tranzacții > X (NULL = niciodată)
+max_charge_cents            INT DEFAULT 200000 -- maxim 2000 RON per tranzacție POS
+charge_cooldown_seconds     INT DEFAULT 10 -- cooldown între charges pe același cont
+
+-- Age verification
+enforce_age_verification    BOOLEAN DEFAULT true
+age_verification_method     ENUM('date_of_birth','manual_id','both') DEFAULT 'date_of_birth'
+
+-- Currency & display
+currency                    VARCHAR(3) DEFAULT 'RON'
+currency_symbol             VARCHAR(5) DEFAULT 'RON'
+display_decimals            INT DEFAULT 2
+
+-- Notifications
+low_balance_threshold_cents INT DEFAULT 2000 -- notificare sold scăzut sub 20 RON
+send_receipt_on_purchase    BOOLEAN DEFAULT true
+send_daily_summary          BOOLEAN DEFAULT false
+
+meta                        JSON NULL
+created_at                  TIMESTAMP
+updated_at                  TIMESTAMP
+```
+
+### 16.2 Voucher/Promo Credits
+
+Coduri promoționale care adaugă sold gratuit în contul cashless. Exemple:
+- Sponsor oferă 20 RON gratis primilor 1000 clienți
+- Cod de compensare pentru probleme tehnice
+- Promoție: top-up 100 RON, primești 10 RON bonus
+
+**Tabel `cashless_vouchers`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+code                    VARCHAR(50) UNIQUE -- "SPONSOR20", "BONUS10"
+name                    VARCHAR(255) -- "Voucher Coca-Cola 20 RON"
+voucher_type            ENUM('fixed_credit','percentage_bonus','topup_bonus')
+amount_cents            INT NULL -- pentru fixed_credit (ex: 2000 = 20 RON gratis)
+bonus_percentage        DECIMAL(5,2) NULL -- pentru percentage_bonus/topup_bonus
+min_topup_cents         INT NULL -- minim top-up pentru a primi bonusul
+max_bonus_cents         INT NULL -- plafonare bonus (ex: max 50 RON bonus)
+sponsor_name            VARCHAR(255) NULL -- "Coca-Cola"
+total_budget_cents      INT NULL -- buget total (NULL = nelimitat)
+used_budget_cents       INT DEFAULT 0 -- cât s-a consumat
+max_redemptions         INT NULL -- nr. maxim utilizări totale (NULL = nelimitat)
+current_redemptions     INT DEFAULT 0
+max_per_customer        INT DEFAULT 1 -- câte ori poate folosi un client
+valid_from              TIMESTAMP NULL
+valid_until             TIMESTAMP NULL
+is_active               BOOLEAN DEFAULT true
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**Tabel `cashless_voucher_redemptions`:**
+```
+id                      BIGINT PK AUTO
+cashless_voucher_id     BIGINT FK
+cashless_account_id     BIGINT FK
+customer_id             BIGINT FK
+amount_cents            INT -- sumă creditată
+wristband_transaction_id BIGINT FK -- tranzacția de tip 'voucher_credit'
+redeemed_at             TIMESTAMP
+meta                    JSON NULL
+created_at              TIMESTAMP
+```
+
+**Flow-uri voucher:**
+
+**A. Fixed credit (cod = bani gratis):**
+```
+1. Client introduce cod "SPONSOR20" în app sau la stand
+2. Sistem verifică: cod valid, nefolosit de client, în buget, în perioadă
+3. Creditare 20 RON → CashlessAccount.balance += 2000
+4. WristbandTransaction cu transaction_type = 'voucher_credit'
+5. Incrementare: voucher.current_redemptions++, voucher.used_budget_cents += 2000
+```
+
+**B. Top-up bonus (top-up X, primești Y% bonus):**
+```
+1. Client face top-up de 100 RON + introduce cod "BONUS10"
+2. Sistem verifică codul → bonus_percentage = 10%
+3. Se procesează top-up-ul normal: +100 RON
+4. Se procesează bonus: +10 RON (transaction_type = 'voucher_credit')
+5. Sold final: 110 RON
+```
+
+**Enum nouă - extindere `transaction_type` pe WristbandTransaction:**
+```
+Valori existente: topup, payment, refund, correction, transfer_in, transfer_out, cashout
+Valori noi:       voucher_credit, promotional_credit, compensation_credit
+```
+
+---
+
+## 17. Migrare Wristband → CashlessAccount (Backwards Compatibility)
+
+### 17.1 Strategia de migrare
+
+Flow-ul existent (`Wristband::topUp()`, `Wristband::charge()`, etc.) funcționează și trebuie păstrat. `CashlessAccount` devine layer-ul superior.
+
+**Principiu: CashlessAccount = source of truth, Wristband = dispozitiv fizic sync.**
+
+```
+ÎNAINTE (existent):
+  Client → Wristband → balance_cents
+  POS → Wristband::charge()
+
+DUPĂ (nou):
+  Client → CashlessAccount → balance_cents (source of truth)
+                ↕ sync
+            Wristband → balance_cents (mirror/cache)
+  POS → CashlessAccountService::charge() → actualizează ambele
+```
+
+### 17.2 Plan de migrare în 3 pași
+
+**Pasul 1: Creare CashlessAccount pentru wristbands existente**
+```php
+// Migration job (one-time)
+Wristband::whereNotNull('customer_id')->each(function ($wristband) {
+    CashlessAccount::firstOrCreate(
+        [
+            'customer_id' => $wristband->customer_id,
+            'festival_edition_id' => $wristband->festival_edition_id,
+        ],
+        [
+            'tenant_id' => $wristband->tenant_id,
+            'wristband_id' => $wristband->id,
+            'balance_cents' => $wristband->balance_cents,
+            'currency' => $wristband->currency,
+            'status' => $wristband->isActive() ? 'active' : 'closed',
+            'activated_at' => $wristband->activated_at,
+        ]
+    );
+});
+```
+
+**Pasul 2: Wrapper pe metodele Wristband existente**
+```php
+// Wristband::topUp() devine wrapper:
+public function topUp(int $amountCents, ...): WristbandTransaction
+{
+    if ($this->cashlessAccount) {
+        // Delegare la CashlessAccountService (noul flow)
+        return app(CashlessAccountService::class)->topUp(
+            $this->cashlessAccount, $amountCents, ...
+        );
+    }
+    // Fallback: flow vechi (pentru wristbands fără CashlessAccount)
+    return $this->legacyTopUp($amountCents, ...);
+}
+```
+
+**Pasul 3: Deprecare metode directe pe Wristband**
+- Toate apelurile noi trec prin `CashlessAccountService`
+- API-urile existente (`/festival/wristbands/{uid}/topup`) rămân funcționale, dar intern delegă la `CashlessAccountService`
+- Noi API-uri (`/cashless/accounts/{id}/topup`) sunt canonical
+
+### 17.3 API backwards compatibility
+
+```
+EXISTENT (rămâne funcțional, intern delegă):
+POST /api/festival/wristbands/{uid}/topup
+POST /api/festival/wristbands/{uid}/charge
+
+NOU (canonical):
+POST /api/cashless/accounts/{id}/topup
+POST /api/cashless/accounts/{id}/charge
+POST /api/cashless/client/topup/initiate    (client app)
+```
+
+---
+
+## 18. Refund Flow Detaliat
+
+### 18.1 Tipuri de refund
+
+| Tip | Inițiat de | Aprobare necesară | Efect |
+|-----|-----------|-------------------|-------|
+| **Refund complet** | Vendor employee | Da (supervisor/manager) | Returnare 100% din CashlessSale |
+| **Refund parțial** | Vendor employee | Da (supervisor/manager) | Returnare 1+ items din CashlessSale |
+| **Refund automat** | Sistem | Nu | Produse out-of-stock după plată |
+| **Compensație** | Admin festival | Nu | Credit de compensare (nu legat de sale) |
+
+### 18.2 Model nou: `CashlessRefund`
+
+**Tabel `cashless_refunds`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+cashless_sale_id        BIGINT FK → cashless_sales
+cashless_account_id     BIGINT FK → cashless_accounts
+customer_id             BIGINT FK
+vendor_id               BIGINT FK
+refund_type             ENUM('full','partial','auto','compensation')
+status                  ENUM('pending','approved','rejected','processed','cancelled')
+requested_by_employee_id BIGINT FK → vendor_employees NULL
+approved_by_employee_id  BIGINT FK → vendor_employees NULL
+requested_at            TIMESTAMP
+approved_at             TIMESTAMP NULL
+processed_at            TIMESTAMP NULL
+rejected_at             TIMESTAMP NULL
+rejection_reason        TEXT NULL
+total_refund_cents      INT
+currency                VARCHAR(3)
+wristband_transaction_id BIGINT FK NULL -- tranzacția de refund (după procesare)
+reason                  TEXT -- motivul refund-ului
+items                   JSON -- [{"vendor_sale_item_id": 5, "quantity": 1, "amount_cents": 1499}]
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### 18.3 Flow refund cu aprobare
+
+```
+1. MEMBER/SUPERVISOR solicită refund:
+   POST /api/cashless/refunds
+   {
+     "cashless_sale_id": 1234,
+     "refund_type": "partial",
+     "items": [{"vendor_sale_item_id": 5, "quantity": 1}],
+     "reason": "Client a primit produs greșit"
+   }
+   → Se creează CashlessRefund cu status = 'pending'
+   → Notificare push la manager/supervisor
+
+2. MANAGER/SUPERVISOR aprobă:
+   POST /api/cashless/refunds/{id}/approve
+   → status = 'approved'
+   → CashlessAccountService::refund() procesează refund-ul:
+     - Lock CashlessAccount
+     - Creditare balance
+     - Creare WristbandTransaction (transaction_type = 'refund')
+     - Update CashlessSale.status = 'partial_refund' sau 'refunded'
+   → status = 'processed'
+   → Notificare client: "Ai primit refund {sumă}. Sold: {sold}"
+
+3. Sau MANAGER respinge:
+   POST /api/cashless/refunds/{id}/reject
+   { "rejection_reason": "Produsul a fost consumat" }
+   → status = 'rejected'
+   → Notificare employee: "Refund respins: {motiv}"
+```
+
+### 18.4 Reguli business refund
+
+- Refund maxim = suma tranzacției originale
+- Refund doar în aceeași ediție (nu cross-edition)
+- Timp maxim de refund configurabil în `CashlessSettings` (ex: 2 ore de la achiziție)
+- Member poate solicita, dar nu poate aproba (separation of duties)
+- Manager poate și solicita și aproba (bypass approval pt urgențe)
+- Toate refund-urile sunt logate în audit trail
+
+---
+
+## 19. Audit Trail
+
+### 19.1 Ce se loghează
+
+Folosim **Spatie Activity Log** (deja instalat) cu log name `cashless`.
+
+| Entitate | Evenimente logate | Detalii extra |
+|----------|-------------------|---------------|
+| `CashlessAccount` | created, updated (balance changes) | balance_before, balance_after, trigger (topup/charge/refund/etc.) |
+| `CashlessSale` | created, refunded | items, amounts, vendor, employee |
+| `CashlessRefund` | created, approved, rejected, processed | who requested, who approved/rejected |
+| `WristbandTransaction` | created | toate câmpurile (immutable - nu se editează niciodată) |
+| `VendorProduct` | created, updated, deleted | price changes, availability changes |
+| `InventoryMovement` | created | toate mișcările de stoc |
+| `FinanceFeeRule` | created, updated, deleted | cine a modificat ce regulă |
+| `PricingRule` | created, updated, deleted | modificări prețuri impuse |
+| `VendorEmployee` | created, updated, deleted | role changes, permission changes |
+| `CashlessSettings` | updated | orice modificare de configurare |
+| `CashlessVoucher` | created, redeemed, deactivated | utilizări voucher |
+
+### 19.2 Implementare pe modele
+
+```php
+// Exemplu pe CashlessAccount
+class CashlessAccount extends Model
+{
+    use LogsActivity;
+    
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['balance_cents', 'status'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Cashless account {$eventName}")
+            ->useLogName('cashless');
+    }
+
+    public function tapActivity(Activity $activity, string $eventName)
+    {
+        $activity->properties = $activity->properties->merge([
+            'tenant_id' => $this->tenant_id,
+            'festival_edition_id' => $this->festival_edition_id,
+            'customer_id' => $this->customer_id,
+        ]);
+    }
+}
+```
+
+### 19.3 Vizualizare audit
+
+- **Filament:** pagină dedicată Audit Log cu filtre pe entitate, user, perioadă
+- **API:** `GET /api/cashless/audit?entity=cashless_account&entity_id=123`
+- **Export:** CSV/PDF pentru audit extern
+- **Retenție:** configurable, default 2 ani (GDPR compliant)
+
+---
+
+## 20. Reconciliere Tranzacții Offline
+
+### 20.1 Problema
+
+POS-urile pot funcționa offline (fără internet). Tranzacțiile se salvează local pe dispozitiv și se sincronizează când revine conexiunea. Pot apărea:
+- **Duplicate** – aceeași tranzacție trimisă de 2 ori
+- **Conflicte de balance** – soldul pe server diferă de soldul offline
+- **Ordine greșită** – tranzacții ajung în ordine inversă
+- **Gap-uri** – tranzacții pierdute
+
+### 20.2 Mecanismul de sync (existent + îmbunătățiri)
+
+**Câmpuri existente pe `WristbandTransaction`:**
+- `sync_source` – 'online' sau 'offline_sync'
+- `offline_ref` – referință unică generată de POS offline
+- `offline_transacted_at` – timestamp-ul real al tranzacției (pe POS)
+- `is_reconciled` – flag de reconciliere
+
+**Câmpuri noi:**
+```
++ reconciliation_batch_id   VARCHAR(50) NULL -- ID batch de sync
++ reconciliation_status     ENUM('pending','matched','conflict','resolved','rejected') NULL
++ reconciliation_notes      TEXT NULL
++ server_balance_at_sync    INT NULL -- ce sold avea serverul când a primit sync
++ device_balance_at_sync    INT NULL -- ce sold credea device-ul
+```
+
+### 20.3 Flow de reconciliere
+
+**Etapa 1: Sync automat (NfcSyncService – existent, extins)**
+```
+1. POS trimite batch de tranzacții offline:
+   POST /api/cashless/sync-offline
+   { "device_uid": "POS-001", "transactions": [...], "batch_id": "BATCH-xxx" }
+
+2. Pentru fiecare tranzacție:
+   a. Check offline_ref → dacă există deja → marcare 'duplicate', skip
+   b. Validare: wristband_id valid, vendor_id valid, amounts pozitive
+   c. Replay tranzacție pe server:
+      - Lock CashlessAccount
+      - Verificare sold suficient (la momentul offline_transacted_at)
+      - Aplicare tranzacție
+      - Salvare cu sync_source = 'offline_sync'
+   d. Dacă sold insuficient → marcare conflict
+```
+
+**Etapa 2: Conflict resolution**
+```
+Conflicte posibile:
+A. Sold insuficient la replay:
+   - Cauza: client a cheltuit între timp de la alt POS/online
+   - Rezolvare automată: permite sold negativ temporar + alert admin
+   
+B. Wristband disabled pe server dar tranzacție offline:
+   - Cauza: wristband raportată pierdută dar client a plătit offline înainte
+   - Rezolvare: admin decide manual (approve/reject)
+
+C. Duplicate (offline_ref identic):
+   - Cauza: retry de sync
+   - Rezolvare automată: skip, marcare 'duplicate'
+```
+
+**Etapa 3: Reconciliation report**
+
+**Tabel `reconciliation_batches`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+batch_id                VARCHAR(50) UNIQUE
+device_uid              VARCHAR(100)
+vendor_id               BIGINT FK NULL
+received_at             TIMESTAMP
+total_transactions      INT
+matched_count           INT DEFAULT 0
+conflict_count          INT DEFAULT 0
+duplicate_count         INT DEFAULT 0
+rejected_count          INT DEFAULT 0
+status                  ENUM('processing','completed','needs_review')
+balance_discrepancy_cents INT DEFAULT 0 -- diferența totală de sold
+notes                   TEXT NULL
+reviewed_by             BIGINT FK NULL
+reviewed_at             TIMESTAMP NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### 20.4 Dashboard reconciliere (Filament)
+
+- **Status global:** X tranzacții nereconciliate, Y conflicte nerezolvate
+- **Per device:** ultima sincronizare, nr. tranzacții offline pending
+- **Per batch:** detalii batch cu status fiecare tranzacție
+- **Acțiuni admin:** approve/reject conflicte individual sau batch
+- **Alertă:** device-uri care nu au sincronizat de >1 oră
+
+---
+
+## 21. Transfer între Conturi (Account-to-Account)
+
+### 21.1 Flow
+
+Diferit de transfer wristband-to-wristband (care transferă TOT soldul). Account transfer permite sume specifice.
+
+```
+1. Client A trimite 50 RON lui Client B:
+   POST /api/cashless/client/transfer
+   { "to_account_number": "CA-XXXXXXXXX", "amount_cents": 5000 }
+
+2. Validări:
+   - Cont sursă activ, sold suficient
+   - Cont destinație activ, aceeași ediție festival
+   - Sumă în limita max_transfer_cents din CashlessSettings
+   - Cont sursă != cont destinație
+
+3. Procesare atomică (DB::transaction + lockForUpdate):
+   a. Debitare cont A: balance -= 5000
+   b. Creditare cont B: balance += 5000
+   c. WristbandTransaction A: type='transfer_out', amount=5000
+   d. WristbandTransaction B: type='transfer_in', amount=5000
+   e. Dacă au wristbands → sync balances
+
+4. Notificări:
+   - Client A: "Ai transferat 50 RON către {nume}. Sold: {sold}"
+   - Client B: "{nume} ți-a transferat 50 RON. Sold: {sold}"
+```
+
+### 21.2 Limitări de securitate
+
+- Max X transferuri pe zi per cont (configurabil)
+- Sumă maximă per transfer
+- Cooldown între transferuri (ex: 1 minut)
+- Flag automat dacă un cont primește > 5 transferuri în < 1 oră (posibil fraud)
+
+---
+
+## 22. Actualizare Ordine Implementare
+
+Cu secțiunile noi, fazele devin:
+
+### Faza 1: Fundație + Settings (Săptămâna 1-2)
+- Migrări DB, modele noi, enums
+- CashlessAccount + CashlessSettings
+- Migrare wristbands existente → CashlessAccount (secțiunea 17)
+- VendorEmployee roles + auth guard vendor
+
+### Faza 2: Core Operations (Săptămâna 3-4)
+- CashlessSale + SaleService
+- TopUpService (online + fizic) + TopUpLocation
+- CashoutService (parțial, digital/fizic)
+- Account-to-account transfer
+- Age verification enforcement
+
+### Faza 3: Vendor Portal (Săptămâna 5-6)
+- Filament VendorPanel setup + auth guard
+- Ecrane per rol (manager/supervisor/member)
+- POS interface
+- CSV import produse
+
+### Faza 4: Suppliers & Stocuri (Săptămâna 7-8)
+- Supplier complet + brands + products
+- InventoryStock + InventoryMovement
+- Flow-uri stoc (livrare → alocare → consum → retur)
+- Auto-decrementare stoc la vânzare
+
+### Faza 5: Finance + Pricing (Săptămâna 9-10)
+- FinanceFeeRule + PricingRule + components
+- Enforcement prețuri obligatorii
+- VendorFinanceSummary + calcul automat
+- Refund flow cu aprobare (secțiunea 18)
+
+### Faza 6: Reports + Dashboard (Săptămâna 11-12)
+- ReportService (50+ rapoarte)
+- Widget-uri Filament dashboard
+- Export CSV/PDF
+- Rapoarte programate
+
+### Faza 7: Profiling + Notifications (Săptămâna 13-14)
+- CustomerProfile + job de calculare
+- Segmentare automată + tags
+- Vouchers/promo credits
+- Sistem notificări (push/email/sms)
+- Preferințe notificări per client
+
+### Faza 8: Mobile API + Polish (Săptămâna 15-16)
+- API client mobile complet
+- Receipts digitale
+- Audit trail complet
+- Reconciliere offline (secțiunea 20)
+- Teste, documentare API, optimizare
+
+---
+
+## 23. Tabele Noi - Sumar Final Actualizat
+
+| # | Tabel | Secțiune |
+|---|-------|----------|
+| 1 | `cashless_accounts` | 5.1 |
+| 2 | `cashless_sales` | 4.1 |
+| 3 | `cashless_refunds` | 18.2 |
+| 4 | `topup_locations` | 5.2 |
+| 5 | `supplier_brands` | 7.2 |
+| 6 | `supplier_products` | 7.3 |
+| 7 | `inventory_stocks` | 7.4 |
+| 8 | `inventory_movements` | 7.4 |
+| 9 | `finance_fee_rules` | 8.1 |
+| 10 | `pricing_rules` | 8.2 |
+| 11 | `pricing_rule_components` | 8.2 |
+| 12 | `customer_profiles` | 10.1 |
+| 13 | `vendor_finance_summaries` | 8.6 |
+| 14 | `cashless_report_snapshots` | 6.1 |
+| 15 | `cashless_settings` | 16.1 |
+| 16 | `cashless_vouchers` | 16.2 |
+| 17 | `cashless_voucher_redemptions` | 16.2 |
+| 18 | `cashless_notification_preferences` | 15.3 |
+| 19 | `reconciliation_batches` | 20.3 |
+
+**Total: 19 tabele noi + 6 tabele modificate + 14 enums**
+
+---
+
+*Plan actualizat cu toate cele 10 cerințe originale + 10 îmbunătățiri: portal vendor, API mobile, notificări, cashless settings, vouchers, migrare backwards-compatible, refund flow cu aprobare, audit trail, reconciliere offline, transfer account-to-account.*
