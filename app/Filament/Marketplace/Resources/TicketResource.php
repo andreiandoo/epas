@@ -33,10 +33,17 @@ class TicketResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
 
-        return parent::getEloquentQuery()
-            ->whereHas('ticketType.event', function ($query) use ($marketplace) {
-                $query->where('marketplace_client_id', $marketplace?->id);
+        $query = parent::getEloquentQuery()
+            ->whereHas('ticketType.event', function ($q) use ($marketplace) {
+                $q->where('marketplace_client_id', $marketplace?->id);
             });
+
+        // Filter by customer from URL query param
+        if ($customerId = request()->query('customer')) {
+            $query->whereHas('order', fn ($q) => $q->where('marketplace_customer_id', $customerId));
+        }
+
+        return $query;
     }
 
     public static function table(Table $table): Table

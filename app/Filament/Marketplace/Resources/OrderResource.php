@@ -40,7 +40,14 @@ class OrderResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
-        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+        $query = parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
+
+        // Filter by customer from URL query param
+        if ($customerId = request()->query('customer')) {
+            $query->where('marketplace_customer_id', $customerId);
+        }
+
+        return $query;
     }
 
     public static function infolist(Schema $schema): Schema
