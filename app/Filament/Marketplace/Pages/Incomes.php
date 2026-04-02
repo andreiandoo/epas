@@ -109,7 +109,7 @@ class Incomes extends Page
     protected function baseOrderQuery()
     {
         $marketplace = static::getMarketplaceClient();
-        $query = Order::where('marketplace_client_id', $marketplace?->id)
+        $query = Order::where('marketplace_client_id', $marketplace?->id)->where('source', '!=', 'external_import')
             ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
         if ($this->organizerId) {
@@ -188,7 +188,7 @@ class Incomes extends Page
             $giftCardCount = (int) $giftCardQuery->count();
 
             // ─── Extra Services Revenue ───
-            $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
                 ->where('payment_status', 'paid')
                 ->whereBetween('paid_at', [$startDate, $endDate]);
 
@@ -200,7 +200,7 @@ class Incomes extends Page
             $serviceCount = (int) $serviceQuery->count();
 
             // Services breakdown by type
-            $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+            $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
                 ->where('payment_status', 'paid')
                 ->whereBetween('paid_at', [$startDate, $endDate])
                 ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -350,7 +350,7 @@ class Incomes extends Page
         $servicesData = [];
 
         // Daily sales & commissions in a single query
-        $dailyOrderData = Order::where('marketplace_client_id', $marketplaceId)
+        $dailyOrderData = Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -366,7 +366,7 @@ class Incomes extends Page
         $dailyCommissions = $dailyOrderData->pluck('total_commissions', 'date')->toArray();
 
         // Daily services
-        $dailyServices = ServiceOrder::where('marketplace_client_id', $marketplaceId)
+        $dailyServices = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
             ->where('payment_status', 'paid')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -402,7 +402,7 @@ class Incomes extends Page
      */
     protected function getTopOrganizers(int $marketplaceId, Carbon $startDate, Carbon $endDate): array
     {
-        return Order::where('marketplace_client_id', $marketplaceId)
+        return Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->whereNotNull('marketplace_organizer_id')
@@ -453,7 +453,7 @@ class Incomes extends Page
     {
         [$prevStart, $prevEnd] = $this->getPreviousPeriodRange();
 
-        $prevOrderQuery = Order::where('marketplace_client_id', $marketplaceId)
+        $prevOrderQuery = Order::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('paid_at', [$prevStart, $prevEnd])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId));
@@ -476,7 +476,7 @@ class Incomes extends Page
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('initial_amount');
 
-        $prevServices = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)
+        $prevServices = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
             ->where('payment_status', 'paid')
             ->whereBetween('paid_at', [$prevStart, $prevEnd])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))

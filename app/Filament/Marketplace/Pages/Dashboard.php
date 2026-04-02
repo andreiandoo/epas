@@ -150,7 +150,7 @@ class Dashboard extends Page
                       ->orWhereIn('orders.event_id', $marketplaceEventIds);
                 }
             })
-            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->selectRaw('COUNT(*) as total')
             ->selectRaw("SUM(CASE WHEN DATE(created_at) = ? THEN 1 ELSE 0 END) as today", [today()->toDateString()])
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid")
@@ -229,7 +229,7 @@ class Dashboard extends Page
                       ->orWhereIn('event_id', $liveEventIds);
                 })
                 ->whereIn('status', $paidStatuses)
-                ->where('source', '!=', 'test_order')
+                ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
                 ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid, SUM(total) as rev')
                 ->groupBy('eid')
                 ->pluck('rev', 'eid');
@@ -278,7 +278,7 @@ class Dashboard extends Page
     {
         $dailySales = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, SUM(total) as total')
             ->groupBy('date')
@@ -379,7 +379,7 @@ class Dashboard extends Page
         // Revenue (excl refunded)
         $totalSales = (float) Order::where($orderScope)
             ->whereIn('orders.status', $allStatuses)
-            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'test_order')->where('orders.source', '!=', 'external_import')
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
             ->value('revenue') ?? 0;
@@ -405,7 +405,7 @@ class Dashboard extends Page
         // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
         $monthOrders = Order::where($orderScope)
             ->whereIn('orders.status', ['paid', 'confirmed', 'completed', 'refunded'])
-            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'test_order')->where('orders.source', '!=', 'external_import')
             ->whereBetween('orders.created_at', [$monthStart, $monthEnd])
             ->count();
 
@@ -454,14 +454,14 @@ class Dashboard extends Page
         // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
         $orderRevenue = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->sum('total');
 
         // Use DB-level SUM with ROUND to match BillingBreakdown per-event rounding
         $ticketingCommission = (float) Order::where($billingScope)
             ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw("SUM(ROUND(total * {$commissionRate} / 100, 2)) as total_commission")
             ->value('total_commission') ?? 0;

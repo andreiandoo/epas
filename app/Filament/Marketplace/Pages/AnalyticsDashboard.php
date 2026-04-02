@@ -105,7 +105,7 @@ class AnalyticsDashboard extends Page
             ];
         }
 
-        $query = Order::where('marketplace_client_id', $marketplace->id);
+        $query = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import');
 
         // Apply date filter
         $startDate = match ($this->dateRange) {
@@ -126,7 +126,7 @@ class AnalyticsDashboard extends Page
 
         // Get previous period for comparison
         $previousStartDate = $startDate ? (clone $startDate)->subDays($startDate->diffInDays(Carbon::now())) : null;
-        $previousQuery = Order::where('marketplace_client_id', $marketplace->id)->where('status', 'paid');
+        $previousQuery = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import')->where('status', 'paid');
 
         if ($previousStartDate && $startDate) {
             $previousQuery->whereBetween('created_at', [$previousStartDate, $startDate]);
@@ -159,7 +159,7 @@ class AnalyticsDashboard extends Page
             default => 30,
         };
 
-        $data = Order::where('marketplace_client_id', $marketplace->id)
+        $data = Order::where('marketplace_client_id', $marketplace->id)->where('source', '!=', 'external_import')
             ->where('status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subDays($days))
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) as revenue, COUNT(*) as orders')

@@ -73,7 +73,7 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order');
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import');
 
         if ($monthStart && $monthEnd) {
             $query->whereBetween('created_at', [$monthStart, $monthEnd]);
@@ -140,7 +140,7 @@ class BillingBreakdown extends Page
                 }
             })
             ->whereIn('status', $validStatuses)
-            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->selectRaw('COALESCE(marketplace_event_id, event_id) as resolved_event_id')
             ->selectRaw('COUNT(*) as order_count')

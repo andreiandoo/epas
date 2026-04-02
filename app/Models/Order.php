@@ -318,6 +318,14 @@ class Order extends Model
     }
 
     /**
+     * Scope: exclude external imports from financial queries.
+     */
+    public function scopeExcludeExternal($query)
+    {
+        return $query->where('source', '!=', 'external_import');
+    }
+
+    /**
      * Release stock for specific tickets (used for partial refunds).
      */
     public function releaseStockForTickets(\Illuminate\Support\Collection $tickets): void

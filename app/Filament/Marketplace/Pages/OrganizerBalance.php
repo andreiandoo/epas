@@ -137,6 +137,7 @@ class OrganizerBalance extends Page
         $revenuePerEvent = Order::query()
             ->where('marketplace_organizer_id', $this->organizerId)
             ->where('status', 'completed')
+            ->where('source', '!=', 'external_import')
             ->select(
                 'marketplace_event_id',
                 DB::raw('COUNT(*) as orders_count'),
