@@ -601,6 +601,9 @@ trait HasEventImport
 
     public function processImport(): void
     {
+        set_time_limit(600);
+        ini_set('max_execution_time', '600');
+
         $cacheKey = 'event_import_rows_' . session()->getId();
         $serialized = Cache::get($cacheKey);
 
@@ -611,6 +614,9 @@ trait HasEventImport
             return;
         }
 
+        /** @var ImportedRow[] $rows */
+        $rows = unserialize($serialized);
+
         $tenantId = $this->resolveImportTenantId();
         if (!$tenantId) {
             Notification::make()->title('Nu s-a putut determina tenant-ul.')->danger()->send();
@@ -619,48 +625,41 @@ trait HasEventImport
         }
 
         $source = $this->eventFormData['import_source'] ?? 'iabilet';
-        $formData = $this->eventFormData;
 
         // Inject marketplace_client_id if available
         if (method_exists($this, 'getMarketplaceClient')) {
             $client = static::getMarketplaceClient();
             if ($client) {
-                $formData['marketplace_client_id'] = $client->id;
+                $this->eventFormData['marketplace_client_id'] = $client->id;
             }
         }
 
-        $resultKey = 'import_result_' . session()->getId();
-
-        // Dispatch to background — process synchronously in a separate PHP process
-        dispatch(function () use ($cacheKey, $formData, $tenantId, $source, $resultKey) {
-            set_time_limit(600);
-
-            $serialized = Cache::get($cacheKey);
-            if (!$serialized) return;
-
-            $rows = unserialize($serialized);
+        try {
             $service = new EventImportService();
+            $result = $service->process($rows, $this->eventFormData, $tenantId, $source);
 
-            try {
-                $result = $service->process($rows, $formData, $tenantId, $source);
-                Cache::put($resultKey, $result->toArray(), 600);
-            } catch (\Throwable $e) {
-                Cache::put($resultKey, ['error' => $e->getMessage()], 600);
+            // Save to cache so page can show results after redirect
+            $resultKey = 'import_result_' . session()->getId();
+            Cache::put($resultKey, $result->toArray(), 600);
+
+            // Clean up
+            Cache::forget($cacheKey);
+            if ($this->storedFilePath && file_exists($this->storedFilePath)) {
+                @unlink($this->storedFilePath);
             }
 
-            Cache::forget($cacheKey);
-        })->afterResponse();
+            // Redirect to force fresh page load with results
+            $this->redirect(request()->url());
+        } catch (\Throwable $e) {
+            $this->isProcessing = false;
+            $this->processingStatus = 'Eroare: ' . $e->getMessage();
 
-        // Show processing stage immediately — user will poll for results
-        $this->stage = 3;
-        $this->isProcessing = true;
-
-        Notification::make()
-            ->title('Import în curs de procesare...')
-            ->body('Importul rulează în background. Pagina se va actualiza automat.')
-            ->info()
-            ->send();
-
+            Notification::make()
+                ->title('Eroare la import')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function resetImport(): void
