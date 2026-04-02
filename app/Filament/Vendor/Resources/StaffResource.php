@@ -17,7 +17,7 @@ class StaffResource extends Resource
 {
     protected static ?string $model = VendorEmployee::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $navigationLabel = 'Staff';
 
@@ -40,11 +40,11 @@ class StaffResource extends Resource
             ->where('vendor_id', $employee->vendor_id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         $employee = Auth::guard('vendor_employee')->user();
 
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\Section::make('Employee Details')->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()

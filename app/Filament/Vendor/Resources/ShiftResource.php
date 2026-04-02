@@ -14,7 +14,7 @@ class ShiftResource extends Resource
 {
     protected static ?string $model = VendorShift::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
 
     protected static ?string $navigationLabel = 'Shifts';
 
