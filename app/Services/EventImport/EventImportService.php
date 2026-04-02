@@ -373,12 +373,18 @@ class EventImportService
         // Map order status
         [$orderStatus, $paymentStatus, $paidAt] = $this->mapOrderStatus($firstRow->orderStatus, $firstRow->orderDate);
 
+        // Skip if order already exists (prevents duplicates on re-import)
+        $orderNumber = strtoupper(substr($sourceKey, 0, 3)) . '-' . $orderId;
+        if (Order::where('order_number', $orderNumber)->exists()) {
+            return ['tickets' => 0]; // Already imported
+        }
+
         // Create Order — set customer_id to avoid auto-create in saving hook
         $order = new Order();
         $order->tenant_id = $tenantId;
         $order->event_id = $event->id;
         $order->customer_id = $customerId;
-        $order->order_number = strtoupper(substr($sourceKey, 0, 3)) . '-' . $orderId;
+        $order->order_number = $orderNumber;
         $order->customer_email = $customerEmail ?: 'anonymous@import.local';
         $order->customer_name = $customerName ?: 'Anonim';
         $order->customer_phone = $customerPhone;
