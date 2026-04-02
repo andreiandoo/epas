@@ -25,6 +25,21 @@ trait HasEventImport
     // Stage tracking
     public int $stage = 1;
 
+    public function mountHasEventImport(): void
+    {
+        // Check if returning from successful import
+        if (request()->query('import_done')) {
+            $resultKey = 'import_result_' . session()->getId();
+            $cached = Cache::get($resultKey);
+            if ($cached) {
+                $this->importResults = $cached;
+                $this->stage = 4;
+                $this->isProcessing = false;
+                Cache::forget($resultKey);
+            }
+        }
+    }
+
     // Stage 1: Event setup form
     public ?array $eventFormData = [
         'import_existing' => false,
@@ -603,11 +618,18 @@ trait HasEventImport
                 @unlink($this->storedFilePath);
             }
 
+            // Store results in cache for retrieval after redirect
+            Cache::put('import_result_' . session()->getId(), $this->importResults, 300);
+
             Notification::make()
                 ->title('Import finalizat cu succes!')
                 ->body("{$result->totalTickets} bilete, {$result->totalOrders} comenzi importate")
                 ->success()
                 ->send();
+
+            // Force redirect to avoid Livewire response timeout
+            $this->redirect(request()->url() . '?import_done=1');
+            return;
         } catch (\Throwable $e) {
             $this->isProcessing = false;
             $this->processingStatus = 'Eroare: ' . $e->getMessage();
