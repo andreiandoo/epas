@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Cashless\CashlessAccount;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 
 class Wristband extends Model
@@ -70,6 +72,11 @@ class Wristband extends Model
     public function transactions(): HasMany
     {
         return $this->hasMany(WristbandTransaction::class);
+    }
+
+    public function cashlessAccount(): HasOne
+    {
+        return $this->hasOne(CashlessAccount::class);
     }
 
     // ── Accessors ──

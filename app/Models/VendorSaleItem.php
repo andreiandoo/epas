@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Cashless\CashlessSale;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class VendorSaleItem extends Model
 {
     protected $fillable = [
+        'cashless_sale_id',
         'vendor_id',
         'festival_edition_id',
         'vendor_product_id',
@@ -21,6 +23,10 @@ class VendorSaleItem extends Model
         'quantity',
         'unit_price_cents',
         'total_cents',
+        'tax_cents',
+        'sgr_cents',
+        'product_type',
+        'product_category_name',
         'currency',
         'commission_cents',
         'commission_rate',
@@ -32,10 +38,17 @@ class VendorSaleItem extends Model
         'quantity'          => 'integer',
         'unit_price_cents'  => 'integer',
         'total_cents'       => 'integer',
+        'tax_cents'         => 'integer',
+        'sgr_cents'         => 'integer',
         'commission_cents'  => 'integer',
         'commission_rate'   => 'decimal:2',
         'meta'              => 'array',
     ];
+
+    public function cashlessSale(): BelongsTo
+    {
+        return $this->belongsTo(CashlessSale::class);
+    }
 
     public function vendor(): BelongsTo
     {

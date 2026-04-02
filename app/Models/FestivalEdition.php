@@ -3,10 +3,15 @@
 namespace App\Models;
 
 use App\Enums\CashlessMode;
+use App\Models\Cashless\CashlessAccount;
+use App\Models\Cashless\CashlessSale;
+use App\Models\Cashless\CashlessSettings;
+use App\Models\Cashless\TopUpLocation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class FestivalEdition extends Model
 {
@@ -110,6 +115,26 @@ class FestivalEdition extends Model
     public function externalTickets(): HasMany
     {
         return $this->hasMany(FestivalExternalTicket::class);
+    }
+
+    public function cashlessAccounts(): HasMany
+    {
+        return $this->hasMany(CashlessAccount::class);
+    }
+
+    public function cashlessSales(): HasMany
+    {
+        return $this->hasMany(CashlessSale::class);
+    }
+
+    public function cashlessSettings(): HasOne
+    {
+        return $this->hasOne(CashlessSettings::class);
+    }
+
+    public function topupLocations(): HasMany
+    {
+        return $this->hasMany(TopUpLocation::class);
     }
 
     // ── Helpers ──

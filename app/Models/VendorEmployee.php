@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\VendorUserRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,21 +13,25 @@ class VendorEmployee extends Model
         'tenant_id',
         'vendor_id',
         'name',
+        'full_name',
         'phone',
         'email',
+        'password',
         'pin',
         'role',
         'status',
         'permissions',
         'avatar_url',
+        'email_verified_at',
         'meta',
     ];
 
-    protected $hidden = ['pin'];
+    protected $hidden = ['pin', 'password'];
 
     protected $casts = [
-        'permissions' => 'array',
-        'meta'        => 'array',
+        'permissions'       => 'array',
+        'meta'              => 'array',
+        'email_verified_at' => 'datetime',
     ];
 
     // ── Relationships ──

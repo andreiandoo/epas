@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Cashless\CashlessAccount;
+use App\Models\Cashless\TopUpLocation;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -32,14 +34,29 @@ class WristbandTransaction extends Model
         'offline_ref',
         'offline_transacted_at',
         'is_reconciled',
+        // Cashless fields
+        'channel',
+        'topup_method',
+        'topup_location_id',
+        'cashless_account_id',
+        'balance_snapshot_cents',
+        'customer_email',
+        'customer_name',
+        'cashout_channel',
+        'cashout_method',
+        'cashout_reference',
+        'cashout_processed_at',
+        'cashout_status',
     ];
 
     protected $casts = [
         'amount_cents'           => 'integer',
         'balance_before_cents'   => 'integer',
         'balance_after_cents'    => 'integer',
+        'balance_snapshot_cents' => 'integer',
         'meta'                   => 'array',
         'offline_transacted_at'  => 'datetime',
+        'cashout_processed_at'   => 'datetime',
         'is_reconciled'          => 'boolean',
     ];
 
@@ -83,6 +100,16 @@ class WristbandTransaction extends Model
         return $this->hasMany(VendorSaleItem::class);
     }
 
+    public function cashlessAccount(): BelongsTo
+    {
+        return $this->belongsTo(CashlessAccount::class);
+    }
+
+    public function topupLocation(): BelongsTo
+    {
+        return $this->belongsTo(TopUpLocation::class, 'topup_location_id');
+    }
+
     public function getAmountAttribute(): float
     {
         return $this->amount_cents / 100;
@@ -95,7 +122,7 @@ class WristbandTransaction extends Model
 
     public function isCredit(): bool
     {
-        return in_array($this->transaction_type, ['topup', 'refund', 'transfer_in', 'correction']);
+        return in_array($this->transaction_type, ['topup', 'refund', 'transfer_in', 'correction', 'voucher_credit', 'promotional_credit', 'compensation_credit']);
     }
 
     public function scopePayments($query)
