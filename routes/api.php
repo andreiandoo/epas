@@ -2850,3 +2850,79 @@ Route::prefix('web-templates')->middleware('throttle:120,1')->group(function () 
 Route::post('/webhooks/brevo', [\App\Http\Controllers\Api\BrevoWebhookController::class, 'handle'])
     ->name('api.webhooks.brevo')
     ->withoutMiddleware(['throttle:api']);
+
+/*
+|--------------------------------------------------------------------------
+| Cashless API — Operations (POS, admin, stand operators)
+|--------------------------------------------------------------------------
+|
+| Used by POS devices, stand operators, and admin dashboards.
+| Auth via vendor API token or sanctum.
+|
+*/
+Route::prefix('cashless')->middleware(['throttle:120,1'])->group(function () {
+
+    // Account operations (stand operators, admin)
+    Route::prefix('accounts')->group(function () {
+        Route::post('/lookup', [App\Http\Controllers\Api\Cashless\AccountController::class, 'lookup'])
+            ->name('api.cashless.accounts.lookup');
+        Route::post('/{accountId}/topup', [App\Http\Controllers\Api\Cashless\AccountController::class, 'topUp'])
+            ->name('api.cashless.accounts.topup');
+        Route::post('/{accountId}/cashout', [App\Http\Controllers\Api\Cashless\AccountController::class, 'cashout'])
+            ->name('api.cashless.accounts.cashout');
+        Route::post('/{accountId}/freeze', [App\Http\Controllers\Api\Cashless\AccountController::class, 'toggleFreeze'])
+            ->name('api.cashless.accounts.freeze');
+        Route::get('/{accountId}/history', [App\Http\Controllers\Api\Cashless\AccountController::class, 'history'])
+            ->name('api.cashless.accounts.history');
+        Route::post('/{accountId}/voucher', [App\Http\Controllers\Api\Cashless\AccountController::class, 'redeemVoucher'])
+            ->name('api.cashless.accounts.voucher');
+    });
+
+    Route::post('/transfer', [App\Http\Controllers\Api\Cashless\AccountController::class, 'transfer'])
+        ->name('api.cashless.transfer');
+
+    // Sales (POS operations)
+    Route::post('/sales', [App\Http\Controllers\Api\Cashless\SaleController::class, 'store'])
+        ->name('api.cashless.sales.store');
+    Route::get('/sales/{saleId}', [App\Http\Controllers\Api\Cashless\SaleController::class, 'show'])
+        ->name('api.cashless.sales.show');
+    Route::post('/sales/{saleId}/void', [App\Http\Controllers\Api\Cashless\SaleController::class, 'void'])
+        ->name('api.cashless.sales.void');
+    Route::post('/sales/{saleId}/partial-refund', [App\Http\Controllers\Api\Cashless\SaleController::class, 'partialRefund'])
+        ->name('api.cashless.sales.partial-refund');
+
+    // Sales reports
+    Route::get('/editions/{editionId}/sales', [App\Http\Controllers\Api\Cashless\SaleController::class, 'index'])
+        ->name('api.cashless.editions.sales');
+    Route::get('/editions/{editionId}/sales/by-category', [App\Http\Controllers\Api\Cashless\SaleController::class, 'byCategory'])
+        ->name('api.cashless.editions.sales.by-category');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Cashless Client API — Customer-facing (mobile app / website)
+|--------------------------------------------------------------------------
+|
+| Auth via Sanctum (customer token).
+|
+*/
+Route::prefix('cashless/client')->middleware(['throttle:60,1', 'auth:sanctum'])->group(function () {
+    Route::get('/account', [App\Http\Controllers\Api\Cashless\ClientController::class, 'account'])
+        ->name('api.cashless.client.account');
+    Route::get('/history', [App\Http\Controllers\Api\Cashless\ClientController::class, 'history'])
+        ->name('api.cashless.client.history');
+    Route::post('/topup/initiate', [App\Http\Controllers\Api\Cashless\ClientController::class, 'initiateTopUp'])
+        ->name('api.cashless.client.topup');
+    Route::post('/cashout/request', [App\Http\Controllers\Api\Cashless\ClientController::class, 'requestCashout'])
+        ->name('api.cashless.client.cashout');
+    Route::post('/transfer', [App\Http\Controllers\Api\Cashless\ClientController::class, 'transfer'])
+        ->name('api.cashless.client.transfer');
+    Route::get('/purchases', [App\Http\Controllers\Api\Cashless\ClientController::class, 'purchases'])
+        ->name('api.cashless.client.purchases');
+    Route::get('/purchases/{saleId}', [App\Http\Controllers\Api\Cashless\ClientController::class, 'purchaseDetail'])
+        ->name('api.cashless.client.purchases.detail');
+    Route::get('/spending', [App\Http\Controllers\Api\Cashless\ClientController::class, 'spendingBreakdown'])
+        ->name('api.cashless.client.spending');
+    Route::post('/voucher/redeem', [App\Http\Controllers\Api\Cashless\ClientController::class, 'redeemVoucher'])
+        ->name('api.cashless.client.voucher');
+});
