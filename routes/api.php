@@ -2907,6 +2907,35 @@ Route::prefix('cashless')->middleware(['throttle:120,1'])->group(function () {
     Route::get('/editions/{editionId}/refunds', [App\Http\Controllers\Api\Cashless\RefundController::class, 'index'])
         ->name('api.cashless.refunds.index');
 
+    // Suppliers & Stock
+    Route::get('/editions/{editionId}/suppliers', [App\Http\Controllers\Api\Cashless\SupplierController::class, 'index'])
+        ->name('api.cashless.suppliers.index');
+    Route::get('/editions/{editionId}/suppliers/{supplierId}/products', [App\Http\Controllers\Api\Cashless\SupplierController::class, 'products'])
+        ->name('api.cashless.suppliers.products');
+    Route::get('/suppliers/{supplierId}/brands', [App\Http\Controllers\Api\Cashless\SupplierController::class, 'brands'])
+        ->name('api.cashless.suppliers.brands');
+
+    Route::get('/editions/{editionId}/stock', [App\Http\Controllers\Api\Cashless\StockController::class, 'summary'])
+        ->name('api.cashless.stock.summary');
+    Route::post('/editions/{editionId}/stock/delivery', [App\Http\Controllers\Api\Cashless\StockController::class, 'delivery'])
+        ->name('api.cashless.stock.delivery');
+    Route::post('/editions/{editionId}/stock/allocate', [App\Http\Controllers\Api\Cashless\StockController::class, 'allocate'])
+        ->name('api.cashless.stock.allocate');
+    Route::post('/editions/{editionId}/stock/return', [App\Http\Controllers\Api\Cashless\StockController::class, 'returnStock'])
+        ->name('api.cashless.stock.return');
+    Route::post('/editions/{editionId}/stock/waste', [App\Http\Controllers\Api\Cashless\StockController::class, 'waste'])
+        ->name('api.cashless.stock.waste');
+    Route::get('/editions/{editionId}/stock/movements', [App\Http\Controllers\Api\Cashless\StockController::class, 'movements'])
+        ->name('api.cashless.stock.movements');
+
+    // Finance
+    Route::get('/editions/{editionId}/finance/summaries', [App\Http\Controllers\Api\Cashless\FinanceController::class, 'vendorSummaries'])
+        ->name('api.cashless.finance.summaries');
+    Route::get('/editions/{editionId}/finance/vendors/{vendorId}', [App\Http\Controllers\Api\Cashless\FinanceController::class, 'vendorTotal'])
+        ->name('api.cashless.finance.vendor-total');
+    Route::post('/editions/{editionId}/finance/enforce-pricing', [App\Http\Controllers\Api\Cashless\FinanceController::class, 'enforcePricing'])
+        ->name('api.cashless.finance.enforce-pricing');
+
     // Reports API
     Route::prefix('editions/{editionId}/reports')->group(function () {
         Route::get('/live-kpis', [App\Http\Controllers\Api\Cashless\ReportController::class, 'liveKpis'])

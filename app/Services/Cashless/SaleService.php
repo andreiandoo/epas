@@ -165,6 +165,10 @@ class SaleService
                 'total_cents'              => $totalCents,
                 'commission_cents'         => $commissionCents,
                 'tip_cents'                => $tipCents,
+                'tip_percentage'           => $tipCents > 0 && $totalCents > 0
+                    ? round($tipCents / $totalCents * 100, 2)
+                    : null,
+                'total_with_tip_cents'     => $totalCents + $tipCents,
                 'currency'                 => $account->currency,
                 'items_count'              => count($lineItems),
                 'status'                   => SaleStatus::Completed,
