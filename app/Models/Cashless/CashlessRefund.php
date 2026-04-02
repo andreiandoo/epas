@@ -10,9 +10,21 @@ use App\Models\VendorEmployee;
 use App\Models\WristbandTransaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class CashlessRefund extends Model
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'total_refund_cents', 'rejection_reason'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->useLogName('cashless');
+    }
     protected $fillable = [
         'tenant_id', 'festival_edition_id', 'cashless_sale_id', 'cashless_account_id',
         'customer_id', 'vendor_id', 'refund_type', 'status',

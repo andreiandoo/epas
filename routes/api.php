@@ -2896,6 +2896,34 @@ Route::prefix('cashless')->middleware(['throttle:120,1'])->group(function () {
         ->name('api.cashless.editions.sales');
     Route::get('/editions/{editionId}/sales/by-category', [App\Http\Controllers\Api\Cashless\SaleController::class, 'byCategory'])
         ->name('api.cashless.editions.sales.by-category');
+
+    // Refunds (with approval flow)
+    Route::post('/refunds', [App\Http\Controllers\Api\Cashless\RefundController::class, 'request'])
+        ->name('api.cashless.refunds.request');
+    Route::post('/refunds/{refundId}/approve', [App\Http\Controllers\Api\Cashless\RefundController::class, 'approve'])
+        ->name('api.cashless.refunds.approve');
+    Route::post('/refunds/{refundId}/reject', [App\Http\Controllers\Api\Cashless\RefundController::class, 'reject'])
+        ->name('api.cashless.refunds.reject');
+    Route::get('/editions/{editionId}/refunds', [App\Http\Controllers\Api\Cashless\RefundController::class, 'index'])
+        ->name('api.cashless.refunds.index');
+
+    // Reports API
+    Route::prefix('editions/{editionId}/reports')->group(function () {
+        Route::get('/live-kpis', [App\Http\Controllers\Api\Cashless\ReportController::class, 'liveKpis'])
+            ->name('api.cashless.reports.live');
+        Route::get('/sales-overview', [App\Http\Controllers\Api\Cashless\ReportController::class, 'salesOverview'])
+            ->name('api.cashless.reports.sales');
+        Route::get('/vendors', [App\Http\Controllers\Api\Cashless\ReportController::class, 'vendorReport'])
+            ->name('api.cashless.reports.vendors');
+        Route::get('/products', [App\Http\Controllers\Api\Cashless\ReportController::class, 'productReport'])
+            ->name('api.cashless.reports.products');
+        Route::get('/finance', [App\Http\Controllers\Api\Cashless\ReportController::class, 'financeReport'])
+            ->name('api.cashless.reports.finance');
+        Route::get('/customers', [App\Http\Controllers\Api\Cashless\ReportController::class, 'customerReport'])
+            ->name('api.cashless.reports.customers');
+        Route::get('/stock', [App\Http\Controllers\Api\Cashless\ReportController::class, 'stockReport'])
+            ->name('api.cashless.reports.stock');
+    });
 });
 
 /*

@@ -757,6 +757,48 @@ Schedule::command('marketplace:generate-auto-deconts --days-after=3')
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Cashless Module Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Aggregate cashless report snapshots (every 5 minutes during active festivals)
+Schedule::job(new \App\Jobs\AggregateCashlessReportsJob)
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::debug('Cashless report snapshots aggregated');
+    });
+
+// Calculate vendor finance summaries (daily at 1:30 AM)
+Schedule::call(function () {
+    $yesterday = now()->subDay()->toDateString();
+    $editions = \App\Models\FestivalEdition::where('status', 'active')->get();
+
+    foreach ($editions as $edition) {
+        \App\Jobs\CalculateVendorFinanceSummaryJob::dispatch($edition->id, $yesterday);
+    }
+
+    \Log::info('Vendor finance summaries dispatched', ['editions' => $editions->count()]);
+})->dailyAt('01:30')->timezone('Europe/Bucharest');
+
+// Calculate customer profiles (every 15 minutes during active festivals)
+Schedule::call(function () {
+    $editions = \App\Models\FestivalEdition::where('status', 'active')->get();
+
+    foreach ($editions as $edition) {
+        \App\Jobs\CalculateCustomerProfilesJob::dispatch($edition->id);
+    }
+})->everyFifteenMinutes()->withoutOverlapping();
+
+// GDPR: Anonymize old cashless data (monthly on 1st at 5 AM)
+Schedule::call(function () {
+    $service = app(\App\Services\Cashless\GdprService::class);
+    $result = $service->anonymizeOldData(24);
+    \Log::info('Cashless GDPR anonymization completed', $result);
+})->monthlyOn(1, '05:00')->timezone('Europe/Bucharest');
+
 // Refresh materialized views every 5 minutes (PostgreSQL only)
 Schedule::command('views:refresh')
     ->everyFiveMinutes()
