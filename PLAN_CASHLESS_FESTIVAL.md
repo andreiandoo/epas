@@ -2152,7 +2152,107 @@ Cu secțiunile noi, fazele devin:
 
 ---
 
-*Plan complet: 38 secțiuni acoperind 10 cerințe originale + 17 îmbunătățiri. 31 tabele noi, 12 modificate, 14+ enums. 10 faze de implementare, ~20 săptămâni. 70+ rapoarte inclusiv predictive. Live tracking + heatmaps. Anomaly detection. Offline-first POS architecture. SLA targets definite.*
+*Plan complet: 40 secțiuni acoperind 10 cerințe originale + 19 îmbunătățiri. 34 tabele noi, 13 modificate, 14+ enums. 10 faze de implementare, ~20 săptămâni. 70+ rapoarte inclusiv predictive. Live tracking + heatmaps. Anomaly detection. Offline-first POS architecture. SLA targets definite.*
+
+---
+
+## 41. Decizii de Produs & Clarificări
+
+Răspunsuri confirmate care influențează design-ul și trebuie respectate la implementare.
+
+### A. Cont Cashless & Activare
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Cont cashless FĂRĂ bilet** – staff, VIP, sponsori pot avea cont cashless fără FestivalPassPurchase | `CashlessAccount.festival_pass_purchase_id` rămâne NULL. Trebuie un flow de creare cont fără pass: admin creează manual sau prin invitație. Câmp nou: `account_origin ENUM('pass_purchase','staff','vip_invite','sponsor','manual')` |
+| **Pre-top-up înainte de festival** – clientul poate alimenta contul cu oricât timp înainte | `CashlessAccount` se creează la momentul cumpărării biletului (nu la check-in). Flow: buy pass → creare cont automat → top-up imediat disponibil. Check-in-ul doar activează wristband-ul fizic (dacă e cazul) |
+
+### B. Vendori & Standuri
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Admin festival creează vendor + primul manager** | Flow Filament: admin creează Vendor → creează primul VendorEmployee cu rol manager → manager primește email de activare. Manager-ul poate apoi crea supervisori/members |
+| **Vendor cross-festival (multi-tenant)** | Vendor-ul are `tenant_id` per festival (entitate separată per tenant), dar poate exista un mecanism de "import vendor" care clonează datele companiei de la un alt tenant. Sau: vendor global cu pivot per tenant. **Recomandare:** păstrăm vendor per tenant (simplu), cu posibilitate de "copiere date companie" dintr-un vendor existent |
+
+### C. Top-up & Cashout
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Sumă liberă top-up** (nu butoane predefinite) | UI: input numeric cu min/max din CashlessSettings. Butoane sugerate opțional (UX) dar nu obligatorii |
+| **Cashout inițiat de client, nu automat** | Eliminăm `auto_cashout_after_festival` din CashlessSettings. Clientul inițiază explicit. Retur pe aceeași cale: card→card refund, cash→cash la stand |
+| **Operator top-up poate adăuga SAU scădea bani** | Operatorul de la punctul fizic poate face și top-up și cashout. Confirmă nevoia de `CashlessAccountService::cashout()` parțial la stand fizic. Câmp pe VendorEmployee sau rol separat: `topup_operator` cu permisiuni de credit/debit |
+
+### D. Finance
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Payout vendori la final festival, prin transfer bancar** | Nu se integrează Stripe Connect pentru payouts (momentan). Se generează un raport de payout per vendor cu suma datorată + detalii IBAN. Admin festival confirmă manual fiecare transfer. Tabel: `vendor_payouts` cu status tracking (pending→approved→transferred→confirmed) |
+
+**Tabel nou: `vendor_payouts`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+vendor_id               BIGINT FK
+gross_sales_cents       INT
+commissions_cents       INT
+fees_cents              INT
+refunds_cents           INT
+tips_cents              INT -- tips merg integral la vendor
+net_payout_cents        INT -- ce primește vendor-ul
+currency                VARCHAR(3)
+vendor_iban             VARCHAR(50) -- snapshot IBAN la momentul generării
+vendor_bank             VARCHAR(255) NULL
+vendor_cui              VARCHAR(20)
+status                  ENUM('draft','approved','transferred','confirmed','disputed')
+approved_by             BIGINT FK → users NULL
+approved_at             TIMESTAMP NULL
+transferred_at          TIMESTAMP NULL
+transfer_reference      VARCHAR(255) NULL -- ref transfer bancar
+confirmed_at            TIMESTAMP NULL
+notes                   TEXT NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### E. Suppliers & Stoc
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Produse proprii vendor (fără supplier)** – cu tracking stoc opțional | `VendorProduct.supplier_product_id` = NULL pentru produse proprii. Vendor-ul poate seta un `initial_stock` opțional. Dacă setat → se creează `InventoryStock` cu `vendor_id` setat și `supplier_product_id` NULL. Tracking stoc funcționează la fel (decrementare la vânzare). Dacă `initial_stock` nu e setat → fără tracking stoc pe acel produs |
+
+**Câmp nou pe `VendorProduct`:**
+```
++ has_stock_tracking     BOOLEAN DEFAULT false
++ initial_stock_quantity DECIMAL(12,3) NULL
+```
+
+**Câmp nou pe `InventoryStock`:**
+```
+supplier_product_id     BIGINT FK NULL -- NULL = produs propriu vendor (fără supplier)
+vendor_product_id       BIGINT FK NULL -- legătură directă pt produse fără supplier
+```
+
+### F. Heatmap & Tracking
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **GPS tracking = opt-in cu consent explicit** + **scanări POS/gate** | Ambele surse. GPS: consent screen în app la prima deschidere, stochezi `customer.location_tracking_consent = true/false`. Scanări POS: implicit (nu necesită consent suplimentar, e parte din serviciu). Heatmap-ul funcționează minim pe scanări POS, îmbunătățit cu GPS unde e disponibil |
+
+**Câmp nou pe `Customer`:**
+```
++ location_tracking_consent  BOOLEAN DEFAULT false
++ location_consent_at        TIMESTAMP NULL
+```
+
+### G. General
+
+| Decizie | Impact pe design |
+|---------|-----------------|
+| **Limba: română acum, multi-language ulterior** | Toate string-urile hardcoded în română. Dar: folosim sistemul `Translatable` existent din platformă pe modelele noi care au nume/descrieri publice (produse, categorii, combo-uri). Astfel, traducerile se pot adăuga ulterior fără refactoring |
+
+---
 
 ---
 
