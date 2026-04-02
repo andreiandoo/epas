@@ -411,7 +411,7 @@ class EventImportService
             $orderMeta['is_external_sale'] = true;
             $orderMeta['external_platform'] = $sourceKey;
         }
-        $order->meta = json_encode($orderMeta);
+        $order->meta = $orderMeta;
         $order->created_at = $firstRow->orderDate ?? now();
         $order->updated_at = $firstRow->orderDate ?? now();
         $order->save();
