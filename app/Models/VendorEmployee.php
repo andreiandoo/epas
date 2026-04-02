@@ -3,11 +3,11 @@
 namespace App\Models;
 
 use App\Enums\VendorUserRole;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class VendorEmployee extends Model
+class VendorEmployee extends Authenticatable
 {
     protected $fillable = [
         'tenant_id',

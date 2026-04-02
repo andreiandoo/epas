@@ -120,9 +120,88 @@ class Wristband extends Model
         ]);
     }
 
-    // ── Financial operations (with row-level locking) ──
+    // ── Financial operations ──
+    // If a CashlessAccount exists, delegates to CashlessAccountService (source of truth).
+    // Falls back to legacy direct-balance operations for wristbands without a CashlessAccount.
 
     public function topUp(int $amountCents, ?string $paymentMethod = null, ?string $operator = null): WristbandTransaction
+    {
+        if ($account = $this->cashlessAccount) {
+            return app(\App\Services\Cashless\CashlessAccountService::class)->topUp(
+                $account,
+                $amountCents,
+                \App\Enums\TopUpChannel::Physical,
+                $paymentMethod ? \App\Enums\TopUpMethod::tryFrom($paymentMethod) : null,
+                operator: $operator,
+                paymentMethod: $paymentMethod,
+            );
+        }
+
+        return $this->legacyTopUp($amountCents, $paymentMethod, $operator);
+    }
+
+    public function charge(
+        int $amountCents,
+        ?string $vendorName = null,
+        ?string $vendorLocation = null,
+        ?string $description = null,
+        ?int $vendorId = null,
+        ?int $posDeviceId = null
+    ): bool|WristbandTransaction {
+        if ($account = $this->cashlessAccount) {
+            return app(\App\Services\Cashless\CashlessAccountService::class)->charge(
+                $account,
+                $amountCents,
+                vendorName: $vendorName,
+                vendorLocation: $vendorLocation,
+                description: $description,
+                vendorId: $vendorId,
+                posDeviceId: $posDeviceId,
+            );
+        }
+
+        return $this->legacyCharge($amountCents, $vendorName, $vendorLocation, $description, $vendorId, $posDeviceId);
+    }
+
+    public function refund(int $amountCents, ?string $description = null, ?string $operator = null): WristbandTransaction
+    {
+        if ($account = $this->cashlessAccount) {
+            return app(\App\Services\Cashless\CashlessAccountService::class)->refund(
+                $account, $amountCents, $description, $operator,
+            );
+        }
+
+        return $this->legacyRefund($amountCents, $description, $operator);
+    }
+
+    public function transferTo(Wristband $target, ?string $operator = null): WristbandTransaction
+    {
+        $sourceAccount = $this->cashlessAccount;
+        $targetAccount = $target->cashlessAccount;
+
+        if ($sourceAccount && $targetAccount) {
+            return app(\App\Services\Cashless\CashlessAccountService::class)->transfer(
+                $sourceAccount, $targetAccount, $sourceAccount->balance_cents, $operator,
+            );
+        }
+
+        return $this->legacyTransferTo($target, $operator);
+    }
+
+    public function cashout(?string $operator = null): WristbandTransaction
+    {
+        if ($account = $this->cashlessAccount) {
+            return app(\App\Services\Cashless\CashlessAccountService::class)->cashout(
+                $account, operator: $operator,
+            );
+        }
+
+        return $this->legacyCashout($operator);
+    }
+
+    // ── Legacy financial operations (direct balance, no CashlessAccount) ──
+
+    private function legacyTopUp(int $amountCents, ?string $paymentMethod, ?string $operator): WristbandTransaction
     {
         return DB::transaction(function () use ($amountCents, $paymentMethod, $operator) {
             $locked = self::lockForUpdate()->find($this->id);
@@ -147,14 +226,8 @@ class Wristband extends Model
         });
     }
 
-    public function charge(
-        int $amountCents,
-        ?string $vendorName = null,
-        ?string $vendorLocation = null,
-        ?string $description = null,
-        ?int $vendorId = null,
-        ?int $posDeviceId = null
-    ): bool|WristbandTransaction {
+    private function legacyCharge(int $amountCents, ?string $vendorName, ?string $vendorLocation, ?string $description, ?int $vendorId, ?int $posDeviceId): bool|WristbandTransaction
+    {
         return DB::transaction(function () use ($amountCents, $vendorName, $vendorLocation, $description, $vendorId, $posDeviceId) {
             $locked = self::lockForUpdate()->find($this->id);
 
@@ -185,13 +258,12 @@ class Wristband extends Model
         });
     }
 
-    public function refund(int $amountCents, ?string $description = null, ?string $operator = null): WristbandTransaction
+    private function legacyRefund(int $amountCents, ?string $description, ?string $operator): WristbandTransaction
     {
         return DB::transaction(function () use ($amountCents, $description, $operator) {
             $locked = self::lockForUpdate()->find($this->id);
             $balanceBefore = $locked->balance_cents;
 
-            // Validate: refund cannot exceed total charges minus existing refunds
             $totalCharged = $locked->transactions()
                 ->where('transaction_type', 'payment')
                 ->sum('amount_cents');
@@ -225,7 +297,7 @@ class Wristband extends Model
         });
     }
 
-    public function transferTo(Wristband $target, ?string $operator = null): WristbandTransaction
+    private function legacyTransferTo(Wristband $target, ?string $operator): WristbandTransaction
     {
         if ($this->tenant_id !== $target->tenant_id) {
             throw new \InvalidArgumentException('Cannot transfer between wristbands of different tenants.');
@@ -238,9 +310,9 @@ class Wristband extends Model
             $source = self::lockForUpdate()->find($this->id);
             $dest   = self::lockForUpdate()->find($target->id);
 
-            $amountCents     = $source->balance_cents;
-            $sourceBefore    = $source->balance_cents;
-            $destBefore      = $dest->balance_cents;
+            $amountCents  = $source->balance_cents;
+            $sourceBefore = $source->balance_cents;
+            $destBefore   = $dest->balance_cents;
 
             $source->balance_cents = 0;
             $source->save();
@@ -250,7 +322,6 @@ class Wristband extends Model
             $this->balance_cents   = 0;
             $target->balance_cents = $destBefore + $amountCents;
 
-            // Log outgoing on source
             $this->transactions()->create([
                 'tenant_id'            => $this->tenant_id,
                 'festival_edition_id'  => $this->festival_edition_id,
@@ -265,7 +336,6 @@ class Wristband extends Model
                 'description'          => "Transfer to wristband {$target->uid}",
             ]);
 
-            // Log incoming on target
             return $target->transactions()->create([
                 'tenant_id'            => $target->tenant_id,
                 'festival_edition_id'  => $target->festival_edition_id,
@@ -282,7 +352,7 @@ class Wristband extends Model
         });
     }
 
-    public function cashout(?string $operator = null): WristbandTransaction
+    private function legacyCashout(?string $operator): WristbandTransaction
     {
         return DB::transaction(function () use ($operator) {
             $locked = self::lockForUpdate()->find($this->id);
