@@ -2254,6 +2254,144 @@ vendor_product_id       BIGINT FK NULL -- legătură directă pt produse fără 
 
 ---
 
+## 42. Wristband Lifecycle Complet
+
+### 42.1 Tipuri de wristband
+
+**Enum `WristbandType` (extindere):**
+```php
+enum WristbandType: string
+{
+    case General = 'general';     // Acces standard, balance normal
+    case Vip = 'vip';             // Acces zone VIP + standard
+    case Staff = 'staff';         // Acces tot, primește credit zilnic/perioadă de la festival
+    case Artist = 'artist';       // Acces backstage + tot, primește credit de la admin
+    case Sponsor = 'sponsor';     // Acces VIP + zone sponsor
+    case Media = 'media';         // Acces press/media zones
+    case VendorStaff = 'vendor_staff'; // Staff vendor (nu al festivalului)
+}
+```
+
+**Permisiuni per tip:**
+
+| Tip | Zone acces | Balance | Credit festival | Top-up propriu | Cashout |
+|-----|-----------|---------|-----------------|----------------|---------|
+| General | Standard | Normal (min/max) | Nu | Da | Da |
+| VIP | Standard + VIP | Normal | Nu | Da | Da |
+| Staff | Toate | Fără limită max | Da (zilnic/perioadă) | Da | Da |
+| Artist | Toate + Backstage | Fără limită max | Da (sumă alocată) | Da | Da |
+| Sponsor | Standard + VIP + Sponsor | Fără limită max | Da (sumă alocată) | Da | Da |
+| Media | Standard + Media/Press | Normal | Opțional | Da | Da |
+| VendorStaff | Standard + Vendor area | Normal | Nu | Da | Da |
+
+### 42.2 Credit alocat de festival (Staff/Artist/Sponsor)
+
+**Tabel `cashless_credit_allocations`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+cashless_account_id     BIGINT FK
+allocated_by            BIGINT FK → users -- admin care a alocat
+allocation_type         ENUM('one_time','daily','per_period')
+amount_cents            INT -- sumă per alocare
+total_allocated_cents   INT DEFAULT 0 -- total alocat până acum
+period_start            DATE NULL
+period_end              DATE NULL
+is_active               BOOLEAN DEFAULT true
+notes                   TEXT NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**Flow:**
+```
+1. Admin festival: "Alocă 150 RON/zi staff-ului Ion Popescu"
+   allocation_type='daily', amount_cents=15000
+
+2. Job zilnic (AllocateDailyCreditJob):
+   - Găsește toate alocările active cu allocation_type='daily'
+   - Pentru fiecare: CashlessAccountService::topUp() cu transaction_type='festival_credit'
+   - Incrementare total_allocated_cents
+   - WristbandTransaction: channel='system', topup_method='festival_credit'
+
+3. One-time (artist/sponsor):
+   Admin: "Alocă 500 RON artistului X"
+   → Se creditează instant, allocation_type='one_time'
+```
+
+### 42.3 Pre-provisioning & Encoding
+
+**Wristband-urile sunt single-use per ediție.**
+
+**Scenariul 1: Encoding on-site (la check-in)**
+```
+1. Festival primește wristbands goale (NFC chip-uri neînscrise) de la furnizor
+2. La check-in:
+   a. Staff scanează biletul clientului (QR code FestivalPassPurchase)
+   b. Staff ia un wristband gol, îl scanează cu NFC writer
+   c. Sistemul: generează UID unic → scrie pe chip NFC → creează Wristband în DB
+   d. Asociere: Wristband → CashlessAccount → Customer
+   e. Wristband activat instant
+```
+
+**Scenariul 2: Pre-encoding (înainte de festival, pentru expediere)**
+```
+1. Admin festival: "Pre-encodează 500 wristbands pentru sponsori/VIP"
+2. Batch job: generare UID-uri → scriere pe NFC chips → creare Wristbands cu status='pre_encoded'
+3. Asociere cu CashlessAccount-urile deja create (la cumpărarea biletului)
+4. Expediere prin curier
+5. La festival: clientul vine cu wristband deja activ, doar check-in la gate
+```
+
+**Status lifecycle wristband:**
+```
+unassigned → pre_encoded → assigned → activated → disabled/lost/returned
+                              ↓
+                         (direct la check-in on-site)
+```
+
+**Câmpuri noi pe `Wristband`:**
+```
++ encoding_method       ENUM('on_site','pre_encoded','bulk_import') DEFAULT 'on_site'
++ encoded_at            TIMESTAMP NULL
++ encoded_by            VARCHAR(255) NULL -- staff care a encodat
++ shipped_at            TIMESTAMP NULL -- dacă s-a trimis prin curier
++ shipping_tracking     VARCHAR(255) NULL
++ batch_id              VARCHAR(100) NULL -- batch de encoding
+```
+
+### 42.4 Batch Import Wristbands
+
+Flow existent (`WristbandController::import()`) acceptă CSV cu UID-uri. Extindere:
+
+```csv
+uid,wristband_type,access_zones,pre_assign_customer_email
+NFC-001,general,"[""standard""]",
+NFC-002,vip,"[""standard"",""vip""]",ion@email.com
+NFC-003,staff,"[""all""]",maria.staff@festival.ro
+NFC-004,artist,"[""all"",""backstage""]",artist@booking.com
+```
+
+### 42.5 Re-assignment (wristband returnat)
+
+Când un wristband e returnat (ex: la Lost & Found) și trebuie re-folosit:
+
+```
+1. Wristband vechi: status = 'returned', dezasociat de CashlessAccount
+2. NU se re-encodează (UID rămâne același)
+3. Se poate re-assign la un alt client:
+   a. Staff scanează wristband-ul returnat
+   b. Sistemul confirmă: balance=0, status=returned
+   c. Staff scanează biletul noului client
+   d. Re-asociere: Wristband → nou CashlessAccount
+   e. Status: 'activated'
+4. Audit trail: logare completă a re-assignment-ului
+```
+
+**Notă:** Sold-ul NU se transferă. Wristband-ul returnat are balance=0. Clientul vechi păstrează soldul pe CashlessAccount (poate cere cashout sau primește wristband nou).
+
 ---
 
 ## 24. Dispute Resolution (Contestații Clienți)
@@ -3971,5 +4109,296 @@ Toate rapoartele din secțiunea 6 care au filtru "per vendor" primesc și filtru
 | Comisioane | Per vendor (nu per stand – CUI unic) |
 | Raport fiscal | Per stand (casă de marcat per stand) |
 | Performance comparison | Stand vs. Stand al aceluiași vendor |
+
+---
+
+## 43. Interacțiunea Combo + Split Payment
+
+### 43.1 Scenarii posibile
+
+| Scenariul | Descriere | Rezolvare |
+|-----------|-----------|-----------|
+| Combo simplu, plată unică | 1 client cumpără un combo | Normal: combo price se aplică, 1 charge |
+| Combo + split egal | 2 clienți împart un combo | Combo price / 2 per persoană |
+| Combo + split per item | 2 clienți, fiecare plătește ce-a ales | Combo discount se distribuie proporțional pe items |
+| Multiple combos + split | 3 clienți, 2 combos + items individuale | Combo-urile se calculează mai întâi, apoi split |
+| Combo parțial (doar unele items) | 3 items în coș, 2 formează combo, 1 nu | Combo pe 2 items, preț normal pe al 3-lea |
+
+### 43.2 Ordinea de calcul la POS
+
+```
+1. Employee adaugă produse în coș
+2. SaleService::detectCombos() → identifică combo-uri aplicabile
+3. Se calculează prețul final (cu combo-uri aplicate)
+4. Employee alege [PLATĂ NORMALĂ] sau [SPLIT]
+5. Dacă split:
+   a. Split egal: total_with_combos / nr_persoane
+   b. Split per item: fiecare item are prețul lui (cu combo discount distribuit)
+   c. Split custom: sume manuale (suma trebuie = total_with_combos)
+6. Se procesează charges
+```
+
+### 43.3 Distribuirea discount-ului combo la split per item
+
+```
+Exemplu:
+  Ursus 500ml: 15 RON (ales de Client A)
+  Hot Dog:     12 RON (ales de Client B)
+  Combo: 22 RON (saving 5 RON)
+
+  Distribuire proporțională:
+  Client A: 15/27 * 22 = 12.22 RON
+  Client B: 12/27 * 22 =  9.78 RON
+  Total:                  22.00 RON ✓
+```
+
+### 43.4 Restricții
+
+- Un combo nu poate fi split între mai multe sale-uri separate (e tot o singură CashlessSale)
+- Age-restricted items din combo: se verifică TOȚI participanții la split (toți trebuie să fie adulți)
+- Combo savings se loghează pe CashlessSale.meta pentru raportare
+
+---
+
+## 44. Offline Queue Priority + Disaster Recovery
+
+### 44.1 Prioritizare queue offline pe POS
+
+Când POS-ul revine online, tranzacțiile se sincronizează în ordinea priorității:
+
+| Prioritate | Tip tranzacție | Motiv |
+|-----------|---------------|-------|
+| 1 (HIGH) | Charges (plăți) | Bani deja încasați fizic, trebuie înregistrate |
+| 2 (HIGH) | Refunds | Bani returnați, trebuie reflectat în sold |
+| 3 (MEDIUM) | Shift close | Afectează rapoartele |
+| 4 (MEDIUM) | Stock movements | Stocul trebuie actualizat |
+| 5 (LOW) | Heartbeats | Status updates |
+| 6 (LOW) | Analytics events | Location pings, etc. |
+
+```
+// POS Sync Engine - pseudocod
+class SyncEngine {
+    async sync() {
+        const queue = await LocalDB.getPendingTransactions();
+        
+        // Sort by priority, then by timestamp
+        queue.sort((a, b) => {
+            if (a.priority !== b.priority) return a.priority - b.priority;
+            return a.timestamp - b.timestamp;
+        });
+        
+        // Sync in batches of 50
+        for (const batch of chunk(queue, 50)) {
+            const result = await api.syncBatch(batch);
+            await LocalDB.markSynced(result.synced);
+            await LocalDB.markConflict(result.conflicts);
+        }
+    }
+}
+```
+
+### 44.2 Queue overflow (storage limitat)
+
+```
+Limită: max 10.000 tranzacții în queue local
+
+Dacă queue e 80% plin (8.000):
+  → Alertă pe ecran POS: "⚠️ Sync urgent - conectează la WiFi"
+
+Dacă queue e 95% plin (9.500):
+  → Alertă critică: "🔴 Spațiu aproape plin. Sincronizează ACUM."
+  → Dezactivare analytics/heartbeat (eliberare spațiu)
+
+Dacă queue e 100%:
+  → POS continuă să funcționeze (nu blochează vânzările!)
+  → Cele mai vechi tranzacții LOW priority se șterg pentru a face loc
+  → Flag: data_loss_risk = true → alertă admin la sync
+```
+
+### 44.3 Disaster Recovery financiar
+
+**Scenariul: Database primară pică în mijlocul festivalului.**
+
+**Strategie pe 3 niveluri:**
+
+```
+Nivel 1: Read Replica Failover (< 30 secunde)
+  - PostgreSQL streaming replication → read replica promovată la primary
+  - Replication lag maxim acceptat: 10 secunde
+  - Pierdere maximă date: ultimele 10s de tranzacții
+  - POS-urile offline nu sunt afectate (continuă local)
+
+Nivel 2: Point-in-Time Recovery (< 15 minute)
+  - WAL archiving continuu (la fiecare 1 minut)
+  - Restore la orice punct din ultimele 24h
+  - Se folosește când replica e compromisă
+
+Nivel 3: Full Backup Restore (< 1 oră)
+  - Backup complet zilnic (noaptea, în afara peak)
+  - Stocat pe S3/external storage
+  - Ultimul resort
+```
+
+**Backup schedule în timpul festivalului:**
+```
+- WAL archive: continuu (la fiecare 60 secunde)
+- Incremental backup: la fiecare 4 ore
+- Full backup: zilnic la 05:00 (post-peak)
+- Transaction log export (CSV): la fiecare oră → S3 (safety net)
+```
+
+**Redis failure:**
+```
+Dacă Redis pică:
+  - Heatmaps: indisponibile temporar (non-critical)
+  - Rate limiting: fallback la in-memory (per-process, mai puțin precis)
+  - Report cache: fallback la DB queries directe (mai lente)
+  - Balance cache: fallback la DB (lockForUpdate() funcționează oricum)
+  → Redis NU este single point of failure pentru operații financiare
+```
+
+---
+
+## 45. Vendor Onboarding + End-of-Festival Checklist
+
+### 45.1 Vendor Onboarding Flow (pas cu pas)
+
+```
+ETAPA 1: CREARE VENDOR (Admin Festival)
+├── Admin creează vendor în Filament (nume, CUI, date companie)
+├── Admin creează primul VendorEmployee cu rol=manager
+├── Sistem trimite email invitație la manager (set password link)
+└── Status vendor: 'onboarding'
+
+ETAPA 2: SETUP VENDOR (Manager)
+├── Manager setează parola, se loghează în Vendor Portal
+├── Manager completează profilul companiei (dacă nu e complet)
+├── Manager adaugă produse (manual sau CSV import)
+├── Manager creează categorii produse
+├── Manager adaugă staff (supervisori, members)
+└── Status vendor: 'pending_approval'
+
+ETAPA 3: APROBARE (Admin Festival)
+├── Admin revizuiește: lista produse, prețuri, date companie
+├── Admin verifică pricing rules respectate (prețuri impuse OK)
+├── Admin verifică produse age-restricted marcate corect
+├── Admin aprobă vendor → status: 'approved'
+└── Dacă probleme → admin respinge cu feedback → vendor revizuiește
+
+ETAPA 4: SETUP EDIȚIE (Admin Festival)
+├── Admin asociază vendor cu ediția (VendorEdition)
+├── Admin setează: comision, locație stand(uri), zone acces
+├── Admin alocă stoc de la suppliers (dacă e cazul)
+├── Admin alocă casa de marcat per stand
+└── Status vendor edition: 'ready'
+
+ETAPA 5: GO LIVE (Ziua festivalului)
+├── Manager/staff se loghează pe POS-uri
+├── Staff-ul startează shift-uri
+├── Primele vânzări
+└── Status vendor edition: 'active'
+```
+
+**Câmp nou pe `VendorEdition`:**
+```
++ onboarding_status     ENUM('onboarding','pending_approval','approved','ready','active','completed','suspended')
++ approved_at           TIMESTAMP NULL
++ approved_by           BIGINT FK → users NULL
++ go_live_at            TIMESTAMP NULL
+```
+
+### 45.2 End-of-Festival Checklist
+
+Procedura completă de închidere, executată ca un wizard în Filament.
+
+**Tabel `festival_closure_checklists`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+status                  ENUM('not_started','in_progress','completed')
+started_at              TIMESTAMP NULL
+completed_at            TIMESTAMP NULL
+started_by              BIGINT FK → users NULL
+steps                   JSON -- status fiecare pas
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**Pașii din checklist:**
+
+```
+FAZA 1: STOP OPERATIONS
+☐ 1.1 Anunță vendorii: "Ultimele 30 minute de vânzări"
+☐ 1.2 Stop top-ups (dezactivare online + fizic)
+☐ 1.3 Stop vânzări (dezactivare POS charge)
+☐ 1.4 Force-close toate shift-urile active
+
+FAZA 2: RECONCILIERE
+☐ 2.1 Forțează sync pe toate POS-urile offline
+☐ 2.2 Așteaptă sincronizare completă (0 pending)
+☐ 2.3 Rulează reconciliere finală (rezolvare conflicte)
+☐ 2.4 Verifică: 0 tranzacții nereconciliate
+
+FAZA 3: STOCURI
+☐ 3.1 Inventar final per stand (vendor confirmă cantități reale)
+☐ 3.2 Calcul diferențe stoc (teoretic vs real)
+☐ 3.3 Logare pierderi/waste
+☐ 3.4 Inițiere retur marfă:
+       - Stoc de la organizator → retur la organizator
+       - Stoc de la supplier → retur la supplier
+☐ 3.5 Confirmare retur din ambele părți
+
+FAZA 4: FINANCE
+☐ 4.1 Generare VendorFinanceSummary final per vendor
+☐ 4.2 Generare raport fiscal final (bonuri, TVA)
+☐ 4.3 Calcul payouts per vendor (net_sales - commissions - fees + tips)
+☐ 4.4 Revizuire payouts de către admin
+☐ 4.5 Aprobare payouts → creare vendor_payouts cu status 'approved'
+☐ 4.6 Executare transferuri bancare
+☐ 4.7 Confirmare transferuri
+
+FAZA 5: CASHOUT CLIENȚI
+☐ 5.1 Notificare clienți: "Festivalul s-a terminat. Solicită cashout în {N} zile."
+☐ 5.2 Activare cashout online (dacă nu era deja)
+☐ 5.3 Procesare cereri cashout (daily job)
+☐ 5.4 Reminder clienți la {N/2} zile: "Mai ai {sold} în cont"
+☐ 5.5 Reminder final la {N-3} zile: "Ultimele 3 zile pentru cashout"
+☐ 5.6 La expirare deadline: solduri rămase → revenue festival
+
+FAZA 6: RAPOARTE FINALE
+☐ 6.1 Generare raport final complet (PDF)
+☐ 6.2 Raport per vendor (trimis fiecărui vendor pe email)
+☐ 6.3 Raport financiar agregat
+☐ 6.4 Raport customer insights
+☐ 6.5 Raport stocuri (livrat vs vândut vs returnat vs pierderi)
+
+FAZA 7: CLEANUP
+☐ 7.1 Dezactivare toate wristband-urile active
+☐ 7.2 Închidere toate CashlessAccount-urile (status='closed')
+☐ 7.3 Marcare ediție ca 'completed'
+☐ 7.4 Arhivare date (mută în cold storage dacă e cazul)
+```
+
+### 45.3 Cashout deadline configurabil
+
+**Câmpuri noi pe `CashlessSettings`:**
+```
++ cashout_deadline_days         INT DEFAULT 30 -- zile după end_date ediție
++ cashout_reminder_days         JSON DEFAULT '[15, 7, 3, 1]' -- când se trimit remindere
++ unclaimed_balance_action      ENUM('revenue','donate','hold') DEFAULT 'revenue'
++ unclaimed_balance_note        TEXT NULL -- "Soldurile nerevendicate devin venituri festival"
+```
+
+**Flow automat:**
+```
+1. Festival se termină (end_date)
+2. Job zilnic verifică: e ziua de reminder? → trimite notificare
+3. La deadline: 
+   - unclaimed_balance_action = 'revenue' → soldurile rămase se marchează ca revenue
+   - CashlessAccount.status = 'closed'
+   - WristbandTransaction: type='unclaimed_closure', amount = remaining balance
+```
 
 ---
