@@ -187,6 +187,9 @@
                             @if($stats['today_orders'] > 0)
                                 · <span class="text-blue-600 dark:text-blue-400">+{{ $stats['today_orders'] }} azi</span>
                             @endif
+                            @if(($stats['external_orders'] ?? 0) > 0)
+                                · <span class="text-indigo-400">🌐 {{ number_format($stats['external_orders']) }} import</span>
+                            @endif
                         </p>
                     </div>
                 </div>
@@ -243,6 +246,9 @@
                             {{ number_format($stats['total_tickets']) }} valide
                             @if($stats['today_tickets'] > 0)
                                 · <span class="text-blue-600 dark:text-blue-400">+{{ $stats['today_tickets'] }} azi</span>
+                            @endif
+                            @if(($stats['external_tickets'] ?? 0) > 0)
+                                · <span class="text-indigo-400">🌐 {{ number_format($stats['external_tickets']) }} import</span>
                             @endif
                         </p>
                     </div>

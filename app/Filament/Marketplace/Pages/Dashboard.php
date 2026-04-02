@@ -180,6 +180,30 @@ class Dashboard extends Page
             ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
 
+        // External import counts (for "din care import" display)
+        $externalTickets = Ticket::whereHas('ticketType.event', fn ($q) => $q->where('marketplace_client_id', $marketplaceId))
+            ->whereHas('order', fn ($q) => $q->where('source', 'external_import'))
+            ->whereIn('status', ['valid', 'used'])
+            ->count();
+        $externalOrders = Order::where('marketplace_client_id', $marketplaceId)
+            ->where('source', 'external_import')
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->count();
+        $externalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+            ->whereExists(function ($q) use ($marketplaceId) {
+                $q->select(\DB::raw(1))->from('orders')
+                    ->whereColumn('orders.marketplace_customer_id', 'marketplace_customers.id')
+                    ->where('orders.source', 'external_import')
+                    ->where('orders.marketplace_client_id', $marketplaceId);
+            })
+            ->whereNotExists(function ($q) use ($marketplaceId) {
+                $q->select(\DB::raw(1))->from('orders')
+                    ->whereColumn('orders.marketplace_customer_id', 'marketplace_customers.id')
+                    ->where('orders.source', '!=', 'external_import')
+                    ->where('orders.marketplace_client_id', $marketplaceId);
+            })
+            ->count();
+
         // 6. Organizers - single query
         $orgStats = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
             ->selectRaw('COUNT(*) as total')
@@ -264,6 +288,9 @@ class Dashboard extends Page
                 'total_tickets' => (int) $ticketStats->sold,
                 'today_tickets' => (int) $ticketStats->sold_today,
                 'total_tickets_db' => (int) $ticketStats->total_db,
+                'external_tickets' => $externalTickets,
+                'external_orders' => $externalOrders,
+                'external_customers' => $externalCustomers,
                 'total_organizers' => (int) $orgStats->total,
                 'active_organizers' => (int) $orgStats->active,
                 'pending_payouts_value' => (float) $payoutStats->pending,
@@ -389,17 +416,24 @@ class Dashboard extends Page
             $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
         );
 
-        // Tickets sold this month — same logic as TicketResource
+        // Tickets sold this month — exclude external imports
         $ticketsSold = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
                 $q->where('marketplace_client_id', $marketplaceId);
             })
+            ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
             ->whereIn('status', ['valid', 'used'])
             ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->count();
 
-        // New customers this month
+        // New customers this month — exclude those created only via external import
         $newCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
             ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->whereExists(function ($q) use ($marketplaceId) {
+                $q->select(\DB::raw(1))->from('orders')
+                    ->whereColumn('orders.marketplace_customer_id', 'marketplace_customers.id')
+                    ->where('orders.source', '!=', 'external_import')
+                    ->where('orders.marketplace_client_id', $marketplaceId);
+            })
             ->count();
 
         // Orders this month (paid + confirmed + completed + refunded, excl cancelled)
