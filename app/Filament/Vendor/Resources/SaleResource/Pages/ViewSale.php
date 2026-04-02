@@ -4,16 +4,16 @@ namespace App\Filament\Vendor\Resources\SaleResource\Pages;
 
 use App\Filament\Vendor\Resources\SaleResource;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Schema;
 
 class ViewSale extends ViewRecord
 {
     protected static string $resource = SaleResource::class;
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        return $infolist->schema([
+        return $schema->schema([
             Infolists\Components\Section::make('Sale Details')->schema([
                 Infolists\Components\TextEntry::make('sale_number')
                     ->label('Sale Number'),
