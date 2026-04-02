@@ -1801,14 +1801,17 @@ class OrderResource extends Resource
             default => 'gray',
         };
 
-        $events->push([
-            'status' => $statusColor,
-            'text' => $statusText,
-            'time' => $record->updated_at,
-        ]);
+        // Don't add current status as event if refunded (refund events cover it)
+        if (!in_array($record->status, ['refunded', 'partially_refunded'])) {
+            $events->push([
+                'status' => $statusColor,
+                'text' => $statusText,
+                'time' => $record->updated_at,
+            ]);
+        }
 
-        // Payment processed (if paid)
-        if (in_array($record->status, ['paid', 'confirmed'])) {
+        // Payment processed (if paid/completed/refunded — was paid before refund)
+        if (in_array($record->status, ['paid', 'confirmed', 'completed', 'refunded', 'partially_refunded'])) {
             $paidAt = $record->paid_at ?? $record->meta['paid_at'] ?? $record->created_at->addMinutes(2);
             $events->push([
                 'status' => 'success',
@@ -1830,8 +1833,17 @@ class OrderResource extends Resource
         if (in_array($record->status, ['refunded', 'partially_refunded'])) {
             $refundRequests = $record->refundRequests()->orderByDesc('created_at')->get();
             foreach ($refundRequests as $refReq) {
-                if ($refReq->status === 'refunded' || $refReq->status === 'partially_refunded') {
-                    $amount = number_format($refReq->approved_amount ?? $refReq->requested_amount ?? 0, 2);
+                $amount = number_format($refReq->approved_amount ?? $refReq->requested_amount ?? 0, 2);
+
+                // Refund initiated
+                $events->push([
+                    'status' => 'warning',
+                    'text' => "Rambursare inițializată — {$amount} {$record->currency}",
+                    'time' => $refReq->created_at,
+                ]);
+
+                // Refund processed
+                if (in_array($refReq->status, ['refunded', 'partially_refunded'])) {
                     $events->push([
                         'status' => 'info',
                         'text' => "Rambursare procesată — {$amount} {$record->currency} ({$refReq->reference})",
@@ -1839,23 +1851,16 @@ class OrderResource extends Resource
                     ]);
                 }
             }
-
-            if ($record->refunded_at) {
-                $events->push([
-                    'status' => 'danger',
-                    'text' => $record->status === 'partially_refunded' ? 'Comandă rambursată parțial' : 'Comandă rambursată',
-                    'time' => $record->refunded_at,
-                ]);
-            }
         }
 
-        // Refund email tracking
-        $refundEmails = \App\Models\MarketplaceEmailLog::where('marketplace_client_id', $record->marketplace_client_id)
+        // Refund email tracking — one email per refund request (latest)
+        $refundEmail = \App\Models\MarketplaceEmailLog::where('marketplace_client_id', $record->marketplace_client_id)
             ->where('template_slug', 'refund_processed')
-            ->where('to_email', $record->customer_email ?? $record->marketplaceCustomer?->email ?? '')
-            ->where('created_at', '>=', $record->created_at)
-            ->orderBy('created_at')
-            ->get();
+            ->where('subject', 'like', '%' . ($record->order_number ?? $record->id) . '%')
+            ->orderByDesc('id')
+            ->first();
+
+        $refundEmails = $refundEmail ? collect([$refundEmail]) : collect();
 
         foreach ($refundEmails as $emailLog) {
             $events->push([
