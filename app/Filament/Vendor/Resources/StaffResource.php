@@ -17,7 +17,7 @@ class StaffResource extends Resource
 {
     protected static ?string $model = VendorEmployee::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $navigationLabel = 'Staff';
 

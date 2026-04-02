@@ -14,7 +14,7 @@ class SaleResource extends Resource
 {
     protected static ?string $model = CashlessSale::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
 
     protected static ?string $navigationLabel = 'Sales';
 

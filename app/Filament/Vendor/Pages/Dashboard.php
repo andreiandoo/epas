@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class Dashboard extends Page
 {
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-home';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-home';
 
     protected static ?string $navigationLabel = 'Dashboard';
 
