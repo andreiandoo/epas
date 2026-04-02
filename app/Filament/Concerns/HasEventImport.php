@@ -475,7 +475,7 @@ trait HasEventImport
 
         // Store the uploaded file
         $path = $this->uploadedFile->store('imports', 'local');
-        $this->storedFilePath = storage_path('app/' . $path);
+        $this->storedFilePath = \Illuminate\Support\Facades\Storage::disk('local')->path($path);
 
         $source = $this->eventFormData['import_source'] ?? 'iabilet';
         $parser = $this->getParsers()[$source] ?? null;
