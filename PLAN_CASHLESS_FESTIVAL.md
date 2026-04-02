@@ -2133,7 +2133,26 @@ Cu secțiunile noi, fazele devin:
 
 ---
 
-*Plan complet: 34 secțiuni acoperind 10 cerințe originale + 13 îmbunătățiri. 28 tabele noi, 11 modificate, 14+ enums. 10 faze de implementare, ~20 săptămâni. 70+ rapoarte inclusiv predictive. Live tracking + heatmaps. Anomaly detection.*
+### Tabele noi adiționale (secțiunile 35-38):
+
+| # | Tabel | Secțiune |
+|---|-------|----------|
+| 29 | `cashless_combos` | 35.2 |
+| 30 | `cashless_combo_items` | 35.2 |
+| 31 | `cashless_sale_splits` | 36.3 |
+
+### Tabele existente modificate adițional:
+
+| Tabel | Secțiune | Câmpuri noi |
+|-------|----------|-------------|
+| `cashless_sales` | 35/36 | tip_cents, tip_percentage, total_with_tip_cents, is_split_payment, split_count, split_method |
+| `cashless_settings` | 35/36/37 | tipping config, split_max_participants, offline POS config |
+
+**Total final: 31 tabele noi + 12 tabele modificate + 14+ enums**
+
+---
+
+*Plan complet: 38 secțiuni acoperind 10 cerințe originale + 17 îmbunătățiri. 31 tabele noi, 12 modificate, 14+ enums. 10 faze de implementare, ~20 săptămâni. 70+ rapoarte inclusiv predictive. Live tracking + heatmaps. Anomaly detection. Offline-first POS architecture. SLA targets definite.*
 
 ---
 
@@ -3028,5 +3047,407 @@ class AnomalyDetectionService
 - Predictions API: `GET /api/cashless/predictions/sales?hours_ahead=6`
 - Anomalies API: `GET /api/cashless/anomalies?status=active`
 - Webhook event: `anomaly.detected` → trimis la endpoints configurate
+
+---
+
+## 35. Combo / Bundle Deals
+
+### 35.1 Concept
+
+Pachete predefinite care oferă discount când produsele se cumpără împreună. Pot fi configurate:
+- **Per vendor** – vendor-ul își setează combo-urile proprii ("Bere + Hot Dog = 22 RON")
+- **Per festival** – admin-ul festivalului impune combo-uri cross-vendor sau pe produse supplier
+
+### 35.2 Model: `CashlessCombo`
+
+**Tabel `cashless_combos`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+vendor_id               BIGINT FK NULL -- NULL = combo la nivel de festival (orice vendor)
+name                    VARCHAR(255) -- "Bere + Hot Dog Menu"
+slug                    VARCHAR(255)
+description             TEXT NULL
+combo_type              ENUM('fixed_price','percentage_discount','fixed_discount')
+fixed_price_cents       INT NULL -- preț fix combo (ex: 2200 = 22 RON)
+discount_percentage     DECIMAL(5,2) NULL -- 15% discount pe total items
+discount_cents          INT NULL -- 500 = 5 RON reducere fixă
+original_price_cents    INT -- suma prețurilor individuale (ex: 2700 = 27 RON)
+savings_cents           INT -- economie (ex: 500 = 5 RON)
+image_url               VARCHAR(500) NULL
+is_active               BOOLEAN DEFAULT true
+valid_from              TIMESTAMP NULL
+valid_until             TIMESTAMP NULL
+max_redemptions         INT NULL -- limită totală
+current_redemptions     INT DEFAULT 0
+max_per_customer        INT NULL -- max per client per zi
+sort_order              INT DEFAULT 0
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**Tabel `cashless_combo_items`:**
+```
+id                      BIGINT PK AUTO
+cashless_combo_id       BIGINT FK → cashless_combos
+vendor_product_id       BIGINT FK → vendor_products NULL -- produs specific
+product_category        VARCHAR(100) NULL -- SAU orice produs din categorie
+quantity                INT DEFAULT 1 -- câte bucăți din acest item
+is_required             BOOLEAN DEFAULT true -- obligatoriu sau opțional
+sort_order              INT DEFAULT 0
+meta                    JSON NULL
+```
+
+### 35.3 Exemple configurare
+
+**Combo fix (vendor level):**
+```
+Combo: "Bere + Hot Dog Menu"
+Items: 1x Ursus 500ml (15 RON) + 1x Hot Dog Classic (12 RON)
+combo_type: 'fixed_price', fixed_price_cents: 2200
+original_price_cents: 2700, savings_cents: 500
+→ Client plătește 22 RON în loc de 27 RON
+```
+
+**Combo categorie (festival level):**
+```
+Combo: "Drink + Food Deal"
+Items: 1x orice din "Bere" + 1x orice din "Fast Food"
+combo_type: 'percentage_discount', discount_percentage: 10
+→ 10% discount pe orice combinație bere + mâncare
+```
+
+**Combo time-limited:**
+```
+Combo: "Happy Hour Combo"
+valid_from: 14:00, valid_until: 16:00
+→ Activ doar în intervalul orar
+```
+
+### 35.4 Flow POS
+
+```
+1. Employee adaugă produse în coș: Ursus 500ml + Hot Dog Classic
+2. SaleService::detectCombos() verifică automat dacă produsele match un combo activ
+3. Dacă da → afișare pe ecran POS: "Combo disponibil: -5 RON"
+   [APLICĂ COMBO] [NU, PREȚURI INDIVIDUALE]
+4. Employee/client confirmă → se aplică discount
+5. CashlessSale: total_cents=2200, meta: { "combo_id": 5, "combo_savings_cents": 500 }
+6. VendorSaleItem-uri: fiecare item cu flag combo_applied=true
+```
+
+### 35.5 Rapoarte combo
+
+- Total combo-uri vândute per tip
+- Savings total oferit clienților (marketing metric)
+- Top combo-uri (popularitate)
+- Conversion rate: câte ori s-a afișat combo vs. câte ori s-a aplicat
+
+---
+
+## 36. Split Payment (Plată Împărțită)
+
+### 36.1 Concept
+
+Doi sau mai mulți clienți împart nota de plată la un vendor. Ex: 3 prieteni comandă împreună, fiecare plătește partea lui.
+
+### 36.2 Flow split payment
+
+```
+1. Employee creează coșul normal:
+   2x Bere Ursus    30 RON
+   1x Pizza          25 RON
+   1x Nachos         18 RON
+   TOTAL:            73 RON
+
+2. Employee alege [SPLIT PAYMENT]
+
+3. Opțiuni split:
+   a. EGAL: 73 / 3 = 24.33 RON fiecare (rotunjire pe ultimul)
+   b. PER ITEM: fiecare alege ce-a comandat
+   c. CUSTOM: sume custom per persoană
+
+4. Scanare wristband #1 → charge 24.33 RON ✓
+   Scanare wristband #2 → charge 24.33 RON ✓
+   Scanare wristband #3 → charge 24.34 RON ✓ (rotunjire)
+
+5. Se creează UN SINGUR CashlessSale (parent) cu mai multe WristbandTransactions
+```
+
+### 36.3 Model
+
+**Câmpuri noi pe `CashlessSale`:**
+```
++ is_split_payment       BOOLEAN DEFAULT false
++ split_count            INT DEFAULT 1 -- câte persoane
++ split_method           ENUM('equal','per_item','custom') NULL
+```
+
+**Tabel `cashless_sale_splits`:**
+```
+id                      BIGINT PK AUTO
+cashless_sale_id        BIGINT FK → cashless_sales
+cashless_account_id     BIGINT FK → cashless_accounts
+customer_id             BIGINT FK → customers NULL
+wristband_transaction_id BIGINT FK → wristband_transactions
+amount_cents            INT -- suma plătită de acest participant
+split_order             INT -- 1, 2, 3...
+items                   JSON NULL -- items alocate (pt split per_item)
+meta                    JSON NULL
+created_at              TIMESTAMP
+```
+
+### 36.4 Reguli business
+
+- Split maxim: configurabil în CashlessSettings (default 6 persoane)
+- Fiecare participant trebuie să aibă sold suficient ÎNAINTE de procesare
+- Dacă un participant nu are sold → opțiune de re-split între ceilalți
+- Toate charge-urile dintr-un split se procesează atomic (toate sau niciuna)
+- Suma split-urilor trebuie să fie exact egală cu total_cents (validare strictă)
+- Tipping: se poate adăuga tip doar pe split-ul propriu
+
+```php
+// Atomic split processing
+DB::transaction(function () use ($sale, $splits) {
+    foreach ($splits as $split) {
+        $account = CashlessAccount::lockForUpdate()->find($split['account_id']);
+        if ($account->balance_cents < $split['amount_cents']) {
+            throw new InsufficientBalanceException(
+                "Account {$account->account_number} has insufficient balance for split"
+            );
+        }
+    }
+    // All validated, now charge all
+    foreach ($splits as $split) {
+        $this->cashlessAccountService->charge($split['account_id'], $split['amount_cents'], ...);
+    }
+});
+```
+
+---
+
+## 37. Offline-First POS Architecture
+
+### 37.1 Overview
+
+POS-ul trebuie să funcționeze **complet offline**. Conexiunea la internet e instabilă la festivaluri (mulți oameni, acoperire slabă). Arhitectura trebuie să fie offline-first, online-second.
+
+### 37.2 Arhitectura device
+
+```
+┌──────────────────────────────────────────┐
+│  POS Device (Tablet Android/iOS)          │
+│                                           │
+│  ┌─────────────────────────────────────┐  │
+│  │  POS App (PWA sau Native)           │  │
+│  │                                     │  │
+│  │  ┌────────────┐  ┌──────────────┐  │  │
+│  │  │ UI Layer   │  │ Sync Engine  │  │  │
+│  │  │ (Vue/React)│  │              │  │  │
+│  │  └──────┬─────┘  └──────┬───────┘  │  │
+│  │         │               │           │  │
+│  │  ┌──────┴───────────────┴───────┐  │  │
+│  │  │     Local Business Logic     │  │  │
+│  │  │  (charge, validate, queue)   │  │  │
+│  │  └──────────────┬───────────────┘  │  │
+│  │                 │                   │  │
+│  │  ┌──────────────┴───────────────┐  │  │
+│  │  │     SQLite / IndexedDB       │  │  │
+│  │  │  - products cache            │  │  │
+│  │  │  - wristband balance cache   │  │  │
+│  │  │  - transaction queue         │  │  │
+│  │  │  - shift data                │  │  │
+│  │  └──────────────────────────────┘  │  │
+│  └─────────────────────────────────────┘  │
+│                                           │
+│  ┌──────────┐  ┌───────────┐              │
+│  │ NFC      │  │ Camera    │              │
+│  │ Reader   │  │ (QR scan) │              │
+│  └──────────┘  └───────────┘              │
+└──────────────────────────────────────────┘
+         ↕ (când e online)
+    ┌─────────────┐
+    │  Server API │
+    └─────────────┘
+```
+
+### 37.3 Date locale pe device
+
+**Ce se sincronizează de pe server → device (download):**
+
+| Date | Frecvență sync | Stocare |
+|------|---------------|---------|
+| Produse vendor (nume, preț, categorie, is_age_restricted) | La fiecare online ping (sau manual) | SQLite |
+| Combo-uri active | La fiecare sync | SQLite |
+| Pricing rules (prețuri impuse) | La fiecare sync | SQLite |
+| Lista wristband UIDs + balance cache | La fiecare sync (delta) | SQLite |
+| Angajat curent + permisiuni | La login | SQLite |
+| Cashless settings (limits, cooldowns) | La fiecare sync | SQLite |
+
+**Ce se sincronizează de pe device → server (upload):**
+
+| Date | Frecvență | Handling |
+|------|-----------|----------|
+| Tranzacții (charges, refunds) | Real-time dacă online, batch la reconnect | Queue + idempotent sync |
+| Shift start/end | Real-time sau batch | Queue |
+| Balance updates pe wristbands | Embedded în tranzacții | Server recalculează |
+
+### 37.4 Offline charge flow
+
+```
+1. Employee scanează wristband (NFC/QR) → POS citește UID
+2. POS verifică LOCAL:
+   a. UID există în baza locală? (downloaded la sync)
+   b. Balance cache suficient? (ultimul sold known)
+   c. Wristband nu e disabled?
+   d. Cooldown respectat? (ultima tranzacție locală > 10s)
+   e. Age restriction ok? (date_of_birth din cache)
+
+3. Dacă validare trece:
+   a. Decrementare balance LOCAL (optimistic)
+   b. Generare offline_ref unic: "{device_uid}-{timestamp}-{sequence}"
+   c. Salvare tranzacție în LOCAL QUEUE cu status='pending_sync'
+   d. Afișare succes pe ecranul POS
+   e. Print/show receipt local
+
+4. Când revine conexiunea:
+   a. Sync engine trimite batch-ul de tranzacții pending
+   b. Server procesează fiecare cu lockForUpdate()
+   c. Server returnează status per tranzacție
+   d. POS marchează tranzacțiile ca synced
+   e. POS primește balance-uri actualizate de pe server → update cache local
+```
+
+### 37.5 Conflict resolution pe device
+
+```
+Scenariul: Client cu 50 RON plătește offline 30 RON la POS-A.
+Între timp, plătește 30 RON la POS-B (tot offline, ambele au cache cu 50 RON).
+La sync: server are sold real 50, primește -30 (POS-A) și -30 (POS-B) = -10 RON.
+
+Rezolvare (server-side):
+1. Prima tranzacție ajunsă: OK (50 - 30 = 20 RON)
+2. A doua tranzacție: sold insuficient (20 < 30)
+   → Marcare 'conflict' pe reconciliation
+   → Tranzacția SE ACCEPTĂ totuși (sold devine -10 RON)
+   → Flag pe CashlessAccount: negative_balance_allowed_until = now + 24h
+   → Alertă admin: "Sold negativ pe contul {X}: -{10 RON}"
+   → La următorul top-up al clientului, soldul negativ se recuperează automat
+
+Rațiune: e mai bine să permitem sold negativ temporar decât să respingem
+o tranzacție care deja s-a finalizat fizic (clientul a primit produsul).
+```
+
+### 37.6 Heartbeat & connectivity indicator
+
+```
+POS → Server: ping la fiecare 30 secunde
+Răspuns: { "status": "ok", "server_time": "...", "pending_sync": 0 }
+
+UI indicator pe POS:
+🟢 Online (0 pending)
+🟡 Online (5 pending sync)  
+🔴 Offline (23 pending sync)
+⚫ Offline >2h (alertă mare pe ecran)
+```
+
+---
+
+## 38. SLA & Performance Targets
+
+### 38.1 Performance Targets per operație
+
+| Operație | Target | Max acceptable | Măsurare |
+|----------|--------|----------------|----------|
+| **POS charge** (online) | <150ms | <500ms | P95 response time |
+| **POS charge** (offline local) | <50ms | <100ms | Local processing |
+| **Top-up online** (card payment excluded) | <200ms | <800ms | P95 |
+| **Balance check** | <100ms | <300ms | P95 |
+| **Heatmap refresh** | <3s | <5s | Redis read + aggregation |
+| **Report generation** (standard) | <2s | <5s | P95 |
+| **Report generation** (complex/aggregate) | <10s | <30s | P95 |
+| **Report export CSV** (10K rows) | <5s | <15s | Async job |
+| **Report export PDF** | <10s | <30s | Async job |
+| **Offline sync batch** (200 transactions) | <5s | <15s | P95 |
+| **Customer profile calculation** | <500ms per client | <2s | Batch job |
+| **Prediction forecast** (hourly sales) | <1s | <3s | P95 |
+| **Anomaly detection scan** | <10s per run | <30s | 5-min job |
+| **Map POI load** | <500ms | <1s | P95 |
+| **Webhook delivery** (first attempt) | <2s | <5s | P95 |
+
+### 38.2 Availability Targets
+
+| Component | Target | Comentariu |
+|-----------|--------|------------|
+| **Financial operations** (charge, topup, cashout) | 99.95% | Maxim ~22 min downtime/lună |
+| **POS API** | 99.9% | Offline-first compensează |
+| **Heatmap & tracking** | 99.0% | Non-critical |
+| **Reports** | 99.5% | Async, tolerabil |
+| **Client app API** | 99.9% | |
+| **Webhook delivery** | 99.5% | Retry compensează |
+| **Database** | 99.99% | PostgreSQL replication |
+| **Redis cache** | 99.9% | Fallback la DB dacă Redis down |
+
+### 38.3 Scalability Targets
+
+| Metric | Target | Scenariul |
+|--------|--------|-----------|
+| Concurrent POS devices | 500 | Festival mare (50 vendori × 10 POS) |
+| Transactions per minute (peak) | 5,000 | Peak hour (500 POS × 10 tx/min) |
+| Concurrent app users | 10,000 | Vizualizare sold + heatmap |
+| Wristbands per edition | 100,000 | Festival mare |
+| Total transactions per edition | 2,000,000 | 4 zile × 500K tx/zi |
+| Offline sync batch (concurrent) | 50 | 50 POS-uri sync simultan |
+| Report query (max rows scanned) | 10,000,000 | Aggregate pe toată ediția |
+
+### 38.4 Optimizări necesare
+
+| Zonă | Strategie |
+|------|-----------|
+| **POS charge latency** | Redis cache balance + optimistic locking; DB write async cu confirm |
+| **Report queries** | Pre-calculated aggregates (cashless_report_snapshots), materialized views, partition by edition_id |
+| **Heatmap** | Redis sorted sets per zonă, agregare in-memory |
+| **Offline sync** | Batch insert cu ON CONFLICT (offline_ref) DO NOTHING (idempotent) |
+| **Database scaling** | Read replicas pentru reports; primary doar pt. writes financiare |
+| **Connection pooling** | PgBouncer pentru PostgreSQL (max 500 connections) |
+| **Queue throughput** | Redis queue driver (nu database), 4+ workers dedicați |
+| **CDN** | Static assets (map tiles, images) pe CloudFlare CDN |
+| **Indexing** | Composite indexes pe: (edition_id, created_at), (account_id, transaction_type), (vendor_id, created_at) |
+
+### 38.5 Monitoring & Alerting
+
+**Metrici monitorizate (Prometheus/Grafana sau similar):**
+
+```
+cashless_charge_duration_seconds          (histogram)
+cashless_topup_duration_seconds           (histogram)
+cashless_active_pos_devices               (gauge)
+cashless_transactions_per_minute          (counter rate)
+cashless_offline_pending_count            (gauge per device)
+cashless_negative_balance_accounts        (gauge)
+cashless_report_generation_seconds        (histogram)
+cashless_heatmap_refresh_seconds          (histogram)
+cashless_redis_hit_rate                   (gauge)
+cashless_db_connection_pool_usage         (gauge)
+cashless_queue_depth                      (gauge)
+cashless_webhook_delivery_success_rate    (gauge)
+cashless_anomalies_active                 (gauge)
+```
+
+**Alerte automate:**
+
+| Alertă | Condiție | Severitate |
+|--------|----------|------------|
+| Charge latency high | P95 > 500ms pentru 5 min | Warning |
+| Charge latency critical | P95 > 2s pentru 2 min | Critical |
+| Offline devices high | >10 POS-uri offline >30 min | Warning |
+| Transaction rate drop | -50% vs. aceeași oră ieri | Warning |
+| Queue depth high | >1000 jobs pending >5 min | Warning |
+| Redis down | Connection failed | Critical |
+| DB replication lag | >10s | Warning |
+| Negative balance accounts | >5 conturi cu sold negativ | Warning |
+| Webhook failures | >50% failure rate >10 min | Warning |
 
 ---
