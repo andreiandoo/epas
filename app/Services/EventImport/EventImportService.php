@@ -61,8 +61,6 @@ class EventImportService
 
             foreach ($orderGroups as $orderId => $orderRows) {
                 try {
-                    DB::beginTransaction();
-
                     $result = $this->processOrderGroup(
                         $orderId,
                         $orderRows,
@@ -77,12 +75,12 @@ class EventImportService
                         $isExternalImport,
                     );
 
-                    DB::commit();
                     $totalTickets += $result['tickets'];
                     $totalOrders++;
                 } catch (\Throwable $e) {
-                    DB::rollBack();
                     $errors[] = "Order {$orderId}: {$e->getMessage()}";
+                    // Reset PgBouncer connection state after error
+                    try { DB::reconnect(); } catch (\Throwable $ignored) {}
                 }
             }
 
