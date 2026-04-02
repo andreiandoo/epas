@@ -577,6 +577,14 @@ trait HasEventImport
 
         $source = $this->eventFormData['import_source'] ?? 'iabilet';
 
+        // Inject marketplace_client_id if available (for marketplace customer creation)
+        if (method_exists($this, 'getMarketplaceClient')) {
+            $client = static::getMarketplaceClient();
+            if ($client) {
+                $this->eventFormData['marketplace_client_id'] = $client->id;
+            }
+        }
+
         try {
             $service = new EventImportService();
             $result = $service->process($rows, $this->eventFormData, $tenantId, $source);
