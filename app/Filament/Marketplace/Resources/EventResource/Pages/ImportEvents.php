@@ -34,9 +34,11 @@ class ImportEvents extends Page implements HasForms
 
         $client = static::getMarketplaceClient();
         if ($client) {
-            $tenant = Tenant::where('marketplace_client_id', $client->id)->first();
-            if ($tenant) {
-                return $tenant->id;
+            // Try allowed_tenants first
+            $allowedTenants = $client->allowed_tenants ?? [];
+            if (!empty($allowedTenants)) {
+                $firstTenantId = is_array($allowedTenants) ? ($allowedTenants[0] ?? null) : null;
+                if ($firstTenantId) return (int) $firstTenantId;
             }
         }
 
