@@ -3617,3 +3617,259 @@ Interfața e definită, driver-ele concrete se vor implementa când se stabilesc
 | Raport Z zilnic per casă | Sumar zilnic (ca raport Z fiscal) |
 
 ---
+
+## 40. Multi-Stand per Vendor
+
+### 40.1 Concept
+
+Un vendor poate opera **mai multe standuri fizice** în festival. Fiecare stand:
+- Are nume propriu ("Beer Corner - Stand Nord")
+- Stoc propriu (dar vizibil agregat la nivel vendor)
+- Poate avea meniu diferit (subset de produse, eventual prețuri diferite)
+- Are propria casă de marcat (un fiscal device per stand)
+- Are POS-uri (telefoane angajați) legate de stand
+- Angajații pot rota între standuri de la o zi la alta
+
+### 40.2 Model nou: `VendorStand`
+
+**Tabel `vendor_stands`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+vendor_id               BIGINT FK → vendors
+name                    VARCHAR(255) -- "Beer Corner - Stand Nord"
+slug                    VARCHAR(255)
+location                VARCHAR(255) NULL -- descriere text locație
+location_coordinates    VARCHAR(100) NULL -- lat,lng
+zone                    VARCHAR(100) NULL -- "Zona A", "VIP Area"
+poi_id                  BIGINT FK → festival_points_of_interest NULL -- link pe hartă
+fiscal_device_id        VARCHAR(100) NULL -- ID casa de marcat alocată
+status                  ENUM('active','inactive','setup','closed') DEFAULT 'setup'
+operating_hours         JSON NULL -- {"monday": {"open": "10:00", "close": "02:00"}, ...}
+capacity                INT NULL -- nr. maxim angajați simultani
+contact_phone           VARCHAR(50) NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+
+UNIQUE (festival_edition_id, slug)
+```
+
+### 40.3 Modificări pe modele existente
+
+**`VendorPosDevice` – câmp nou:**
+```
++ vendor_stand_id        BIGINT FK → vendor_stands NULL
+```
+
+**`VendorShift` – câmp nou:**
+```
++ vendor_stand_id        BIGINT FK → vendor_stands NULL
+```
+
+**`VendorSaleItem` – câmp nou:**
+```
++ vendor_stand_id        BIGINT FK → vendor_stands NULL
+```
+
+**`CashlessSale` – câmp nou:**
+```
++ vendor_stand_id        BIGINT FK → vendor_stands NULL
+```
+
+**`CashlessFiscalReceipt` – câmp nou:**
+```
++ vendor_stand_id        BIGINT FK → vendor_stands NULL
+```
+
+**`InventoryStock` – modificare:**
+```
+Existent: UNIQUE (festival_edition_id, supplier_product_id, vendor_id)
+Nou:      vendor_stand_id BIGINT FK → vendor_stands NULL
+          -- vendor_id = stoc total vendor (agregat)
+          -- vendor_stand_id = stoc per stand
+Nou UNIQUE: (festival_edition_id, supplier_product_id, vendor_id, vendor_stand_id)
+```
+
+### 40.4 Meniu per stand
+
+Un stand poate avea un subset de produse din catalogul vendor-ului, cu posibilitate de prețuri diferite.
+
+**Tabel `vendor_stand_products`:**
+```
+id                      BIGINT PK AUTO
+vendor_stand_id         BIGINT FK → vendor_stands
+vendor_product_id       BIGINT FK → vendor_products
+is_available            BOOLEAN DEFAULT true
+override_price_cents    INT NULL -- NULL = folosește prețul standard din vendor_products
+sort_order              INT DEFAULT 0
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+
+UNIQUE (vendor_stand_id, vendor_product_id)
+```
+
+**Logica:**
+- Dacă `vendor_stand_products` nu are niciun entry pentru stand → stand-ul are TOATE produsele vendor-ului
+- Dacă are entries → stand-ul are DOAR produsele listate
+- Dacă `override_price_cents` IS NOT NULL → se folosește prețul custom, altfel prețul din `vendor_products.sale_price_cents`
+
+### 40.5 Stoc per Stand
+
+**Ierarhie stocuri:**
+```
+Festival (organizator)
+  └── Vendor (agregat toate standurile)
+       ├── Stand Nord (stoc propriu)
+       ├── Stand Sud (stoc propriu)
+       └── Stand VIP (stoc propriu)
+```
+
+**InventoryStock** are acum 3 niveluri:
+- `vendor_id NOT NULL, vendor_stand_id IS NULL` → stoc agregat vendor (calcul automat = sumă standuri)
+- `vendor_id NOT NULL, vendor_stand_id NOT NULL` → stoc per stand (sursa de adevăr)
+- `vendor_id IS NULL, vendor_stand_id IS NULL` → stoc festival (organizator, nedistribuit)
+
+### 40.6 Stock Transfer cu confirmare bilaterală
+
+**Tabel `inventory_transfer_requests`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+supplier_product_id     BIGINT FK
+quantity                DECIMAL(12,3)
+unit_measure            VARCHAR(50)
+
+-- Sursa
+from_type               ENUM('festival','vendor','stand')
+from_vendor_id          BIGINT FK NULL
+from_stand_id           BIGINT FK → vendor_stands NULL
+
+-- Destinație
+to_type                 ENUM('vendor','stand')
+to_vendor_id            BIGINT FK NULL
+to_stand_id             BIGINT FK → vendor_stands NULL
+
+-- Status
+status                  ENUM('pending','accepted','rejected','cancelled','expired')
+requested_by            VARCHAR(255) -- cine a inițiat
+requested_at            TIMESTAMP
+accepted_by             VARCHAR(255) NULL
+accepted_at             TIMESTAMP NULL
+rejected_by             VARCHAR(255) NULL
+rejected_at             TIMESTAMP NULL
+rejection_reason        TEXT NULL
+expires_at              TIMESTAMP NULL -- expiră dacă nu e acceptat (ex: 2h)
+
+-- Post-confirmare
+inventory_movement_id   BIGINT FK → inventory_movements NULL -- creat la accept
+notes                   TEXT NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### 40.7 Flow-uri Stock Transfer
+
+**Scenariul 1: Organizator → Stand (marfa pleacă de la organizator)**
+```
+1. Admin festival creează transfer request:
+   from_type='festival', to_type='stand', to_stand_id=5, quantity=100, product="Cola 330ml"
+   → status='pending'
+   → Notificare la vendor manager: "Organizatorul vrea să livreze 100x Cola la Stand Nord"
+
+2. Vendor manager ACCEPTĂ:
+   → status='accepted'
+   → Se creează InventoryMovement: movement_type='allocation'
+   → Stoc festival: quantity_allocated += 100
+   → Stoc stand: quantity_total += 100
+   → Stoc vendor (agregat): recalculat automat
+
+3. Sau RESPINGE:
+   → status='rejected', rejection_reason="Nu avem spațiu de depozitare"
+```
+
+**Scenariul 2: Stand ↔ Stand (transfer intern vendor)**
+```
+1. Manager Stand Nord: "Transfer 20x Ursus la Stand Sud"
+   from_type='stand', from_stand_id=1, to_type='stand', to_stand_id=2
+   → status='pending'
+   → Notificare la Stand Sud
+
+2. Manager/Supervisor Stand Sud ACCEPTĂ:
+   → InventoryMovement cu from_vendor_id + to_vendor_id (sau stand IDs)
+   → Stoc Stand Nord: -20
+   → Stoc Stand Sud: +20
+   → Stoc vendor (agregat): rămâne neschimbat (20 se mută doar între standuri)
+```
+
+**Scenariul 3: Vendor → Stand (vendorul are stoc centralizat, distribuie la standuri)**
+```
+1. Vendor manager alocă din stocul vendor (nealocat la niciun stand) → Stand Nord
+   from_type='vendor', from_vendor_id=3, to_type='stand', to_stand_id=1
+   → status='pending'
+   → Dacă managerul e cel care face și primește → auto-accept
+
+2. Accept → InventoryMovement, update stocuri
+```
+
+### 40.8 Retur de marfă (end-of-festival)
+
+```
+La final festival, organizatorul trebuie să știe cât a rămas per stand și per vendor.
+
+1. Admin festival: "Raport stoc final"
+   → Per stand: ce cantitate rămâne din fiecare produs
+   → Per vendor: sumă pe toate standurile
+   → Per supplier: cât a fost livrat - cât s-a vândut - cât se returnează
+
+2. Retur: organizatorul inițiază transfer request invers:
+   from_type='stand', to_type='festival'
+   → Stand confirmă cantitatea reală (poate diferi de teoretic!)
+   → Diferențe = pierderi/waste, logate separat
+```
+
+### 40.9 Angajați și standuri
+
+Angajații sunt legați de **vendor** (relație permanentă) dar lucrează la un **stand** (prin shift).
+
+**`VendorShift.vendor_stand_id`** indică la ce stand lucrează angajatul în acel shift.
+
+```
+Zi 1: Ion lucrează la Stand Nord (shift cu vendor_stand_id=1)
+Zi 2: Ion lucrează la Stand Sud (shift cu vendor_stand_id=2)
+```
+
+Un angajat NU poate avea 2 shift-uri active simultan la standuri diferite.
+
+### 40.10 POS ca aplicație mobilă
+
+POS-ul = aplicația mobilă instalată pe telefonul angajatului. La login/start shift:
+1. Angajatul se loghează în app cu email + parolă
+2. Selectează stand-ul la care lucrează azi
+3. POS-ul se leagă automat de `vendor_stand_id`
+4. Toate tranzacțiile au `vendor_stand_id` setat
+5. Toate bonurile fiscale se emit pe casa de marcat a standului respectiv
+
+**`VendorPosDevice`** poate fi:
+- Device fix (tabletă la stand) → `vendor_stand_id` setat permanent
+- Device mobil (telefon angajat) → `vendor_stand_id` setat la start shift, poate schimba
+
+### 40.11 Rapoarte per stand
+
+Toate rapoartele din secțiunea 6 care au filtru "per vendor" primesc și filtru **"per stand"**:
+
+| Raport | Granularitate nouă |
+|--------|-------------------|
+| Vânzări totale | Per stand + per vendor (agregat) |
+| Vânzări per produs | Per stand |
+| Vânzări per angajat | Per stand (unde a lucrat) |
+| Stoc curent | Per stand + per vendor (agregat) |
+| Comisioane | Per vendor (nu per stand – CUI unic) |
+| Raport fiscal | Per stand (casă de marcat per stand) |
+| Performance comparison | Stand vs. Stand al aceluiași vendor |
+
+---
