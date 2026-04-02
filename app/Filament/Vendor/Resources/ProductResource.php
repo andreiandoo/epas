@@ -7,8 +7,8 @@ use App\Filament\Vendor\Resources\ProductResource\Pages;
 use App\Models\VendorProduct;
 use App\Models\VendorProductCategory;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,11 +39,11 @@ class ProductResource extends Resource
             ->where('vendor_id', $employee->vendor_id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         $employee = Auth::guard('vendor_employee')->user();
 
-        return $form->schema([
+        return $schema->schema([
             Forms\Components\Section::make('Product Details')->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
