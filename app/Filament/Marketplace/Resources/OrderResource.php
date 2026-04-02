@@ -1268,11 +1268,15 @@ class OrderResource extends Resource
                 $totalOnTop += $commission;
             }
 
+            $rateLabel = ($rate > 0)
+                ? number_format($rate, 2) . '%'
+                : number_format($commission / max(1, $qty), 2) . ' lei fix';
+
             $itemBreakdown[] = [
                 'name' => $name,
                 'qty' => $qty,
                 'commission' => $commission,
-                'rate_label' => number_format($rate, 2) . '%',
+                'rate_label' => $rateLabel,
                 'mode' => $isOnTop ? 'peste preț' : 'inclus',
             ];
         }
