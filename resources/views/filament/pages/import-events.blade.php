@@ -169,20 +169,20 @@
             <x-filament::section>
                 <x-slot name="heading">Se procesează importul...</x-slot>
 
-                <div class="space-y-4">
+                <div class="space-y-4" wire:poll.3s="checkImportStatus">
                     @if($isProcessing)
                         <div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
                             <x-filament::loading-indicator class="w-5 h-5" />
-                            <span>{{ $processingStatus }}</span>
+                            <span>Importul rulează în background. Pagina se actualizează automat...</span>
                         </div>
 
                         <div class="w-full bg-gray-200 rounded-full h-3 dark:bg-gray-700">
-                            <div class="bg-primary-600 h-3 rounded-full transition-all duration-300"
+                            <div class="bg-primary-600 h-3 rounded-full transition-all duration-300 animate-pulse"
                                 style="width: 100%"></div>
                         </div>
 
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Se creează evenimente, comenzi, bilete și clienți...
+                            Se creează comenzi, bilete și clienți... Nu închide pagina.
                         </p>
                     @else
                         @if($processingStatus && str_starts_with($processingStatus, 'Eroare'))

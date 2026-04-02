@@ -27,16 +27,47 @@ trait HasEventImport
 
     public function mountHasEventImport(): void
     {
-        // Check if returning from successful import
-        if (request()->query('import_done')) {
-            $resultKey = 'import_result_' . session()->getId();
-            $cached = Cache::get($resultKey);
-            if ($cached) {
+        // Check if returning from successful import or if results are ready
+        $resultKey = 'import_result_' . session()->getId();
+        $cached = Cache::get($resultKey);
+        if ($cached) {
+            if (isset($cached['error'])) {
+                $this->importResults = $cached;
+                $this->stage = 1;
+                Cache::forget($resultKey);
+            } else {
                 $this->importResults = $cached;
                 $this->stage = 4;
                 $this->isProcessing = false;
                 Cache::forget($resultKey);
             }
+        }
+    }
+
+    /**
+     * Poll for import results (called from view via wire:poll)
+     */
+    public function checkImportStatus(): void
+    {
+        $resultKey = 'import_result_' . session()->getId();
+        $cached = Cache::get($resultKey);
+
+        if ($cached) {
+            if (isset($cached['error'])) {
+                $this->isProcessing = false;
+                $this->stage = 1;
+                Notification::make()->title('Eroare la import: ' . $cached['error'])->danger()->send();
+            } else {
+                $this->importResults = $cached;
+                $this->stage = 4;
+                $this->isProcessing = false;
+                Notification::make()
+                    ->title('Import finalizat!')
+                    ->body(($cached['total_tickets'] ?? 0) . ' bilete, ' . ($cached['total_orders'] ?? 0) . ' comenzi')
+                    ->success()
+                    ->send();
+            }
+            Cache::forget($resultKey);
         }
     }
 
@@ -570,10 +601,6 @@ trait HasEventImport
 
     public function processImport(): void
     {
-        // Allow longer execution for large imports
-        set_time_limit(300);
-        ini_set('max_execution_time', '300');
-
         $cacheKey = 'event_import_rows_' . session()->getId();
         $serialized = Cache::get($cacheKey);
 
@@ -584,9 +611,6 @@ trait HasEventImport
             return;
         }
 
-        /** @var ImportedRow[] $rows */
-        $rows = unserialize($serialized);
-
         $tenantId = $this->resolveImportTenantId();
         if (!$tenantId) {
             Notification::make()->title('Nu s-a putut determina tenant-ul.')->danger()->send();
@@ -595,51 +619,48 @@ trait HasEventImport
         }
 
         $source = $this->eventFormData['import_source'] ?? 'iabilet';
+        $formData = $this->eventFormData;
 
-        // Inject marketplace_client_id if available (for marketplace customer creation)
+        // Inject marketplace_client_id if available
         if (method_exists($this, 'getMarketplaceClient')) {
             $client = static::getMarketplaceClient();
             if ($client) {
-                $this->eventFormData['marketplace_client_id'] = $client->id;
+                $formData['marketplace_client_id'] = $client->id;
             }
         }
 
-        try {
+        $resultKey = 'import_result_' . session()->getId();
+
+        // Dispatch to background — process synchronously in a separate PHP process
+        dispatch(function () use ($cacheKey, $formData, $tenantId, $source, $resultKey) {
+            set_time_limit(600);
+
+            $serialized = Cache::get($cacheKey);
+            if (!$serialized) return;
+
+            $rows = unserialize($serialized);
             $service = new EventImportService();
-            $result = $service->process($rows, $this->eventFormData, $tenantId, $source);
 
-            $this->importResults = $result->toArray();
-            $this->stage = 4;
-            $this->isProcessing = false;
-
-            // Clean up
-            Cache::forget($cacheKey);
-            if ($this->storedFilePath && file_exists($this->storedFilePath)) {
-                @unlink($this->storedFilePath);
+            try {
+                $result = $service->process($rows, $formData, $tenantId, $source);
+                Cache::put($resultKey, $result->toArray(), 600);
+            } catch (\Throwable $e) {
+                Cache::put($resultKey, ['error' => $e->getMessage()], 600);
             }
 
-            // Store results in cache for retrieval after redirect
-            Cache::put('import_result_' . session()->getId(), $this->importResults, 300);
+            Cache::forget($cacheKey);
+        })->afterResponse();
 
-            Notification::make()
-                ->title('Import finalizat cu succes!')
-                ->body("{$result->totalTickets} bilete, {$result->totalOrders} comenzi importate")
-                ->success()
-                ->send();
+        // Show processing stage immediately — user will poll for results
+        $this->stage = 3;
+        $this->isProcessing = true;
 
-            // Force redirect to avoid Livewire response timeout
-            $this->redirect(request()->url() . '?import_done=1');
-            return;
-        } catch (\Throwable $e) {
-            $this->isProcessing = false;
-            $this->processingStatus = 'Eroare: ' . $e->getMessage();
+        Notification::make()
+            ->title('Import în curs de procesare...')
+            ->body('Importul rulează în background. Pagina se va actualiza automat.')
+            ->info()
+            ->send();
 
-            Notification::make()
-                ->title('Eroare la import')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-        }
     }
 
     public function resetImport(): void
