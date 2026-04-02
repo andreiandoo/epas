@@ -95,11 +95,8 @@ class EventImportService
                 ];
             }
 
-            // Post-import: update marketplace customer metrics
-            $mktClientId = $eventConfig['marketplace_client_id'] ?? $event->marketplace_client_id ?? null;
-            if ($mktClientId) {
-                $this->updateMarketplaceCustomerMetrics((int) $mktClientId);
-            }
+            // Skip metrics update during import — too slow with 90K+ customers
+            // Metrics can be recalculated separately via artisan command
 
             return new ImportResult(
                 eventId: $event->id,
