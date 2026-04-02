@@ -15,6 +15,8 @@ use Illuminate\Support\Str;
 
 class EventImportService
 {
+    protected array $importedMarketplaceCustomerIds = [];
+
     /**
      * Process parsed rows and create all records.
      *
@@ -95,8 +97,10 @@ class EventImportService
                 ];
             }
 
-            // Skip metrics update during import — too slow with 90K+ customers
-            // Metrics can be recalculated separately via artisan command
+            // Update metrics only for customers touched in this import
+            if (!empty($this->importedMarketplaceCustomerIds)) {
+                $this->updateImportedCustomerMetrics($this->importedMarketplaceCustomerIds);
+            }
 
             return new ImportResult(
                 eventId: $event->id,
@@ -353,6 +357,7 @@ class EventImportService
                     ]);
                 }
                 $marketplaceCustomerId = $mktCustomer->id;
+                $this->importedMarketplaceCustomerIds[$mktCustomer->id] = true;
             }
         } else {
             $anonymousOrders++;
@@ -532,37 +537,30 @@ class EventImportService
     }
 
     /**
-     * Update marketplace customer metrics (total_orders, total_spent) after import.
+     * Update metrics only for customers created/touched during this import.
      */
-    protected function updateMarketplaceCustomerMetrics(int $marketplaceClientId): void
+    protected function updateImportedCustomerMetrics(array $customerIdMap): void
     {
         try {
-            $customers = \App\Models\MarketplaceCustomer::where('marketplace_client_id', $marketplaceClientId)
-                ->whereIn('id', function ($q) use ($marketplaceClientId) {
-                    $q->select('marketplace_customer_id')
-                        ->from('orders')
-                        ->where('marketplace_client_id', $marketplaceClientId)
-                        ->whereNotNull('marketplace_customer_id');
-                })
-                ->get();
+            $customerIds = array_keys($customerIdMap);
+            if (empty($customerIds)) return;
 
-            foreach ($customers as $mktCustomer) {
+            foreach ($customerIds as $mktCustomerId) {
                 $stats = DB::table('orders')
-                    ->where('marketplace_customer_id', $mktCustomer->id)
-                    ->where('marketplace_client_id', $marketplaceClientId)
+                    ->where('marketplace_customer_id', $mktCustomerId)
                     ->whereIn('status', ['completed', 'paid', 'confirmed'])
                     ->selectRaw('COUNT(*) as total_orders, COALESCE(SUM(total), 0) as total_spent')
                     ->first();
 
-                $mktCustomer->update([
+                DB::table('marketplace_customers')->where('id', $mktCustomerId)->update([
                     'total_orders' => $stats->total_orders ?? 0,
                     'total_spent' => $stats->total_spent ?? 0,
+                    'updated_at' => now(),
                 ]);
             }
         } catch (\Throwable $e) {
-            // Non-critical — don't fail import for metrics
-            \Illuminate\Support\Facades\Log::warning('Failed to update marketplace customer metrics', [
-                'marketplace_client_id' => $marketplaceClientId,
+            \Illuminate\Support\Facades\Log::warning('Failed to update imported customer metrics', [
+                'count' => count($customerIdMap),
                 'error' => $e->getMessage(),
             ]);
         }
