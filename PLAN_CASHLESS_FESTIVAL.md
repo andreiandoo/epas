@@ -4402,3 +4402,211 @@ FAZA 7: CLEANUP
 ```
 
 ---
+
+## 46. Arhitectură Chip-Agnostic (DESFire EV3 + NTAG213)
+
+### 46.1 Principiu
+
+Admin-ul festivalului alege per ediție ce tip de chip NFC se folosește. Sistemul se adaptează automat:
+
+- **DESFire EV3** → balance pe chip, offline complet, securitate maximă
+- **NTAG213** → balance server-side cu cache local pe POS, necesită conectivitate parțială
+
+### 46.2 Enum `NfcChipType`
+
+```php
+enum NfcChipType: string
+{
+    case DesfireEv3 = 'desfire_ev3';  // Balance pe chip, AES-128, offline complet
+    case Ntag213 = 'ntag213';         // Balance server-side, phone-writable, cost redus
+
+    public function balanceOnChip(): bool
+    {
+        return match ($this) {
+            self::DesfireEv3 => true,
+            self::Ntag213 => false,
+        };
+    }
+
+    public function requiresKeyManagement(): bool
+    {
+        return match ($this) {
+            self::DesfireEv3 => true,
+            self::Ntag213 => false,
+        };
+    }
+
+    public function supportsOfflineCharge(): bool
+    {
+        return match ($this) {
+            self::DesfireEv3 => true,   // citește sold de pe chip
+            self::Ntag213 => false,      // necesită cache/connectivity
+        };
+    }
+}
+```
+
+### 46.3 Configurare per ediție
+
+**Câmpuri noi pe `FestivalEdition`:**
+```
++ nfc_chip_type          ENUM('desfire_ev3','ntag213') DEFAULT 'desfire_ev3'
+```
+
+**Câmpuri noi pe `CashlessSettings`:**
+```
++ nfc_chip_type          ENUM('desfire_ev3','ntag213') DEFAULT 'desfire_ev3'
+
+-- DESFire EV3 specific
++ desfire_app_id         VARCHAR(6) DEFAULT '010203' -- AID hex
++ desfire_key_master     TEXT NULL -- encrypted AES key (Key 0)
++ desfire_key_topup      TEXT NULL -- encrypted AES key (Key 1)
++ desfire_key_pos        TEXT NULL -- encrypted AES key (Key 2)
++ desfire_key_readonly   TEXT NULL -- encrypted AES key (Key 3)
++ desfire_value_upper_limit INT DEFAULT 5000000 -- max 50,000.00 RON
++ desfire_keys_rotated_at TIMESTAMP NULL
+
+-- NTAG213 specific
++ ntag_password          VARCHAR(8) NULL -- 4-byte password hex
++ ntag_ndef_url_prefix   VARCHAR(255) NULL -- URL scris pe tag
+```
+
+### 46.4 Service Layer chip-agnostic
+
+```php
+// app/Services/Cashless/NfcChipServiceFactory.php
+class NfcChipServiceFactory
+{
+    public function make(FestivalEdition $edition): NfcChipServiceInterface
+    {
+        return match ($edition->nfc_chip_type) {
+            NfcChipType::DesfireEv3 => app(DesfireEv3Service::class),
+            NfcChipType::Ntag213 => app(Ntag213Service::class),
+        };
+    }
+}
+
+// Interface comun
+interface NfcChipServiceInterface
+{
+    public function readBalance(string $uid): ?int;      // null = trebuie server lookup
+    public function writeBalance(string $uid, int $balanceCents): bool;
+    public function charge(string $uid, int $amountCents): ChargeResult;
+    public function topUp(string $uid, int $amountCents): TopUpResult;
+    public function getChipMetadata(string $uid): array;
+    public function encodeNewWristband(string $uid, array $metadata): bool;
+    public function balanceIsOnChip(): bool;
+}
+```
+
+**Implementare DESFire EV3:**
+```php
+class DesfireEv3Service implements NfcChipServiceInterface
+{
+    public function balanceIsOnChip(): bool { return true; }
+
+    public function charge(string $uid, int $amountCents): ChargeResult
+    {
+        // 1. Authenticate cu Key 2 (POS key)
+        // 2. GetValue din Value File → sold curent
+        // 3. Debit $amountCents
+        // 4. CommitTransaction (atomic, anti-tear)
+        // 5. Salvare tranzacție local (pentru sync ulterior)
+        // → ZERO dependență de internet
+    }
+
+    public function readBalance(string $uid): int
+    {
+        // Authenticate cu Key 3 (read-only) → GetValue
+        // Sold citit direct de pe chip
+    }
+}
+```
+
+**Implementare NTAG213:**
+```php
+class Ntag213Service implements NfcChipServiceInterface
+{
+    public function balanceIsOnChip(): bool { return false; }
+
+    public function charge(string $uid, int $amountCents): ChargeResult
+    {
+        // 1. Citește UID de pe chip
+        // 2. Lookup balance din CACHE LOCAL (SQLite pe POS)
+        // 3. Dacă cache valid → procesează local (optimistic)
+        // 4. Dacă online → verifică server → procesează
+        // 5. Dacă offline + no cache → RISC: permite cu flag
+    }
+
+    public function readBalance(string $uid): ?int
+    {
+        // UID → lookup în cache local sau server
+        // Returnează null dacă nu știe (no cache, no internet)
+    }
+}
+```
+
+### 46.5 Impact pe POS App
+
+POS-ul verifică `edition.nfc_chip_type` la start:
+
+```
+if (chipType == 'desfire_ev3') {
+    // Încarcă cheile AES din config securizat
+    // Folosește TapLinx SDK pentru read/write
+    // Balance = citit de pe chip
+    // Charge = debit pe chip + log local
+} else if (chipType == 'ntag213') {
+    // Citește doar UID
+    // Balance = cache local SQLite + sync server
+    // Charge = decrementare cache + log local + sync when online
+    // Afișare warning dacă offline + cache stale
+}
+```
+
+### 46.6 Filament UI pentru admin
+
+Pe pagina de configurare ediție, admin-ul vede:
+
+```
+┌─────────────────────────────────────────────┐
+│ Tip NFC Chip                                │
+│                                             │
+│ ○ MIFARE DESFire EV3 (recomandat)          │
+│   ✓ Sold pe chip - funcționează 100% offline│
+│   ✓ Securitate AES-128                      │
+│   ✓ Anti-fraudă                             │
+│   ⚠ Cost mai mare (~$1.50-3.00/buc)        │
+│   ⚠ Necesită key management                 │
+│                                             │
+│ ○ NTAG213 (economic)                        │
+│   ✓ Cost redus (~$0.30-0.50/buc)           │
+│   ✓ Encodare simplă de pe orice telefon    │
+│   ⚠ Necesită conectivitate (WiFi local)    │
+│   ⚠ Securitate limitată                     │
+│   ⚠ Risc sold negativ în mod offline        │
+└─────────────────────────────────────────────┘
+```
+
+### 46.7 DESFire Key Management
+
+**Tabel `cashless_nfc_keys`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+key_slot                ENUM('master','topup','pos','readonly') -- Key 0-3
+encrypted_key           TEXT -- AES key criptat cu app master secret
+key_version             INT DEFAULT 1
+created_at              TIMESTAMP
+rotated_at              TIMESTAMP NULL
+created_by              BIGINT FK → users
+```
+
+**Distribuirea cheilor la POS-uri:**
+1. Admin generează setul de chei per ediție (o singură dată)
+2. La login POS: device-ul autentificat primește cheile relevante (doar Key 2 pentru vendor POS, Key 1 pentru top-up stand)
+3. Cheile se stochează criptat pe device (Android Keystore)
+4. La end-of-festival: cheile se invalidează automat
+
+---
