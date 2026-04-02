@@ -32,11 +32,20 @@ class EventImportService
 
         return DB::transaction(function () use ($rows, $eventConfig, $tenantId, $sourceKey, &$errors, &$customersCreated, &$customersEnriched, &$anonymousOrders) {
 
-            // 1. Create Event
-            $event = $this->createEvent($eventConfig, $tenantId, $sourceKey);
+            $isExternalImport = !empty($eventConfig['existing_event_id']);
+            $externalPlatform = $eventConfig['external_platform_name'] ?? $sourceKey;
 
-            // 2. Discover and create TicketTypes
-            $ticketTypeMap = $this->createTicketTypes($rows, $event, $tenantId);
+            // 1. Create or use existing Event
+            if ($isExternalImport) {
+                $event = Event::findOrFail($eventConfig['existing_event_id']);
+                // Override source key for external imports
+                $sourceKey = $externalPlatform;
+            } else {
+                $event = $this->createEvent($eventConfig, $tenantId, $sourceKey);
+            }
+
+            // 2. Discover and create TicketTypes (with platform prefix for external imports)
+            $ticketTypeMap = $this->createTicketTypes($rows, $event, $tenantId, $isExternalImport ? $externalPlatform : null);
 
             // 3. Group rows by orderId and process
             $orderGroups = $this->groupByOrder($rows);
@@ -56,6 +65,7 @@ class EventImportService
                         $eventConfig,
                         $customersCreated,
                         $customersEnriched,
+                        isExternalImport: $isExternalImport,
                         $anonymousOrders,
                     );
 
@@ -136,7 +146,7 @@ class EventImportService
      *
      * @return array<string, array{id: int, count: int, price: float}>
      */
-    protected function createTicketTypes(array $rows, Event $event, int $tenantId): array
+    protected function createTicketTypes(array $rows, Event $event, int $tenantId, ?string $externalPlatform = null): array
     {
         $groups = [];
 
@@ -155,21 +165,31 @@ class EventImportService
         }
 
         $map = [];
-        $sortOrder = 0;
+        $sortOrder = $event->ticketTypes()->max('sort_order') ?? 0;
 
         foreach ($groups as $name => $data) {
             // Use most common price, fallback to first
             $price = $this->mostCommonValue($data['prices']) ?? 0;
 
+            // Prefix ticket type name with platform for external imports
+            $displayName = $externalPlatform ? "{$name} ({$externalPlatform})" : $name;
+
+            $meta = [];
+            if ($externalPlatform) {
+                $meta['external_platform'] = $externalPlatform;
+                $meta['is_external_sale'] = true;
+            }
+
             $ticketType = TicketType::create([
                 'event_id' => $event->id,
-                'name' => $name,
+                'name' => $displayName,
                 'price_cents' => (int) round($price * 100),
                 'quota_total' => $data['count'],
                 'quota_sold' => $data['count'], // historical import — all sold
                 'status' => 'active',
-                'sort_order' => $sortOrder++,
+                'sort_order' => ++$sortOrder,
                 'currency' => 'RON',
+                'meta' => !empty($meta) ? $meta : null,
             ]);
 
             $map[$name] = [
@@ -209,6 +229,7 @@ class EventImportService
         int &$customersCreated,
         int &$customersEnriched,
         int &$anonymousOrders,
+        bool $isExternalImport = false,
     ): array {
         // Find customer info from the first row that has email
         $customerRow = null;
@@ -291,7 +312,8 @@ class EventImportService
             $orderTotal += $row->isInvitation ? 0 : ($row->ticketPrice ?? 0);
         }
 
-        $commissionRate = (float) ($eventConfig['commission_rate'] ?? 0);
+        // External imports: no commission (not sold via Tixello)
+        $commissionRate = $isExternalImport ? 0 : (float) ($eventConfig['commission_rate'] ?? 0);
         $commissionAmount = $commissionRate > 0 ? round($orderTotal * ($commissionRate / 100), 2) : 0;
 
         // Map order status
@@ -314,12 +336,17 @@ class EventImportService
         $order->currency = $firstRow->currency ?? 'RON';
         $order->status = $orderStatus;
         $order->payment_status = $paymentStatus;
-        $order->source = 'legacy_import';
+        $order->source = $isExternalImport ? 'external_import' : 'legacy_import';
         $order->paid_at = $paidAt;
-        $order->meta = json_encode([
+        $orderMeta = [
             'imported_from' => $sourceKey,
             'original_order_id' => $orderId,
-        ]);
+        ];
+        if ($isExternalImport) {
+            $orderMeta['is_external_sale'] = true;
+            $orderMeta['external_platform'] = $sourceKey;
+        }
+        $order->meta = json_encode($orderMeta);
         $order->created_at = $firstRow->orderDate ?? now();
         $order->updated_at = $firstRow->orderDate ?? now();
         $order->save();
@@ -379,12 +406,14 @@ class EventImportService
                 'attendee_name' => $row->clientName,
                 'attendee_email' => $row->email,
                 'checked_in_at' => $checkedInAt,
-                'meta' => [
+                'meta' => array_filter([
                     'fiscal_series' => $row->fiscalSeries,
                     'import_source' => $sourceKey,
                     'is_invitation' => $row->isInvitation,
                     'original_ticket_status' => $row->ticketStatus,
-                ],
+                    'is_external_sale' => $isExternalImport ?: null,
+                    'external_platform' => $isExternalImport ? $sourceKey : null,
+                ]),
             ]);
 
             $ticketCount++;

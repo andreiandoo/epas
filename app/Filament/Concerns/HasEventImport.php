@@ -89,6 +89,72 @@ trait HasEventImport
         return $schema
             ->statePath('eventFormData')
             ->schema(array_merge($fields, [
+
+                // Import existing event toggle
+                Forms\Components\Toggle::make('import_existing')
+                    ->label('Import pe eveniment existent')
+                    ->helperText('Activează pentru a importa comenzi/bilete pe un eveniment deja creat în Tixello.')
+                    ->default(false)
+                    ->live()
+                    ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                        if (!$state) {
+                            $set('existing_event_id', null);
+                            $set('external_platform_name', null);
+                        }
+                    }),
+
+                Forms\Components\Select::make('existing_event_id')
+                    ->label('Selectează evenimentul')
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('import_existing'))
+                    ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('import_existing'))
+                    ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                        $organizerId = $get('marketplace_organizer_id') ?? null;
+                        $query = \App\Models\Event::query();
+
+                        if ($organizerId) {
+                            $query->where('marketplace_organizer_id', $organizerId);
+                        }
+
+                        return $query->orderByDesc('event_date')
+                            ->limit(100)
+                            ->get()
+                            ->mapWithKeys(function ($e) {
+                                $title = is_array($e->title) ? ($e->title['ro'] ?? reset($e->title) ?? '') : ($e->title ?? '');
+                                $date = $e->event_date?->format('d.m.Y') ?? 'TBD';
+                                $status = $e->status ?? '';
+                                return [$e->id => "{$title} ({$date}) [{$status}]"];
+                            });
+                    })
+                    ->live()
+                    ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                        if (!$state) return;
+                        $event = \App\Models\Event::with(['venue', 'eventTypes', 'eventGenres'])->find($state);
+                        if (!$event) return;
+
+                        $title = is_array($event->title) ? ($event->title['ro'] ?? '') : ($event->title ?? '');
+                        $set('title', $title);
+                        $set('event_date', $event->event_date?->format('Y-m-d'));
+                        $set('start_time', $event->start_time);
+                        $set('end_time', $event->end_time);
+                        $set('duration_mode', $event->duration_mode ?? 'single_day');
+                        $set('range_start_date', $event->range_start_date?->format('Y-m-d'));
+                        $set('range_end_date', $event->range_end_date?->format('Y-m-d'));
+                        $set('venue_id', $event->venue_id);
+                        $set('description', is_array($event->description) ? ($event->description['ro'] ?? '') : ($event->description ?? ''));
+                        $set('event_type_ids', $event->eventTypes->pluck('id')->toArray());
+                        $set('event_genre_ids', $event->eventGenres->pluck('id')->toArray());
+                        $set('marketplace_event_category_id', $event->marketplace_event_category_id);
+                    }),
+
+                Forms\Components\TextInput::make('external_platform_name')
+                    ->label('Numele platformei externe')
+                    ->placeholder('ex: iaBilet, Eventim, MyTicket')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('import_existing'))
+                    ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('import_existing'))
+                    ->maxLength(100),
+
                 SC\Grid::make(2)->schema([
                     Forms\Components\Select::make('import_source')
                         ->label('Sursă import')

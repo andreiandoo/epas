@@ -245,7 +245,8 @@ class OrderResource extends Resource
                     ->formatStateUsing(fn ($state, $record) =>
                         '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
                         ($record->order_number ? " ({$record->order_number})" : '') .
-                        ($record->source === 'test_order' ? ' ⚗️ TEST' : '')
+                        ($record->source === 'test_order' ? ' ⚗️ TEST' : '') .
+                        ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? 'Extern') : '')
                     )
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
@@ -994,6 +995,7 @@ class OrderResource extends Resource
         $insuranceAmount = (float) ($record->meta['insurance_amount'] ?? 0);
         $ticketInsurance = (bool) ($record->meta['ticket_insurance'] ?? false);
         $isPosOrder = $record->source === 'pos_app';
+        $isExternalImport = $record->source === 'external_import';
 
         $rowStyle = "display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.3);";
         $labelStyle = "font-size:12px;color:#94A3B8;";
@@ -1002,6 +1004,12 @@ class OrderResource extends Resource
         $headStyle = "font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;padding:10px 0 4px;";
 
         $html = '<div>';
+
+        // === EXTERNAL IMPORT BADGE ===
+        if ($isExternalImport) {
+            $extPlatform = e($record->meta['external_platform'] ?? 'Extern');
+            $html .= "<div style='padding:8px 12px;margin-bottom:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:12px;color:#818CF8;display:flex;align-items:center;gap:6px;'>🌐 Import extern: <strong>{$extPlatform}</strong> — fără comision Tixello</div>";
+        }
 
         // === TICKETS ===
         $ticketsValue = $record->tickets->sum('price');
@@ -1019,7 +1027,10 @@ class OrderResource extends Resource
         }
 
         // === COMMISSION ===
-        if ($orderCommission > 0 && !$isPosOrder) {
+        if ($isExternalImport) {
+            $html .= "<div style='{$headStyle}'>Comision</div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Fără comision (import extern)</span><span style='font-size:12px;color:#64748B;'>0.00 {$currency}</span></div>";
+        } elseif ($orderCommission > 0 && !$isPosOrder) {
             // Determine commission type label
             $modes = collect($commissionDetails)->pluck('commission_mode')->unique();
             $hasFixed = collect($commissionDetails)->contains(fn ($cd) => ($cd['commission_rate'] ?? 0) == 0 && ($cd['commission_amount'] ?? 0) > 0);
