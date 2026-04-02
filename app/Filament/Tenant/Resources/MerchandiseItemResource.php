@@ -199,7 +199,7 @@ class MerchandiseItemResource extends Resource
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Actions\DeleteBulkAction::make(),
             ]);
     }
 

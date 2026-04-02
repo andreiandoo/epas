@@ -85,7 +85,7 @@ class MerchandiseSupplierResource extends Resource
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Actions\DeleteBulkAction::make(),
             ]);
     }
 
