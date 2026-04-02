@@ -12,7 +12,7 @@ class CashlessKpiCards extends StatsOverviewWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $pollingInterval = '30s';
+    protected ?string $pollingInterval = '30s';
 
     public int $editionId = 0;
 

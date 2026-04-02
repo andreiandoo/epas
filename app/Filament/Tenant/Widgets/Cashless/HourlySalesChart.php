@@ -15,7 +15,7 @@ class HourlySalesChart extends ChartWidget
 
     protected static ?string $maxHeight = '250px';
 
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     public int $editionId = 0;
 
