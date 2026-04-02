@@ -262,10 +262,25 @@ trait HasEventImport
                                     $v->id => ($v->getTranslation('name', 'ro') ?: $v->name) . ($v->city ? " ({$v->city})" : ''),
                                 ]);
                         })
+                        ->getOptionLabelUsing(function ($value) {
+                            $v = Venue::find($value);
+                            if (!$v) return "Venue #{$value}";
+                            return ($v->getTranslation('name', 'ro') ?: $v->name) . ($v->city ? " ({$v->city})" : '');
+                        })
                         ->getSearchResultsUsing(function (string $search) {
+                            $term = '%' . mb_strtolower($search) . '%';
+                            $isPgsql = \DB::getDriverName() === 'pgsql';
+
                             return Venue::query()
-                                ->where('name', 'like', "%{$search}%")
-                                ->orWhere('city', 'like', "%{$search}%")
+                                ->where(function ($q) use ($term, $isPgsql) {
+                                    if ($isPgsql) {
+                                        $q->whereRaw("unaccent(LOWER(name::text)) LIKE unaccent(?)", [$term])
+                                          ->orWhereRaw("unaccent(LOWER(COALESCE(city, ''))) LIKE unaccent(?)", [$term]);
+                                    } else {
+                                        $q->whereRaw("LOWER(name) LIKE ?", [$term])
+                                          ->orWhereRaw("LOWER(COALESCE(city, '')) LIKE ?", [$term]);
+                                    }
+                                })
                                 ->limit(20)
                                 ->get()
                                 ->mapWithKeys(fn ($v) => [
@@ -326,7 +341,17 @@ trait HasEventImport
                                 ->pluck('name', 'id');
                         })
                         ->getSearchResultsUsing(function (string $search) {
-                            return Artist::where('name', 'like', "%{$search}%")
+                            $term = '%' . mb_strtolower($search) . '%';
+                            $isPgsql = \DB::getDriverName() === 'pgsql';
+
+                            return Artist::query()
+                                ->where(function ($q) use ($term, $isPgsql) {
+                                    if ($isPgsql) {
+                                        $q->whereRaw("unaccent(LOWER(name)) LIKE unaccent(?)", [$term]);
+                                    } else {
+                                        $q->whereRaw("LOWER(name) LIKE ?", [$term]);
+                                    }
+                                })
                                 ->limit(20)
                                 ->pluck('name', 'id');
                         })
