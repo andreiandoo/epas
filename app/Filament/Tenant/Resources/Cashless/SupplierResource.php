@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources\Cashless;
 
+use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\SupplierResource\Pages;
 use App\Models\MerchandiseSupplier;
 use Filament\Forms;
@@ -9,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SupplierResource extends Resource
 {
@@ -23,6 +25,18 @@ class SupplierResource extends Resource
     protected static ?int $navigationSort = 30;
 
     protected static ?string $slug = 'cashless-suppliers';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $tenant = auth()->user()->tenant;
+        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
 
     public static function form(Schema $schema): Schema
     {

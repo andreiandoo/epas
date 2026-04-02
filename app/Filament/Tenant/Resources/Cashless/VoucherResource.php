@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources\Cashless;
 
+use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\VoucherResource\Pages;
 use App\Models\Cashless\CashlessVoucher;
 use Filament\Forms;
@@ -9,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class VoucherResource extends Resource
 {
@@ -23,6 +25,18 @@ class VoucherResource extends Resource
     protected static ?int $navigationSort = 50;
 
     protected static ?string $slug = 'cashless-vouchers';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $tenant = auth()->user()->tenant;
+        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
 
     public static function form(Schema $schema): Schema
     {

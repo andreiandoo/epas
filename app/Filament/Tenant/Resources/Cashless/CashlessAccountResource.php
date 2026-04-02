@@ -2,11 +2,13 @@
 
 namespace App\Filament\Tenant\Resources\Cashless;
 
+use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\CashlessAccountResource\Pages;
 use App\Models\Cashless\CashlessAccount;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CashlessAccountResource extends Resource
 {
@@ -19,6 +21,18 @@ class CashlessAccountResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Cashless';
 
     protected static ?int $navigationSort = 10;
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $tenant = auth()->user()->tenant;
+        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
 
     public static function canCreate(): bool
     {

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources\Cashless;
 
+use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\RefundResource\Pages;
 use App\Models\Cashless\CashlessRefund;
 use App\Services\Cashless\RefundService;
@@ -9,6 +10,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class RefundResource extends Resource
 {
@@ -23,6 +25,18 @@ class RefundResource extends Resource
     protected static ?int $navigationSort = 25;
 
     protected static ?string $slug = 'cashless-refunds';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $tenant = auth()->user()->tenant;
+        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
 
     public static function canCreate(): bool
     {

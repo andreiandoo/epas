@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Resources\Cashless;
 
+use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\CustomerProfileResource\Pages;
 use App\Models\Cashless\CustomerProfile;
 use Filament\Resources\Resource;
@@ -22,6 +23,18 @@ class CustomerProfileResource extends Resource
     protected static ?int $navigationSort = 60;
 
     protected static ?string $slug = 'cashless-profiles';
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $tenant && $tenant->tenant_type === TenantType::Festival;
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $tenant = auth()->user()->tenant;
+        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
 
     public static function canCreate(): bool
     {
