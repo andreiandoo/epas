@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Actions;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
@@ -169,8 +170,8 @@ class MerchandiseAllocationResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('markReturn')
+                Actions\EditAction::make(),
+                Actions\Action::make('markReturn')
                     ->label('Marcheaza retur')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('warning')
