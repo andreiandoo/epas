@@ -5,6 +5,7 @@ namespace App\Filament\Concerns;
 use App\Models\Artist;
 use App\Models\EventGenre;
 use App\Models\EventType;
+use App\Models\MarketplaceEventCategory;
 use App\Models\Venue;
 use App\Services\EventImport\DTOs\ImportedRow;
 use App\Services\EventImport\EventImportService;
@@ -113,6 +114,17 @@ trait HasEventImport
                         ->required()
                         ->maxLength(255),
 
+                    Forms\Components\Select::make('duration_mode')
+                        ->label('Tip program')
+                        ->options([
+                            'single_day' => 'O singură zi',
+                            'date_range' => 'Interval de date',
+                            'multi_day' => 'Mai multe zile cu program diferit',
+                        ])
+                        ->default('single_day')
+                        ->live()
+                        ->native(false),
+
                     SC\Grid::make(3)->schema([
                         Forms\Components\DatePicker::make('event_date')
                             ->label('Data eveniment')
@@ -126,6 +138,17 @@ trait HasEventImport
                             ->label('Ora final')
                             ->seconds(false)
                             ->native(true),
+                    ]),
+
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\DatePicker::make('range_start_date')
+                            ->label('Data start interval')
+                            ->native(false)
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => in_array($get('duration_mode'), ['date_range', 'multi_day'])),
+                        Forms\Components\DatePicker::make('range_end_date')
+                            ->label('Data final interval')
+                            ->native(false)
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => in_array($get('duration_mode'), ['date_range', 'multi_day'])),
                     ]),
 
                     Forms\Components\RichEditor::make('description')
@@ -177,6 +200,27 @@ trait HasEventImport
                             return $venue->id;
                         }),
 
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('venue_city')
+                            ->label('Oraș eveniment')
+                            ->placeholder('Se preia automat de la venue dacă e selectat')
+                            ->maxLength(100),
+                        Forms\Components\TextInput::make('venue_address')
+                            ->label('Adresă eveniment')
+                            ->maxLength(500),
+                    ]),
+
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('website_url')
+                            ->label('Website eveniment')
+                            ->url()
+                            ->maxLength(500),
+                        Forms\Components\TextInput::make('facebook_url')
+                            ->label('Facebook eveniment')
+                            ->url()
+                            ->maxLength(500),
+                    ]),
+
                     Forms\Components\Select::make('artist_ids')
                         ->label('Artiști')
                         ->multiple()
@@ -209,6 +253,19 @@ trait HasEventImport
                 ]),
 
                 SC\Section::make('Taxonomii')->schema([
+                    Forms\Components\Select::make('marketplace_event_category_id')
+                        ->label('Categorie eveniment')
+                        ->searchable()
+                        ->preload()
+                        ->options(function () {
+                            return MarketplaceEventCategory::query()
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($c) => [
+                                    $c->id => $c->getTranslation('name', 'ro') ?: $c->getTranslation('name', 'en') ?: $c->name,
+                                ]);
+                        }),
+
                     Forms\Components\Select::make('event_type_ids')
                         ->label('Tip eveniment')
                         ->multiple()

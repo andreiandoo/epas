@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Concerns\HasEventImport;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Models\MarketplaceOrganizer;
 use App\Models\Tenant;
 use Filament\Forms;
 use Filament\Forms\Contracts\HasForms;
@@ -51,13 +52,24 @@ class ImportEvents extends Page implements HasForms
 
     protected function getExtraEventFormFields(): array
     {
+        $marketplace = static::getMarketplaceClient();
+
         return [
-            Forms\Components\Select::make('tenant_id')
-                ->label('Tenant')
+            Forms\Components\Select::make('marketplace_organizer_id')
+                ->label('Organizator')
                 ->searchable()
                 ->preload()
-                ->options(Tenant::pluck('public_name', 'id'))
-                ->required()
+                ->options(function () use ($marketplace) {
+                    if (!$marketplace) return [];
+                    return MarketplaceOrganizer::where('marketplace_client_id', $marketplace->id)
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(fn ($o) => [$o->id => ($o->company_name ?? $o->name ?? 'Organizator #' . $o->id)])
+                        ->toArray();
+                })
+                ->required(),
+
+            Forms\Components\Hidden::make('tenant_id')
                 ->default(fn () => $this->resolveImportTenantId()),
         ];
     }
