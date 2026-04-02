@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CashlessMode;
+use App\Enums\NfcChipType;
 use App\Models\Cashless\CashlessAccount;
 use App\Models\Cashless\CashlessSale;
 use App\Models\Cashless\CashlessSettings;
@@ -27,6 +28,7 @@ class FestivalEdition extends Model
         'status',
         'currency',
         'cashless_mode',
+        'nfc_chip_type',
         'settings',
         'meta',
     ];
@@ -36,6 +38,7 @@ class FestivalEdition extends Model
         'start_date'     => 'date',
         'end_date'       => 'date',
         'cashless_mode'  => CashlessMode::class,
+        'nfc_chip_type'  => NfcChipType::class,
         'settings'       => 'array',
         'meta'           => 'array',
     ];
@@ -197,5 +200,29 @@ class FestivalEdition extends Model
     public function scopeCompleted($query)
     {
         return $query->where('status', 'completed');
+    }
+
+    // ── NFC helpers ──
+
+    public function isDesfireMode(): bool
+    {
+        return $this->nfc_chip_type === NfcChipType::DesfireEv3;
+    }
+
+    public function isNtagMode(): bool
+    {
+        return $this->nfc_chip_type === NfcChipType::Ntag213;
+    }
+
+    public function balanceOnChip(): bool
+    {
+        return $this->nfc_chip_type?->balanceOnChip() ?? false;
+    }
+
+    // ── Cashless microservice guard ──
+
+    public function hasCashlessMicroservice(): bool
+    {
+        return $this->tenant?->hasMicroservice('cashless') ?? false;
     }
 }

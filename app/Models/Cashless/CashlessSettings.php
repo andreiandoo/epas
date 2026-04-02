@@ -2,6 +2,7 @@
 
 namespace App\Models\Cashless;
 
+use App\Enums\NfcChipType;
 use App\Models\FestivalEdition;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Model;
@@ -59,6 +60,22 @@ class CashlessSettings extends Model
         'max_tip_cents',
 
         'meta',
+
+        // NFC chip configuration
+        'nfc_chip_type',
+
+        // DESFire EV3 specific
+        'desfire_app_id',
+        'desfire_key_master',
+        'desfire_key_topup',
+        'desfire_key_pos',
+        'desfire_key_readonly',
+        'desfire_value_upper_limit',
+        'desfire_keys_rotated_at',
+
+        // NTAG213 specific
+        'ntag_password',
+        'ntag_ndef_url_prefix',
     ];
 
     protected $casts = [
@@ -88,6 +105,9 @@ class CashlessSettings extends Model
         'tip_presets'                => 'array',
         'max_tip_cents'              => 'integer',
         'meta'                       => 'array',
+        'nfc_chip_type'              => NfcChipType::class,
+        'desfire_value_upper_limit'  => 'integer',
+        'desfire_keys_rotated_at'    => 'datetime',
     ];
 
     // ── Relationships ──

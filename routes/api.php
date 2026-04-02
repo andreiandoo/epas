@@ -2860,7 +2860,7 @@ Route::post('/webhooks/brevo', [\App\Http\Controllers\Api\BrevoWebhookController
 | Auth via vendor API token or sanctum.
 |
 */
-Route::prefix('cashless')->middleware(['throttle:120,1'])->group(function () {
+Route::prefix('cashless')->middleware(['throttle:120,1', 'cashless.active'])->group(function () {
 
     // Account operations (stand operators, admin)
     Route::prefix('accounts')->group(function () {
@@ -2963,7 +2963,7 @@ Route::prefix('cashless')->middleware(['throttle:120,1'])->group(function () {
 | Auth via Sanctum (customer token).
 |
 */
-Route::prefix('cashless/client')->middleware(['throttle:60,1', 'auth:sanctum'])->group(function () {
+Route::prefix('cashless/client')->middleware(['throttle:60,1', 'auth:sanctum', 'cashless.active'])->group(function () {
     Route::get('/account', [App\Http\Controllers\Api\Cashless\ClientController::class, 'account'])
         ->name('api.cashless.client.account');
     Route::get('/history', [App\Http\Controllers\Api\Cashless\ClientController::class, 'history'])

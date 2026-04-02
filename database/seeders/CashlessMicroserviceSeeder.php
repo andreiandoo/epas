@@ -29,7 +29,7 @@ class CashlessMicroserviceSeeder extends Seeder
                 'billing_cycle' => 'monthly',
                 'pricing_model' => 'recurring',
                 'category' => 'operations',
-                'status' => 'active',
+                'is_active' => true,
                 'icon' => 'credit-card',
                 'sort_order' => 10,
                 'features' => [
