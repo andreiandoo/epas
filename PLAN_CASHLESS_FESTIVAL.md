@@ -2004,7 +2004,7 @@ Cu secțiunile noi, fazele devin:
 
 ---
 
-## 23. Tabele Noi - Sumar Final Actualizat
+## 23. Tabele Noi - Sumar Final Complet
 
 | # | Tabel | Secțiune |
 |---|-------|----------|
@@ -2027,9 +2027,1006 @@ Cu secțiunile noi, fazele devin:
 | 17 | `cashless_voucher_redemptions` | 16.2 |
 | 18 | `cashless_notification_preferences` | 15.3 |
 | 19 | `reconciliation_batches` | 20.3 |
+| 20 | `cashless_disputes` | 24.1 |
+| 21 | `cashless_webhook_endpoints` | 25.1 |
+| 22 | `cashless_webhook_deliveries` | 25.1 |
+| 23 | `cashless_exchange_rates` | 26.1 |
+| 24 | `cashless_spending_limits` | 28.1 |
+| 25 | `cashless_gdpr_requests` | 30.3 |
+| 26 | `cashless_batch_jobs` | 31.1 |
+| 27 | `participant_location_events` | 33.3 |
+| 28 | `heatmap_snapshots` | 33.4 |
 
-**Total: 19 tabele noi + 6 tabele modificate + 14 enums**
+### Tabele existente modificate:
+
+| # | Tabel | Secțiune | Câmpuri noi |
+|---|-------|----------|-------------|
+| 1 | `vendor_employees` | 3.1 | full_name, email, phone, password, role enum, email_verified_at |
+| 2 | `vendor_products` | 3.2 | type, unit_measure, weight_volume, supplier_product_id, base/sale_price, is_age_restricted, min_age, sgr, vat |
+| 3 | `vendor_sale_items` | 4.2 | cashless_sale_id, tax_cents, sgr_cents, product_type, product_category_name |
+| 4 | `wristband_transactions` | 5.3/5.5 | channel, topup_method, topup_location_id, cashless_account_id, balance_snapshot, cashout fields, reconciliation fields |
+| 5 | `merchandise_suppliers` | 7.1 | company details, fiscal data, contract, banking, status |
+| 6 | `customers` | 9.2 | gender, age_group, id_verified, id_verified_at, id_verification_method |
+| 7 | `cashless_sales` | 27.1 | tip_cents, tip_percentage, total_with_tip_cents |
+| 8 | `cashless_settings` | 16.1/26.1/27.1/29.2 | multi-currency, tipping, rate limiting config |
+| 9 | `lost_and_found` | 32.2 | festival_edition_id, wristband_id, cashless_account_id, vendor_id, zone, urgency |
+| 10 | `festival_points_of_interest` | 33.2 | vendor_id, topup_location_id, capacity, occupancy, polygon, live_status |
+| 11 | `festival_maps` | 33.2 | festival_edition_id, map_type, tile_url, zoom config, heatmap/tracking flags |
+
+**Total: 28 tabele noi + 11 tabele modificate + 14+ enums**
 
 ---
 
-*Plan actualizat cu toate cele 10 cerințe originale + 10 îmbunătățiri: portal vendor, API mobile, notificări, cashless settings, vouchers, migrare backwards-compatible, refund flow cu aprobare, audit trail, reconciliere offline, transfer account-to-account.*
+## Ordine Implementare Finală (10 faze)
+
+### Faza 1: Fundație + Settings (Săptămâna 1-2)
+- Migrări DB, modele noi, enums
+- CashlessAccount + CashlessSettings
+- Migrare wristbands existente → CashlessAccount (§17)
+- VendorEmployee roles + auth guard vendor
+
+### Faza 2: Core Operations (Săptămâna 3-4)
+- CashlessSale + SaleService
+- TopUpService (online + fizic) + TopUpLocation
+- CashoutService (parțial, digital/fizic)
+- Account-to-account transfer (§21)
+- Age verification enforcement
+- Tipping (§27)
+
+### Faza 3: Vendor Portal (Săptămâna 5-6)
+- Filament VendorPanel setup + auth guard
+- Ecrane per rol (manager/supervisor/member)
+- POS interface
+- CSV import produse
+
+### Faza 4: Suppliers & Stocuri (Săptămâna 7-8)
+- Supplier complet + brands + products
+- InventoryStock + InventoryMovement
+- Flow-uri stoc (livrare → alocare → consum → retur)
+- Auto-decrementare stoc la vânzare
+
+### Faza 5: Finance + Pricing + Refunds (Săptămâna 9-10)
+- FinanceFeeRule + PricingRule + components
+- Enforcement prețuri obligatorii
+- VendorFinanceSummary + calcul automat
+- Refund flow cu aprobare (§18)
+- Multi-currency support (§26)
+
+### Faza 6: Reports + Dashboard (Săptămâna 11-13)
+- ReportService (50+ rapoarte standard, §6)
+- Widget-uri Filament dashboard
+- Export CSV/PDF
+- Rapoarte programate
+- Rapoarte avansate: basket analysis, cohort, weather correlation (§34)
+
+### Faza 7: Map + Heatmaps + Predictions (Săptămâna 14-15)
+- Extindere FestivalMap + POI cu vendor linking (§33)
+- Live participant tracking (event collection)
+- Heatmap engine (aggregation + Redis + display)
+- Crowd management dashboard
+- PredictionService + AnomalyDetectionService (§34)
+
+### Faza 8: Profiling + Notifications (Săptămâna 16-17)
+- CustomerProfile + job de calculare
+- Segmentare automată + tags
+- Vouchers/promo credits (§16)
+- Spending limits parentale (§28)
+- Sistem notificări (push/email/sms) + preferințe
+
+### Faza 9: Integrations + Operations (Săptămâna 18-19)
+- Mobile API client complet (§15)
+- Receipts digitale
+- Webhooks externe (§25)
+- Dispute resolution (§24)
+- Lost & Found integrare cashless (§32)
+- Reconciliere offline detaliată (§20)
+- Batch operations + progress tracking (§31)
+
+### Faza 10: Polish + Compliance (Săptămâna 20)
+- Audit trail complet (§19)
+- GDPR compliance (§30)
+- Rate limiting granular (§29)
+- Teste unitare + feature + load (§31)
+- Documentare API (OpenAPI/Swagger)
+- Security review
+- Performance optimization (indexes, Redis cache, query optimization)
+
+---
+
+*Plan complet: 34 secțiuni acoperind 10 cerințe originale + 13 îmbunătățiri. 28 tabele noi, 11 modificate, 14+ enums. 10 faze de implementare, ~20 săptămâni. 70+ rapoarte inclusiv predictive. Live tracking + heatmaps. Anomaly detection.*
+
+---
+
+## 24. Dispute Resolution (Contestații Clienți)
+
+Diferit de refund (inițiat de vendor): disputa e inițiată de **client** care contestă o tranzacție.
+
+### 24.1 Model: `CashlessDispute`
+
+**Tabel `cashless_disputes`:**
+```
+id                       BIGINT PK AUTO
+tenant_id                BIGINT FK
+festival_edition_id      BIGINT FK
+cashless_account_id      BIGINT FK
+customer_id              BIGINT FK
+wristband_transaction_id BIGINT FK NULL -- tranzacția contestată
+cashless_sale_id         BIGINT FK NULL
+vendor_id                BIGINT FK NULL
+dispute_type             ENUM('unauthorized_charge','wrong_amount','duplicate_charge','product_not_received','quality_issue','other')
+status                   ENUM('open','investigating','resolved_refund','resolved_partial_refund','resolved_no_action','rejected','escalated')
+amount_disputed_cents    INT
+amount_refunded_cents    INT DEFAULT 0
+description              TEXT -- descrierea clientului
+evidence                 JSON NULL -- screenshots, photos uploaded
+admin_notes              TEXT NULL
+assigned_to              BIGINT FK → users NULL -- admin asignat
+priority                 ENUM('low','medium','high','urgent') DEFAULT 'medium'
+opened_at                TIMESTAMP
+resolved_at              TIMESTAMP NULL
+resolution_reason        TEXT NULL
+meta                     JSON NULL
+created_at               TIMESTAMP
+updated_at               TIMESTAMP
+```
+
+### 24.2 Flow dispută
+
+```
+1. CLIENT deschide dispută din app:
+   POST /api/cashless/client/disputes
+   { "wristband_transaction_id": 5678, "dispute_type": "wrong_amount", 
+     "description": "Mi s-a debitat 45 RON dar am cumpărat doar o bere de 15 RON" }
+   → status = 'open', priority auto-calculated pe baza sumei
+
+2. ADMIN festival vede disputa în Filament → o preia (assigned_to = admin)
+   → status = 'investigating'
+   → Poate vedea: tranzacția, istoricul clientului, camera POS (dacă există), logul vendorului
+
+3. ADMIN decide:
+   a. Refund complet → CashlessAccountService::refund() + status = 'resolved_refund'
+   b. Refund parțial → status = 'resolved_partial_refund'
+   c. Fără acțiune (tranzacție validă) → status = 'resolved_no_action'
+   d. Escalare (fraud suspect) → status = 'escalated' + alertă security
+
+4. CLIENT primește notificare cu rezoluția
+```
+
+### 24.3 Auto-escalare
+
+- Dispute nerezolvate >2h în timpul festivalului → priority auto-upgrade
+- >5 dispute de la același vendor în <1h → alertă admin: posibilă problemă la vendor
+- >3 dispute de la același client → flag review (posibil abuz)
+
+---
+
+## 25. Webhooks Externe
+
+### 25.1 Sistem de webhook subscriptions
+
+Festivalul poate configura URL-uri externe care primesc events în real-time.
+
+**Tabel `cashless_webhook_endpoints`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK NULL -- NULL = toate edițiile
+url                     VARCHAR(500)
+secret                  VARCHAR(255) -- pentru HMAC signature
+description             VARCHAR(255) NULL
+events                  JSON -- ["sale.completed","topup.completed","stock.low",...]
+is_active               BOOLEAN DEFAULT true
+last_success_at         TIMESTAMP NULL
+last_failure_at         TIMESTAMP NULL
+consecutive_failures    INT DEFAULT 0 -- disable auto după 10 failures
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**Tabel `cashless_webhook_deliveries`:**
+```
+id                      BIGINT PK AUTO
+webhook_endpoint_id     BIGINT FK
+event_type              VARCHAR(100)
+payload                 JSON
+response_status         INT NULL
+response_body           TEXT NULL
+attempted_at            TIMESTAMP
+succeeded               BOOLEAN DEFAULT false
+attempt_number          INT DEFAULT 1
+next_retry_at           TIMESTAMP NULL
+```
+
+### 25.2 Events disponibile
+
+```
+sale.completed          → payload: sale_id, vendor, items, total, customer
+sale.refunded           → payload: refund_id, sale_id, amount
+topup.completed         → payload: account_id, amount, channel, method
+cashout.requested       → payload: account_id, amount, method
+cashout.completed       → payload: account_id, amount
+stock.low               → payload: vendor_id, product, quantity_remaining
+stock.depleted          → payload: vendor_id, product
+vendor.shift_started    → payload: vendor_id, employee, shift_id
+vendor.shift_ended      → payload: vendor_id, employee, sales_total
+dispute.opened          → payload: dispute_id, customer, amount
+account.activated       → payload: account_id, customer
+wristband.disabled      → payload: wristband_uid, reason
+reconciliation.completed → payload: batch_id, stats
+```
+
+### 25.3 Delivery cu retry
+
+```
+Retry schedule: 30s, 2min, 10min, 1h, 6h (5 încercări)
+După 10 delivery failures consecutive → endpoint dezactivat automat + notificare admin
+Signature: HMAC-SHA256 pe payload cu secret-ul endpoint-ului
+Header: X-Cashless-Signature, X-Cashless-Event, X-Cashless-Delivery-Id
+```
+
+---
+
+## 26. Currency Exchange (Multi-Currency)
+
+### 26.1 Configurare
+
+Festivaluri internaționale: clientul poate plăti în moneda lui, festivalul operează în moneda locală.
+
+**Câmpuri noi pe `CashlessSettings`:**
+```
++ supported_currencies      JSON DEFAULT '["RON"]' -- ["RON","EUR","USD","GBP"]
++ base_currency             VARCHAR(3) DEFAULT 'RON' -- moneda festivalului
++ exchange_rate_source      ENUM('manual','ecb','bnr','auto') DEFAULT 'manual'
++ exchange_rate_refresh_minutes INT DEFAULT 60
++ exchange_markup_percentage DECIMAL(5,2) DEFAULT 2.00 -- markup pe curs (profit festival)
+```
+
+**Tabel `cashless_exchange_rates`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+from_currency           VARCHAR(3)
+to_currency             VARCHAR(3)
+rate                    DECIMAL(12,6) -- 1 EUR = 4.9750 RON
+markup_rate             DECIMAL(12,6) -- 1 EUR = 5.0745 RON (cu markup 2%)
+valid_from              TIMESTAMP
+valid_until             TIMESTAMP NULL
+source                  VARCHAR(50) -- 'manual', 'bnr_api', 'ecb_api'
+meta                    JSON NULL
+created_at              TIMESTAMP
+
+UNIQUE (festival_edition_id, from_currency, to_currency, valid_from)
+```
+
+### 26.2 Flow top-up multi-currency
+
+```
+1. Client cu card EUR face top-up 50 EUR
+2. Sistem: curs EUR→RON = 5.0745 (cu markup)
+3. Se creditează: 253.73 RON în CashlessAccount
+4. WristbandTransaction: amount_cents=25373, currency='RON',
+   meta: { original_amount_cents: 5000, original_currency: 'EUR', exchange_rate: 5.0745 }
+5. Toate operațiile interne rămân în base_currency (RON)
+```
+
+---
+
+## 27. Tipping (Bacșiș Digital)
+
+### 27.1 Concept
+
+Clientul poate adăuga bacșiș opțional la orice achiziție. Bacșișul merge **integral** la vendor (nu se aplică comision festival).
+
+**Câmpuri noi pe `CashlessSale`:**
+```
++ tip_cents              INT DEFAULT 0
++ tip_percentage         DECIMAL(5,2) NULL -- dacă a ales procent (10%, 15%, 20%)
++ total_with_tip_cents   INT -- total_cents + tip_cents
+```
+
+**Câmpuri noi pe `CashlessSettings`:**
+```
++ tipping_enabled           BOOLEAN DEFAULT false
++ tip_preset_percentages    JSON DEFAULT '[10, 15, 20]' -- opțiuni rapide
++ tip_custom_enabled        BOOLEAN DEFAULT true -- permite sumă custom
++ tip_max_percentage        DECIMAL(5,2) DEFAULT 50.00 -- maxim 50% bacșiș
++ tip_exempt_from_commission BOOLEAN DEFAULT true -- nu se aplică comision pe tips
+```
+
+### 27.2 Flow POS cu tip
+
+```
+1. Employee scanează produse → Total: 45 RON
+2. Ecranul se întoarce la client: "Dorești să adaugi bacșiș?"
+   [10% = 4.50] [15% = 6.75] [20% = 9.00] [Altă sumă] [Nu, mulțumesc]
+3. Client alege 15% → tip_cents = 675
+4. Charge total: 45.00 + 6.75 = 51.75 RON
+5. WristbandTransaction.amount_cents = 5175
+6. CashlessSale: total_cents=4500, tip_cents=675, total_with_tip_cents=5175
+7. La calcul comision: se aplică doar pe total_cents (4500), NU pe tip
+```
+
+### 27.3 Rapoarte tipping
+
+- Total tips per vendor / per angajat / per zi
+- Procentaj mediu tip per vendor
+- Distribuție tips: câți clienți dau 10%, 15%, 20%, custom
+- Raport: vendori cu cele mai mari/mici tips (indicator calitate serviciu)
+
+---
+
+## 28. Spending Limits Parentale
+
+### 28.1 Concept
+
+Un părinte (cont adult) poate seta limită de cheltuieli pe contul copilului minor.
+
+**Tabel `cashless_spending_limits`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+parent_account_id       BIGINT FK → cashless_accounts
+child_account_id        BIGINT FK → cashless_accounts
+daily_limit_cents       INT NULL -- limită pe zi (NULL = fără limită zilnică)
+total_limit_cents       INT NULL -- limită totală pe toată durata
+per_transaction_limit_cents INT NULL -- maxim per tranzacție
+daily_spent_cents       INT DEFAULT 0 -- reset zilnic la 00:00
+total_spent_cents       INT DEFAULT 0
+blocked_categories      JSON NULL -- ["alcohol","tobacco"] -- categorii blocate complet
+require_approval_above_cents INT NULL -- cere aprobare părintelui pentru sume mari
+is_active               BOOLEAN DEFAULT true
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### 28.2 Flow
+
+```
+1. PĂRINTE din app: "Setează limită pentru copilul meu"
+   POST /api/cashless/client/spending-limits
+   { "child_account_number": "CA-XXX", "daily_limit_cents": 20000, 
+     "blocked_categories": ["alcohol","tobacco"] }
+
+2. La fiecare CHARGE pe contul copilului:
+   a. SaleService verifică spending limits
+   b. Categorii blocate → BLOCK instant
+   c. daily_spent + charge > daily_limit → BLOCK: "Limita zilnică depășită"
+   d. total_spent + charge > total_limit → BLOCK: "Limita totală depășită"
+   e. charge > per_transaction_limit → BLOCK sau cerere aprobare
+
+3. NOTIFICARE PĂRINTE la fiecare achiziție a copilului:
+   "{copil} a cheltuit {sumă} la {vendor}. Sold: {sold}. Limită: {rămas}/{total}"
+
+4. Job zilnic: ResetDailySpendingLimitsJob → daily_spent_cents = 0
+```
+
+### 28.3 Linking parent ↔ child
+
+Validare: ambele conturi trebuie să fie din aceeași ediție festival. Linking-ul se face prin:
+- QR code scan din app-ul părintelui pe wristband-ul copilului
+- Sau manual prin account_number + confirmare pe ambele conturi
+
+---
+
+## 29. API Rate Limiting Detaliat
+
+### 29.1 Straturi de rate limiting
+
+```
+Layer 1: Global (nginx/CloudFlare)
+  → 1000 req/min per IP
+
+Layer 2: Per API key (Laravel throttle middleware)
+  → 300 req/min per tenant API key
+
+Layer 3: Per endpoint (granular)
+  → POS charge: 60 req/min per vendor_pos_device
+  → Top-up: 10 req/min per customer
+  → Sync offline: 10 req/min per device
+  → Reports: 30 req/min per user
+  → Client app: 120 req/min per customer token
+
+Layer 4: Per entitate (business logic)
+  → 1 charge per 10s per cashless_account (anti-double-tap)
+  → 1 transfer per 60s per account
+  → 3 cashout requests per hour per account
+  → 5 dispute opens per day per customer
+```
+
+### 29.2 Configurare în `CashlessSettings`
+
+```
++ rate_limit_charge_cooldown_seconds    INT DEFAULT 10
++ rate_limit_topup_per_minute           INT DEFAULT 10
++ rate_limit_transfer_cooldown_seconds  INT DEFAULT 60
++ rate_limit_cashout_per_hour           INT DEFAULT 3
+```
+
+### 29.3 Middleware custom
+
+```php
+// app/Http/Middleware/CashlessRateLimit.php
+class CashlessRateLimit
+{
+    public function handle($request, Closure $next, string $context)
+    {
+        $settings = $this->getEditionSettings($request);
+        $key = $this->buildRateLimitKey($request, $context);
+        $limit = $this->getLimitForContext($settings, $context);
+        
+        if (RateLimiter::tooManyAttempts($key, $limit)) {
+            return response()->json([
+                'error' => 'rate_limit_exceeded',
+                'retry_after' => RateLimiter::availableIn($key),
+            ], 429);
+        }
+        
+        RateLimiter::hit($key, decay: $this->getDecayForContext($context));
+        return $next($request);
+    }
+}
+```
+
+---
+
+## 30. Data Retention & GDPR
+
+### 30.1 Politică de retenție
+
+| Categorie date | Retenție | Acțiune după expirare |
+|----------------|----------|----------------------|
+| Tranzacții financiare | 10 ani | Obligație legală (fiscal) – se păstrează |
+| Date personale client (nume, email, telefon) | 2 ani post-festival | Anonimizare |
+| Customer profiles (comportament) | 1 an post-festival | Ștergere completă |
+| Audit logs | 5 ani | Arhivare cold storage |
+| Wristband scan logs | 6 luni post-festival | Ștergere |
+| Notification preferences | La cerere sau 1 an | Ștergere |
+| Dispute evidence (photos) | 1 an post-rezolvare | Ștergere |
+| Webhook delivery logs | 90 zile | Ștergere |
+| Location/heatmap data | 6 luni post-festival | Anonimizare |
+
+### 30.2 Anonimizare
+
+**Job: `AnonymizeCashlessDataJob`** (rulat periodic)
+
+```php
+// Anonimizare tranzacții mai vechi de 2 ani:
+WristbandTransaction::where('created_at', '<', now()->subYears(2))
+    ->update([
+        'customer_email' => null,
+        'customer_name' => null,
+        'operator' => 'anonymized',
+    ]);
+
+// Anonimizare CashlessAccount:
+CashlessAccount::where('closed_at', '<', now()->subYears(2))
+    ->each(function ($account) {
+        $account->update(['meta' => null]);
+        // Customer rămâne (date fiscale) dar profilul se șterge
+        $account->profile()->delete();
+    });
+```
+
+### 30.3 Drepturi GDPR client
+
+| Drept | Implementare |
+|-------|-------------|
+| **Drept la acces** | `GET /api/cashless/client/gdpr/export` → export JSON/CSV cu toate datele |
+| **Drept la ștergere** | `POST /api/cashless/client/gdpr/delete-request` → cerere review admin → ștergere/anonimizare |
+| **Drept la portabilitate** | Același endpoint export, format standard |
+| **Drept la rectificare** | `PUT /api/cashless/client/profile` → modificare date |
+| **Drept la opoziție** | Dezactivare notificări, dezactivare profiling |
+
+**Tabel `cashless_gdpr_requests`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+customer_id             BIGINT FK
+request_type            ENUM('export','deletion','rectification','objection')
+status                  ENUM('pending','processing','completed','rejected')
+requested_at            TIMESTAMP
+processed_at            TIMESTAMP NULL
+processed_by            BIGINT FK → users NULL
+export_file_path        VARCHAR(500) NULL
+notes                   TEXT NULL
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+---
+
+## 31. Batch Operations + Testing Strategy
+
+### 31.1 Batch Operations
+
+Operații în masă necesare pentru managementul festivalului.
+
+**Job-uri batch cu progress tracking:**
+
+| Operație | Job | Input |
+|----------|-----|-------|
+| Import 5000 wristbands | `BatchImportWristbandsJob` | CSV cu UIDs |
+| Activare conturi în masă | `BatchActivateAccountsJob` | Lista customer IDs |
+| Alocare stoc la 20 vendori | `BatchAllocateStockJob` | JSON: [{vendor_id, product_id, qty}] |
+| Top-up promo (voucher masiv) | `BatchApplyVoucherJob` | Voucher ID + lista accounts |
+| Auto-cashout final festival | `BatchAutoCashoutJob` | Edition ID |
+| Export raport mare | `BatchExportReportJob` | Report config |
+| Anonimizare GDPR | `AnonymizeCashlessDataJob` | Date range |
+
+**Progress tracking:**
+
+**Tabel `cashless_batch_jobs`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK NULL
+job_type                VARCHAR(100)
+status                  ENUM('queued','processing','completed','failed','cancelled')
+total_items             INT
+processed_items         INT DEFAULT 0
+failed_items            INT DEFAULT 0
+progress_percentage     DECIMAL(5,2) DEFAULT 0
+started_at              TIMESTAMP NULL
+completed_at            TIMESTAMP NULL
+error_log               JSON NULL -- [{item_id, error_message}]
+result_file_path        VARCHAR(500) NULL -- CSV cu rezultate
+initiated_by            BIGINT FK → users
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+**API:**
+```
+POST   /api/cashless/batch/{type}        → inițiere job
+GET    /api/cashless/batch/{id}/status    → progress real-time
+POST   /api/cashless/batch/{id}/cancel    → anulare
+GET    /api/cashless/batch/{id}/result    → download rezultat
+```
+
+### 31.2 Testing Strategy
+
+#### Unit Tests (PHPUnit)
+
+| Component | Ce se testează | Nr. teste estimat |
+|-----------|---------------|-------------------|
+| `CashlessAccountService` | topUp, charge, refund, cashout, transfer – cu locking, edge cases | ~30 |
+| `PricingService` | Calcul prețuri, components, TVA, SGR, mandatory pricing | ~20 |
+| `FinanceFeeService` | Calcul comisioane, fee rules, percentage/fixed/per-category | ~15 |
+| `SaleService` | Creare sale, age verification, spending limits, tipping | ~25 |
+| `SupplierStockService` | Delivery, allocation, consumption, return, waste | ~20 |
+| `CustomerProfileService` | Scoring, segmentation, tagging | ~15 |
+| `ProductImportService` | CSV parse, validation, matching | ~10 |
+| `ReconciliationService` | Offline sync, conflicts, duplicates | ~15 |
+| Models | Relații, scopes, accessors, computed fields | ~30 |
+| **Total** | | **~180 tests** |
+
+#### Feature Tests (Integration)
+
+| Flow | Ce se testează |
+|------|---------------|
+| Full purchase flow | Activare cont → top-up → achiziție → receipt → cashout |
+| Refund with approval | Member request → manager approve → balance restored |
+| Dispute flow | Client opens → admin investigates → refund/reject |
+| Stock flow | Delivery → allocate → sell → stock decremented |
+| Multi-currency topup | EUR top-up → RON conversion → correct balance |
+| Offline reconciliation | Batch sync → conflict detection → resolution |
+| Voucher redemption | Apply code → validate → credit account |
+| Parental spending limit | Set limit → child charges → limit enforcement |
+
+#### Load Testing
+
+```
+Tool: k6 sau Laravel's built-in stress testing
+
+Scenarii:
+1. Peak POS: 5000 charge requests/min (simulare 100 POS-uri × 50 tranzacții/min)
+2. Peak top-up: 500 top-ups/min
+3. Concurrent charges pe același cont: 10 simultane (test locking)
+4. Mass sync: 50 POS-uri trimit câte 200 tranzacții offline simultan
+5. Report generation: 20 rapoarte complexe simultane
+```
+
+#### Seeders
+
+```php
+// database/seeders/CashlessFestivalSeeder.php
+// Generează un festival complet cu:
+// - 1 ediție activă
+// - 30 vendori cu câte 20-50 produse fiecare
+// - 5 suppliers cu 100 produse
+// - 5000 clienți cu conturi cashless active
+// - 50,000 tranzacții (mix topup/charge/refund)
+// - 10 POS devices per vendor
+// - 200 angajați
+// - Pricing rules + finance rules
+// - Stocuri alocate
+```
+
+---
+
+## 32. Lost & Found (Integrare Cashless)
+
+### 32.1 Ce există
+
+Modelul `LostAndFound` este deja funcțional cu: categorii (phone, wallet, keys etc.), matching lost↔found, claiming, foto, scopes. Trebuie doar integrat cu sistemul cashless.
+
+### 32.2 Extinderi necesare
+
+**Câmpuri noi pe `lost_and_found`:**
+```
++ festival_edition_id    BIGINT FK → festival_editions NULL
++ wristband_id           BIGINT FK → wristbands NULL -- wristband pierdută/găsită
++ cashless_account_id    BIGINT FK → cashless_accounts NULL
++ wristband_uid          VARCHAR(100) NULL -- UID scanat de pe wristband găsit
++ vendor_id              BIGINT FK NULL -- raportare de la un vendor
++ topup_location_id      BIGINT FK NULL -- raportare de la un top-up stand
++ zone                   VARCHAR(100) NULL -- zona din festival (legat de FestivalMap)
++ urgency                ENUM('low','medium','high') DEFAULT 'medium'
++ notification_sent      BOOLEAN DEFAULT false
+```
+
+**Categorie nouă:**
+```php
+'wristband' => 'Wristband / Brățară',
+```
+
+### 32.3 Flow wristband pierdută
+
+```
+1. Client raportează pierdere din app:
+   POST /api/cashless/client/lost-and-found
+   { "type": "lost", "category": "wristband", "location_found_or_lost": "Zona Stage A" }
+
+2. Sistem AUTOMAT:
+   a. Dezactivare wristband: Wristband::disable('reported_lost')
+   b. CashlessAccount rămâne ACTIV (sold păstrat, contul funcționează digital)
+   c. Creare LostAndFound entry cu wristband_id link
+   d. Notificare: "Wristband dezactivat. Soldul tău de {sold} e protejat."
+
+3. La Info Point, staff găsește o wristband:
+   a. Scanare NFC → identificare UID
+   b. Creare LostAndFound entry type='found', wristband_uid=UID
+   c. Auto-matching cu entries 'lost' care au același wristband_id
+   d. Dacă match → notificare client: "Wristband-ul tău a fost găsit! Vino la Info Point {X}"
+
+4. Client vine să revendice:
+   a. Verificare identitate (CI/pașaport)
+   b. LostAndFound::markClaimed()
+   c. Re-activare wristband + re-link la CashlessAccount
+```
+
+### 32.4 Flow wristband replacement
+
+```
+1. Client la Info Point: "Am pierdut wristband-ul"
+2. Staff verifică CashlessAccount → sold confirmé
+3. Dezactivare wristband vechi (dacă nu era deja)
+4. Atribuire wristband NOU → CashlessAccount (Wristband::assignTo())
+5. Sync balance pe noul wristband
+6. Logare în audit trail: "Wristband replacement: old=UID1, new=UID2"
+```
+
+### 32.5 API client
+
+```
+POST   /api/cashless/client/lost-and-found           → raportare pierdere
+GET    /api/cashless/client/lost-and-found            → status raportările mele
+GET    /api/cashless/client/lost-and-found/{id}       → detalii
+```
+
+---
+
+## 33. Festival Map + Live Tracking + Heatmaps
+
+### 33.1 Ce există
+
+- `FestivalMap` – hartă cu image_url + bounds (coordonate)
+- `FestivalPointOfInterest` – POI cu lat/lng, categorie, ore funcționare, stage_id
+
+### 33.2 Extinderi necesare pe modele existente
+
+**Câmpuri noi pe `festival_points_of_interest`:**
+```
++ vendor_id              BIGINT FK → vendors NULL -- POI = vendor location
++ topup_location_id      BIGINT FK → topup_locations NULL
++ capacity               INT NULL -- capacitate maximă zonă
++ current_occupancy       INT DEFAULT 0 -- persoane estimate acum (live)
++ occupancy_level         ENUM('low','moderate','high','full') NULL
++ is_cashless_point       BOOLEAN DEFAULT false -- are terminal cashless?
++ live_status             ENUM('open','closed','busy','full') DEFAULT 'open'
++ polygon_coordinates     JSON NULL -- contur zonă (pentru heatmap)
++ elevation               DECIMAL(6,2) NULL -- nivel/etaj
+```
+
+**Câmpuri noi pe `festival_maps`:**
+```
++ festival_edition_id    BIGINT FK → festival_editions NULL
++ map_type               ENUM('static','interactive','satellite') DEFAULT 'static'
++ tile_url               VARCHAR(500) NULL -- custom tile server URL
++ min_zoom               INT DEFAULT 14
++ max_zoom               INT DEFAULT 20
++ default_zoom           INT DEFAULT 16
++ default_center         JSON NULL -- {"lat": 44.4268, "lng": 26.1025}
++ overlay_layers         JSON NULL -- layer-uri aditionale
++ heatmap_enabled        BOOLEAN DEFAULT false
++ live_tracking_enabled  BOOLEAN DEFAULT false
+```
+
+### 33.3 Live Participant Tracking
+
+**Sursele de date locație:**
+1. **Scanări wristband la POS** – cea mai precisă (știm exact unde e clientul)
+2. **Top-up la stand** – locație exactă
+3. **Check-in la gate** – intrare/ieșire zone
+4. **App GPS** (opțional, cu consent) – tracking continuu
+5. **Bluetooth beacons** (opțional, hardware adițional)
+
+**Tabel `participant_location_events`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+customer_id             BIGINT FK NULL -- poate fi anonim
+cashless_account_id     BIGINT FK NULL
+source                  ENUM('pos_scan','topup_scan','gate_checkin','app_gps','beacon')
+lat                     DECIMAL(9,6) NULL
+lng                     DECIMAL(9,6) NULL
+zone_id                 BIGINT FK → festival_points_of_interest NULL
+vendor_id               BIGINT FK NULL
+accuracy_meters         DECIMAL(6,1) NULL
+recorded_at             TIMESTAMP
+-- Nu stocăm created_at/updated_at - optimizare write performance
+```
+
+**Index:** `(festival_edition_id, recorded_at)` + `(zone_id, recorded_at)` pentru query-uri rapide.
+
+**Retenție:** Ștergere automată după 6 luni (GDPR). Agregările rămân.
+
+### 33.4 Heatmap Engine
+
+**Cum funcționează:**
+
+```
+1. COLECTARE: La fiecare scanare POS/topup/gate, se scrie în participant_location_events
+   → Async via queue (nu blochează tranzacția)
+
+2. AGREGARE: Job periodic (la fiecare 2 minute):
+   AggregateHeatmapJob calculează densitate per zonă:
+   
+   SELECT zone_id, COUNT(DISTINCT customer_id) as unique_visitors,
+          COUNT(*) as total_events
+   FROM participant_location_events
+   WHERE recorded_at > NOW() - INTERVAL '15 minutes'
+   GROUP BY zone_id
+
+3. STOCARE: Redis hash pentru acces rapid
+   Key: "heatmap:{edition_id}:current"
+   Value: { "zone_123": { "density": 0.85, "count": 342 }, ... }
+
+4. AFIȘARE: Frontend (app + admin) citește din Redis → overlay pe hartă
+```
+
+**Tabel `heatmap_snapshots` (istoric pentru analiză post-festival):**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+snapshot_at             TIMESTAMP
+granularity             ENUM('5min','15min','1hour') DEFAULT '15min'
+data                    JSON -- {"zones": [{"id": 1, "density": 0.7, "visitors": 250}, ...]}
+total_active_visitors   INT
+meta                    JSON NULL
+```
+
+### 33.5 API Hartă + Heatmap
+
+```
+GET    /api/cashless/map/{editionId}                    → hartă + toate POI-uri
+GET    /api/cashless/map/{editionId}/vendors             → doar vendori cu locație
+GET    /api/cashless/map/{editionId}/topup-locations     → standuri top-up
+GET    /api/cashless/map/{editionId}/heatmap/live        → heatmap real-time (Redis)
+GET    /api/cashless/map/{editionId}/heatmap/history     → heatmap istoric (per interval)
+GET    /api/cashless/map/{editionId}/zones/{zoneId}/occupancy → ocupare zonă live
+```
+
+**API client app:**
+```
+POST   /api/cashless/client/location                    → report GPS location (opt-in)
+GET    /api/cashless/client/map                          → hartă personalizată (cu vendori vizitați highlighted)
+GET    /api/cashless/client/nearby-vendors               → vendori apropiați pe baza locației
+```
+
+### 33.6 Crowd Management Dashboard (Filament)
+
+Widget-uri pe pagina Map admin:
+
+1. **Hartă interactivă live** cu heatmap overlay (culori: verde→galben→roșu→violet)
+2. **Ocupare per zonă** – barchart cu capacitate vs. actual
+3. **Alertă suprasolicitare** – dacă o zonă depășește 90% capacitate → alertă automată
+4. **Flow vizitatori** – animație: de unde vin vizitatorii (entry points) și cum se distribuie
+5. **Comparație cu ziua precedentă** – overlay: azi vs ieri la aceeași oră
+6. **Timeline slider** – vizualizare heatmap istoric, scrub prin ore
+
+---
+
+## 34. Advanced Reports, Analytics & Predictions
+
+### 34.1 Rapoarte adiționale (extindere secțiunea 6)
+
+#### G. RAPOARTE AVANSATE VÂNZĂRI
+
+| # | Raport | Descriere |
+|---|--------|-----------|
+| SA1 | **Basket analysis** | Ce produse se cumpără împreună (asocieri) – ex: "Clienții care cumpără bere cumpără și hot dog 67% din timp" |
+| SA2 | **Price elasticity** | Impactul prețului asupra volumului – dacă prețul crește cu 10%, volumul scade cu X% |
+| SA3 | **Sales velocity** | Viteza vânzărilor per produs (unități/oră) – trending up/down |
+| SA4 | **Vendor performance matrix** | Revenue × Satisfaction (tip %) × Efficiency (avg serve time) |
+| SA5 | **Lost sales estimation** | Estimare vânzări pierdute din cauza stoc epuizat (bazat pe trend pre-depletion) |
+| SA6 | **Revenue per square meter** | Dacă avem suprafața vendorilor → revenue/mp (eficiență spațiu) |
+| SA7 | **Weather correlation** | Corelație vânzări ↔ vreme (necesită weather API) – "Pe ploaie, vânzările de bere scad 30% dar cafeaua crește 50%" |
+
+#### H. RAPOARTE AVANSATE CLIENȚI
+
+| # | Raport | Descriere |
+|---|--------|-----------|
+| CA1 | **Customer journey map** | Traseul complet al clientului: check-in → prim topup → unde a mâncat → ce concerte → cashout |
+| CA2 | **Cohort analysis** | Comportament pe cohorte: Early Bird vs. Last Minute buyers, VIP vs. General |
+| CA3 | **Churn prediction intra-festival** | Clienți care au încetat să mai cumpere – probabilitate cashout anticipat |
+| CA4 | **Lifetime value per client** | Dacă clientul a participat la mai multe ediții → LTV cross-edition |
+| CA5 | **Net Promoter Score correlation** | Corelare NPS (din FestivalReview) cu spending patterns |
+| CA6 | **Social spending patterns** | Grupuri de clienți care cumpără împreună (same vendor, same time, transfer-uri între ei) |
+| CA7 | **First purchase delay** | Cât timp trece de la activare cont → prima achiziție (indicator onboarding friction) |
+
+#### I. RAPOARTE PREDICTIVE (ML-ready)
+
+| # | Raport | Descriere | Algoritm sugerat |
+|---|--------|-----------|------------------|
+| P1 | **Demand forecasting per produs** | Predicție cerere pe orele următoare | Time series (ARIMA/Prophet) |
+| P2 | **Stock depletion prediction** | Când se va termina stocul fiecărui produs | Linear regression pe consumption rate |
+| P3 | **Peak hour prediction** | Predicție ore vârf pentru ziua curentă | Pattern matching pe zile anterioare |
+| P4 | **Revenue forecast** | Estimare revenue total ediție bazat pe trend curent | Exponential smoothing |
+| P5 | **Crowd density prediction** | Estimare densitate pe zone pentru următoarele 2h | LSTM pe heatmap history |
+| P6 | **Cashout volume prediction** | Estimare volum cashout-uri (pentru pregătire cash) | Historical pattern + day-of-festival position |
+| P7 | **Vendor staffing recommendation** | Câți angajați ar trebui per shift bazat pe predicted demand | Optimization model |
+
+### 34.2 Implementare predicții
+
+**Abordare pragmatică (fără ML extern inițial):**
+
+```php
+// app/Services/Cashless/PredictionService.php
+
+class PredictionService
+{
+    /**
+     * Predicție simplă bazată pe moving average + day-of-festival pattern
+     */
+    public function forecastHourlySales(int $editionId, int $hoursAhead = 6): array
+    {
+        // 1. Obține vânzări per oră pentru zilele anterioare din aceeași ediție
+        $historicalHourly = $this->getHourlySalesHistory($editionId);
+        
+        // 2. Calculează pattern: "la ora 14, ziua 3, în medie se vând X"
+        $dayOfFestival = $this->getCurrentDayNumber($editionId);
+        
+        // 3. Ajustare cu trend curent (azi e mai sus/jos decât media)
+        $todayTrend = $this->calculateTodayTrend($editionId);
+        
+        // 4. Proiecție pe orele următoare
+        $forecast = [];
+        for ($h = 1; $h <= $hoursAhead; $h++) {
+            $targetHour = now()->addHours($h)->hour;
+            $baselineForHour = $historicalHourly[$targetHour] ?? 0;
+            $forecast[] = [
+                'hour' => $targetHour,
+                'predicted_sales_cents' => (int) ($baselineForHour * $todayTrend),
+                'confidence' => $this->calculateConfidence($historicalHourly, $targetHour),
+            ];
+        }
+        return $forecast;
+    }
+
+    /**
+     * Predicție stock depletion
+     */
+    public function predictStockDepletion(int $stockId): ?Carbon
+    {
+        $stock = InventoryStock::find($stockId);
+        
+        // Consumption rate din ultimele 4 ore
+        $recentConsumption = InventoryMovement::where('inventory_stock_id', $stockId)
+            ->where('movement_type', 'sale')
+            ->where('created_at', '>', now()->subHours(4))
+            ->sum('quantity');
+        
+        $hourlyRate = $recentConsumption / 4;
+        
+        if ($hourlyRate <= 0) return null; // nu se consumă
+        
+        $hoursUntilEmpty = $stock->quantity_available / $hourlyRate;
+        
+        return now()->addHours($hoursUntilEmpty);
+    }
+}
+```
+
+### 34.3 Dashboard Analytics Avansat (Filament)
+
+**Pagină dedicată: "Analytics & Predictions"**
+
+**Row 1: Predicții live**
+- Card: "Revenue estimat EOD" → predicted total + confidence interval
+- Card: "Peak hour azi" → ora estimată cu cel mai mare volum
+- Card: "Produse care se termină în <2h" → alertă roșie
+- Card: "Crowd peak estimat" → ora + zona
+
+**Row 2: Trend-uri**
+- Grafic: Actual vs. Predicted sales (suprapuse, ultimele 12h)
+- Grafic: Stock depletion curves (top 10 produse cu cel mai rapid consum)
+
+**Row 3: Patterns**
+- Heatmap temporal: Ore × Zile (intensitate = volum vânzări)
+- Sankey diagram: Customer flow (Vendor A → Stage B → Vendor C)
+- Scatter plot: Spending vs. Age (clustering vizual)
+
+**Row 4: Cross-festival insights** (dacă au existat ediții anterioare)
+- Comparație ediție curentă vs. precedentă (KPI-uri side by side)
+- Trend multi-ediție: revenue, nr. clienți, avg. spending growth
+
+### 34.4 Real-time Anomaly Detection
+
+**Service: `AnomalyDetectionService`**
+
+Rulează la fiecare 5 minute, verifică:
+
+| Anomalie | Detectare | Alertă |
+|----------|-----------|--------|
+| Spike vânzări brusc (+200% vs. media orei) | Z-score > 3 pe sliding window 1h | Posibil bug POS sau fraud |
+| Drop vânzări brusc (-70% vs. media orei) | Z-score < -2 pe sliding window 1h | POS down? Incident? |
+| Cont cu >20 tranzacții/oră | Threshold pe frequency | Posibil sharing fraudulent |
+| Top-up sume rotunde repetate | Pattern detection | Posibil money laundering |
+| Vendor cu 0 vânzări >2h (în ore active) | Gap detection | POS offline? Vendor închis? |
+| Sold negativ cont | Balance < 0 (din offline sync) | Necesită reconciliere |
+| Wristband folosit la 2 POS-uri simultan | Temporal overlap | Wristband clonat |
+
+```php
+class AnomalyDetectionService
+{
+    public function detectSalesSpike(int $editionId): array
+    {
+        $currentHourSales = $this->getCurrentHourSales($editionId);
+        $avgHourSales = $this->getAverageHourSales($editionId, now()->hour);
+        $stdDev = $this->getStdDevHourSales($editionId, now()->hour);
+        
+        if ($stdDev == 0) return [];
+        
+        $zScore = ($currentHourSales - $avgHourSales) / $stdDev;
+        
+        if (abs($zScore) > 3) {
+            return [[
+                'type' => $zScore > 0 ? 'sales_spike' : 'sales_drop',
+                'severity' => abs($zScore) > 4 ? 'critical' : 'warning',
+                'current_value' => $currentHourSales,
+                'expected_value' => $avgHourSales,
+                'z_score' => $zScore,
+                'detected_at' => now(),
+            ]];
+        }
+        return [];
+    }
+}
+```
+
+### 34.5 Export & API
+
+- Toate rapoartele avansate disponibile prin API: `GET /api/cashless/analytics/{report_type}`
+- Predictions API: `GET /api/cashless/predictions/sales?hours_ahead=6`
+- Anomalies API: `GET /api/cashless/anomalies?status=active`
+- Webhook event: `anomaly.detected` → trimis la endpoints configurate
+
+---
