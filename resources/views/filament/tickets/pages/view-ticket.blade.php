@@ -207,7 +207,14 @@
                                 @endif
                             </p>
                         </div>
-                        @if($ticket->order->tenant)
+                        @if($ticket->order->marketplaceOrganizer)
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
+                                <p class="text-base text-gray-900 dark:text-white">
+                                    {{ $ticket->order->marketplaceOrganizer->company_name ?? $ticket->order->marketplaceOrganizer->name ?? '' }}
+                                </p>
+                            </div>
+                        @elseif($ticket->order->tenant)
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Organizator</span>
                                 <p class="text-base text-gray-900 dark:text-white">
@@ -218,6 +225,14 @@
                                     @else
                                         {{ $ticket->order->tenant->name }}
                                     @endif
+                                </p>
+                            </div>
+                        @endif
+                        @if($ticket->order->source === 'external_import')
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Sursă import</span>
+                                <p class="text-base text-indigo-400">
+                                    🌐 {{ $ticket->order->meta['external_platform'] ?? $ticket->order->meta['imported_from'] ?? 'Extern' }}
                                 </p>
                             </div>
                         @endif

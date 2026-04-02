@@ -23,7 +23,8 @@ class ViewOrder extends ViewRecord
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('danger')
                 ->visible(fn () => in_array($this->record->status, ['completed', 'paid', 'confirmed'])
-                    && ($this->record->refund_status ?? 'none') !== 'full')
+                    && ($this->record->refund_status ?? 'none') !== 'full'
+                    && $this->record->source !== 'external_import')
                 ->modalHeading('Rambursare comandă')
                 ->modalWidth('xl')
                 ->form(fn () => $this->getRefundFormSchema())
@@ -35,7 +36,7 @@ class ViewOrder extends ViewRecord
                 ->label('Change Status')
                 ->icon('heroicon-o-arrow-path')
                 ->color('warning')
-                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']))
+                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']) && $this->record->source !== 'external_import')
                 ->form([
                     Forms\Components\Select::make('status')
                         ->label('New Status')
@@ -89,7 +90,7 @@ class ViewOrder extends ViewRecord
                 }),
 
             Actions\EditAction::make()
-                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded'])),
+                ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']) && $this->record->source !== 'external_import'),
         ];
     }
 

@@ -141,6 +141,7 @@ class OrderResource extends Resource
                                     ->label('Retrimite confirmare')
                                     ->icon('heroicon-o-envelope')
                                     ->color('gray')
+                                    ->visible(fn ($record) => $record->source !== 'external_import')
                                     ->action(fn ($record) => self::resendConfirmation($record)),
                             ])->fullWidth(),
                             SC\Actions::make([
@@ -154,14 +155,15 @@ class OrderResource extends Resource
                                 Action::make('print_invoice')
                                     ->label('Printează factura')
                                     ->icon('heroicon-o-printer')
-                                    ->color('gray'),
+                                    ->color('gray')
+                                    ->visible(fn ($record) => $record->source !== 'external_import'),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('change_status')
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('warning')
-                                    ->visible(fn ($record) => !in_array($record->status, ['refunded', 'partially_refunded']))
+                                    ->visible(fn ($record) => !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
                                     ->form([
                                         Forms\Components\Select::make('status')
                                             ->options([
@@ -253,7 +255,7 @@ class OrderResource extends Resource
                         '#' . str_pad($state, 6, '0', STR_PAD_LEFT) .
                         ($record->order_number ? " ({$record->order_number})" : '') .
                         ($record->source === 'test_order' ? ' ⚗️ TEST' : '') .
-                        ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? 'Extern') : '')
+                        ($record->source === 'external_import' ? ' 🌐 ' . ($record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern') : '')
                     )
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
@@ -426,7 +428,7 @@ class OrderResource extends Resource
                     ->color('danger')
                     ->iconButton()
                     ->tooltip('Rambursează comanda')
-                    ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']))
+                    ->visible(fn ($record) => in_array($record->status, ['completed', 'paid', 'confirmed']) && !in_array($record->status, ['refunded', 'partially_refunded']) && $record->source !== 'external_import')
                     ->requiresConfirmation()
                     ->modalHeading(fn ($record) => 'Rambursare ' . ($record->order_number ?? '#' . $record->id))
                     ->modalDescription(fn ($record) => 'Rambursare completă pentru comanda ' . ($record->order_number ?? '#' . $record->id) . '. Total: ' . number_format($record->total ?? 0, 2) . ' ' . ($record->currency ?? 'RON'))
@@ -1014,7 +1016,7 @@ class OrderResource extends Resource
 
         // === EXTERNAL IMPORT BADGE ===
         if ($isExternalImport) {
-            $extPlatform = e($record->meta['external_platform'] ?? 'Extern');
+            $extPlatform = e($record->meta['external_platform'] ?? $record->meta['imported_from'] ?? 'Extern');
             $html .= "<div style='padding:8px 12px;margin-bottom:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:12px;color:#818CF8;display:flex;align-items:center;gap:6px;'>🌐 Import extern: <strong>{$extPlatform}</strong> — fără comision Tixello</div>";
         }
 
