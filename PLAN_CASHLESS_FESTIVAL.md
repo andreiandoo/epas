@@ -3451,3 +3451,169 @@ cashless_anomalies_active                 (gauge)
 | Webhook failures | >50% failure rate >10 min | Warning |
 
 ---
+
+## 39. Fiscalizare (Bonuri Fiscale per Vendor)
+
+### 39.1 Principii
+
+- **Fiecare vânzare cashless generează bon fiscal** – emis de vendor pe CUI-ul propriu
+- **Bonul se emite real-time** la momentul tranzacției (inclusiv offline – se generează local pe POS, se trimite la casa de marcat)
+- **Top-up / Cashout NU generează bon fiscal** – se emite doar un bon nefiscal (chitanță informativă)
+- **TVA per produs** – setat în admin festival pe fiecare produs; bonul conține breakdown TVA per cotă
+- **Integrare casă de marcat fizică** – fiecare vendor are propria casă de marcat (modelul va fi definit ulterior)
+- **Nu se trimite nimic la e-Factura ANAF** momentan – doar bonuri fiscale locale
+
+### 39.2 Model: `CashlessFiscalReceipt`
+
+**Tabel `cashless_fiscal_receipts`:**
+```
+id                      BIGINT PK AUTO
+tenant_id               BIGINT FK
+festival_edition_id     BIGINT FK
+cashless_sale_id        BIGINT FK → cashless_sales NULL -- bon fiscal (legat de vânzare)
+wristband_transaction_id BIGINT FK NULL -- bon nefiscal (topup/cashout)
+vendor_id               BIGINT FK
+vendor_cui              VARCHAR(20) -- snapshot CUI vendor la emitere
+receipt_type            ENUM('fiscal','non_fiscal')
+receipt_number          VARCHAR(100) -- nr. bon fiscal de pe casa de marcat
+fiscal_device_id        VARCHAR(100) NULL -- ID casa de marcat
+status                  ENUM('pending','printed','sent_to_device','confirmed','failed','voided')
+
+-- Sume
+subtotal_cents          INT -- total fără TVA
+total_tax_cents         INT -- total TVA
+total_cents             INT -- total cu TVA
+currency                VARCHAR(3)
+
+-- TVA breakdown
+vat_breakdown           JSON -- [{"rate": 9.00, "base_cents": 1200, "tax_cents": 108}, {"rate": 19.00, "base_cents": 800, "tax_cents": 152}]
+
+-- Items
+items                   JSON -- [{"name": "Ursus 500ml", "qty": 2, "unit_price_cents": 1500, "total_cents": 3000, "vat_rate": 19.00}]
+
+-- Timing
+issued_at               TIMESTAMP -- când s-a emis
+printed_at              TIMESTAMP NULL
+voided_at               TIMESTAMP NULL
+void_reason             TEXT NULL
+
+-- Offline
+is_offline              BOOLEAN DEFAULT false
+offline_ref             VARCHAR(100) NULL
+synced_at               TIMESTAMP NULL
+
+meta                    JSON NULL
+created_at              TIMESTAMP
+updated_at              TIMESTAMP
+```
+
+### 39.3 Flow bon fiscal la vânzare (online)
+
+```
+1. CashlessSale se creează (charge reușit)
+2. SaleService apelează FiscalReceiptService::generateForSale($sale)
+3. Se construiește receipt-ul:
+   a. Se iterează VendorSaleItems → items cu preț, cantitate, TVA
+   b. Se calculează TVA breakdown per cotă (9%, 19% etc.)
+   c. Se creează CashlessFiscalReceipt cu status='pending'
+4. Se trimite comanda la casa de marcat (API/driver - TBD)
+5. Casa de marcat confirmă → status='confirmed', receipt_number = nr. de pe bon
+6. POS afișează/printează bonul
+```
+
+### 39.4 Flow bon fiscal offline
+
+```
+1. POS este offline → vânzare se face local
+2. POS generează receipt LOCAL:
+   - Items, TVA breakdown calculat pe device
+   - offline_ref generat local
+   - is_offline = true
+   - Dacă casa de marcat e conectată local la POS → se printează direct
+   - Dacă nu → receipt se pune în queue local
+3. La reconectare:
+   a. Sync tranzacții → server creează CashlessSale
+   b. Sync receipts → server creează CashlessFiscalReceipt cu is_offline=true
+   c. Dacă receipt-ul a fost deja printat local → status='confirmed'
+   d. Dacă nu → se trimite la casă de marcat
+```
+
+### 39.5 Bon nefiscal (top-up / cashout)
+
+```
+La top-up:
+  receipt_type = 'non_fiscal'
+  items: [{"name": "Alimentare cont cashless", "total_cents": 10000}]
+  Nu conține TVA
+
+La cashout:
+  receipt_type = 'non_fiscal'
+  items: [{"name": "Retragere sold cashless", "total_cents": 5000}]
+  Nu conține TVA
+```
+
+### 39.6 TVA calculat din produse
+
+TVA per produs e setat pe `VendorProduct.vat_rate`. La generarea bonului:
+
+```php
+class FiscalReceiptService
+{
+    public function buildVatBreakdown(CashlessSale $sale): array
+    {
+        $byRate = [];
+        foreach ($sale->items as $item) {
+            $rate = $item->product->vat_rate ?? 19.00;
+            $vatIncluded = $item->product->vat_included ?? true;
+            
+            if ($vatIncluded) {
+                // Preț include TVA → extragem baza
+                $baseCents = (int) round($item->total_cents / (1 + $rate / 100));
+                $taxCents = $item->total_cents - $baseCents;
+            } else {
+                $baseCents = $item->total_cents;
+                $taxCents = (int) round($baseCents * $rate / 100);
+            }
+            
+            $key = (string) $rate;
+            $byRate[$key] ??= ['rate' => $rate, 'base_cents' => 0, 'tax_cents' => 0];
+            $byRate[$key]['base_cents'] += $baseCents;
+            $byRate[$key]['tax_cents'] += $taxCents;
+        }
+        return array_values($byRate);
+    }
+}
+```
+
+### 39.7 Integrare casă de marcat (placeholder)
+
+```php
+// app/Services/Cashless/FiscalDevice/FiscalDeviceInterface.php
+interface FiscalDeviceInterface
+{
+    public function printReceipt(CashlessFiscalReceipt $receipt): FiscalDeviceResponse;
+    public function voidReceipt(string $receiptNumber): FiscalDeviceResponse;
+    public function getStatus(): FiscalDeviceStatus;
+    public function dailyReport(): FiscalDailyReport;
+}
+
+// Implementări viitoare per model de casă de marcat:
+// app/Services/Cashless/FiscalDevice/Drivers/GenericEscPosDriver.php
+// app/Services/Cashless/FiscalDevice/Drivers/DatecsDriver.php
+// app/Services/Cashless/FiscalDevice/Drivers/TremolDriver.php
+// etc.
+```
+
+Interfața e definită, driver-ele concrete se vor implementa când se stabilesc modelele de case de marcat.
+
+### 39.8 Rapoarte fiscale
+
+| Raport | Descriere |
+|--------|-----------|
+| Total bonuri emise per vendor/zi | Volum + valoare |
+| TVA colectat per cotă per vendor | Breakdown 9% / 19% |
+| Bonuri nule (voided) | Cu motiv |
+| Bonuri offline nesinc | Status pending sync |
+| Raport Z zilnic per casă | Sumar zilnic (ca raport Z fiscal) |
+
+---
