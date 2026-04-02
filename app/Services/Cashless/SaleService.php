@@ -17,6 +17,7 @@ class SaleService
     public function __construct(
         private CashlessAccountService $accountService,
         private AgeVerificationService $ageVerificationService,
+        private SupplierStockService $stockService,
     ) {}
 
     /**
@@ -197,6 +198,19 @@ class SaleService
                         : 0,
                     'commission_rate'         => $commissionRate,
                 ]);
+            }
+
+            // Auto-decrement inventory stock for products linked to supplier products
+            foreach ($lineItems as $line) {
+                if ($line['product']->supplier_product_id) {
+                    $this->stockService->recordSale(
+                        $account->tenant_id,
+                        $editionId,
+                        $line['product']->supplier_product_id,
+                        $vendorId,
+                        $line['quantity'],
+                    );
+                }
             }
 
             // Update shift sales count if applicable

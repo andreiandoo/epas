@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProductType;
+use App\Models\Cashless\SupplierProduct;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -75,6 +76,11 @@ class VendorProduct extends Model
     public function saleItems(): HasMany
     {
         return $this->hasMany(VendorSaleItem::class);
+    }
+
+    public function supplierProduct(): BelongsTo
+    {
+        return $this->belongsTo(SupplierProduct::class);
     }
 
     public function getPriceAttribute(): float
