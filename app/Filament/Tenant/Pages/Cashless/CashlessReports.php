@@ -17,7 +17,7 @@ class CashlessReports extends Page
 
     protected static ?int $navigationSort = 2;
 
-    protected static string $view = 'filament.tenant.pages.cashless.reports';
+    protected string $view = 'filament.tenant.pages.cashless.reports';
 
     public ?int $editionId = null;
 

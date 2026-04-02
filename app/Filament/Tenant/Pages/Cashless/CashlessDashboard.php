@@ -22,7 +22,7 @@ class CashlessDashboard extends Page
 
     protected static ?int $navigationSort = 1;
 
-    protected static string $view = 'filament.tenant.pages.cashless.dashboard';
+    protected string $view = 'filament.tenant.pages.cashless.dashboard';
 
     public ?int $editionId = null;
 
