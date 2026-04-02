@@ -114,25 +114,14 @@ class OrderResource extends Resource
 
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
-                    // Price Details
-                    SC\Section::make('Detalii preț')
+                    // Combined Order Details
+                    SC\Section::make('Detalii comandă')
                         ->icon('heroicon-o-calculator')
                         ->compact()
                         ->schema([
-                            Forms\Components\Placeholder::make('price_breakdown')
+                            Forms\Components\Placeholder::make('order_details_combined')
                                 ->hiddenLabel()
-                                ->content(fn ($record) => self::renderPriceBreakdown($record)),
-                        ]),
-
-                    // Commission Details
-                    SC\Section::make('Detalii comision')
-                        ->icon('heroicon-o-currency-dollar')
-                        ->compact()
-                        ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
-                        ->schema([
-                            Forms\Components\Placeholder::make('commission_details')
-                                ->hiddenLabel()
-                                ->content(fn ($record) => self::renderCommissionDetails($record)),
+                                ->content(fn ($record) => self::renderCombinedOrderDetails($record)),
                         ]),
 
                     // Quick Actions - stacked vertically with fullWidth
@@ -994,6 +983,137 @@ class OrderResource extends Resource
         return new HtmlString($html);
     }
 
+    protected static function renderCombinedOrderDetails(Order $record): HtmlString
+    {
+        $currency = $record->currency ?? 'RON';
+        $commissionDetails = $record->meta['commission_details'] ?? [];
+        $orderTotal = (float) ($record->total ?? 0);
+        $orderSubtotal = (float) ($record->subtotal ?? 0);
+        $orderDiscount = (float) ($record->discount_amount ?? 0);
+        $orderCommission = (float) ($record->commission_amount ?? 0);
+        $insuranceAmount = (float) ($record->meta['insurance_amount'] ?? 0);
+        $ticketInsurance = (bool) ($record->meta['ticket_insurance'] ?? false);
+        $isPosOrder = $record->source === 'pos_app';
+
+        $rowStyle = "display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(51,65,85,0.3);";
+        $labelStyle = "font-size:12px;color:#94A3B8;";
+        $valueStyle = "font-size:12px;font-weight:600;color:#E2E8F0;";
+        $subStyle = "font-size:11px;color:#64748B;padding:2px 0 4px 12px;border-bottom:1px solid rgba(51,65,85,0.2);";
+        $headStyle = "font-size:11px;font-weight:600;color:#94A3B8;text-transform:uppercase;letter-spacing:0.5px;padding:10px 0 4px;";
+
+        $html = '<div>';
+
+        // === TICKETS ===
+        $ticketsValue = $record->tickets->sum('price');
+        $html .= "<div style='{$headStyle}'>Bilete</div>";
+        $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Valoare bilete</span><span style='{$valueStyle}'>" . number_format($ticketsValue, 2) . " {$currency}</span></div>";
+
+        // Per-ticket breakdown
+        foreach ($commissionDetails as $cd) {
+            $name = $cd['ticket_type'] ?? 'Bilet';
+            if (is_array($name)) $name = $name['ro'] ?? reset($name) ?? 'Bilet';
+            $qty = (int) ($cd['quantity'] ?? 1);
+            $unitPrice = (float) ($cd['unit_price'] ?? 0);
+            $total = (float) ($cd['total'] ?? 0);
+            $html .= "<div style='{$subStyle}'>" . e($name) . " x{$qty} — " . number_format($unitPrice, 2) . " {$currency}/buc = " . number_format($total, 2) . " {$currency}</div>";
+        }
+
+        // === COMMISSION ===
+        if ($orderCommission > 0 && !$isPosOrder) {
+            // Determine commission type label
+            $modes = collect($commissionDetails)->pluck('commission_mode')->unique();
+            $hasFixed = collect($commissionDetails)->contains(fn ($cd) => ($cd['commission_rate'] ?? 0) == 0 && ($cd['commission_amount'] ?? 0) > 0);
+            $hasPercent = collect($commissionDetails)->contains(fn ($cd) => ($cd['commission_rate'] ?? 0) > 0);
+            $isOnTop = $modes->contains(fn ($m) => in_array($m, ['on_top', 'add_on_top', 'added_on_top']));
+            $modeLabel = $isOnTop ? 'peste' : 'inclus';
+
+            if ($hasFixed && $hasPercent) {
+                $commLabel = "Comision mixt ({$modeLabel})";
+            } elseif ($hasFixed) {
+                $commLabel = "Comision fix ({$modeLabel})";
+            } else {
+                $rates = collect($commissionDetails)->pluck('commission_rate')->unique()->filter(fn ($r) => $r > 0);
+                $rateStr = $rates->count() === 1 ? number_format($rates->first(), 1) . '%' : 'variabil';
+                $commLabel = "Comision {$rateStr} ({$modeLabel})";
+            }
+
+            $html .= "<div style='{$headStyle}'>Comision</div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>{$commLabel}</span><span style='{$valueStyle}'>" . number_format($orderCommission, 2) . " {$currency}</span></div>";
+
+            // Per-type commission breakdown
+            foreach ($commissionDetails as $cd) {
+                $name = $cd['ticket_type'] ?? 'Bilet';
+                if (is_array($name)) $name = $name['ro'] ?? reset($name) ?? 'Bilet';
+                $commission = (float) ($cd['commission_amount'] ?? 0);
+                $rate = (float) ($cd['commission_rate'] ?? 0);
+                $qty = (int) ($cd['quantity'] ?? 1);
+                $cdMode = in_array($cd['commission_mode'] ?? '', ['on_top', 'add_on_top', 'added_on_top']) ? 'peste' : 'inclus';
+
+                if ($commission <= 0) continue;
+
+                $rateLabel = ($rate > 0)
+                    ? number_format($rate, 1) . '%, ' . $cdMode
+                    : number_format($commission / max(1, $qty), 2) . " lei fix, {$cdMode}";
+
+                $html .= "<div style='{$subStyle}'>" . e($name) . " x{$qty} ({$rateLabel}) — " . number_format($commission, 2) . " {$currency}</div>";
+            }
+
+            // Organizer receives
+            $organizerRevenue = $ticketsValue;
+            if (!$isOnTop) $organizerRevenue -= $orderCommission;
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Organizator primește</span><span style='font-size:12px;font-weight:600;color:#10B981;'>" . number_format($organizerRevenue, 2) . " {$currency}</span></div>";
+        }
+
+        // === DISCOUNT ===
+        if ($orderDiscount > 0) {
+            $promoData = $record->meta['promo_code'] ?? null;
+            $promoCode = $promoData['code'] ?? '';
+            $promoLabel = $promoCode ? " (cod: {$promoCode})" : '';
+            $html .= "<div style='{$headStyle}'>Reducere</div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Reducere{$promoLabel}</span><span style='font-size:12px;font-weight:600;color:#10B981;'>-" . number_format($orderDiscount, 2) . " {$currency}</span></div>";
+
+            if ($promoData) {
+                $promoType = match($promoData['type'] ?? '') {
+                    'percentage' => $promoData['value'] . '%',
+                    'fixed' => number_format($promoData['value'] ?? 0, 2) . ' ' . $currency,
+                    default => $promoData['type'] ?? '',
+                };
+                $promoSource = match($promoData['source'] ?? '') {
+                    'coupon' => 'Cod promoțional',
+                    'organizer' => 'Cod organizator',
+                    'affiliate' => 'Cod afiliat',
+                    default => $promoData['source'] ?? '',
+                };
+                $html .= "<div style='{$subStyle}'>{$promoSource} · {$promoType}</div>";
+            }
+        }
+
+        // === INSURANCE ===
+        if ($insuranceAmount > 0 || $ticketInsurance) {
+            $html .= "<div style='{$headStyle}'>Asigurare retur</div>";
+            $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Taxa de retur bilete</span><span style='font-size:12px;font-weight:600;color:#A78BFA;'>" . number_format($insuranceAmount, 2) . " {$currency}</span></div>";
+
+            // Show which tickets have insurance
+            $insuredTickets = $record->tickets->filter(fn ($t) => !empty($t->meta['has_insurance']));
+            if ($insuredTickets->isNotEmpty()) {
+                foreach ($insuredTickets as $t) {
+                    $html .= "<div style='{$subStyle}'>🛡 " . e($t->ticketType?->name ?? 'Bilet') . " #" . e($t->code ?? '') . "</div>";
+                }
+            } elseif ($ticketInsurance) {
+                $html .= "<div style='{$subStyle}'>🛡 Toate biletele din comandă</div>";
+            }
+        }
+
+        // === TOTAL ===
+        $html .= "<div style='display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;margin-top:6px;border-top:2px solid rgba(51,65,85,0.5);'>
+            <span style='font-size:13px;font-weight:600;color:white;'>Total plătit</span>
+            <span style='font-size:18px;font-weight:700;color:white;'>" . number_format($orderTotal, 2) . " {$currency}</span>
+        </div>";
+
+        $html .= '</div>';
+        return new HtmlString($html);
+    }
+
     protected static function renderPriceBreakdown(Order $record): HtmlString
     {
         $currency = $record->currency ?? 'RON';
@@ -1229,7 +1349,7 @@ class OrderResource extends Resource
                 'qty' => $qty,
                 'commission' => $itemCommission,
                 'rate_label' => $rateLabel,
-                'mode' => $isOnTop ? 'peste preț' : 'inclus',
+                'mode' => $isOnTop ? 'peste' : 'inclus',
             ];
         }
 
@@ -1277,7 +1397,7 @@ class OrderResource extends Resource
                 'qty' => $qty,
                 'commission' => $commission,
                 'rate_label' => $rateLabel,
-                'mode' => $isOnTop ? 'peste preț' : 'inclus',
+                'mode' => $isOnTop ? 'peste' : 'inclus',
             ];
         }
 
