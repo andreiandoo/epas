@@ -63,8 +63,7 @@ class EventImportService
 
             foreach ($orderGroups as $orderId => $orderRows) {
                 try {
-                    // Disable Order observers during import (prevents tracking/hooks that fail)
-                    $result = Order::withoutEvents(fn () => $this->processOrderGroup(
+                    $result = $this->processOrderGroup(
                         $orderId,
                         $orderRows,
                         $event,
@@ -76,7 +75,7 @@ class EventImportService
                         $customersEnriched,
                         $anonymousOrders,
                         $isExternalImport,
-                    ));
+                    );
 
                     $totalTickets += $result['tickets'];
                     $totalOrders++;

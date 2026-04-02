@@ -638,9 +638,9 @@ trait HasEventImport
             $service = new EventImportService();
             $result = $service->process($rows, $this->eventFormData, $tenantId, $source);
 
-            // Save to cache so page can show results after redirect
-            $resultKey = 'import_result_' . session()->getId();
-            Cache::put($resultKey, $result->toArray(), 600);
+            $this->importResults = $result->toArray();
+            $this->stage = 4;
+            $this->isProcessing = false;
 
             // Clean up
             Cache::forget($cacheKey);
@@ -648,8 +648,11 @@ trait HasEventImport
                 @unlink($this->storedFilePath);
             }
 
-            // Redirect to force fresh page load with results
-            $this->redirect(request()->url());
+            Notification::make()
+                ->title('Import finalizat cu succes!')
+                ->body("{$result->totalTickets} bilete, {$result->totalOrders} comenzi importate")
+                ->success()
+                ->send();
         } catch (\Throwable $e) {
             $this->isProcessing = false;
             $this->processingStatus = 'Eroare: ' . $e->getMessage();
