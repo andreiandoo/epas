@@ -790,7 +790,7 @@ Schedule::call(function () {
     foreach ($editions as $edition) {
         \App\Jobs\CalculateCustomerProfilesJob::dispatch($edition->id);
     }
-})->everyFifteenMinutes()->withoutOverlapping();
+})->everyFifteenMinutes()->name('cashless-customer-profiles')->withoutOverlapping();
 
 // GDPR: Anonymize old cashless data (monthly on 1st at 5 AM)
 Schedule::call(function () {
