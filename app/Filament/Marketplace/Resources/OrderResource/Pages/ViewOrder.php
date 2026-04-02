@@ -101,6 +101,18 @@ class ViewOrder extends ViewRecord
             ->where('refund_status', '!=', 'refunded')
             ->get();
 
+        // Build per-ticket-type commission map from stored order data
+        $commissionDetails = $order->meta['commission_details'] ?? [];
+        $commissionByType = [];
+        foreach ($commissionDetails as $cd) {
+            $key = $cd['ticket_type'] ?? '';
+            $commissionByType[$key] = [
+                'amount_per_unit' => (float) ($cd['commission_amount'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
+                'mode' => $cd['commission_mode'] ?? 'included',
+                'rate' => (float) ($cd['commission_rate'] ?? 0),
+            ];
+        }
+
         // Calculate per-ticket discount proportionally
         $orderSubtotal = (float) ($order->subtotal ?? 0);
         $orderDiscount = (float) ($order->discount_amount ?? 0);
@@ -115,8 +127,6 @@ class ViewOrder extends ViewRecord
             }
             return [$t->id => $label];
         })->toArray();
-
-        $commissionRate = (float) ($order->commission_rate ?? 0);
 
         return [
             Forms\Components\Select::make('refund_type')
@@ -138,15 +148,27 @@ class ViewOrder extends ViewRecord
 
             Forms\Components\Toggle::make('refund_commission')
                 ->label('Include comisionul în rambursare')
-                ->helperText($commissionRate > 0
-                    ? "Comision: {$commissionRate}%. Dacă dezactivat, comisionul va fi reținut."
-                    : 'Fără comision configurat pe această comandă.')
+                ->helperText(function () use ($order, $commissionByType) {
+                    $totalCommission = (float) ($order->commission_amount ?? 0);
+                    if ($totalCommission <= 0) return 'Fără comision pe această comandă.';
+                    $parts = [];
+                    foreach ($commissionByType as $typeName => $cd) {
+                        if ($cd['rate'] > 0) {
+                            $parts[] = "{$typeName}: {$cd['rate']}%";
+                        } elseif ($cd['amount_per_unit'] > 0) {
+                            $parts[] = "{$typeName}: " . number_format($cd['amount_per_unit'], 2) . " lei fix";
+                        }
+                    }
+                    return 'Comision total: ' . number_format($totalCommission, 2) . ' ' . ($order->currency ?? 'RON')
+                        . ($parts ? ' (' . implode(', ', $parts) . ')' : '')
+                        . '. Dacă dezactivat, comisionul va fi reținut.';
+                })
                 ->default(false)
                 ->live(),
 
             Forms\Components\Placeholder::make('refund_summary')
                 ->label('Sumar rambursare')
-                ->content(function (Get $get) use ($order, $tickets, $discountRatio) {
+                ->content(function (Get $get) use ($order, $tickets, $discountRatio, $commissionByType) {
                     $refundType = $get('refund_type') ?? 'full';
                     $selectedIds = $get('ticket_ids') ?? [];
                     $refundCommission = (bool) $get('refund_commission');
@@ -159,17 +181,6 @@ class ViewOrder extends ViewRecord
                         return new HtmlString('<p style="color:#94A3B8;">Selectează biletele pentru a vedea sumarul.</p>');
                     }
 
-                    // Use stored order amounts for accurate proportional calculation
-                    $orderTotal = (float) ($order->total ?? 0);
-                    $orderCommission = (float) ($order->commission_amount ?? 0);
-                    $orderSubtotal = (float) ($order->subtotal ?? 0);
-                    $allTicketCount = $tickets->count();
-                    $refundTicketCount = $refundTickets->count();
-
-                    // Proportional amounts based on ticket share
-                    // For partial refund: proportional to selected tickets vs all tickets
-                    $ticketShareRatio = $allTicketCount > 0 ? ($refundTicketCount / $allTicketCount) : 1;
-
                     $rows = '';
                     $totalFace = 0;
                     $totalCommission = 0;
@@ -179,12 +190,13 @@ class ViewOrder extends ViewRecord
                     foreach ($refundTickets as $ticket) {
                         $originalPrice = (float) ($ticket->price ?? 0);
                         $ticketDiscount = round($originalPrice * $discountRatio, 2);
-                        $priceAfterDiscount = round($originalPrice - $ticketDiscount, 2);
-                        // Proportional commission from stored order commission
-                        $commission = ($orderSubtotal > 0)
-                            ? round($orderCommission * ($originalPrice / $orderSubtotal), 2)
-                            : 0;
-                        $faceValue = $priceAfterDiscount;
+                        $faceValue = round($originalPrice - $ticketDiscount, 2);
+
+                        // Get exact commission from stored commission_details per ticket type
+                        $typeName = $ticket->ticketType?->name ?? 'Bilet';
+                        $cd = $commissionByType[$typeName] ?? null;
+                        $commission = $cd ? round($cd['amount_per_unit'], 2) : 0;
+
                         $refundAmount = $refundCommission ? ($faceValue + $commission) : $faceValue;
 
                         $totalFace += $faceValue;

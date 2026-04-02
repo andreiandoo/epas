@@ -214,17 +214,27 @@ class PaymentRefundService
         $orderCommission = (float) ($order->commission_amount ?? 0);
         $discountRatio = ($orderSubtotal > 0 && $orderDiscount > 0) ? ($orderDiscount / $orderSubtotal) : 0;
 
+        // Build per-ticket-type commission map from stored order data
+        $commissionDetails = $order->meta['commission_details'] ?? [];
+        $commissionByType = [];
+        foreach ($commissionDetails as $cd) {
+            $key = $cd['ticket_type'] ?? '';
+            $commissionByType[$key] = [
+                'amount_per_unit' => (float) ($cd['commission_amount'] ?? 0) / max(1, (int) ($cd['quantity'] ?? 1)),
+            ];
+        }
+
         $items = [];
         $totalRefund = 0;
 
         foreach ($tickets as $ticket) {
             $originalPrice = (float) ($ticket->price ?? 0);
             $ticketDiscount = round($originalPrice * $discountRatio, 2);
-            $faceValue = round($originalPrice - $ticketDiscount, 2); // price after discount
-            // Proportional commission from stored order commission
-            $commission = ($orderSubtotal > 0)
-                ? round($orderCommission * ($originalPrice / $orderSubtotal), 2)
-                : 0;
+            $faceValue = round($originalPrice - $ticketDiscount, 2);
+            // Get exact commission from stored commission_details per ticket type
+            $typeName = $ticket->ticketType?->name ?? '';
+            $cd = $commissionByType[$typeName] ?? null;
+            $commission = $cd ? round($cd['amount_per_unit'], 2) : 0;
             $refundAmount = $refundCommission ? ($faceValue + $commission) : $faceValue;
 
             $items[] = [
