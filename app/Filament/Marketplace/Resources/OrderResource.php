@@ -1781,19 +1781,23 @@ class OrderResource extends Resource
 
         // Current status
         $statusText = match($record->status) {
+            'completed' => 'Comandă finalizată',
             'confirmed' => 'Comandă confirmată',
             'paid' => 'Comandă plătită',
             'pending' => 'Comandă în așteptare',
             'cancelled' => 'Comandă anulată',
             'refunded' => 'Comandă rambursată',
+            'partially_refunded' => 'Comandă rambursată parțial',
+            'failed' => 'Comandă eșuată',
+            'expired' => 'Comandă expirată',
             default => 'Status: ' . $record->status,
         };
 
         $statusColor = match($record->status) {
-            'confirmed', 'paid' => 'success',
+            'completed', 'confirmed', 'paid' => 'success',
             'pending' => 'warning',
-            'cancelled' => 'danger',
-            'refunded' => 'info',
+            'cancelled', 'failed', 'expired' => 'danger',
+            'refunded', 'partially_refunded' => 'info',
             default => 'gray',
         };
 
@@ -1820,6 +1824,77 @@ class OrderResource extends Resource
                 'text' => 'Email confirmare trimis',
                 'time' => $record->created_at->addMinutes(1),
             ]);
+        }
+
+        // Refund events
+        if (in_array($record->status, ['refunded', 'partially_refunded'])) {
+            $refundRequests = $record->refundRequests()->orderByDesc('created_at')->get();
+            foreach ($refundRequests as $refReq) {
+                if ($refReq->status === 'refunded' || $refReq->status === 'partially_refunded') {
+                    $amount = number_format($refReq->approved_amount ?? $refReq->requested_amount ?? 0, 2);
+                    $events->push([
+                        'status' => 'info',
+                        'text' => "Rambursare procesată — {$amount} {$record->currency} ({$refReq->reference})",
+                        'time' => $refReq->completed_at ?? $refReq->processed_at ?? $refReq->updated_at,
+                    ]);
+                }
+            }
+
+            if ($record->refunded_at) {
+                $events->push([
+                    'status' => 'danger',
+                    'text' => $record->status === 'partially_refunded' ? 'Comandă rambursată parțial' : 'Comandă rambursată',
+                    'time' => $record->refunded_at,
+                ]);
+            }
+        }
+
+        // Refund email tracking
+        $refundEmails = \App\Models\MarketplaceEmailLog::where('marketplace_client_id', $record->marketplace_client_id)
+            ->where('template_slug', 'refund_processed')
+            ->where('to_email', $record->customer_email ?? $record->marketplaceCustomer?->email ?? '')
+            ->where('created_at', '>=', $record->created_at)
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($refundEmails as $emailLog) {
+            $events->push([
+                'status' => 'info',
+                'text' => '📧 Email rambursare trimis',
+                'time' => $emailLog->sent_at ?? $emailLog->created_at,
+            ]);
+
+            if ($emailLog->delivered_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => '📧 Email rambursare livrat',
+                    'time' => $emailLog->delivered_at,
+                ]);
+            }
+
+            if ($emailLog->opened_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => '👁 Email rambursare deschis de client',
+                    'time' => $emailLog->opened_at,
+                ]);
+            }
+
+            if ($emailLog->clicked_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => '🔗 Client a dat click în email',
+                    'time' => $emailLog->clicked_at,
+                ]);
+            }
+
+            if ($emailLog->bounced_at) {
+                $events->push([
+                    'status' => 'danger',
+                    'text' => '⚠ Email rambursare bounce',
+                    'time' => $emailLog->bounced_at,
+                ]);
+            }
         }
 
         // Order created
