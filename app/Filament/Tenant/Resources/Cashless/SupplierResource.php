@@ -5,6 +5,7 @@ namespace App\Filament\Tenant\Resources\Cashless;
 use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\SupplierResource\Pages;
 use App\Models\MerchandiseSupplier;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -86,7 +87,7 @@ class SupplierResource extends Resource
                     ->counts('supplierProducts')->label('Products'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Actions\EditAction::make(),
             ])
             ->defaultSort('name');
     }

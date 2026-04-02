@@ -6,6 +6,7 @@ use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\RefundResource\Pages;
 use App\Models\Cashless\CashlessRefund;
 use App\Services\Cashless\RefundService;
+use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -67,7 +68,7 @@ class RefundResource extends Resource
                     ->options(['full' => 'Full', 'partial' => 'Partial', 'auto' => 'Auto', 'compensation' => 'Compensation']),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Actions\Action::make('approve')
                     ->label('Approve & Process')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -81,7 +82,7 @@ class RefundResource extends Resource
                             Notification::make()->title($e->getMessage())->danger()->send();
                         }
                     }),
-                Tables\Actions\Action::make('reject')
+                Actions\Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

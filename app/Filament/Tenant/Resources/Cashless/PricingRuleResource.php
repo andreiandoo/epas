@@ -6,6 +6,7 @@ use App\Enums\PricingComponentType;
 use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\PricingRuleResource\Pages;
 use App\Models\Cashless\PricingRule;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -93,7 +94,7 @@ class PricingRuleResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
                 Tables\Columns\TextColumn::make('edition.name')->label('Edition'),
             ])
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->defaultSort('name');
     }
 

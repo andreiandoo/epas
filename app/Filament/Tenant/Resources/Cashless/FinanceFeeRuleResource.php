@@ -6,6 +6,7 @@ use App\Enums\FeeType;
 use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\FinanceFeeRuleResource\Pages;
 use App\Models\Cashless\FinanceFeeRule;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -84,7 +85,7 @@ class FinanceFeeRuleResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
                 Tables\Columns\TextColumn::make('edition.name')->label('Edition'),
             ])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
+            ->actions([Actions\EditAction::make(), Actions\DeleteAction::make()])
             ->defaultSort('name');
     }
 

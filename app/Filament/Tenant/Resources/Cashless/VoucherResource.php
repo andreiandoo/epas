@@ -5,6 +5,7 @@ namespace App\Filament\Tenant\Resources\Cashless;
 use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\VoucherResource\Pages;
 use App\Models\Cashless\CashlessVoucher;
+use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -87,7 +88,7 @@ class VoucherResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')->boolean(),
                 Tables\Columns\TextColumn::make('sponsor_name')->toggleable(),
             ])
-            ->actions([Tables\Actions\EditAction::make()])
+            ->actions([Actions\EditAction::make()])
             ->defaultSort('created_at', 'desc');
     }
 

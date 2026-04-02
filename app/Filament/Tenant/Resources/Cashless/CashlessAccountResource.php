@@ -5,6 +5,7 @@ namespace App\Filament\Tenant\Resources\Cashless;
 use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\CashlessAccountResource\Pages;
 use App\Models\Cashless\CashlessAccount;
+use Filament\Actions;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -63,7 +64,7 @@ class CashlessAccountResource extends Resource
                     ->label('Edition')->relationship('edition', 'name'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
+                Actions\ViewAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }
