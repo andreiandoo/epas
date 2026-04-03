@@ -137,6 +137,7 @@ class FestivalDemoSeeder
             [
                 'name' => 'DEMO - ' . $parent->name,
                 'public_name' => 'DEMO - ' . ($parent->public_name ?? $parent->name),
+                'domain' => $slug . '.demo.local',
                 'status' => 'active',
                 'is_demo_shadow' => true,
                 'demo_parent_id' => $parent->id,
