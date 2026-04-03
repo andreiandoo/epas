@@ -88,7 +88,7 @@ class VendorResource extends Resource
                                             ->label('CUI')
                                             ->maxLength(20)
                                             ->suffixAction(
-                                                Forms\Components\Actions\Action::make('lookupAnaf')
+                                                Actions\Action::make('lookupAnaf')
                                                     ->icon('heroicon-o-magnifying-glass')
                                                     ->label('Interogare ANAF')
                                                     ->action(function (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {

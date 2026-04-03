@@ -71,7 +71,7 @@ class CashlessAccountResource extends Resource
                     ->label('Edition')->relationship('edition', 'name'),
             ])
             ->actions([
-                Tables\Actions\Action::make('view_details')
+                Actions\Action::make('view_details')
                     ->label('View')
                     ->icon('heroicon-o-eye')
                     ->modalHeading('Cashless Account Details')
