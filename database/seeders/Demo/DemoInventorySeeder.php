@@ -96,7 +96,7 @@ class DemoInventorySeeder
                     'price_with_vat_cents' => $vatPrice,
                     'barcode' => $sp['barcode'],
                     'is_age_restricted' => $sp['age'] ?? false,
-                    'min_age' => ($sp['age'] ?? false) ? 18 : null,
+                    'min_age' => ($sp['age'] ?? false) ? 18 : 0,
                     'is_active' => true,
                 ]
             );
