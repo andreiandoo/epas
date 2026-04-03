@@ -32,6 +32,11 @@ class TenantScope implements Scope
      */
     protected function getCurrentTenantId(): ?int
     {
+        // Demo mode override: shadow tenant takes priority
+        if (session()->has('demo_tenant_id')) {
+            return (int) session()->get('demo_tenant_id');
+        }
+
         // Try to get tenant_id from authenticated user
         if (auth()->check() && isset(auth()->user()->tenant_id)) {
             return auth()->user()->tenant_id;

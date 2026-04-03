@@ -218,6 +218,39 @@ Route::middleware(['web', 'auth'])->prefix('admin/api')->group(function () {
     Route::delete('/tenants/{tenantId}/demo', [\App\Http\Controllers\Admin\DemoDataController::class, 'cleanup'])->name('admin.tenants.demo.cleanup');
 });
 
+// Demo tenant session switching (for tenant panel)
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/tenant/demo/enter/{tenantId}', function (int $tenantId) {
+        $tenant = \App\Models\Tenant::findOrFail($tenantId);
+        $user = auth()->user();
+
+        // Allow super-admin or tenant owner
+        $isSuperAdmin = $user->role === 'super-admin';
+        $isOwner = $user->tenant_id === $tenantId || ($user->ownedTenant?->id === $tenantId);
+
+        if (!$isSuperAdmin && !$isOwner) {
+            abort(403);
+        }
+
+        if (!$tenant->demo_shadow_id) {
+            return redirect('/tenant')->with('error', 'No demo data on this tenant.');
+        }
+
+        session([
+            'demo_tenant_id' => $tenant->demo_shadow_id,
+            'demo_parent_tenant_id' => $tenant->id,
+            'demo_parent_tenant_name' => $tenant->public_name ?? $tenant->name,
+        ]);
+
+        return redirect('/tenant')->with('success', 'Demo mode activated.');
+    })->name('tenant.demo.enter');
+
+    Route::get('/tenant/demo/exit', function () {
+        session()->forget(['demo_tenant_id', 'demo_parent_tenant_id', 'demo_parent_tenant_name']);
+        return redirect('/tenant')->with('success', 'Demo mode deactivated.');
+    })->name('tenant.demo.exit');
+});
+
 // Admin Domain Management Routes
 Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');

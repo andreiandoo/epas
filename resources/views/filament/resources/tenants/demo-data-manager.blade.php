@@ -108,6 +108,11 @@
         </div>
 
         <div class="flex items-center gap-2">
+            <a href="{{ route('tenant.demo.enter', $tenant->id) }}"
+                class="inline-flex items-center gap-2 px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg shadow-sm transition">
+                <x-heroicon-o-play class="w-4 h-4" />
+                Enter Demo Mode
+            </a>
             <a href="/admin/tenants/{{ $demoShadow->id }}/edit"
                 class="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition text-gray-700 dark:text-gray-200">
                 <x-heroicon-o-eye class="w-4 h-4" />
