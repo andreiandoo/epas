@@ -18,7 +18,7 @@ class ListMerchandiseItems extends ListRecords
                 ->label('Adaugare in bulk')
                 ->icon('heroicon-o-squares-plus')
                 ->color('info')
-                ->url(MerchandiseItemResource::getUrl('bulk-add')),
+                ->url('/tenant/merchandise-items/bulk-add'),
         ];
     }
 }
