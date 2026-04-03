@@ -82,7 +82,7 @@ class DemoInventorySeeder
             $brand = $sp['brand'] ? ($brands[$sp['brand']] ?? null) : null;
             $vatPrice = (int) round($sp['price'] * (1 + $sp['vat'] / 100));
 
-            $supplierProducts[$sp['sku']] = SupplierProduct::firstOrCreate(
+            $supplierProducts[$sp['sku']] = SupplierProduct::updateOrCreate(
                 ['tenant_id' => $tenantId, 'sku' => $sp['sku']],
                 [
                     'merchandise_supplier_id' => $sp['supplier']->id,
