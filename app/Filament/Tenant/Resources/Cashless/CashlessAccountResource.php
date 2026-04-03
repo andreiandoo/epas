@@ -6,6 +6,8 @@ use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\CashlessAccountResource\Pages;
 use App\Models\Cashless\CashlessAccount;
 use Filament\Actions;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -49,9 +51,9 @@ class CashlessAccountResource extends Resource
                 Tables\Columns\TextColumn::make('balance_cents')->label('Balance')
                     ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON')->sortable(),
                 Tables\Columns\TextColumn::make('total_topped_up_cents')->label('Total Top-ups')
-                    ->formatStateUsing(fn ($state) => number_format($state / 100, 2))->toggleable(),
+                    ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON')->toggleable(),
                 Tables\Columns\TextColumn::make('total_spent_cents')->label('Total Spent')
-                    ->formatStateUsing(fn ($state) => number_format($state / 100, 2))->toggleable(),
+                    ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON')->toggleable(),
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors(['success' => 'active', 'warning' => 'frozen', 'gray' => 'closed']),
                 Tables\Columns\TextColumn::make('edition.name')->label('Edition')->sortable(),
@@ -64,7 +66,29 @@ class CashlessAccountResource extends Resource
                     ->label('Edition')->relationship('edition', 'name'),
             ])
             ->actions([
-                Actions\ViewAction::make(),
+                Tables\Actions\ViewAction::make()
+                    ->infolist([
+                        Infolists\Components\TextEntry::make('account_number')->label('Account Number'),
+                        Infolists\Components\TextEntry::make('customer.first_name')->label('Customer First Name'),
+                        Infolists\Components\TextEntry::make('customer.last_name')->label('Customer Last Name'),
+                        Infolists\Components\TextEntry::make('customer.email')->label('Customer Email'),
+                        Infolists\Components\TextEntry::make('customer.phone')->label('Customer Phone'),
+                        Infolists\Components\TextEntry::make('balance_cents')->label('Balance')
+                            ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
+                        Infolists\Components\TextEntry::make('total_topped_up_cents')->label('Total Top-ups')
+                            ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
+                        Infolists\Components\TextEntry::make('total_spent_cents')->label('Total Spent')
+                            ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
+                        Infolists\Components\TextEntry::make('total_cashed_out_cents')->label('Total Cashed Out')
+                            ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
+                        Infolists\Components\TextEntry::make('status')->badge()
+                            ->color(fn ($state) => match($state?->value ?? $state) {
+                                'active' => 'success', 'frozen' => 'warning', 'closed' => 'gray', default => 'gray',
+                            }),
+                        Infolists\Components\TextEntry::make('edition.name')->label('Edition'),
+                        Infolists\Components\TextEntry::make('wristband.uid')->label('Wristband UID'),
+                        Infolists\Components\TextEntry::make('activated_at')->dateTime('d M Y H:i'),
+                    ]),
             ])
             ->defaultSort('created_at', 'desc');
     }

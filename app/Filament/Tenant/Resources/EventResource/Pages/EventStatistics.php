@@ -66,7 +66,7 @@ class EventStatistics extends Page
             ->get()
             ->map(fn ($type) => [
                 'id' => $type->id,
-                'name' => $type->name,
+                'name' => is_array($type->name) ? ($type->name[app()->getLocale()] ?? $type->name['en'] ?? $type->name['ro'] ?? reset($type->name)) : $type->name,
                 'price' => number_format(($type->sale_price_cents ?? $type->price_cents) / 100, 2),
                 'currency' => $type->currency ?? 'RON',
                 'sold' => $type->quota_sold ?? 0,
@@ -141,7 +141,10 @@ class EventStatistics extends Page
     public function getDailySalesData(): array
     {
         $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
-        $ticketTypes = $this->record->ticketTypes()->pluck('name', 'id');
+        $locale = app()->getLocale();
+        $ticketTypes = $this->record->ticketTypes()->pluck('name', 'id')->map(fn ($name) =>
+            is_array($name) ? ($name[$locale] ?? $name['en'] ?? $name['ro'] ?? reset($name)) : (is_string($name) && json_decode($name) ? (json_decode($name, true)[$locale] ?? json_decode($name, true)['en'] ?? $name) : $name)
+        );
 
         $startDate = now()->subDays(29)->startOfDay();
         $endDate = now()->endOfDay();

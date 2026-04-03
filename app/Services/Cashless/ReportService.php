@@ -239,6 +239,16 @@ class ReportService
             ')
             ->first();
 
+        if (! $stats || ! $stats->customers_with_spending) {
+            return [
+                'customers_with_spending' => 0,
+                'avg_spent_cents'         => 0,
+                'min_spent_cents'         => 0,
+                'max_spent_cents'         => 0,
+                'median_spent_cents'      => 0,
+            ];
+        }
+
         // Fallback for SQLite which doesn't support PERCENTILE_CONT
         if ($stats->median_spent_cents === null) {
             $stats->median_spent_cents = $stats->avg_spent_cents;
