@@ -139,6 +139,7 @@ class DemoOrderSeeder
                 $name = $anonNames[$anonIdx % count($anonNames)];
                 $anonIdx++;
                 $orderData['customer_name'] = $name;
+                $orderData['customer_email'] = 'demo-anon-' . $anonIdx . '@noemail.local';
                 $orderData['customer_phone'] = '+4074100' . sprintf('%04d', 50 + $anonIdx);
             }
 
