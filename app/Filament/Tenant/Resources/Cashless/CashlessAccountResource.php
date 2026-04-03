@@ -6,9 +6,8 @@ use App\Enums\TenantType;
 use App\Filament\Tenant\Resources\Cashless\CashlessAccountResource\Pages;
 use App\Models\Cashless\CashlessAccount;
 use Filament\Actions;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -49,7 +48,7 @@ class CashlessAccountResource extends Resource
                 Tables\Columns\TextColumn::make('account_number')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('customer.first_name')->label('Customer')->searchable(),
                 Tables\Columns\TextColumn::make('balance_cents')->label('Balance')
-                    ->formatStateUsing(fn ($state) => number_format($state / 100, 2) . ' RON')->sortable(),
+                    ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON')->sortable(),
                 Tables\Columns\TextColumn::make('total_topped_up_cents')->label('Total Top-ups')
                     ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON')->toggleable(),
                 Tables\Columns\TextColumn::make('total_spent_cents')->label('Total Spent')
@@ -72,35 +71,15 @@ class CashlessAccountResource extends Resource
                     ->label('Edition')->relationship('edition', 'name'),
             ])
             ->actions([
-                Actions\ViewAction::make()
-                    ->infolist([
-                        Infolists\Components\Section::make('Account')->schema([
-                            Infolists\Components\TextEntry::make('account_number')->label('Account'),
-                            Infolists\Components\TextEntry::make('status')->badge()
-                                ->color(fn ($state) => match($state?->value ?? $state) {
-                                    'active' => 'success', 'frozen' => 'warning', 'closed' => 'gray', default => 'gray',
-                                }),
-                            Infolists\Components\TextEntry::make('edition.name')->label('Edition'),
-                            Infolists\Components\TextEntry::make('wristband.uid')->label('Wristband'),
-                            Infolists\Components\TextEntry::make('activated_at')->label('Activated')->dateTime('d M Y H:i'),
-                        ])->columns(3),
-                        Infolists\Components\Section::make('Customer')->schema([
-                            Infolists\Components\TextEntry::make('customer.first_name')->label('First Name'),
-                            Infolists\Components\TextEntry::make('customer.last_name')->label('Last Name'),
-                            Infolists\Components\TextEntry::make('customer.email')->label('Email'),
-                            Infolists\Components\TextEntry::make('customer.phone')->label('Phone'),
-                        ])->columns(4),
-                        Infolists\Components\Section::make('Balances')->schema([
-                            Infolists\Components\TextEntry::make('balance_cents')->label('Balance')
-                                ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
-                            Infolists\Components\TextEntry::make('total_topped_up_cents')->label('Top-ups')
-                                ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
-                            Infolists\Components\TextEntry::make('total_spent_cents')->label('Spent')
-                                ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
-                            Infolists\Components\TextEntry::make('total_cashed_out_cents')->label('Cashed Out')
-                                ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
-                        ])->columns(4),
-                    ]),
+                Tables\Actions\Action::make('view_details')
+                    ->label('View')
+                    ->icon('heroicon-o-eye')
+                    ->modalHeading('Cashless Account Details')
+                    ->modalContent(fn (CashlessAccount $record) => view('filament.tenant.components.cashless-account-modal', [
+                        'account' => $record->load(['customer', 'wristband', 'edition']),
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Close'),
             ])
             ->defaultSort('created_at', 'desc');
     }
