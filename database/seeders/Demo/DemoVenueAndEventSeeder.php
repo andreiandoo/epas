@@ -119,15 +119,19 @@ class DemoVenueAndEventSeeder
         if ($popGenre) $event->eventGenres()->syncWithoutDetaching([$popGenre->id]);
 
         // ── Ticket Types ──
+        // Note: TicketType uses virtual fillable fields with mutators:
+        // price_max → price_cents (value in RON, mutator multiplies ×100)
+        // capacity → quota_total
+        // is_active → status ('active'/'hidden')
         $ticketTypesData = [
-            ['name' => 'General Access 4-Day', 'group' => 'Acces', 'price' => 20000, 'quota' => 5000, 'sold' => 1847, 'status' => 'active', 'perks' => ['Acces toate zilele', 'Acces toate scenele']],
-            ['name' => 'General Access 1-Day', 'group' => 'Acces', 'price' => 8000, 'quota' => 2000, 'sold' => 523, 'status' => 'active', 'perks' => ['Acces o zi la alegere']],
-            ['name' => 'Early Bird 4-Day', 'group' => 'Acces', 'price' => 15000, 'quota' => 500, 'sold' => 500, 'status' => 'disabled', 'perks' => ['Acces toate zilele', 'Acces toate scenele', 'Pret redus']],
-            ['name' => 'VIP 4-Day', 'group' => 'VIP', 'price' => 50000, 'quota' => 500, 'sold' => 187, 'status' => 'active', 'perks' => ['Acces VIP Lounge', 'Zona dedicata', 'Toalete VIP', 'Drink de bun venit']],
-            ['name' => 'VIP 1-Day', 'group' => 'VIP', 'price' => 20000, 'quota' => 300, 'sold' => 45, 'status' => 'active', 'perks' => ['Acces VIP Lounge', 'Zona dedicata']],
-            ['name' => 'Camping Standard', 'group' => 'Camping', 'price' => 10000, 'quota' => 1000, 'sold' => 412, 'status' => 'active', 'perks' => ['Loc cort zona generala', 'Acces dusuri comune']],
-            ['name' => 'Camping Premium', 'group' => 'Camping', 'price' => 20000, 'quota' => 200, 'sold' => 89, 'status' => 'active', 'perks' => ['Loc cort zona premium', 'Priza electrica', 'Acces dusuri private']],
-            ['name' => 'Parking', 'group' => 'Parcari', 'price' => 5000, 'quota' => 300, 'sold' => 156, 'status' => 'active', 'perks' => ['1 loc parcare 5 zile']],
+            ['name' => 'General Access 4-Day', 'group' => 'Acces', 'price_ron' => 200, 'quota' => 5000, 'sold' => 1847, 'active' => true, 'perks' => ['Acces toate zilele', 'Acces toate scenele']],
+            ['name' => 'General Access 1-Day', 'group' => 'Acces', 'price_ron' => 80, 'quota' => 2000, 'sold' => 523, 'active' => true, 'perks' => ['Acces o zi la alegere']],
+            ['name' => 'Early Bird 4-Day', 'group' => 'Acces', 'price_ron' => 150, 'quota' => 500, 'sold' => 500, 'active' => false, 'perks' => ['Acces toate zilele', 'Acces toate scenele', 'Pret redus']],
+            ['name' => 'VIP 4-Day', 'group' => 'VIP', 'price_ron' => 500, 'quota' => 500, 'sold' => 187, 'active' => true, 'perks' => ['Acces VIP Lounge', 'Zona dedicata', 'Toalete VIP', 'Drink de bun venit']],
+            ['name' => 'VIP 1-Day', 'group' => 'VIP', 'price_ron' => 200, 'quota' => 300, 'sold' => 45, 'active' => true, 'perks' => ['Acces VIP Lounge', 'Zona dedicata']],
+            ['name' => 'Camping Standard', 'group' => 'Camping', 'price_ron' => 100, 'quota' => 1000, 'sold' => 412, 'active' => true, 'perks' => ['Loc cort zona generala', 'Acces dusuri comune']],
+            ['name' => 'Camping Premium', 'group' => 'Camping', 'price_ron' => 200, 'quota' => 200, 'sold' => 89, 'active' => true, 'perks' => ['Loc cort zona premium', 'Priza electrica', 'Acces dusuri private']],
+            ['name' => 'Parking', 'group' => 'Parcari', 'price_ron' => 50, 'quota' => 300, 'sold' => 156, 'active' => true, 'perks' => ['1 loc parcare 5 zile']],
         ];
 
         $ticketTypes = [];
@@ -135,13 +139,13 @@ class DemoVenueAndEventSeeder
             $ticketType = TicketType::firstOrCreate(
                 ['event_id' => $event->id, 'sku' => 'DEMO-AF26-' . Str::slug($tt['name'])],
                 [
-                    'name' => ['ro' => $tt['name'], 'en' => $tt['name']],
+                    'name' => json_encode(['ro' => $tt['name'], 'en' => $tt['name']]),
                     'ticket_group' => $tt['group'],
-                    'price_cents' => $tt['price'],
+                    'price_max' => $tt['price_ron'],
+                    'capacity' => $tt['quota'],
+                    'is_active' => $tt['active'],
                     'currency' => 'RON',
-                    'quota_total' => $tt['quota'],
                     'quota_sold' => $tt['sold'],
-                    'status' => $tt['status'],
                     'perks' => $tt['perks'],
                     'sort_order' => $i + 1,
                     'sales_start_at' => '2026-03-01 00:00:00',
