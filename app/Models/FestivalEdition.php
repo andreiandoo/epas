@@ -8,6 +8,7 @@ use App\Models\Cashless\CashlessAccount;
 use App\Models\Cashless\CashlessSale;
 use App\Models\Cashless\CashlessSettings;
 use App\Models\Cashless\TopUpLocation;
+use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -182,9 +183,43 @@ class FestivalEdition extends Model
         return $this->saleItems()->sum('total_cents');
     }
 
+    public function totalCashlessRevenueCents(): int
+    {
+        return $this->saleItems()->whereNotNull('cashless_sale_id')->sum('total_cents');
+    }
+
     public function totalCommissionCents(): int
     {
         return $this->saleItems()->sum('commission_cents');
+    }
+
+    // ── Cashless billing helpers ──
+
+    public function hasCashlessActivationInvoice(): bool
+    {
+        return Invoice::where('tenant_id', $this->tenant_id)
+            ->whereJsonContains('meta->type', 'cashless_activation')
+            ->whereJsonContains('meta->festival_edition_id', $this->id)
+            ->exists();
+    }
+
+    public function hasCashlessCompletionInvoice(): bool
+    {
+        return Invoice::where('tenant_id', $this->tenant_id)
+            ->whereJsonContains('meta->type', 'cashless_completion')
+            ->whereJsonContains('meta->festival_edition_id', $this->id)
+            ->exists();
+    }
+
+    public function cashlessInvoices()
+    {
+        return Invoice::where('tenant_id', $this->tenant_id)
+            ->where(function ($q) {
+                $q->whereJsonContains('meta->type', 'cashless_activation')
+                    ->orWhereJsonContains('meta->type', 'cashless_completion');
+            })
+            ->whereJsonContains('meta->festival_edition_id', $this->id)
+            ->get();
     }
 
     public function scopeForYear($query, int $year)

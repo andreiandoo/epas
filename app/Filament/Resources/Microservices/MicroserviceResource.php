@@ -197,6 +197,38 @@ class MicroserviceResource extends Resource
                         ->helperText('Costul per SMS promoțional (campanii)'),
                 ])->columns(2)
                 ->visible(fn ($record) => $record?->slug === 'sms-notifications'),
+
+            // Cashless Pricing (only for cashless microservice)
+            SC\Section::make('Cashless Pricing')
+                ->description('Prețuri default pentru microserviciul Cashless. Pot fi suprascrise per tenant din TenantMicroservice settings.')
+                ->schema([
+                    Forms\Components\TextInput::make('metadata.cashless_pricing.activation_fee')
+                        ->label('Taxă activare per ediție')
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0)
+                        ->prefix('EUR')
+                        ->helperText('Taxa unică de activare per ediție de festival'),
+
+                    Forms\Components\TextInput::make('metadata.cashless_pricing.commission_rate')
+                        ->label('Comision din vânzări cashless')
+                        ->numeric()
+                        ->step(0.01)
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->suffix('%')
+                        ->helperText('Procentul aplicat pe totalul vânzărilor cashless la finalizarea ediției'),
+
+                    Forms\Components\Select::make('metadata.cashless_pricing.currency')
+                        ->label('Monedă')
+                        ->options([
+                            'EUR' => 'EUR',
+                            'RON' => 'RON',
+                        ])
+                        ->default('EUR')
+                        ->helperText('Moneda în care se facturează'),
+                ])->columns(3)
+                ->visible(fn ($record) => $record?->slug === 'cashless'),
         ])->columns(1);
     }
 
