@@ -100,11 +100,41 @@ class User extends Authenticatable implements FilamentUser
     /**
      * Get the tenant for this user (works for both tenant owners and editors).
      */
+    /**
+     * Get the effective tenant ID, respecting demo mode.
+     * Use this instead of $user->tenant_id for runtime tenant resolution.
+     */
+    public function currentTenantId(): ?int
+    {
+        if (session()->has('demo_tenant_id')) {
+            return (int) session('demo_tenant_id');
+        }
+        return $this->attributes['tenant_id'] ?? $this->ownedTenant?->id ?? null;
+    }
+
+    /**
+     * Override getAttribute to intercept tenant_id reads in demo mode.
+     * This ensures ALL code that does $user->tenant_id gets the demo tenant.
+     */
+    public function getAttribute($key)
+    {
+        if ($key === 'tenant_id' && session()->has('demo_tenant_id')) {
+            return (int) session('demo_tenant_id');
+        }
+        return parent::getAttribute($key);
+    }
+
     public function getTenantAttribute(): ?Tenant
     {
+        // Demo mode: return the shadow tenant
+        if (session()->has('demo_tenant_id')) {
+            return Tenant::find(session('demo_tenant_id'));
+        }
+
         // First check if user belongs to a tenant via tenant_id
-        if ($this->tenant_id) {
-            return Tenant::find($this->tenant_id);
+        $realTenantId = $this->attributes['tenant_id'] ?? null;
+        if ($realTenantId) {
+            return Tenant::find($realTenantId);
         }
         // Otherwise check if user owns a tenant (tenant role)
         return $this->ownedTenant;
