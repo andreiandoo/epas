@@ -74,25 +74,23 @@ class CashlessAccountResource extends Resource
             ->actions([
                 Actions\ViewAction::make()
                     ->infolist([
-                        Infolists\Components\Grid::make(2)->schema([
-                            Infolists\Components\Section::make('Account')->schema([
-                                Infolists\Components\TextEntry::make('account_number')->label('Account'),
-                                Infolists\Components\TextEntry::make('status')->badge()
-                                    ->color(fn ($state) => match($state?->value ?? $state) {
-                                        'active' => 'success', 'frozen' => 'warning', 'closed' => 'gray', default => 'gray',
-                                    }),
-                                Infolists\Components\TextEntry::make('edition.name')->label('Edition'),
-                                Infolists\Components\TextEntry::make('wristband.uid')->label('Wristband'),
-                                Infolists\Components\TextEntry::make('activated_at')->label('Activated')->dateTime('d M Y H:i'),
-                            ]),
-                            Infolists\Components\Section::make('Customer')->schema([
-                                Infolists\Components\TextEntry::make('customer.first_name')->label('First Name'),
-                                Infolists\Components\TextEntry::make('customer.last_name')->label('Last Name'),
-                                Infolists\Components\TextEntry::make('customer.email')->label('Email'),
-                                Infolists\Components\TextEntry::make('customer.phone')->label('Phone'),
-                            ]),
-                        ]),
-                        Infolists\Components\Grid::make(4)->schema([
+                        Infolists\Components\Section::make('Account')->schema([
+                            Infolists\Components\TextEntry::make('account_number')->label('Account'),
+                            Infolists\Components\TextEntry::make('status')->badge()
+                                ->color(fn ($state) => match($state?->value ?? $state) {
+                                    'active' => 'success', 'frozen' => 'warning', 'closed' => 'gray', default => 'gray',
+                                }),
+                            Infolists\Components\TextEntry::make('edition.name')->label('Edition'),
+                            Infolists\Components\TextEntry::make('wristband.uid')->label('Wristband'),
+                            Infolists\Components\TextEntry::make('activated_at')->label('Activated')->dateTime('d M Y H:i'),
+                        ])->columns(3),
+                        Infolists\Components\Section::make('Customer')->schema([
+                            Infolists\Components\TextEntry::make('customer.first_name')->label('First Name'),
+                            Infolists\Components\TextEntry::make('customer.last_name')->label('Last Name'),
+                            Infolists\Components\TextEntry::make('customer.email')->label('Email'),
+                            Infolists\Components\TextEntry::make('customer.phone')->label('Phone'),
+                        ])->columns(4),
+                        Infolists\Components\Section::make('Balances')->schema([
                             Infolists\Components\TextEntry::make('balance_cents')->label('Balance')
                                 ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
                             Infolists\Components\TextEntry::make('total_topped_up_cents')->label('Top-ups')
@@ -101,7 +99,7 @@ class CashlessAccountResource extends Resource
                                 ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
                             Infolists\Components\TextEntry::make('total_cashed_out_cents')->label('Cashed Out')
                                 ->formatStateUsing(fn ($state) => number_format(($state ?? 0) / 100, 2) . ' RON'),
-                        ]),
+                        ])->columns(4),
                     ]),
             ])
             ->defaultSort('created_at', 'desc');

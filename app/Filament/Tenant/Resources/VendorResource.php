@@ -44,7 +44,7 @@ class VendorResource extends Resource
             ->components([
                 SC\Tabs::make('Vendor')
                     ->tabs([
-                        SC\Tab::make('Date generale')
+                        SC\Tabs\Tab::make('Date generale')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->label('Nume stand/brand')
@@ -79,7 +79,7 @@ class VendorResource extends Resource
                                     ->required(),
                             ])->columns(2),
 
-                        SC\Tab::make('Date societate')
+                        SC\Tabs\Tab::make('Date societate')
                             ->schema([
                                 SC\Section::make('Interogare ANAF')
                                     ->description('Introdu CUI-ul si datele se completeaza automat')
