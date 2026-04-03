@@ -109,11 +109,13 @@ class MerchandiseItemResource extends Resource
                             ->required()
                             ->minValue(0),
                         Forms\Components\TextInput::make('acquisition_price_cents')
-                            ->label('Pret achizitie (bani)')
+                            ->label('Pret achizitie')
                             ->numeric()
                             ->required()
-                            ->suffix('bani')
-                            ->helperText('Pretul per unitate in bani (ex: 350 = 3.50 RON)'),
+                            ->suffix('RON')
+                            ->step(0.01)
+                            ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0.00')
+                            ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100)),
                         Forms\Components\Select::make('currency')
                             ->label('Moneda')
                             ->options([
@@ -167,7 +169,7 @@ class MerchandiseItemResource extends Resource
                     ]),
                 Tables\Columns\TextColumn::make('quantity')
                     ->label('Cantitate')
-                    ->formatStateUsing(fn ($state, $record) => $state . ' ' . $record->unit)
+                    ->formatStateUsing(fn ($state, $record) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' ' . $record->unit)
                     ->sortable(),
                 Tables\Columns\TextColumn::make('acquisition_price_cents')
                     ->label('Pret achizitie')

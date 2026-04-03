@@ -52,7 +52,10 @@ class FinanceFeeRuleResource extends Resource
                     ->relationship('edition', 'name')->required(),
                 Forms\Components\Select::make('vendor_id')->label('Vendor (blank = all)')
                     ->relationship('vendor', 'name')->nullable(),
-                Forms\Components\TextInput::make('amount_cents')->numeric()->label('Amount (cents)')
+                Forms\Components\TextInput::make('amount_cents')->numeric()->label('Amount (RON)')
+                    ->suffix('RON')->step(0.01)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0.00')
+                    ->dehydrateStateUsing(fn ($state) => (int) round(((float) $state) * 100))
                     ->visible(fn ($get) => in_array($get('fee_type'), ['fixed_daily', 'fixed_period', 'fixed_per_transaction'])),
                 Forms\Components\TextInput::make('percentage')->numeric()->label('Percentage (%)')
                     ->visible(fn ($get) => in_array($get('fee_type'), ['percentage_sales', 'percentage_per_category'])),
@@ -78,7 +81,7 @@ class FinanceFeeRuleResource extends Resource
                 Tables\Columns\TextColumn::make('fee_type')->badge()
                     ->formatStateUsing(fn ($state) => $state instanceof FeeType ? $state->label() : $state),
                 Tables\Columns\TextColumn::make('amount_cents')->label('Amount')
-                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2) : '-'),
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2) . ' RON' : '-'),
                 Tables\Columns\TextColumn::make('percentage')
                     ->formatStateUsing(fn ($state) => $state ? $state . '%' : '-'),
                 Tables\Columns\TextColumn::make('vendor.name')->label('Vendor')->placeholder('All'),

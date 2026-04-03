@@ -93,7 +93,7 @@ class VendorEmployeeResource extends Resource
                                 'manage_products' => 'Gestionare produse',
                                 'manage_employees'=> 'Gestionare angajati',
                             ])
-                            ->visible(fn (Forms\Get $get) => $get('role') === 'operator')
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('role') === 'operator')
                             ->columnSpanFull(),
                     ])->columns(2),
             ]);

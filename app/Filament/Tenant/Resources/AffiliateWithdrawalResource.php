@@ -132,8 +132,8 @@ class AffiliateWithdrawalResource extends Resource
                         Forms\Components\Textarea::make('rejection_reason')
                             ->label('Rejection Reason')
                             ->rows(2)
-                            ->visible(fn (Forms\Get $get) => $get('status') === 'rejected')
-                            ->required(fn (Forms\Get $get) => $get('status') === 'rejected'),
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('status') === 'rejected')
+                            ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('status') === 'rejected'),
                     ]),
             ]);
     }

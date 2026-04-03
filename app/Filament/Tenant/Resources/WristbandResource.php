@@ -74,10 +74,12 @@ class WristbandResource extends Resource
                             ->default('unassigned')
                             ->required(),
                         Forms\Components\TextInput::make('balance_cents')
-                            ->label('Sold (bani)')
+                            ->label('Sold')
                             ->numeric()
                             ->default(0)
-                            ->suffix('bani'),
+                            ->suffix('RON')
+                            ->formatStateUsing(fn ($state) => $state ? number_format($state / 100, 2, '.', '') : '0.00')
+                            ->dehydrated(false),
                         Forms\Components\Select::make('currency')
                             ->label('Moneda')
                             ->options([
@@ -85,6 +87,28 @@ class WristbandResource extends Resource
                                 'EUR' => 'EUR',
                             ])
                             ->default('RON'),
+                        Forms\Components\Select::make('customer_id')
+                            ->label('Client conectat')
+                            ->relationship('customer', 'email')
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+                        Forms\Components\Placeholder::make('customer_info')
+                            ->label('Detalii client')
+                            ->visible(fn ($record) => $record?->customer_id)
+                            ->content(function ($record) {
+                                if (!$record?->customer) return '-';
+                                $c = $record->customer;
+                                return "{$c->first_name} {$c->last_name} | {$c->email} | {$c->phone}";
+                            }),
+                        Forms\Components\Placeholder::make('pass_info')
+                            ->label('Pass festival')
+                            ->visible(fn ($record) => $record?->festival_pass_purchase_id)
+                            ->content(function ($record) {
+                                $pp = $record?->passPurchase;
+                                if (!$pp) return '-';
+                                return "#{$pp->code} — {$pp->festivalPass?->name} ({$pp->status})";
+                            }),
                     ])->columns(2),
             ]);
     }

@@ -71,12 +71,12 @@ class AffiliateSettingsResource extends Resource
                                             ->live(),
 
                                         Forms\Components\TextInput::make('default_commission_value')
-                                            ->label(fn (Forms\Get $get) => $get('default_commission_type') === 'percent' ? 'Commission Percentage' : 'Commission Amount')
+                                            ->label(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('default_commission_type') === 'percent' ? 'Commission Percentage' : 'Commission Amount')
                                             ->numeric()
                                             ->default(10)
                                             ->required()
-                                            ->suffix(fn (Forms\Get $get) => $get('default_commission_type') === 'percent' ? '%' : null)
-                                            ->helperText(fn (Forms\Get $get) => $get('default_commission_type') === 'percent'
+                                            ->suffix(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('default_commission_type') === 'percent' ? '%' : null)
+                                            ->helperText(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('default_commission_type') === 'percent'
                                                 ? 'Percentage of order value'
                                                 : 'Fixed amount per conversion'),
 
@@ -124,7 +124,7 @@ class AffiliateSettingsResource extends Resource
                                             ->label('Require Approval')
                                             ->helperText('New affiliates must be approved before they can start earning')
                                             ->default(true)
-                                            ->visible(fn (Forms\Get $get) => $get('allow_self_registration')),
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('allow_self_registration')),
                                     ])
                                     ->columns(2),
 
@@ -168,7 +168,7 @@ class AffiliateSettingsResource extends Resource
                                             ->numeric()
                                             ->default(50)
                                             ->required()
-                                            ->prefix(fn (Forms\Get $get) => $get('currency') ?? 'RON'),
+                                            ->prefix(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('currency') ?? 'RON'),
 
                                         Forms\Components\Select::make('currency')
                                             ->label('Currency')

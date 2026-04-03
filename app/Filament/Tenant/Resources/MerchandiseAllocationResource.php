@@ -55,7 +55,7 @@ class MerchandiseAllocationResource extends Resource
                             ->live(),
                         Forms\Components\Select::make('merchandise_item_id')
                             ->label('Produs')
-                            ->relationship('item', 'name', modifyQueryUsing: function (Builder $query, Forms\Get $get) {
+                            ->relationship('item', 'name', modifyQueryUsing: function (Builder $query, \Filament\Schemas\Components\Utilities\Get $get) {
                                 $tenant = auth()->user()->tenant;
                                 $query->where('tenant_id', $tenant?->id);
                                 if ($editionId = $get('festival_edition_id')) {
@@ -128,11 +128,11 @@ class MerchandiseAllocationResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity_allocated')
                     ->label('Alocat')
-                    ->formatStateUsing(fn ($state, $record) => $state . ' ' . ($record->item?->unit ?? 'buc'))
+                    ->formatStateUsing(fn ($state, $record) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' ' . ($record->item?->unit ?? 'buc'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('quantity_returned')
                     ->label('Returnat')
-                    ->formatStateUsing(fn ($state, $record) => $state . ' ' . ($record->item?->unit ?? 'buc'))
+                    ->formatStateUsing(fn ($state, $record) => rtrim(rtrim(number_format((float) $state, 2, '.', ''), '0'), '.') . ' ' . ($record->item?->unit ?? 'buc'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('outstanding')
                     ->label('Ramas')

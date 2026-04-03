@@ -91,7 +91,7 @@ class VendorResource extends Resource
                                                 Forms\Components\Actions\Action::make('lookupAnaf')
                                                     ->icon('heroicon-o-magnifying-glass')
                                                     ->label('Interogare ANAF')
-                                                    ->action(function (Forms\Get $get, Forms\Set $set) {
+                                                    ->action(function (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
                                                         $cui = $get('cui');
                                                         if (! $cui) {
                                                             Notification::make()
