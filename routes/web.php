@@ -246,8 +246,13 @@ Route::middleware(['web', 'auth'])->group(function () {
     })->name('tenant.demo.enter');
 
     Route::get('/tenant/demo/exit', function () {
+        $parentId = session('demo_parent_tenant_id');
         session()->forget(['demo_tenant_id', 'demo_parent_tenant_id', 'demo_parent_tenant_name']);
-        return redirect('/tenant')->with('success', 'Demo mode deactivated.');
+
+        if ($parentId) {
+            return redirect("/admin/tenants/{$parentId}/edit?tab=domains-deployment%3A%3Adata%3A%3Atab");
+        }
+        return redirect('/admin');
     })->name('tenant.demo.exit');
 });
 
