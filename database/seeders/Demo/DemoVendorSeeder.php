@@ -247,9 +247,10 @@ class DemoVendorSeeder
                 'vat_included' => true,
                 'is_available' => true,
                 'is_age_restricted' => $ageRestricted,
-                'min_age' => $minAge,
+                'min_age' => $minAge ?? 0,
                 'sort_order' => 1,
                 'tags' => $tags,
+                'sgr_cents' => 0,
             ]
         );
     }

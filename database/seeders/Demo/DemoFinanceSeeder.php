@@ -122,16 +122,19 @@ class DemoFinanceSeeder
             $vEmps = $empByVendor[$vendor->id] ?? [];
             $vPos = $posDevices[$vendor->id] ?? collect();
 
+            // Skip shifts if no employees or POS devices
+            if (empty($vEmps) || $vPos->isEmpty()) continue;
+
             foreach ($festivalDays as $dayIdx => $day) {
                 // Morning shift
-                $morningEmp = $vEmps[0] ?? null;
+                $morningEmp = $vEmps[0];
                 $morningPos = $vPos->first();
 
                 VendorShift::firstOrCreate(
                     ['tenant_id' => $tenantId, 'vendor_id' => $vendor->id, 'festival_edition_id' => $edition->id, 'started_at' => "{$day} 10:00:00"],
                     [
-                        'vendor_employee_id' => $morningEmp?->id,
-                        'vendor_pos_device_id' => $morningPos?->id,
+                        'vendor_employee_id' => $morningEmp->id,
+                        'vendor_pos_device_id' => $morningPos->id,
                         'ended_at' => "{$day} 18:00:00",
                         'status' => 'completed',
                         'sales_count' => mt_rand(10, 40),
@@ -140,14 +143,14 @@ class DemoFinanceSeeder
                 );
 
                 // Evening shift
-                $eveningEmp = $vEmps[1] ?? $vEmps[0] ?? null;
-                $eveningPos = $vPos->last() ?? $vPos->first();
+                $eveningEmp = $vEmps[1] ?? $vEmps[0];
+                $eveningPos = $vPos->count() > 1 ? $vPos[1] : $vPos->first();
 
                 VendorShift::firstOrCreate(
                     ['tenant_id' => $tenantId, 'vendor_id' => $vendor->id, 'festival_edition_id' => $edition->id, 'started_at' => "{$day} 18:00:00"],
                     [
-                        'vendor_employee_id' => $eveningEmp?->id,
-                        'vendor_pos_device_id' => $eveningPos?->id,
+                        'vendor_employee_id' => $eveningEmp->id,
+                        'vendor_pos_device_id' => $eveningPos->id,
                         'ended_at' => Carbon::parse($day)->addDay()->format('Y-m-d') . ' 04:00:00',
                         'status' => 'completed',
                         'sales_count' => mt_rand(20, 60),

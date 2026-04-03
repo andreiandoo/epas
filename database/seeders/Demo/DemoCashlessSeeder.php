@@ -344,7 +344,7 @@ class DemoCashlessSeeder
                         'total_cents' => $si['total'],
                         'tax_cents' => $itemTax,
                         'sgr_cents' => 0,
-                        'product_type' => $si['product']->type ?? 'food',
+                        'product_type' => $si['product']->type instanceof \BackedEnum ? $si['product']->type->value : ($si['product']->type ?? 'food'),
                         'currency' => 'RON',
                         'commission_cents' => $itemComm,
                         'commission_rate' => $commRate,
