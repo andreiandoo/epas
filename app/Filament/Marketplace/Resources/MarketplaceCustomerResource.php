@@ -44,6 +44,14 @@ class MarketplaceCustomerResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
+            // Import source badge
+            Forms\Components\Placeholder::make('import_badge')
+                ->hiddenLabel()
+                ->visible(fn ($record) => !empty($record?->settings['imported_from'] ?? null))
+                ->content(fn ($record) => new \Illuminate\Support\HtmlString(
+                    '<div style="padding:8px 12px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:8px;font-size:13px;color:#818CF8;display:flex;align-items:center;gap:6px;">🌐 Client importat din: <strong>' . e($record->settings['imported_from'] ?? 'Extern') . '</strong></div>'
+                )),
+
             SC\Grid::make(4)->schema([
                 SC\Group::make()->columnSpan(3)->schema([
                     SC\Section::make('Account Information')
@@ -388,6 +396,11 @@ class MarketplaceCustomerResource extends Resource
                     ->label('Name')
                     ->searchable(['first_name', 'last_name'])
                     ->sortable()
+                    ->formatStateUsing(function ($state, $record) {
+                        $source = $record->settings['imported_from'] ?? null;
+                        return $state . ($source ? " 🌐" : '');
+                    })
+                    ->tooltip(fn ($record) => ($record->settings['imported_from'] ?? null) ? 'Import: ' . $record->settings['imported_from'] : null)
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')

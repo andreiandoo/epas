@@ -353,7 +353,13 @@ class EventImportService
                         'status' => 'active',
                         'total_orders' => 0,
                         'total_spent' => 0,
+                        'settings' => $isExternalImport ? ['imported_from' => $sourceKey] : null,
                     ]);
+                } elseif ($isExternalImport && empty($mktCustomer->settings['imported_from'] ?? null)) {
+                    // Mark existing customer as also imported from this source
+                    $settings = $mktCustomer->settings ?? [];
+                    $settings['imported_from'] = $sourceKey;
+                    $mktCustomer->update(['settings' => $settings]);
                 }
                 $marketplaceCustomerId = $mktCustomer->id;
                 $this->importedMarketplaceCustomerIds[$mktCustomer->id] = true;
