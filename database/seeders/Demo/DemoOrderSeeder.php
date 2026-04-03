@@ -127,7 +127,7 @@ class DemoOrderSeeder
                 'currency' => 'RON',
                 'created_at' => $orderDate,
                 'updated_at' => $orderDate,
-                'metadata' => ['demo' => true, 'seeder' => 'FestivalDemoSeeder'],
+                'meta' => ['demo' => true, 'seeder' => 'FestivalDemoSeeder'],
             ];
 
             if ($customer) {
