@@ -43,7 +43,7 @@ class PricingRuleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Pricing Rule')->schema([
+            \Filament\Schemas\Components\Section::make('Pricing Rule')->schema([
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\Select::make('festival_edition_id')->label('Edition')
                     ->relationship('edition', 'name')->required(),
@@ -61,7 +61,7 @@ class PricingRuleResource extends Resource
                 Forms\Components\Textarea::make('notes')->rows(2),
             ])->columns(2),
 
-            Forms\Components\Section::make('Price Components')->schema([
+            \Filament\Schemas\Components\Section::make('Price Components')->schema([
                 Forms\Components\Repeater::make('components')
                     ->relationship()
                     ->schema([

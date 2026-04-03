@@ -45,8 +45,8 @@ class ReportService
 
     public function salesPerVendor(int $editionId, ?string $date = null): array
     {
-        $query = CashlessSale::where('festival_edition_id', $editionId)
-            ->where('status', SaleStatus::Completed)
+        $query = CashlessSale::where('cashless_sales.festival_edition_id', $editionId)
+            ->where('cashless_sales.status', SaleStatus::Completed)
             ->join('vendors', 'cashless_sales.vendor_id', '=', 'vendors.id');
 
         if ($date) {

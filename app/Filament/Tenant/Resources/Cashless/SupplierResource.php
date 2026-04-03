@@ -42,7 +42,7 @@ class SupplierResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Company Details')->schema([
+            \Filament\Schemas\Components\Section::make('Company Details')->schema([
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\TextInput::make('company_name'),
                 Forms\Components\TextInput::make('cui')->label('CUI'),
@@ -52,7 +52,7 @@ class SupplierResource extends Resource
                 Forms\Components\TextInput::make('phone'),
                 Forms\Components\TextInput::make('website')->url(),
             ])->columns(2),
-            Forms\Components\Section::make('Fiscal & Banking')->schema([
+            \Filament\Schemas\Components\Section::make('Fiscal & Banking')->schema([
                 Forms\Components\Textarea::make('fiscal_address')->rows(2),
                 Forms\Components\TextInput::make('county'),
                 Forms\Components\TextInput::make('city'),
@@ -60,7 +60,7 @@ class SupplierResource extends Resource
                 Forms\Components\TextInput::make('bank_name'),
                 Forms\Components\TextInput::make('iban')->label('IBAN'),
             ])->columns(2),
-            Forms\Components\Section::make('Contract')->schema([
+            \Filament\Schemas\Components\Section::make('Contract')->schema([
                 Forms\Components\TextInput::make('contract_number'),
                 Forms\Components\DatePicker::make('contract_start'),
                 Forms\Components\DatePicker::make('contract_end'),

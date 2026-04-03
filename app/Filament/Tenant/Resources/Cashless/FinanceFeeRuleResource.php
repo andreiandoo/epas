@@ -43,7 +43,7 @@ class FinanceFeeRuleResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Fee Rule')->schema([
+            \Filament\Schemas\Components\Section::make('Fee Rule')->schema([
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\Select::make('fee_type')
                     ->options(collect(FeeType::cases())->mapWithKeys(fn ($t) => [$t->value => $t->label()]))

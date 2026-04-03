@@ -42,7 +42,7 @@ class VoucherResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            Forms\Components\Section::make('Voucher Details')->schema([
+            \Filament\Schemas\Components\Section::make('Voucher Details')->schema([
                 Forms\Components\TextInput::make('code')->required()->unique(ignoreRecord: true),
                 Forms\Components\TextInput::make('name')->required(),
                 Forms\Components\Select::make('festival_edition_id')->label('Edition')
@@ -59,7 +59,7 @@ class VoucherResource extends Resource
                 Forms\Components\TextInput::make('max_bonus_cents')->numeric()->label('Max Bonus (cents)'),
                 Forms\Components\TextInput::make('sponsor_name'),
             ])->columns(2),
-            Forms\Components\Section::make('Limits')->schema([
+            \Filament\Schemas\Components\Section::make('Limits')->schema([
                 Forms\Components\TextInput::make('total_budget_cents')->numeric()->label('Total Budget (cents)'),
                 Forms\Components\TextInput::make('max_redemptions')->numeric(),
                 Forms\Components\TextInput::make('max_per_customer')->numeric()->default(1),

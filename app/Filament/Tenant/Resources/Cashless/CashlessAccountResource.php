@@ -66,7 +66,7 @@ class CashlessAccountResource extends Resource
                     ->label('Edition')->relationship('edition', 'name'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
+                Actions\ViewAction::make()
                     ->infolist([
                         Infolists\Components\TextEntry::make('account_number')->label('Account Number'),
                         Infolists\Components\TextEntry::make('customer.first_name')->label('Customer First Name'),
