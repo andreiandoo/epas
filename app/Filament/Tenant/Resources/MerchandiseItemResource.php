@@ -208,9 +208,10 @@ class MerchandiseItemResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index'  => Pages\ListMerchandiseItems::route('/'),
-            'create' => Pages\CreateMerchandiseItem::route('/create'),
-            'edit'   => Pages\EditMerchandiseItem::route('/{record}/edit'),
+            'index'    => Pages\ListMerchandiseItems::route('/'),
+            'create'   => Pages\CreateMerchandiseItem::route('/create'),
+            'edit'     => Pages\EditMerchandiseItem::route('/{record}/edit'),
+            'bulk-add' => Pages\BulkAddMerchandiseItems::route('/bulk-add'),
         ];
     }
 }
