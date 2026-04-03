@@ -106,12 +106,12 @@
             @if(!empty($tenantsList))
                 <div class="mt-6">
                     <x-filament::section>
-                        <x-slot name="heading">Cumpărături per Tenant</x-slot>
+                        <x-slot name="heading">Cumpărături per Organizator</x-slot>
                         <div class="overflow-x-auto">
                             <table class="min-w-full text-sm divide-y divide-gray-200 dark:divide-gray-700">
                                 <thead class="bg-gray-50 dark:bg-gray-800">
                                     <tr>
-                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Tenant</th>
+                                        <th class="px-3 py-2 font-medium text-left text-gray-600 dark:text-gray-300">Organizator</th>
                                         <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Comenzi</th>
                                         <th class="px-3 py-2 font-medium text-right text-gray-600 dark:text-gray-300">Valoare (RON)</th>
                                     </tr>

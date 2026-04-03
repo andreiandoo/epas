@@ -711,6 +711,18 @@ class CustomerInsightsService
 
     public function tenantsList(): array
     {
+        // For marketplace customers, group by marketplace_client (organizer) instead of tenant
+        if ($this->marketplaceCustomerId) {
+            return DB::table('marketplace_clients as mc')
+                ->join('orders as o', 'o.marketplace_client_id', '=', 'mc.id')
+                ->where('o.' . $this->orderColumn, $this->customerId)
+                ->select('mc.id', 'mc.name', DB::raw('COUNT(*) as cnt'), DB::raw("SUM(" . $this->totalExpr('o') . ") as total"))
+                ->groupBy('mc.id', 'mc.name')
+                ->orderByDesc('total')
+                ->get()
+                ->toArray();
+        }
+
         return DB::table('tenants as tn')
             ->join('orders as o', 'o.tenant_id', '=', 'tn.id')
             ->where('o.' . $this->orderColumn, $this->customerId)
