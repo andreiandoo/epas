@@ -22,6 +22,11 @@ class TenantResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office';
     protected static ?int $navigationSort = 10;
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return parent::getEloquentQuery()->where('is_demo_shadow', false);
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -833,6 +838,31 @@ class TenantResource extends Resource
                                             return new \Illuminate\Support\HtmlString(
                                                 view('filament.resources.tenants.packages-manager', [
                                                     'tenant' => $record,
+                                                ])->render()
+                                            );
+                                        }),
+                                ])
+                                ->visible(fn ($record) => $record !== null),
+
+                            SC\Section::make('Demo Data')
+                                ->icon('heroicon-o-beaker')
+                                ->description('Populate this tenant with a comprehensive demo dataset for testing. Data lives in a separate shadow tenant — your real data stays clean.')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('demo_data_manager')
+                                        ->label('')
+                                        ->content(function ($record) {
+                                            if (!$record) {
+                                                return 'Save the tenant first to manage demo data.';
+                                            }
+                                            return new \Illuminate\Support\HtmlString(
+                                                view('filament.resources.tenants.demo-data-manager', [
+                                                    'tenant' => $record,
+                                                    'hasDemoData' => $record->hasDemoData(),
+                                                    'demoShadow' => $record->hasDemoData() ? $record->demoShadow : null,
+                                                    'demoDataset' => $record->demo_dataset,
+                                                    'availableDatasets' => [
+                                                        'festival' => 'Festival (cashless, vendors, inventory, finance)',
+                                                    ],
                                                 ])->render()
                                             );
                                         }),

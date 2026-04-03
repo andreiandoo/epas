@@ -21,6 +21,14 @@ class EditTenant extends EditRecord
 {
     protected static string $resource = TenantResource::class;
 
+    /**
+     * Allow editing shadow tenants even though they're filtered from the list query.
+     */
+    public function resolveRecord(int|string $key): \Illuminate\Database\Eloquent\Model
+    {
+        return \App\Models\Tenant::findOrFail($key);
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         unset($data['microservice_ids']);

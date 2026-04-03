@@ -212,6 +212,12 @@ Route::get('/politica-confidentialitate', function () {
 Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePayVerificationController::class)
     ->name('apple-pay.verification');
 
+// Admin Demo Data Management Routes
+Route::middleware(['web', 'auth'])->prefix('admin/api')->group(function () {
+    Route::post('/tenants/{tenantId}/demo', [\App\Http\Controllers\Admin\DemoDataController::class, 'seed'])->name('admin.tenants.demo.seed');
+    Route::delete('/tenants/{tenantId}/demo', [\App\Http\Controllers\Admin\DemoDataController::class, 'cleanup'])->name('admin.tenants.demo.cleanup');
+});
+
 // Admin Domain Management Routes
 Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');

@@ -8,8 +8,8 @@ use Illuminate\Console\Command;
 
 class SeedFestivalDemo extends Command
 {
-    protected $signature = 'demo:festival {tenant_id} {--cleanup : Remove all demo data}';
-    protected $description = 'Seed comprehensive festival demo data for an existing tenant';
+    protected $signature = 'demo:festival {tenant_id} {--cleanup : Remove all demo data and shadow tenant}';
+    protected $description = 'Seed comprehensive festival demo data into a shadow tenant';
 
     public function handle(): int
     {
@@ -21,20 +21,35 @@ class SeedFestivalDemo extends Command
             return self::FAILURE;
         }
 
-        $this->info("Tenant: {$tenant->public_name} (#{$tenant->id})");
+        if ($tenant->is_demo_shadow) {
+            $this->error("Tenant #{$tenantId} is a demo shadow tenant. Use the parent tenant ID instead.");
+            return self::FAILURE;
+        }
+
+        $this->info("Parent tenant: {$tenant->public_name} (#{$tenant->id})");
 
         $seeder = new FestivalDemoSeeder($tenantId, $this->output);
 
         if ($this->option('cleanup')) {
-            $this->warn('Cleaning up demo data...');
+            if (! $tenant->demo_shadow_id) {
+                $this->warn('No demo data found on this tenant.');
+                return self::SUCCESS;
+            }
+            $this->warn('Cleaning up demo data and shadow tenant...');
             $seeder->cleanup();
-            $this->info('Demo data removed.');
+            $this->info('Done! Demo data and shadow tenant removed.');
             return self::SUCCESS;
         }
 
-        $this->info('Seeding festival demo data...');
+        if ($tenant->demo_shadow_id) {
+            $this->warn("Tenant already has demo data (shadow #{$tenant->demo_shadow_id}). Use --cleanup first.");
+            return self::FAILURE;
+        }
+
+        $this->info('Creating shadow tenant and seeding festival demo data...');
         $seeder->run();
-        $this->info('Done!');
+        $this->info('Done! Shadow tenant created with demo data.');
+        $this->info("View demo data at: /admin/tenants/{$tenant->fresh()->demo_shadow_id}/edit");
 
         return self::SUCCESS;
     }

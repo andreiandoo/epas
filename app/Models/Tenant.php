@@ -82,6 +82,11 @@ class Tenant extends Model
         'payment_processor',
         'payment_processor_mode',
         'currency',
+        // Demo shadow
+        'is_demo_shadow',
+        'demo_shadow_id',
+        'demo_dataset',
+        'demo_parent_id',
     ];
 
     protected $casts = [
@@ -109,6 +114,7 @@ class Tenant extends Model
         'onboarding_completed' => 'boolean',
         'use_core_smtp' => 'boolean',
         'has_own_website' => 'boolean',
+        'is_demo_shadow' => 'boolean',
     ];
 
     public function contractTemplate(): BelongsTo
@@ -229,6 +235,28 @@ class Tenant extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /** The shadow tenant that holds demo data for this tenant */
+    public function demoShadow(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'demo_shadow_id');
+    }
+
+    /** The parent tenant this shadow belongs to */
+    public function demoParent(): BelongsTo
+    {
+        return $this->belongsTo(Tenant::class, 'demo_parent_id');
+    }
+
+    public function hasDemoData(): bool
+    {
+        return $this->demo_shadow_id !== null;
+    }
+
+    public function isDemoShadow(): bool
+    {
+        return (bool) $this->is_demo_shadow;
     }
 
     /**
