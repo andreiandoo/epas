@@ -70,6 +70,10 @@ class User extends Authenticatable implements FilamentUser
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'tenant') {
+            // Allow admin/super-admin in demo mode
+            if (session()->has('demo_tenant_id') && in_array($this->role, ['super-admin', 'admin'])) {
+                return true;
+            }
             return $this->role === 'tenant';
         }
 
