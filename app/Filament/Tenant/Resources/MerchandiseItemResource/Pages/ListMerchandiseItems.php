@@ -14,6 +14,11 @@ class ListMerchandiseItems extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+            Actions\Action::make('bulk_add')
+                ->label('Adaugare in bulk')
+                ->icon('heroicon-o-squares-plus')
+                ->color('info')
+                ->url(MerchandiseItemResource::getUrl('bulk-add')),
         ];
     }
 }
