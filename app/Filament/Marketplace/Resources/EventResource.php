@@ -1552,11 +1552,24 @@ class EventResource extends Resource
 
                                         // ── Section 2: Prețuri per reprezentație (collapsible, collapsed) ──
                                         SC\Section::make($t('Prețuri per reprezentație', 'Prices per performance'))
-                                            ->visible(fn (SGet $get) => $get('../../duration_mode') === 'multi_day')
+                                            ->visible(fn (SGet $get) => $get('../../duration_mode') === 'multi_day' && $get('../../has_per_performance_pricing'))
                                             ->schema([
+                                                Forms\Components\Placeholder::make('perf_prices_hint')
+                                                    ->hiddenLabel()
+                                                    ->content(function (\Livewire\Component $livewire) use ($t) {
+                                                        $eventId = $livewire->record?->id ?? null;
+                                                        if (!$eventId) {
+                                                            return new HtmlString('<p class="text-sm text-amber-600 dark:text-amber-400">' . $t('Salvează evenimentul mai întâi pentru a configura prețurile per reprezentație.', 'Save the event first to configure prices per performance.') . '</p>');
+                                                        }
+                                                        $count = \App\Models\Performance::where('event_id', $eventId)->count();
+                                                        if ($count === 0) {
+                                                            return new HtmlString('<p class="text-sm text-amber-600 dark:text-amber-400">' . $t('Salvează evenimentul pentru a genera reprezentațiile din tab-ul Program, apoi revino aici.', 'Save the event to generate performances from the Program tab, then come back here.') . '</p>');
+                                                        }
+                                                        return '';
+                                                    }),
                                                 Forms\Components\Repeater::make('meta.performance_prices')
                                                     ->label($t('Prețuri per reprezentare', 'Prices per performance'))
-                                                    ->visible(fn (SGet $get) => $get('../../has_per_performance_pricing'))
+                                                    ->visible(fn (\Livewire\Component $livewire) => $livewire->record && \App\Models\Performance::where('event_id', $livewire->record->id)->exists())
                                                     ->schema([
                                                         Forms\Components\Select::make('perf_id')
                                                             ->hiddenLabel()
