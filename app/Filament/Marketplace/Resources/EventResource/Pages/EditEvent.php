@@ -24,6 +24,14 @@ class EditEvent extends EditRecord
 
     protected static string $resource = EventResource::class;
 
+    /**
+     * Allow editing child events even though they're filtered from the list query.
+     */
+    public function resolveRecord(int|string $key): \Illuminate\Database\Eloquent\Model
+    {
+        return Event::findOrFail($key);
+    }
+
     public function mount(int|string $record): void
     {
         parent::mount($record);

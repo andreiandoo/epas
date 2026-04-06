@@ -68,7 +68,8 @@ class EventResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
-            ->where('marketplace_client_id', $marketplace?->id);
+            ->where('marketplace_client_id', $marketplace?->id)
+            ->whereNull('parent_id'); // Hide child events from main list
     }
 
     public static function form(Schema $schema): Schema
@@ -3612,12 +3613,35 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable()
                     ->extraAttributes(['class' => 'ep-title-cell'])
-                    ->formatStateUsing(fn ($state, Event $record) => new HtmlString(
-                        '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
-                        '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="ep-title-edit" title="Quick Edit">' .
-                            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
-                        '</button>'
-                    )),
+                    ->formatStateUsing(function ($state, Event $record) {
+                        $html = '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
+                            '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="ep-title-edit" title="Quick Edit">' .
+                                '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
+                            '</button>';
+
+                        // Show child events (representations) for multi_day/recurring parents
+                        if ($record->is_template && $record->children()->exists()) {
+                            $children = $record->children()->orderBy('occurrence_number')->limit(10)->get();
+                            $html .= '<div class="mt-1 space-y-0.5">';
+                            foreach ($children as $child) {
+                                $childDate = $child->event_date?->format('d M Y') ?? '-';
+                                $childTime = $child->start_time ?? '';
+                                $childStatus = $child->isPast() ? '<span class="text-gray-400">încheiat</span>' : '<span class="text-green-600">activ</span>';
+                                $childUrl = static::getUrl('edit', ['record' => $child]);
+                                $html .= '<div class="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 pl-3 border-l-2 border-gray-200 dark:border-gray-700">'
+                                    . '<svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+                                    . '<a href="' . $childUrl . '" class="hover:text-primary-600 hover:underline">' . $childDate . ($childTime ? " · {$childTime}" : '') . '</a>'
+                                    . ' ' . $childStatus
+                                    . '</div>';
+                            }
+                            if ($record->children()->count() > 10) {
+                                $html .= '<div class="text-[10px] text-gray-400 pl-3">+' . ($record->children()->count() - 10) . ' mai multe...</div>';
+                            }
+                            $html .= '</div>';
+                        }
+
+                        return new HtmlString($html);
+                    }),
                 Tables\Columns\IconColumn::make('seating_layout_id')
                     ->label('Seating')
                     ->boolean()
