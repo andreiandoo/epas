@@ -84,7 +84,24 @@ class ViewPayout extends ViewRecord
                 ->action(function (array $data) {
                     $admin = Auth::guard('marketplace_admin')->user();
                     $this->record->reject($admin->id, $data['reason']);
-                    $this->refreshFormData(['status', 'rejection_reason', 'rejected_at']);
+
+                    // Delete associated decont document if exists
+                    $decont = $this->record->decontDocument;
+                    if ($decont) {
+                        if ($decont->file_path) {
+                            Storage::disk('public')->delete($decont->file_path);
+                        }
+                        $decont->delete();
+                    }
+
+                    // Delete associated invoice if exists
+                    $invoice = $this->record->invoice;
+                    if ($invoice) {
+                        $invoice->delete();
+                    }
+
+                    Notification::make()->title('Decont respins')->body('Documentele asociate au fost șterse.')->success()->send();
+                    $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
                 }),
 
             Actions\Action::make('add_note')
@@ -108,7 +125,7 @@ class ViewPayout extends ViewRecord
                 ->color('info')
                 ->requiresConfirmation()
                 ->modalDescription('Se va genera documentul de decont pentru acest payout.')
-                ->visible(fn () => $this->record->decontDocument === null && in_array($this->record->status, ['approved', 'processing', 'completed']))
+                ->visible(fn () => $this->record->decontDocument === null && in_array($this->record->status, ['approved', 'processing', 'completed']) && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $observer = new \App\Observers\MarketplacePayoutObserver();
                     $method = new \ReflectionMethod($observer, 'generateDecont');
@@ -174,7 +191,7 @@ class ViewPayout extends ViewRecord
                 ->icon('heroicon-o-document-text')
                 ->color('info')
                 ->button()
-                ->visible(fn () => $this->record->decontDocument !== null),
+                ->visible(fn () => $this->record->decontDocument !== null && !in_array($this->record->status, ['rejected', 'cancelled'])),
 
             // ========== GENERATE INVOICE (when decont exists but no invoice) ==========
             Actions\Action::make('generate_invoice')
@@ -183,7 +200,7 @@ class ViewPayout extends ViewRecord
                 ->color('warning')
                 ->requiresConfirmation()
                 ->modalDescription('Se va genera o factură asociată acestui decont.')
-                ->visible(fn () => $this->record->decontDocument !== null && $this->record->invoice === null)
+                ->visible(fn () => $this->record->decontDocument !== null && $this->record->invoice === null && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
                     $payout = $this->record;
                     $organizer = $payout->organizer;
