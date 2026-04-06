@@ -82,10 +82,11 @@ class OrdersController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Find or create customer
-            $customer = Customer::firstOrCreate(
+            // Find or create customer — use updateOrCreate to handle PostgreSQL
+            // unique constraint (tenant_id, email) safely within transaction
+            $customer = Customer::updateOrCreate(
                 [
-                    'email' => $request->input('customer.email'),
+                    'email' => strtolower(trim($request->input('customer.email'))),
                     'tenant_id' => $tenantId,
                 ],
                 [

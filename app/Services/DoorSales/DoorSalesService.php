@@ -228,13 +228,13 @@ class DoorSalesService
         // Find or create customer
         $customer = null;
         if ($doorSale->customer_email) {
-            $customer = Customer::firstOrCreate(
+            $customer = Customer::updateOrCreate(
                 [
                     'tenant_id' => $doorSale->tenant_id,
-                    'email' => $doorSale->customer_email,
+                    'email' => strtolower(trim($doorSale->customer_email)),
                 ],
                 [
-                    'name' => $doorSale->customer_name ?? 'Door Sale Customer',
+                    'full_name' => $doorSale->customer_name ?? 'Door Sale Customer',
                 ]
             );
         }

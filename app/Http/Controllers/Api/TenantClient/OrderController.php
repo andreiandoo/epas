@@ -80,10 +80,10 @@ class OrderController extends Controller
         try {
             return DB::transaction(function () use ($validated, $tenant, $firstName, $lastName, $fullName, $request) {
                 // Find or create customer
-                $customer = Customer::firstOrCreate(
+                $customer = Customer::updateOrCreate(
                     [
                         'tenant_id' => $tenant->id,
-                        'email' => $validated['customer_email'],
+                        'email' => strtolower(trim($validated['customer_email'])),
                     ],
                     [
                         'first_name' => $firstName,

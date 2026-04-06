@@ -148,7 +148,7 @@ class Order extends Model
     protected static function booted(): void
     {
         static::saving(function (Order $order) {
-            // sincronizare email <-> customer (cum ți-am dat anterior)
+            // sincronizare email <-> customer
             if ($order->customer_id && empty($order->customer_email)) {
                 $email = $order->relationLoaded('customer')
                     ? $order->customer?->email
@@ -158,7 +158,10 @@ class Order extends Model
                 }
             }
             if (!$order->customer_id && $order->tenant_id && $order->customer_email) {
-                $customer = Customer::where('email', $order->customer_email)->first();
+                // Search by email AND tenant_id to respect unique constraint
+                $customer = Customer::where('email', $order->customer_email)
+                    ->where('tenant_id', $order->tenant_id)
+                    ->first();
                 if (!$customer) {
                     $customer = Customer::create([
                         'tenant_id' => $order->tenant_id,
@@ -174,19 +177,29 @@ class Order extends Model
         });
 
         static::saved(function (Order $order) {
-            // asigură membership în pivot pt. tenantul comenzii
+            // Ensure customer-tenant pivot membership.
+            // Wrapped in try-catch to prevent PostgreSQL "aborted transaction" cascading failures.
             if ($order->customer_id && $order->tenant_id) {
-                if (!$order->relationLoaded('customer')) {
-                    $order->load('customer');
-                }
-                $customer = $order->customer;
-                if ($customer && !$customer->tenants()->where('tenants.id', $order->tenant_id)->exists()) {
-                    $customer->tenants()->attach($order->tenant_id);
-                }
-                // setează primary dacă lipsește
-                if ($customer && !$customer->primary_tenant_id) {
-                    $customer->primary_tenant_id = $order->tenant_id;
-                    $customer->save();
+                try {
+                    if (!$order->relationLoaded('customer')) {
+                        $order->load('customer');
+                    }
+                    $customer = $order->customer;
+                    if ($customer && !$customer->tenants()->where('tenants.id', $order->tenant_id)->exists()) {
+                        $customer->tenants()->attach($order->tenant_id);
+                    }
+                    // setează primary dacă lipsește
+                    if ($customer && !$customer->primary_tenant_id) {
+                        $customer->primary_tenant_id = $order->tenant_id;
+                        $customer->save();
+                    }
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('Order saved: customer-tenant pivot sync failed', [
+                        'order_id' => $order->id,
+                        'customer_id' => $order->customer_id,
+                        'tenant_id' => $order->tenant_id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
 
