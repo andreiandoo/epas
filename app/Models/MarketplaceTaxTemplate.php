@@ -777,8 +777,15 @@ class MarketplaceTaxTemplate extends Model
             // Use breakdown qty (from this decont) over total event sold
             if ($totalTicketsSold > 0) {
                 $variables['total_tickets_sold'] = $totalTicketsSold;
+            } elseif ($payout->gross_amount > 0 && !empty($events)) {
+                // Fallback: estimate from gross amount and average ticket price
+                $event = $events->first();
+                $avgPrice = $event?->ticketTypes->avg(fn ($tt) => $tt->price_cents > 0 ? $tt->price_cents / 100 : 0);
+                if ($avgPrice > 0) {
+                    $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
+                }
             }
-            $variables['total_tickets_refunded'] = 0; // TODO: calculate from refund data if available
+            $variables['total_tickets_refunded'] = 0;
 
             // Preprinted tickets (physical tickets sent by courier)
             $preprintedData = $payout->payout_method['preprinted'] ?? [];

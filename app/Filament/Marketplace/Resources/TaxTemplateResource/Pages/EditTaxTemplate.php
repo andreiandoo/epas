@@ -241,6 +241,9 @@ class EditTaxTemplate extends EditRecord
         $html = preg_replace('/writing-mode\s*:\s*[^;"]+;?/', '', $html);
         $html = preg_replace('/transform\s*:\s*[^;"]+;?/', '', $html);
 
+        // Replace font-weight:600 with font-weight:bold (DomPDF lacks 600 variant for DejaVu Sans)
+        $html = preg_replace('/font-weight\s*:\s*600\b/', 'font-weight:bold', $html);
+
         return $html;
     }
 }
