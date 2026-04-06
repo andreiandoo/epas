@@ -722,6 +722,18 @@ Schedule::call(function () {
     }
 })->everyMinute()->name('ticket-types:deactivate-expired');
 
+// Auto-activate ticket types whose scheduled_at datetime has arrived
+Schedule::command('ticket-types:activate-scheduled')
+    ->everyMinute()
+    ->timezone('Europe/Bucharest')
+    ->name('ticket-types:activate-scheduled');
+
+// Auto-activate ticket types when the previous one (by sort_order) is sold out
+Schedule::command('ticket-types:autostart-sold-out')
+    ->everyMinute()
+    ->timezone('Europe/Bucharest')
+    ->name('ticket-types:autostart-sold-out');
+
 /*
 |--------------------------------------------------------------------------
 | Marketplace Auto-Deconts
