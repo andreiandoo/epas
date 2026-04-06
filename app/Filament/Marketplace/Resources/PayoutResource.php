@@ -671,6 +671,18 @@ class PayoutResource extends Resource
                     ->action(function (MarketplacePayout $record, array $data): void {
                         $admin = Auth::guard('marketplace_admin')->user();
                         $record->reject($admin->id, $data['rejection_reason']);
+
+                        // Delete associated documents
+                        $decont = $record->decontDocument;
+                        if ($decont) {
+                            if ($decont->file_path) {
+                                \Illuminate\Support\Facades\Storage::disk('public')->delete($decont->file_path);
+                            }
+                            $decont->delete();
+                        }
+                        if ($record->invoice) {
+                            $record->invoice->delete();
+                        }
                     }),
 
                 ViewAction::make(),

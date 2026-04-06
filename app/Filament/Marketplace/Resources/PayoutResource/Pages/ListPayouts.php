@@ -59,9 +59,12 @@ class ListPayouts extends ListRecords
                     ->searchable()
                     ->required()
                     ->live()
-                    ->afterStateUpdated(function (Set $set) {
+                    ->afterStateUpdated(function ($state, Set $set) {
                         $set('event_id', null);
-                        $set('bank_account_id', null);
+                        // Auto-select primary bank account
+                        $primary = $state ? MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $state)
+                            ->where('is_primary', true)->first() : null;
+                        $set('bank_account_id', $primary?->id);
                     }),
 
                 Forms\Components\Select::make('event_id')
@@ -530,14 +533,6 @@ class ListPayouts extends ListRecords
                                 $acc->id => $acc->bank_name . ' - ' . $acc->iban . ($acc->is_primary ? ' ★ primar' : ''),
                             ])
                             ->toArray();
-                    })
-                    ->afterStateHydrated(function ($component, Get $get) {
-                        $organizerId = $get('marketplace_organizer_id');
-                        if ($organizerId && !$component->getState()) {
-                            $primary = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
-                                ->where('is_primary', true)->first();
-                            if ($primary) $component->state($primary->id);
-                        }
                     })
                     ->searchable()
                     ->required()

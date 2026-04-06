@@ -25,9 +25,16 @@
                     $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Tip bilet';
                     $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
                     $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-                    $gross = (float) ($item['gross'] ?? $item['total'] ?? ($price * $qty));
-                    $commission = (float) ($item['commission'] ?? $item['commission_amount'] ?? 0);
+                    $commPerTicket = (float) ($item['commission_per_ticket'] ?? $item['commission'] ?? 0);
+                    $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
+                    $gross = (float) ($item['gross'] ?? $item['total'] ?? ($price * $qty + ($item['commission_mode'] === 'added_on_top' ? $commission : 0)));
                     $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
+                    $commissionRate = isset($item['commission_rate']) ? $item['commission_rate'] . '%' : '';
+                    $commissionLabel = match($commissionMode) {
+                        'added_on_top' => 'Peste preț' . ($commissionRate ? " ({$commissionRate})" : ''),
+                        'included' => 'Inclus' . ($commissionRate ? " ({$commissionRate})" : ''),
+                        default => $commissionMode,
+                    };
                     $totalQty += $qty;
                     $totalGross += $gross;
                     $totalCommission += $commission;
@@ -38,7 +45,7 @@
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-semibold">{{ $qty }}</td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($gross, 2) }}</td>
                     <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($commission, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-gray-500 dark:text-gray-400 text-xs">{{ $commissionMode }}</td>
+                    <td class="py-2 px-3 text-right text-gray-500 dark:text-gray-400 text-xs">{{ $commissionLabel }}</td>
                 </tr>
             @endforeach
         </tbody>
