@@ -707,11 +707,28 @@ class MarketplaceTaxTemplate extends Model
             $variables['payout_gross_amount'] = number_format($payout->gross_amount ?? 0, 2);
             $variables['payout_commission_amount'] = number_format($payout->commission_amount ?? 0, 2);
 
-            // Calculate commission percentage
-            $commissionPercent = ($payout->gross_amount > 0)
-                ? round(($payout->commission_amount / $payout->gross_amount) * 100, 2)
-                : 0;
-            $variables['payout_commission_percent'] = $commissionPercent . '%';
+            // Commission percentage: use per-ticket rate if available, then organizer rate, then calculate from amounts
+            $commissionPercent = null;
+            $ticketBreakdownForRate = $payout->ticket_breakdown ?? [];
+            if (!empty($ticketBreakdownForRate)) {
+                // Get commission from first ticket type in breakdown
+                $firstItem = $ticketBreakdownForRate[0] ?? [];
+                $commissionPercent = $firstItem['commission_rate'] ?? $firstItem['commission_percent'] ?? null;
+            }
+            if ($commissionPercent === null && $event) {
+                // Try per-ticket-type commission from DB
+                $firstTt = $event->ticketTypes()->first();
+                if ($firstTt && $firstTt->commission_rate) {
+                    $commissionPercent = $firstTt->commission_rate;
+                }
+            }
+            if ($commissionPercent === null && $organizer) {
+                $commissionPercent = $organizer->commission_rate;
+            }
+            if ($commissionPercent === null && $payout->gross_amount > 0) {
+                $commissionPercent = round(($payout->commission_amount / $payout->gross_amount) * 100, 2);
+            }
+            $variables['payout_commission_percent'] = ($commissionPercent ?? 0) . '%';
 
             $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
             $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
@@ -757,7 +774,10 @@ class MarketplaceTaxTemplate extends Model
                 }
             }
             $variables['tickets_breakdown_label'] = !empty($breakdownParts) ? ' (' . implode('+', $breakdownParts) . ')' : '';
-            $variables['total_tickets_sold'] = $variables['total_tickets_sold'] ?? $totalTicketsSold;
+            // Use breakdown qty (from this decont) over total event sold
+            if ($totalTicketsSold > 0) {
+                $variables['total_tickets_sold'] = $totalTicketsSold;
+            }
             $variables['total_tickets_refunded'] = 0; // TODO: calculate from refund data if available
 
             // Preprinted tickets (physical tickets sent by courier)

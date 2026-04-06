@@ -104,7 +104,7 @@ class ViewOrganizerDocument extends ViewRecord
     <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <style>
-        * { font-family: DejaVu Sans, sans-serif; }
+        *, th, td, thead th, thead td { font-family: DejaVu Sans, sans-serif !important; }
     </style>
 </head>
 <body>' . $htmlContent . '</body>
@@ -120,7 +120,7 @@ class ViewOrganizerDocument extends ViewRecord
                         if (stripos($htmlContent, 'font-family') === false) {
                             $htmlContent = preg_replace(
                                 '/<\/head>/i',
-                                '<style>* { font-family: DejaVu Sans, sans-serif; }</style></head>',
+                                '<style>*, th, td, thead th, thead td { font-family: DejaVu Sans, sans-serif !important; }</style></head>',
                                 $htmlContent
                             );
                         }
