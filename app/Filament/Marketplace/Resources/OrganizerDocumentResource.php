@@ -445,6 +445,28 @@ class OrganizerDocumentResource extends Resource
                     ->url(fn ($record) => $record->download_url)
                     ->openUrlInNewTab()
                     ->visible(fn ($record) => $record->file_path),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('delete_selected')
+                    ->label('Șterge selectate')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Șterge documentele selectate')
+                    ->modalDescription('Ești sigur? Fișierele PDF vor fi șterse permanent.')
+                    ->deselectRecordsAfterCompletion()
+                    ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                        foreach ($records as $doc) {
+                            if ($doc->file_path) {
+                                \Illuminate\Support\Facades\Storage::disk('public')->delete($doc->file_path);
+                            }
+                            $doc->delete();
+                        }
+                        \Filament\Notifications\Notification::make()
+                            ->title($records->count() . ' documente șterse')
+                            ->success()
+                            ->send();
+                    }),
             ]);
     }
 
