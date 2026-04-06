@@ -178,9 +178,12 @@ class Order extends Model
 
         static::saved(function (Order $order) {
             // Ensure customer-tenant pivot membership.
-            // Wrapped in try-catch to prevent PostgreSQL "aborted transaction" cascading failures.
+            // Use a savepoint so that if this fails on PostgreSQL, it doesn't
+            // abort the outer transaction (PostgreSQL marks the entire transaction
+            // as failed after any error, unlike MySQL/SQLite).
             if ($order->customer_id && $order->tenant_id) {
                 try {
+                    DB::connection()->unprepared('SAVEPOINT customer_tenant_sync');
                     if (!$order->relationLoaded('customer')) {
                         $order->load('customer');
                     }
@@ -188,12 +191,17 @@ class Order extends Model
                     if ($customer && !$customer->tenants()->where('tenants.id', $order->tenant_id)->exists()) {
                         $customer->tenants()->attach($order->tenant_id);
                     }
-                    // setează primary dacă lipsește
                     if ($customer && !$customer->primary_tenant_id) {
                         $customer->primary_tenant_id = $order->tenant_id;
                         $customer->save();
                     }
+                    DB::connection()->unprepared('RELEASE SAVEPOINT customer_tenant_sync');
                 } catch (\Throwable $e) {
+                    try {
+                        DB::connection()->unprepared('ROLLBACK TO SAVEPOINT customer_tenant_sync');
+                    } catch (\Throwable) {
+                        // Savepoint may not exist if DB doesn't support it
+                    }
                     \Illuminate\Support\Facades\Log::warning('Order saved: customer-tenant pivot sync failed', [
                         'order_id' => $order->id,
                         'customer_id' => $order->customer_id,
@@ -207,17 +215,12 @@ class Order extends Model
             if ($order->wasChanged('status')) {
                 $newStatus = $order->status;
 
-                // When order is paid/confirmed, tickets become valid
                 if (in_array($newStatus, ['paid', 'confirmed', 'completed'])) {
                     $order->tickets()->update(['status' => 'valid']);
-                }
-                // When order is cancelled/refunded, tickets become cancelled + release seats + restore stock
-                elseif (in_array($newStatus, ['cancelled', 'refunded', 'expired'])) {
+                } elseif (in_array($newStatus, ['cancelled', 'refunded', 'expired'])) {
                     $order->tickets()->update(['status' => 'cancelled']);
                     $order->releaseSeatsAndRestoreStock();
-                }
-                // When order is pending, tickets stay pending
-                elseif ($newStatus === 'pending') {
+                } elseif ($newStatus === 'pending') {
                     $order->tickets()->update(['status' => 'pending']);
                 }
             }
