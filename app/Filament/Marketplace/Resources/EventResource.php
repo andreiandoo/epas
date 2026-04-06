@@ -696,7 +696,7 @@ class EventResource extends Resource
                                     ->label($t('Descriere scurtă', 'Short description'))
                                     ->rows(3)
                                     ->maxLength(1000)
-                                    ->live(debounce: 300)
+                                    ->live(onBlur: true)
                                     ->helperText(function ($state) use ($t) {
                                         $wordCount = $state ? str_word_count(strip_tags($state)) : 0;
                                         $remaining = 120 - $wordCount;
