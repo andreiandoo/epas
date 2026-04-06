@@ -1060,9 +1060,11 @@ class EditEvent extends EditRecord
 
                 // Persist the updated meta with series back to the ticket type
                 if ($ttId && !empty($perfPrices)) {
+                    $existingMeta = \App\Models\TicketType::where('id', $ttId)->value('meta');
+                    $existingMeta = is_array($existingMeta) ? $existingMeta : (json_decode($existingMeta ?? '{}', true) ?: []);
                     \App\Models\TicketType::where('id', $ttId)->update([
                         'meta' => json_encode(array_merge(
-                            json_decode(\App\Models\TicketType::where('id', $ttId)->value('meta') ?? '{}', true) ?: [],
+                            $existingMeta,
                             ['performance_prices' => array_values($perfPrices)]
                         ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     ]);
