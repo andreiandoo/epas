@@ -329,8 +329,31 @@ class ViewPayout extends ViewRecord
                 return;
             }
 
-            $subject = "{$docType} {$document->title} — {$this->record->reference}";
-            $body = "Bună ziua,\n\nAtașat găsiți {$docType} pentru decontul {$this->record->reference}.\n\nCu respect,\n" . ($marketplace->name ?? 'Tixello');
+            $payout = $this->record;
+            $event = $payout->event;
+            $organizer = $payout->organizer;
+
+            // Event details
+            $eventName = $event ? (is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? '') : ($event->title ?? '')) : '';
+            $eventDate = $event?->event_date?->format('d.m.Y') ?? '';
+            $venue = $event?->venue;
+            $venueName = $venue ? (is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? '') : ($venue->name ?? '')) : '';
+            $venueCity = $venue?->city ?? '';
+
+            $subject = "{$docType} {$document->title} — {$payout->reference}";
+
+            $bodyHtml = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">'
+                . '<p>Bună ziua,</p>'
+                . '<p>Atașat găsiți <strong>' . e($docType) . '</strong> pentru decontul <strong>' . e($payout->reference) . '</strong>.</p>'
+                . '<table style="border-collapse:collapse;margin:16px 0;font-size:13px;">'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Eveniment:</td><td style="padding:4px 0;font-weight:bold;">' . e($eventName) . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Data:</td><td style="padding:4px 0;">' . e($eventDate) . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Locație:</td><td style="padding:4px 0;">' . e($venueName) . ($venueCity ? ', ' . e($venueCity) : '') . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Sumă netă:</td><td style="padding:4px 0;font-weight:bold;">' . number_format((float) $payout->amount, 2) . ' ' . ($payout->currency ?? 'RON') . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Organizator:</td><td style="padding:4px 0;">' . e($organizer?->company_name ?? $organizer?->name ?? '') . '</td></tr>'
+                . '</table>'
+                . '<p>Cu respect,<br><strong>' . e($marketplace->name ?? 'Tixello') . '</strong></p>'
+                . '</div>';
 
             $symfonyEmail = (new \Symfony\Component\Mime\Email())
                 ->from(new \Symfony\Component\Mime\Address(
@@ -339,10 +362,25 @@ class ViewPayout extends ViewRecord
                 ))
                 ->to($email)
                 ->subject($subject)
-                ->text($body)
+                ->html($bodyHtml)
                 ->attachFromPath($filePath, $document->file_name, 'application/pdf');
 
             $transport->send($symfonyEmail);
+
+            // Log to marketplace email logs
+            \App\Models\MarketplaceEmailLog::create([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $organizer?->id,
+                'marketplace_event_id' => $event?->id,
+                'template_slug' => 'decont_send',
+                'from_email' => $marketplace->getEmailFromAddress(),
+                'from_name' => $marketplace->getEmailFromName(),
+                'to_email' => $email,
+                'to_name' => $organizer?->name ?? $email,
+                'subject' => $subject,
+                'body_html' => $bodyHtml,
+                'status' => 'sent',
+            ]);
 
             Notification::make()->title("{$docType} trimis la {$email}")->success()->send();
         } catch (\Exception $e) {
@@ -364,8 +402,31 @@ class ViewPayout extends ViewRecord
                 return;
             }
 
-            $subject = "Factură #{$invoice->number} — {$this->record->reference}";
-            $body = "Bună ziua,\n\nAtașat găsiți factura #{$invoice->number} pentru decontul {$this->record->reference}.\n\nSuma: {$invoice->amount} {$invoice->currency}\nScadența: " . ($invoice->due_date?->format('d.m.Y') ?? '-') . "\n\nCu respect,\n" . ($marketplace->name ?? 'Tixello');
+            $payout = $this->record;
+            $event = $payout->event;
+            $organizer = $payout->organizer;
+
+            $eventName = $event ? (is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? '') : ($event->title ?? '')) : '';
+            $eventDate = $event?->event_date?->format('d.m.Y') ?? '';
+            $venue = $event?->venue;
+            $venueName = $venue ? (is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? '') : ($venue->name ?? '')) : '';
+            $venueCity = $venue?->city ?? '';
+
+            $subject = "Factură #{$invoice->number} — {$payout->reference}";
+
+            $bodyHtml = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">'
+                . '<p>Bună ziua,</p>'
+                . '<p>Atașat găsiți <strong>factura #' . e($invoice->number) . '</strong> pentru decontul <strong>' . e($payout->reference) . '</strong>.</p>'
+                . '<table style="border-collapse:collapse;margin:16px 0;font-size:13px;">'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Eveniment:</td><td style="padding:4px 0;font-weight:bold;">' . e($eventName) . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Data:</td><td style="padding:4px 0;">' . e($eventDate) . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Locație:</td><td style="padding:4px 0;">' . e($venueName) . ($venueCity ? ', ' . e($venueCity) : '') . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Sumă factură:</td><td style="padding:4px 0;font-weight:bold;">' . number_format((float) ($invoice->amount ?? $invoice->total ?? 0), 2) . ' ' . ($invoice->currency ?? 'RON') . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Scadență:</td><td style="padding:4px 0;">' . ($invoice->due_date?->format('d.m.Y') ?? '-') . '</td></tr>'
+                . '<tr><td style="padding:4px 12px 4px 0;color:#888;">Organizator:</td><td style="padding:4px 0;">' . e($organizer?->company_name ?? $organizer?->name ?? '') . '</td></tr>'
+                . '</table>'
+                . '<p>Cu respect,<br><strong>' . e($marketplace->name ?? 'Tixello') . '</strong></p>'
+                . '</div>';
 
             $symfonyEmail = (new \Symfony\Component\Mime\Email())
                 ->from(new \Symfony\Component\Mime\Address(
@@ -374,9 +435,24 @@ class ViewPayout extends ViewRecord
                 ))
                 ->to($email)
                 ->subject($subject)
-                ->text($body);
+                ->html($bodyHtml);
 
             $transport->send($symfonyEmail);
+
+            // Log to marketplace email logs
+            \App\Models\MarketplaceEmailLog::create([
+                'marketplace_client_id' => $marketplace->id,
+                'marketplace_organizer_id' => $organizer?->id,
+                'marketplace_event_id' => $event?->id,
+                'template_slug' => 'invoice_send',
+                'from_email' => $marketplace->getEmailFromAddress(),
+                'from_name' => $marketplace->getEmailFromName(),
+                'to_email' => $email,
+                'to_name' => $organizer?->name ?? $email,
+                'subject' => $subject,
+                'body_html' => $bodyHtml,
+                'status' => 'sent',
+            ]);
 
             Notification::make()->title("Factură trimisă la {$email}")->success()->send();
         } catch (\Exception $e) {
