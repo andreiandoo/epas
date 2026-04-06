@@ -989,14 +989,23 @@ class OrdersController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $orders = Order::with('items')
+        // Load orders with valid/used tickets only (excludes cancelled/refunded tickets)
+        $orders = Order::with(['tickets' => function ($q) {
+                $q->whereIn('status', ['valid', 'used']);
+            }])
             ->where('event_id', $eventId)
             ->where('marketplace_client_id', $client->id)
             ->whereIn('status', ['confirmed', 'completed'])
-            ->get();
+            ->get()
+            // Only include orders that have at least one valid ticket
+            ->filter(fn($o) => $o->tickets->isNotEmpty());
 
         $online = $orders->where('source', '!=', 'pos_app');
         $pos = $orders->where('source', 'pos_app');
+
+        // Helper: count valid tickets and sum their prices
+        $ticketCount = fn($orders) => $orders->sum(fn($o) => $o->tickets->count());
+        $ticketRevenue = fn($orders) => round($orders->sum(fn($o) => $o->tickets->sum('price')), 2);
 
         // Group POS by sold_by from meta
         $posByUser = $pos->groupBy(function ($o) {
@@ -1007,18 +1016,18 @@ class OrdersController extends BaseController
         return $this->success([
             'online' => [
                 'orders' => $online->count(),
-                'tickets' => $online->sum(fn($o) => $o->items->sum('quantity')),
-                'revenue' => round($online->sum('total'), 2),
+                'tickets' => $ticketCount($online),
+                'revenue' => $ticketRevenue($online),
             ],
             'pos' => [
                 'orders' => $pos->count(),
-                'tickets' => $pos->sum(fn($o) => $o->items->sum('quantity')),
-                'revenue' => round($pos->sum('total'), 2),
+                'tickets' => $ticketCount($pos),
+                'revenue' => $ticketRevenue($pos),
                 'by_user' => $posByUser->map(fn($userOrders, $userName) => [
                     'user' => $userName,
                     'orders' => $userOrders->count(),
-                    'tickets' => $userOrders->sum(fn($o) => $o->items->sum('quantity')),
-                    'revenue' => round($userOrders->sum('total'), 2),
+                    'tickets' => $ticketCount($userOrders),
+                    'revenue' => $ticketRevenue($userOrders),
                 ])->values(),
             ],
         ]);
