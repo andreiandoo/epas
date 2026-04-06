@@ -12,26 +12,24 @@ class EventSchedulingService
 {
     /**
      * Process event scheduling after save
-     * Creates child events for multi-day and recurring modes
+     * Creates/updates child events for multi-day and recurring modes
      */
     public function processEventScheduling(Event $event): void
     {
-        // Only process parent events (not children)
         if ($event->isChild()) {
             return;
         }
 
-        $durationMode = $event->duration_mode;
-
-        match ($durationMode) {
+        match ($event->duration_mode) {
             'multi_day' => $this->processMultiDayEvent($event),
             'recurring' => $this->processRecurringEvent($event),
-            default => null, // single_day and range don't need child events
+            default => null,
         };
     }
 
     /**
-     * Process multi-day event - create child event for each slot
+     * Process multi-day event - sync child events for each slot.
+     * PRESERVES existing children and their IDs/slugs/URLs.
      */
     protected function processMultiDayEvent(Event $event): void
     {
@@ -42,28 +40,60 @@ class EventSchedulingService
         }
 
         DB::transaction(function () use ($event, $multiSlots) {
-            // Mark parent as template
             $event->update(['is_template' => true]);
 
-            // Delete existing children to recreate
-            $event->children()->delete();
+            $existingChildren = $event->children()->orderBy('occurrence_number')->get();
 
-            // Create child for each slot
+            // Index existing children by occurrence_number
+            $childrenByOccurrence = $existingChildren->keyBy('occurrence_number');
+
+            $processedIds = [];
+
             foreach ($multiSlots as $index => $slot) {
-                $this->createChildEvent($event, [
+                $occurrenceNumber = $index + 1;
+                $dateData = [
                     'event_date' => $slot['date'] ?? null,
                     'start_time' => $slot['start_time'] ?? null,
                     'door_time' => $slot['door_time'] ?? null,
                     'end_time' => $slot['end_time'] ?? null,
-                ], $index + 1);
+                ];
+
+                if (isset($childrenByOccurrence[$occurrenceNumber])) {
+                    // UPDATE existing child — preserve ID, slug, URL
+                    $child = $childrenByOccurrence[$occurrenceNumber];
+                    $this->updateChildEvent($event, $child, $dateData);
+                    $processedIds[] = $child->id;
+                } else {
+                    // CREATE new child
+                    $child = $this->createChildEvent($event, $dateData, $occurrenceNumber);
+                    $processedIds[] = $child->id;
+                }
             }
 
-            Log::info("[EventScheduling] Created " . count($multiSlots) . " child events for multi-day event #{$event->id}");
+            // Remove children that no longer have a slot (only if no tickets sold)
+            $event->children()
+                ->whereNotIn('id', $processedIds)
+                ->get()
+                ->each(function (Event $orphan) {
+                    $hasTickets = $orphan->ticketTypes()
+                        ->whereHas('tickets', fn ($q) => $q->where('status', '!=', 'cancelled'))
+                        ->exists();
+
+                    if (!$hasTickets) {
+                        Log::info("[EventScheduling] Deleting orphan child event #{$orphan->id}");
+                        $orphan->delete();
+                    } else {
+                        Log::warning("[EventScheduling] Keeping orphan child #{$orphan->id} — has sold tickets");
+                    }
+                });
+
+            Log::info("[EventScheduling] Synced " . count($multiSlots) . " child events for multi-day event #{$event->id}");
         });
     }
 
     /**
-     * Process recurring event - generate events based on recurrence pattern
+     * Process recurring event - sync child events based on recurrence pattern.
+     * PRESERVES existing children.
      */
     protected function processRecurringEvent(Event $event): void
     {
@@ -76,11 +106,7 @@ class EventSchedulingService
         }
 
         DB::transaction(function () use ($event, $recurringStartDate, $recurringFrequency, $recurringCount) {
-            // Mark parent as template
             $event->update(['is_template' => true]);
-
-            // Delete existing children to recreate
-            $event->children()->delete();
 
             $dates = $this->generateRecurringDates(
                 Carbon::parse($recurringStartDate),
@@ -89,17 +115,125 @@ class EventSchedulingService
                 $event->recurring_week_of_month ?? null
             );
 
+            $existingChildren = $event->children()->orderBy('occurrence_number')->get();
+            $childrenByOccurrence = $existingChildren->keyBy('occurrence_number');
+
+            $processedIds = [];
+
             foreach ($dates as $index => $date) {
-                $this->createChildEvent($event, [
+                $occurrenceNumber = $index + 1;
+                $dateData = [
                     'event_date' => $date->format('Y-m-d'),
                     'start_time' => $event->recurring_start_time,
                     'door_time' => $event->recurring_door_time,
                     'end_time' => $event->recurring_end_time,
-                ], $index + 1);
+                ];
+
+                if (isset($childrenByOccurrence[$occurrenceNumber])) {
+                    $child = $childrenByOccurrence[$occurrenceNumber];
+                    $this->updateChildEvent($event, $child, $dateData);
+                    $processedIds[] = $child->id;
+                } else {
+                    $child = $this->createChildEvent($event, $dateData, $occurrenceNumber);
+                    $processedIds[] = $child->id;
+                }
             }
 
-            Log::info("[EventScheduling] Created " . count($dates) . " child events for recurring event #{$event->id}");
+            // Remove excess children (only if no tickets sold)
+            $event->children()
+                ->whereNotIn('id', $processedIds)
+                ->get()
+                ->each(function (Event $orphan) {
+                    $hasTickets = $orphan->ticketTypes()
+                        ->whereHas('tickets', fn ($q) => $q->where('status', '!=', 'cancelled'))
+                        ->exists();
+
+                    if (!$hasTickets) {
+                        $orphan->delete();
+                    }
+                });
+
+            Log::info("[EventScheduling] Synced " . count($dates) . " child events for recurring event #{$event->id}");
         });
+    }
+
+    /**
+     * Update an existing child event with new date data from parent.
+     * Preserves: id, slug, ticket types, orders, tickets.
+     * Updates: dates/times, shared fields from parent.
+     */
+    protected function updateChildEvent(Event $parent, Event $child, array $dateData): void
+    {
+        $child->update([
+            'event_date' => $dateData['event_date'],
+            'start_time' => $dateData['start_time'],
+            'door_time' => $dateData['door_time'],
+            'end_time' => $dateData['end_time'],
+            // Sync shared fields from parent
+            'title' => $parent->title,
+            'subtitle' => $parent->subtitle,
+            'short_description' => $parent->short_description,
+            'description' => $parent->description,
+            'venue_id' => $parent->venue_id,
+            'address' => $parent->address,
+            'poster_url' => $parent->poster_url,
+            'hero_image_url' => $parent->hero_image_url,
+            'ticket_terms' => $parent->ticket_terms,
+            'is_published' => $parent->is_published,
+            'is_cancelled' => $parent->is_cancelled,
+            'is_postponed' => $parent->is_postponed,
+            'marketplace_client_id' => $parent->marketplace_client_id,
+            'marketplace_organizer_id' => $parent->marketplace_organizer_id,
+            'marketplace_city_id' => $parent->marketplace_city_id,
+            'marketplace_event_category_id' => $parent->marketplace_event_category_id,
+        ]);
+
+        // Sync taxonomy relationships
+        $this->copyEventRelationships($parent, $child);
+    }
+
+    /**
+     * Create a child event from parent
+     */
+    protected function createChildEvent(Event $parent, array $dateData, int $occurrenceNumber): Event
+    {
+        $childData = $parent->replicate()->toArray();
+
+        unset(
+            $childData['id'],
+            $childData['created_at'],
+            $childData['updated_at'],
+            $childData['multi_slots'],
+            $childData['recurring_start_date'],
+            $childData['recurring_frequency'],
+            $childData['recurring_count'],
+            $childData['recurring_week_of_month'],
+            $childData['recurring_start_time'],
+            $childData['recurring_door_time'],
+            $childData['recurring_end_time'],
+            $childData['recurring_weekday']
+        );
+
+        $childData['parent_id'] = $parent->id;
+        $childData['is_template'] = false;
+        $childData['occurrence_number'] = $occurrenceNumber;
+        $childData['duration_mode'] = 'single_day';
+        $childData['event_date'] = $dateData['event_date'];
+        $childData['start_time'] = $dateData['start_time'];
+        $childData['door_time'] = $dateData['door_time'];
+        $childData['end_time'] = $dateData['end_time'];
+
+        // Temporary slug until we have the ID
+        $childData['slug'] = $parent->slug . '-' . $occurrenceNumber . '-' . Str::random(6);
+
+        $child = Event::create($childData);
+
+        // Permanent slug with actual ID (stable URL)
+        $child->update(['slug' => $parent->slug . '-' . $child->id]);
+
+        $this->copyEventRelationships($parent, $child);
+
+        return $child;
     }
 
     /**
@@ -125,11 +259,9 @@ class EventSchedulingService
                         break;
 
                     case 'monthly_nth':
-                        // Get the Nth weekday of next month
-                        $weekday = $startDate->dayOfWeekIso; // 1=Monday, 7=Sunday
+                        $weekday = $startDate->dayOfWeekIso;
                         $current->addMonth();
 
-                        // Find the Nth occurrence of this weekday in the month
                         $targetDate = $this->getNthWeekdayOfMonth(
                             $current->year,
                             $current->month,
@@ -149,22 +281,12 @@ class EventSchedulingService
         return $dates;
     }
 
-    /**
-     * Get the Nth occurrence of a weekday in a month
-     *
-     * @param int $year
-     * @param int $month
-     * @param int $weekday 1=Monday, 7=Sunday
-     * @param int $nth 1=First, 2=Second, -1=Last
-     * @return Carbon|null
-     */
     protected function getNthWeekdayOfMonth(int $year, int $month, int $weekday, int $nth): ?Carbon
     {
         $firstOfMonth = Carbon::create($year, $month, 1);
         $lastOfMonth = $firstOfMonth->copy()->endOfMonth();
 
         if ($nth === -1) {
-            // Last occurrence of the weekday
             $date = $lastOfMonth->copy();
             while ($date->dayOfWeekIso !== $weekday) {
                 $date->subDay();
@@ -172,16 +294,13 @@ class EventSchedulingService
             return $date;
         }
 
-        // Find first occurrence
         $date = $firstOfMonth->copy();
         while ($date->dayOfWeekIso !== $weekday) {
             $date->addDay();
         }
 
-        // Add weeks to get to Nth occurrence
         $date->addWeeks($nth - 1);
 
-        // Make sure it's still in the same month
         if ($date->month !== $month) {
             return null;
         }
@@ -190,88 +309,27 @@ class EventSchedulingService
     }
 
     /**
-     * Create a child event from parent
-     */
-    protected function createChildEvent(Event $parent, array $dateData, int $occurrenceNumber): Event
-    {
-        // Copy parent data
-        $childData = $parent->replicate()->toArray();
-
-        // Remove fields that shouldn't be copied
-        unset(
-            $childData['id'],
-            $childData['created_at'],
-            $childData['updated_at'],
-            $childData['multi_slots'],
-            $childData['recurring_start_date'],
-            $childData['recurring_frequency'],
-            $childData['recurring_count'],
-            $childData['recurring_week_of_month'],
-            $childData['recurring_start_time'],
-            $childData['recurring_door_time'],
-            $childData['recurring_end_time'],
-            $childData['recurring_weekday']
-        );
-
-        // Set child-specific data
-        $childData['parent_id'] = $parent->id;
-        $childData['is_template'] = false;
-        $childData['occurrence_number'] = $occurrenceNumber;
-        $childData['duration_mode'] = 'single_day';
-
-        // Set the specific date for this occurrence
-        $childData['event_date'] = $dateData['event_date'];
-        $childData['start_time'] = $dateData['start_time'];
-        $childData['door_time'] = $dateData['door_time'];
-        $childData['end_time'] = $dateData['end_time'];
-
-        // Generate unique slug: parent-slug-{id} will be set after create
-        // For now use temporary slug
-        $childData['slug'] = $parent->slug . '-' . $occurrenceNumber . '-' . Str::random(6);
-
-        // Create the child event
-        $child = Event::create($childData);
-
-        // Update slug with actual ID
-        $child->update(['slug' => $parent->slug . '-' . $child->id]);
-
-        // Copy relationships
-        $this->copyEventRelationships($parent, $child);
-
-        return $child;
-    }
-
-    /**
      * Copy event relationships from parent to child
      */
     protected function copyEventRelationships(Event $parent, Event $child): void
     {
-        // Copy artists
         if ($parent->artists()->exists()) {
             $child->artists()->sync($parent->artists()->pluck('id'));
         }
-
-        // Copy event types
         if ($parent->eventTypes()->exists()) {
             $child->eventTypes()->sync($parent->eventTypes()->pluck('id'));
         }
-
-        // Copy event genres
         if ($parent->eventGenres()->exists()) {
             $child->eventGenres()->sync($parent->eventGenres()->pluck('id'));
         }
-
-        // Copy tags
         if ($parent->tags()->exists()) {
             $child->tags()->sync($parent->tags()->pluck('id'));
         }
-
-        // Note: Ticket types are NOT copied - they should be created separately for each child
-        // This allows different pricing/availability per occurrence
     }
 
     /**
-     * Sync child events when parent is updated
+     * Sync child events when parent is updated.
+     * Now PRESERVES existing children instead of delete+recreate.
      */
     public function syncChildEvents(Event $parent): void
     {
@@ -279,7 +337,6 @@ class EventSchedulingService
             return;
         }
 
-        // Re-process scheduling which will delete and recreate children
         $this->processEventScheduling($parent);
     }
 
