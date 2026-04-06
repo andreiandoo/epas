@@ -2,7 +2,7 @@
     use App\Models\MarketplaceTaxTemplate;
     use Illuminate\Support\Facades\Storage;
 
-    $isEventFinished = $event->status === 'archived';
+    $isEventFinished = $event->isPast() || $event->status === 'archived';
     $isEventPublished = (bool) $event->is_published;
 
     // Map trigger → human-readable condition
@@ -52,7 +52,7 @@
             $doc = $existingDoc ?? $orgDoc;
         @endphp
 
-        <div class="flex items-start gap-3 p-2.5 rounded-lg border {{ $hasDocument ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10' : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50' }}">
+        <div class="flex items-start gap-3 p-2.5 rounded-lg border {{ $hasDocument ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10' : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800' }}">
             {{-- Status icon --}}
             <div class="flex-shrink-0 mt-0.5">
                 @if($hasDocument)
