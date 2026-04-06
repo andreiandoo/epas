@@ -371,7 +371,7 @@ class ViewPayout extends ViewRecord
             \App\Models\MarketplaceEmailLog::create([
                 'marketplace_client_id' => $marketplace->id,
                 'marketplace_organizer_id' => $organizer?->id,
-                'marketplace_event_id' => $event?->id,
+                'marketplace_event_id' => null,
                 'template_slug' => 'decont_send',
                 'from_email' => $marketplace->getEmailFromAddress(),
                 'from_name' => $marketplace->getEmailFromName(),
@@ -443,7 +443,7 @@ class ViewPayout extends ViewRecord
             \App\Models\MarketplaceEmailLog::create([
                 'marketplace_client_id' => $marketplace->id,
                 'marketplace_organizer_id' => $organizer?->id,
-                'marketplace_event_id' => $event?->id,
+                'marketplace_event_id' => null,
                 'template_slug' => 'invoice_send',
                 'from_email' => $marketplace->getEmailFromAddress(),
                 'from_name' => $marketplace->getEmailFromName(),
