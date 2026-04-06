@@ -184,8 +184,8 @@ class OrdersController extends BaseController
             $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && $posSource !== 'pos_app';
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
-            // Create order — skipTicketSync prevents the saved() callback from running
-            // redundant ticket status queries inside this transaction (we handle it explicitly below)
+            // Create order — disable activity logging and ticket sync inside this transaction
+            // to avoid any side-effect queries that could abort the PostgreSQL transaction.
             $order = new Order([
                 'tenant_id' => $tenantId,
                 'event_id' => $event->id,
@@ -212,6 +212,7 @@ class OrdersController extends BaseController
                 ],
             ]);
             $order->skipTicketSync = true;
+            activity()->disableLogging();
             $order->save();
 
             // Create order items and tickets
@@ -366,6 +367,7 @@ class OrdersController extends BaseController
             }
 
             DB::commit();
+            activity()->enableLogging();
 
             // Reload order to get updated status
             $order->refresh();
@@ -421,11 +423,13 @@ class OrdersController extends BaseController
 
         } catch (\Exception $e) {
             DB::rollBack();
+            activity()->enableLogging();
 
             Log::error('Failed to create marketplace order', [
                 'marketplace_client_id' => $client->id,
                 'event_id' => $request->event_id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return $this->error($e->getMessage(), 400);
