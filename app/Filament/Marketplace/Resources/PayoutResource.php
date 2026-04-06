@@ -229,9 +229,10 @@ class PayoutResource extends Resource
                             ->icon('heroicon-o-calculator')
                             ->schema([
                                 // 1. Situația vânzărilor la momentul decontului
-                                Infolists\Components\Placeholder::make('event_sales_status')
+                                Infolists\Components\TextEntry::make('event_sales_status')
                                     ->label('')
-                                    ->content(function ($record) {
+                                    ->getStateUsing(fn () => '—')
+                                    ->formatStateUsing(function ($state, $record) {
                                         if (!$record->event_id) return '';
                                         $event = \App\Models\Event::with('ticketTypes')->find($record->event_id);
                                         if (!$event) return '';
@@ -270,6 +271,7 @@ class PayoutResource extends Resource
                                         </div>
                                         ");
                                     })
+                                    ->html()
                                     ->columnSpanFull(),
 
                                 // 2. Ce s-a cerut în acest decont
