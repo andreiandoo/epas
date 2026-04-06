@@ -340,7 +340,8 @@ class ViewPayout extends ViewRecord
             $venueName = $venue ? (is_array($venue->name) ? ($venue->name['ro'] ?? $venue->name['en'] ?? '') : ($venue->name ?? '')) : '';
             $venueCity = $venue?->city ?? '';
 
-            $subject = "{$docType} {$document->title} — {$payout->reference}";
+            $locationPart = implode(', ', array_filter([$venueName, $venueCity]));
+            $subject = "{$docType} - {$eventName} {$eventDate}" . ($locationPart ? " {$locationPart}" : '');
 
             $bodyHtml = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#333;">'
                 . '<p>Bună ziua,</p>'
