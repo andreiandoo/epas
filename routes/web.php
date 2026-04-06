@@ -411,6 +411,19 @@ Route::get('/download-android', function () {
     ]);
 })->name('download.android');
 
+Route::get('/android', function () {
+    return redirect()->route('download.android');
+});
+
+// App version check (used by mobile app to detect updates)
+Route::get('/api/app-version', function () {
+    return response()->json([
+        'latest_version' => config('app.staff_app_version', '1.0.0'),
+        'download_url' => url('/download-android'),
+        'force_update' => false,
+    ]);
+});
+
 // Public Contract Signing Routes (no auth required - token-based)
 Route::prefix('contract')->group(function () {
     Route::get('/{token}', [ContractSigningController::class, 'view'])->name('contract.view');

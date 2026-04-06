@@ -224,6 +224,9 @@ class MarketplaceTaxTemplate extends Model
             '{{payout_gross_amount}}' => 'Gross Amount (sumă brută)',
             '{{payout_commission_amount}}' => 'Commission Amount',
             '{{payout_commission_percent}}' => 'Commission Percentage (ex: 6%)',
+            '{{payout_vat_rate}}' => 'Cota TVA (ex: 19% sau 0%)',
+            '{{payout_vat_amount}}' => 'Valoare TVA calculată',
+            '{{payout_total_with_vat}}' => 'Total de plată cu TVA',
             '{{payout_fees_amount}}' => 'Fees Amount (taxe)',
             '{{payout_adjustments_amount}}' => 'Adjustments Amount (ajustări)',
             '{{payout_adjustments_note}}' => 'Adjustments Note',
@@ -732,6 +735,14 @@ class MarketplaceTaxTemplate extends Model
 
             $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
             $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
+
+            // VAT calculations
+            $vatPayer = $organizer?->vat_payer ?? false;
+            $vatRate = $vatPayer ? 19 : 0;
+            $vatAmount = $vatPayer ? round(($payout->commission_amount ?? 0) * $vatRate / 100, 2) : 0;
+            $variables['payout_vat_rate'] = $vatRate > 0 ? $vatRate . '%' : '0%';
+            $variables['payout_vat_amount'] = number_format($vatAmount, 2);
+            $variables['payout_total_with_vat'] = number_format(($payout->fees_amount ?? 0) + $vatAmount, 2);
             $variables['payout_adjustments_note'] = $payout->adjustments_note ?? '';
             $variables['payout_period_start'] = $payout->period_start
                 ? $payout->period_start->format('d.m.Y')
