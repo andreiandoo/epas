@@ -386,8 +386,6 @@ class EventResource extends Resource
                                         ->native(false),
                                     Forms\Components\TimePicker::make('start_time')
                                         ->label($t('Ora start', 'Start time'))
-                                        ->seconds(false)
-                                        ->native(true)
                                         ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
                                     Forms\Components\TimePicker::make('door_time')
                                         ->label($t('Ora acces', 'Door time'))
