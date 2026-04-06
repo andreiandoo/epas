@@ -16,6 +16,13 @@ class Order extends Model
 {
     use LogsActivity;
 
+    /**
+     * When true, the saved() callback skips automatic ticket status sync.
+     * Used by controllers that manage ticket statuses explicitly within transactions.
+     * Not a database column — excluded from Eloquent attributes.
+     */
+    public bool $skipTicketSync = false;
+
     protected $fillable = [
         'tenant_id',
         'customer_email',
@@ -180,7 +187,7 @@ class Order extends Model
             // Skip automatic ticket status sync when a controller is managing this explicitly.
             // This prevents redundant queries and avoids PostgreSQL 25P02 errors where
             // a prior query failure in the same transaction causes all subsequent queries to fail.
-            if ($order->skipTicketSync ?? false) {
+            if ($order->skipTicketSync) {
                 return;
             }
 
