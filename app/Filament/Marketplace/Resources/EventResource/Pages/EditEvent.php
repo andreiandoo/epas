@@ -1035,7 +1035,23 @@ class EditEvent extends EditRecord
         // Sync per-performance ticket type prices → Performance.ticket_overrides JSON
         // Also auto-calculate series_start/series_end per performance
         // Data comes from TicketType.meta.performance_prices repeater
-        if ($this->record->duration_mode === 'multi_day') {
+        if ($this->record->duration_mode !== 'multi_day' || !($this->data['has_per_performance_pricing'] ?? false)) {
+            // Clear all performance overrides when not in multi_day mode or pricing disabled
+            $this->record->performances()->update(['ticket_overrides' => null]);
+
+            // Clear meta.performance_prices from all ticket types
+            foreach ($this->record->ticketTypes as $tt) {
+                $meta = is_array($tt->meta) ? $tt->meta : (json_decode($tt->meta ?? '{}', true) ?: []);
+                if (isset($meta['performance_prices'])) {
+                    unset($meta['performance_prices']);
+                    \App\Models\TicketType::where('id', $tt->id)->update([
+                        'meta' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}',
+                    ]);
+                }
+            }
+        }
+
+        if ($this->record->duration_mode === 'multi_day' && ($this->data['has_per_performance_pricing'] ?? false)) {
             $performances = $this->record->performances()->get();
             $ticketTypesData = $this->data['ticketTypes'] ?? [];
             $eventSeries = $this->record->event_series ?? '';
