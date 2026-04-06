@@ -382,7 +382,7 @@ function CartItemRow({ item, onUpdateQuantity, hideControls }) {
 export default function SalesScreen({ navigation }) {
   const { ticketTypes, isReportsOnlyMode, selectedEvent, refreshStats, refreshTicketTypes, eventCommission } = useEvent();
   const { user } = useAuth();
-  const { recentSales, addSale, addScan, loadSaleHistory } = useApp();
+  const { recentSales, addSale, addScan, loadSaleHistory, autoConfirmValid } = useApp();
 
   // State
   const [showTicketList, setShowTicketList] = useState(false);
@@ -596,8 +596,9 @@ export default function SalesScreen({ navigation }) {
 
         addSale(saleRecord);
 
-        // Cash sales are auto-checked-in — add them to scan history too
-        if (method === 'cash') {
+        // Only add scan records if auto-confirm is enabled (immediate check-in)
+        // When disabled, cash tickets are sold but NOT checked-in — they need scanning later
+        if (method === 'cash' && autoConfirmValid) {
           cartItems.forEach((item) => {
             for (let i = 0; i < item.quantity; i++) {
               addScan({
@@ -627,8 +628,8 @@ export default function SalesScreen({ navigation }) {
   };
 
   const finishPayment = async (skipEmail = false) => {
-    // Auto check-in tickets when skipping email on cash POS orders / invitations
-    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash') {
+    // Auto check-in tickets only when autoConfirmValid is enabled
+    if (skipEmail && lastOrderData?.id && paymentMethod === 'cash' && autoConfirmValid) {
       try {
         await apiPost(`/orders/${lastOrderData.id}/pos-complete`, {
           auto_checkin: true,
