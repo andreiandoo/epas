@@ -422,13 +422,12 @@ class EventResource extends Resource
                                     ->schema([
                                         Forms\Components\DatePicker::make('date')
                                             ->label($t('Data', 'Date'))
-                                            ->minDate(function (SGet $get) use ($minDateForEvent) {
-                                                // Don't enforce minDate on past slots (allow editing events with past dates)
+                                            ->minDate(function (SGet $get) use ($today) {
                                                 $currentDate = $get('date');
                                                 if ($currentDate && \Carbon\Carbon::parse($currentDate)->isPast()) {
                                                     return null;
                                                 }
-                                                return $minDateForEvent;
+                                                return $today;
                                             })
                                             ->native(false)
                                             ->required(),
