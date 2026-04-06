@@ -337,11 +337,11 @@ class PayoutResource extends Resource
                                         if (!$record->event_id) return '—';
                                         $total = MarketplacePayout::where('event_id', $record->event_id)
                                             ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
                                             ->count();
                                         $nr = MarketplacePayout::where('event_id', $record->event_id)
                                             ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
                                             ->where('id', '<=', $record->id)
                                             ->count();
                                         return "{$nr} din {$total}";
@@ -352,7 +352,7 @@ class PayoutResource extends Resource
                                         if (!$record->event_id) return '—';
                                         $payouts = MarketplacePayout::where('event_id', $record->event_id)
                                             ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
-                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
                                             ->orderBy('created_at')
                                             ->get(['id', 'reference', 'amount', 'status']);
                                         return $payouts->map(fn ($p) => $p->reference . ': ' . number_format((float) $p->amount, 2) . ' RON (' . $p->status . ')' . ($p->id === $record->id ? ' ←' : ''))->implode("\n");
