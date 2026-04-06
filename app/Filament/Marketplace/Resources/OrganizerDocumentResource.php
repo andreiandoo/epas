@@ -447,7 +447,7 @@ class OrganizerDocumentResource extends Resource
                     ->visible(fn ($record) => $record->file_path),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('delete_selected')
+                \Filament\Actions\BulkAction::make('delete_selected')
                     ->label('Șterge selectate')
                     ->icon('heroicon-o-trash')
                     ->color('danger')
