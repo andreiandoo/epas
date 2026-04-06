@@ -317,20 +317,32 @@ class ViewPayout extends ViewRecord
             $filePath = Storage::disk('public')->path($document->file_path);
 
             if (!file_exists($filePath)) {
-                Notification::make()->title('Fisierul nu a fost gasit')->danger()->send();
+                Notification::make()->title('Fișierul nu a fost găsit')->danger()->send();
+                return;
+            }
+
+            $marketplace = $this->record->marketplaceClient;
+            $transport = $marketplace?->getMailTransport();
+
+            if (!$transport) {
+                Notification::make()->title('Mail-ul nu este configurat')->body('Configurează SMTP/Brevo în Settings > Emails.')->danger()->send();
                 return;
             }
 
             $subject = "{$docType} {$document->title} — {$this->record->reference}";
+            $body = "Bună ziua,\n\nAtașat găsiți {$docType} pentru decontul {$this->record->reference}.\n\nCu respect,\n" . ($marketplace->name ?? 'Tixello');
 
-            Mail::raw("Buna ziua,\n\nAtasat gasiti {$docType} pentru decontul {$this->record->reference}.\n\nCu respect,\n" . ($this->record->marketplaceClient?->name ?? 'Tixello'), function ($message) use ($email, $subject, $filePath, $document) {
-                $message->to($email)
-                    ->subject($subject)
-                    ->attach($filePath, [
-                        'as' => $document->file_name,
-                        'mime' => 'application/pdf',
-                    ]);
-            });
+            $symfonyEmail = (new \Symfony\Component\Mime\Email())
+                ->from(new \Symfony\Component\Mime\Address(
+                    $marketplace->getEmailFromAddress(),
+                    $marketplace->getEmailFromName()
+                ))
+                ->to($email)
+                ->subject($subject)
+                ->text($body)
+                ->attachFromPath($filePath, $document->file_name, 'application/pdf');
+
+            $transport->send($symfonyEmail);
 
             Notification::make()->title("{$docType} trimis la {$email}")->success()->send();
         } catch (\Exception $e) {
@@ -344,14 +356,29 @@ class ViewPayout extends ViewRecord
     protected function sendInvoiceByEmail(Invoice $invoice, string $email): void
     {
         try {
-            $subject = "Factura #{$invoice->number} — {$this->record->reference}";
-            $body = "Buna ziua,\n\nAtasat gasiti factura #{$invoice->number} pentru decontul {$this->record->reference}.\n\nSuma: {$invoice->amount} {$invoice->currency}\nScadenta: " . ($invoice->due_date?->format('d.m.Y') ?? '-') . "\n\nCu respect,\n" . ($this->record->marketplaceClient?->name ?? 'Tixello');
+            $marketplace = $this->record->marketplaceClient;
+            $transport = $marketplace?->getMailTransport();
 
-            Mail::raw($body, function ($message) use ($email, $subject) {
-                $message->to($email)->subject($subject);
-            });
+            if (!$transport) {
+                Notification::make()->title('Mail-ul nu este configurat')->danger()->send();
+                return;
+            }
 
-            Notification::make()->title("Factura trimisa la {$email}")->success()->send();
+            $subject = "Factură #{$invoice->number} — {$this->record->reference}";
+            $body = "Bună ziua,\n\nAtașat găsiți factura #{$invoice->number} pentru decontul {$this->record->reference}.\n\nSuma: {$invoice->amount} {$invoice->currency}\nScadența: " . ($invoice->due_date?->format('d.m.Y') ?? '-') . "\n\nCu respect,\n" . ($marketplace->name ?? 'Tixello');
+
+            $symfonyEmail = (new \Symfony\Component\Mime\Email())
+                ->from(new \Symfony\Component\Mime\Address(
+                    $marketplace->getEmailFromAddress(),
+                    $marketplace->getEmailFromName()
+                ))
+                ->to($email)
+                ->subject($subject)
+                ->text($body);
+
+            $transport->send($symfonyEmail);
+
+            Notification::make()->title("Factură trimisă la {$email}")->success()->send();
         } catch (\Exception $e) {
             Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
         }
