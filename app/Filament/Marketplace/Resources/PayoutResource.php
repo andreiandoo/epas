@@ -326,14 +326,75 @@ class PayoutResource extends Resource
                                     ->copyable(),
                             ]),
 
+                        // Event decont context
+                        Section::make('Context eveniment')
+                            ->icon('heroicon-o-chart-bar')
+                            ->compact()
+                            ->schema([
+                                Infolists\Components\TextEntry::make('decont_number')
+                                    ->label('Nr. decont pe eveniment')
+                                    ->getStateUsing(function ($record) {
+                                        if (!$record->event_id) return '—';
+                                        $total = MarketplacePayout::where('event_id', $record->event_id)
+                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->count();
+                                        $nr = MarketplacePayout::where('event_id', $record->event_id)
+                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->where('id', '<=', $record->id)
+                                            ->count();
+                                        return "{$nr} din {$total}";
+                                    }),
+                                Infolists\Components\TextEntry::make('event_payouts_summary')
+                                    ->label('Deconturi pe eveniment')
+                                    ->getStateUsing(function ($record) {
+                                        if (!$record->event_id) return '—';
+                                        $payouts = MarketplacePayout::where('event_id', $record->event_id)
+                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                            ->whereIn('status', ['approved', 'processing', 'completed'])
+                                            ->orderBy('created_at')
+                                            ->get(['id', 'reference', 'amount', 'status']);
+                                        return $payouts->map(fn ($p) => $p->reference . ': ' . number_format((float) $p->amount, 2) . ' RON (' . $p->status . ')' . ($p->id === $record->id ? ' ←' : ''))->implode("\n");
+                                    })
+                                    ->markdown(),
+                                Infolists\Components\TextEntry::make('event_remaining_balance')
+                                    ->label('Sold disponibil eveniment')
+                                    ->getStateUsing(function ($record) {
+                                        if (!$record->event_id || !$record->organizer) return '—';
+                                        $event = \App\Models\Event::find($record->event_id);
+                                        if (!$event) return '—';
+                                        $balance = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventBalance($event);
+                                        return number_format($balance, 2) . ' RON';
+                                    })
+                                    ->color('success')
+                                    ->weight('bold'),
+                            ])
+                            ->visible(fn ($record) => $record->event_id),
+
                         // Timeline
                         Section::make('Cronologie')
                             ->icon('heroicon-o-clock')
                             ->compact()
                             ->schema([
                                 Infolists\Components\TextEntry::make('created_at')
-                                    ->label('Solicitat')
+                                    ->label(fn ($record) => $record->source === 'manual' ? 'Creat manual' : ($record->source === 'organizer' ? 'Solicitat de organizator' : 'Solicitat'))
                                     ->dateTime('d.m.Y H:i'),
+                                Infolists\Components\TextEntry::make('source')
+                                    ->label('Tip')
+                                    ->badge()
+                                    ->formatStateUsing(fn ($state) => match ($state) {
+                                        'manual' => 'Manual (admin)',
+                                        'organizer' => 'Solicitat de organizator',
+                                        'automated' => 'Automat',
+                                        default => ucfirst($state),
+                                    })
+                                    ->color(fn ($state) => match ($state) {
+                                        'manual' => 'warning',
+                                        'organizer' => 'primary',
+                                        'automated' => 'info',
+                                        default => 'gray',
+                                    }),
                                 Infolists\Components\TextEntry::make('approved_at')
                                     ->label('Aprobat')
                                     ->dateTime('d.m.Y H:i')
