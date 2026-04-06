@@ -477,7 +477,7 @@ class TaxTemplateResource extends Resource
             'marketplace_signature_image' => $marketplace?->signature_image
                 ? '<img src="' . \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />'
                 : '<span style="color:#999;font-style:italic;">[Semnătura]</span>',
-            'marketplace_logo_url' => $marketplace?->settings['logo_url'] ?? '',
+            'marketplace_logo_url' => '<img src="' . ($marketplace?->settings['logo_url'] ?? '') . '" alt="Logo" style="max-height:44px;max-width:130px;display:block;" />',
             'marketplace_invoice_preparer' => $marketplace?->settings['invoice_preparer'] ?? 'Nume Prenume',
 
             // Organizer

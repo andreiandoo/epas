@@ -111,7 +111,7 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_bank_name}}' => 'Bank Name',
             '{{marketplace_contract_number}}' => 'Contract Number (incremental)',
             '{{marketplace_signature_image}}' => 'Signature Image',
-            '{{marketplace_logo_url}}' => 'Logo URL (pt. header decont)',
+            '{{marketplace_logo_url}}' => 'Logo (tag img complet, se inserează direct)',
             '{{marketplace_invoice_preparer}}' => 'Persoana care completează factura',
         ],
         'Organizer' => [
@@ -802,40 +802,39 @@ class MarketplaceTaxTemplate extends Model
             $variables['marketplace_invoice_preparer'] = $marketplace?->settings['invoice_preparer'] ?? $marketplace?->contact_name ?? '';
 
             // Marketplace logo - convert to base64 data URI for PDF compatibility
+            // Build logo as complete <img> tag with base64 (like signature_image)
             $variables['marketplace_logo_url'] = '';
             $logoPath = $marketplace?->logo ?? null;
             $logoUrl = $marketplace?->settings['logo_url'] ?? null;
+            $logoB64 = null;
 
             if ($logoPath && \Illuminate\Support\Facades\Storage::disk('public')->exists($logoPath)) {
                 $content = \Illuminate\Support\Facades\Storage::disk('public')->get($logoPath);
                 $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($logoPath) ?: 'image/png';
-                $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
+                if (str_contains($mime, 'webp') && function_exists('imagecreatefromwebp')) {
+                    $img = @imagecreatefromwebp(\Illuminate\Support\Facades\Storage::disk('public')->path($logoPath));
+                    if ($img) { ob_start(); imagepng($img); $content = ob_get_clean(); imagedestroy($img); $mime = 'image/png'; }
+                }
+                $logoB64 = 'data:' . $mime . ';base64,' . base64_encode($content);
             } elseif ($logoUrl) {
-                // Try to fetch external URL and convert to base64 PNG (DomPDF doesn't support WebP)
                 try {
                     $content = @file_get_contents($logoUrl);
                     if ($content) {
                         $finfo = new \finfo(FILEINFO_MIME_TYPE);
                         $mime = $finfo->buffer($content) ?: 'image/png';
-
-                        // Convert WebP to PNG for DomPDF compatibility
-                        if ($mime === 'image/webp' && function_exists('imagecreatefromwebp')) {
+                        if (str_contains($mime, 'webp') && function_exists('imagecreatefromstring')) {
                             $img = @imagecreatefromstring($content);
-                            if ($img) {
-                                ob_start();
-                                imagepng($img);
-                                $content = ob_get_clean();
-                                imagedestroy($img);
-                                $mime = 'image/png';
-                            }
+                            if ($img) { ob_start(); imagepng($img); $content = ob_get_clean(); imagedestroy($img); $mime = 'image/png'; }
                         }
-
-                        $variables['marketplace_logo_url'] = 'data:' . $mime . ';base64,' . base64_encode($content);
+                        $logoB64 = 'data:' . $mime . ';base64,' . base64_encode($content);
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Failed to load marketplace logo', ['url' => $logoUrl, 'error' => $e->getMessage()]);
                 }
             }
+            $variables['marketplace_logo_url'] = $logoB64
+                ? '<img src="' . $logoB64 . '" alt="' . htmlspecialchars($marketplace?->name ?? '') . '" style="max-height:44px;max-width:130px;display:block;" />'
+                : '';
 
             // Organizer phone (ensure it's available)
             $variables['organizer_phone'] = $variables['organizer_phone'] ?? $organizer?->phone ?? $organizer?->contact_phone ?? '';
