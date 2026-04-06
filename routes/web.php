@@ -212,6 +212,27 @@ Route::get('/politica-confidentialitate', function () {
 Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePayVerificationController::class)
     ->name('apple-pay.verification');
 
+// Marketplace Document Generation API
+Route::middleware(['web', 'auth'])->prefix('marketplace/api')->group(function () {
+    Route::post('/events/{eventId}/generate-document', function (int $eventId) {
+        $event = \App\Models\Event::findOrFail($eventId);
+        $templateId = request()->input('template_id');
+        $template = \App\Models\MarketplaceTaxTemplate::findOrFail($templateId);
+
+        try {
+            $document = \App\Models\EventGeneratedDocument::generateDocument(
+                event: $event,
+                template: $template,
+                generatedBy: auth()->user()
+            );
+            return response()->json(['success' => true, 'message' => "Document generat: {$document->filename}"]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    })->name('marketplace.events.generate-document');
+});
+
 // Admin Demo Data Management Routes
 Route::middleware(['web', 'auth'])->prefix('admin/api')->group(function () {
     Route::post('/tenants/{tenantId}/demo', [\App\Http\Controllers\Admin\DemoDataController::class, 'seed'])->name('admin.tenants.demo.seed');

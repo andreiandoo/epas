@@ -3108,9 +3108,45 @@ class EventResource extends Resource
                                         ->visible(fn (?Event $record) => $record && $record->exists)
                                         ->url(fn (?Event $record) => $record ? static::getUrl('statistics', ['record' => $record]) : null),
                                 ])->fullWidth(),
+                            // Document Status Section
+                            SC\Section::make($t('Documente eveniment', 'Event Documents'))
+                                ->icon('heroicon-o-document-text')
+                                ->compact()
+                                ->visible(fn (?Event $record) => $record && $record->exists)
+                                ->schema([
+                                    Forms\Components\Placeholder::make('document_status_list')
+                                        ->hiddenLabel()
+                                        ->content(function (?Event $record) {
+                                            if (!$record) return '';
+
+                                            $eventTemplates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
+                                                ->where('is_active', true)
+                                                ->where(function ($q) {
+                                                    $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
+                                                      ->orWhereNull('trigger')
+                                                      ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
+                                                })
+                                                ->where('type', '!=', 'organizer_contract')
+                                                ->orderBy('name')
+                                                ->get();
+
+                                            $generatedDocs = EventGeneratedDocument::where('event_id', $record->id)->get();
+                                            $organizerDocs = OrganizerDocument::where('event_id', $record->id)->get();
+
+                                            return new HtmlString(
+                                                view('filament.marketplace.components.event-document-status', [
+                                                    'event' => $record,
+                                                    'templates' => $eventTemplates,
+                                                    'generatedDocs' => $generatedDocs,
+                                                    'organizerDocs' => $organizerDocs,
+                                                ])->render()
+                                            );
+                                        }),
+                                ]),
+
                                 SC\Actions::make([
                                     Action::make('generate_document')
-                                        ->label($t('Generează', 'Generate'))
+                                        ->label($t('Generează alt document', 'Generate other document'))
                                         ->icon('heroicon-o-document-plus')
                                         ->color('gray')
                                         ->size('sm')
