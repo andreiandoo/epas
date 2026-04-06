@@ -1563,15 +1563,36 @@ class EventResource extends Resource
                                                             ->placeholder($t('Alege reprezentarea...', 'Choose performance...'))
                                                             ->options(function (SGet $get, \Livewire\Component $livewire) {
                                                                 $eventId = $livewire->record?->id ?? null;
-                                                                if (!$eventId) return [];
-                                                                return \App\Models\Performance::where('event_id', $eventId)
-                                                                    ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
-                                                                    ->orderBy('starts_at')
-                                                                    ->get()
-                                                                    ->mapWithKeys(fn ($p) => [
-                                                                        $p->id => $p->starts_at->format('D, d M Y · H:i')
-                                                                    ])
-                                                                    ->toArray();
+
+                                                                // Try Performance records first
+                                                                if ($eventId) {
+                                                                    $performances = \App\Models\Performance::where('event_id', $eventId)
+                                                                        ->where(fn ($q) => $q->where('status', 'active')->orWhereNull('status'))
+                                                                        ->orderBy('starts_at')
+                                                                        ->get();
+
+                                                                    if ($performances->isNotEmpty()) {
+                                                                        return $performances->mapWithKeys(fn ($p) => [
+                                                                            $p->id => $p->starts_at->format('D, d M Y · H:i')
+                                                                        ])->toArray();
+                                                                    }
+                                                                }
+
+                                                                // Fallback: build options from multi_slots JSON (before first save)
+                                                                $multiSlots = $get('../../multi_slots') ?? [];
+                                                                if (!empty($multiSlots)) {
+                                                                    $options = [];
+                                                                    foreach ($multiSlots as $idx => $slot) {
+                                                                        $date = $slot['date'] ?? null;
+                                                                        if (!$date) continue;
+                                                                        $startTime = $slot['start_time'] ?? '00:00';
+                                                                        $label = \Carbon\Carbon::parse("{$date} {$startTime}")->format('D, d M Y · H:i');
+                                                                        $options["slot_{$idx}"] = $label;
+                                                                    }
+                                                                    return $options;
+                                                                }
+
+                                                                return [];
                                                             })
                                                             ->disableOptionWhen(function (string $value, SGet $get, $component) {
                                                                 $currentPerfId = $get('perf_id');
