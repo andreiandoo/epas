@@ -248,25 +248,34 @@ class PayoutResource extends Resource
 
                                         $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
 
+                                        // Calculate commission already deducted in payouts
+                                        $paidCommission = (float) MarketplacePayout::where('event_id', $record->event_id)
+                                            ->where('marketplace_organizer_id', $record->marketplace_organizer_id)
+                                            ->whereIn('status', ['pending', 'approved', 'processing', 'completed'])
+                                            ->sum('commission_amount');
+                                        $remainingCommission = max(0, $commission - $paidCommission);
+
                                         return new \Illuminate\Support\HtmlString("
                                         <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;'>
                                             <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Vânzări totale eveniment</div>
-                                                <div style='font-size:16px;font-weight:700;'>{$fmt($gross)}</div>
-                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Comision total: {$fmt($commission)}</div>
-                                                <div style='font-size:11px;color:#888;'>Net total: {$fmt($net)}</div>
+                                                <div style='font-size:16px;font-weight:700;color:#1a1a2e;'>{$fmt($gross)}</div>
+                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Comision total: {$fmt($commission)}</div>
+                                                <div style='font-size:11px;color:#666;'>Net total: {$fmt($net)}</div>
                                                 " . ($refunds > 0 ? "<div style='font-size:11px;color:#dc2626;'>Returnări: -{$fmt($refunds)}</div>" : "") . "
                                             </div>
                                             <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fef3c7;'>
                                                 <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Decontat</div>
                                                 <div style='font-size:16px;font-weight:700;color:#92400e;'>{$fmt($paid + $pending)}</div>
-                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Plătit: {$fmt($paid)}</div>
+                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Plătit: {$fmt($paid)}</div>
                                                 " . ($pending > 0 ? "<div style='font-size:11px;color:#d97706;'>În așteptare: {$fmt($pending)}</div>" : "") . "
+                                                <div style='font-size:11px;color:#666;'>Comision încasat: {$fmt($paidCommission)}</div>
                                             </div>
                                             <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
                                                 <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Disponibil</div>
                                                 <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($balance)}</div>
-                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Net rămas de decontat</div>
+                                                <div style='font-size:11px;color:#666;margin-top:2px;'>Comision rămas: {$fmt($remainingCommission)}</div>
+                                                <div style='font-size:11px;color:#666;'>Net rămas: {$fmt($balance)}</div>
                                             </div>
                                         </div>
                                         ");
