@@ -366,7 +366,7 @@ class ViewPayout extends ViewRecord
                 ->html($bodyHtml)
                 ->attachFromPath($filePath, $document->file_name, 'application/pdf');
 
-            $transport->send($symfonyEmail);
+            $sentMessage = $transport->send($symfonyEmail);
 
             // Log to marketplace email logs
             \App\Models\MarketplaceEmailLog::create([
@@ -381,6 +381,8 @@ class ViewPayout extends ViewRecord
                 'subject' => $subject,
                 'body_html' => $bodyHtml,
                 'status' => 'sent',
+                'sent_at' => now(),
+                'message_id' => $sentMessage?->getMessageId() ?? null,
             ]);
 
             Notification::make()->title("{$docType} trimis la {$email}")->success()->send();
@@ -438,7 +440,7 @@ class ViewPayout extends ViewRecord
                 ->subject($subject)
                 ->html($bodyHtml);
 
-            $transport->send($symfonyEmail);
+            $sentMessage = $transport->send($symfonyEmail);
 
             // Log to marketplace email logs
             \App\Models\MarketplaceEmailLog::create([
@@ -453,6 +455,8 @@ class ViewPayout extends ViewRecord
                 'subject' => $subject,
                 'body_html' => $bodyHtml,
                 'status' => 'sent',
+                'sent_at' => now(),
+                'message_id' => $sentMessage?->getMessageId() ?? null,
             ]);
 
             Notification::make()->title("Factură trimisă la {$email}")->success()->send();
