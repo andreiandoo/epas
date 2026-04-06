@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar, Platform } from 'react-native';
+import { View, Text, StyleSheet, StatusBar, Platform, Modal, TouchableOpacity, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
+
+const APP_VERSION = '1.4.3';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -107,9 +109,29 @@ function MainTabs() {
   const [showGuestList, setShowGuestList] = useState(false);
   const [showGateManager, setShowGateManager] = useState(false);
   const [showStaffAssignment, setShowStaffAssignment] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(null);
 
   useEffect(() => {
     fetchEvents();
+    // Check for app updates
+    (async () => {
+      try {
+        const res = await fetch('https://core.tixello.com/api/app-version');
+        const data = await res.json();
+        if (data.latest_version && data.latest_version !== APP_VERSION) {
+          // Compare versions: only show if server version is newer
+          const current = APP_VERSION.split('.').map(Number);
+          const latest = data.latest_version.split('.').map(Number);
+          for (let i = 0; i < 3; i++) {
+            if ((latest[i] || 0) > (current[i] || 0)) {
+              setUpdateAvailable({ version: data.latest_version, url: data.download_url });
+              break;
+            }
+            if ((latest[i] || 0) < (current[i] || 0)) break;
+          }
+        }
+      } catch (e) { /* silently ignore */ }
+    })();
   }, []);
 
   const isAdmin = userRole === 'admin' || userRole === 'owner';
@@ -208,6 +230,35 @@ function MainTabs() {
       {showStaffAssignment && (
         <StaffAssignmentModal visible={showStaffAssignment} onClose={() => setShowStaffAssignment(false)} />
       )}
+
+      {/* Update available banner */}
+      {updateAvailable && (
+        <Modal visible transparent animationType="fade" statusBarTranslucent>
+          <View style={styles.updateOverlay}>
+            <View style={styles.updateCard}>
+              <Text style={styles.updateTitle}>Actualizare disponibilă</Text>
+              <Text style={styles.updateText}>
+                Versiunea {updateAvailable.version} este disponibilă.{'\n'}
+                Versiunea ta curentă: {APP_VERSION}
+              </Text>
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={() => Linking.openURL(updateAvailable.url)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.updateButtonText}>Descarcă actualizarea</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.updateDismiss}
+                onPress={() => setUpdateAvailable(null)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.updateDismissText}>Mai târziu</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -271,5 +322,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  updateOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  updateCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  updateTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 12,
+  },
+  updateText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  updateButton: {
+    backgroundColor: colors.purple,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  updateButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  updateDismiss: {
+    paddingVertical: 8,
+  },
+  updateDismissText: {
+    fontSize: 14,
+    color: colors.textTertiary,
   },
 });

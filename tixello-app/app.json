@@ -2,7 +2,7 @@
   "expo": {
     "name": "AmBilet Scan",
     "slug": "ambilet-scan",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
