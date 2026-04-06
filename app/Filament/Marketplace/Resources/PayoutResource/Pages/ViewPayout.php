@@ -224,9 +224,9 @@ class ViewPayout extends ViewRecord
                         'period_end' => $payout->period_end,
                         'due_date' => now()->addDays(30),
                         'subtotal' => $payout->commission_amount ?? 0,
-                        'vat_rate' => 19,
-                        'vat_amount' => round(($payout->commission_amount ?? 0) * 0.19, 2),
-                        'amount' => round(($payout->commission_amount ?? 0) * 1.19, 2),
+                        'vat_rate' => $marketplace->vat_payer ? 19 : 0,
+                        'vat_amount' => $marketplace->vat_payer ? round(($payout->commission_amount ?? 0) * 0.19, 2) : 0,
+                        'amount' => $marketplace->vat_payer ? round(($payout->commission_amount ?? 0) * 1.19, 2) : ($payout->commission_amount ?? 0),
                         'currency' => $payout->currency ?? 'RON',
                         'status' => 'outstanding',
                         'meta' => [
