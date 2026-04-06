@@ -45,7 +45,6 @@ class TenantPanelProvider extends PanelProvider
                 ->seconds(false)
                 ->displayFormat('D, d M Y H:i')
                 ->firstDayOfWeek(1)
-                ->closeOnDateSelection()
                 ->minutesStep(5);
         });
 
@@ -57,8 +56,10 @@ class TenantPanelProvider extends PanelProvider
         });
 
         \Filament\Forms\Components\TimePicker::configureUsing(function (\Filament\Forms\Components\TimePicker $picker): void {
-            $picker->seconds(false)
-                ->minutesStep(5);
+            $picker->native(true)
+                ->seconds(false)
+                ->minutesStep(5)
+                ->displayFormat('H:i');
         });
     }
 
