@@ -224,16 +224,61 @@ class PayoutResource extends Resource
                             ])
                             ->visible(fn ($record) => !empty($record->ticket_breakdown)),
 
-                        // Financial summary
+                        // Financial summary with full event context
                         Section::make('Rezumat financiar')
                             ->icon('heroicon-o-calculator')
                             ->schema([
+                                // 1. Situația vânzărilor la momentul decontului
+                                Infolists\Components\Placeholder::make('event_sales_status')
+                                    ->label('')
+                                    ->content(function ($record) {
+                                        if (!$record->event_id) return '';
+                                        $event = \App\Models\Event::with('ticketTypes')->find($record->event_id);
+                                        if (!$event) return '';
+
+                                        $financials = \App\Filament\Marketplace\Resources\PayoutResource\Pages\ListPayouts::calculateEventFinancials($event);
+                                        $gross = (float) ($financials['gross'] ?? 0);
+                                        $commission = (float) ($financials['commission'] ?? 0);
+                                        $net = (float) ($financials['net'] ?? 0);
+                                        $refunds = (float) ($financials['refunds'] ?? 0);
+                                        $paid = (float) ($financials['paid'] ?? 0);
+                                        $pending = (float) ($financials['pending'] ?? 0);
+                                        $balance = (float) ($financials['balance'] ?? 0);
+
+                                        $fmt = fn ($v) => number_format($v, 2, ',', '.') . ' RON';
+
+                                        return new \Illuminate\Support\HtmlString("
+                                        <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;'>
+                                            <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;'>
+                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Vânzări totale eveniment</div>
+                                                <div style='font-size:16px;font-weight:700;'>{$fmt($gross)}</div>
+                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Comision total: {$fmt($commission)}</div>
+                                                <div style='font-size:11px;color:#888;'>Net total: {$fmt($net)}</div>
+                                                " . ($refunds > 0 ? "<div style='font-size:11px;color:#dc2626;'>Returnări: -{$fmt($refunds)}</div>" : "") . "
+                                            </div>
+                                            <div style='padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fef3c7;'>
+                                                <div style='font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Decontat</div>
+                                                <div style='font-size:16px;font-weight:700;color:#92400e;'>{$fmt($paid + $pending)}</div>
+                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Plătit: {$fmt($paid)}</div>
+                                                " . ($pending > 0 ? "<div style='font-size:11px;color:#d97706;'>În așteptare: {$fmt($pending)}</div>" : "") . "
+                                            </div>
+                                            <div style='padding:12px;border:1px solid #059669;border-radius:8px;background:#f0fdf4;'>
+                                                <div style='font-size:10px;color:#059669;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;'>Disponibil</div>
+                                                <div style='font-size:16px;font-weight:700;color:#059669;'>{$fmt($balance)}</div>
+                                                <div style='font-size:11px;color:#888;margin-top:2px;'>Net rămas de decontat</div>
+                                            </div>
+                                        </div>
+                                        ");
+                                    })
+                                    ->columnSpanFull(),
+
+                                // 2. Ce s-a cerut în acest decont
                                 Infolists\Components\TextEntry::make('gross_amount')
-                                    ->label('Suma brută')
+                                    ->label('Suma brută decont')
                                     ->money('RON'),
 
                                 Infolists\Components\TextEntry::make('commission_amount')
-                                    ->label('Comision')
+                                    ->label('Comision decont')
                                     ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
                                     ->color('danger'),
 
