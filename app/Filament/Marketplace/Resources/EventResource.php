@@ -276,21 +276,21 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în secțiunea hero/featured de pe homepage', 'Show on homepage hero/featured section'))
                                         ->onIcon('heroicon-m-home')
                                         ->offIcon('heroicon-m-home')
-                                        ->live()
+                                        ->live(onBlur: true)
                                         ->partiallyRenderAfterStateUpdated(),
                                     Forms\Components\Toggle::make('is_general_featured')
                                         ->label($t('Featured General', 'General Featured'))
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează în listele generale de evenimente featured', 'Show in general featured events lists'))
                                         ->onIcon('heroicon-m-star')
                                         ->offIcon('heroicon-m-star')
-                                        ->live()
+                                        ->live(onBlur: true)
                                         ->partiallyRenderAfterStateUpdated(),
                                     Forms\Components\Toggle::make('is_category_featured')
                                         ->label($t('Featured în Categorie', 'Category Featured'))
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Afișează ca featured pe pagina categoriei sale', 'Show as featured in its category page'))
                                         ->onIcon('heroicon-m-tag')
                                         ->offIcon('heroicon-m-tag')
-                                        ->live()
+                                        ->live(onBlur: true)
                                         ->partiallyRenderAfterStateUpdated(),
                                 ]),
 
@@ -327,7 +327,7 @@ class EventResource extends Resource
                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Selectează manual ce evenimente să apară în secțiunea "Îți recomandăm"', 'Manually select which events to show in the "Îți recomandăm" section'))
                                         ->onIcon('heroicon-m-queue-list')
                                         ->offIcon('heroicon-m-queue-list')
-                                        ->live()
+                                        ->live(onBlur: true)
                                         ->partiallyRenderAfterStateUpdated(),
 
                                     Forms\Components\Select::make('custom_related_event_ids')
@@ -476,7 +476,7 @@ class EventResource extends Resource
                                                     'monthly_nth' => $t('Lunar (a N-a zi)', 'Monthly (Nth weekday)'),
                                                 ])
                                                 ->required()
-                                                ->live(),
+                                                ->live(onBlur: true),
                                             Forms\Components\TextInput::make('recurring_count')
                                                 ->label($t('Ocurențe', 'Occurrences'))
                                                 ->numeric()
@@ -518,7 +518,7 @@ class EventResource extends Resource
                                     ->label($t('Locație', 'Venue'))
                                     ->searchable()
                                     ->preload()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->options(function () use ($marketplace) {
                                         $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
                                         return Venue::query()
@@ -623,7 +623,7 @@ class EventResource extends Resource
                                     ->label($t('Harta de locuri', 'Seating Layout'))
                                     ->searchable()
                                     ->preload()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->visible(function (SGet $get) {
                                         $venueId = $get('venue_id');
                                         if (!$venueId) return false;
@@ -779,7 +779,7 @@ class EventResource extends Resource
                                     ->preload()
                                     ->placeholder($t('Selectează o categorie', 'Select a category'))
                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Categorie personalizată de eveniment marketplace', 'Custom marketplace event category'))
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->partiallyRenderAfterStateUpdated()
                                     ->afterStateUpdated(function ($state, SSet $set) {
                                         // Auto-fill eventTypes from the category's linked event types
@@ -816,7 +816,7 @@ class EventResource extends Resource
                                     ->preload()
                                     ->searchable()
                                     ->maxItems(2)
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->partiallyRenderAfterStateUpdated()
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                         $typeIds = (array) ($get('eventTypes') ?? []);
@@ -871,7 +871,7 @@ class EventResource extends Resource
                                     ->multiple()
                                     ->preload()
                                     ->searchable()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->partiallyRenderAfterStateUpdated()
                                     ->suffixAction(
                                         Action::make('create_artist')
@@ -1639,7 +1639,7 @@ class EventResource extends Resource
                                                         'both' => $t('Procentual + Fix', 'Percentage + Fixed'),
                                                     ])
                                                     ->default('')
-                                                    ->live()
+                                                    ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set, $component) use ($marketplace) {
                                                         $defaultRate = $marketplace?->commission_rate ?? 5;
                                                         $defaultMode = $marketplace?->commission_mode ?? 'included';
@@ -1723,6 +1723,9 @@ class EventResource extends Resource
                                                 Forms\Components\DateTimePicker::make('active_until')
                                                     ->label($t('Activ până la', 'Active until'))
                                                     ->inlineLabel($il)
+                                                    ->native(false)
+                                                    ->seconds(false)
+                                                    ->displayFormat('Y-m-d H:i')
                                                     ->minDate($minDateForEvent)
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                     ->visible(fn (SGet $get) => $get('is_active'))
@@ -2832,7 +2835,7 @@ class EventResource extends Resource
                                     ->required()
                                     ->searchable()
                                     ->preload()
-                                    ->live()
+                                    ->live(onBlur: true)
                                     ->partiallyRenderAfterStateUpdated()
                                     ->placeholder($t('Selectează organizator...', 'Select organizer...'))
                                     ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
