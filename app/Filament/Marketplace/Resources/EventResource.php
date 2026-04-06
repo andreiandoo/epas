@@ -422,7 +422,14 @@ class EventResource extends Resource
                                     ->schema([
                                         Forms\Components\DatePicker::make('date')
                                             ->label($t('Data', 'Date'))
-                                            ->minDate($minDateForEvent)
+                                            ->minDate(function (SGet $get) use ($minDateForEvent) {
+                                                // Don't enforce minDate on past slots (allow editing events with past dates)
+                                                $currentDate = $get('date');
+                                                if ($currentDate && \Carbon\Carbon::parse($currentDate)->isPast()) {
+                                                    return null;
+                                                }
+                                                return $minDateForEvent;
+                                            })
                                             ->native(false)
                                             ->required(),
                                         Forms\Components\TimePicker::make('start_time')
