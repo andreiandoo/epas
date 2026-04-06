@@ -373,6 +373,10 @@ class ListOrganizerDocuments extends ListRecords
             $htmlContent
         );
 
+        // Strip CSS properties not supported by DomPDF
+        $htmlContent = preg_replace('/writing-mode\s*:\s*[^;"]+;?/', '', $htmlContent);
+        $htmlContent = preg_replace('/transform\s*:\s*[^;"]+;?/', '', $htmlContent);
+
         if (stripos($htmlContent, '<html') === false) {
             $htmlContent = '<!DOCTYPE html>
 <html>

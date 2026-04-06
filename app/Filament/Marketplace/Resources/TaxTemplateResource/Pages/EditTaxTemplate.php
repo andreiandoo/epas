@@ -154,7 +154,7 @@ class EditTaxTemplate extends EditRecord
                         . '<meta charset="UTF-8">'
                         . '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>'
                         . '<style>'
-                        . '@page { size: ' . ($orientation === 'landscape' ? 'A4 landscape' : 'A4') . '; margin: 10mm 12mm; }'
+                        . '@page { size: ' . ($orientation === 'landscape' ? 'A4 landscape' : 'A4') . '; margin: 6mm 8mm; }'
                         . '* { font-family: DejaVu Sans, Arial, sans-serif; }'
                         . 'body { margin: 0; padding: 0; background: #fff; color: #000; }'
                         . '</style></head><body>' . $combinedContent . '</body></html>';
@@ -236,6 +236,10 @@ class EditTaxTemplate extends EditRecord
             ['ş', 'Ş', 'ţ', 'Ţ'],
             $html
         );
+
+        // Strip CSS properties not supported by DomPDF
+        $html = preg_replace('/writing-mode\s*:\s*[^;"]+;?/', '', $html);
+        $html = preg_replace('/transform\s*:\s*[^;"]+;?/', '', $html);
 
         return $html;
     }

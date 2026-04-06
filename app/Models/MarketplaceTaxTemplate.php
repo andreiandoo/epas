@@ -388,9 +388,22 @@ class MarketplaceTaxTemplate extends Model
                 : $marketplace->getCurrentContractNumber();
 
             // Signature image
-            if ($marketplace->signature_image) {
-                $signatureUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image);
-                $variables['marketplace_signature_image'] = '<img src="' . htmlspecialchars($signatureUrl) . '" alt="Signature" style="display:block;" />';
+            if ($marketplace->signature_image && \Illuminate\Support\Facades\Storage::disk('public')->exists($marketplace->signature_image)) {
+                $content = \Illuminate\Support\Facades\Storage::disk('public')->get($marketplace->signature_image);
+                $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($marketplace->signature_image) ?: 'image/png';
+                // Convert WebP to PNG for DomPDF compatibility
+                if (str_contains($mime, 'webp') && function_exists('imagecreatefromwebp')) {
+                    $img = @imagecreatefromwebp(\Illuminate\Support\Facades\Storage::disk('public')->path($marketplace->signature_image));
+                    if ($img) {
+                        ob_start();
+                        imagepng($img);
+                        $content = ob_get_clean();
+                        imagedestroy($img);
+                        $mime = 'image/png';
+                    }
+                }
+                $b64 = 'data:' . $mime . ';base64,' . base64_encode($content);
+                $variables['marketplace_signature_image'] = '<img src="' . $b64 . '" alt="Semnătura" style="max-height:60px;max-width:180px;display:block;" />';
             } else {
                 $variables['marketplace_signature_image'] = '';
             }

@@ -92,6 +92,10 @@ class ViewOrganizerDocument extends ViewRecord
                         $htmlContent
                     );
 
+                    // Strip CSS properties not supported by DomPDF
+                    $htmlContent = preg_replace('/writing-mode\s*:\s*[^;"]+;?/', '', $htmlContent);
+                    $htmlContent = preg_replace('/transform\s*:\s*[^;"]+;?/', '', $htmlContent);
+
                     // Ensure proper UTF-8 encoding
                     if (stripos($htmlContent, '<html') === false) {
                         $htmlContent = '<!DOCTYPE html>
