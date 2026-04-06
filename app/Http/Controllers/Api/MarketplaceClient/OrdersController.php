@@ -79,22 +79,41 @@ class OrdersController extends BaseController
             return $this->error('Not authorized to sell tickets for this event', 403);
         }
 
+        // Find or create customer BEFORE the transaction.
+        // This avoids PostgreSQL/PgBouncer issues where a failed INSERT
+        // (unique constraint) inside a transaction aborts it permanently.
+        $customerEmail = strtolower(trim($request->input('customer.email')));
+        $customer = Customer::where('email', $customerEmail)
+            ->where('tenant_id', $tenantId)
+            ->first();
+
+        if ($customer) {
+            $customer->update([
+                'first_name' => $request->input('customer.first_name'),
+                'last_name' => $request->input('customer.last_name'),
+                'phone' => $request->input('customer.phone'),
+            ]);
+        } else {
+            $customer = Customer::create([
+                'email' => $customerEmail,
+                'tenant_id' => $tenantId,
+                'primary_tenant_id' => $tenantId,
+                'first_name' => $request->input('customer.first_name'),
+                'last_name' => $request->input('customer.last_name'),
+                'phone' => $request->input('customer.phone'),
+            ]);
+        }
+
+        // Ensure customer-tenant pivot (safe INSERT ... ON CONFLICT DO NOTHING)
+        DB::table('customer_tenant')->insertOrIgnore([
+            'customer_id' => $customer->id,
+            'tenant_id' => $tenantId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         try {
             DB::beginTransaction();
-
-            // Find or create customer — use updateOrCreate to handle PostgreSQL
-            // unique constraint (tenant_id, email) safely within transaction
-            $customer = Customer::updateOrCreate(
-                [
-                    'email' => strtolower(trim($request->input('customer.email'))),
-                    'tenant_id' => $tenantId,
-                ],
-                [
-                    'first_name' => $request->input('customer.first_name'),
-                    'last_name' => $request->input('customer.last_name'),
-                    'phone' => $request->input('customer.phone'),
-                ]
-            );
 
             // Calculate totals and validate availability
             $orderItems = [];

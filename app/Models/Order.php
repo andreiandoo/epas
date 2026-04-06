@@ -177,40 +177,6 @@ class Order extends Model
         });
 
         static::saved(function (Order $order) {
-            // Ensure customer-tenant pivot membership.
-            // Use a savepoint so that if this fails on PostgreSQL, it doesn't
-            // abort the outer transaction (PostgreSQL marks the entire transaction
-            // as failed after any error, unlike MySQL/SQLite).
-            if ($order->customer_id && $order->tenant_id) {
-                try {
-                    DB::connection()->unprepared('SAVEPOINT customer_tenant_sync');
-                    if (!$order->relationLoaded('customer')) {
-                        $order->load('customer');
-                    }
-                    $customer = $order->customer;
-                    if ($customer && !$customer->tenants()->where('tenants.id', $order->tenant_id)->exists()) {
-                        $customer->tenants()->attach($order->tenant_id);
-                    }
-                    if ($customer && !$customer->primary_tenant_id) {
-                        $customer->primary_tenant_id = $order->tenant_id;
-                        $customer->save();
-                    }
-                    DB::connection()->unprepared('RELEASE SAVEPOINT customer_tenant_sync');
-                } catch (\Throwable $e) {
-                    try {
-                        DB::connection()->unprepared('ROLLBACK TO SAVEPOINT customer_tenant_sync');
-                    } catch (\Throwable) {
-                        // Savepoint may not exist if DB doesn't support it
-                    }
-                    \Illuminate\Support\Facades\Log::warning('Order saved: customer-tenant pivot sync failed', [
-                        'order_id' => $order->id,
-                        'customer_id' => $order->customer_id,
-                        'tenant_id' => $order->tenant_id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
             // Update ticket statuses based on order status
             if ($order->wasChanged('status')) {
                 $newStatus = $order->status;
@@ -223,6 +189,39 @@ class Order extends Model
                 } elseif ($newStatus === 'pending') {
                     $order->tickets()->update(['status' => 'pending']);
                 }
+            }
+        });
+
+        // Customer-tenant pivot sync runs AFTER the transaction commits.
+        // This prevents any pivot insert failure from aborting the main
+        // transaction on PostgreSQL (especially through PgBouncer which
+        // does not support savepoints).
+        static::created(function (Order $order) {
+            if ($order->customer_id && $order->tenant_id) {
+                $customerId = $order->customer_id;
+                $tenantId = $order->tenant_id;
+                DB::afterCommit(function () use ($customerId, $tenantId) {
+                    try {
+                        // insertOrIgnore = INSERT ... ON CONFLICT DO NOTHING
+                        // Never fails, even if row already exists
+                        DB::table('customer_tenant')->insertOrIgnore([
+                            'customer_id' => $customerId,
+                            'tenant_id' => $tenantId,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        // Set primary_tenant_id if missing
+                        Customer::where('id', $customerId)
+                            ->whereNull('primary_tenant_id')
+                            ->update(['primary_tenant_id' => $tenantId]);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Order afterCommit: customer-tenant sync failed', [
+                            'customer_id' => $customerId,
+                            'tenant_id' => $tenantId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                });
             }
         });
 
