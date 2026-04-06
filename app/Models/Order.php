@@ -177,6 +177,13 @@ class Order extends Model
         });
 
         static::saved(function (Order $order) {
+            // Skip automatic ticket status sync when a controller is managing this explicitly.
+            // This prevents redundant queries and avoids PostgreSQL 25P02 errors where
+            // a prior query failure in the same transaction causes all subsequent queries to fail.
+            if ($order->skipTicketSync ?? false) {
+                return;
+            }
+
             // Update ticket statuses based on order status
             if ($order->wasChanged('status')) {
                 $newStatus = $order->status;

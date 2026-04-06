@@ -184,8 +184,9 @@ class OrdersController extends BaseController
             $isOnTop = in_array($commissionMode, ['on_top', 'added_on_top']) && $posSource !== 'pos_app';
             $total = $isOnTop ? $subtotal + $commissionAmount : $subtotal;
 
-            // Create order
-            $order = Order::create([
+            // Create order — skipTicketSync prevents the saved() callback from running
+            // redundant ticket status queries inside this transaction (we handle it explicitly below)
+            $order = new Order([
                 'tenant_id' => $tenantId,
                 'event_id' => $event->id,
                 'customer_id' => $customer->id,
@@ -203,13 +204,15 @@ class OrdersController extends BaseController
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
-                'expires_at' => now()->addMinutes(15), // 15 minute reservation
+                'expires_at' => now()->addMinutes(15),
                 'meta' => [
                     'marketplace_client' => $client->name,
                     'ip_address' => $request->ip(),
                     'sold_by' => $request->input('sold_by'),
                 ],
             ]);
+            $order->skipTicketSync = true;
+            $order->save();
 
             // Create order items and tickets
             foreach ($orderItems as $item) {
