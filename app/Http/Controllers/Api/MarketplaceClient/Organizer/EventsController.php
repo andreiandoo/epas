@@ -843,11 +843,11 @@ class EventsController extends BaseController
         $perPage = min((int) $request->get('per_page', 50), 200);
         $tickets = $query->paginate($perPage);
 
-        // Get stats
+        // Get stats — count only valid/used tickets (excludes cancelled/refunded)
         $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
             $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses)
                 ->where('marketplace_organizer_id', $organizer->id);
-        })->count();
+        })->whereIn('status', ['valid', 'used'])->count();
 
         $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
             $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses)
@@ -936,16 +936,19 @@ class EventsController extends BaseController
             $q->whereIn('event_id', $statsEventIds)
                 ->whereIn('status', $validOrderStatuses)
                 ->where('marketplace_organizer_id', $organizer->id);
-        });
+        })->whereIn('status', ['valid', 'used']);
 
         $totalTickets = $statsQuery->count();
         $checkedInCount = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
 
-        // Calculate revenue for the selected event(s)
-        $revenue = Order::whereIn('event_id', $statsEventIds)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->whereIn('status', $validOrderStatuses)
-            ->sum('total');
+        // Calculate revenue from valid/used tickets only
+        $revenue = (float) \App\Models\Ticket::whereIn('event_id', $statsEventIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($q) use ($validOrderStatuses, $organizer) {
+                $q->whereIn('status', $validOrderStatuses)
+                    ->where('marketplace_organizer_id', $organizer->id);
+            })
+            ->sum('price');
 
         // Get unique orders count
         $ordersCount = Order::whereIn('event_id', $statsEventIds)
@@ -3076,7 +3079,16 @@ class EventsController extends BaseController
             'revenue' => (float) $event->total_revenue,
             'views' => $event->views_count ?? 0,
             'ticket_types' => $event->ticketTypes->map(function ($tt) use ($event) {
-                // Count checked-in tickets for this ticket type
+                // Count valid/used tickets (excludes cancelled/refunded)
+                $validTickets = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                    ->whereHas('order', function ($q) use ($event) {
+                        $q->where('event_id', $event->id)
+                          ->whereIn('status', ['paid', 'confirmed', 'completed']);
+                    })
+                    ->whereIn('status', ['valid', 'used'])
+                    ->count();
+
+                // Count checked-in tickets
                 $checkedIn = \App\Models\Ticket::where('ticket_type_id', $tt->id)
                     ->whereHas('order', function ($q) use ($event) {
                         $q->where('event_id', $event->id)
@@ -3085,6 +3097,9 @@ class EventsController extends BaseController
                     ->whereNotNull('checked_in_at')
                     ->count();
 
+                // Available = total capacity minus valid sold tickets
+                $available = $tt->quota_total ? max(0, $tt->quota_total - $validTickets) : 0;
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
@@ -3092,8 +3107,8 @@ class EventsController extends BaseController
                     'price' => (float) $tt->display_price,
                     'currency' => $tt->currency ?? 'RON',
                     'quantity' => $tt->quota_total,
-                    'quantity_sold' => $tt->quota_sold,
-                    'available' => $tt->available_quantity,
+                    'quantity_sold' => $validTickets,
+                    'available' => $available,
                     'min_per_order' => 1,
                     'max_per_order' => 10,
                     'status' => $tt->status === 'active' ? 'on_sale' : $tt->status,
