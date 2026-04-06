@@ -767,6 +767,7 @@ class MarketplaceTaxTemplate extends Model
                 $sequenceNumber = MarketplacePayout::where('event_id', $payout->event_id)
                     ->where('marketplace_organizer_id', $payout->marketplace_organizer_id)
                     ->where('id', '<=', $payout->id)
+                    ->whereIn('status', ['approved', 'completed'])
                     ->count();
             }
             $variables['payout_sequence_number'] = $sequenceNumber;
