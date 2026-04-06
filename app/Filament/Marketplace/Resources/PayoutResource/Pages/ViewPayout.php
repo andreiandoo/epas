@@ -124,7 +124,7 @@ class ViewPayout extends ViewRecord
                 Actions\Action::make('view_decont')
                     ->label('Vezi decont')
                     ->icon('heroicon-o-eye')
-                    ->url(fn () => OrganizerDocumentResource::getUrl('edit', ['record' => $this->record->decontDocument]))
+                    ->url(fn () => OrganizerDocumentResource::getUrl('view', ['record' => $this->record->decontDocument]))
                     ->openUrlInNewTab(),
 
                 Actions\Action::make('download_decont')
