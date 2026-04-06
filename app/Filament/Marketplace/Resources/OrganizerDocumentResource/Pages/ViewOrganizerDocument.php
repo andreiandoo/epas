@@ -97,6 +97,18 @@ class ViewOrganizerDocument extends ViewRecord
                     $htmlContent = preg_replace('/transform\s*:\s*[^;"]+;?/', '', $htmlContent);
                     $htmlContent = preg_replace('/font-weight\s*:\s*600\b/', 'font-weight:bold', $htmlContent);
 
+                    // Compress spacing to fit on single page
+                    $htmlContent = preg_replace('/margin-top\s*:\s*1[4-9]px/', 'margin-top:6px', $htmlContent);
+                    $htmlContent = preg_replace('/margin-top\s*:\s*[2-9]\dpx/', 'margin-top:6px', $htmlContent);
+                    $htmlContent = preg_replace('/margin-bottom\s*:\s*1[4-9]px/', 'margin-bottom:4px', $htmlContent);
+                    $htmlContent = preg_replace('/margin-bottom\s*:\s*[2-9]\dpx/', 'margin-bottom:4px', $htmlContent);
+                    $htmlContent = preg_replace('/padding\s*:\s*16px/', 'padding:8px', $htmlContent);
+                    $htmlContent = preg_replace('/padding\s*:\s*12px\s+20px/', 'padding:6px 12px', $htmlContent);
+                    $htmlContent = preg_replace('/font-size\s*:\s*15pt/', 'font-size:13pt', $htmlContent);
+                    $htmlContent = preg_replace('/font-size\s*:\s*11\.5pt/', 'font-size:10pt', $htmlContent);
+                    $htmlContent = preg_replace('/font-size\s*:\s*11pt/', 'font-size:9.5pt', $htmlContent);
+                    $htmlContent = preg_replace('/font-size\s*:\s*10pt/', 'font-size:9pt', $htmlContent);
+
                     // Ensure proper UTF-8 encoding
                     if (stripos($htmlContent, '<html') === false) {
                         $htmlContent = '<!DOCTYPE html>

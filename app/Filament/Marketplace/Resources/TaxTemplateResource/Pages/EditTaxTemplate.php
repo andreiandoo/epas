@@ -154,7 +154,7 @@ class EditTaxTemplate extends EditRecord
                         . '<meta charset="UTF-8">'
                         . '<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>'
                         . '<style>'
-                        . '@page { size: ' . ($orientation === 'landscape' ? 'A4 landscape' : 'A4') . '; margin: 6mm 8mm; }'
+                        . '@page { size: ' . ($orientation === 'landscape' ? 'A4 landscape' : 'A4') . '; margin: 5mm 6mm; }'
                         . '*, th, td, thead th, thead td { font-family: DejaVu Sans, Arial, sans-serif !important; }'
                         . 'body { margin: 0; padding: 0; background: #fff; color: #000; }'
                         . '</style></head><body>' . $combinedContent . '</body></html>';
@@ -243,6 +243,21 @@ class EditTaxTemplate extends EditRecord
 
         // Replace font-weight:600 with font-weight:bold (DomPDF lacks 600 variant for DejaVu Sans)
         $html = preg_replace('/font-weight\s*:\s*600\b/', 'font-weight:bold', $html);
+
+        // Compress spacing to fit on single page
+        $html = preg_replace('/margin-top\s*:\s*1[4-9]px/', 'margin-top:6px', $html);
+        $html = preg_replace('/margin-top\s*:\s*[2-9]\dpx/', 'margin-top:6px', $html);
+        $html = preg_replace('/margin-bottom\s*:\s*1[4-9]px/', 'margin-bottom:4px', $html);
+        $html = preg_replace('/margin-bottom\s*:\s*[2-9]\dpx/', 'margin-bottom:4px', $html);
+        $html = preg_replace('/padding\s*:\s*16px/', 'padding:8px', $html);
+        $html = preg_replace('/padding\s*:\s*12px\s+20px/', 'padding:6px 12px', $html);
+        $html = preg_replace('/padding\s*:\s*16px\s+10px\s+12px\s+20px/', 'padding:8px 8px 6px 12px', $html);
+        $html = preg_replace('/padding\s*:\s*16px\s+20px\s+12px\s+0/', 'padding:8px 12px 6px 0', $html);
+        // Reduce font sizes slightly
+        $html = preg_replace('/font-size\s*:\s*15pt/', 'font-size:13pt', $html);
+        $html = preg_replace('/font-size\s*:\s*11\.5pt/', 'font-size:10pt', $html);
+        $html = preg_replace('/font-size\s*:\s*11pt/', 'font-size:9.5pt', $html);
+        $html = preg_replace('/font-size\s*:\s*10pt/', 'font-size:9pt', $html);
 
         return $html;
     }

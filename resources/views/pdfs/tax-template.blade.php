@@ -6,7 +6,7 @@
     <style>
         @page {
             size: {{ $orientation === 'landscape' ? 'A4 landscape' : 'A4' }};
-            margin: 6mm 8mm;
+            margin: 5mm 6mm;
         }
         * { font-family: DejaVu Sans, Arial, sans-serif !important; }
         body {
