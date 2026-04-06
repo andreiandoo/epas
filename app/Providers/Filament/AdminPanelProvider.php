@@ -377,6 +377,25 @@ class AdminPanelProvider extends PanelProvider
 
     public function boot(): void
     {
-        // Render hooks are now in panel() method above
+        \Filament\Forms\Components\DateTimePicker::configureUsing(function (\Filament\Forms\Components\DateTimePicker $picker): void {
+            $picker->native(false)
+                ->seconds(false)
+                ->displayFormat('D, d M Y H:i')
+                ->firstDayOfWeek(1)
+                ->closeOnDateSelection()
+                ->minutesStep(5);
+        });
+
+        \Filament\Forms\Components\DatePicker::configureUsing(function (\Filament\Forms\Components\DatePicker $picker): void {
+            $picker->native(false)
+                ->displayFormat('D, d M Y')
+                ->firstDayOfWeek(1)
+                ->closeOnDateSelection();
+        });
+
+        \Filament\Forms\Components\TimePicker::configureUsing(function (\Filament\Forms\Components\TimePicker $picker): void {
+            $picker->seconds(false)
+                ->minutesStep(5);
+        });
     }
 }

@@ -227,14 +227,75 @@ class TicketType extends Model
     }
 
     /**
-     * Get the effective display price (sale price if available, otherwise gross price)
+     * Accessor: intercept sale_price_cents reads to enforce sales_start_at / sales_end_at.
+     * If the sale window hasn't opened yet or has closed, returns null.
+     * All code that reads $tt->sale_price_cents will automatically respect sale dates.
+     */
+    public function getSalePriceCentsAttribute($value): ?int
+    {
+        if (! $value || $value <= 0) {
+            return null;
+        }
+
+        $now = now('Europe/Bucharest');
+
+        if ($this->attributes['sales_start_at'] ?? null) {
+            $start = \Carbon\Carbon::parse($this->attributes['sales_start_at']);
+            if ($now->lt($start)) {
+                return null;
+            }
+        }
+
+        if ($this->attributes['sales_end_at'] ?? null) {
+            $end = \Carbon\Carbon::parse($this->attributes['sales_end_at']);
+            if ($now->gt($end)) {
+                return null;
+            }
+        }
+
+        return (int) $value;
+    }
+
+    /**
+     * Get raw sale_price_cents from DB without date enforcement (for admin forms).
+     */
+    public function getRawSalePriceCents(): ?int
+    {
+        return $this->attributes['sale_price_cents'] ?? null;
+    }
+
+    /**
+     * Get the effective sale price in cents (alias for accessor, explicit call).
+     * Returns null if no active sale.
+     */
+    public function getEffectiveSalePriceCents(): ?int
+    {
+        if (! $this->sale_price_cents || $this->sale_price_cents <= 0) {
+            return null;
+        }
+
+        $now = now('Europe/Bucharest');
+
+        if ($this->sales_start_at && $now->lt($this->sales_start_at)) {
+            return null;
+        }
+
+        if ($this->sales_end_at && $now->gt($this->sales_end_at)) {
+            return null;
+        }
+
+        return (int) $this->sale_price_cents;
+    }
+
+    /**
+     * Get the effective display price (sale price if active, otherwise gross price)
      * This is the price that should be shown to customers
      */
     public function getDisplayPriceAttribute()
     {
-        // If sale price exists, use it; otherwise use gross price
-        if ($this->sale_price_cents !== null && $this->sale_price_cents > 0) {
-            return $this->sale_price_cents / 100;
+        $effectiveSale = $this->getEffectiveSalePriceCents();
+        if ($effectiveSale) {
+            return $effectiveSale / 100;
         }
         return $this->price_cents ? $this->price_cents / 100 : 0;
     }
