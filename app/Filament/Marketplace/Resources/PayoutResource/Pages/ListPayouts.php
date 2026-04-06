@@ -253,7 +253,7 @@ class ListPayouts extends ListRecords
                 \Filament\Schemas\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('desired_net_amount')
                         ->label('Cât vrei să decontezi?')
-                        ->helperText('Introduce suma netă dorită. Biletele se vor distribui automat.')
+                        ->helperText('Introdu suma netă dorită, apoi apasă pe Distribuie automat.')
                         ->numeric()
                         ->minValue(0)
                         ->suffix('RON')
@@ -397,7 +397,6 @@ class ListPayouts extends ListRecords
                     ->addable(false)
                     ->deletable(false)
                     ->defaultItems(0)
-                    ->dehydrated(false)
                     ->visible(fn (Get $get) => $get('event_id') !== null && $get('has_balance'))
                     ->columnSpanFull(),
 
@@ -532,6 +531,14 @@ class ListPayouts extends ListRecords
                             ])
                             ->toArray();
                     })
+                    ->afterStateHydrated(function ($component, Get $get) {
+                        $organizerId = $get('marketplace_organizer_id');
+                        if ($organizerId && !$component->getState()) {
+                            $primary = MarketplaceOrganizerBankAccount::where('marketplace_organizer_id', $organizerId)
+                                ->where('is_primary', true)->first();
+                            if ($primary) $component->state($primary->id);
+                        }
+                    })
                     ->searchable()
                     ->required()
                     ->visible(function (Get $get) {
@@ -546,6 +553,8 @@ class ListPayouts extends ListRecords
                     ->label('Note admin')
                     ->rows(2),
             ])
+            ->modalSubmitActionLabel('Creează decont')
+            ->modalCancelActionLabel('Anulează')
             ->action(function (array $data): void {
                 $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
                 $bankAccount = MarketplaceOrganizerBankAccount::find($data['bank_account_id']);
