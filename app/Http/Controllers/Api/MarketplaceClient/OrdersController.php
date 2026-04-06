@@ -186,7 +186,9 @@ class OrdersController extends BaseController
 
             // Create order — disable activity logging and ticket sync inside this transaction
             // to avoid any side-effect queries that could abort the PostgreSQL transaction.
-            $order = new Order([
+            // Insert order directly via DB to avoid all model events (OrderObserver,
+            // LogsActivity, saved callback) that can fail and abort PostgreSQL transaction.
+            $orderId = DB::table('orders')->insertGetId([
                 'tenant_id' => $tenantId,
                 'event_id' => $event->id,
                 'customer_id' => $customer->id,
@@ -205,15 +207,15 @@ class OrdersController extends BaseController
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
                 'expires_at' => now()->addMinutes(15),
-                'meta' => [
+                'meta' => json_encode([
                     'marketplace_client' => $client->name,
                     'ip_address' => $request->ip(),
                     'sold_by' => $request->input('sold_by'),
-                ],
+                ]),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
-            $order->skipTicketSync = true;
-            activity()->disableLogging();
-            $order->save();
+            $order = Order::find($orderId);
 
             // Create order items and tickets
             foreach ($orderItems as $item) {
@@ -351,19 +353,27 @@ class OrdersController extends BaseController
                 ]);
             }
 
-            // Auto-confirm POS cash orders and invitations immediately
+            // Auto-confirm POS cash orders and invitations immediately.
+            // Use raw DB update to avoid triggering OrderObserver::updated() which
+            // calls trackPurchaseConversion inside the transaction. That method writes
+            // to a UUID column with a non-UUID value, causing PostgreSQL to abort the
+            // entire transaction (25P02 cascade).
             $paymentMethod = $request->input('payment_method');
             $source = $request->input('source', 'marketplace');
             $isInvitation = (bool) $request->input('is_invitation', false);
             if (($paymentMethod === 'cash' || $isInvitation) && $source === 'pos_app') {
-                $order->update([
+                DB::table('orders')->where('id', $order->id)->update([
                     'status' => 'confirmed',
                     'payment_status' => $isInvitation ? 'free' : 'paid',
                     'paid_at' => now(),
-                    'meta' => array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : []),
+                    'meta' => json_encode(array_merge($order->meta ?? [], $isInvitation ? ['is_invitation' => true] : [])),
+                    'updated_at' => now(),
                 ]);
                 // Mark tickets as valid
-                $order->tickets()->update(['status' => 'valid']);
+                DB::table('tickets')->where('order_id', $order->id)->update([
+                    'status' => 'valid',
+                    'updated_at' => now(),
+                ]);
             }
 
             DB::commit();
