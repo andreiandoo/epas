@@ -403,7 +403,7 @@ class MarketplaceTaxTemplate extends Model
                     }
                 }
                 $b64 = 'data:' . $mime . ';base64,' . base64_encode($content);
-                $variables['marketplace_signature_image'] = '<img src="' . $b64 . '" alt="Semnătura" style="max-height:60px;max-width:180px;display:block;" />';
+                $variables['marketplace_signature_image'] = '<img src="' . $b64 . '" alt="Semnătura" style="max-height:100px;max-width:250px;display:block;" />';
             } else {
                 $variables['marketplace_signature_image'] = '';
             }
