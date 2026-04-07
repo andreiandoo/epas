@@ -43,6 +43,7 @@ class MarketplaceAdmin extends Authenticatable implements FilamentUser
         'proxy_phone',
         'proxy_id_card_file',
         'proxy_authorization_file',
+        'proxy_signature_image',
     ];
 
     protected $hidden = [

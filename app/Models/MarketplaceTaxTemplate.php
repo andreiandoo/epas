@@ -113,6 +113,13 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_signature_image}}' => 'Signature Image',
             '{{marketplace_logo_url}}' => 'Logo (tag img complet, se inserează direct)',
             '{{marketplace_invoice_preparer}}' => 'Persoana care completează factura',
+            '{{proxy_signature_image}}' => 'Semnătura împuternicit (tag img complet, din admin curent)',
+            '{{proxy_full_name}}' => 'Nume complet împuternicit',
+            '{{proxy_position}}' => 'Funcție / rol împuternicit',
+            '{{proxy_cnp}}' => 'CNP împuternicit',
+            '{{proxy_id_series}}' => 'Serie act identitate împuternicit',
+            '{{proxy_id_number}}' => 'Număr act identitate împuternicit',
+            '{{proxy_address}}' => 'Adresă împuternicit',
         ],
         'Organizer' => [
             '{{organizer_name}}' => 'Name',
@@ -409,6 +416,32 @@ class MarketplaceTaxTemplate extends Model
                 $variables['marketplace_signature_image'] = '<img src="' . $b64 . '" alt="Semnătura" style="max-height:100px;max-width:250px;display:block;" />';
             } else {
                 $variables['marketplace_signature_image'] = '';
+            }
+
+            // Proxy signature image (from currently authenticated admin)
+            $variables['proxy_signature_image'] = '';
+            $variables['proxy_full_name'] = '';
+            $variables['proxy_position'] = '';
+            $variables['proxy_cnp'] = '';
+            $variables['proxy_id_series'] = '';
+            $variables['proxy_id_number'] = '';
+            $variables['proxy_address'] = '';
+
+            $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+            if ($admin) {
+                $variables['proxy_full_name'] = $admin->proxy_full_name ?? $admin->name ?? '';
+                $variables['proxy_position'] = $admin->proxy_role ?? '';
+                $variables['proxy_cnp'] = $admin->proxy_cnp ?? '';
+                $variables['proxy_id_series'] = $admin->proxy_id_series ?? '';
+                $variables['proxy_id_number'] = $admin->proxy_id_number ?? '';
+                $variables['proxy_address'] = $admin->proxy_address ?? '';
+
+                if ($admin->proxy_signature_image && \Illuminate\Support\Facades\Storage::disk('public')->exists($admin->proxy_signature_image)) {
+                    $sigContent = \Illuminate\Support\Facades\Storage::disk('public')->get($admin->proxy_signature_image);
+                    $sigMime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($admin->proxy_signature_image) ?: 'image/png';
+                    $sigB64 = 'data:' . $sigMime . ';base64,' . base64_encode($sigContent);
+                    $variables['proxy_signature_image'] = '<img src="' . $sigB64 . '" alt="Semnătura împuternicit" style="max-height:100px;max-width:250px;display:block;" />';
+                }
             }
         }
 

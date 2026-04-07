@@ -231,6 +231,18 @@ class MarketplaceAdminResource extends Resource
                             ->maxSize(5120)
                             ->downloadable()
                             ->openable(),
+
+                        Forms\Components\FileUpload::make('proxy_signature_image')
+                            ->label('Semnătură împuternicit')
+                            ->helperText('Imagine PNG/JPG cu semnătura. Va fi folosită automat în documentele generate prin împuternicit.')
+                            ->disk('public')
+                            ->directory('proxy-signatures')
+                            ->image()
+                            ->imageEditor()
+                            ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                            ->maxSize(2048)
+                            ->downloadable()
+                            ->openable(),
                     ])->columns(1),
             ]);
     }
