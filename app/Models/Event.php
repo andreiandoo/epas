@@ -106,6 +106,7 @@ class Event extends Model
         'general_stock',
         'general_quota',
         'organizer_notifications',
+        'marketplace_tax_registry_id',
         'views_count',
         'interested_count',
 

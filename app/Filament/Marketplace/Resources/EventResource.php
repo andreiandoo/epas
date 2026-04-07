@@ -525,7 +525,7 @@ class EventResource extends Resource
                                     ->label($t('Locație', 'Venue'))
                                     ->searchable()
                                     ->preload()
-                                    ->live(onBlur: true)
+                                    ->live()
                                     ->options(function () use ($marketplace) {
                                         $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
                                         return Venue::query()
@@ -597,6 +597,29 @@ class EventResource extends Resource
                                                         $set('marketplace_city_id', $newCity->id);
                                                     }
                                                 }
+
+                                                // Try to auto-match tax registry by country/county/city
+                                                $normalize = fn ($s) => strtolower(trim(\Illuminate\Support\Str::ascii($s ?? '')));
+                                                $vCountry = $normalize($venue->country);
+                                                $vCounty = $normalize($venue->state);
+                                                $vCity = $normalize($venue->city);
+
+                                                $matchedRegistry = \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)
+                                                    ->where('is_active', true)
+                                                    ->get()
+                                                    ->first(function ($r) use ($normalize, $vCountry, $vCounty, $vCity) {
+                                                        $rCountry = $normalize($r->country);
+                                                        $rCounty = $normalize($r->county);
+                                                        $rCity = $normalize($r->city);
+
+                                                        $countryMatch = !$rCountry || !$vCountry || str_contains($rCountry, $vCountry) || str_contains($vCountry, $rCountry);
+                                                        $countyMatch = !$rCounty || !$vCounty || str_contains($rCounty, $vCounty) || str_contains($vCounty, $rCounty);
+                                                        $cityMatch = !$rCity || !$vCity || str_contains($rCity, $vCity) || str_contains($vCity, $rCity);
+
+                                                        return $countryMatch && $countyMatch && $cityMatch && ($vCity || $vCounty);
+                                                    });
+
+                                                $set('marketplace_tax_registry_id', $matchedRegistry?->id);
                                             }
                                         }
                                     })
@@ -616,6 +639,50 @@ class EventResource extends Resource
                                             ->openUrlInNewTab(),
                                     ])
                                     ->nullable(),
+                                Forms\Components\Placeholder::make('tax_registry_match_info')
+                                    ->hiddenLabel()
+                                    ->visible(fn (SGet $get) => (bool) $get('venue_id'))
+                                    ->content(function (SGet $get) use ($t, $marketplace) {
+                                        $registryId = $get('marketplace_tax_registry_id');
+                                        if ($registryId) {
+                                            $registry = \App\Models\MarketplaceTaxRegistry::find($registryId);
+                                            if ($registry) {
+                                                $name = e($registry->name);
+                                                $location = e(implode(', ', array_filter([$registry->city, $registry->county, $registry->country])));
+                                                return new HtmlString(
+                                                    '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #10b981;background:#f0fdf4;border-radius:6px;color:#065f46;font-size:13px;">'
+                                                    . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                                                    . '<div><strong>' . $t('Tax Registry identificat:', 'Tax Registry found:') . '</strong> ' . $name
+                                                    . '<div style="font-size:11px;color:#047857;margin-top:2px;">' . $location . '</div></div>'
+                                                    . '</div>'
+                                                );
+                                            }
+                                        }
+                                        return new HtmlString(
+                                            '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid #f59e0b;background:#fffbeb;border-radius:6px;color:#92400e;font-size:13px;">'
+                                            . '<svg style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>'
+                                            . '<div>' . $t('Niciun Tax Registry nu se potrivește automat. Selectează manual din dropdown-ul de mai jos.', 'No Tax Registry matches automatically. Select manually from dropdown below.') . '</div>'
+                                            . '</div>'
+                                        );
+                                    }),
+
+                                Forms\Components\Select::make('marketplace_tax_registry_id')
+                                    ->label($t('Tax Registry', 'Tax Registry'))
+                                    ->options(function () use ($marketplace) {
+                                        return \App\Models\MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_active', true)
+                                            ->get()
+                                            ->mapWithKeys(fn ($r) => [
+                                                $r->id => $r->name . ' — ' . implode(', ', array_filter([$r->city, $r->county, $r->country])),
+                                            ]);
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->live()
+                                    ->visible(fn (SGet $get) => (bool) $get('venue_id'))
+                                    ->helperText($t('Direcția fiscală locală pentru declarațiile de impozit pe spectacole.', 'Local tax authority for entertainment tax declarations.')),
+
                                 Forms\Components\TextInput::make('suggested_venue_name')
                                     ->label($t('Locație sugerată de organizator', 'Suggested venue by organizer'))
                                     ->disabled()
