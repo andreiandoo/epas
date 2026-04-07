@@ -16,10 +16,15 @@ class ViewOrganizer extends ViewRecord
         $record = $this->getRecord();
 
         return [
+            // Primary action: ALWAYS first, aligned LEFT
+            Actions\EditAction::make(),
+
+            // Secondary actions: pushed to the RIGHT via margin-left:auto on first one
             Actions\Action::make('login_as')
                 ->label('Login as Organizer')
                 ->icon('heroicon-o-arrow-right-on-rectangle')
                 ->color('warning')
+                ->extraAttributes(['style' => 'margin-left: auto;'])
                 ->url(fn () => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
 
             Actions\Action::make('view_events')
@@ -79,8 +84,6 @@ class ViewOrganizer extends ViewRecord
                     $record->update(['status' => 'active']);
                     \Filament\Notifications\Notification::make()->title('Organizer reactivated')->success()->send();
                 }),
-
-            Actions\EditAction::make(),
         ];
     }
 }
