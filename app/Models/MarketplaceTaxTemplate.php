@@ -478,8 +478,15 @@ class MarketplaceTaxTemplate extends Model
             $variables['organizer_phone'] = $organizer->phone ?? $organizer->contact_phone ?? '';
         }
 
-        // Proxy (împuternicit) variables — from logged-in admin or fallback to organizer guarantor
-        $proxyAdmin = $generatedBy ?? \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+        // Proxy (împuternicit) variables — prefer organizer's assigned proxy admin
+        $proxyAdmin = null;
+        if ($organizer && $organizer->proxy_admin_id) {
+            $proxyAdmin = MarketplaceAdmin::find($organizer->proxy_admin_id);
+        }
+        // Fallback: explicit generatedBy or current authenticated admin
+        if (!$proxyAdmin) {
+            $proxyAdmin = $generatedBy ?? \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+        }
 
         if ($proxyAdmin instanceof MarketplaceAdmin && $proxyAdmin->proxy_full_name) {
             // Use marketplace admin proxy data

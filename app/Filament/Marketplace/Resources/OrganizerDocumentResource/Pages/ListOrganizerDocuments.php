@@ -16,6 +16,7 @@ use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\HtmlString;
 
 class ListOrganizerDocuments extends ListRecords
 {
@@ -141,6 +142,21 @@ class ListOrganizerDocuments extends ListRecords
                                 ->send();
                             return;
                         }
+                    }
+
+                    // Check if template requires proxy and organizer has one assigned
+                    if ($template->by_proxy && !$organizer->proxy_admin_id) {
+                        $editUrl = \App\Filament\Marketplace\Resources\OrganizerResource::getUrl('edit', ['record' => $organizer->id]) . '?tab=date-legale';
+                        Notification::make()
+                            ->title('Împuternicit nesetat')
+                            ->body(new HtmlString(
+                                'Acest template se generează prin împuternicit, dar organizatorul <strong>' . e($organizer->name ?? $organizer->company_name) . '</strong> nu are unul setat. '
+                                . '<a href="' . $editUrl . '" target="_blank" style="text-decoration:underline;font-weight:bold;">Setează împuternicit →</a>'
+                            ))
+                            ->danger()
+                            ->persistent()
+                            ->send();
+                        return;
                     }
 
                     // Get tax registry: prefer event-specific registry, fall back to default

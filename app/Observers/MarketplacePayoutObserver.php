@@ -65,6 +65,15 @@ class MarketplacePayoutObserver
                 return;
             }
 
+            // Skip if template requires proxy and organizer has none assigned
+            if ($template->by_proxy && !$organizer->proxy_admin_id) {
+                Log::warning('MarketplacePayoutObserver: Skipping decont generation - no proxy admin assigned', [
+                    'payout_id' => $payout->id,
+                    'organizer_id' => $organizer->id,
+                ]);
+                return;
+            }
+
             // Get tax registry: prefer event-specific, fall back to default
             $taxRegistry = null;
             if ($payout->event && $payout->event->marketplace_tax_registry_id) {
