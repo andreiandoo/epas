@@ -73,9 +73,14 @@ class EventActivityLog extends Page
             return 'System';
         }
 
-        // Check if it's a User model
+        // Check if it's a User model (core admin)
         if ($activity->causer_type === 'App\\Models\\User') {
             return $activity->causer->name ?? $activity->causer->email ?? 'Admin User';
+        }
+
+        // Check if it's a MarketplaceAdmin
+        if ($activity->causer_type === 'App\\Models\\MarketplaceAdmin') {
+            return $activity->causer->name ?? $activity->causer->email ?? 'Marketplace Admin';
         }
 
         // Check if it's a MarketplaceOrganizer
@@ -104,6 +109,7 @@ class EventActivityLog extends Page
 
         return match ($activity->causer_type) {
             'App\\Models\\User' => 'admin',
+            'App\\Models\\MarketplaceAdmin' => 'marketplace admin',
             'App\\Models\\MarketplaceOrganizer' => 'organizer',
             'App\\Models\\Customer' => 'customer',
             default => 'unknown',
