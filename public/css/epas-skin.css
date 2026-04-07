@@ -4151,6 +4151,7 @@ html.dark {
 }
 .dark nav.fi-tabs button.fi-tabs-item {
     border-radius: 0;
+    padding-block: calc(var(--spacing) * 3);
 }
 
 .dark .fi-ta-ctn {

@@ -2542,6 +2542,46 @@ class EventResource extends Resource
                                             ]),
                                     ]), // End Tab 8: Observatii
 
+                                // ── TAB 9: Documente ──
+                                SC\Tabs\Tab::make($t('Documente', 'Documents'))
+                                    ->key('documente')
+                                    ->icon('heroicon-o-document-text')
+                                    ->schema([
+                                        SC\Section::make($t('Documente eveniment', 'Event Documents'))
+                                            ->icon('heroicon-o-document-text')
+                                            ->visible(fn (?Event $record) => $record && $record->exists)
+                                            ->schema([
+                                                Forms\Components\Placeholder::make('document_status_list_tab')
+                                                    ->hiddenLabel()
+                                                    ->content(function (?Event $record) {
+                                                        if (!$record) return '';
+
+                                                        $eventTemplates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
+                                                            ->where('is_active', true)
+                                                            ->where(function ($q) {
+                                                                $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
+                                                                  ->orWhereNull('trigger')
+                                                                  ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
+                                                            })
+                                                            ->where('type', '!=', 'organizer_contract')
+                                                            ->orderBy('name')
+                                                            ->get();
+
+                                                        $generatedDocs = \App\Models\EventGeneratedDocument::where('event_id', $record->id)->get();
+                                                        $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)->get();
+
+                                                        return new HtmlString(
+                                                            view('filament.marketplace.components.event-document-status', [
+                                                                'event' => $record,
+                                                                'templates' => $eventTemplates,
+                                                                'generatedDocs' => $generatedDocs,
+                                                                'organizerDocs' => $organizerDocs,
+                                                            ])->render()
+                                                        );
+                                                    }),
+                                            ]),
+                                    ]), // End Tab 9: Documente
+
                             ]), // End Tabs component
                     ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
@@ -3444,42 +3484,6 @@ class EventResource extends Resource
                                             return new HtmlString($html);
                                         }),
                                 ])->fullWidth(),
-                            ]),
-
-                        // 5. Document Status Section
-                        SC\Section::make($t('Documente eveniment', 'Event Documents'))
-                            ->icon('heroicon-o-document-text')
-                            ->compact()
-                            ->visible(fn (?Event $record) => $record && $record->exists)
-                            ->schema([
-                                Forms\Components\Placeholder::make('document_status_list')
-                                    ->hiddenLabel()
-                                    ->content(function (?Event $record) {
-                                        if (!$record) return '';
-
-                                        $eventTemplates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
-                                            ->where('is_active', true)
-                                            ->where(function ($q) {
-                                                $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
-                                                  ->orWhereNull('trigger')
-                                                  ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
-                                            })
-                                            ->where('type', '!=', 'organizer_contract')
-                                            ->orderBy('name')
-                                            ->get();
-
-                                        $generatedDocs = \App\Models\EventGeneratedDocument::where('event_id', $record->id)->get();
-                                        $organizerDocs = \App\Models\OrganizerDocument::where('event_id', $record->id)->get();
-
-                                        return new HtmlString(
-                                            view('filament.marketplace.components.event-document-status', [
-                                                'event' => $record,
-                                                'templates' => $eventTemplates,
-                                                'generatedDocs' => $generatedDocs,
-                                                'organizerDocs' => $organizerDocs,
-                                            ])->render()
-                                        );
-                                    }),
                             ]),
 
                         // 6. Activity Log (doar pentru edit)

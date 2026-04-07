@@ -51,6 +51,7 @@ body {
     border-radius: var(--radius-xl);
     border-bottom-right-radius: 0;
     border-bottom-left-radius: 0;
+    padding: 0;
 }
 
 /* ─── EventResource tabs styling ─────────────────────────────────── */
