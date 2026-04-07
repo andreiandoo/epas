@@ -1874,16 +1874,7 @@ class EventResource extends Resource
                                                 Forms\Components\Toggle::make('is_active')
                                                     ->label($t('Activ', 'Active'))
                                                     ->default(true)
-                                                    ->columnSpan(6),
-                                                Forms\Components\DateTimePicker::make('active_until')
-                                                    ->label($t('Activ până la', 'Active until'))
-                                                    ->inlineLabel($il)
-                                                    ->native(true)
-                                                    ->seconds(false)
-                                                    ->extraInputAttributes(['lang' => 'ro-RO'])
-                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
-                                                    ->columnSpan(6),
-                                                // Scheduling fields - shown when ticket is NOT active
+                                                    ->columnSpan(2),
                                                 Forms\Components\DateTimePicker::make('scheduled_at')
                                                     ->label($t('Programează activare', 'Schedule Activation'))
                                                     ->inlineLabel($il)
@@ -1891,13 +1882,19 @@ class EventResource extends Resource
                                                     ->native(true)
                                                     ->seconds(false)
                                                     ->extraInputAttributes(['lang' => 'ro-RO'])
-                                                    ->visible(fn (SGet $get) => !$get('is_active'))
+                                                    ->columnSpan(4),
+                                                Forms\Components\DateTimePicker::make('active_until')
+                                                    ->label($t('Activ până la', 'Active until'))
+                                                    ->inlineLabel($il)
+                                                    ->native(true)
+                                                    ->seconds(false)
+                                                    ->extraInputAttributes(['lang' => 'ro-RO'])
+                                                    ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                     ->columnSpan(4),
                                                 Forms\Components\Toggle::make('autostart_when_previous_sold_out')
                                                     ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
-                                                    ->visible(fn (SGet $get) => !$get('is_active'))
-                                                    ->columnSpan(4),
+                                                    ->columnSpan(2),
                                             ])
                                             ->collapsible()
                                             ->collapsed()
