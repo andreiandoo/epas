@@ -156,6 +156,26 @@ class MarketplacePanelProvider extends PanelProvider
             // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
 
+            // Disable HTML5 validation on Filament forms (fixes "invalid form control with name=''" errors
+            // caused by hidden inputs in Filament repeater fields with custom datetime pickers)
+            ->renderHook('panels::body.end', fn (): string => '<script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    document.querySelectorAll("form").forEach(function(form) {
+                        form.setAttribute("novalidate", "novalidate");
+                    });
+                });
+                document.addEventListener("livewire:navigated", function() {
+                    document.querySelectorAll("form").forEach(function(form) {
+                        form.setAttribute("novalidate", "novalidate");
+                    });
+                });
+                document.addEventListener("livewire:initialized", function() {
+                    document.querySelectorAll("form").forEach(function(form) {
+                        form.setAttribute("novalidate", "novalidate");
+                    });
+                });
+            </script>')
+
             // Sticky / floating save button for long forms
             ->renderHook('panels::body.end', fn (): string => view('filament.sticky-actions')->render())
 
