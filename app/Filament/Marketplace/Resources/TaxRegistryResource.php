@@ -162,6 +162,19 @@ class TaxRegistryResource extends Resource
                             ->label('Cod SIRUTA')
                             ->maxLength(50),
 
+                        Forms\Components\FileUpload::make('coat_of_arms')
+                            ->label('Stema')
+                            ->helperText('Imagine PNG/JPG cu stema unității administrativ-teritoriale.')
+                            ->disk('public')
+                            ->directory('tax-registry-coat-of-arms')
+                            ->image()
+                            ->imageEditor()
+                            ->acceptedFileTypes(['image/png', 'image/jpeg'])
+                            ->maxSize(2048)
+                            ->downloadable()
+                            ->openable()
+                            ->columnSpanFull(),
+
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true),

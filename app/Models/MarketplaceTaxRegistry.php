@@ -26,6 +26,7 @@ class MarketplaceTaxRegistry extends Model
         'cif',
         'iban',
         'siruta_code',
+        'coat_of_arms',
         'is_active',
     ];
 
@@ -91,6 +92,15 @@ class MarketplaceTaxRegistry extends Model
      */
     public function toTemplateVariables(): array
     {
+        // Build coat of arms as complete <img> tag with base64 (DomPDF compatible)
+        $coatOfArmsHtml = '';
+        if ($this->coat_of_arms && \Illuminate\Support\Facades\Storage::disk('public')->exists($this->coat_of_arms)) {
+            $content = \Illuminate\Support\Facades\Storage::disk('public')->get($this->coat_of_arms);
+            $mime = \Illuminate\Support\Facades\Storage::disk('public')->mimeType($this->coat_of_arms) ?: 'image/png';
+            $b64 = 'data:' . $mime . ';base64,' . base64_encode($content);
+            $coatOfArmsHtml = '<img src="' . $b64 . '" alt="Stema" style="max-height:80px;max-width:80px;display:block;" />';
+        }
+
         return [
             'tax_registry_country' => $this->country ?? '',
             'tax_registry_county' => $this->county ?? '',
@@ -107,6 +117,7 @@ class MarketplaceTaxRegistry extends Model
             'tax_registry_cif' => $this->cif ?? '',
             'tax_registry_iban' => $this->iban ?? '',
             'tax_registry_siruta_code' => $this->siruta_code ?? '',
+            'tax_registry_coat_of_arms' => $coatOfArmsHtml,
         ];
     }
 }
