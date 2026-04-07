@@ -172,6 +172,9 @@ class MarketplaceTaxTemplate extends Model
             '{{total_tickets_available}}' => 'Total Tickets Available (Initial)',
             '{{total_tickets_sold}}' => 'Total Tickets Sold',
             '{{total_sales_value}}' => 'Total Sales Value',
+            '{{music_stamp_value}}' => 'Valoare timbru muzical (2% din vânzări)',
+            '{{taxable_income}}' => 'Încasări supuse impozitului (vânzări - timbru muzical)',
+            '{{tax_due}}' => 'Impozit datorat (cotă registry × încasări supuse impozitului)',
             '{{total_sales_currency}}' => 'Sales Currency',
             '{{unsold_tickets_rows}}' => 'PV Distrugere: rânduri bilete nevândute (exclude abonamente)',
             '{{total_unsold_tickets}}' => 'PV Distrugere: total bilete nevândute (exclude abonamente)',
@@ -691,6 +694,22 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_tickets_sold'] = $totalSold;
             $variables['total_sales_value'] = number_format($totalSalesValue, 2);
             $variables['total_sales_currency'] = $currency;
+
+            // === Calcule pentru decont impozit pe spectacole ===
+            // Timbrul muzical: 2% din valoarea totală a biletelor (conform legii)
+            $musicStampRate = 2.0;
+            $musicStampValue = round($totalSalesValue * $musicStampRate / 100, 2);
+
+            // Încasări supuse impozitului = total vânzări - timbru muzical
+            $taxableIncome = round($totalSalesValue - $musicStampValue, 2);
+
+            // Impozit datorat = cota tax registry * încasări supuse impozitului
+            $taxRate = $taxRegistry?->tax_rate !== null ? (float) $taxRegistry->tax_rate : 0;
+            $taxDue = round($taxableIncome * $taxRate / 100, 2);
+
+            $variables['music_stamp_value'] = number_format($musicStampValue, 2);
+            $variables['taxable_income'] = number_format($taxableIncome, 2);
+            $variables['tax_due'] = number_format($taxDue, 2);
 
             // PV Distrugere variables — unsold tickets (excluding subscriptions)
             $variables['unsold_tickets_rows'] = $unsoldRowsHtml;
