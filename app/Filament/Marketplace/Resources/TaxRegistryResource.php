@@ -162,6 +162,15 @@ class TaxRegistryResource extends Resource
                             ->label('Cod SIRUTA')
                             ->maxLength(50),
 
+                        Forms\Components\TextInput::make('tax_rate')
+                            ->label('Cotă')
+                            ->helperText('Procent de impozitare (ex: 2 sau 5)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%'),
+
                         Forms\Components\FileUpload::make('coat_of_arms')
                             ->label('Stema')
                             ->helperText('Imagine PNG/JPG cu stema unității administrativ-teritoriale.')

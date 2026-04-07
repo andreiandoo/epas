@@ -27,6 +27,7 @@ class MarketplaceTaxRegistry extends Model
         'iban',
         'siruta_code',
         'coat_of_arms',
+        'tax_rate',
         'is_active',
     ];
 
@@ -118,6 +119,7 @@ class MarketplaceTaxRegistry extends Model
             'tax_registry_iban' => $this->iban ?? '',
             'tax_registry_siruta_code' => $this->siruta_code ?? '',
             'tax_registry_coat_of_arms' => $coatOfArmsHtml,
+            'tax_registry_tax_rate' => $this->tax_rate !== null ? rtrim(rtrim(number_format((float) $this->tax_rate, 2, '.', ''), '0'), '.') . '%' : '',
         ];
     }
 }

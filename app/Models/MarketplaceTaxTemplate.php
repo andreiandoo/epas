@@ -98,6 +98,7 @@ class MarketplaceTaxTemplate extends Model
             '{{tax_registry_iban}}' => 'IBAN',
             '{{tax_registry_siruta_code}}' => 'Cod SIRUTA',
             '{{tax_registry_coat_of_arms}}' => 'Stema (tag img complet)',
+            '{{tax_registry_tax_rate}}' => 'Cotă impozit (ex: 2%)',
         ],
         'Marketplace' => [
             '{{marketplace_legal_name}}' => 'Legal Company Name',
