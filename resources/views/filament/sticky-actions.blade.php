@@ -120,6 +120,17 @@
     }
 
     function onSaveClick() {
+        // Disable HTML5 validation on all forms before submit (Filament repeater hidden fields
+        // sometimes leave invalid form controls without name attribute)
+        document.querySelectorAll('form').forEach(function (f) {
+            f.setAttribute('novalidate', 'novalidate');
+        });
+        // Remove name attribute from inputs that have empty name (causes "invalid form control" error)
+        document.querySelectorAll('input[name=""], select[name=""], textarea[name=""]').forEach(function (el) {
+            el.removeAttribute('name');
+            el.removeAttribute('required');
+        });
+
         var saveBtn = findSaveButton();
         if (saveBtn) {
             saveBtn.click();
