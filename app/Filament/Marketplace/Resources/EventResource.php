@@ -1300,6 +1300,19 @@ class EventResource extends Resource
                                             );
                                         }
 
+                                        // Scheduled: scheduled_at is set and in the future
+                                        $scheduledAt = $state['scheduled_at'] ?? null;
+                                        if ($scheduledAt) {
+                                            try {
+                                                $scheduledDate = \Carbon\Carbon::parse($scheduledAt, 'Europe/Bucharest');
+                                                if ($scheduledDate->isFuture()) {
+                                                    return new \Illuminate\Support\HtmlString(
+                                                        '○ ' . $name . $badges . ' <span style="font-size:11px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:1px 6px;border-radius:4px;margin-left:6px;">Programat ' . $scheduledDate->format('d.m.Y H:i') . '</span>'
+                                                    );
+                                                }
+                                            } catch (\Exception $e) {}
+                                        }
+
                                         // Autostart: waiting for previous ticket type to sell out
                                         if ($state['autostart_when_previous_sold_out'] ?? false) {
                                             return new \Illuminate\Support\HtmlString(
