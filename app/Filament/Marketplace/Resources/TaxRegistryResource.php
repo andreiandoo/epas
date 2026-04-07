@@ -52,125 +52,114 @@ class TaxRegistryResource extends Resource
         $countries = $locationService->getCountries();
 
         return $schema
+            ->columns(1)
             ->components([
-                Section::make('Location')
-                    ->icon('heroicon-o-map-pin')
-                    ->schema([
-                        Forms\Components\Select::make('country')
-                            ->label('Country')
-                            ->options($countries)
-                            ->default('Romania')
-                            ->required()
-                            ->searchable()
-                            ->live()
-                            ->afterStateUpdated(function (SSet $set) {
-                                $set('county', null);
-                                $set('city', null);
-                            }),
+                Forms\Components\Select::make('country')
+                    ->label('Country')
+                    ->options($countries)
+                    ->default('Romania')
+                    ->required()
+                    ->searchable()
+                    ->live()
+                    ->afterStateUpdated(function (SSet $set) {
+                        $set('county', null);
+                        $set('city', null);
+                    }),
 
-                        Forms\Components\Select::make('county')
-                            ->label('County')
-                            ->options(function (SGet $get) use ($locationService) {
-                                $country = $get('country');
-                                if (!$country) return [];
+                Forms\Components\Select::make('county')
+                    ->label('County')
+                    ->options(function (SGet $get) use ($locationService) {
+                        $country = $get('country');
+                        if (!$country) return [];
 
-                                $countryCode = $locationService->getCountryCode($country);
-                                if (!$countryCode) return [];
+                        $countryCode = $locationService->getCountryCode($country);
+                        if (!$countryCode) return [];
 
-                                return $locationService->getStates($countryCode);
-                            })
-                            ->searchable()
-                            ->live()
-                            ->afterStateUpdated(function (SSet $set) {
-                                $set('city', null);
-                            }),
+                        return $locationService->getStates($countryCode);
+                    })
+                    ->searchable()
+                    ->live()
+                    ->afterStateUpdated(function (SSet $set) {
+                        $set('city', null);
+                    }),
 
-                        Forms\Components\Select::make('city')
-                            ->label('City')
-                            ->options(function (SGet $get) use ($locationService) {
-                                $country = $get('country');
-                                $county = $get('county');
-                                if (!$country || !$county) return [];
+                Forms\Components\Select::make('city')
+                    ->label('City')
+                    ->options(function (SGet $get) use ($locationService) {
+                        $country = $get('country');
+                        $county = $get('county');
+                        if (!$country || !$county) return [];
 
-                                $countryCode = $locationService->getCountryCode($country);
-                                if (!$countryCode) return [];
+                        $countryCode = $locationService->getCountryCode($country);
+                        if (!$countryCode) return [];
 
-                                return $locationService->getCities($countryCode, $county);
-                            })
-                            ->searchable(),
+                        return $locationService->getCities($countryCode, $county);
+                    })
+                    ->searchable(),
 
-                        Forms\Components\TextInput::make('commune')
-                            ->label('Comună')
-                            ->maxLength(255)
-                            ->placeholder('ex: Comuna Berceni'),
-                    ])
-                    ->columns(4),
+                Forms\Components\TextInput::make('commune')
+                    ->label('Comună')
+                    ->maxLength(255)
+                    ->placeholder('ex: Comuna Berceni'),
 
-                Section::make('Registry Information')
-                    ->icon('heroicon-o-identification')
-                    ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Name')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('Company or Person Name'),
+                Forms\Components\TextInput::make('name')
+                    ->label('Name')
+                    ->required()
+                    ->maxLength(255)
+                    ->placeholder('Company or Person Name'),
 
-                        Forms\Components\TextInput::make('subname')
-                            ->label('Subname / Department')
-                            ->maxLength(255)
-                            ->placeholder('Optional subdivision'),
+                Forms\Components\TextInput::make('subname')
+                    ->label('Subname / Department')
+                    ->maxLength(255)
+                    ->placeholder('Optional subdivision'),
 
-                        Forms\Components\Textarea::make('address')
-                            ->label('Address')
-                            ->rows(2)
-                            ->columnSpanFull(),
+                Forms\Components\Textarea::make('address')
+                    ->label('Address')
+                    ->rows(2),
 
-                        Forms\Components\Textarea::make('directions')
-                            ->label('Indicații')
-                            ->rows(3)
-                            ->columnSpanFull()
-                            ->placeholder('Indicații de acces, puncte de reper, etc.'),
+                Forms\Components\Textarea::make('directions')
+                    ->label('Indicații')
+                    ->rows(3)
+                    ->placeholder('Indicații de acces, puncte de reper, etc.'),
 
-                        Forms\Components\TextInput::make('phone')
-                            ->label('Phone')
-                            ->tel()
-                            ->maxLength(50),
+                Forms\Components\TextInput::make('phone')
+                    ->label('Phone')
+                    ->tel()
+                    ->maxLength(50),
 
-                        Forms\Components\TextInput::make('email')
-                            ->label('Email')
-                            ->email()
-                            ->maxLength(255),
+                Forms\Components\TextInput::make('email')
+                    ->label('Email')
+                    ->email()
+                    ->maxLength(255),
 
-                        Forms\Components\TextInput::make('email2')
-                            ->label('Email 2')
-                            ->email()
-                            ->maxLength(255),
+                Forms\Components\TextInput::make('email2')
+                    ->label('Email 2')
+                    ->email()
+                    ->maxLength(255),
 
-                        Forms\Components\TextInput::make('website_url')
-                            ->label('Website URL')
-                            ->url()
-                            ->maxLength(255)
-                            ->placeholder('https://...'),
+                Forms\Components\TextInput::make('website_url')
+                    ->label('Website URL')
+                    ->url()
+                    ->maxLength(255)
+                    ->placeholder('https://...'),
 
-                        Forms\Components\TextInput::make('cif')
-                            ->label('CIF / Tax ID')
-                            ->maxLength(50)
-                            ->placeholder('e.g., RO12345678'),
+                Forms\Components\TextInput::make('cif')
+                    ->label('CIF / Tax ID')
+                    ->maxLength(50)
+                    ->placeholder('e.g., RO12345678'),
 
-                        Forms\Components\TextInput::make('iban')
-                            ->label('IBAN')
-                            ->maxLength(50)
-                            ->placeholder('e.g., RO49AAAA1B31007593840000'),
+                Forms\Components\TextInput::make('iban')
+                    ->label('IBAN')
+                    ->maxLength(50)
+                    ->placeholder('e.g., RO49AAAA1B31007593840000'),
 
-                        Forms\Components\TextInput::make('siruta_code')
-                            ->label('Cod SIRUTA')
-                            ->maxLength(50),
+                Forms\Components\TextInput::make('siruta_code')
+                    ->label('Cod SIRUTA')
+                    ->maxLength(50),
 
-                        Forms\Components\Toggle::make('is_active')
-                            ->label('Active')
-                            ->default(true),
-                    ])
-                    ->columns(2),
+                Forms\Components\Toggle::make('is_active')
+                    ->label('Active')
+                    ->default(true),
             ]);
     }
 

@@ -40,6 +40,7 @@ class OrganizerInvoiceResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form
+            ->columns(1)
             ->schema([
                 Section::make('Detalii factură')
                     ->schema([
@@ -73,7 +74,7 @@ class OrganizerInvoiceResource extends Resource
                             ->label('Descriere')
                             ->rows(2)
                             ->columnSpanFull(),
-                    ])->columns(2),
+                    ])->columns(1),
 
                 Section::make('Date')
                     ->schema([
@@ -90,7 +91,7 @@ class OrganizerInvoiceResource extends Resource
 
                         Forms\Components\DatePicker::make('period_end')
                             ->label('Perioadă până la'),
-                    ])->columns(4),
+                    ])->columns(1),
 
                 Section::make('Valori')
                     ->schema([
@@ -136,7 +137,7 @@ class OrganizerInvoiceResource extends Resource
                             ->label('Monedă')
                             ->default('RON')
                             ->maxLength(3),
-                    ])->columns(5),
+                    ])->columns(1),
 
                 // Organizer & items data section (single column)
                 Section::make('Date emitent / client / articole')
