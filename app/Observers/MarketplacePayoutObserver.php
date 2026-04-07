@@ -65,10 +65,16 @@ class MarketplacePayoutObserver
                 return;
             }
 
-            // Get tax registry
-            $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
-                ->where('is_active', true)
-                ->first();
+            // Get tax registry: prefer event-specific, fall back to default
+            $taxRegistry = null;
+            if ($payout->event && $payout->event->marketplace_tax_registry_id) {
+                $taxRegistry = MarketplaceTaxRegistry::find($payout->event->marketplace_tax_registry_id);
+            }
+            if (!$taxRegistry) {
+                $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+                    ->where('is_active', true)
+                    ->first();
+            }
 
             // Build variables with payout context
             $variables = MarketplaceTaxTemplate::getVariablesForContext(

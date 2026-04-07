@@ -143,13 +143,19 @@ class ListOrganizerDocuments extends ListRecords
                         }
                     }
 
-                    // Get tax registry
-                    $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
-                        ->where('is_active', true)
-                        ->first();
+                    // Get tax registry: prefer event-specific registry, fall back to default
+                    $firstEvent = $events->first();
+                    $taxRegistry = null;
+                    if ($firstEvent && $firstEvent->marketplace_tax_registry_id) {
+                        $taxRegistry = MarketplaceTaxRegistry::find($firstEvent->marketplace_tax_registry_id);
+                    }
+                    if (!$taxRegistry) {
+                        $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+                            ->where('is_active', true)
+                            ->first();
+                    }
 
                     // Build variables using first event as base
-                    $firstEvent = $events->first();
                     $variables = MarketplaceTaxTemplate::getVariablesForContext(
                         $taxRegistry,
                         $marketplace,

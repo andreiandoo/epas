@@ -67,9 +67,16 @@ class ViewOrganizerDocument extends ViewRecord
                     }
 
                     // Get tax registry
-                    $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
-                        ->where('is_active', true)
-                        ->first();
+                    // Prefer event-specific tax registry
+                    $taxRegistry = null;
+                    if ($event && $event->marketplace_tax_registry_id) {
+                        $taxRegistry = MarketplaceTaxRegistry::find($event->marketplace_tax_registry_id);
+                    }
+                    if (!$taxRegistry) {
+                        $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace->id)
+                            ->where('is_active', true)
+                            ->first();
+                    }
 
                     // Get template variables
                     $variables = MarketplaceTaxTemplate::getVariablesForContext(

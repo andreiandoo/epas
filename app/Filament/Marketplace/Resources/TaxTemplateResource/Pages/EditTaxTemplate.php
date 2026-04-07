@@ -110,7 +110,14 @@ class EditTaxTemplate extends EditRecord
                     $organizer = MarketplaceOrganizer::find($data['organizer_id']);
                     $event = !empty($data['event_id']) ? Event::with(['ticketTypes', 'venue'])->find($data['event_id']) : null;
                     $payout = !empty($data['payout_id']) ? MarketplacePayout::find($data['payout_id']) : null;
-                    $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)->active()->first();
+                    // Prefer event-specific tax registry
+                    $taxRegistry = null;
+                    if ($event && $event->marketplace_tax_registry_id) {
+                        $taxRegistry = MarketplaceTaxRegistry::find($event->marketplace_tax_registry_id);
+                    }
+                    if (!$taxRegistry) {
+                        $taxRegistry = MarketplaceTaxRegistry::where('marketplace_client_id', $marketplace?->id)->active()->first();
+                    }
 
                     // Build variables from real data
                     $variables = MarketplaceTaxTemplate::getVariablesForContext(
