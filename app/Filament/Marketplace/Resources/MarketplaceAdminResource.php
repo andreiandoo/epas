@@ -223,15 +223,6 @@ class MarketplaceAdminResource extends Resource
                             ->downloadable()
                             ->openable(),
 
-                        Forms\Components\FileUpload::make('proxy_authorization_file')
-                            ->label('Împuternicire')
-                            ->disk('public')
-                            ->directory('proxy-documents')
-                            ->acceptedFileTypes(['image/*', 'application/pdf'])
-                            ->maxSize(5120)
-                            ->downloadable()
-                            ->openable(),
-
                         Forms\Components\FileUpload::make('proxy_signature_image')
                             ->label('Semnătură împuternicit')
                             ->helperText('Imagine PNG/JPG cu semnătura. Va fi folosită automat în documentele generate prin împuternicit.')
