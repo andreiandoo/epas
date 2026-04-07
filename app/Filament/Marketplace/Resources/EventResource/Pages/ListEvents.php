@@ -23,6 +23,32 @@ class ListEvents extends ListRecords
         return new HtmlString("Evenimente <span class=\"ml-2 inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-white/10 dark:text-gray-300\">{$count}</span>");
     }
 
+    public function getSubheading(): string|Htmlable|null
+    {
+        $marketplaceAdmin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user();
+        if (!$marketplaceAdmin) return null;
+
+        $expiring = \App\Models\Event::expiringWithoutReplacement($marketplaceAdmin->marketplace_client_id);
+
+        if ($expiring->isEmpty()) return null;
+
+        $items = $expiring->map(function ($e) {
+            $title = is_array($e->title) ? ($e->title['ro'] ?? $e->title['en'] ?? reset($e->title) ?: 'Eveniment') : ($e->title ?? 'Eveniment');
+            $url = static::getResource()::getUrl('edit', ['record' => $e->id]) . '?tab=bilete';
+            return '<li><a href="' . e($url) . '" style="color:#92400e;text-decoration:underline;font-weight:600;">' . e($title) . '</a></li>';
+        })->implode('');
+
+        return new HtmlString(
+            '<div style="margin-top:12px;padding:12px 16px;border:1px solid #f59e0b;background:#fffbeb;border-radius:8px;color:#92400e;">'
+            . '<div style="display:flex;align-items:center;gap:8px;font-weight:700;margin-bottom:6px;">'
+            . '<svg xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;flex-shrink:0;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+            . 'Atenție: ' . $expiring->count() . ' eveniment(e) au tipuri de bilete care expiră în 24h fără înlocuitor'
+            . '</div>'
+            . '<ul style="margin:4px 0 0 24px;font-size:13px;list-style:disc;">' . $items . '</ul>'
+            . '</div>'
+        );
+    }
+
     public function mount(): void
     {
         parent::mount();

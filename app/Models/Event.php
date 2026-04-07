@@ -717,6 +717,90 @@ class Event extends Model
     }
 
     /**
+     * Check if this event has at least one ticket type that will expire within 24h
+     * AND no replacement (no other active ticket beyond 24h, no scheduled future ticket).
+     * Uses pre-loaded ticketTypes collection if available (no extra queries).
+     */
+    public function hasExpiringTicketsWithoutReplacement(): bool
+    {
+        if (!$this->is_published || $this->is_cancelled) return false;
+
+        $eventDate = $this->event_date ?? $this->range_start_date;
+        if ($eventDate && \Carbon\Carbon::parse($eventDate)->isPast()) return false;
+
+        $now = now('Europe/Bucharest');
+        $cutoff = $now->copy()->addHours(24);
+
+        $tickets = $this->relationLoaded('ticketTypes') ? $this->ticketTypes : $this->ticketTypes()->get();
+
+        $expiringSoon = $tickets->contains(function ($tt) use ($now, $cutoff) {
+            if ($tt->status !== 'active') return false;
+            $au = $tt->active_until ? \Carbon\Carbon::parse($tt->active_until) : null;
+            $se = $tt->sales_end_at ? \Carbon\Carbon::parse($tt->sales_end_at) : null;
+            return ($au && $au->between($now, $cutoff)) || ($se && $se->between($now, $cutoff));
+        });
+
+        if (!$expiringSoon) return false;
+
+        $hasReplacement = $tickets->contains(function ($tt) use ($cutoff, $now) {
+            // Active and not expiring soon
+            if ($tt->status === 'active') {
+                $au = $tt->active_until ? \Carbon\Carbon::parse($tt->active_until) : null;
+                $se = $tt->sales_end_at ? \Carbon\Carbon::parse($tt->sales_end_at) : null;
+                $auOk = !$au || $au->gt($cutoff);
+                $seOk = !$se || $se->gt($cutoff);
+                if ($auOk && $seOk) return true;
+            }
+            // Scheduled for future activation
+            if ($tt->scheduled_at && \Carbon\Carbon::parse($tt->scheduled_at)->gt($now)) return true;
+            return false;
+        });
+
+        return !$hasReplacement;
+    }
+
+    /**
+     * Get cached list of events with expiring tickets without replacement.
+     * Uses 1 SQL query + 15min cache.
+     */
+    public static function expiringWithoutReplacement(?int $marketplaceClientId = null): \Illuminate\Support\Collection
+    {
+        $cacheKey = 'expiring_tickets_alert_' . ($marketplaceClientId ?? 'all');
+
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($marketplaceClientId) {
+            $now = now('Europe/Bucharest');
+            $cutoff = $now->copy()->addHours(24);
+
+            $query = self::query()
+                ->with('ticketTypes')
+                ->where('is_published', true)
+                ->where('is_cancelled', false)
+                ->where(function ($q) use ($now) {
+                    $q->whereNull('event_date')->orWhere('event_date', '>=', $now->toDateString());
+                })
+                ->whereHas('ticketTypes', function ($q) use ($now, $cutoff) {
+                    $q->where('status', 'active')
+                        ->where(function ($q2) use ($now, $cutoff) {
+                            $q2->where(function ($q3) use ($now, $cutoff) {
+                                $q3->whereNotNull('active_until')
+                                   ->whereBetween('active_until', [$now, $cutoff]);
+                            })->orWhere(function ($q3) use ($now, $cutoff) {
+                                $q3->whereNotNull('sales_end_at')
+                                   ->whereBetween('sales_end_at', [$now, $cutoff]);
+                            });
+                        });
+                });
+
+            if ($marketplaceClientId) {
+                $query->where('marketplace_client_id', $marketplaceClientId);
+            }
+
+            // Filter in PHP using the helper (using preloaded ticketTypes — no extra queries)
+            return $query->get()->filter(fn ($e) => $e->hasExpiringTicketsWithoutReplacement())->values();
+        });
+    }
+
+    /**
      * Get currency from marketplace client or default to RON
      */
     public function getCurrencyAttribute(): string

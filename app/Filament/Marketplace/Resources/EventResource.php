@@ -68,6 +68,7 @@ class EventResource extends Resource
         $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
+            ->with(['ticketTypes:id,event_id,status,active_until,sales_end_at,scheduled_at'])
             ->where('marketplace_client_id', $marketplace?->id)
             ->whereNull('parent_id'); // Hide child events from main list
     }
@@ -3429,7 +3430,14 @@ class EventResource extends Resource
                     ->toggleable()
                     ->extraAttributes(['class' => 'ep-title-cell'])
                     ->formatStateUsing(function ($state, Event $record) {
-                        $html = '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
+                        $expiringIcon = '';
+                        if ($record->hasExpiringTicketsWithoutReplacement()) {
+                            $expiringIcon = '<span title="Tip de bilet expiră în următoarele 24h fără înlocuitor" style="display:inline-flex;vertical-align:middle;margin-right:6px;color:#d97706;">'
+                                . '<svg xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                                . '</span>';
+                        }
+
+                        $html = $expiringIcon . '<a href="' . static::getUrl('edit', ['record' => $record]) . '" class="ep-title-link">' . e($state) . '</a>' .
                             '<button type="button" wire:click="mountTableAction(\'editTitle\', \'' . $record->getKey() . '\')" class="ep-title-edit" title="Quick Edit">' .
                                 '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>' .
                             '</button>';
