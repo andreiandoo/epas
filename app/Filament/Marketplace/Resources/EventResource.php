@@ -1882,7 +1882,6 @@ class EventResource extends Resource
                                                     ->seconds(false)
                                                     ->extraInputAttributes(['lang' => 'ro-RO'])
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
-                                                    ->visible(fn (SGet $get) => $get('is_active'))
                                                     ->columnSpan(6),
                                                 // Scheduling fields - shown when ticket is NOT active
                                                 Forms\Components\DateTimePicker::make('scheduled_at')
