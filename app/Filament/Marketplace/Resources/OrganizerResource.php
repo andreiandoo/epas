@@ -336,14 +336,6 @@ class OrganizerResource extends Resource
                                 ->openable()
                                 ->helperText('Drag & drop documentul de împuternicire (PDF sau imagine)')
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
-                                ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
-                                ->rules([
-                                    fn (\Filament\Schemas\Components\Utilities\Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
-                                        if ((bool) $get('has_proxy_authorization') && empty($value)) {
-                                            $fail('Documentul de împuternicire este obligatoriu.');
-                                        }
-                                    },
-                                ])
                                 ->columnSpanFull(),
 
                             Forms\Components\Select::make('proxy_admin_id')
