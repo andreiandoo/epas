@@ -62,6 +62,16 @@ class OrganizerResource extends Resource
         return $form->schema([
             SC\Grid::make(4)->schema([
                 SC\Group::make()->columnSpan(3)->schema([
+                    SC\Tabs::make('OrganizerTabs')
+                        ->persistTabInQueryString()
+                        ->tabs([
+
+                            // ── TAB 1: Cont ──
+                            SC\Tabs\Tab::make('Cont')
+                                ->key('cont')
+                                ->icon('heroicon-o-user')
+                                ->schema([
+
                     Section::make('Organizer Information')
                         ->icon('heroicon-o-user')
                         ->schema([
@@ -165,6 +175,14 @@ class OrganizerResource extends Resource
                                 ->native(false),
                         ])
                         ->columns(3),
+
+                                ]), // end Tab 1 (Cont)
+
+                            // ── TAB 2: Date legale ──
+                            SC\Tabs\Tab::make('Date legale')
+                                ->key('date-legale')
+                                ->icon('heroicon-o-building-office')
+                                ->schema([
 
                     Section::make('Company Information')
                         ->icon('heroicon-o-building-office')
@@ -341,6 +359,14 @@ class OrganizerResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
+                                ]), // end Tab 2 (Date legale)
+
+                            // ── TAB 3: Financiar ──
+                            SC\Tabs\Tab::make('Financiar')
+                                ->key('financiar')
+                                ->icon('heroicon-o-banknotes')
+                                ->schema([
+
                     Section::make('Bank Accounts')
                         ->icon('heroicon-o-credit-card')
                         ->description('Manage organizer bank accounts for payouts. The primary account will be used for payments.')
@@ -411,6 +437,14 @@ class OrganizerResource extends Resource
                                 ->helperText('Suprascrie setarea globală de zile scadență. Lasă gol pentru a folosi valoarea din Setări.'),
                         ])
                         ->columns(2),
+
+                                ]), // end Tab 3 (Financiar)
+
+                            // ── TAB 4: Bilete & Termeni ──
+                            SC\Tabs\Tab::make('Bilete & Termeni')
+                                ->key('bilete-termeni')
+                                ->icon('heroicon-o-ticket')
+                                ->schema([
 
                     Section::make('Termeni și Condiții Bilete')
                         ->icon('heroicon-o-document-text')
@@ -493,6 +527,37 @@ class OrganizerResource extends Resource
                                 ])
                                 ->columns(2),
                         ]),
+
+                                ]), // end Tab 4 (Bilete & Termeni)
+
+                            // ── TAB 5: Stats ──
+                            SC\Tabs\Tab::make('Stats')
+                                ->key('stats')
+                                ->icon('heroicon-o-chart-bar')
+                                ->schema([
+
+                                    Section::make('Financial Summary')
+                                        ->icon('heroicon-o-currency-dollar')
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
+                                        ->schema([
+                                            Forms\Components\Placeholder::make('financial_stats')
+                                                ->hiddenLabel()
+                                                ->content(fn (?MarketplaceOrganizer $record) => self::renderFinancialStats($record)),
+                                        ]),
+
+                                    Section::make('Events Stats')
+                                        ->icon('heroicon-o-chart-bar')
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->schema([
+                                            Forms\Components\Placeholder::make('events_stats')
+                                                ->hiddenLabel()
+                                                ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsStats($record)),
+                                        ]),
+
+                                ]), // end Tab 5 (Stats)
+
+                        ]), // end Tabs
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
                     // Organizer Preview Card (doar pe Edit/View)
@@ -548,89 +613,6 @@ class OrganizerResource extends Resource
                                 ->label('Verified At'),
                         ])
                         ->columns(1),
-
-                    Section::make('Financial Summary')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->compact()
-                    ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
-                    ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
-                    ->schema([
-                        Forms\Components\Placeholder::make('financial_stats')
-                            ->hiddenLabel()
-                            ->content(fn (?MarketplaceOrganizer $record) => self::renderFinancialStats($record)),
-                    ]),
-
-                    // Quick Actions (doar pe Edit/View)
-                    Section::make('Quick Actions')
-                        ->icon('heroicon-o-bolt')
-                        ->compact()
-                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
-                        ->schema([
-                            SC\Actions::make([
-                                Action::make('login_as')
-                                    ->label('Login as Organizer')
-                                    ->icon('heroicon-o-arrow-right-on-rectangle')
-                                    ->color('warning')
-                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
-                                Action::make('view_events')
-                                    ->label('View Events')
-                                    ->icon('heroicon-o-calendar')
-                                    ->color('gray')
-                                    ->url(fn ($record) => EventResource::getUrl('index', ['organizer' => $record->id])),
-                                Action::make('create_event')
-                                    ->label('Create Event')
-                                    ->icon('heroicon-o-plus')
-                                    ->color('gray')
-                                    ->url(fn ($record) => EventResource::getUrl('create', ['organizer' => $record->id])),
-                                Action::make('view_contract')
-                                    ->label('Vezi Contract')
-                                    ->icon('heroicon-o-document-text')
-                                    ->color('primary')
-                                    ->visible(fn ($record) => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
-                                        ->where('document_type', 'organizer_contract')
-                                        ->exists())
-                                    ->url(fn ($record) => \App\Models\OrganizerDocument::where('marketplace_organizer_id', $record->id)
-                                        ->where('document_type', 'organizer_contract')
-                                        ->latest('issued_at')
-                                        ->first()?->download_url, shouldOpenInNewTab: true),
-                                Action::make('view_balance')
-                                    ->label('View Balance')
-                                    ->icon('heroicon-o-wallet')
-                                    ->color('warning')
-                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance')),
-                                Action::make('create_payout')
-                                    ->label('Create Payout')
-                                    ->icon('heroicon-o-banknotes')
-                                    ->color('info')
-                                    ->visible(fn ($record) => $record->available_balance > 0)
-                                    ->url(fn ($record) => url('/marketplace/organizers/' . $record->id . '/balance')),
-                                Action::make('suspend')
-                                    ->label('Suspend Organizer')
-                                    ->icon('heroicon-o-x-circle')
-                                    ->color('danger')
-                                    ->requiresConfirmation()
-                                    ->visible(fn ($record) => $record->status === 'active')
-                                    ->action(fn ($record) => $record->update(['status' => 'suspended'])),
-                                Action::make('reactivate')
-                                    ->label('Reactivate')
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->color('success')
-                                    ->visible(fn ($record) => $record->status === 'suspended')
-                                    ->action(fn ($record) => $record->update(['status' => 'active'])),
-                            ]),
-                        ]),
-
-                    // Events Stats (doar pe Edit/View)
-                    Section::make('Events Stats')
-                        ->icon('heroicon-o-chart-bar')
-                        ->compact()
-                        ->collapsible()
-                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
-                        ->schema([
-                            Forms\Components\Placeholder::make('events_stats')
-                                ->hiddenLabel()
-                                ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsStats($record)),
-                        ]),
 
                     // Meta Info (doar pe Edit/View, collapsed)
                     Section::make('Meta Info')
