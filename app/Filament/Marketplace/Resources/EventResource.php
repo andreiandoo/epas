@@ -1882,7 +1882,7 @@ class EventResource extends Resource
                                                     ->native(true)
                                                     ->seconds(false)
                                                     ->extraInputAttributes(['lang' => 'ro-RO'])
-                                                    ->columnSpan(4),
+                                                    ->columnSpan(3),
                                                 Forms\Components\DateTimePicker::make('active_until')
                                                     ->label($t('Activ până la', 'Active until'))
                                                     ->inlineLabel($il)
@@ -1890,11 +1890,11 @@ class EventResource extends Resource
                                                     ->seconds(false)
                                                     ->extraInputAttributes(['lang' => 'ro-RO'])
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
-                                                    ->columnSpan(4),
+                                                    ->columnSpan(3),
                                                 Forms\Components\Toggle::make('autostart_when_previous_sold_out')
                                                     ->label($t('Autostart când precedentul e sold out', 'Autostart when previous sold out'))
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Activează automat când tipurile de bilete anterioare ajung la capacitate 0', 'Activate automatically when previous ticket types reach 0 capacity'))
-                                                    ->columnSpan(2),
+                                                    ->columnSpan(4),
                                             ])
                                             ->collapsible()
                                             ->collapsed()
