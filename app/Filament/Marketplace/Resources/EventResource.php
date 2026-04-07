@@ -2546,6 +2546,47 @@ class EventResource extends Resource
                                 SC\Tabs\Tab::make($t('Documente', 'Documents'))
                                     ->key('documente')
                                     ->icon('heroicon-o-document-text')
+                                    ->badge(function (?Event $record) {
+                                        if (!$record || !$record->exists) return null;
+
+                                        $isEventFinished = $record->isPast() || $record->status === 'archived';
+                                        $isEventPublished = (bool) $record->is_published;
+
+                                        $templates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
+                                            ->where('is_active', true)
+                                            ->where(function ($q) {
+                                                $q->whereIn('trigger', ['after_event_published', 'after_event_finished', 'after_payout_completed'])
+                                                  ->orWhereNull('trigger')
+                                                  ->orWhereIn('type', ['cerere_avizare', 'declaratie_impozite', 'decont', 'decont_ontop', 'decont_inclus', 'pv_distrugere']);
+                                            })
+                                            ->where('type', '!=', 'organizer_contract')
+                                            ->get();
+
+                                        $generatedTemplateIds = \App\Models\EventGeneratedDocument::where('event_id', $record->id)
+                                            ->pluck('marketplace_tax_template_id')
+                                            ->toArray();
+                                        $organizerDocTypes = \App\Models\OrganizerDocument::where('event_id', $record->id)
+                                            ->pluck('document_type')
+                                            ->toArray();
+
+                                        $available = 0;
+                                        foreach ($templates as $template) {
+                                            if (in_array($template->id, $generatedTemplateIds)) continue;
+                                            if (in_array($template->type, $organizerDocTypes)) continue;
+
+                                            $canGenerate = match ($template->trigger) {
+                                                'after_event_published' => $isEventPublished,
+                                                'after_event_finished' => $isEventFinished,
+                                                'after_payout_completed' => true,
+                                                default => true,
+                                            };
+
+                                            if ($canGenerate) $available++;
+                                        }
+
+                                        return $available > 0 ? (string) $available : null;
+                                    })
+                                    ->badgeColor('warning')
                                     ->schema([
                                         SC\Section::make($t('Documente eveniment', 'Event Documents'))
                                             ->icon('heroicon-o-document-text')
