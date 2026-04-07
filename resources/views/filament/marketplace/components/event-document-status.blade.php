@@ -69,16 +69,16 @@
             {{-- Content --}}
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ $template->name }}</span>
+                    <span class="text-sm font-medium truncate {{ $hasDocument ? 'text-slate-700' : 'text-gray-900 dark:text-white' }}">{{ $template->name }}</span>
                 </div>
                 <div class="flex items-center gap-1.5 mt-0.5">
                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{{ $typeLabel }}</span>
-                    <span class="text-[10px] text-gray-400">{{ $conditionLabel }}</span>
+                    <span class="text-[10px] {{ $hasDocument ? 'text-slate-700' : 'text-gray-400' }}">{{ $conditionLabel }}</span>
                 </div>
 
                 @if($hasDocument)
                     <div class="flex items-center gap-2 mt-1.5">
-                        <span class="text-[10px] text-green-600 dark:text-green-400">
+                        <span class="text-[10px] text-slate-700">
                             Generat {{ $doc->created_at?->format('d.m.Y H:i') }}
                         </span>
                         @php
