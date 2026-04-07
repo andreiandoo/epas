@@ -1639,8 +1639,8 @@ class EventResource extends Resource
                                                     ->label($t('Bilet de 1 zi — valabil în data', 'Single-day ticket — valid on date'))
                                                     ->inlineLabel($il)
                                                     ->native(true)
-                                                    ->minDate(fn (SGet $get) => $get('../../range_start_date'))
-                                                    ->maxDate(fn (SGet $get) => $get('../../range_end_date'))
+                                                    ->minDate(fn (SGet $get) => $get('../../range_start_date') ? \Carbon\Carbon::parse($get('../../range_start_date'))->format('Y-m-d') : null)
+                                                    ->maxDate(fn (SGet $get) => $get('../../range_end_date') ? \Carbon\Carbon::parse($get('../../range_end_date'))->format('Y-m-d') : null)
                                                     ->placeholder($t('Completează doar pentru bilete valabile o singură zi', 'Fill only for tickets valid on a single day'))
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol dacă biletul e valabil pe toată durata evenimentului. Completează o dată specifică pentru bilete de o zi.', 'Leave empty if ticket is valid for the entire event. Fill a specific date for single-day tickets.'))
                                                     ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
@@ -1867,7 +1867,6 @@ class EventResource extends Resource
                                                     ->native(true)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate($minDateForEvent)
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.', 'When this date is reached, the ticket type will be marked as sold out, even if there are still tickets in stock.'))
                                                     ->visible(fn (SGet $get) => $get('is_active'))
                                                     ->columnSpan(6),
@@ -1879,7 +1878,6 @@ class EventResource extends Resource
                                                     ->native(true)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate($minDateForEvent)
                                                     ->visible(fn (SGet $get) => !$get('is_active'))
                                                     ->columnSpan(4),
                                                 Forms\Components\Toggle::make('autostart_when_previous_sold_out')
@@ -1972,7 +1970,6 @@ class EventResource extends Resource
                                                     ->native(true)
                                                     ->seconds(false)
                                                     ->displayFormat('Y-m-d H:i')
-                                                    ->minDate($minDateForEvent)
                                                     ->live(onBlur: true)
                                                     ->skipRenderAfterStateUpdated()
                                                     ->afterStateUpdated(function ($state, SSet $set) {
