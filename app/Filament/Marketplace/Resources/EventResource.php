@@ -1908,6 +1908,17 @@ class EventResource extends Resource
                                                             $set('has_sale', true);
                                                         }
                                                     })
+                                                    ->afterStateUpdated(function ($state, SSet $set) {
+                                                        if (!$state) {
+                                                            // Clear all sale-related fields when toggle is disabled
+                                                            $set('price', null);
+                                                            $set('sale_price_cents', null);
+                                                            $set('discount_percent', null);
+                                                            $set('sales_start_at', null);
+                                                            $set('sales_end_at', null);
+                                                            $set('sale_stock', null);
+                                                        }
+                                                    })
                                                     ->columnSpan(12),
 
                                                 Forms\Components\TextInput::make('price')
