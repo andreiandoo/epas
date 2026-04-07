@@ -292,6 +292,55 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(2),
 
+                    Section::make(function () {
+                            $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
+                            $marketplaceName = $marketplaceAdmin?->marketplaceClient?->public_name
+                                ?? $marketplaceAdmin?->marketplaceClient?->name
+                                ?? 'Marketplace';
+                            return 'Împuternicire ' . $marketplaceName;
+                        })
+                        ->icon('heroicon-o-shield-check')
+                        ->description('Organizatorul împuternicește marketplace-ul prin intermediul unui reprezentant.')
+                        ->schema([
+                            Forms\Components\Toggle::make('has_proxy_authorization')
+                                ->label('Există împuternicire')
+                                ->default(false)
+                                ->live()
+                                ->columnSpanFull(),
+
+                            Forms\Components\FileUpload::make('proxy_authorization_file')
+                                ->label('Document de împuternicire')
+                                ->disk('public')
+                                ->directory('organizer-documents/proxy-authorizations')
+                                ->acceptedFileTypes(['image/*', 'application/pdf'])
+                                ->maxSize(10240)
+                                ->downloadable()
+                                ->openable()
+                                ->helperText('Drag & drop documentul de împuternicire (PDF sau imagine)')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
+                                ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
+                                ->columnSpanFull(),
+
+                            Forms\Components\Select::make('proxy_admin_id')
+                                ->label('Împuternicit din partea marketplace')
+                                ->options(function () {
+                                    $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
+                                    return \App\Models\MarketplaceAdmin::query()
+                                        ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id)
+                                        ->whereNotNull('proxy_full_name')
+                                        ->where('proxy_full_name', '!=', '')
+                                        ->orderBy('proxy_full_name')
+                                        ->pluck('proxy_full_name', 'id')
+                                        ->toArray();
+                                })
+                                ->searchable()
+                                ->placeholder('Selectează împuternicitul')
+                                ->helperText('Doar admin-ii cu datele de împuternicit completate apar în listă')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
+                                ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('has_proxy_authorization'))
+                                ->columnSpanFull(),
+                        ]),
+
                     Section::make('Bank Accounts')
                         ->icon('heroicon-o-credit-card')
                         ->description('Manage organizer bank accounts for payouts. The primary account will be used for payments.')
