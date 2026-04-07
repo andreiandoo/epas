@@ -74,7 +74,7 @@ class OrganizerInvoiceResource extends Resource
                             ->label('Descriere')
                             ->rows(2)
                             ->columnSpanFull(),
-                    ])->columns(1),
+                    ])->columns(2),
 
                 Section::make('Date')
                     ->schema([
@@ -91,7 +91,7 @@ class OrganizerInvoiceResource extends Resource
 
                         Forms\Components\DatePicker::make('period_end')
                             ->label('Perioadă până la'),
-                    ])->columns(1),
+                    ])->columns(4),
 
                 Section::make('Valori')
                     ->schema([
@@ -137,7 +137,7 @@ class OrganizerInvoiceResource extends Resource
                             ->label('Monedă')
                             ->default('RON')
                             ->maxLength(3),
-                    ])->columns(1),
+                    ])->columns(5),
 
                 // Organizer & items data section (single column)
                 Section::make('Date emitent / client / articole')
