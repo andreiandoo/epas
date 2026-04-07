@@ -9,10 +9,6 @@
     }
 }
 
-/* Header actions: full width so margin-left:auto can push secondary actions to the right */
-.fi-header-actions-ctn {
-    width: 100%;
-}
 
 /*
  * ═══════════════════════════════════════════════════════════════════════════
