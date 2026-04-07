@@ -2551,6 +2551,11 @@ class EventResource extends Resource
 
                                         $isEventFinished = $record->isPast() || $record->status === 'archived';
                                         $isEventPublished = (bool) $record->is_published;
+                                        $hasSales = \App\Models\Order::where('event_id', $record->id)
+                                            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                            ->where('total', '>', 0)
+                                            ->exists();
+                                        $decontTypes = ['decont', 'decont_ontop', 'decont_inclus'];
 
                                         $templates = MarketplaceTaxTemplate::where('marketplace_client_id', $record->marketplace_client_id)
                                             ->where('is_active', true)
@@ -2573,6 +2578,8 @@ class EventResource extends Resource
                                         foreach ($templates as $template) {
                                             if (in_array($template->id, $generatedTemplateIds)) continue;
                                             if (in_array($template->type, $organizerDocTypes)) continue;
+                                            // Decont templates require sales
+                                            if (in_array($template->type, $decontTypes) && !$hasSales) continue;
 
                                             $canGenerate = match ($template->trigger) {
                                                 'after_event_published' => $isEventPublished,

@@ -5,6 +5,15 @@
     $isEventFinished = $event->isPast() || $event->status === 'archived';
     $isEventPublished = (bool) $event->is_published;
 
+    // Check if event has any sales (paid/confirmed/completed orders with non-zero total)
+    $hasSales = \App\Models\Order::where('event_id', $event->id)
+        ->whereIn('status', ['paid', 'confirmed', 'completed'])
+        ->where('total', '>', 0)
+        ->exists();
+
+    // Decont template types — require sales to be generatable
+    $decontTypes = ['decont', 'decont_ontop', 'decont_inclus'];
+
     // Map trigger → human-readable condition
     $triggerLabels = [
         'after_event_published' => 'După publicare eveniment',
@@ -44,6 +53,12 @@
             $canGenerate = $triggerCanGenerate[$trigger] ?? true;
             $blockedReason = !$canGenerate ? ($triggerBlockedReason[$trigger] ?? '') : '';
             $conditionLabel = $triggerLabels[$trigger] ?? 'Manual';
+
+            // Decont templates require event sales
+            if (in_array($template->type, $decontTypes) && !$hasSales) {
+                $canGenerate = false;
+                $blockedReason = 'Nu există vânzări pe eveniment';
+            }
 
             // Check if already generated
             $existingDoc = $existingByTemplate[$template->id] ?? null;
