@@ -123,6 +123,96 @@ class EditEvent extends EditRecord
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();
 
+        // Statistics action
+        $actions[] = Actions\Action::make('statistics')
+            ->label('Statistici')
+            ->icon('heroicon-o-chart-pie')
+            ->color('gray')
+            ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
+
+        // Duplicate action
+        $actions[] = Actions\Action::make('duplicate')
+            ->label('Duplică')
+            ->icon('heroicon-o-document-duplicate')
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Duplică evenimentul')
+            ->modalDescription('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.')
+            ->modalSubmitActionLabel('Duplică')
+            ->action(function () {
+                $record = $this->record;
+
+                $newEvent = $record->replicate([
+                    'id', 'slug', 'event_series', 'created_at', 'updated_at',
+                    'status', 'is_public', 'submitted_at', 'approved_at', 'approved_by',
+                    'venue_name', 'city', 'starts_at', 'ends_at',
+                    'seo_title', 'seo_description', 'revenue_target', 'capacity', 'event_type',
+                ]);
+
+                $titleArray = $record->title ?? [];
+                if (is_array($titleArray)) {
+                    foreach ($titleArray as $locale => $value) {
+                        if (!empty($value)) {
+                            $titleArray[$locale] = '[Duplicat] ' . $value;
+                        }
+                    }
+                }
+                $newEvent->title = $titleArray;
+
+                $originalTitle = $record->title ?? [];
+                $baseTitle = is_array($originalTitle) ? ($originalTitle['ro'] ?? $originalTitle['en'] ?? reset($originalTitle)) : $originalTitle;
+                $baseSlug = \Illuminate\Support\Str::slug($baseTitle ?: 'eveniment');
+                $newEvent->slug = $baseSlug . '-temp-' . time();
+
+                $newEvent->is_featured = false;
+                $newEvent->is_homepage_featured = false;
+                $newEvent->is_general_featured = false;
+                $newEvent->is_category_featured = false;
+                $newEvent->is_published = false;
+                $newEvent->views_count = 0;
+                $newEvent->interested_count = 0;
+                $newEvent->save();
+
+                $newEvent->slug = $baseSlug . '-' . $newEvent->id;
+                $newEvent->save();
+
+                if ($record->eventTypes && $record->eventTypes->count() > 0) {
+                    $newEvent->eventTypes()->sync($record->eventTypes->pluck('id'));
+                }
+                if ($record->eventGenres && $record->eventGenres->count() > 0) {
+                    $newEvent->eventGenres()->sync($record->eventGenres->pluck('id'));
+                }
+                if ($record->artists && $record->artists->count() > 0) {
+                    $newEvent->artists()->sync($record->artists->pluck('id'));
+                }
+
+                foreach ($record->ticketTypes as $ticketType) {
+                    $newTicketType = $ticketType->replicate([
+                        'id', 'created_at', 'updated_at', 'series_start', 'series_end',
+                    ]);
+                    $newTicketType->event_id = $newEvent->id;
+                    $newTicketType->quota_sold = 0;
+                    $newTicketType->series_start = null;
+                    $newTicketType->series_end = null;
+                    $newTicketType->min_per_order = $ticketType->min_per_order ?? 1;
+                    $newTicketType->max_per_order = $ticketType->max_per_order ?? 10;
+                    $newTicketType->commission_type = $ticketType->commission_type;
+                    $newTicketType->commission_rate = $ticketType->commission_rate;
+                    $newTicketType->commission_fixed = $ticketType->commission_fixed;
+                    $newTicketType->commission_mode = $ticketType->commission_mode;
+                    $newTicketType->save();
+                }
+
+                $displayTitle = $newEvent->getTranslation('title') ?? 'Eveniment';
+                Notification::make()
+                    ->title('Eveniment duplicat')
+                    ->body("Evenimentul \"{$displayTitle}\" a fost creat.")
+                    ->success()
+                    ->send();
+
+                return redirect(EventResource::getUrl('edit', ['record' => $newEvent]));
+            });
+
         $actions[] = Actions\DeleteAction::make();
 
         return $actions;
