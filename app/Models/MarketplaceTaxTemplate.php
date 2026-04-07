@@ -171,9 +171,12 @@ class MarketplaceTaxTemplate extends Model
             '{{total_tickets_sold}}' => 'Total Tickets Sold',
             '{{total_sales_value}}' => 'Total Sales Value',
             '{{total_sales_currency}}' => 'Sales Currency',
-            '{{unsold_tickets_rows}}' => 'PV Distrugere: rânduri tabel bilete nevândute (serie, nr total, tarif, valoare, obs)',
-            '{{total_unsold_tickets}}' => 'PV Distrugere: total bilete nevândute',
-            '{{total_unsold_value}}' => 'PV Distrugere: valoare totală bilete nevândute',
+            '{{unsold_tickets_rows}}' => 'PV Distrugere: rânduri bilete nevândute (exclude abonamente)',
+            '{{total_unsold_tickets}}' => 'PV Distrugere: total bilete nevândute (exclude abonamente)',
+            '{{total_unsold_value}}' => 'PV Distrugere: valoare totală bilete nevândute (exclude abonamente)',
+            '{{unsold_subscriptions_rows}}' => 'PV Distrugere: rânduri abonamente nevândute',
+            '{{total_unsold_subscriptions}}' => 'PV Distrugere: total abonamente nevândute',
+            '{{total_unsold_subscriptions_value}}' => 'PV Distrugere: valoare totală abonamente nevândute',
         ],
         'Order' => [
             '{{order_number}}' => 'Order Number',
@@ -570,10 +573,15 @@ class MarketplaceTaxTemplate extends Model
             $ticketSeriesList = [];
             $ticketRowsHtml = '';
 
-            // PV Distrugere: unsold tickets rows
+            // PV Distrugere: unsold tickets rows (NON-subscription)
             $unsoldRowsHtml = '';
             $totalUnsold = 0;
             $totalUnsoldValue = 0;
+
+            // PV Distrugere: unsold subscriptions rows
+            $unsoldSubscriptionsRowsHtml = '';
+            $totalUnsoldSubscriptions = 0;
+            $totalUnsoldSubscriptionsValue = 0;
 
             if ($event->ticketTypes) {
                 foreach ($event->ticketTypes as $ticketType) {
@@ -581,6 +589,7 @@ class MarketplaceTaxTemplate extends Model
                     if (isset($ticketType->is_declarable) && $ticketType->is_declarable === false) {
                         continue;
                     }
+                    $isSubscription = (bool) ($ticketType->is_subscription ?? false);
                     $available = (int) ($ticketType->quota_total ?? $ticketType->capacity ?? 0);
                     $sold = (int) ($ticketType->quota_sold ?? 0);
                     $price = (float) ($ticketType->display_price ?? $ticketType->price ?? 0);
@@ -620,46 +629,35 @@ class MarketplaceTaxTemplate extends Model
 
                     // PV Distrugere: calculate unsold tickets with series range
                     $unsold = max(0, $available - $sold);
-                    if ($unsold > 0 && $seriesStart && $seriesEnd) {
-                        // Parse series_end to extract the numeric suffix
-                        // Format: AMB-{eventId}-{ttId}-{number} e.g. AMB-3822-STD-00500
-                        $seriesPrefix = '';
-                        $endNumber = 0;
-                        if (preg_match('/^(.+-)(\d+)$/', $seriesEnd, $mEnd)) {
+                    if ($unsold > 0) {
+                        $unsoldValue = $unsold * $price;
+                        $unsoldSeriesDisplay = '-';
+
+                        if ($seriesStart && $seriesEnd && preg_match('/^(.+-)(\d+)$/', $seriesEnd, $mEnd)) {
                             $seriesPrefix = $mEnd[1];
-                            $endNumber = (int) $mEnd[2];
+                            $unsoldStartNum = $sold + 1;
+                            $padLen = strlen($mEnd[2]);
+                            $unsoldSeriesStart = $seriesPrefix . str_pad($unsoldStartNum, $padLen, '0', STR_PAD_LEFT);
+                            $unsoldSeriesDisplay = $unsoldSeriesStart . ' — ' . $seriesEnd;
                         }
-                        // Unsold range: from (sold+1) to end
-                        $unsoldStartNum = $sold + 1;
-                        $padLen = strlen($mEnd[2] ?? '5');
-                        $unsoldSeriesStart = $seriesPrefix . str_pad($unsoldStartNum, $padLen, '0', STR_PAD_LEFT);
-                        $unsoldSeriesEnd = $seriesEnd;
-                        $unsoldSeriesDisplay = $unsoldSeriesStart . ' — ' . $unsoldSeriesEnd;
 
-                        $unsoldValue = $unsold * $price;
-                        $totalUnsold += $unsold;
-                        $totalUnsoldValue += $unsoldValue;
+                        $rowHtml = '<tr>';
+                        $rowHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $unsoldSeriesDisplay . '</td>';
+                        $rowHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $unsold . '</td>';
+                        $rowHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($price, 2) . '</td>';
+                        $rowHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($unsoldValue, 2) . '</td>';
+                        $rowHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $ticketName . '</td>';
+                        $rowHtml .= '</tr>';
 
-                        $unsoldRowsHtml .= '<tr>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $unsoldSeriesDisplay . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $unsold . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($price, 2) . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($unsoldValue, 2) . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $ticketName . '</td>';
-                        $unsoldRowsHtml .= '</tr>';
-                    } elseif ($unsold > 0) {
-                        // No series, just show count
-                        $unsoldValue = $unsold * $price;
-                        $totalUnsold += $unsold;
-                        $totalUnsoldValue += $unsoldValue;
-
-                        $unsoldRowsHtml .= '<tr>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">-</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $unsold . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($price, 2) . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . number_format($unsoldValue, 2) . '</td>';
-                        $unsoldRowsHtml .= '<td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">' . $ticketName . '</td>';
-                        $unsoldRowsHtml .= '</tr>';
+                        if ($isSubscription) {
+                            $totalUnsoldSubscriptions += $unsold;
+                            $totalUnsoldSubscriptionsValue += $unsoldValue;
+                            $unsoldSubscriptionsRowsHtml .= $rowHtml;
+                        } else {
+                            $totalUnsold += $unsold;
+                            $totalUnsoldValue += $unsoldValue;
+                            $unsoldRowsHtml .= $rowHtml;
+                        }
                     }
                 }
             }
@@ -685,10 +683,15 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_sales_value'] = number_format($totalSalesValue, 2);
             $variables['total_sales_currency'] = $currency;
 
-            // PV Distrugere variables — unsold tickets
+            // PV Distrugere variables — unsold tickets (excluding subscriptions)
             $variables['unsold_tickets_rows'] = $unsoldRowsHtml;
             $variables['total_unsold_tickets'] = $totalUnsold;
             $variables['total_unsold_value'] = number_format($totalUnsoldValue, 2);
+
+            // PV Distrugere variables — unsold subscriptions
+            $variables['unsold_subscriptions_rows'] = $unsoldSubscriptionsRowsHtml;
+            $variables['total_unsold_subscriptions'] = $totalUnsoldSubscriptions;
+            $variables['total_unsold_subscriptions_value'] = number_format($totalUnsoldSubscriptionsValue, 2);
         }
 
         // Order variables

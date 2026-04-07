@@ -55,6 +55,8 @@ class TicketType extends Model
         'admin_notes',
         // Declarable flag - included in cerere avizare documents
         'is_declarable',
+        // Subscription flag - true if this ticket type is an abonament
+        'is_subscription',
         // Multiplier for quantity increment/decrement step
         'multiplier',
         // Series fields for ticket numbering
@@ -84,6 +86,7 @@ class TicketType extends Model
         'is_refundable'  => 'boolean',
         'is_entry_ticket' => 'boolean',
         'is_declarable' => 'boolean',
+        'is_subscription' => 'boolean',
         'is_independent_stock' => 'boolean',
         'valid_date'     => 'date',
         'min_per_order'    => 'integer',

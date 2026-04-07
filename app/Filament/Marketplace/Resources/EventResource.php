@@ -1192,6 +1192,7 @@ class EventResource extends Resource
                                         $isEntryTicket = $state['is_entry_ticket'] ?? false;
                                         $isDeclarable = $state['is_declarable'] ?? true;
                                         $isRefundable = $state['is_refundable'] ?? false;
+                                        $isSubscription = $state['is_subscription'] ?? false;
 
                                         $badges = '';
                                         // Channel badge: Online (default) or Offline (app ticket)
@@ -1209,6 +1210,10 @@ class EventResource extends Resource
                                         // Returnabil badge
                                         if ($isRefundable) {
                                             $badges .= '<span style="font-size:10px;font-weight:600;color:#059669;background:#ecfdf5;padding:1px 6px;border-radius:4px;margin-left:4px;">Returnabil</span>';
+                                        }
+                                        // Abonament badge with subscription icon
+                                        if ($isSubscription) {
+                                            $badges .= '<span style="font-size:10px;font-weight:600;color:#a16207;background:#fefce8;padding:1px 6px;border-radius:4px;margin-left:4px;display:inline-flex;align-items:center;gap:3px;"><svg style="width:11px;height:11px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Abonament</span>';
                                         }
 
                                         if ($isActive) {
@@ -1294,6 +1299,26 @@ class EventResource extends Resource
                                             ->action(function (array $arguments, Forms\Components\Repeater $component) {
                                                 $state = $component->getState();
                                                 $state[$arguments['item']]['is_refundable'] = !($state[$arguments['item']]['is_refundable'] ?? false);
+                                                $component->state($state);
+                                            }),
+                                        Action::make('toggleAbonament')
+                                            ->iconButton()
+                                            ->icon(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_subscription'] ?? false)
+                                                    ? 'heroicon-s-clock'
+                                                    : 'heroicon-o-clock'
+                                            )
+                                            ->color(fn (array $arguments, Forms\Components\Repeater $component): string =>
+                                                ($component->getState()[$arguments['item']]['is_subscription'] ?? false)
+                                                    ? 'warning' : 'gray'
+                                            )
+                                            ->tooltip(fn (array $arguments, Forms\Components\Repeater $component) =>
+                                                ($component->getState()[$arguments['item']]['is_subscription'] ?? false)
+                                                    ? 'Abonament: ON (click to disable)' : 'Abonament: OFF (click to enable)'
+                                            )
+                                            ->action(function (array $arguments, Forms\Components\Repeater $component) {
+                                                $state = $component->getState();
+                                                $state[$arguments['item']]['is_subscription'] = !($state[$arguments['item']]['is_subscription'] ?? false);
                                                 $component->state($state);
                                             }),
                                         Action::make('duplicateTicketType')
@@ -1530,11 +1555,12 @@ class EventResource extends Resource
                                                     ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
                                                     ->columnSpan(3),
 
-                                                // Hidden fields for header toggle buttons (App, Declarabil, Returnabil)
+                                                // Hidden fields for header toggle buttons (App, Declarabil, Returnabil, Abonament)
                                                 // These are toggled via extraItemActions in the repeater header
                                                 Forms\Components\Hidden::make('is_entry_ticket')->default(false),
                                                 Forms\Components\Hidden::make('is_declarable')->default(true),
                                                 Forms\Components\Hidden::make('is_refundable')->default(false),
+                                                Forms\Components\Hidden::make('is_subscription')->default(false),
 
                                                 // Single-day ticket date (visible only for range events)
                                                 Forms\Components\DatePicker::make('valid_date')
