@@ -1772,12 +1772,14 @@ class EventResource extends Resource
                                                     ->label($t('Tip comision', 'Commission type'))
                                                     ->inlineLabel($il)
                                                     ->options([
-                                                        '' => $t('Moștenește setările', 'Inherit settings'),
+                                                        'inherit' => $t('Moștenește setările', 'Inherit settings'),
                                                         'percentage' => $t('Procentual', 'Percentage'),
                                                         'fixed' => $t('Fix', 'Fixed'),
                                                         'both' => $t('Procentual + Fix', 'Percentage + Fixed'),
                                                     ])
-                                                    ->default('')
+                                                    ->default('inherit')
+                                                    ->formatStateUsing(fn ($state) => $state ?: 'inherit')
+                                                    ->dehydrateStateUsing(fn ($state) => $state === 'inherit' ? null : $state)
                                                     ->live(onBlur: true)
                                                     ->afterStateUpdated(function ($state, SSet $set, $component) use ($marketplace) {
                                                         $defaultRate = $marketplace?->commission_rate ?? 5;
