@@ -184,27 +184,36 @@ class OrganizerInvoiceResource extends Resource
                                 $html .= '<hr style="border:none;border-top:1px solid currentColor;opacity:0.15;margin:20px 0;">';
 
                                 // ── CLIENT ──
-                                $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Client (organizator)</h4>';
+                                $isGeneralClient = ($record->meta['recipient_type'] ?? null) === 'general_client';
+                                $clientHeading = $isGeneralClient ? 'Client (general)' : 'Client (organizator)';
+                                $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">' . $clientHeading . '</h4>';
                                 $html .= '<table style="width:100%;">';
                                 $html .= $row('Nume', $warn($client['name'] ?? '', 'Nume'));
-                                $html .= $row('CUI (factură)', $warn($client['cui'] ?? '', 'CUI'));
-                                if ($org) {
-                                    $orgCui = $org->company_tax_id ?? '';
-                                    if ($orgCui && empty($client['cui'])) {
-                                        $html .= $row('CUI (profil)', '<span style="color:#22c55e;">' . e($orgCui) . ' — va fi completat automat la trimitere</span>');
-                                    } elseif ($orgCui) {
-                                        $html .= $row('CUI (profil)', e($orgCui));
-                                    } else {
-                                        $html .= $row('CUI (profil)', $warn('', 'CUI profil'));
-                                    }
-                                    $html .= $row('Reg. Com. (factură)', e($client['reg_com'] ?? '-'));
-                                    $html .= $row('Reg. Com. (profil)', e($org->company_registration ?? '-'));
-                                    $html .= $row('Adresă (factură)', e($client['address'] ?? '-'));
-                                    $orgAddr = implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county]));
-                                    $html .= $row('Adresă (profil)', e($orgAddr ?: '-'));
-                                    $html .= $row('Email', e($org->billing_email ?? $org->email ?? '-'));
+
+                                if ($isGeneralClient) {
+                                    // For general client, show only the static data — no organizer profile fallback
+                                    $html .= $row('CUI', e($client['cui'] ?? '') ?: '<span style="opacity:0.5;">—</span>');
+                                    $html .= $row('Adresă', e($client['address'] ?? '') ?: '<span style="opacity:0.5;">—</span>');
                                 } else {
-                                    $html .= $row('Organizator', '<span style="color:#ef4444;">Organizator negăsit</span>');
+                                    $html .= $row('CUI (factură)', $warn($client['cui'] ?? '', 'CUI'));
+                                    if ($org) {
+                                        $orgCui = $org->company_tax_id ?? '';
+                                        if ($orgCui && empty($client['cui'])) {
+                                            $html .= $row('CUI (profil)', '<span style="color:#22c55e;">' . e($orgCui) . ' — va fi completat automat la trimitere</span>');
+                                        } elseif ($orgCui) {
+                                            $html .= $row('CUI (profil)', e($orgCui));
+                                        } else {
+                                            $html .= $row('CUI (profil)', $warn('', 'CUI profil'));
+                                        }
+                                        $html .= $row('Reg. Com. (factură)', e($client['reg_com'] ?? '-'));
+                                        $html .= $row('Reg. Com. (profil)', e($org->company_registration ?? '-'));
+                                        $html .= $row('Adresă (factură)', e($client['address'] ?? '-'));
+                                        $orgAddr = implode(', ', array_filter([$org->company_address, $org->company_city, $org->company_county]));
+                                        $html .= $row('Adresă (profil)', e($orgAddr ?: '-'));
+                                        $html .= $row('Email', e($org->billing_email ?? $org->email ?? '-'));
+                                    } else {
+                                        $html .= $row('Organizator', '<span style="color:#ef4444;">Organizator negăsit</span>');
+                                    }
                                 }
                                 $html .= '</table>';
 
