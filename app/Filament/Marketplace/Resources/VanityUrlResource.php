@@ -99,9 +99,9 @@ class VanityUrlResource extends Resource
                             ->dehydrateStateUsing(fn ($state) => strtolower(trim($state)))
                             ->rules([
                                 'regex:/^[a-z][a-z0-9-]{0,99}$/',
-                                function (string $attribute, $value, \Closure $fail) {
+                                fn () => function (string $attribute, $value, \Closure $fail) {
                                     $value = strtolower(trim($value));
-                                    if (in_array($value, self::RESERVED_PATHS, true)) {
+                                    if (in_array($value, \App\Filament\Marketplace\Resources\VanityUrlResource::RESERVED_PATHS, true)) {
                                         $fail("Slug-ul „{$value}\" este rezervat și nu poate fi folosit.");
                                     }
                                 },
