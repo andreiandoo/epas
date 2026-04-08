@@ -279,8 +279,16 @@ class ViewPayout extends ViewRecord
                 Actions\Action::make('download_invoice')
                     ->label('Descarca factura')
                     ->icon('heroicon-o-arrow-down-tray')
-                    ->visible(fn () => $this->record->invoice !== null)
-                    ->url(fn () => $this->record->invoice?->proforma_pdf_url ?? $this->record->invoice?->fiscal_pdf_url, shouldOpenInNewTab: true),
+                    ->visible(function () {
+                        $inv = $this->record->invoice;
+                        if (!$inv) return false;
+                        $meta = $inv->meta ?? [];
+                        return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                    })
+                    ->url(function () {
+                        $meta = $this->record->invoice?->meta ?? [];
+                        return $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
+                    }, shouldOpenInNewTab: true),
 
                 Actions\Action::make('register_invoice')
                     ->label('Inregistreaza eFactura')
@@ -302,7 +310,12 @@ class ViewPayout extends ViewRecord
                 Actions\Action::make('send_invoice')
                     ->label('Trimite factura')
                     ->icon('heroicon-o-envelope')
-                    ->visible(fn () => $this->record->invoice !== null)
+                    ->visible(function () {
+                        $inv = $this->record->invoice;
+                        if (!$inv) return false;
+                        $meta = $inv->meta ?? [];
+                        return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                    })
                     ->form([
                         Forms\Components\TextInput::make('email')
                             ->label('Adresa email')
