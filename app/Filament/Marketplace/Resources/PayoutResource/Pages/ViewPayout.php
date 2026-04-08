@@ -303,7 +303,8 @@ class ViewPayout extends ViewRecord
                     ->requiresConfirmation()
                     ->modalDescription(function () {
                         $providerLabel = $this->getAccountingProviderLabel() ?? 'software-ul de contabilitate';
-                        return "Factura va fi trimisa ca FACTURĂ FISCALĂ in {$providerLabel}.";
+                        $docLabel = $this->isAccountingDraftMode() ? 'DRAFT' : 'FACTURĂ FISCALĂ';
+                        return "Factura va fi trimisa ca {$docLabel} in {$providerLabel}.";
                     })
                     ->visible(function () {
                         if (!$this->record->invoice) return false;
@@ -522,6 +523,29 @@ class ViewPayout extends ViewRecord
             'keez' => 'Keez',
             default => ucfirst($connector->provider),
         };
+    }
+
+    /**
+     * Check if the configured accounting connector has use_draft enabled.
+     */
+    protected function isAccountingDraftMode(): bool
+    {
+        $marketplace = $this->record->marketplaceClient;
+        if (!$marketplace) return false;
+
+        $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'connected')
+            ->first();
+
+        if (!$connector) return false;
+
+        try {
+            $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
+            return (bool) ($auth['use_draft'] ?? false);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
