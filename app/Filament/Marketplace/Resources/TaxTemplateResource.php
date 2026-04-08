@@ -561,6 +561,15 @@ class TaxTemplateResource extends Resource
             'total_sales_value' => '54,950.00',
             'total_sales_currency' => 'RON',
 
+            // Decont impozit pe spectacole
+            'music_stamp_value' => '1,099.00',
+            'taxable_income' => '53,851.00',
+            'tax_due' => '1,615.53',
+            'document_number' => '00123',
+            'tax_registry_tax_rate' => '3',
+            'tax_registry_coat_of_arms' => '<div style="width:48px;height:48px;border:1px dashed #999;display:inline-block;line-height:48px;color:#999;font-size:9px;">stemă</div>',
+            'proxy_signature_image' => '<span style="color:#999;font-style:italic;">[Semnătura electronică]</span>',
+
             // PV Distrugere - unsold tickets
             'unsold_tickets_rows' => '<tr><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">AMB-100-GA-00298 — AMB-100-GA-00500</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">203</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">150.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">30,450.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">General Admission</td></tr><tr><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">AMB-100-VIP-00068 — AMB-100-VIP-00100</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">33</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">350.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">11,550.00</td><td style="border:1.5px solid #111; padding:3px 5px; font-size:9px; text-align:center; vertical-align:middle;">VIP</td></tr>',
             'total_unsold_tickets' => '236',
