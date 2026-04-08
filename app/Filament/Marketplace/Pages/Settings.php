@@ -62,6 +62,8 @@ class Settings extends Page
                 'general_invoice_client_name' => $settings['general_invoice_client_name'] ?? 'Client general',
                 'general_invoice_client_cui' => $settings['general_invoice_client_cui'] ?? '',
                 'general_invoice_client_address' => $settings['general_invoice_client_address'] ?? '',
+                'admin_notification_orders_email' => $settings['admin_notifications']['orders_email'] ?? '',
+                'admin_notification_service_orders_email' => $settings['admin_notifications']['service_orders_email'] ?? '',
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $marketplace->name ?? $marketplace->name ?? '',
@@ -197,8 +199,7 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('general_invoice_client_name')
                                             ->label('Denumire')
                                             ->maxLength(255)
-                                            ->default('Client general')
-                                            ->required(),
+                                            ->default('Client general'),
                                         Forms\Components\TextInput::make('general_invoice_client_cui')
                                             ->label('CUI / CIF')
                                             ->maxLength(50),
@@ -612,6 +613,21 @@ class Settings extends Page
                                             ->email()
                                             ->placeholder('alerts@exemplu.ro'),
                                     ])->columns(2),
+
+                                SC\Section::make('Notificări admin')
+                                    ->description('Adrese de email către care se trimit notificări automate. Lasă gol pentru a dezactiva un anumit tip de notificare.')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('admin_notification_orders_email')
+                                            ->label('Comenzi bilete & cereri de retur')
+                                            ->email()
+                                            ->placeholder('admin@exemplu.ro')
+                                            ->helperText('Primește notificare la fiecare comandă plătită și la fiecare cerere de retur.'),
+                                        Forms\Components\TextInput::make('admin_notification_service_orders_email')
+                                            ->label('Comenzi servicii extra')
+                                            ->email()
+                                            ->placeholder('admin@exemplu.ro')
+                                            ->helperText('Primește notificare la fiecare comandă de servicii noi (featuring, email, tracking, campaign).'),
+                                    ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Domains')
@@ -679,6 +695,10 @@ class Settings extends Page
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';
         $settings['general_invoice_client_cui'] = $data['general_invoice_client_cui'] ?? '';
         $settings['general_invoice_client_address'] = $data['general_invoice_client_address'] ?? '';
+        $settings['admin_notifications'] = [
+            'orders_email' => $data['admin_notification_orders_email'] ?? '',
+            'service_orders_email' => $data['admin_notification_service_orders_email'] ?? '',
+        ];
 
         // Document Series
         $settings['order_prefix'] = $data['order_prefix'] ?? 'CMD';

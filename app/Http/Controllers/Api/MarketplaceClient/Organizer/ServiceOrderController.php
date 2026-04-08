@@ -193,6 +193,45 @@ class ServiceOrderController extends BaseController
                 'service_end_date' => $request->config['end_date'] ?? null,
             ]);
 
+            // Notify marketplace admin (if configured)
+            try {
+                $marketplace = \App\Models\MarketplaceClient::find($organizer->marketplace_client_id);
+                if ($marketplace) {
+                    $eventTitle = '';
+                    if ($event) {
+                        $eventTitle = is_array($event->title)
+                            ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: '')
+                            : ($event->title ?? '');
+                    }
+                    (new \App\Services\MarketplaceEmailService($marketplace))->sendAdminNotification(
+                        slug: 'admin_new_service_order',
+                        settingKey: 'service_orders_email',
+                        variables: [
+                            'service_order_number' => $order->order_number ?? $order->uuid ?? $order->id,
+                            'service_type' => $request->service_type,
+                            'organizer_name' => $organizer->company_name ?? $organizer->name ?? '',
+                            'event_name' => $eventTitle,
+                            'total_amount' => number_format((float) $total, 2) . ' RON',
+                            'view_url' => url("/marketplace/service-orders/{$order->id}"),
+                        ],
+                        fallbackSubject: 'Comandă servicii nouă: {{service_order_number}}',
+                        fallbackHtml: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">'
+                            . '<h2 style="color:#7c3aed;">Comandă servicii extra nouă</h2>'
+                            . '<p><strong>{{service_order_number}}</strong></p>'
+                            . '<table cellpadding="6" style="border-collapse:collapse;">'
+                            . '<tr><td style="color:#6b7280;">Tip serviciu</td><td>{{service_type}}</td></tr>'
+                            . '<tr><td style="color:#6b7280;">Organizator</td><td>{{organizer_name}}</td></tr>'
+                            . '<tr><td style="color:#6b7280;">Eveniment</td><td>{{event_name}}</td></tr>'
+                            . '<tr><td style="color:#6b7280;">Total</td><td><strong>{{total_amount}}</strong></td></tr>'
+                            . '</table>'
+                            . '<p style="margin-top:16px;"><a href="{{view_url}}" style="background:#7c3aed;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Vezi comanda</a></p>'
+                            . '</div>',
+                    );
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('Admin service order notification failed: ' . $e->getMessage(), ['service_order_id' => $order->id]);
+            }
+
             return $this->success([
                 'order' => $this->formatOrderDetailed($order->fresh(['event'])),
             ], 'Order created successfully', 201);

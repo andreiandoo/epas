@@ -58,6 +58,9 @@ class MarketplaceEmailTemplate extends Model
         // Admin Notifications
         'admin_event_cancelled' => 'Admin: Event Cancelled by Organizer',
         'admin_event_postponed' => 'Admin: Event Postponed by Organizer',
+        'admin_new_order' => 'Admin: Comandă nouă bilete',
+        'admin_refund_request' => 'Admin: Cerere de retur',
+        'admin_new_service_order' => 'Admin: Comandă servicii extra',
         // Stock Alerts
         'stock_low_alert' => 'Low Stock Alert',
         // Gift Card Templates
@@ -194,6 +197,33 @@ class MarketplaceEmailTemplate extends Model
                 'event_date' => 'Event date',
                 'venue_name' => 'Venue name',
                 'admin_url' => 'Admin edit URL',
+            ],
+            'admin_new_order' => [
+                'order_number' => 'Order number',
+                'customer_name' => 'Customer name',
+                'customer_email' => 'Customer email',
+                'total_amount' => 'Order total',
+                'currency' => 'Currency',
+                'tickets_count' => 'Number of tickets',
+                'event_name' => 'Event name',
+                'view_url' => 'Admin order URL',
+            ],
+            'admin_refund_request' => [
+                'refund_reference' => 'Refund reference',
+                'order_number' => 'Order number',
+                'customer_name' => 'Customer name',
+                'customer_email' => 'Customer email',
+                'refund_amount' => 'Refund amount',
+                'refund_reason' => 'Refund reason',
+                'view_url' => 'Admin refund URL',
+            ],
+            'admin_new_service_order' => [
+                'service_order_number' => 'Service order number',
+                'service_type' => 'Service type',
+                'organizer_name' => 'Organizer name',
+                'event_name' => 'Event name',
+                'total_amount' => 'Order total',
+                'view_url' => 'Admin service order URL',
             ],
             'stock_low_alert' => [
                 'organizer_name' => 'Organizer name',

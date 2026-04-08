@@ -23,6 +23,83 @@ class MarketplaceEmailService
     }
 
     /**
+     * Send a notification to the marketplace admin recipient configured in
+     * marketplace_clients.settings.admin_notifications.{$settingKey}.
+     *
+     * Falls back to a hardcoded subject/HTML when no DB template with $slug
+     * exists, so notifications work out of the box without seeders.
+     */
+    public function sendAdminNotification(
+        string $slug,
+        string $settingKey,
+        array $variables,
+        string $fallbackSubject,
+        string $fallbackHtml
+    ): bool {
+        $settings = $this->marketplace->settings ?? [];
+        $recipient = $settings['admin_notifications'][$settingKey] ?? '';
+
+        if (!$recipient) {
+            return false;
+        }
+
+        if (!$this->marketplace->hasMailConfigured()) {
+            Log::warning('Admin notification skipped — SMTP not configured', [
+                'slug' => $slug,
+                'marketplace_id' => $this->marketplace->id,
+            ]);
+            return false;
+        }
+
+        $template = MarketplaceEmailTemplate::where('marketplace_client_id', $this->marketplace->id)
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
+
+        if ($template) {
+            $rendered = $template->render($variables);
+            $subject = $rendered['subject'];
+            $html = $rendered['body_html'];
+        } else {
+            $subject = $this->renderFallback($fallbackSubject, $variables);
+            $html = $this->renderFallback($fallbackHtml, $variables);
+        }
+
+        try {
+            $transport = $this->marketplace->getMailTransport();
+            $email = (new Email())
+                ->from(new Address(
+                    $this->marketplace->getEmailFromAddress(),
+                    $this->marketplace->getEmailFromName()
+                ))
+                ->to(new Address($recipient))
+                ->subject($subject)
+                ->html($html);
+
+            $transport->send($email);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('Admin notification send failed', [
+                'slug' => $slug,
+                'recipient' => $recipient,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Replace {{var}} placeholders in a fallback template string.
+     */
+    protected function renderFallback(string $template, array $variables): string
+    {
+        foreach ($variables as $key => $value) {
+            $template = str_replace('{{' . $key . '}}', (string) ($value ?? ''), $template);
+        }
+        return $template;
+    }
+
+    /**
      * Send ticket purchase confirmation
      */
     public function sendTicketPurchaseEmail(Order $order): bool

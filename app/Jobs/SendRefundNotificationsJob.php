@@ -45,6 +45,7 @@ class SendRefundNotificationsJob implements ShouldQueue
             case self::TYPE_CREATED:
                 $this->notifyCustomerRefundReceived($emailService);
                 $this->notifyAdminsNewRefundRequest();
+                $this->notifyAdminRecipientNewRefundRequest($emailService);
                 break;
 
             case self::TYPE_APPROVED:
@@ -127,6 +128,48 @@ class SendRefundNotificationsJob implements ShouldQueue
                 $bodyHtml,
                 $admin->name
             );
+        }
+    }
+
+    /**
+     * Notify the marketplace admin recipient configured in
+     * settings.admin_notifications.orders_email (separate from per-admin notifications above).
+     */
+    protected function notifyAdminRecipientNewRefundRequest(MarketplaceEmailService $emailService): void
+    {
+        $refund = $this->refundRequest;
+        $order = $refund->order;
+        $customer = $refund->customer;
+
+        try {
+            $emailService->sendAdminNotification(
+                slug: 'admin_refund_request',
+                settingKey: 'orders_email',
+                variables: [
+                    'refund_reference' => $refund->reference,
+                    'order_number' => $order->order_number ?? str_pad($order->id, 8, '0', STR_PAD_LEFT),
+                    'customer_name' => $customer->full_name ?? '',
+                    'customer_email' => $customer->email ?? '',
+                    'refund_amount' => number_format((float) $refund->requested_amount, 2) . ' RON',
+                    'refund_reason' => $refund->reason_label ?? '',
+                    'view_url' => url("/marketplace/refund-requests/{$refund->id}"),
+                ],
+                fallbackSubject: 'Cerere retur nouă: {{refund_reference}}',
+                fallbackHtml: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">'
+                    . '<h2 style="color:#dc2626;">Cerere de retur nouă</h2>'
+                    . '<p><strong>{{refund_reference}}</strong></p>'
+                    . '<table cellpadding="6" style="border-collapse:collapse;">'
+                    . '<tr><td style="color:#6b7280;">Comandă</td><td>{{order_number}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Client</td><td>{{customer_name}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Email</td><td>{{customer_email}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Sumă</td><td><strong>{{refund_amount}}</strong></td></tr>'
+                    . '<tr><td style="color:#6b7280;">Motiv</td><td>{{refund_reason}}</td></tr>'
+                    . '</table>'
+                    . '<p style="margin-top:16px;"><a href="{{view_url}}" style="background:#dc2626;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Vezi cererea</a></p>'
+                    . '</div>',
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('Admin refund recipient notification failed: ' . $e->getMessage(), ['refund_id' => $refund->id]);
         }
     }
 

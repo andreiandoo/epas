@@ -819,6 +819,45 @@ class PaymentController extends BaseController
             'order_id' => $order->id,
             'template_slug' => 'ticket_purchase',
         ]);
+
+        // Notify marketplace admin (if configured)
+        try {
+            $eventTitle = '';
+            if ($order->event) {
+                $eventTitle = is_array($order->event->title)
+                    ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title) ?: '')
+                    : ($order->event->title ?? '');
+            }
+            (new \App\Services\MarketplaceEmailService($marketplace))->sendAdminNotification(
+                slug: 'admin_new_order',
+                settingKey: 'orders_email',
+                variables: [
+                    'order_number' => $order->order_number ?? $order->id,
+                    'customer_name' => $customerName,
+                    'customer_email' => $customerEmail,
+                    'total_amount' => number_format((float) ($order->total ?? 0), 2),
+                    'currency' => $order->currency ?? 'RON',
+                    'tickets_count' => $order->tickets()->count(),
+                    'event_name' => $eventTitle,
+                    'view_url' => url("/marketplace/orders/{$order->id}"),
+                ],
+                fallbackSubject: 'Comandă nouă: {{order_number}}',
+                fallbackHtml: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">'
+                    . '<h2 style="color:#2563eb;">Comandă nouă plătită</h2>'
+                    . '<p><strong>{{order_number}}</strong></p>'
+                    . '<table cellpadding="6" style="border-collapse:collapse;">'
+                    . '<tr><td style="color:#6b7280;">Client</td><td>{{customer_name}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Email</td><td>{{customer_email}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Total</td><td><strong>{{total_amount}} {{currency}}</strong></td></tr>'
+                    . '<tr><td style="color:#6b7280;">Bilete</td><td>{{tickets_count}}</td></tr>'
+                    . '<tr><td style="color:#6b7280;">Eveniment</td><td>{{event_name}}</td></tr>'
+                    . '</table>'
+                    . '<p style="margin-top:16px;"><a href="{{view_url}}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Vezi în dashboard</a></p>'
+                    . '</div>',
+            );
+        } catch (\Throwable $e) {
+            Log::warning('Admin order notification failed: ' . $e->getMessage(), ['order_id' => $order->id]);
+        }
     }
 
     /**
