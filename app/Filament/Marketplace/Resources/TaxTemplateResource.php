@@ -495,6 +495,7 @@ class TaxTemplateResource extends Resource
             'marketplace_phone' => $marketplace?->contact_phone ?? $marketplace?->phone ?? '+40 21 987 6543',
             'marketplace_website' => $marketplace?->domain ?? 'www.marketplace.ro',
             'marketplace_bank_name' => $marketplace?->bank_name ?? 'Banca Transilvania',
+            'marketplace_iban' => $marketplace?->bank_account ?? 'RO49BTRL1234567890123456',
             'marketplace_contract_number' => $marketplace?->getCurrentContractNumber() ?? '1',
             'marketplace_signature_image' => $marketplace?->signature_image
                 ? '<img src="' . \Illuminate\Support\Facades\Storage::disk('public')->url($marketplace->signature_image) . '" alt="Semnătura" style="max-height:80px;max-width:200px;" />'

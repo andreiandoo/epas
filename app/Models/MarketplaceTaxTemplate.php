@@ -398,6 +398,7 @@ class MarketplaceTaxTemplate extends Model
             $variables['marketplace_phone'] = $marketplace->contact_phone ?? '';
             $variables['marketplace_website'] = $marketplace->website ?? $marketplace->domain ?? '';
             $variables['marketplace_bank_name'] = $marketplace->bank_name ?? '';
+            $variables['marketplace_iban'] = $marketplace->bank_account ?? '';
             $variables['marketplace_contract_number'] = $incrementContractNumber
                 ? $marketplace->getNextContractNumber()
                 : $marketplace->getCurrentContractNumber();
@@ -728,6 +729,11 @@ class MarketplaceTaxTemplate extends Model
                         $musicStampValue += (float) $tax->value;
                     }
                 }
+            }
+
+            // Taxă monument istoric (2%) — dacă venue-ul are flag-ul activ
+            if ($event->venue && ($event->venue->has_historical_monument_tax ?? false)) {
+                $musicStampValue += round($totalSalesValue * 2 / 100, 2);
             }
 
             // Încasări supuse impozitului = total vânzări - taxe aplicate
