@@ -168,16 +168,22 @@ class OrganizerInvoiceResource extends Resource
                                 // ── EMITENT ──
                                 $html .= '<h4 style="font-weight:700;font-size:13px;text-transform:uppercase;opacity:0.5;margin:0 0 8px;letter-spacing:0.05em;">Emitent (din factură)</h4>';
                                 $html .= '<table style="width:100%;">';
-                                $html .= $row('Nume', $warn($issuer['name'] ?? '', 'Nume'));
-                                $html .= $row('CUI', $warn($issuer['cui'] ?? '', 'CUI'));
-                                if ($marketplace && !empty($marketplace->cui) && empty($issuer['cui'])) {
-                                    $html .= $row('CUI (din setări)', '<span style="color:#22c55e;">' . e($marketplace->cui) . ' — va fi completat automat la trimitere</span>');
-                                }
-                                $html .= $row('Reg. Com.', e($issuer['reg_com'] ?? '-'));
-                                $html .= $row('Adresă', e($issuer['address'] ?? '-'));
-                                $html .= $row('Bancă', e($issuer['bank_name'] ?? '-'));
-                                $html .= $row('IBAN', e($issuer['iban'] ?? '-'));
-                                $html .= $row('Plătitor TVA', ($issuer['vat_payer'] ?? false) ? 'Da' : 'Nu');
+                                // Fallback to current marketplace settings for any field missing on the invoice meta
+                                $effName = $issuer['name'] ?? ($marketplace?->company_name ?? $marketplace?->name ?? '');
+                                $effCui = $issuer['cui'] ?? ($marketplace?->cui ?? '');
+                                $effRegCom = $issuer['reg_com'] ?? ($marketplace?->reg_com ?? '');
+                                $effAddress = $issuer['address'] ?? trim(implode(', ', array_filter([$marketplace?->address, $marketplace?->city, $marketplace?->state])));
+                                $effBank = $issuer['bank_name'] ?? ($marketplace?->bank_name ?? '');
+                                $effIban = $issuer['iban'] ?? ($marketplace?->bank_account ?? '');
+                                $effVatPayer = $issuer['vat_payer'] ?? ($marketplace?->vat_payer ?? false);
+
+                                $html .= $row('Nume', $warn($effName, 'Nume'));
+                                $html .= $row('CUI', $warn($effCui, 'CUI'));
+                                $html .= $row('Reg. Com.', e($effRegCom ?: '-'));
+                                $html .= $row('Adresă', e($effAddress ?: '-'));
+                                $html .= $row('Bancă', e($effBank ?: '-'));
+                                $html .= $row('IBAN', e($effIban ?: '-'));
+                                $html .= $row('Plătitor TVA', $effVatPayer ? 'Da' : 'Nu');
                                 $html .= '</table>';
 
                                 // ── SEPARATOR ──
