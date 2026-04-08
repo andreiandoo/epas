@@ -532,11 +532,14 @@ class OrganizerInvoiceResource extends Resource
 
         $itemsHtml = '';
         foreach ($items as $item) {
+            $qty = (float) ($item['quantity'] ?? 1);
+            $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+            $total = (float) ($item['total'] ?? $item['amount'] ?? ($qty * $price));
             $itemsHtml .= '<tr>';
             $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;">' . e($item['description'] ?? '') . '</td>';
-            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">' . ($item['quantity'] ?? 0) . '</td>';
-            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">' . number_format($item['price'] ?? 0, 2) . ' ' . $currency . '</td>';
-            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">' . number_format($item['total'] ?? 0, 2) . ' ' . $currency . '</td>';
+            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">' . $qty . '</td>';
+            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;">' . number_format($price, 2) . ' ' . $currency . '</td>';
+            $itemsHtml .= '<td style="padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">' . number_format($total, 2) . ' ' . $currency . '</td>';
             $itemsHtml .= '</tr>';
         }
 

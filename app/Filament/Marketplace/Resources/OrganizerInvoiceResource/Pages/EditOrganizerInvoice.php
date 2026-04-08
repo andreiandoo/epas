@@ -38,19 +38,14 @@ class EditOrganizerInvoice extends EditRecord
                 ->label('Descarcă PDF')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
-                ->action(function () {
-                    $invoice = $this->record;
-                    $html = OrganizerInvoiceResource::renderInvoiceHtml($invoice);
-                    if (!str_contains($html, '<html')) {
-                        $html = '<html><head><meta charset="UTF-8"><style>body{font-family:DejaVu Sans,sans-serif;font-size:12px;}</style></head><body>' . $html . '</body></html>';
-                    }
-                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
-                    $pdf->setPaper('A4', 'portrait');
-                    $fileName = 'factura_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $invoice->number) . '.pdf';
-                    return response()->streamDownload(fn () => print($pdf->output()), $fileName, [
-                        'Content-Type' => 'application/pdf',
-                    ]);
-                }),
+                ->visible(function () {
+                    $meta = $this->record->meta ?? [];
+                    return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                })
+                ->url(function () {
+                    $meta = $this->record->meta ?? [];
+                    return $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
+                }, shouldOpenInNewTab: true),
 
             Actions\DeleteAction::make()
                 ->label('Șterge factura')

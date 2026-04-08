@@ -307,7 +307,11 @@ class ViewPayout extends ViewRecord
                         return "Factura va fi trimisa ca {$docLabel} in {$providerLabel}.";
                     })
                     ->visible(function () {
-                        if (!$this->record->invoice) return false;
+                        $invoice = $this->record->invoice;
+                        if (!$invoice) return false;
+                        // Hide if already submitted to accounting provider
+                        $meta = $invoice->meta ?? [];
+                        if (!empty($meta['accounting']['external_ref'])) return false;
                         $marketplace = $this->record->marketplaceClient;
                         if (!$marketplace) return false;
                         return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
@@ -610,6 +614,42 @@ class ViewPayout extends ViewRecord
         }
 
         $addressParts = array_map('trim', explode(',', $client['address'] ?? ''));
+
+        // For general_client invoices, don't leak organizer email/country
+        if ($recipientType === 'general_client') {
+            $customerEmail = '';
+            $customerCountry = '';
+        } else {
+            $customerEmail = $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '';
+            $customerCountry = 'Romania';
+        }
+
+        // Build a friendly description from the payout's event (single line: name, date, venue, city)
+        $event = $this->record->event;
+        $eventDescription = '';
+        if ($event) {
+            $title = $event->title;
+            if (is_array($title)) {
+                $title = $title['ro'] ?? $title['en'] ?? reset($title) ?: '';
+            }
+            $eventDate = '';
+            if ($event->event_date) {
+                $eventDate = $event->event_date->format('d.m.Y');
+            } elseif ($event->range_start_date) {
+                $eventDate = $event->range_start_date->format('d.m.Y');
+            }
+            $venueName = '';
+            $venueCity = '';
+            if ($event->venue) {
+                $venueName = $event->venue->name;
+                if (is_array($venueName)) {
+                    $venueName = $venueName['ro'] ?? $venueName['en'] ?? reset($venueName) ?: '';
+                }
+                $venueCity = $event->venue->city ?? '';
+            }
+            $eventDescription = trim(implode(', ', array_filter([$title, $eventDate, $venueName, $venueCity])));
+        }
+
         $invoiceData = [
             'seller_vat' => $issuer['cui'] ?? '',
             'issue_date' => $invoice->issue_date?->format('Y-m-d') ?? date('Y-m-d'),
@@ -622,18 +662,19 @@ class ViewPayout extends ViewRecord
                 'name' => $client['name'] ?? '',
                 'vat_number' => $client['cui'] ?? '',
                 'reg_number' => $client['reg_com'] ?? '',
-                'email' => $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '',
+                'email' => $customerEmail,
                 'address' => [
                     'street' => $addressParts[0] ?? '',
                     'city' => $addressParts[1] ?? '',
                     'county' => $addressParts[2] ?? '',
-                    'country' => 'Romania',
+                    'country' => $customerCountry,
                 ],
             ],
-            'lines' => array_map(function ($item) {
+            'lines' => array_map(function ($item) use ($eventDescription) {
+                // Short product name + event details as description (avoids duplication)
                 return [
-                    'product_name' => $item['description'] ?? '',
-                    'description' => $item['description'] ?? '',
+                    'product_name' => 'Comision servicii ticketing',
+                    'description' => $eventDescription ?: ($item['description'] ?? ''),
                     'quantity' => (float) ($item['quantity'] ?? 1),
                     'unit_price' => (float) ($item['unit_price'] ?? $item['price'] ?? 0),
                     'tax_rate' => 19,
