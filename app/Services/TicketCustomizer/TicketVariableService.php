@@ -237,6 +237,20 @@ class TicketVariableService
                         'type' => 'url',
                         'example' => 'https://tickets.example.com/t/WLMVWB2G',
                     ],
+                    [
+                        'path' => 'ticket.description',
+                        'label' => 'Ticket Description',
+                        'description' => 'Description of the ticket type',
+                        'type' => 'text',
+                        'example' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
+                    ],
+                    [
+                        'path' => 'ticket.perks',
+                        'label' => 'Perks / Conditions',
+                        'description' => 'List of perks/conditions for this ticket type (joined by bullet points)',
+                        'type' => 'text',
+                        'example' => '• Acces VIP Lounge • Drink de bun venit • Loc rezervat',
+                    ],
                 ],
             ],
 
@@ -478,6 +492,8 @@ class TicketVariableService
                 'price_detail' => 'Preț: 299,00 lei + 5% taxă procesare (313,95 lei)',
                 'fees_text' => 'Prețul include 5% Timbru Muzical, 2% Taxa de Monument Istoric',
                 'verify_url' => 'https://tickets.example.com/t/WLMVWB2G',
+                'description' => 'Acces VIP cu drink de bun venit și loc rezervat în primele rânduri',
+                'perks' => '• Acces VIP Lounge • Drink de bun venit • Loc rezervat',
             ],
             'buyer' => [
                 'name' => 'Ion Popescu',
@@ -645,6 +661,8 @@ class TicketVariableService
                 'price_detail' => $priceDetail,
                 'fees_text' => $feesText,
                 'verify_url' => $ticket->getVerifyUrl(),
+                'description' => $this->resolveTicketDescription($ticketType),
+                'perks' => $this->resolveTicketPerks($ticketType),
             ],
             'buyer' => [
                 'name' => $buyerName,
@@ -765,6 +783,51 @@ class TicketVariableService
         }
 
         return '';
+    }
+
+    /**
+     * Resolve ticket type description (translatable or plain)
+     */
+    private function resolveTicketDescription($ticketType): string
+    {
+        if (!$ticketType) return '';
+
+        $desc = $ticketType->description ?? '';
+
+        if (is_array($desc)) {
+            return $desc['ro'] ?? $desc['en'] ?? (reset($desc) ?: '');
+        }
+
+        return (string) $desc;
+    }
+
+    /**
+     * Resolve ticket type perks/conditions list (joined as bullet text)
+     */
+    private function resolveTicketPerks($ticketType): string
+    {
+        if (!$ticketType) return '';
+
+        $perks = $ticketType->perks ?? [];
+
+        if (!is_array($perks) || empty($perks)) {
+            return '';
+        }
+
+        // Each perk may be a string or an array with 'text' / 'value'
+        $items = array_map(function ($perk) {
+            if (is_string($perk)) return trim($perk);
+            if (is_array($perk)) {
+                return trim($perk['text'] ?? $perk['value'] ?? $perk['name'] ?? '');
+            }
+            return '';
+        }, $perks);
+
+        $items = array_filter($items, fn ($v) => $v !== '');
+
+        if (empty($items)) return '';
+
+        return '• ' . implode(' • ', $items);
     }
 
     private function buildSerialNumber(Ticket $ticket): string
