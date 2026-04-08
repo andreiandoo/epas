@@ -40,7 +40,7 @@ class Artist extends Model
         'twitter_url', 'wiki_url', 'lastfm_url', 'itunes_url', 'musicbrainz_url',
         'main_image_url', 'logo_url', 'portrait_url',
         'youtube_videos',
-        'city', 'country', 'phone', 'email',
+        'city', 'state', 'country', 'phone', 'email',
         'manager_first_name','manager_last_name','manager_email','manager_phone','manager_website',
         'agent_first_name','agent_last_name','agent_email','agent_phone','agent_website',
         'booking_agency',

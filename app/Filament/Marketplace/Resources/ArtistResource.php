@@ -10,6 +10,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Set as SSet;
+use Filament\Schemas\Components\Utilities\Get as SGet;
+use App\Support\Locations;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -184,15 +186,29 @@ class ArtistResource extends Resource
                         SC\Section::make('Locație')
                             ->icon('heroicon-o-map-pin')
                             ->schema([
-                                Forms\Components\TextInput::make('city')
-                                    ->label('Oraș')
-                                    ->maxLength(120)
-                                    ->placeholder('e.g. București'),
-                                Forms\Components\TextInput::make('country')
+                                Forms\Components\Select::make('country')
                                     ->label('Țară')
-                                    ->maxLength(120)
-                                    ->placeholder('e.g. România'),
-                            ])->columns(1),
+                                    ->options(Locations::countries())
+                                    ->searchable()
+                                    ->live()
+                                    ->preload(false)
+                                    ->afterStateUpdated(function (SSet $set) {
+                                        $set('state', null);
+                                        $set('city', null);
+                                    }),
+                                Forms\Components\Select::make('state')
+                                    ->label('Județ / Regiune')
+                                    ->options(fn (SGet $get) => $get('country') ? Locations::states($get('country')) : [])
+                                    ->searchable()
+                                    ->live()
+                                    ->preload(false)
+                                    ->afterStateUpdated(fn (SSet $set) => $set('city', null)),
+                                Forms\Components\Select::make('city')
+                                    ->label('Oraș')
+                                    ->options(fn (SGet $get) => ($get('country') && $get('state')) ? Locations::cityOptions($get('country'), $get('state')) : [])
+                                    ->searchable()
+                                    ->preload(false),
+                            ])->columns(3),
 
                         // TYPES & GENRES
                         SC\Section::make('Categorii')
