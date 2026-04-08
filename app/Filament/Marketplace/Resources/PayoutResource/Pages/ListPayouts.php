@@ -1003,7 +1003,7 @@ class ListPayouts extends ListRecords
 
         \Filament\Notifications\Notification::make()
             ->title('Decont generat')
-            ->body("Decontul {$payout->reference} ({$balance} RON) a fost creat.")
+            ->body("Decontul {$payout->reference} (" . number_format($netAmount, 2) . " RON) a fost creat.")
             ->success()
             ->send();
 
