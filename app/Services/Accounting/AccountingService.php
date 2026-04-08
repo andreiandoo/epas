@@ -142,18 +142,29 @@ class AccountingService
         $testResult = $adapter->testConnection();
 
         // Save connector using marketplace_client_id
-        DB::table('acc_connectors')->updateOrInsert(
-            ['marketplace_client_id' => $marketplaceClientId, 'provider' => $provider],
-            [
-                'auth' => Crypt::encryptString(json_encode($credentials)),
-                'status' => $testResult['connected'] ? 'connected' : 'error',
-                'settings' => json_encode($settings),
-                'last_test_at' => now(),
-                'last_error' => $testResult['connected'] ? null : $testResult['message'],
-                'updated_at' => now(),
-                'created_at' => DB::raw('COALESCE(created_at, NOW())'),
-            ]
-        );
+        $existing = DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('provider', $provider)
+            ->first();
+
+        $values = [
+            'auth' => Crypt::encryptString(json_encode($credentials)),
+            'status' => $testResult['connected'] ? 'connected' : 'error',
+            'settings' => json_encode($settings),
+            'last_test_at' => now(),
+            'last_error' => $testResult['connected'] ? null : $testResult['message'],
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('acc_connectors')->where('id', $existing->id)->update($values);
+        } else {
+            DB::table('acc_connectors')->insert(array_merge($values, [
+                'marketplace_client_id' => $marketplaceClientId,
+                'provider' => $provider,
+                'created_at' => now(),
+            ]));
+        }
 
         return [
             'success' => $testResult['connected'],
@@ -183,18 +194,29 @@ class AccountingService
         $testResult = $adapter->testConnection();
 
         // Save connector
-        DB::table('acc_connectors')->updateOrInsert(
-            ['tenant_id' => $tenantId, 'provider' => $provider],
-            [
-                'auth' => Crypt::encryptString(json_encode($credentials)),
-                'status' => $testResult['connected'] ? 'connected' : 'error',
-                'settings' => json_encode($settings),
-                'last_test_at' => now(),
-                'last_error' => $testResult['connected'] ? null : $testResult['message'],
-                'updated_at' => now(),
-                'created_at' => DB::raw('COALESCE(created_at, NOW())'),
-            ]
-        );
+        $existing = DB::table('acc_connectors')
+            ->where('tenant_id', $tenantId)
+            ->where('provider', $provider)
+            ->first();
+
+        $values = [
+            'auth' => Crypt::encryptString(json_encode($credentials)),
+            'status' => $testResult['connected'] ? 'connected' : 'error',
+            'settings' => json_encode($settings),
+            'last_test_at' => now(),
+            'last_error' => $testResult['connected'] ? null : $testResult['message'],
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('acc_connectors')->where('id', $existing->id)->update($values);
+        } else {
+            DB::table('acc_connectors')->insert(array_merge($values, [
+                'tenant_id' => $tenantId,
+                'provider' => $provider,
+                'created_at' => now(),
+            ]));
+        }
 
         return [
             'success' => $testResult['connected'],
@@ -208,15 +230,28 @@ class AccountingService
      */
     public function createMapping(string $tenantId, string $entity, string $localRef, string $remoteRef, array $meta = []): void
     {
-        DB::table('acc_mappings')->updateOrInsert(
-            ['tenant_id' => $tenantId, 'entity' => $entity, 'local_ref' => $localRef],
-            [
-                'remote_ref' => $remoteRef,
-                'meta' => json_encode($meta),
-                'updated_at' => now(),
-                'created_at' => DB::raw('COALESCE(created_at, NOW())'),
-            ]
-        );
+        $existing = DB::table('acc_mappings')
+            ->where('tenant_id', $tenantId)
+            ->where('entity', $entity)
+            ->where('local_ref', $localRef)
+            ->first();
+
+        $values = [
+            'remote_ref' => $remoteRef,
+            'meta' => json_encode($meta),
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('acc_mappings')->where('id', $existing->id)->update($values);
+        } else {
+            DB::table('acc_mappings')->insert(array_merge($values, [
+                'tenant_id' => $tenantId,
+                'entity' => $entity,
+                'local_ref' => $localRef,
+                'created_at' => now(),
+            ]));
+        }
     }
 
     /**
