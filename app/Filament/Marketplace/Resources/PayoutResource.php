@@ -310,6 +310,30 @@ class PayoutResource extends Resource
                                     ->weight('bold')
                                     ->size('lg')
                                     ->color('success'),
+
+                                Infolists\Components\TextEntry::make('commission_mode')
+                                    ->label('Mod comision')
+                                    ->badge()
+                                    ->formatStateUsing(fn ($state) => match ($state) {
+                                        'included' => 'Inclus în preț',
+                                        'added_on_top' => 'Adăugat peste preț',
+                                        default => 'Nesetat (decont vechi)',
+                                    })
+                                    ->color(fn ($state) => match ($state) {
+                                        'included' => 'success',
+                                        'added_on_top' => 'warning',
+                                        default => 'gray',
+                                    }),
+
+                                Infolists\Components\TextEntry::make('invoice_recipient_type')
+                                    ->label('Destinatar factură')
+                                    ->badge()
+                                    ->formatStateUsing(fn ($state) => match ($state) {
+                                        'organizer' => 'Organizator',
+                                        'general_client' => 'Client general',
+                                        default => '—',
+                                    })
+                                    ->color(fn ($state) => $state === 'general_client' ? 'warning' : 'info'),
                             ])
                             ->columns(4),
 
