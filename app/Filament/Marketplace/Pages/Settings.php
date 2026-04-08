@@ -59,6 +59,9 @@ class Settings extends Page
                 'bank_account' => $marketplace->bank_account,
                 'currency' => $marketplace->currency ?? 'EUR',
                 'invoice_preparer' => $settings['invoice_preparer'] ?? '',
+                'general_invoice_client_name' => $settings['general_invoice_client_name'] ?? 'Client general',
+                'general_invoice_client_cui' => $settings['general_invoice_client_cui'] ?? '',
+                'general_invoice_client_address' => $settings['general_invoice_client_address'] ?? '',
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $marketplace->name ?? $marketplace->name ?? '',
@@ -187,6 +190,23 @@ class Settings extends Page
                                             ->maxLength(255)
                                             ->helperText('Numele persoanei care semnează/completează facturile și documentele fiscale.'),
                                     ])->columns(3),
+
+                                SC\Section::make('Client general (facturi comision peste preț)')
+                                    ->description('Folosit ca destinatar pe facturile de comision când evenimentul are modul "comision peste preț" (comisionul a fost achitat de clienții finali, nu de organizator).')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('general_invoice_client_name')
+                                            ->label('Denumire')
+                                            ->maxLength(255)
+                                            ->default('Client general')
+                                            ->required(),
+                                        Forms\Components\TextInput::make('general_invoice_client_cui')
+                                            ->label('CUI / CIF')
+                                            ->maxLength(50),
+                                        Forms\Components\TextInput::make('general_invoice_client_address')
+                                            ->label('Adresă')
+                                            ->maxLength(255)
+                                            ->columnSpanFull(),
+                                    ])->columns(2),
 
                                 SC\Section::make('Address')
                                     ->schema([
@@ -656,6 +676,9 @@ class Settings extends Page
         ];
         $settings['site_template'] = $data['site_template'];
         $settings['invoice_preparer'] = $data['invoice_preparer'] ?? '';
+        $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';
+        $settings['general_invoice_client_cui'] = $data['general_invoice_client_cui'] ?? '';
+        $settings['general_invoice_client_address'] = $data['general_invoice_client_address'] ?? '';
 
         // Document Series
         $settings['order_prefix'] = $data['order_prefix'] ?? 'CMD';

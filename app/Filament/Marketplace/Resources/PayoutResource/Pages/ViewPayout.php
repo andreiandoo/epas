@@ -210,11 +210,10 @@ class ViewPayout extends ViewRecord
                         ?? ($payout->commission_mode === 'added_on_top' ? 'general_client' : 'organizer');
 
                     if ($recipientType === 'general_client') {
-                        $generalClientName = $marketplace->settings['general_invoice_client_name'] ?? 'Client general';
                         $client = [
-                            'name' => $generalClientName,
-                            'cui' => '',
-                            'address' => '',
+                            'name' => $marketplace->settings['general_invoice_client_name'] ?? 'Client general',
+                            'cui' => $marketplace->settings['general_invoice_client_cui'] ?? '',
+                            'address' => $marketplace->settings['general_invoice_client_address'] ?? '',
                         ];
                     } else {
                         $client = [
