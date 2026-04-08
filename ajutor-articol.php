@@ -110,7 +110,7 @@ $cssBundle = 'listing';
     <?php include 'includes/header.php'; ?>
 
     <!-- Breadcrumb & Header -->
-    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-18 mobile:mt-18">
+    <section class="px-6 py-8 bg-white border-b border-gray-200 mt-17 mobile:mt-18">
         <div class="max-w-4xl mx-auto">
             <!-- Breadcrumb -->
             <nav class="flex flex-wrap items-center gap-2 mb-6 text-sm text-gray-500">

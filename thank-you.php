@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="confetti-container" id="confetti"></div>
 
     <!-- Progress Steps - All Complete -->
-    <div class="bg-white border-b border-gray-200 mt-18 mobile:mt-20">
+    <div class="bg-white border-b border-gray-200 mt-17 mobile:mt-20">
         <div class="px-4 py-4 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">

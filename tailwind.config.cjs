@@ -54,7 +54,7 @@ module.exports = {
     'px-2', 'px-3', 'px-4', 'px-6', 'px-8',
     'py-1', 'py-2', 'py-3', 'py-4', 'py-6', 'py-8',
     'mb-2', 'mb-3', 'mb-4', 'mb-6', 'mb-8',
-    'mt-2', 'mt-4', 'mt-6', 'mt-8', 'mt-18',
+    'mt-2', 'mt-4', 'mt-6', 'mt-8', 'mt-18', 'mt-17',
     // Height values
     'h-32', 'h-40', 'h-52', 'h-64', 'h-72', 'h-96',
     // Text sizes used in JS
