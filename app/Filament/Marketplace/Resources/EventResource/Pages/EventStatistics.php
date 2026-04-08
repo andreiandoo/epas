@@ -86,7 +86,7 @@ class EventStatistics extends Page
     {
         // Query orders directly by event_id for marketplace orders
         $revenue = Order::where('event_id', $this->record->id)
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->sum('total');
 
         // If no results, fallback to summing from ticket types (for older orders using total_cents)
@@ -95,7 +95,7 @@ class EventStatistics extends Page
             $revenueCents = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
                     $q->whereIn('ticket_type_id', $ticketTypeIds);
                 })
-                ->whereIn('status', ['paid', 'confirmed'])
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
                 ->sum('total_cents');
 
             if ($revenueCents > 0) {
@@ -174,7 +174,22 @@ class EventStatistics extends Page
      */
     public function getTotalTicketsSold(): int
     {
-        return $this->record->ticketTypes()->sum('quota_sold') ?? 0;
+        // Count non-cancelled tickets actually issued for this event
+        // (quota_sold on ticket_types includes tickets that were later cancelled).
+        $count = Ticket::where('event_id', $this->record->id)
+            ->where('is_cancelled', false)
+            ->count();
+
+        if ($count === 0) {
+            $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
+            if ($ticketTypeIds->isNotEmpty()) {
+                $count = Ticket::whereIn('ticket_type_id', $ticketTypeIds)
+                    ->where('is_cancelled', false)
+                    ->count();
+            }
+        }
+
+        return $count;
     }
 
     /**
@@ -241,7 +256,7 @@ class EventStatistics extends Page
 
         // Get orders data
         $orders = Order::where('event_id', $this->record->id)
-            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->get(['total', 'subtotal']);
 
         $customerPaymentTotal = 0;  // What customers actually paid
@@ -440,7 +455,7 @@ class EventStatistics extends Page
         return [
             'total' => array_sum($orders),
             'pending' => $orders['pending'] ?? 0,
-            'paid' => ($orders['paid'] ?? 0) + ($orders['confirmed'] ?? 0),
+            'paid' => ($orders['paid'] ?? 0) + ($orders['confirmed'] ?? 0) + ($orders['completed'] ?? 0),
             'cancelled' => $orders['cancelled'] ?? 0,
             'refunded' => $orders['refunded'] ?? 0,
             'failed' => $orders['failed'] ?? 0,
@@ -462,7 +477,8 @@ class EventStatistics extends Page
         // Get sales per day per ticket type
         $sales = Ticket::whereIn('ticket_type_id', $ticketTypeIds)
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed']))
+            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
+            ->where('is_cancelled', false)
             ->select(
                 'ticket_type_id',
                 DB::raw('DATE(created_at) as date'),
