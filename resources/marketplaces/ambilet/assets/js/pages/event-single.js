@@ -1302,21 +1302,33 @@ const EventPage = {
 
         } else if (durationMode === 'multi_day' && e.multi_slots && e.multi_slots.length > 0) {
             // Multi-day mode - show dates from slots
-            const firstSlot = e.multi_slots[0];
-            const firstDate = new Date(firstSlot.date);
-
-            // Show the selected performance's date, or nearest upcoming slot
+            // Filter out slots that have no active performance (or are in the past with no performance)
             const now = new Date();
+            const activeSlots = e.multi_slots.filter(function(s) {
+                // If we have performances, only keep slots that match an active performance
+                if (e.performances && e.performances.length > 0) {
+                    return e.performances.some(function(p) {
+                        return p.date === s.date && p.start_time === s.start_time;
+                    });
+                }
+                // Fallback: keep only slots in the future
+                return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
+            });
+
+            // If all slots are filtered out, fall back to all multi_slots
+            const slotsToShow = activeSlots.length > 0 ? activeSlots : e.multi_slots;
+            const firstSlot = slotsToShow[0];
+
+            // Show the selected performance's date, or nearest upcoming active slot
             let headerSlot = null;
-            // If a performance is selected, match its date/time to a slot
             if (e.selectedPerformanceId && e.performances) {
                 const selPerf = e.performances.find(p => p.id === e.selectedPerformanceId);
                 if (selPerf) {
-                    headerSlot = e.multi_slots.find(s => s.date === selPerf.date && s.start_time === selPerf.start_time);
+                    headerSlot = slotsToShow.find(s => s.date === selPerf.date && s.start_time === selPerf.start_time);
                 }
             }
             if (!headerSlot) {
-                headerSlot = e.multi_slots.find(function(s) {
+                headerSlot = slotsToShow.find(function(s) {
                     return new Date(s.date + 'T' + (s.start_time || '00:00')) >= now;
                 }) || firstSlot;
             }
@@ -1326,13 +1338,15 @@ const EventPage = {
             document.getElementById(this.elements.eventMonth).textContent = months[headerDate.getMonth()];
             document.getElementById(this.elements.eventWeekday).textContent = weekdays[headerDate.getDay()];
 
-            if (e.multi_slots.length === 1) {
+            const remainingCount = slotsToShow.length - 1;
+
+            if (remainingCount <= 0) {
                 document.getElementById(this.elements.eventDateFull).textContent =
                     headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear();
             } else {
                 document.getElementById(this.elements.eventDateFull).textContent =
                     headerDate.getDate() + ' ' + months[headerDate.getMonth()] + ' ' + headerDate.getFullYear() +
-                    ' (+' + (e.multi_slots.length - 1) + ' ' + (e.multi_slots.length === 2 ? 'altă dată' : 'alte date') + ')';
+                    ' (+' + remainingCount + ' ' + (remainingCount === 1 ? 'altă dată' : 'alte date') + ')';
             }
 
         } else {
