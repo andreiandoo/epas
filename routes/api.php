@@ -1346,6 +1346,7 @@ use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as Marketplac
 use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 use App\Http\Controllers\Api\MarketplaceClient\SearchController as MarketplaceSearchController;
 use App\Http\Controllers\Api\MarketplaceClient\BlogController as MarketplaceBlogController;
+use App\Http\Controllers\Api\MarketplaceClient\VanityUrlController as MarketplaceVanityUrlController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1376,6 +1377,11 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.tracking.scripts');
     Route::get('/tracking/organizer/{organizerId}/scripts', [MarketplaceConfigController::class, 'organizerTrackingScripts'])
         ->name('api.marketplace-client.tracking.organizer-scripts');
+
+    // Vanity URLs (short URLs / custom slugs)
+    Route::get('/vanity/{slug}', [MarketplaceVanityUrlController::class, 'resolve'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('api.marketplace-client.vanity.resolve');
 
     // Global Search
     Route::get('/search', [MarketplaceSearchController::class, 'search'])
