@@ -465,11 +465,11 @@ RewriteRule ^ - [L]
 # Must come after all other explicit routes
 # ============================================
 
-# Handle single city pages - dynamic routing for any city slug
-# The city.php file validates the slug against the API and redirects if not found
+# Handle single-segment slugs via vanity URL resolver, with fallback to city pages.
+# vanity.php first checks marketplace_vanity_urls; if no match it includes city.php.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^([a-z][a-z0-9-]{1,50})/?$ city.php?slug=$1 [L,QSA]
+RewriteRule ^([a-z][a-z0-9-]{1,50})/?$ vanity.php?slug=$1 [L,QSA]
 
 # ============================================
 # FALLBACK: Remove .php extension from URLs
