@@ -25,17 +25,21 @@ if (empty($vanitySlug) || !preg_match('/^[a-z][a-z0-9-]{0,99}$/', $vanitySlug)) 
 // Resolve via API
 $response = api_get('/vanity/' . urlencode($vanitySlug));
 
+// api_get() wraps the API payload as ['success' => bool, 'data' => <payload>]
+// so the actual {found, type, ...} fields live under $response['data'].
+$payload = $response['data'] ?? [];
+
 // API returns {found: false} OR HTTP 404 → fall through to city
-if (empty($response) || empty($response['found']) || $response['found'] !== true) {
+if (empty($response['success']) || empty($payload['found']) || $payload['found'] !== true) {
     include __DIR__ . '/city.php';
     return;
 }
 
-$type = $response['type'] ?? null;
+$type = $payload['type'] ?? null;
 
 // External URL → 302 redirect
 if ($type === 'external_url') {
-    $targetUrl = $response['target_url'] ?? null;
+    $targetUrl = $payload['target_url'] ?? null;
     if ($targetUrl) {
         header('Location: ' . $targetUrl, true, 302);
         exit;
@@ -46,7 +50,7 @@ if ($type === 'external_url') {
 
 // For internal targets, inject the real entity slug into $_GET so the
 // included entry file picks it up via its existing $_GET['slug'] reading.
-$targetSlug = $response['target_slug'] ?? null;
+$targetSlug = $payload['target_slug'] ?? null;
 if (!$targetSlug) {
     include __DIR__ . '/city.php';
     return;
