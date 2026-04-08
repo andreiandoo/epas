@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\OrganizerDocumentResource;
 use App\Filament\Marketplace\Resources\OrganizerInvoiceResource;
 use App\Models\Invoice;
 use App\Models\OrganizerDocument;
+use App\Services\Accounting\AccountingService;
 use App\Services\EFactura\EFacturaService;
 use Filament\Actions;
 use Filament\Forms;
@@ -290,21 +291,28 @@ class ViewPayout extends ViewRecord
                         return $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
                     }, shouldOpenInNewTab: true),
 
-                Actions\Action::make('register_invoice')
-                    ->label('Inregistreaza eFactura')
-                    ->icon('heroicon-o-paper-airplane')
-                    ->color('info')
+                Actions\Action::make('send_to_accounting')
+                    ->label(function () {
+                        $providerLabel = $this->getAccountingProviderLabel();
+                        return $providerLabel
+                            ? "Trimite la {$providerLabel}"
+                            : 'Trimite la contabilitate';
+                    })
+                    ->icon('heroicon-o-calculator')
+                    ->color('warning')
                     ->requiresConfirmation()
-                    ->modalDescription('Factura va fi trimisa catre sistemul eFactura ANAF.')
-                    ->visible(fn () => $this->record->invoice !== null)
+                    ->modalDescription(function () {
+                        $providerLabel = $this->getAccountingProviderLabel() ?? 'software-ul de contabilitate';
+                        return "Factura va fi trimisa ca FACTURĂ FISCALĂ in {$providerLabel}.";
+                    })
+                    ->visible(function () {
+                        if (!$this->record->invoice) return false;
+                        $marketplace = $this->record->marketplaceClient;
+                        if (!$marketplace) return false;
+                        return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
+                    })
                     ->action(function () {
-                        try {
-                            $efacturaService = app(EFacturaService::class);
-                            $efacturaService->queueMarketplaceInvoice($this->record->invoice);
-                            Notification::make()->title('Factura trimisa in eFactura')->success()->send();
-                        } catch (\Exception $e) {
-                            Notification::make()->title('Eroare eFactura')->body($e->getMessage())->danger()->send();
-                        }
+                        $this->sendInvoiceToAccounting($this->record->invoice);
                     }),
 
                 Actions\Action::make('send_invoice')
@@ -489,6 +497,169 @@ class ViewPayout extends ViewRecord
             Notification::make()->title("Factură trimisă la {$email}")->success()->send();
         } catch (\Exception $e) {
             Notification::make()->title('Eroare la trimitere')->body($e->getMessage())->danger()->send();
+        }
+    }
+
+    /**
+     * Get the human-readable label for the configured accounting provider, or null if none.
+     */
+    protected function getAccountingProviderLabel(): ?string
+    {
+        $marketplace = $this->record->marketplaceClient;
+        if (!$marketplace) return null;
+
+        $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'connected')
+            ->first();
+
+        if (!$connector) return null;
+
+        return match ($connector->provider) {
+            'oblio' => 'Oblio.eu',
+            'smartbill' => 'SmartBill',
+            'fgo' => 'FGO',
+            'keez' => 'Keez',
+            default => ucfirst($connector->provider),
+        };
+    }
+
+    /**
+     * Send the invoice to the configured accounting provider as a fiscal invoice
+     * and store the resulting external ref + PDF URL on invoice.meta.
+     */
+    protected function sendInvoiceToAccounting(\App\Models\Invoice $invoice): void
+    {
+        $marketplace = $this->record->marketplaceClient;
+        if (!$marketplace) {
+            Notification::make()->danger()->title('Marketplace negăsit.')->send();
+            return;
+        }
+
+        $meta = $invoice->meta ?? [];
+        $issuer = $meta['issuer'] ?? [];
+        $client = $meta['client'] ?? [];
+        $items = $meta['items'] ?? [];
+
+        // Auto-fill issuer from marketplace if missing
+        $issuer['name'] = $issuer['name'] ?? ($marketplace->company_name ?? $marketplace->name);
+        $issuer['cui'] = $issuer['cui'] ?? ($marketplace->cui ?? '');
+        $issuer['reg_com'] = $issuer['reg_com'] ?? ($marketplace->reg_com ?? '');
+        if (empty($issuer['address'])) {
+            $issuer['address'] = implode(', ', array_filter([$marketplace->address, $marketplace->city, $marketplace->state]));
+        }
+        $issuer['bank_name'] = $issuer['bank_name'] ?? ($marketplace->bank_name ?? '');
+        $issuer['iban'] = $issuer['iban'] ?? ($marketplace->bank_account ?? '');
+
+        $errors = [];
+        if (empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
+        if (empty($items)) $errors[] = 'Factura nu conține articole.';
+
+        // For 'organizer' recipient type the CUI is required by Oblio; for 'general_client' allow empty
+        $recipientType = $meta['recipient_type'] ?? 'organizer';
+        if ($recipientType !== 'general_client' && empty($client['cui'])) {
+            $errors[] = 'CUI-ul clientului lipsește.';
+        }
+
+        if (!empty($errors)) {
+            Notification::make()->danger()
+                ->title('Date incomplete pentru contabilitate')
+                ->body(implode("\n", $errors))
+                ->send();
+            return;
+        }
+
+        // Read use_draft from connector
+        $connector = \Illuminate\Support\Facades\DB::table('acc_connectors')
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'connected')
+            ->first();
+
+        $useDraft = false;
+        if ($connector) {
+            try {
+                $auth = json_decode(\Illuminate\Support\Facades\Crypt::decryptString($connector->auth), true);
+                $useDraft = $auth['use_draft'] ?? false;
+            } catch (\Exception $e) {
+                // ignore
+            }
+        }
+
+        $addressParts = array_map('trim', explode(',', $client['address'] ?? ''));
+        $invoiceData = [
+            'seller_vat' => $issuer['cui'] ?? '',
+            'issue_date' => $invoice->issue_date?->format('Y-m-d') ?? date('Y-m-d'),
+            'due_date' => $invoice->due_date?->format('Y-m-d'),
+            'currency' => $invoice->currency ?? 'RON',
+            'number' => $invoice->number,
+            'is_draft' => $useDraft,
+            'doc_type' => 'invoice',
+            'customer' => [
+                'name' => $client['name'] ?? '',
+                'vat_number' => $client['cui'] ?? '',
+                'reg_number' => $client['reg_com'] ?? '',
+                'email' => $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '',
+                'address' => [
+                    'street' => $addressParts[0] ?? '',
+                    'city' => $addressParts[1] ?? '',
+                    'county' => $addressParts[2] ?? '',
+                    'country' => 'Romania',
+                ],
+            ],
+            'lines' => array_map(function ($item) {
+                return [
+                    'product_name' => $item['description'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'quantity' => (float) ($item['quantity'] ?? 1),
+                    'unit_price' => (float) ($item['unit_price'] ?? $item['price'] ?? 0),
+                    'tax_rate' => 19,
+                    'unit' => 'buc',
+                ];
+            }, $items),
+        ];
+
+        try {
+            $service = app(AccountingService::class);
+            $result = $service->issueMarketplaceInvoice($marketplace->id, $invoice->number, $invoiceData);
+
+            if (!($result['success'] ?? false)) {
+                Notification::make()->danger()->title('Eroare la trimitere')->send();
+                return;
+            }
+
+            $meta['issuer'] = $issuer;
+            $meta['accounting'] = [
+                'external_ref' => $result['external_ref'],
+                'invoice_number' => $result['invoice_number'],
+                'doc_type' => 'invoice',
+                'provider' => $connector->provider ?? 'unknown',
+                'sent_at' => now()->toIso8601String(),
+            ];
+
+            // Try to fetch PDF immediately
+            try {
+                $pdfResult = $service->getMarketplaceInvoicePdf($marketplace->id, $result['external_ref'], 'invoice');
+                if (!empty($pdfResult['pdf_url'])) {
+                    $meta['accounting']['pdf_url'] = $pdfResult['pdf_url'];
+                }
+            } catch (\Throwable $e) {
+                \Log::info("PDF not yet available: {$e->getMessage()}");
+            }
+
+            $invoice->update(['meta' => $meta]);
+
+            $msg = "Nr. extern: {$result['invoice_number']}";
+            if (!empty($meta['accounting']['pdf_url'])) {
+                $msg .= ' — PDF disponibil.';
+            }
+
+            Notification::make()->success()->title('Factură trimisă')->body($msg)->send();
+        } catch (\Throwable $e) {
+            \Log::error("Accounting submission failed: {$e->getMessage()}");
+            Notification::make()->danger()
+                ->title('Eroare la trimiterea în contabilitate')
+                ->body($e->getMessage())
+                ->send();
         }
     }
 }
