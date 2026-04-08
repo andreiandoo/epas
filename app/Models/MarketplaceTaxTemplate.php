@@ -113,6 +113,7 @@ class MarketplaceTaxTemplate extends Model
             '{{marketplace_phone}}' => 'Contact Phone',
             '{{marketplace_website}}' => 'Website',
             '{{marketplace_bank_name}}' => 'Bank Name',
+            '{{marketplace_iban}}' => 'IBAN',
             '{{marketplace_contract_number}}' => 'Contract Number (incremental)',
             '{{marketplace_signature_image}}' => 'Signature Image',
             '{{marketplace_logo_url}}' => 'Logo (tag img complet, se inserează direct)',
