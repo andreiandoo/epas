@@ -890,8 +890,65 @@ class ListPayouts extends ListRecords
             return;
         }
 
-        $balance = self::calculateEventBalance($event);
-        if ($balance <= 0) {
+        // Build ticket breakdown using the same logic as the manual flow.
+        $event->loadMissing('ticketTypes');
+        $items = $this->buildTicketBreakdownForEvent($event);
+
+        if (empty($items)) {
+            \Filament\Notifications\Notification::make()
+                ->title('Sold insuficient')
+                ->body('Nu există bilete neîncasate pentru acest eveniment.')
+                ->warning()
+                ->send();
+            return;
+        }
+
+        $ttMap = $event->ticketTypes->keyBy('id');
+        $ticketBreakdown = collect($items)->map(function ($t) use ($ttMap) {
+            $tt = $ttMap->get($t['ticket_type_id'] ?? null);
+            return [
+                'ticket_type_id' => $t['ticket_type_id'] ?? null,
+                'ticket_type_name' => $t['ticket_type_name'] ?? '',
+                'qty' => (int) ($t['qty'] ?? 0),
+                'unit_price' => (float) ($t['unit_price'] ?? 0),
+                'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
+                'commission_type' => $tt?->commission_type ?? null,
+                'commission_rate' => $tt?->commission_rate !== null ? (float) $tt->commission_rate : null,
+                'commission_fixed' => $tt?->commission_fixed !== null ? (float) $tt->commission_fixed : null,
+                'commission_mode' => $tt?->commission_mode ?? null,
+            ];
+        })->values()->toArray();
+
+        // Resolve commission_mode from ticket types first (same as manual flow)
+        $modesFromTickets = collect($ticketBreakdown)->pluck('commission_mode')->filter()->unique()->values();
+        if ($modesFromTickets->count() === 1) {
+            $commissionMode = $modesFromTickets->first();
+        } elseif ($modesFromTickets->contains('added_on_top')) {
+            $commissionMode = 'added_on_top';
+        } else {
+            $commissionMode = $event->getEffectiveCommissionMode() ?? 'included';
+        }
+
+        // Compute gross / commission / net from the breakdown
+        $grossAmount = 0;
+        $commissionAmount = 0;
+        foreach ($ticketBreakdown as $tb) {
+            $qty = (int) $tb['qty'];
+            $unit = (float) $tb['unit_price'];
+            $commPer = (float) $tb['commission_per_ticket'];
+            $grossAmount += $qty * $unit;
+            $commissionAmount += $qty * $commPer;
+        }
+
+        if ($commissionMode === 'added_on_top') {
+            // Customer paid commission separately; organizer receives full gross
+            $netAmount = $grossAmount;
+        } else {
+            // Commission is deducted from gross
+            $netAmount = $grossAmount - $commissionAmount;
+        }
+
+        if ($netAmount <= 0) {
             \Filament\Notifications\Notification::make()
                 ->title('Sold insuficient')
                 ->body('Nu există sold disponibil pentru acest eveniment.')
@@ -912,18 +969,6 @@ class ListPayouts extends ListRecords
             'account_holder' => $bankAccount->account_holder,
         ] : ($organizer->payout_details ?? []);
 
-        // Calculate commission
-        $commissionMode = $event->getEffectiveCommissionMode();
-        $commissionRate = $event->getEffectiveCommissionRate();
-
-        if ($commissionMode === 'added_on_top') {
-            $grossAmount = $balance;
-            $commissionAmount = 0;
-        } else {
-            $grossAmount = $balance / (1 - $commissionRate / 100);
-            $commissionAmount = $grossAmount - $balance;
-        }
-
         // Period
         $lastPayout = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
             ->where('event_id', $event->id)
@@ -939,7 +984,7 @@ class ListPayouts extends ListRecords
             'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
             'marketplace_organizer_id' => $organizer->id,
             'event_id' => $event->id,
-            'amount' => round($balance, 2),
+            'amount' => round($netAmount, 2),
             'currency' => 'RON',
             'period_start' => $periodStart,
             'period_end' => now()->toDateString(),
@@ -951,6 +996,9 @@ class ListPayouts extends ListRecords
             'source' => 'automated',
             'payout_method' => $payoutMethod,
             'admin_notes' => 'Decont generat automat din lista evenimente încheiate.',
+            'ticket_breakdown' => $ticketBreakdown,
+            'commission_mode' => $commissionMode,
+            'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
         ]);
 
         \Filament\Notifications\Notification::make()
@@ -1048,6 +1096,76 @@ class ListPayouts extends ListRecords
         }
 
         $set('payout_tickets', $items);
+    }
+
+    /**
+     * Same logic as populatePayoutTicketsFromEvent but without the Filament Set
+     * dependency — returns the items array directly. Used by automated payout
+     * generation from the "Evenimente încheiate" modal.
+     */
+    public function buildTicketBreakdownForEvent(Event $event): array
+    {
+        $commissionRate = $event->getEffectiveCommissionRate();
+
+        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id')
+            ->toArray();
+
+        $organizer = $event->marketplaceOrganizer;
+        $alreadyPaidPerType = [];
+        if ($organizer) {
+            $previousPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
+                ->where('event_id', $event->id)
+                ->whereIn('status', ['completed', 'processing', 'approved', 'pending'])
+                ->whereNotNull('ticket_breakdown')
+                ->get();
+
+            foreach ($previousPayouts as $pp) {
+                foreach ($pp->ticket_breakdown ?? [] as $tb) {
+                    $ttId = $tb['ticket_type_id'] ?? null;
+                    if ($ttId) {
+                        $alreadyPaidPerType[$ttId] = ($alreadyPaidPerType[$ttId] ?? 0) + (int) ($tb['qty'] ?? 0);
+                    }
+                }
+            }
+        }
+
+        $items = [];
+        foreach ($event->ticketTypes as $tt) {
+            $totalSold = $ticketCounts[$tt->id] ?? 0;
+            if ($totalSold <= 0) continue;
+
+            $alreadyPaid = $alreadyPaidPerType[$tt->id] ?? 0;
+            $remaining = max(0, $totalSold - $alreadyPaid);
+            if ($remaining <= 0) continue;
+
+            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
+
+            if ($tt->commission_type && $tt->commission_type !== '') {
+                $commPerTicket = match ($tt->commission_type) {
+                    'percentage' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2),
+                    'fixed' => (float) ($tt->commission_fixed ?? 0),
+                    'both' => round($basePrice * (($tt->commission_rate ?? 0) / 100), 2) + (float) ($tt->commission_fixed ?? 0),
+                    default => round($basePrice * ($commissionRate / 100), 2),
+                };
+            } else {
+                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
+            }
+
+            $items[] = [
+                'ticket_type_id' => $tt->id,
+                'ticket_type_name' => is_array($tt->name) ? ($tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name,
+                'available' => $remaining,
+                'unit_price' => $basePrice,
+                'commission_per_ticket' => $commPerTicket,
+                'qty' => $remaining,
+            ];
+        }
+
+        return $items;
     }
 
 
