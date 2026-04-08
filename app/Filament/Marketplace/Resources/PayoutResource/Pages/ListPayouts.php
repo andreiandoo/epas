@@ -572,6 +572,7 @@ class ListPayouts extends ListRecords
                 ];
 
                 $event = Event::find($data['event_id']);
+                $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
 
                 // Build ticket breakdown from form data
                 // Build ticket breakdown with full commission details
@@ -612,11 +613,12 @@ class ListPayouts extends ListRecords
                     'payout_method' => $payoutMethod,
                     'ticket_breakdown' => !empty($ticketBreakdown) ? $ticketBreakdown : null,
                     'admin_notes' => $data['admin_notes'] ?? null,
+                    'commission_mode' => $commissionMode,
+                    'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',
                 ]);
 
                 // Generate decont document immediately based on commission mode
                 try {
-                    $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
                     $templateType = $commissionMode === 'added_on_top' ? 'decont_ontop' : 'decont_inclus';
 
                     // Try specific template first, fall back to generic 'decont'

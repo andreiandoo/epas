@@ -47,7 +47,14 @@ class MarketplacePayout extends Model
         'admin_notes',
         'organizer_notes',
         'ticket_breakdown',
+        'commission_mode',
+        'invoice_recipient_type',
     ];
+
+    public function isCommissionAddedOnTop(): bool
+    {
+        return $this->commission_mode === 'added_on_top';
+    }
 
     protected $casts = [
         'amount' => 'decimal:2',

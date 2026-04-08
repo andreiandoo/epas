@@ -808,6 +808,8 @@ class MarketplaceTaxTemplate extends Model
 
             $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
             $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
+            $variables['payout_net_amount'] = number_format($payout->amount ?? 0, 2);
+            $variables['payout_commission_mode'] = $payout->commission_mode ?? 'included';
 
             // VAT calculations
             $vatPayer = $organizer?->vat_payer ?? false;

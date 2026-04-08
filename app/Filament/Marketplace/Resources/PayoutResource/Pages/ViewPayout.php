@@ -206,6 +206,24 @@ class ViewPayout extends ViewRecord
                     $organizer = $payout->organizer;
                     $marketplace = $payout->marketplaceClient;
 
+                    $recipientType = $payout->invoice_recipient_type
+                        ?? ($payout->commission_mode === 'added_on_top' ? 'general_client' : 'organizer');
+
+                    if ($recipientType === 'general_client') {
+                        $generalClientName = $marketplace->settings['general_invoice_client_name'] ?? 'Client general';
+                        $client = [
+                            'name' => $generalClientName,
+                            'cui' => '',
+                            'address' => '',
+                        ];
+                    } else {
+                        $client = [
+                            'name' => $organizer->company_name ?? $organizer->name,
+                            'cui' => $organizer->cui ?? '',
+                            'address' => $organizer->address ?? '',
+                        ];
+                    }
+
                     $lastInvoice = Invoice::where('marketplace_client_id', $marketplace->id)
                         ->orderByDesc('id')
                         ->first();
@@ -236,11 +254,8 @@ class ViewPayout extends ViewRecord
                                 'cui' => $marketplace->cui ?? '',
                                 'address' => $marketplace->address ?? '',
                             ],
-                            'client' => [
-                                'name' => $organizer->company_name ?? $organizer->name,
-                                'cui' => $organizer->cui ?? '',
-                                'address' => $organizer->address ?? '',
-                            ],
+                            'client' => $client,
+                            'recipient_type' => $recipientType,
                             'items' => [[
                                 'description' => 'Comision servicii ticketing - ' . $payout->reference,
                                 'quantity' => 1,

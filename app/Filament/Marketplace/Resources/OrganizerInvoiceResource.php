@@ -290,7 +290,14 @@ class OrganizerInvoiceResource extends Resource
                 Tables\Columns\TextColumn::make('organizer.name')
                     ->label('Organizator')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->formatStateUsing(function ($state, $record) {
+                        $meta = $record->meta ?? [];
+                        if (($meta['recipient_type'] ?? null) === 'general_client') {
+                            return $meta['client']['name'] ?? 'Client general';
+                        }
+                        return $state;
+                    }),
 
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tip')

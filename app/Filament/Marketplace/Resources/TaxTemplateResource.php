@@ -614,6 +614,8 @@ class TaxTemplateResource extends Resource
             'payout_adjustments_note' => 'Bilete returnate',
             'payout_sequence_number' => '1',
             'payout_advance_amount' => '0.00',
+            'payout_net_amount' => '6,500.00',
+            'payout_commission_mode' => 'included',
 
             // Payout - Bilete
             'tickets_breakdown_label' => ' (150lei*2+350lei*1)',
