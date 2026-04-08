@@ -15,6 +15,26 @@ class EditArtist extends EditRecord
 
     protected bool $shouldClose = false;
 
+    /**
+     * Resolve the record without applying the country filter from getEloquentQuery().
+     * Only enforce that the artist is actually a partner of the current marketplace.
+     */
+    public function resolveRecord(int|string $key): \Illuminate\Database\Eloquent\Model
+    {
+        $marketplace = static::getMarketplaceClient();
+
+        $artist = \App\Models\Artist::whereHas(
+            'marketplaceClients',
+            fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $marketplace?->id)
+        )->find($key);
+
+        if (!$artist) {
+            abort(404);
+        }
+
+        return $artist;
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $marketplace = static::getMarketplaceClient();
