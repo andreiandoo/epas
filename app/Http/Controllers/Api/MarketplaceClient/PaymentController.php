@@ -820,15 +820,55 @@ class PaymentController extends BaseController
             'template_slug' => 'ticket_purchase',
         ]);
 
-        // Notify marketplace admin (if configured)
+        // Notify marketplace admin (if configured) — sends the same full email
+        // the customer receives, prefixed with an admin banner that lists the
+        // event/venue/customer/order details and a link to the dashboard.
         try {
             $eventTitle = '';
+            $eventDateForBanner = $firstEventDate . ($firstEventTime ? ' · ' . $firstEventTime : '');
             if ($order->event) {
                 $eventTitle = is_array($order->event->title)
                     ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title) ?: '')
                     : ($order->event->title ?? '');
             }
-            (new \App\Services\MarketplaceEmailService($marketplace))->sendAdminNotification(
+            if (!$eventTitle) {
+                $eventTitle = $firstEventName ?? '';
+            }
+
+            $row = fn (string $label, string $value) =>
+                '<tr><td style="padding:4px 12px 4px 0;color:#6b7280;white-space:nowrap;">' . e($label) . '</td>'
+                . '<td style="padding:4px 0;"><strong>' . $value . '</strong></td></tr>';
+
+            $bannerRows = '';
+            $bannerRows .= $row('Comandă', e($order->order_number ?? (string) $order->id));
+            $bannerRows .= $row('Status', e($order->status ?? '-') . ' / ' . e($order->payment_status ?? '-'));
+            $bannerRows .= $row('Plătită la', $order->paid_at ? e($order->paid_at->format('d.m.Y H:i')) : '-');
+            $bannerRows .= $row('Total', e(number_format((float) ($order->total ?? 0), 2)) . ' ' . e($order->currency ?? 'RON'));
+            $bannerRows .= $row('Bilete', (string) $order->tickets()->count());
+            $bannerRows .= $row('Plată', e($order->payment_processor ?? $order->payment_method ?? '-')
+                . ($order->payment_reference ? ' · ref ' . e($order->payment_reference) : ''));
+            $bannerRows .= $row('Eveniment', e($eventTitle));
+            $bannerRows .= $row('Data eveniment', e($eventDateForBanner ?: '-'));
+            $bannerRows .= $row('Venue', e(($firstVenueName ?? '') . ($firstVenueCity ? ' · ' . $firstVenueCity : '')));
+            $bannerRows .= $row('Client', e($customerName ?: '-'));
+            $bannerRows .= $row('Email client', e($customerEmail ?: '-'));
+            if (!empty($order->customer_phone)) {
+                $bannerRows .= $row('Telefon', e($order->customer_phone));
+            }
+
+            $viewUrl = url("/marketplace/orders/{$order->id}");
+            $banner = '<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;margin:0 0 24px;font-family:Arial,sans-serif;color:#1f2937;">'
+                . '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#2563eb;font-weight:700;margin-bottom:8px;">Notificare admin · comandă nouă plătită</div>'
+                . '<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;width:100%;">' . $bannerRows . '</table>'
+                . '<p style="margin:14px 0 0;"><a href="' . e($viewUrl) . '" style="display:inline-block;background:#2563eb;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">Vezi comanda în dashboard</a></p>'
+                . '<hr style="border:none;border-top:1px solid #bfdbfe;margin:16px 0 0;">'
+                . '<p style="margin:8px 0 0;font-size:11px;color:#64748b;">Mai jos găsești emailul exact pe care l-a primit clientul.</p>'
+                . '</div>';
+
+            $adminHtml = $banner . $html;
+
+            $emailService = new \App\Services\MarketplaceEmailService($marketplace);
+            $emailService->sendAdminNotification(
                 slug: 'admin_new_order',
                 settingKey: 'orders_email',
                 variables: [
@@ -839,21 +879,10 @@ class PaymentController extends BaseController
                     'currency' => $order->currency ?? 'RON',
                     'tickets_count' => $order->tickets()->count(),
                     'event_name' => $eventTitle,
-                    'view_url' => url("/marketplace/orders/{$order->id}"),
+                    'view_url' => $viewUrl,
                 ],
-                fallbackSubject: 'Comandă nouă: {{order_number}}',
-                fallbackHtml: '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">'
-                    . '<h2 style="color:#2563eb;">Comandă nouă plătită</h2>'
-                    . '<p><strong>{{order_number}}</strong></p>'
-                    . '<table cellpadding="6" style="border-collapse:collapse;">'
-                    . '<tr><td style="color:#6b7280;">Client</td><td>{{customer_name}}</td></tr>'
-                    . '<tr><td style="color:#6b7280;">Email</td><td>{{customer_email}}</td></tr>'
-                    . '<tr><td style="color:#6b7280;">Total</td><td><strong>{{total_amount}} {{currency}}</strong></td></tr>'
-                    . '<tr><td style="color:#6b7280;">Bilete</td><td>{{tickets_count}}</td></tr>'
-                    . '<tr><td style="color:#6b7280;">Eveniment</td><td>{{event_name}}</td></tr>'
-                    . '</table>'
-                    . '<p style="margin-top:16px;"><a href="{{view_url}}" style="background:#2563eb;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Vezi în dashboard</a></p>'
-                    . '</div>',
+                fallbackSubject: '[Admin] Comandă nouă: ' . ($order->order_number ?? $order->id) . ' · ' . ($eventTitle ?: 'eveniment'),
+                fallbackHtml: $adminHtml,
             );
         } catch (\Throwable $e) {
             Log::warning('Admin order notification failed: ' . $e->getMessage(), ['order_id' => $order->id]);
