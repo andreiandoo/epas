@@ -23,6 +23,17 @@ use Illuminate\Support\Facades\DB;
 class GlobalSearchController extends Controller
 {
     /**
+     * Build a LOWER(col) LIKE expression that works for jsonb columns on Postgres.
+     * On pgsql jsonb cannot be passed to LOWER directly; cast to text first.
+     */
+    private function jsonbLowerLike(string $column): string
+    {
+        return DB::getDriverName() === 'pgsql'
+            ? "LOWER({$column}::text)"
+            : "LOWER({$column})";
+    }
+
+    /**
      * Search for admin panel (global platform search)
      */
     public function search(Request $request)
@@ -45,9 +56,8 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $venues = Venue::query()
-            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+            ->whereRaw($this->jsonbLowerLike('name') . " LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -80,9 +90,8 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $events = Event::query()
-            ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
+            ->whereRaw($this->jsonbLowerLike('title') . " LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -210,7 +219,7 @@ class GlobalSearchController extends Controller
         // Search Events (by title - translatable JSON field)
         $events = Event::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
+            ->whereRaw($this->jsonbLowerLike('title') . " LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -228,7 +237,7 @@ class GlobalSearchController extends Controller
         // Search Venues (by name - translatable JSON field)
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+            ->whereRaw($this->jsonbLowerLike('name') . " LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -353,7 +362,7 @@ class GlobalSearchController extends Controller
         // Search in Order meta->beneficiaries[].name/email
         $ordersWithBeneficiaries = Order::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("LOWER(meta) LIKE ?", [$lowerQuery])
+            ->whereRaw($this->jsonbLowerLike('meta') . " LIKE ?", [$lowerQuery])
             ->limit(10)
             ->get()
             ->filter(function ($order) use ($query) {
@@ -580,7 +589,7 @@ class GlobalSearchController extends Controller
             // Search Events (by title - translatable JSON field)
             $events = Event::query()
                 ->where('marketplace_client_id', $marketplaceId)
-                ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
+                ->whereRaw($this->jsonbLowerLike('title') . " LIKE ?", [$lowerQuery])
                 ->limit(5)
                 ->get();
 
@@ -619,7 +628,7 @@ class GlobalSearchController extends Controller
 
             // Search Venues (global - all venues, links to public site)
             $venues = Venue::query()
-                ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                ->whereRaw($this->jsonbLowerLike('name') . " LIKE ?", [$lowerQuery])
                 ->limit(5)
                 ->get();
 
