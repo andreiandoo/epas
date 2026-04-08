@@ -93,7 +93,8 @@ class MarketplacePayoutObserver
                 $payout->event, // May be null for general payouts
                 null, // No order
                 incrementContractNumber: false,
-                payout: $payout
+                payout: $payout,
+                template: $template,
             );
 
             // Process template

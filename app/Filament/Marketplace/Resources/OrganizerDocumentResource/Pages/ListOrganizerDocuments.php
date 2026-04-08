@@ -179,6 +179,9 @@ class ListOrganizerDocuments extends ListRecords
                         $firstEvent,
                         null,
                         $template->type === 'organizer_contract',
+                        null,
+                        null,
+                        $template,
                     );
 
                     // For multi-event: override event_date and ticket type variables

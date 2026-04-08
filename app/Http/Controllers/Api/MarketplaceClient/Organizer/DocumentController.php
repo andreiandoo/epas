@@ -199,7 +199,8 @@ class DocumentController extends BaseController
             $organizer,
             $event,
             null, // No order
-            incrementContractNumber: $isContract
+            incrementContractNumber: $isContract,
+            template: $template,
         );
 
         // Process template
@@ -488,7 +489,8 @@ class DocumentController extends BaseController
             $organizer,
             $event,
             null,
-            incrementContractNumber: false
+            incrementContractNumber: false,
+            template: $template,
         );
 
         // Use stored contract number from original document if available

@@ -28,6 +28,7 @@ class MarketplaceTaxTemplate extends Model
         'is_default',
         'is_active',
         'by_proxy',
+        'general_tax_ids',
     ];
 
     protected $attributes = [
@@ -38,6 +39,7 @@ class MarketplaceTaxTemplate extends Model
         'is_default' => 'boolean',
         'is_active' => 'boolean',
         'by_proxy' => 'boolean',
+        'general_tax_ids' => 'array',
     ];
 
     /**
@@ -374,7 +376,8 @@ class MarketplaceTaxTemplate extends Model
         ?Order $order = null,
         bool $incrementContractNumber = false,
         ?MarketplacePayout $payout = null,
-        ?MarketplaceAdmin $generatedBy = null
+        ?MarketplaceAdmin $generatedBy = null,
+        ?self $template = null
     ): array {
         $variables = [];
 
@@ -696,11 +699,38 @@ class MarketplaceTaxTemplate extends Model
             $variables['total_sales_currency'] = $currency;
 
             // === Calcule pentru decont impozit pe spectacole ===
-            // Timbrul muzical: 2% din valoarea totală a biletelor (conform legii)
-            $musicStampRate = 2.0;
-            $musicStampValue = round($totalSalesValue * $musicStampRate / 100, 2);
+            // Sumează taxele generale aplicabile (din template->general_tax_ids)
+            // Filtrate după event_types: doar taxele care includ unul dintre tipurile evenimentului
+            $musicStampValue = 0;
+            $generalTaxIds = $template?->general_tax_ids ?? [];
 
-            // Încasări supuse impozitului = total vânzări - timbru muzical
+            if (!empty($generalTaxIds) && $event) {
+                $eventTypeIds = $event->relationLoaded('eventTypes')
+                    ? $event->eventTypes->pluck('id')->toArray()
+                    : $event->eventTypes()->pluck('event_types.id')->toArray();
+
+                $applicableTaxes = \App\Models\Tax\GeneralTax::whereIn('id', $generalTaxIds)
+                    ->where('is_active', true)
+                    ->with('eventTypes:id')
+                    ->get();
+
+                foreach ($applicableTaxes as $tax) {
+                    $taxEventTypeIds = $tax->eventTypes->pluck('id')->toArray();
+
+                    // Apply if: tax has no event_types restriction (global) OR matches at least one event type
+                    $applies = empty($taxEventTypeIds) || !empty(array_intersect($taxEventTypeIds, $eventTypeIds));
+
+                    if (!$applies) continue;
+
+                    if ($tax->value_type === 'percentage') {
+                        $musicStampValue += round($totalSalesValue * (float) $tax->value / 100, 2);
+                    } else {
+                        $musicStampValue += (float) $tax->value;
+                    }
+                }
+            }
+
+            // Încasări supuse impozitului = total vânzări - taxe aplicate
             $taxableIncome = round($totalSalesValue - $musicStampValue, 2);
 
             // Impozit datorat = cota tax registry * încasări supuse impozitului

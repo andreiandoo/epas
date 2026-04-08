@@ -126,6 +126,7 @@ class EditTaxTemplate extends EditRecord
                         organizer: $organizer,
                         event: $event ?? $payout?->event,
                         payout: $payout,
+                        template: $template,
                     );
 
                     // Generate PDF pages

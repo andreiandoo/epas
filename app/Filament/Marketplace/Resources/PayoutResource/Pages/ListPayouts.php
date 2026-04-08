@@ -647,7 +647,8 @@ class ListPayouts extends ListRecords
                             marketplace: $marketplace,
                             organizer: $organizer,
                             event: $event,
-                            payout: $payout
+                            payout: $payout,
+                            template: $template,
                         );
 
                         $htmlContent = $template->processTemplate($variables);

@@ -83,7 +83,12 @@ class ViewOrganizerDocument extends ViewRecord
                         $taxRegistry,
                         $marketplace,
                         $organizer,
-                        $event
+                        $event,
+                        null,
+                        false,
+                        null,
+                        null,
+                        $template,
                     );
 
                     // Process template

@@ -97,6 +97,28 @@ class TaxTemplateResource extends Resource
                     ])
                     ->columns(3),
 
+                Section::make('Taxe generale aplicabile')
+                    ->description('Selectează care taxe generale (timbru, etc.) se aplică automat în acest template. Doar taxele care au "Event Type" potrivit cu tipul evenimentului vor fi calculate efectiv.')
+                    ->icon('heroicon-o-receipt-percent')
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Select::make('general_tax_ids')
+                            ->label('Taxe aplicabile')
+                            ->options(function () {
+                                return \App\Models\Tax\GeneralTax::where('is_active', true)
+                                    ->orderBy('priority')
+                                    ->orderBy('name')
+                                    ->get()
+                                    ->mapWithKeys(fn ($tax) => [
+                                        $tax->id => $tax->name . ' (' . rtrim(rtrim(number_format((float) $tax->value, 2, '.', ''), '0'), '.') . ($tax->value_type === 'percentage' ? '%' : ' ' . ($tax->currency ?? 'RON')) . ')',
+                                    ]);
+                            })
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Variabile generate: {{music_stamp_value}} (suma totală taxe), {{taxable_income}}, {{tax_due}}.'),
+                    ]),
+
                 Section::make('Available Variables')
                     ->icon('heroicon-o-variable')
                     ->description('Click to copy a variable to clipboard. Paste it into the HTML content below.')

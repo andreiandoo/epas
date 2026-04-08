@@ -101,7 +101,8 @@ class MarketplaceOrganizerObserver
                 $organizer,
                 null, // No event for organizer contract
                 null, // No order
-                incrementContractNumber: true
+                incrementContractNumber: true,
+                template: $template,
             );
 
             // Process template
