@@ -572,7 +572,10 @@ class ListPayouts extends ListRecords
                 ];
 
                 $event = Event::find($data['event_id']);
-                $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
+                // Commission mode resolution priority:
+                // 1. Ticket type level (most specific) — derived from selected tickets in this payout
+                // 2. Event > Organizer > Marketplace fallback
+                $commissionMode = null;
 
                 // Build ticket breakdown from form data
                 // Build ticket breakdown with full commission details
@@ -593,6 +596,24 @@ class ListPayouts extends ListRecords
                         'commission_mode' => $tt?->commission_mode ?? null,
                     ];
                 })->values()->toArray();
+
+                // Derive commission_mode from ticket breakdown (most specific level)
+                $modesFromTickets = collect($ticketBreakdown)
+                    ->pluck('commission_mode')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($modesFromTickets->count() === 1) {
+                    // All tickets in this payout share the same mode → use it
+                    $commissionMode = $modesFromTickets->first();
+                } elseif ($modesFromTickets->contains('added_on_top')) {
+                    // Mixed but at least one is added_on_top → treat whole payout as added_on_top
+                    $commissionMode = 'added_on_top';
+                } else {
+                    // No ticket-level info → fall back to Event > Organizer > Marketplace
+                    $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
+                }
 
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
