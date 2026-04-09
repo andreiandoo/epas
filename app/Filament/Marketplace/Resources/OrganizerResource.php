@@ -618,27 +618,46 @@ class OrganizerResource extends Resource
                                                 );
                                             }
 
+                                            // Mark all unread as read when viewing tab
+                                            $record->contactMessages()->where('status', 'unread')->update(['status' => 'read']);
+
+                                            $orgName = e($record->name ?? '');
                                             $html = '<div class="space-y-3">';
                                             foreach ($messages as $msg) {
                                                 $statusBadge = match ($msg->status) {
-                                                    'unread' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">Necitit</span>',
-                                                    'read' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">Citit</span>',
-                                                    'replied' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">Răspuns</span>',
+                                                    'unread' => '<span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:9999px;background:#fee2e2;color:#b91c1c;">Necitit</span>',
+                                                    'read' => '<span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:9999px;background:#fef9c3;color:#a16207;">Citit</span>',
+                                                    'replied' => '<span style="display:inline-block;padding:2px 8px;font-size:11px;font-weight:600;border-radius:9999px;background:#dcfce7;color:#15803d;">Răspuns</span>',
                                                     default => '',
                                                 };
-                                                $html .= '<div class="p-4 border rounded-xl border-gray-200 ' . ($msg->status === 'unread' ? 'bg-blue-50/50 border-blue-200' : 'bg-white') . '">'
-                                                    . '<div class="flex items-start justify-between mb-2">'
+
+                                                $senderName = e($msg->first_name . ' ' . $msg->last_name);
+                                                $senderEmail = e($msg->email);
+                                                $replySubject = rawurlencode('Re: Mesaj de la ' . $msg->first_name . ' ' . $msg->last_name . ' pe ' . ($record->name ?? 'profil'));
+                                                $replyBody = rawurlencode("\n\n---\nMesaj original de la {$msg->first_name} {$msg->last_name} ({$msg->email}):\n{$msg->message}");
+                                                $mailtoUrl = 'mailto:' . e($msg->email) . '?subject=' . $replySubject . '&body=' . $replyBody;
+
+                                                $bgStyle = $msg->status === 'unread'
+                                                    ? 'background:#eff6ff;border-color:#bfdbfe;'
+                                                    : 'background:#fff;border-color:#e5e7eb;';
+
+                                                $html .= '<div style="padding:16px;border:1px solid;border-radius:12px;' . $bgStyle . '">'
+                                                    . '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:8px;">'
                                                     . '<div>'
-                                                    . '<span class="font-semibold text-gray-900">' . e($msg->first_name . ' ' . $msg->last_name) . '</span>'
-                                                    . ' <span class="text-sm text-gray-500">' . e($msg->email) . '</span>'
-                                                    . ($msg->phone ? ' · <span class="text-sm text-gray-500">' . e($msg->phone) . '</span>' : '')
+                                                    . '<span style="font-weight:600;color:#374151;">' . $senderName . '</span>'
+                                                    . ' <span style="font-size:13px;color:#6b7280;">' . $senderEmail . '</span>'
+                                                    . ($msg->phone ? ' · <span style="font-size:13px;color:#6b7280;">' . e($msg->phone) . '</span>' : '')
                                                     . '</div>'
-                                                    . '<div class="flex items-center gap-2">'
+                                                    . '<div style="display:flex;align-items:center;gap:8px;">'
                                                     . $statusBadge
-                                                    . '<span class="text-xs text-gray-400">' . $msg->created_at->format('d.m.Y H:i') . '</span>'
+                                                    . '<span style="font-size:12px;color:#9ca3af;">' . $msg->created_at->format('d.m.Y H:i') . '</span>'
                                                     . '</div>'
                                                     . '</div>'
-                                                    . '<p class="text-sm text-gray-700 whitespace-pre-wrap">' . e($msg->message) . '</p>'
+                                                    . '<p style="font-size:14px;color:#374151;white-space:pre-wrap;margin:0 0 12px;">' . e($msg->message) . '</p>'
+                                                    . '<a href="' . $mailtoUrl . '" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">'
+                                                    . '<svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
+                                                    . 'Răspunde'
+                                                    . '</a>'
                                                     . '</div>';
                                             }
                                             $html .= '</div>';
