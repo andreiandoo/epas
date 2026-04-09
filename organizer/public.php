@@ -390,7 +390,7 @@ const OrganizerPage = {
 
         // Past Events — horizontal cards, no link
         if (data.pastEvents && data.pastEvents.length > 0) {
-            document.getElementById('pastEventsGrid').innerHTML = AmbiletEventCard.renderManyHorizontal(data.pastEvents, { noLink: true });
+            document.getElementById('pastEventsGrid').innerHTML = AmbiletEventCard.renderManyHorizontal(data.pastEvents, { showBuyButton: false, showPrice: false, showTime: false });
         } else {
             document.getElementById('pastEventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400">Nu sunt evenimente trecute.</p>';
         }
