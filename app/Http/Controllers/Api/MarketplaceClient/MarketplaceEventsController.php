@@ -205,14 +205,27 @@ class MarketplaceEventsController extends BaseController
             }
         }
 
-        // Filter by active paid promotion (ServiceOrder featuring)
+        // Filter by promoted events:
+        // 1. Active paid ServiceOrder featuring, OR
+        // 2. Manual is_promoted flag (with optional promoted_until date)
         if ($request->boolean('promoted')) {
             $today = now()->toDateString();
-            $query->whereHas('activeFeaturingOrders', function ($q) use ($today) {
-                $q->where('service_type', ServiceOrder::TYPE_FEATURING)
-                    ->where('status', ServiceOrder::STATUS_ACTIVE)
-                    ->where('service_start_date', '<=', $today)
-                    ->where('service_end_date', '>=', $today);
+            $query->where(function ($q) use ($today) {
+                // Paid promotion via ServiceOrder
+                $q->whereHas('activeFeaturingOrders', function ($sq) use ($today) {
+                    $sq->where('service_type', ServiceOrder::TYPE_FEATURING)
+                        ->where('status', ServiceOrder::STATUS_ACTIVE)
+                        ->where('service_start_date', '<=', $today)
+                        ->where('service_end_date', '>=', $today);
+                })
+                // Manual promotion via admin toggle
+                ->orWhere(function ($sq) use ($today) {
+                    $sq->where('is_promoted', true)
+                        ->where(function ($sq2) use ($today) {
+                            $sq2->whereNull('promoted_until')
+                                ->orWhere('promoted_until', '>=', $today);
+                        });
+                });
             });
         }
 
