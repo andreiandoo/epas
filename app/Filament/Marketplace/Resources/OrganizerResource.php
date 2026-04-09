@@ -596,6 +596,56 @@ class OrganizerResource extends Resource
 
                                 ]), // end Tab 5 (Stats)
 
+                            // ── TAB 6: Mesaje ──
+                            SC\Tabs\Tab::make('Mesaje')
+                                ->key('mesaje')
+                                ->icon('heroicon-o-envelope')
+                                ->badge(fn (?MarketplaceOrganizer $record) => $record?->contactMessages()->where('status', 'unread')->count() ?: null)
+                                ->badgeColor('danger')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('contact_messages_list')
+                                        ->hiddenLabel()
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->content(function (?MarketplaceOrganizer $record) {
+                                            if (!$record) return '';
+                                            $messages = $record->contactMessages()->orderByDesc('created_at')->limit(50)->get();
+                                            if ($messages->isEmpty()) {
+                                                return new \Illuminate\Support\HtmlString(
+                                                    '<div class="py-8 text-center text-gray-400">'
+                                                    . '<p class="text-lg">Niciun mesaj</p>'
+                                                    . '<p class="text-sm">Mesajele trimise prin formularul de contact de pe profilul public vor apărea aici.</p>'
+                                                    . '</div>'
+                                                );
+                                            }
+
+                                            $html = '<div class="space-y-3">';
+                                            foreach ($messages as $msg) {
+                                                $statusBadge = match ($msg->status) {
+                                                    'unread' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">Necitit</span>',
+                                                    'read' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">Citit</span>',
+                                                    'replied' => '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">Răspuns</span>',
+                                                    default => '',
+                                                };
+                                                $html .= '<div class="p-4 border rounded-xl border-gray-200 ' . ($msg->status === 'unread' ? 'bg-blue-50/50 border-blue-200' : 'bg-white') . '">'
+                                                    . '<div class="flex items-start justify-between mb-2">'
+                                                    . '<div>'
+                                                    . '<span class="font-semibold text-gray-900">' . e($msg->first_name . ' ' . $msg->last_name) . '</span>'
+                                                    . ' <span class="text-sm text-gray-500">' . e($msg->email) . '</span>'
+                                                    . ($msg->phone ? ' · <span class="text-sm text-gray-500">' . e($msg->phone) . '</span>' : '')
+                                                    . '</div>'
+                                                    . '<div class="flex items-center gap-2">'
+                                                    . $statusBadge
+                                                    . '<span class="text-xs text-gray-400">' . $msg->created_at->format('d.m.Y H:i') . '</span>'
+                                                    . '</div>'
+                                                    . '</div>'
+                                                    . '<p class="text-sm text-gray-700 whitespace-pre-wrap">' . e($msg->message) . '</p>'
+                                                    . '</div>';
+                                            }
+                                            $html .= '</div>';
+                                            return new \Illuminate\Support\HtmlString($html);
+                                        }),
+                                ]), // end Tab 6 (Mesaje)
+
                         ]), // end Tabs
                 ]),
                 SC\Group::make()->columnSpan(1)->schema([
@@ -911,7 +961,7 @@ class OrganizerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            \App\Filament\Marketplace\Resources\OrganizerResource\RelationManagers\ContactMessagesRelationManager::class,
+            //
         ];
     }
 
