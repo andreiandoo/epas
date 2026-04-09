@@ -140,6 +140,27 @@ class OrganizerResource extends Resource
                                 ->url()
                                 ->maxLength(255),
 
+                            Forms\Components\FileUpload::make('logo')
+                                ->label('Logo organizator')
+                                ->image()
+                                ->imageResizeMode('cover')
+                                ->imageCropAspectRatio('1:1')
+                                ->imageResizeTargetWidth('400')
+                                ->imageResizeTargetHeight('400')
+                                ->directory('organizer-logos')
+                                ->disk('public')
+                                ->helperText('Imagine pătrată, recomandat 400×400 px.'),
+
+                            Forms\Components\FileUpload::make('cover_image')
+                                ->label('Imagine cover')
+                                ->image()
+                                ->imageResizeMode('cover')
+                                ->imageResizeTargetWidth('1920')
+                                ->imageResizeTargetHeight('600')
+                                ->directory('organizer-covers')
+                                ->disk('public')
+                                ->helperText('Imagine landscape, recomandat 1920×600 px.'),
+
                             Forms\Components\Toggle::make('is_public')
                                 ->label('Fă profil public')
                                 ->helperText('Activează profilul public al organizatorului pe site-ul marketplace.')

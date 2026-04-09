@@ -1988,7 +1988,7 @@ class MarketplaceEventsController extends BaseController
         $upcomingEvents = $upcomingEventsQuery
             ->orderBy('event_date')
             ->orderBy('start_time')
-            ->limit(12)
+            ->limit(50)
             ->get();
 
         // Get past events
@@ -2004,12 +2004,15 @@ class MarketplaceEventsController extends BaseController
                     ->orWhere('range_end_date', '<', $today);
             })
             ->orderByDesc('event_date')
-            ->limit(10)
+            ->limit(50)
             ->get();
 
-        // Calculate stats
+        // Calculate stats — exclude cancelled events
         $totalEvents = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
             ->count();
 
         $totalTicketsSold = $organizer->total_tickets_sold ?? 0;
@@ -2131,6 +2134,7 @@ class MarketplaceEventsController extends BaseController
 
         return $this->success([
             'avatar' => $organizer->logo ? Storage::disk('public')->url($organizer->logo) : null,
+            'cover_image' => $organizer->cover_image ? Storage::disk('public')->url($organizer->cover_image) : null,
             'name' => $organizer->name,
             'slug' => $organizer->slug,
             'verified' => $organizer->verified_at !== null,

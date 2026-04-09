@@ -94,6 +94,7 @@ class MarketplaceOrganizer extends Authenticatable
         'total_paid_out',
         'is_public',
         'is_featured',
+        'cover_image',
     ];
 
     /**
