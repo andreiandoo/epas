@@ -92,7 +92,38 @@ class MarketplaceOrganizer extends Authenticatable
         'available_balance',
         'pending_balance',
         'total_paid_out',
+        'is_public',
+        'is_featured',
     ];
+
+    /**
+     * Resolve the public profile URL on the marketplace front-end.
+     * Prefers an active vanity URL pointing to this organizer; falls back
+     * to /organizator/{slug}. Returns null if the organizer has no slug.
+     */
+    public function getPublicProfileUrl(): ?string
+    {
+        if (empty($this->slug)) return null;
+
+        $marketplace = $this->marketplaceClient ?? MarketplaceClient::find($this->marketplace_client_id);
+        $domain = $marketplace?->domain ?? null;
+        if (!$domain) return null;
+
+        $base = (str_starts_with($domain, 'http') ? $domain : 'https://' . $domain);
+
+        $vanity = MarketplaceVanityUrl::where('marketplace_client_id', $this->marketplace_client_id)
+            ->where('target_type', MarketplaceVanityUrl::TYPE_ORGANIZER)
+            ->where('target_id', $this->id)
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($vanity) {
+            return rtrim($base, '/') . '/' . ltrim($vanity->slug, '/');
+        }
+
+        return rtrim($base, '/') . '/organizator/' . $this->slug;
+    }
 
     protected $hidden = [
         'password',
@@ -108,6 +139,8 @@ class MarketplaceOrganizer extends Authenticatable
         'password' => 'hashed',
         'social_links' => 'array',
         'settings' => 'array',
+        'is_public' => 'boolean',
+        'is_featured' => 'boolean',
         'gamification_enabled' => 'boolean',
         'invitations_enabled' => 'boolean',
         'service_settings' => 'array',

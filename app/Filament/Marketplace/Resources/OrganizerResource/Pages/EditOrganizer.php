@@ -34,6 +34,19 @@ class EditOrganizer extends EditRecord
                 ->color('gray')
                 ->url(fn () => EventResource::getUrl('index', ['organizer' => $record->id])),
 
+            Actions\Action::make('view_public_profile')
+                ->label('Vezi profil public')
+                ->icon('heroicon-o-globe-alt')
+                ->color('gray')
+                ->visible(fn () => (bool) $record->is_public && $record->getPublicProfileUrl())
+                ->url(fn () => $record->getPublicProfileUrl(), shouldOpenInNewTab: true),
+
+            Actions\Action::make('vanity_urls')
+                ->label('Vanity URLs')
+                ->icon('heroicon-o-link')
+                ->color('gray')
+                ->url(fn () => '/marketplace/vanity-urls?tableFilters[target_type][value]=organizer', shouldOpenInNewTab: true),
+
             Actions\Action::make('create_event')
                 ->label('Create Event')
                 ->icon('heroicon-o-plus')
