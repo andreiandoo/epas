@@ -65,7 +65,11 @@ class DateAvailabilityController extends BaseController
             return response()->json(['date' => $dateStr, 'is_open' => false, 'reason' => 'closed']);
         }
 
+        // Check if past last entry time (only relevant for today)
+        $pastLastEntry = $event->isPastLastEntry($dateStr);
+
         $operatingHours = $event->getOperatingHours($dateStr);
+        $season = $event->getSeasonForDate($dateStr);
 
         $ticketTypes = $event->ticketTypes()
             ->where('status', 'on_sale')
@@ -101,7 +105,36 @@ class DateAvailabilityController extends BaseController
                 $effectivePrice = $event->getEffectivePrice($tt, $dateStr);
             }
 
-            $ticketData[] = [
+            // Tour slot support: check if this ticket type has guided tour slots
+            $meta = $tt->meta ?? [];
+            $hasTourSlots = (bool) ($meta['has_tour_slots'] ?? false);
+            $tourSlots = null;
+
+            if ($hasTourSlots) {
+                $slotTimes = $meta['slot_times'] ?? [];
+                $maxPerSlot = (int) ($meta['max_per_slot'] ?? 20);
+                $seasonalAvail = $meta['seasonal_availability'] ?? null;
+
+                // Check seasonal availability (e.g. "summer" = only in summer season)
+                if ($seasonalAvail && $season) {
+                    $seasonName = strtolower($season['name'] ?? '');
+                    if ($seasonalAvail === 'summer' && !str_contains($seasonName, 'var')) {
+                        continue; // Skip this ticket type — not available in current season
+                    }
+                    if ($seasonalAvail === 'winter' && !str_contains($seasonName, 'iarn')) {
+                        continue;
+                    }
+                }
+
+                // Build slot availability (could track per-slot sales via date_capacities notes or meta)
+                $tourSlots = array_map(fn ($time) => [
+                    'time' => $time,
+                    'available' => true, // TODO: track per-slot capacity when needed
+                    'max' => $maxPerSlot,
+                ], $slotTimes);
+            }
+
+            $ttData = [
                 'id' => $tt->id,
                 'name' => $tt->name,
                 'description' => $tt->description,
@@ -117,12 +150,21 @@ class DateAvailabilityController extends BaseController
                 'requires_vehicle_info' => (bool) $tt->requires_vehicle_info,
                 'is_refundable' => (bool) $tt->is_refundable,
             ];
+
+            if ($hasTourSlots) {
+                $ttData['has_tour_slots'] = true;
+                $ttData['tour_slots'] = $tourSlots;
+            }
+
+            $ticketData[] = $ttData;
         }
 
         return response()->json([
             'date' => $dateStr,
             'is_open' => true,
+            'past_last_entry' => $pastLastEntry,
             'operating_hours' => $operatingHours,
+            'season' => $season ? ['name' => $season['name'] ?? null] : null,
             'ticket_types' => $ticketData,
         ]);
     }

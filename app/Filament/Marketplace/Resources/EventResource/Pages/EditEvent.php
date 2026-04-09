@@ -1063,21 +1063,34 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
-        // Transform venue_config.operating_schedule_list (repeater) into operating_schedule (keyed by day)
+        // Transform venue_config seasons schedule_list → schedule (keyed by day)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
             $config = $this->record->venue_config ?? [];
-            $scheduleList = $config['operating_schedule_list'] ?? [];
-            $schedule = [];
-            foreach ($scheduleList as $entry) {
-                $day = $entry['day'] ?? null;
-                if ($day && !empty($entry['open'])) {
-                    $schedule[$day] = ['open' => $entry['open'], 'close' => $entry['close'] ?? '20:00'];
-                } elseif ($day) {
-                    $schedule[$day] = null; // Closed
+            $seasons = $config['seasons'] ?? [];
+            $changed = false;
+
+            foreach ($seasons as &$season) {
+                $scheduleList = $season['schedule_list'] ?? [];
+                if (!empty($scheduleList)) {
+                    $schedule = [];
+                    foreach ($scheduleList as $entry) {
+                        $day = $entry['day'] ?? null;
+                        if ($day && !empty($entry['open'])) {
+                            $schedule[$day] = ['open' => $entry['open'], 'close' => $entry['close'] ?? '20:00'];
+                        } elseif ($day) {
+                            $schedule[$day] = null;
+                        }
+                    }
+                    $season['schedule'] = $schedule;
+                    $changed = true;
                 }
             }
-            $config['operating_schedule'] = $schedule;
-            $this->record->update(['venue_config' => $config]);
+            unset($season);
+
+            if ($changed) {
+                $config['seasons'] = $seasons;
+                $this->record->update(['venue_config' => $config]);
+            }
         }
 
         // Auto-fill short description from first 80 words of description if empty

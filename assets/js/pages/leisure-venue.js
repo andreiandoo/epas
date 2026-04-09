@@ -28,6 +28,9 @@
     let dateTickets = null;  // ticket types for selected date
     let quantities = {};     // { ticketTypeId: qty }
     let vehicleInfo = {};    // { ticketTypeId: { license_plate } }
+    let tourSlotSelections = {}; // { ticketTypeId: slotTime }
+    let currentSeason = null;
+    let pastLastEntry = false;
 
     // DOM refs
     const $calDays = document.getElementById('cal-days');
@@ -178,7 +181,10 @@
         selectedDate = dateStr;
         quantities = {};
         vehicleInfo = {};
+        tourSlotSelections = {};
         dateTickets = null;
+        currentSeason = null;
+        pastLastEntry = false;
 
         // Update calendar highlight
         renderCalendar();
@@ -201,7 +207,20 @@
             if (!resp || !resp.is_open) {
                 $loading.classList.add('hidden');
                 $noDate.classList.remove('hidden');
-                $noDate.innerHTML = '<p class="text-gray-500">Această dată nu este disponibilă.</p>';
+                const reason = resp?.reason === 'closed' ? 'Locația este închisă în această zi.' : 'Această dată nu este disponibilă.';
+                $noDate.innerHTML = '<p class="text-gray-500">' + reason + '</p>';
+                return;
+            }
+
+            currentSeason = resp.season || null;
+            pastLastEntry = resp.past_last_entry || false;
+
+            // Show last entry warning
+            if (pastLastEntry) {
+                $loading.classList.add('hidden');
+                $noDate.classList.remove('hidden');
+                const lastEntry = resp.operating_hours?.last_entry || '';
+                $noDate.innerHTML = '<div class="text-center"><p class="text-amber-600 font-semibold">Ultima intrare a fost la ' + escHtml(lastEntry) + '</p><p class="text-gray-500 text-sm mt-1">Vânzarea online pentru astăzi s-a încheiat. Selectează o altă dată.</p></div>';
                 return;
             }
 
@@ -291,6 +310,25 @@
 
                 html += '</div>';
 
+                // Tour slot selector
+                if (tt.has_tour_slots && tt.tour_slots && qty > 0) {
+                    const selectedSlot = tourSlotSelections[tt.id] || '';
+                    html += '<div class="px-5 pb-3">';
+                    html += '<label class="text-xs font-medium text-gray-500 mb-1 block">Alege ora plecării grupului:</label>';
+                    html += '<div class="flex flex-wrap gap-2">';
+                    tt.tour_slots.forEach(slot => {
+                        const isSelected = selectedSlot === slot.time;
+                        const cls = isSelected
+                            ? 'bg-primary text-white border-primary'
+                            : (slot.available ? 'bg-white text-secondary border-gray-200 hover:border-primary' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed');
+                        html += '<button class="tour-slot-btn px-3 py-1.5 text-sm font-medium border rounded-lg transition ' + cls + '"'
+                            + ' data-tt="' + tt.id + '" data-time="' + slot.time + '"'
+                            + (slot.available ? '' : ' disabled') + '>'
+                            + slot.time + '</button>';
+                    });
+                    html += '</div></div>';
+                }
+
                 // Parking: license plate input
                 if (tt.requires_vehicle_info && qty > 0) {
                     for (let i = 0; i < qty; i++) {
@@ -316,6 +354,15 @@
                 const ttId = parseInt(btn.dataset.tt);
                 const dir = parseInt(btn.dataset.dir);
                 changeQuantity(ttId, dir);
+            });
+        });
+
+        // Bind tour slot buttons
+        $groups.querySelectorAll('.tour-slot-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ttId = parseInt(btn.dataset.tt);
+                tourSlotSelections[ttId] = btn.dataset.time;
+                renderTicketSelector();
             });
         });
 
@@ -385,7 +432,7 @@
             return;
         }
 
-        // Validate: parking tickets need license plates
+        // Validate: parking tickets need license plates, tour tickets need slot
         let valid = true;
         items.forEach(item => {
             if (item.tt.requires_vehicle_info) {
@@ -393,6 +440,9 @@
                     const plate = vehicleInfo[item.tt.id + '_' + i]?.license_plate;
                     if (!plate || plate.length < 3) valid = false;
                 }
+            }
+            if (item.tt.has_tour_slots && !tourSlotSelections[item.tt.id]) {
+                valid = false;
             }
         });
 
@@ -432,6 +482,9 @@
                 vInfo = { license_plates: plates };
             }
 
+            // Tour slot
+            const tourSlot = tt.has_tour_slots ? tourSlotSelections[tt.id] : null;
+
             // Add to AmbiletCart with meta
             if (typeof AmbiletCart !== 'undefined' && AmbiletCart.addItem) {
                 AmbiletCart.addItem(
@@ -444,7 +497,7 @@
                     },
                     {
                         id: tt.id,
-                        name: tt.name,
+                        name: tt.name + (tourSlot ? ' (' + tourSlot + ')' : ''),
                         price: tt.effective_price,
                         originalPrice: tt.base_price !== tt.effective_price ? tt.base_price : null,
                         min_per_order: tt.min_per_order,
@@ -456,6 +509,7 @@
                     {
                         visit_date: selectedDate,
                         vehicle_info: vInfo,
+                        tour_slot_time: tourSlot,
                     }
                 );
             }

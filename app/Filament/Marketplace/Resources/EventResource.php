@@ -1155,43 +1155,57 @@ class EventResource extends Resource
                                     ->icon('heroicon-o-building-office')
                                     ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') === 'leisure_venue')
                                     ->schema([
-                                        SC\Section::make($t('Program funcționare', 'Operating Schedule'))
-                                            ->description($t('Setează programul pentru fiecare zi a săptămânii. Lasă gol pentru zilele în care locația este închisă.', 'Set schedule for each day of the week. Leave empty for closed days.'))
+                                        SC\Section::make($t('Sezoane', 'Seasons'))
+                                            ->description($t('Definește sezoanele cu program și oră ultimă intrare. Exemplu: Vară (01 apr - 31 oct) și Iarnă (01 nov - 31 mar).', 'Define seasons with schedule and last entry time.'))
                                             ->schema([
-                                                Forms\Components\Repeater::make('venue_config.operating_schedule_list')
+                                                Forms\Components\Repeater::make('venue_config.seasons')
                                                     ->label('')
-                                                    ->default([
-                                                        ['day' => 'mon', 'open' => '09:00', 'close' => '20:00'],
-                                                        ['day' => 'tue', 'open' => '09:00', 'close' => '20:00'],
-                                                        ['day' => 'wed', 'open' => '09:00', 'close' => '20:00'],
-                                                        ['day' => 'thu', 'open' => '09:00', 'close' => '20:00'],
-                                                        ['day' => 'fri', 'open' => '09:00', 'close' => '20:00'],
-                                                        ['day' => 'sat', 'open' => '10:00', 'close' => '21:00'],
-                                                        ['day' => 'sun', 'open' => '10:00', 'close' => '21:00'],
-                                                    ])
                                                     ->schema([
-                                                        Forms\Components\Select::make('day')
-                                                            ->label($t('Zi', 'Day'))
-                                                            ->options([
-                                                                'mon' => $t('Luni', 'Monday'),
-                                                                'tue' => $t('Marți', 'Tuesday'),
-                                                                'wed' => $t('Miercuri', 'Wednesday'),
-                                                                'thu' => $t('Joi', 'Thursday'),
-                                                                'fri' => $t('Vineri', 'Friday'),
-                                                                'sat' => $t('Sâmbătă', 'Saturday'),
-                                                                'sun' => $t('Duminică', 'Sunday'),
+                                                        SC\Grid::make(4)->schema([
+                                                            Forms\Components\TextInput::make('name')
+                                                                ->label($t('Nume sezon', 'Season name'))
+                                                                ->placeholder($t('ex: Vară', 'e.g. Summer'))
+                                                                ->required(),
+                                                            Forms\Components\TextInput::make('start')
+                                                                ->label($t('Început (LL-ZZ)', 'Start (MM-DD)'))
+                                                                ->placeholder('04-01')
+                                                                ->required(),
+                                                            Forms\Components\TextInput::make('end')
+                                                                ->label($t('Sfârșit (LL-ZZ)', 'End (MM-DD)'))
+                                                                ->placeholder('10-31')
+                                                                ->required(),
+                                                            Forms\Components\TextInput::make('last_entry')
+                                                                ->label($t('Ultima intrare', 'Last entry'))
+                                                                ->placeholder('18:30')
+                                                                ->helperText($t('Vânzarea online se blochează după această oră', 'Online sales blocked after this time')),
+                                                        ]),
+                                                        Forms\Components\Repeater::make('schedule_list')
+                                                            ->label($t('Program pe zile', 'Daily schedule'))
+                                                            ->schema([
+                                                                Forms\Components\Select::make('day')
+                                                                    ->label($t('Zi', 'Day'))
+                                                                    ->options([
+                                                                        'mon' => $t('Luni', 'Monday'), 'tue' => $t('Marți', 'Tuesday'),
+                                                                        'wed' => $t('Miercuri', 'Wednesday'), 'thu' => $t('Joi', 'Thursday'),
+                                                                        'fri' => $t('Vineri', 'Friday'), 'sat' => $t('Sâmbătă', 'Saturday'),
+                                                                        'sun' => $t('Duminică', 'Sunday'),
+                                                                    ])
+                                                                    ->required(),
+                                                                Forms\Components\TextInput::make('open')
+                                                                    ->label($t('Deschidere', 'Open'))
+                                                                    ->placeholder('09:00'),
+                                                                Forms\Components\TextInput::make('close')
+                                                                    ->label($t('Închidere', 'Close'))
+                                                                    ->placeholder('19:00'),
                                                             ])
-                                                            ->required(),
-                                                        Forms\Components\TextInput::make('open')
-                                                            ->label($t('Deschidere', 'Open'))
-                                                            ->placeholder('09:00'),
-                                                        Forms\Components\TextInput::make('close')
-                                                            ->label($t('Închidere', 'Close'))
-                                                            ->placeholder('20:00'),
+                                                            ->columns(3)
+                                                            ->reorderable(false)
+                                                            ->defaultItems(7)
+                                                            ->addActionLabel($t('Adaugă zi', 'Add day')),
                                                     ])
-                                                    ->columns(3)
-                                                    ->reorderable(false)
-                                                    ->addActionLabel($t('Adaugă zi', 'Add day')),
+                                                    ->addActionLabel($t('Adaugă sezon', 'Add season'))
+                                                    ->collapsible()
+                                                    ->itemLabel(fn (array $state) => ($state['name'] ?? 'Sezon') . ' (' . ($state['start'] ?? '') . ' — ' . ($state['end'] ?? '') . ')'),
                                             ]),
 
                                         SC\Section::make($t('Configurare generală', 'General Configuration'))

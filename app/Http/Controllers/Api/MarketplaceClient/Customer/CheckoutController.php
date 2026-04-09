@@ -105,9 +105,10 @@ class CheckoutController extends BaseController
                         $cartItem['seats'] = $item['seats'] ?? [];
                     }
 
-                    // Preserve leisure venue metadata (visit_date, vehicle_info)
+                    // Preserve leisure venue metadata (visit_date, vehicle_info, tour_slot_time)
                     $cartItem['visit_date'] = $item['meta']['visit_date'] ?? $item['visit_date'] ?? null;
                     $cartItem['vehicle_info'] = $item['meta']['vehicle_info'] ?? $item['vehicle_info'] ?? null;
+                    $cartItem['meta'] = $item['meta'] ?? null;
 
                     $cartItems[] = $cartItem;
                 }
@@ -652,6 +653,11 @@ class CheckoutController extends BaseController
                     }
                     if (!empty($item['vehicle_info'])) {
                         $ticketMeta['vehicle_info'] = $item['vehicle_info'];
+                    }
+                    // Tour slot time (guided tours)
+                    $tourSlot = $item['meta']['tour_slot_time'] ?? $item['tour_slot_time'] ?? null;
+                    if ($tourSlot) {
+                        $ticketMeta['tour_slot_time'] = $tourSlot;
                     }
 
                     Ticket::create([

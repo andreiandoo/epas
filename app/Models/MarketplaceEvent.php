@@ -219,6 +219,48 @@ class MarketplaceEvent extends Model
     }
 
     /**
+     * Get the active season for a specific date.
+     * Returns season array or null if no season matches.
+     * Supports both new seasons[] format and legacy operating_schedule format.
+     */
+    public function getSeasonForDate(string $date): ?array
+    {
+        $config = $this->venue_config ?? [];
+        $seasons = $config['seasons'] ?? [];
+
+        if (empty($seasons)) {
+            // Legacy fallback: use operating_schedule as a single year-round season
+            $schedule = $config['operating_schedule'] ?? [];
+            if (!empty($schedule)) {
+                return [
+                    'name' => 'Default',
+                    'start' => '01-01',
+                    'end' => '12-31',
+                    'schedule' => $schedule,
+                    'last_entry' => null,
+                ];
+            }
+            return null;
+        }
+
+        $md = Carbon::parse($date)->format('m-d'); // e.g. "07-15"
+
+        foreach ($seasons as $season) {
+            $start = $season['start'] ?? '01-01';
+            $end = $season['end'] ?? '12-31';
+
+            // Handle wrap-around seasons (e.g. Nov 01 - Mar 31)
+            if ($start <= $end) {
+                if ($md >= $start && $md <= $end) return $season;
+            } else {
+                if ($md >= $start || $md <= $end) return $season;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Check if a specific date is open for the leisure venue.
      */
     public function isDateOpen(string $date): bool
@@ -235,28 +277,55 @@ class MarketplaceEvent extends Model
             return false;
         }
 
-        // Check operating schedule
-        $dayOfWeek = strtolower(Carbon::parse($date)->format('D')); // mon, tue, wed...
-        $schedule = $config['operating_schedule'] ?? [];
+        $season = $this->getSeasonForDate($date);
+        if (!$season) {
+            return false; // No season covers this date
+        }
 
-        // If no schedule defined, assume open every day
+        $dayOfWeek = strtolower(Carbon::parse($date)->format('D'));
+        $schedule = $season['schedule'] ?? [];
+
         if (empty($schedule)) {
-            return true;
+            return true; // No schedule = open every day
         }
 
         return isset($schedule[$dayOfWeek]) && $schedule[$dayOfWeek] !== null;
     }
 
     /**
-     * Get operating hours for a specific date.
+     * Get operating hours for a specific date (from the matching season).
      */
     public function getOperatingHours(string $date): ?array
     {
-        $config = $this->venue_config ?? [];
-        $schedule = $config['operating_schedule'] ?? [];
-        $dayOfWeek = strtolower(Carbon::parse($date)->format('D'));
+        $season = $this->getSeasonForDate($date);
+        if (!$season) return null;
 
-        return $schedule[$dayOfWeek] ?? null;
+        $dayOfWeek = strtolower(Carbon::parse($date)->format('D'));
+        $schedule = $season['schedule'] ?? [];
+        $hours = $schedule[$dayOfWeek] ?? null;
+
+        if ($hours && !empty($season['last_entry'])) {
+            $hours['last_entry'] = $season['last_entry'];
+        }
+
+        return $hours;
+    }
+
+    /**
+     * Check if online sales should be blocked because last entry time has passed.
+     */
+    public function isPastLastEntry(string $date): bool
+    {
+        $season = $this->getSeasonForDate($date);
+        if (!$season) return true;
+
+        $lastEntry = $season['last_entry'] ?? null;
+        if (!$lastEntry) return false;
+
+        // Only relevant for today
+        if ($date !== now()->format('Y-m-d')) return false;
+
+        return now()->format('H:i') > $lastEntry;
     }
 
     /**
