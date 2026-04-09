@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Resources\OrganizerResource\RelationManagers;
 
+use Filament\Actions;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -63,7 +64,7 @@ class ContactMessagesRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\Action::make('view_message')
+                Actions\Action::make('view_message')
                     ->label('Vezi')
                     ->icon('heroicon-o-eye')
                     ->modalHeading(fn ($record) => 'Mesaj de la ' . $record->first_name . ' ' . $record->last_name)
@@ -85,7 +86,7 @@ class ContactMessagesRelationManager extends RelationManager
                         }
                     }),
 
-                Tables\Actions\Action::make('mark_replied')
+                Actions\Action::make('mark_replied')
                     ->label('Marcat răspuns')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -93,7 +94,7 @@ class ContactMessagesRelationManager extends RelationManager
                     ->requiresConfirmation(false)
                     ->action(fn ($record) => $record->update(['status' => 'replied'])),
 
-                Tables\Actions\DeleteAction::make(),
+                Actions\DeleteAction::make(),
             ])
             ->emptyStateHeading('Niciun mesaj')
             ->emptyStateDescription('Mesajele trimise prin formularul de contact de pe profilul public vor apărea aici.');
