@@ -12,7 +12,7 @@ $currentYear = date('Y');
 ?>
 
 <!-- User Footer -->
-<footer class="px-4 py-4 bg-slate-800 md:px-6 rounded-b-xl mobile:rounded-none mobile:px-0">
+<footer class="px-4 py-4 bg-slate-800 md:px-6 mobile:rounded-none mobile:px-0">
     <div class="flex flex-col items-center justify-between max-w-6xl gap-4 mx-auto md:flex-row md:gap-5">
         <!-- Left: Copyright & Links -->
         <div class="flex flex-col items-center gap-3 md:flex-row md:gap-6 mobile:w-full">
@@ -30,7 +30,7 @@ $currentYear = date('Y');
         <div class="flex items-center gap-4 mobile:w-full mobile:justify-between mobile:px-4">
             <div class="mobile:flex mobile:flex-col mobile:items-start">
                 <p class="hidden mb-1 text-xs font-semibold mobile:block text-white/90"><?= SITE_NAME ?> &copy; <?= $currentYear ?>. Toate drepturile rezervate.</p>
-                <div class="flex items-center gap-1.5 text-[11px] text-white/40">
+                <div class="hidden items-center gap-1.5 text-[11px] text-white/40">
                     Powered by
                     <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 font-semibold transition-colors text-white/90 hover:text-white">
                         <img src="/assets/images/tixello-logo.svg" width="40" height="12" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
