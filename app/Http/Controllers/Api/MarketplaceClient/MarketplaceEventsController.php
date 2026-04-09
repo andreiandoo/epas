@@ -2063,17 +2063,30 @@ class MarketplaceEventsController extends BaseController
                 $status = 'soon';
             }
 
+            $venueName = '';
+            if ($venue) {
+                $venueName = is_array($venue->name)
+                    ? ($venue->name[$language] ?? $venue->name['ro'] ?? $venue->name['en'] ?? reset($venue->name) ?: '')
+                    : ($venue->name ?? '');
+            }
+
             return [
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', $language),
                 'slug' => $event->slug,
+                'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
-                'day' => $eventDate?->format('d'),
-                'month' => $eventDate?->translatedFormat('M'),
+                'event_date' => $eventDate?->toIso8601String(),
+                'start_time' => $event->start_time ? substr($event->start_time, 0, 5) : null,
+                'duration_mode' => $event->duration_mode,
+                'range_start_date' => $event->range_start_date?->toDateString(),
+                'range_end_date' => $event->range_end_date?->toDateString(),
                 'category' => $category?->getTranslation('name', $language),
-                'venue' => $venue?->getTranslation('name', $language) ?? $venue?->city,
-                'time' => $event->start_time ? substr($event->start_time, 0, 5) : null,
+                'venue_name' => $venueName,
+                'venue_city' => $venue?->city ?? '',
                 'price' => $minPrice,
+                'is_sold_out' => (bool) $event->is_sold_out,
+                'is_cancelled' => (bool) $event->is_cancelled,
                 'status' => $status,
             ];
         });
@@ -2082,15 +2095,24 @@ class MarketplaceEventsController extends BaseController
         $formattedPast = $pastEventsQuery->map(function ($event) use ($language) {
             $venue = $event->venue;
             $eventDate = $event->event_date ?? $event->range_start_date;
+            $venueName = '';
+            if ($venue) {
+                $venueName = is_array($venue->name)
+                    ? ($venue->name[$language] ?? $venue->name['ro'] ?? $venue->name['en'] ?? reset($venue->name) ?: '')
+                    : ($venue->name ?? '');
+            }
 
             return [
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', $language),
                 'slug' => $event->slug,
+                'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                'event_date' => $eventDate?->toIso8601String(),
+                'venue_name' => $venueName,
+                'venue_city' => $venue?->city ?? '',
                 'date' => $eventDate?->translatedFormat('d F Y'),
                 'participants' => $event->tickets_sold ?? 0,
-                'rating' => $event->average_rating ?? 0,
             ];
         });
 
