@@ -606,6 +606,8 @@ switch ($action) {
         if (isset($_GET['max_price'])) $params['max_price'] = (int)$_GET['max_price'];
         if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
         if (isset($_GET['featured_only'])) $params['featured_only'] = $_GET['featured_only'];
+        if (isset($_GET['promoted'])) $params['promoted'] = $_GET['promoted'];
+        if (isset($_GET['recommended'])) $params['recommended'] = $_GET['recommended'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 50);

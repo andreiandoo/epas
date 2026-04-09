@@ -394,8 +394,8 @@ php artisan fix:ambilet-event-dates $INC/inc_event_dates_fix_modified.csv
 php artisan fix:ambilet-event-images
 php artisan fix:ambilet-event-images --fix-paths
 
-# 9. Activare ticket types + quota fix
-php artisan tinker --execute='$ids=DB::table("events")->where("marketplace_client_id",1)->pluck("id");echo "Activated: ".DB::table("ticket_types")->whereIn("event_id",$ids)->where("status","hidden")->update(["status"=>"active","updated_at"=>now()]).PHP_EOL;echo "Quota: ".DB::table("ticket_types")->whereIn("event_id",$ids)->where("quota_total",0)->update(["quota_total"=>-1,"updated_at"=>now()]).PHP_EOL;'
+# 9. Activare ticket types (quota se setează corect la import: 0=epuizat, >0=fix, -1=nelimitat)
+php artisan tinker --execute='$ids=DB::table("events")->where("marketplace_client_id",1)->pluck("id");echo "Activated: ".DB::table("ticket_types")->whereIn("event_id",$ids)->where("status","hidden")->update(["status"=>"active","updated_at"=>now()]).PHP_EOL;'
 
 # 10. Link orphan tickets
 php artisan fix:ambilet-orphan-tickets $INC/inc_ticket_order_map.csv
@@ -459,7 +459,7 @@ php artisan tinker --execute='echo "Events: ".DB::table("events")->where("market
 
 ### VALORI SPECIALE
 
-9. **`quota_total = -1`** = nelimitat; `0` = blocat (nu se pot cumpăra bilete!); `>0` = cantitate fixă
+9. **`quota_total = -1`** = nelimitat (WP `_stock` gol/NULL); `0` = epuizat/sold out (WP `_stock=0`); `>0` = cantitate fixă
 10. **Archived events păstrează `is_published = 1`** — nu pune draft la evenimentele expirate
 11. **Ticket types se importă cu `status = hidden`** — trebuie activate manual după import
 12. **`_ticket_availability_from/to_date` NU controlează vânzarea** — controlează fereastra de VALIDITATE/SCANARE. Disponibilitatea la vânzare e WP `post_status` (publish=activ, future=programat)
