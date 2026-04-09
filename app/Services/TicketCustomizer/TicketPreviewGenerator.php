@@ -217,16 +217,43 @@ class TicketPreviewGenerator
         $codeData = $layer['barcodeData'] ?? $layer['props']['data'] ?? '123456789';
         $codeData = $this->replacePlaceholders($codeData, $data);
         $displayData = htmlspecialchars($codeData, ENT_QUOTES, 'UTF-8');
+        $foreground = $layer['barcodeForeground'] ?? '#000000';
+        $background = $layer['barcodeBackground'] ?? '#ffffff';
+        $showText = $layer['barcodeShowText'] ?? false;
 
-        $barcodeDataUri = $this->fetchBarcodeAsDataUri($codeData);
+        // Generate barcode bars as HTML divs (DomPDF-safe, no external API)
+        $pattern = $this->generateBarcodePattern($codeData);
+        $totalUnits = array_sum(array_column($pattern, 'width'));
+        if ($totalUnits <= 0) $totalUnits = 1;
 
-        $barH = round($h * 0.8, 2);
-        $textTopPt = round($y + $barH, 2);
-        $textH = round($h - $barH, 2);
-        $textFontPt = round(2.5 * self::MM_TO_PT, 1);
+        $barH = $showText ? round($h * 0.80, 2) : $h;
+        $quietZonePt = round($w * 0.05, 2);
+        $availableW = round($w - 2 * $quietZonePt, 2);
+        $unitW = $availableW / $totalUnits;
 
-        return "<img src=\"{$barcodeDataUri}\" style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$barH}pt;\">\n" .
-               "<div style=\"position: fixed; left: {$x}pt; top: {$textTopPt}pt; width: {$w}pt; height: {$textH}pt; text-align: center; font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: {$textFontPt}pt; line-height: {$textH}pt;\">{$displayData}</div>\n";
+        // Background rect
+        $html = "<div style=\"position: fixed; left: {$x}pt; top: {$y}pt; width: {$w}pt; height: {$h}pt; background-color: {$background};\"></div>\n";
+
+        // Bars
+        $currentX = $x + $quietZonePt;
+        foreach ($pattern as $bar) {
+            $barW = round($bar['width'] * $unitW, 3);
+            if ($bar['black']) {
+                $bx = round($currentX, 3);
+                $html .= "<div style=\"position: fixed; left: {$bx}pt; top: {$y}pt; width: {$barW}pt; height: {$barH}pt; background-color: {$foreground};\"></div>\n";
+            }
+            $currentX += $barW;
+        }
+
+        // Optional text label below bars
+        if ($showText) {
+            $textTopPt = round($y + $barH, 2);
+            $textH = round($h - $barH, 2);
+            $textFontPt = round(2.5 * self::MM_TO_PT, 1);
+            $html .= "<div style=\"position: fixed; left: {$x}pt; top: {$textTopPt}pt; width: {$w}pt; height: {$textH}pt; text-align: center; font-family: 'DejaVu Sans Mono', 'Courier New', monospace; font-size: {$textFontPt}pt; line-height: {$textH}pt; color: {$foreground};\">{$displayData}</div>\n";
+        }
+
+        return $html;
     }
 
     private function renderImageLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
