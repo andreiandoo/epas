@@ -1880,6 +1880,14 @@ class MarketplaceEventsController extends BaseController
     {
         $today = now()->toDateString();
 
+        // Manual promotion via admin toggle
+        if ($event->is_promoted) {
+            if (!$event->promoted_until || $event->promoted_until->format('Y-m-d') >= $today) {
+                return true;
+            }
+        }
+
+        // Paid promotion via ServiceOrder
         return ServiceOrder::where('marketplace_event_id', $event->id)
             ->where('service_type', ServiceOrder::TYPE_FEATURING)
             ->where('status', ServiceOrder::STATUS_ACTIVE)
