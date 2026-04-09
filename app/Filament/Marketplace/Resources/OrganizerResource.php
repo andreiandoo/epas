@@ -650,7 +650,7 @@ class OrganizerResource extends Resource
                                                     . '</div>'
                                                     . '<div style="display:flex;align-items:center;gap:8px;">'
                                                     . $statusBadge
-                                                    . '<span style="font-size:12px;color:#9ca3af;">' . $msg->created_at->format('d.m.Y H:i') . '</span>'
+                                                    . '<span style="font-size:12px;color:#9ca3af;">' . $msg->created_at->timezone('Europe/Bucharest')->format('d.m.Y H:i') . '</span>'
                                                     . '</div>'
                                                     . '</div>'
                                                     . '<p style="font-size:14px;color:#374151;white-space:pre-wrap;margin:0 0 12px;">' . e($msg->message) . '</p>'
