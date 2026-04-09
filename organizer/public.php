@@ -257,8 +257,10 @@ require_once __DIR__ . '/../includes/header.php';
 // Include footer
 require_once __DIR__ . '/../includes/footer.php';
 
-// Page-specific scripts
-$scriptsExtra = <<<'SCRIPTS'
+// Page-specific scripts (defined before scripts.php include so AmbiletAPI is loaded first)
+$scriptsExtra = '';
+require_once __DIR__ . '/../includes/scripts.php';
+?>
 <script>
 const OrganizerPage = {
     init() {
@@ -562,7 +564,3 @@ const OrganizerPage = {
 
 document.addEventListener('DOMContentLoaded', () => OrganizerPage.init());
 </script>
-SCRIPTS;
-
-echo $scriptsExtra;
-?>
