@@ -333,14 +333,6 @@ const OrganizerPage = {
                     ${data.location || 'România'}
                 </div>
                 <div class="flex gap-8">
-                    <div class="text-center">
-                        <div class="text-2xl font-extrabold text-gray-900">${data.stats.events}</div>
-                        <div class="text-[13px] text-gray-500">Evenimente</div>
-                    </div>
-                    <div class="text-center">
-                        <div class="text-2xl font-extrabold text-gray-900">${data.stats.tickets}</div>
-                        <div class="text-[13px] text-gray-500">Bilete vândute</div>
-                    </div>
                     ${data.stats.followers !== '0' ? `
                     <div class="text-center">
                         <div class="text-2xl font-extrabold text-gray-900">${data.stats.followers}</div>
