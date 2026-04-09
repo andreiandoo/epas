@@ -103,8 +103,9 @@ wp_event_id, name, wp_slug, post_status, created_at, organizer_wp_user_id, start
 
 ### `import:ambilet-ticket-types` → inc_ticket_types.csv
 ```
-wp_product_id, name, wp_event_id, price, stock_qty
+wp_product_id, name, wp_event_id, price, stock_qty, sold_count
 ```
+> `stock_qty` = stoc CURENT rămas (WP `_stock`), `sold_count` = bilete vândute (din `wc-completed` orders). `quota_total = stock_qty + sold_count`, `quota_sold = sold_count`.
 
 ### `import:ambilet-orders` → inc_orders.csv
 ```
@@ -254,14 +255,22 @@ SELECT
     p.post_title AS name,
     COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_event_name' LIMIT 1), '') AS wp_event_id,
     COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_price' LIMIT 1), '0') AS price,
-    COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_stock' LIMIT 1), '') AS stock_qty
+    COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_stock' LIMIT 1), '') AS stock_qty,
+    (SELECT COUNT(*)
+     FROM wpyt_woocommerce_order_itemmeta oim
+     JOIN wpyt_woocommerce_order_items oi ON oi.order_item_id = oim.order_item_id
+     JOIN wpyt_posts o ON o.ID = oi.order_id
+     WHERE oim.meta_key = '_product_id' AND oim.meta_value = p.ID
+       AND o.post_type = 'shop_order' AND o.post_status = 'wc-completed'
+    ) AS sold_count
 FROM wpyt_posts p
 WHERE p.post_type = 'product'
-  AND p.post_status IN ('publish', 'draft', 'private')
+  AND p.post_status IN ('publish', 'draft', 'private', 'future')
   AND GREATEST(p.post_date, p.post_modified) > 'DATE_START'
   AND GREATEST(p.post_date, p.post_modified) <= 'DATE_END'
 ORDER BY p.ID
 ```
+> `stock_qty` = stoc curent rămas din WP. `sold_count` = nr. bilete din comenzi `wc-completed`. La import: `quota_total = stock_qty + sold_count`, `quota_sold = sold_count`.
 
 ### 7. Comenzi NOI
 ```sql

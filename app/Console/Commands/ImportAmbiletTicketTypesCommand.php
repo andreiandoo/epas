@@ -76,9 +76,19 @@ class ImportAmbiletTicketTypesCommand extends Command
             $price     = is_numeric($data['price']) ? (float) $data['price'] : 0.0;
             $priceCents = (int) round($price * 100);
             $stockRaw  = trim($data['stock_qty'] ?? '');
-            $qty       = ($stockRaw !== '' && $stockRaw !== 'NULL' && is_numeric($stockRaw))
-                ? (int) $stockRaw   // 0 = sold out, >0 = fixed quantity
-                : -1;              // empty/NULL = unlimited
+            $soldCount = (isset($data['sold_count']) && is_numeric(trim($data['sold_count'])))
+                ? (int) trim($data['sold_count'])
+                : 0;
+
+            if ($stockRaw !== '' && $stockRaw !== 'NULL' && is_numeric($stockRaw)) {
+                $remaining  = (int) $stockRaw;
+                $quotaTotal = $remaining + $soldCount; // initial stock = remaining + sold
+                $quotaSold  = $soldCount;
+            } else {
+                // No stock set in WP = unlimited
+                $quotaTotal = -1;
+                $quotaSold  = $soldCount;
+            }
 
             $now = now()->toDateTimeString();
 
@@ -90,8 +100,8 @@ class ImportAmbiletTicketTypesCommand extends Command
                 'name'                             => mb_substr($data['name'], 0, 120),
                 'price_cents'                      => $priceCents,
                 'currency'                         => 'RON',
-                'quota_total'                      => $qty,
-                'quota_sold'                       => 0,
+                'quota_total'                      => $quotaTotal,
+                'quota_sold'                       => $quotaSold,
                 'status'                           => 'hidden',
                 'is_refundable'                    => 0,
                 'sort_order'                       => 0,
