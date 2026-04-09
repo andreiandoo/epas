@@ -209,7 +209,13 @@ class TicketPreviewGenerator
 
         $qrDataUri = $this->fetchQrAsDataUri($codeData);
 
-        return "<img src=\"{$qrDataUri}\" style=\"position: fixed; left: {$qrX}pt; top: {$qrY}pt; width: {$size}pt; height: {$size}pt;\">\n";
+        $borderPt = round(2 * self::MM_TO_PT / 2.8346, 2); // 2px ≈ 1.5pt
+        $boxX = round($qrX - $borderPt, 2);
+        $boxY = round($qrY - $borderPt, 2);
+        $boxSize = round($size + 2 * $borderPt, 2);
+
+        return "<div style=\"position: fixed; left: {$boxX}pt; top: {$boxY}pt; width: {$boxSize}pt; height: {$boxSize}pt; background-color: #ffffff;\"></div>\n" .
+               "<img src=\"{$qrDataUri}\" style=\"position: fixed; left: {$qrX}pt; top: {$qrY}pt; width: {$size}pt; height: {$size}pt;\">\n";
     }
 
     private function renderBarcodeLayerHtml(array $layer, array $data, float $x, float $y, float $w, float $h): string
