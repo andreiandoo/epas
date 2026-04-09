@@ -82,8 +82,14 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
             </div>
 
+            <!-- Coming soon notice (replaces rewards / badges / levels until benefits are announced) -->
+            <div class="p-6 mb-6 text-center bg-white border rounded-xl lg:rounded-2xl border-border">
+                <div class="mb-3 text-4xl">✨</div>
+                <h2 class="mb-2 text-xl font-bold text-secondary">Adună puncte, în scurt timp anunțăm beneficiile!</h2>
+            </div>
+
             <!-- Tabs -->
-            <div class="flex max-w-full gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl scrollbar-hide">
+            <div style="display:none;" class="flex max-w-full gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl scrollbar-hide">
                 <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" id="tab-btn-rewards">
                     Recompense
                 </button>
@@ -99,7 +105,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Rewards Tab -->
-            <div id="tab-rewards">
+            <div id="tab-rewards" style="display:none;">
                 <div class="mb-6">
                     <h2 class="mb-2 text-xl font-bold text-secondary">Foloseste-ti punctele</h2>
                     <p class="text-muted">Schimba punctele acumulate pentru reduceri si beneficii exclusive.</p>
@@ -111,7 +117,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Badges Tab -->
-            <div id="tab-badges" class="hidden">
+            <div id="tab-badges" class="hidden" style="display:none;">
                 <div class="mb-6">
                     <h2 class="mb-2 text-xl font-bold text-secondary">Colectia ta de badge-uri</h2>
                     <p class="text-muted" id="badges-desc">Loading...</p>
@@ -138,7 +144,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Levels Tab -->
-            <div id="tab-levels" class="hidden">
+            <div id="tab-levels" class="hidden" style="display:none;">
                 <div class="mb-6">
                     <h2 class="mb-2 text-xl font-bold text-secondary">Sistemul de niveluri</h2>
                     <p class="text-muted">Acumuleaza XP pentru a avansa in nivel si a debloca recompense exclusive.</p>
