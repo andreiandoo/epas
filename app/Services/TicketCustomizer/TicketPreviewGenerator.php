@@ -209,7 +209,7 @@ class TicketPreviewGenerator
 
         $qrDataUri = $this->fetchQrAsDataUri($codeData);
 
-        $borderPt = round(2 * self::MM_TO_PT / 2.8346, 2); // 2px ≈ 1.5pt
+        $borderPt = round(5 * 0.75, 2); // 5px ≈ 3.75pt
         $boxX = round($qrX - $borderPt, 2);
         $boxY = round($qrY - $borderPt, 2);
         $boxSize = round($size + 2 * $borderPt, 2);
