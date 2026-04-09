@@ -916,6 +916,18 @@ switch ($action) {
         $endpoint = '/marketplace-events/organizers/' . urlencode($slug);
         break;
 
+    case 'organizer.contact':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing organizer slug']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-events/organizers/' . urlencode($slug) . '/contact';
+        break;
+
     // ==================== LOCATIONS ====================
 
     case 'locations.stats':

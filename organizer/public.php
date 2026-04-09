@@ -233,13 +233,13 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="p-6 bg-gradient-to-br from-gray-900 to-gray-700 rounded-2xl">
                 <h3 class="mb-2 text-base font-bold text-white">Interesat de colaborare?</h3>
                 <p class="mb-5 text-sm text-white/90">Contactează organizatorul pentru evenimente private sau corporate.</p>
-                <a id="contactEmail" href="#" class="w-full flex items-center justify-center gap-2 py-3.5 bg-primary rounded-lg text-white text-sm font-semibold hover:bg-primary-dark transition-colors mb-3">
+                <button onclick="var m=document.getElementById('contactModal');m.style.display='flex'" class="w-full flex items-center justify-center gap-2 py-3.5 bg-primary rounded-lg text-white text-sm font-semibold hover:bg-primary-dark transition-colors mb-3 cursor-pointer">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                         <polyline points="22,6 12,13 2,6"/>
                     </svg>
                     Trimite mesaj
-                </a>
+                </button>
                 <a id="contactWebsite" href="#" target="_blank" class="w-full flex items-center justify-center gap-2 py-3.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-semibold hover:bg-white/20 transition-colors hidden">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"/>
@@ -252,6 +252,46 @@ require_once __DIR__ . '/../includes/header.php';
         </aside>
     </div>
 </main>
+
+<!-- Contact Modal -->
+<div id="contactModal" class="fixed inset-0 z-50 items-center justify-center bg-black/50 backdrop-blur-sm" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="w-full max-w-md mx-4 bg-white shadow-2xl rounded-2xl">
+        <div class="flex items-center justify-between p-5 border-b border-gray-200">
+            <h3 class="text-lg font-bold text-gray-900">Trimite mesaj</h3>
+            <button onclick="document.getElementById('contactModal').style.display='none'" class="p-1 text-gray-400 transition-colors hover:text-gray-600">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="contactForm" class="p-5 space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-gray-700">Prenume *</label>
+                    <input type="text" name="first_name" required class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="Prenumele tău">
+                </div>
+                <div>
+                    <label class="block mb-1 text-sm font-medium text-gray-700">Nume *</label>
+                    <input type="text" name="last_name" required class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="Numele tău">
+                </div>
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Email *</label>
+                <input type="email" name="email" required class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="email@exemplu.ro">
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Telefon</label>
+                <input type="tel" name="phone" class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" placeholder="07xx xxx xxx">
+            </div>
+            <div>
+                <label class="block mb-1 text-sm font-medium text-gray-700">Mesaj *</label>
+                <textarea name="message" required rows="4" class="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none" placeholder="Scrie mesajul tău aici..."></textarea>
+            </div>
+            <div id="contactFormMessage" class="hidden px-4 py-3 text-sm rounded-lg"></div>
+            <button type="submit" id="contactSubmitBtn" class="w-full py-3 text-sm font-semibold text-white transition-colors rounded-lg bg-primary hover:bg-primary-dark">
+                Trimite mesajul
+            </button>
+        </form>
+    </div>
+</div>
 
 <?php
 // Include footer
@@ -495,5 +535,39 @@ const OrganizerPage = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => OrganizerPage.init());
+document.addEventListener('DOMContentLoaded', () => {
+    OrganizerPage.init();
+
+    // Contact form submit
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('contactSubmitBtn');
+            const msg = document.getElementById('contactFormMessage');
+            const slug = window.location.pathname.split('/').pop();
+
+            btn.disabled = true;
+            btn.textContent = 'Se trimite...';
+            msg.className = 'hidden';
+
+            try {
+                const fd = new FormData(contactForm);
+                const payload = Object.fromEntries(fd.entries());
+                await AmbiletAPI.post('/marketplace-events/organizers/' + slug + '/contact', payload);
+
+                msg.textContent = 'Mesajul a fost trimis cu succes! Organizatorul va reveni cu un răspuns.';
+                msg.className = 'px-4 py-3 text-sm rounded-lg bg-green-50 text-green-700';
+                contactForm.reset();
+                setTimeout(() => { document.getElementById('contactModal').style.display = 'none'; msg.className = 'hidden'; }, 3000);
+            } catch (err) {
+                msg.textContent = err.message || 'A apărut o eroare. Încearcă din nou.';
+                msg.className = 'px-4 py-3 text-sm rounded-lg bg-red-50 text-red-700';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Trimite mesajul';
+            }
+        });
+    }
+});
 </script>
