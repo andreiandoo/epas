@@ -654,7 +654,7 @@ class OrganizerResource extends Resource
                                                     . '</div>'
                                                     . '</div>'
                                                     . '<p style="font-size:14px;color:#374151;white-space:pre-wrap;margin:0 0 12px;">' . e($msg->message) . '</p>'
-                                                    . '<a href="' . $mailtoUrl . '" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">'
+                                                    . '<a href="' . $mailtoUrl . '" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:13px;font-weight:600;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">'
                                                     . '<svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>'
                                                     . 'Răspunde'
                                                     . '</a>'
