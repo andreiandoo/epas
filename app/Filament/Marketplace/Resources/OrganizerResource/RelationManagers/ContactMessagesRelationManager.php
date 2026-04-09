@@ -13,8 +13,6 @@ class ContactMessagesRelationManager extends RelationManager
 
     protected static ?string $title = 'Mesaje';
 
-    protected static ?string $icon = 'heroicon-o-envelope';
-
     public function table(Table $table): Table
     {
         return $table
