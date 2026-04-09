@@ -73,6 +73,10 @@ class TicketType extends Model
         'ticket_group',
         // Perks/conditions list (JSON array of strings)
         'perks',
+        // Leisure venue fields
+        'daily_capacity',
+        'is_parking',
+        'requires_vehicle_info',
     ];
 
     protected $casts = [
@@ -87,6 +91,8 @@ class TicketType extends Model
         'is_entry_ticket' => 'boolean',
         'is_declarable' => 'boolean',
         'is_subscription' => 'boolean',
+        'is_parking' => 'boolean',
+        'requires_vehicle_info' => 'boolean',
         'is_independent_stock' => 'boolean',
         'valid_date'     => 'date',
         'min_per_order'    => 'integer',

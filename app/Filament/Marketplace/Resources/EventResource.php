@@ -1149,6 +1149,122 @@ class EventResource extends Resource
                             ])->columns(3),
                                     ]), // End Tab 3: Conținut
 
+                                // ========== TAB: CONFIGURARE LOCAȚIE (doar leisure_venue) ==========
+                                SC\Tabs\Tab::make($t('Configurare Locație', 'Venue Config'))
+                                    ->key('venue-config')
+                                    ->icon('heroicon-o-building-office')
+                                    ->visible(fn (SGet $get) => ($get('display_template') ?? 'standard') === 'leisure_venue')
+                                    ->schema([
+                                        SC\Section::make($t('Program funcționare', 'Operating Schedule'))
+                                            ->description($t('Setează programul pentru fiecare zi a săptămânii. Lasă gol pentru zilele în care locația este închisă.', 'Set schedule for each day of the week. Leave empty for closed days.'))
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.operating_schedule_list')
+                                                    ->label('')
+                                                    ->default([
+                                                        ['day' => 'mon', 'open' => '09:00', 'close' => '20:00'],
+                                                        ['day' => 'tue', 'open' => '09:00', 'close' => '20:00'],
+                                                        ['day' => 'wed', 'open' => '09:00', 'close' => '20:00'],
+                                                        ['day' => 'thu', 'open' => '09:00', 'close' => '20:00'],
+                                                        ['day' => 'fri', 'open' => '09:00', 'close' => '20:00'],
+                                                        ['day' => 'sat', 'open' => '10:00', 'close' => '21:00'],
+                                                        ['day' => 'sun', 'open' => '10:00', 'close' => '21:00'],
+                                                    ])
+                                                    ->schema([
+                                                        Forms\Components\Select::make('day')
+                                                            ->label($t('Zi', 'Day'))
+                                                            ->options([
+                                                                'mon' => $t('Luni', 'Monday'),
+                                                                'tue' => $t('Marți', 'Tuesday'),
+                                                                'wed' => $t('Miercuri', 'Wednesday'),
+                                                                'thu' => $t('Joi', 'Thursday'),
+                                                                'fri' => $t('Vineri', 'Friday'),
+                                                                'sat' => $t('Sâmbătă', 'Saturday'),
+                                                                'sun' => $t('Duminică', 'Sunday'),
+                                                            ])
+                                                            ->required(),
+                                                        Forms\Components\TextInput::make('open')
+                                                            ->label($t('Deschidere', 'Open'))
+                                                            ->placeholder('09:00'),
+                                                        Forms\Components\TextInput::make('close')
+                                                            ->label($t('Închidere', 'Close'))
+                                                            ->placeholder('20:00'),
+                                                    ])
+                                                    ->columns(3)
+                                                    ->reorderable(false)
+                                                    ->addActionLabel($t('Adaugă zi', 'Add day')),
+                                            ]),
+
+                                        SC\Section::make($t('Configurare generală', 'General Configuration'))
+                                            ->schema([
+                                                SC\Grid::make(3)->schema([
+                                                    Forms\Components\TextInput::make('venue_config.max_advance_days')
+                                                        ->label($t('Zile maxime în avans', 'Max advance days'))
+                                                        ->numeric()
+                                                        ->default(90)
+                                                        ->minValue(1)
+                                                        ->maxValue(365)
+                                                        ->helperText($t('Câte zile în viitor pot rezerva clienții', 'How many days ahead customers can book')),
+                                                    Forms\Components\TextInput::make('venue_config.contact_phone')
+                                                        ->label($t('Telefon contact', 'Contact phone'))
+                                                        ->tel(),
+                                                    Forms\Components\TextInput::make('venue_config.directions_url')
+                                                        ->label($t('Link Google Maps', 'Google Maps URL'))
+                                                        ->url()
+                                                        ->placeholder('https://maps.google.com/...'),
+                                                ]),
+                                                Forms\Components\TagsInput::make('venue_config.amenities')
+                                                    ->label($t('Facilități', 'Amenities'))
+                                                    ->placeholder($t('ex: Piscină, Tobogane, Restaurant...', 'e.g. Pool, Slides, Restaurant...'))
+                                                    ->helperText($t('Afișate ca badge-uri pe pagina publică', 'Shown as badges on public page')),
+                                                Forms\Components\TagsInput::make('venue_config.closed_dates')
+                                                    ->label($t('Zile închise', 'Closed dates'))
+                                                    ->placeholder('YYYY-MM-DD')
+                                                    ->helperText($t('Formatat: 2026-12-25 (Crăciun), 2026-01-01 (An Nou)', 'Format: 2026-12-25 (Christmas), 2026-01-01 (New Year)')),
+                                            ]),
+
+                                        SC\Section::make($t('Reguli de preț automate', 'Automatic Pricing Rules'))
+                                            ->description($t('Definește majorări automate de preț pe anumite zile ale săptămânii. Override-urile manuale per dată suprascriu aceste reguli.', 'Define automatic price increases on certain days. Manual per-date overrides take priority.'))
+                                            ->schema([
+                                                Forms\Components\Repeater::make('venue_config.pricing_rules')
+                                                    ->label('')
+                                                    ->schema([
+                                                        Forms\Components\CheckboxList::make('days')
+                                                            ->label($t('Zile', 'Days'))
+                                                            ->options([
+                                                                'mon' => $t('Lu', 'Mon'), 'tue' => $t('Ma', 'Tue'), 'wed' => $t('Mi', 'Wed'),
+                                                                'thu' => $t('Jo', 'Thu'), 'fri' => $t('Vi', 'Fri'), 'sat' => $t('Sâ', 'Sat'), 'sun' => $t('Du', 'Sun'),
+                                                            ])
+                                                            ->columns(7),
+                                                        SC\Grid::make(3)->schema([
+                                                            Forms\Components\Select::make('type')
+                                                                ->label($t('Tip', 'Type'))
+                                                                ->options([
+                                                                    'percent' => $t('Procent (+%)', 'Percent (+%)'),
+                                                                    'fixed' => $t('Sumă fixă (+RON)', 'Fixed amount (+RON)'),
+                                                                ])
+                                                                ->default('percent'),
+                                                            Forms\Components\TextInput::make('value')
+                                                                ->label($t('Valoare', 'Value'))
+                                                                ->numeric()
+                                                                ->placeholder($t('ex: 20 (pentru +20%)', 'e.g. 20 (for +20%)')),
+                                                            Forms\Components\TextInput::make('label')
+                                                                ->label($t('Etichetă', 'Label'))
+                                                                ->placeholder($t('ex: Weekend +20%', 'e.g. Weekend +20%')),
+                                                        ]),
+                                                    ])
+                                                    ->addActionLabel($t('Adaugă regulă', 'Add rule'))
+                                                    ->reorderable(false),
+                                            ]),
+
+                                        SC\Section::make($t('Regulament', 'Rules'))
+                                            ->collapsed()
+                                            ->schema([
+                                                Forms\Components\RichEditor::make('venue_config.rules_html')
+                                                    ->label('')
+                                                    ->toolbarButtons(['bold', 'italic', 'bulletList', 'orderedList', 'link']),
+                                            ]),
+                                    ]),
+
                                 // ========== TAB 4: BILETE ==========
                                 SC\Tabs\Tab::make($t('Bilete', 'Tickets'))
                                     ->key('bilete')
@@ -1660,6 +1776,27 @@ class EventResource extends Resource
                                                     ->hintIcon('heroicon-o-information-circle', tooltip: $t('Lasă gol dacă biletul e valabil pe toată durata evenimentului. Completează o dată specifică pentru bilete de o zi.', 'Leave empty if ticket is valid for the entire event. Fill a specific date for single-day tickets.'))
                                                     ->visible(fn (SGet $get) => $get('../../duration_mode') === 'range')
                                                     ->columnSpan(12),
+
+                                                // ── Leisure Venue Fields (visible only for leisure_venue events) ──
+                                                SC\Grid::make(4)
+                                                    ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make('daily_capacity')
+                                                            ->label($t('Capacitate zilnică', 'Daily capacity'))
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->placeholder($t('ex: 500', 'e.g. 500'))
+                                                            ->helperText($t('Bilete maxime pe zi pentru acest tip', 'Max tickets per day for this type'))
+                                                            ->columnSpan(1),
+                                                        Forms\Components\Toggle::make('is_parking')
+                                                            ->label($t('Bilet de parcare', 'Parking ticket'))
+                                                            ->live()
+                                                            ->columnSpan(1),
+                                                        Forms\Components\Toggle::make('requires_vehicle_info')
+                                                            ->label($t('Necesită nr. înmatriculare', 'Requires license plate'))
+                                                            ->visible(fn (SGet $get) => (bool) $get('is_parking'))
+                                                            ->columnSpan(1),
+                                                    ]),
                                             ])
                                             ->columns(12)
                                             ->columnSpan(12),
@@ -2657,6 +2794,16 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
+                        Forms\Components\Select::make('display_template')
+                            ->label($t('Tip pagină', 'Page template'))
+                            ->options([
+                                'standard' => $t('Standard (eveniment)', 'Standard (event)'),
+                                'leisure_venue' => $t('Locație de agrement', 'Leisure venue'),
+                            ])
+                            ->default('standard')
+                            ->live()
+                            ->helperText($t('Locație de agrement: calendar + bilete zilnice + parcare', 'Leisure venue: calendar + daily tickets + parking')),
+
                         SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
                                 ->label($t('Publicat', 'Published'))
@@ -4128,6 +4275,7 @@ class EventResource extends Resource
             'view-guest' => Pages\ViewGuestEvent::route('/{record}/view'),
             'import-external-tickets' => Pages\ImportExternalTickets::route('/{record}/external-tickets'),
             'import' => Pages\ImportEvents::route('/import'),
+            'daily-capacities' => Pages\DailyCapacities::route('/{record}/daily-capacities'),
         ];
     }
 }

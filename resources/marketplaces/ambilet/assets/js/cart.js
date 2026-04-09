@@ -33,10 +33,20 @@ const AmbiletCart = {
     /**
      * Add item to cart
      */
-    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1) {
+    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null) {
+        // Support alternative signature: addItem(eventData, ticketTypeData, quantity, meta)
+        if (typeof eventId === 'object' && eventId !== null) {
+            meta = ticketTypeId; // 4th arg
+            quantity = ticketTypeData || 1; // 3rd arg
+            ticketTypeData = eventData; // 2nd arg
+            eventData = eventId; // 1st arg
+            ticketTypeId = ticketTypeData.id;
+            eventId = eventData.id;
+        }
         const cart = this.getCart();
         const perfId = eventData.performance_id || 0;
-        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}`;
+        const visitDate = meta?.visit_date || eventData.visit_date || '';
+        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}${visitDate ? '_' + visitDate : ''}`;
 
         // Find existing item
         const existingIndex = cart.items.findIndex(item => item.key === itemKey);
@@ -78,9 +88,12 @@ const AmbiletCart = {
                     min_per_order: ticketTypeData.min_per_order || 1,
                     max_per_order: ticketTypeData.max_per_order || 10,
                     commission: ticketTypeData.commission || null, // Per-ticket commission settings
-                    is_refundable: ticketTypeData.is_refundable || false
+                    is_refundable: ticketTypeData.is_refundable || false,
+                    is_parking: ticketTypeData.is_parking || false,
+                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false
                 },
                 quantity,
+                meta: meta || null,
                 addedAt: new Date().toISOString()
             });
         }

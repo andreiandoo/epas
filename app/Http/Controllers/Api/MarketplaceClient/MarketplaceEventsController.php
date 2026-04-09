@@ -702,6 +702,9 @@ class MarketplaceEventsController extends BaseController
                 // Custom related events flags
                 'has_custom_related' => (bool) $event->has_custom_related,
                 'custom_related_event_ids' => $event->custom_related_event_ids ?? [],
+                // Leisure venue fields
+                'display_template' => $event->display_template ?? 'standard',
+                'venue_config' => ($event->display_template ?? 'standard') === 'leisure_venue' ? ($event->venue_config ?? null) : null,
                 'ticket_terms' => (function () use ($event, $venue, $language) {
                     $terms = $event->getTranslation('ticket_terms', $language)
                         ?? $event->getTranslation('ticket_terms', 'ro')
@@ -844,6 +847,9 @@ class MarketplaceEventsController extends BaseController
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
                     'ticket_group' => $tt->ticket_group,
                     'perks' => $tt->perks ?? [],
+                    'daily_capacity' => $tt->daily_capacity,
+                    'is_parking' => (bool) ($tt->is_parking ?? false),
+                    'requires_vehicle_info' => (bool) ($tt->requires_vehicle_info ?? false),
                 ];
             })->values(),
             'enable_ticket_groups' => (bool) $event->enable_ticket_groups,

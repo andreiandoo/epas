@@ -113,6 +113,10 @@ class Event extends Model
         // ticket display options
         'enable_ticket_groups',
         'enable_ticket_perks',
+
+        // leisure venue
+        'display_template',
+        'venue_config',
     ];
 
     protected $casts = [
@@ -158,6 +162,7 @@ class Event extends Model
         'multi_slots'       => 'array',
         'organizer_notifications' => 'array',
         'seo'               => 'array',
+        'venue_config'      => 'array',
 
         // marketplace pricing & tracking
         'target_price'      => 'decimal:2',

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class MarketplaceEvent extends Model
@@ -57,6 +58,10 @@ class MarketplaceEvent extends Model
         'tickets_sold',
         'revenue',
         'views',
+
+        // Leisure venue fields
+        'display_template',
+        'venue_config',
     ];
 
     protected $casts = [
@@ -78,6 +83,7 @@ class MarketplaceEvent extends Model
         'max_points_discount_percent' => 'decimal:2',
         'revenue' => 'decimal:2',
         'target_price' => 'decimal:2',
+        'venue_config' => 'array',
     ];
 
     protected static function boot()
@@ -128,6 +134,11 @@ class MarketplaceEvent extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'marketplace_event_id');
+    }
+
+    public function dateCapacities(): HasMany
+    {
+        return $this->hasMany(MarketplaceEventDateCapacity::class);
     }
 
     public function approvedBy(): BelongsTo
@@ -185,11 +196,105 @@ class MarketplaceEvent extends Model
             return false;
         }
 
-        if ($this->starts_at < $now) {
-            return false; // Event already started
+        // Leisure venues: on sale until ends_at (they run for the entire season)
+        if ($this->isLeisureVenue()) {
+            return !$this->ends_at || $this->ends_at > $now;
+        }
+
+        // Standard events: not on sale once started
+        if ($this->starts_at && $this->starts_at < $now) {
+            return false;
         }
 
         return true;
+    }
+
+    // =========================================
+    // Leisure Venue Helpers
+    // =========================================
+
+    public function isLeisureVenue(): bool
+    {
+        return $this->display_template === 'leisure_venue';
+    }
+
+    /**
+     * Check if a specific date is open for the leisure venue.
+     */
+    public function isDateOpen(string $date): bool
+    {
+        if (!$this->isLeisureVenue()) {
+            return false;
+        }
+
+        $config = $this->venue_config ?? [];
+
+        // Check closed dates
+        $closedDates = $config['closed_dates'] ?? [];
+        if (in_array($date, $closedDates)) {
+            return false;
+        }
+
+        // Check operating schedule
+        $dayOfWeek = strtolower(Carbon::parse($date)->format('D')); // mon, tue, wed...
+        $schedule = $config['operating_schedule'] ?? [];
+
+        // If no schedule defined, assume open every day
+        if (empty($schedule)) {
+            return true;
+        }
+
+        return isset($schedule[$dayOfWeek]) && $schedule[$dayOfWeek] !== null;
+    }
+
+    /**
+     * Get operating hours for a specific date.
+     */
+    public function getOperatingHours(string $date): ?array
+    {
+        $config = $this->venue_config ?? [];
+        $schedule = $config['operating_schedule'] ?? [];
+        $dayOfWeek = strtolower(Carbon::parse($date)->format('D'));
+
+        return $schedule[$dayOfWeek] ?? null;
+    }
+
+    /**
+     * Calculate effective price for a ticket type on a given date.
+     * Applies pricing rules from venue_config, then checks for date-specific override.
+     */
+    public function getEffectivePrice(MarketplaceTicketType $ticketType, string $date, ?float $dateOverride = null): float
+    {
+        // Date-level override takes absolute priority
+        if ($dateOverride !== null) {
+            return $dateOverride;
+        }
+
+        $basePrice = (float) $ticketType->price;
+        $config = $this->venue_config ?? [];
+        $pricingRules = $config['pricing_rules'] ?? [];
+
+        if (empty($pricingRules)) {
+            return $basePrice;
+        }
+
+        $dayOfWeek = strtolower(Carbon::parse($date)->format('D'));
+
+        foreach ($pricingRules as $rule) {
+            $days = $rule['days'] ?? [];
+            if (in_array($dayOfWeek, $days)) {
+                $type = $rule['type'] ?? 'percent';
+                $value = (float) ($rule['value'] ?? 0);
+
+                if ($type === 'percent') {
+                    return round($basePrice * (1 + $value / 100), 2);
+                } elseif ($type === 'fixed') {
+                    return round($basePrice + $value, 2);
+                }
+            }
+        }
+
+        return $basePrice;
     }
 
     public function hasAvailableTickets(): bool

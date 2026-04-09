@@ -105,6 +105,10 @@ class CheckoutController extends BaseController
                         $cartItem['seats'] = $item['seats'] ?? [];
                     }
 
+                    // Preserve leisure venue metadata (visit_date, vehicle_info)
+                    $cartItem['visit_date'] = $item['meta']['visit_date'] ?? $item['visit_date'] ?? null;
+                    $cartItem['vehicle_info'] = $item['meta']['vehicle_info'] ?? $item['vehicle_info'] ?? null;
+
                     $cartItems[] = $cartItem;
                 }
             }
@@ -285,11 +289,56 @@ class CheckoutController extends BaseController
                             $this->checkLowStockAlert($ticketType);
                         }
                     }
+
+                    // Date capacity check for leisure venue events
+                    $visitDate = $item['visit_date'] ?? null;
+                    if ($visitDate && $mktTicketType && $mktTicketType->daily_capacity) {
+                        $dateCap = \App\Models\MarketplaceEventDateCapacity::where('marketplace_event_id', $eventId)
+                            ->where('marketplace_ticket_type_id', $ticketTypeId)
+                            ->where('visit_date', $visitDate)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$dateCap) {
+                            $dateCap = \App\Models\MarketplaceEventDateCapacity::create([
+                                'marketplace_event_id' => $eventId,
+                                'marketplace_ticket_type_id' => $ticketTypeId,
+                                'visit_date' => $visitDate,
+                                'capacity' => $mktTicketType->daily_capacity,
+                                'sold' => 0,
+                                'reserved' => 0,
+                            ]);
+                        }
+
+                        if ($dateCap->is_closed) {
+                            throw new \Exception("Tickets for {$mktTicketType->name} are not available on {$visitDate}");
+                        }
+
+                        if ($dateCap->available < $quantity) {
+                            throw new \Exception("Not enough tickets for {$mktTicketType->name} on {$visitDate}");
+                        }
+
+                        $dateCap->increment('sold', $quantity);
+                    }
                 }
 
                 // Determine unit price
                 if ($mktTicketType) {
-                    $unitPrice = (float) $mktTicketType->price;
+                    // For leisure venues, use effective price (includes pricing rules + date overrides)
+                    $visitDate = $item['visit_date'] ?? null;
+                    if ($visitDate && $marketplaceEvent?->isLeisureVenue()) {
+                        $dateOverride = null;
+                        $dateCap = \App\Models\MarketplaceEventDateCapacity::where('marketplace_event_id', $eventId)
+                            ->where('marketplace_ticket_type_id', $ticketTypeId)
+                            ->where('visit_date', $visitDate)
+                            ->first();
+                        if ($dateCap && $dateCap->price_override !== null) {
+                            $dateOverride = (float) $dateCap->price_override;
+                        }
+                        $unitPrice = $marketplaceEvent->getEffectivePrice($mktTicketType, $visitDate, $dateOverride);
+                    } else {
+                        $unitPrice = (float) $mktTicketType->price;
+                    }
                 } elseif ($ticketType) {
                     $unitPrice = ($ticketType->sale_price_cents ?? $ticketType->price_cents) / 100;
                 } else {
@@ -348,6 +397,8 @@ class CheckoutController extends BaseController
                     'seat_uids' => $item['seat_uids'] ?? [],
                     'seats' => $item['seats'] ?? [],
                     'event_seating_id' => $item['event_seating_id'] ?? null,
+                    'visit_date' => $item['visit_date'] ?? null,
+                    'vehicle_info' => $item['vehicle_info'] ?? null,
                 ];
 
                 // Collect seated items for order meta
@@ -593,6 +644,14 @@ class CheckoutController extends BaseController
                     if ($hasInsurance && $insurancePerTicket > 0) {
                         $ticketMeta['has_insurance'] = true;
                         $ticketMeta['insurance_amount'] = $insurancePerTicket;
+                    }
+
+                    // Leisure venue metadata
+                    if (!empty($item['visit_date'])) {
+                        $ticketMeta['visit_date'] = $item['visit_date'];
+                    }
+                    if (!empty($item['vehicle_info'])) {
+                        $ticketMeta['vehicle_info'] = $item['vehicle_info'];
                     }
 
                     Ticket::create([

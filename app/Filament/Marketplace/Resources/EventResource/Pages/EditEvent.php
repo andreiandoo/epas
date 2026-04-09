@@ -123,6 +123,15 @@ class EditEvent extends EditRecord
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();
 
+        // Daily Capacities (leisure venue only)
+        if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
+            $actions[] = Actions\Action::make('daily_capacities')
+                ->label('Capacitate Zilnică')
+                ->icon('heroicon-o-calendar-days')
+                ->color('warning')
+                ->url(fn () => EventResource::getUrl('daily-capacities', ['record' => $this->record]));
+        }
+
         // Statistics action
         $actions[] = Actions\Action::make('statistics')
             ->label('Statistici')
@@ -1054,6 +1063,23 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
+        // Transform venue_config.operating_schedule_list (repeater) into operating_schedule (keyed by day)
+        if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
+            $config = $this->record->venue_config ?? [];
+            $scheduleList = $config['operating_schedule_list'] ?? [];
+            $schedule = [];
+            foreach ($scheduleList as $entry) {
+                $day = $entry['day'] ?? null;
+                if ($day && !empty($entry['open'])) {
+                    $schedule[$day] = ['open' => $entry['open'], 'close' => $entry['close'] ?? '20:00'];
+                } elseif ($day) {
+                    $schedule[$day] = null; // Closed
+                }
+            }
+            $config['operating_schedule'] = $schedule;
+            $this->record->update(['venue_config' => $config]);
+        }
+
         // Auto-fill short description from first 80 words of description if empty
         $marketplace = static::getMarketplaceClient();
         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';

@@ -547,7 +547,11 @@ const CheckoutPage = {
                 price: price,
                 lineTotal: itemTotal,
                 hasDiscount: hasDiscount,
-                originalPrice: originalPrice
+                originalPrice: originalPrice,
+                visitDate: item.meta?.visit_date || item.event?.visit_date || null,
+                vehicleInfo: item.meta?.vehicle_info || null,
+                isParking: item.ticketType?.is_parking || false,
+                requiresVehicleInfo: item.ticketType?.requires_vehicle_info || false,
             });
         });
 
@@ -595,10 +599,17 @@ const CheckoutPage = {
 
             // Show tickets for this event
             group.tickets.forEach(ticket => {
+                const visitDateHtml = ticket.visitDate ? `<div class="text-xs text-gray-400 mt-0.5">Data vizită: ${AmbiletUtils.formatDate(ticket.visitDate)}</div>` : '';
+                const vehiclePlates = ticket.vehicleInfo?.license_plates?.filter(p => p)?.join(', ') || '';
+                const vehicleHtml = vehiclePlates ? `<div class="text-xs text-gray-400">Nr. înmatriculare: ${vehiclePlates}</div>` : '';
                 itemsHtml += `
                     <div class="flex justify-between text-sm">
-                        <span class="text-muted">${ticket.qty}x ${ticket.name}</span>
-                        <div class="text-right">
+                        <div>
+                            <span class="text-muted">${ticket.qty}x ${ticket.name}</span>
+                            ${visitDateHtml}
+                            ${vehicleHtml}
+                        </div>
+                        <div class="text-right shrink-0">
                             ${ticket.hasDiscount ? `<span class="mr-2 text-xs line-through text-muted">${AmbiletUtils.formatCurrency(ticket.originalPrice * ticket.qty)}</span>` : ''}
                             <span class="font-medium">${AmbiletUtils.formatCurrency(ticket.lineTotal)}</span>
                         </div>

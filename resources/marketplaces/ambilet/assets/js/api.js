@@ -221,6 +221,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/date-availability/i)) return 'event.dateAvailability';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/verify-password$/i)) return 'event.verify-password';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.includes('/marketplace-events')) return 'events';
@@ -493,6 +494,12 @@ const AmbiletAPI = {
         const ordersPayMatch = endpoint.match(/\/orders\/(\d+)\/(pay|payment-status)$/);
         if (ordersPayMatch) {
             return `id=${encodeURIComponent(ordersPayMatch[1])}`;
+        }
+
+        // Extract slug from date-availability endpoint: /marketplace-events/{slug}/date-availability?date=...
+        const dateAvailMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/date-availability/i);
+        if (dateAvailMatch) {
+            return `slug=${encodeURIComponent(dateAvailMatch[1])}`;
         }
 
         // Extract slug from endpoints like /marketplace-events/event-slug or /marketplace-events/event-slug/verify-password

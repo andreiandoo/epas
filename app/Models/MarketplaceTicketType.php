@@ -33,6 +33,13 @@ class MarketplaceTicketType extends Model
         'series_start',
         'series_end',
         'event_series',
+
+        // Leisure venue fields
+        'ticket_group',
+        'daily_capacity',
+        'is_parking',
+        'requires_vehicle_info',
+        'meta',
     ];
 
     protected $casts = [
@@ -43,6 +50,9 @@ class MarketplaceTicketType extends Model
         'autostart_when_previous_sold_out' => 'boolean',
         'is_visible' => 'boolean',
         'is_refundable' => 'boolean',
+        'is_parking' => 'boolean',
+        'requires_vehicle_info' => 'boolean',
+        'meta' => 'array',
     ];
 
     // =========================================

@@ -61,6 +61,13 @@ if ($eventSlug) {
     }
 }
 
+// Leisure venue: delegate to custom template
+$displayTemplate = $ev['display_template'] ?? 'standard';
+if ($displayTemplate === 'leisure_venue') {
+    include __DIR__ . '/leisure-venue.php';
+    return;
+}
+
 // Build LCP image URLs for preload (hero for desktop, poster for mobile)
 $lcpHeroUrl = '';
 $lcpPosterUrl = '';

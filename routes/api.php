@@ -2263,6 +2263,8 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
         ->name('api.marketplace-client.marketplace-events.verify-password');
     Route::get('/{event}/availability', [PublicMarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.marketplace-events.availability');
+    Route::get('/{identifier}/date-availability', [\App\Http\Controllers\Api\MarketplaceClient\DateAvailabilityController::class, '__invoke'])
+        ->name('api.marketplace-client.marketplace-events.date-availability');
 });
 
 /*
