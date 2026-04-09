@@ -271,7 +271,7 @@ const OrganizerPage = {
     async loadOrganizerData() {
         try {
             const slug = window.location.pathname.split('/').pop();
-            const response = await AmbiletAPI.get('/api/proxy.php?action=organizer&slug=' + slug);
+            const response = await AmbiletAPI.get('/marketplace-events/organizers/' + slug);
             if (response.success && response.data) {
                 this.renderOrganizer(response.data);
                 return;

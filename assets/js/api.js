@@ -212,6 +212,10 @@ const AmbiletAPI = {
         // Newsletter
         if (endpoint === '/newsletter/subscribe') return 'newsletter.subscribe';
 
+        // Public organizer profile
+        if (endpoint.match(/\/marketplace-events\/organizers\/[a-z0-9-]+$/i)) return 'organizer';
+        if (endpoint.includes('/marketplace-events/organizers')) return 'organizers';
+
         // Public endpoints
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
@@ -426,6 +430,12 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract organizer slug from /marketplace-events/organizers/{slug}
+        const organizerMatch = endpoint.match(/\/marketplace-events\/organizers\/([\w-]+)$/);
+        if (organizerMatch) {
+            return `slug=${encodeURIComponent(organizerMatch[1])}`;
+        }
+
         // Extract order ID from /order-confirmation/{id} (public thank-you page)
         const confirmMatch = endpoint.match(/\/order-confirmation\/([\w-]+)$/);
         if (confirmMatch) {
