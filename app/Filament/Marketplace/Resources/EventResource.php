@@ -1793,6 +1793,7 @@ class EventResource extends Resource
 
                                                 // ── Leisure Venue Fields (visible only for leisure_venue events) ──
                                                 SC\Grid::make(4)
+                                                    ->extraAttributes(['style' => '--col-span-default: span 1 / span 1; --col-span-lg: span 12 / span 12;'])
                                                     ->visible(fn (SGet $get) => ($get('../../display_template') ?? 'standard') === 'leisure_venue')
                                                     ->schema([
                                                         Forms\Components\TextInput::make('daily_capacity')
@@ -1800,16 +1801,13 @@ class EventResource extends Resource
                                                             ->numeric()
                                                             ->minValue(1)
                                                             ->placeholder($t('ex: 500', 'e.g. 500'))
-                                                            ->helperText($t('Bilete maxime pe zi pentru acest tip', 'Max tickets per day for this type'))
-                                                            ->columnSpan(1),
+                                                            ->helperText($t('Bilete maxime pe zi pentru acest tip', 'Max tickets per day for this type')),
                                                         Forms\Components\Toggle::make('is_parking')
                                                             ->label($t('Bilet de parcare', 'Parking ticket'))
-                                                            ->live()
-                                                            ->columnSpan(1),
+                                                            ->live(),
                                                         Forms\Components\Toggle::make('requires_vehicle_info')
                                                             ->label($t('Necesită nr. înmatriculare', 'Requires license plate'))
-                                                            ->visible(fn (SGet $get) => (bool) $get('is_parking'))
-                                                            ->columnSpan(1),
+                                                            ->visible(fn (SGet $get) => (bool) $get('is_parking')),
                                                     ]),
                                             ])
                                             ->columns(12)
