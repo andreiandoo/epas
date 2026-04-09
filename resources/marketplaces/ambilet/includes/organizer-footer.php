@@ -5,7 +5,7 @@
 ?>
 
 <!-- Organizer Footer -->
-<footer class="bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3.5 md:px-6 rounded-b-xl border-t border-primary/30 mobile:rounded-none">
+<footer class="bg-gradient-to-br from-slate-900 to-slate-800 px-4 py-3.5 md:px-6 border-t border-primary/30 mobile:rounded-none">
     <div class="flex flex-col items-center justify-between max-w-6xl gap-3 mx-auto md:flex-row md:gap-5">
         <!-- Left: Brand & Links -->
         <div class="flex flex-col items-center gap-3 md:flex-row md:gap-5">
@@ -43,7 +43,7 @@
 
         <!-- Right: Powered by & Help -->
         <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1.5 text-[10px] text-white/30">
+            <div class="hidden items-center gap-1.5 text-[10px] text-white/30">
                 Powered by
                 <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 font-semibold transition-colors text-white/40 hover:text-white">
                     <img src="/assets/images/tixello-logo.svg" width="40" height="12" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>

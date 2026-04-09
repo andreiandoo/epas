@@ -204,7 +204,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         </div>
     </div>
     <div class="mx-auto max-w-7xl mobile:px-4">
-        <div class="flex items-center justify-between h-[72px]">
+        <div class="flex items-center justify-between h-[67px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
                 <img src="/assets/images/ambilet_logo.webp" width="88" height="40" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">

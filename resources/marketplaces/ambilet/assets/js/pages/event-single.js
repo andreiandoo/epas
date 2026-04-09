@@ -2013,23 +2013,23 @@ const EventPage = {
             }
 
             return {group: tt.ticket_group || null, html: '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
-                '<div class="flex items-center justify-between">' +
+                '<div class="flex items-center justify-between align-stretch">' +
                     '<div class="relative tooltip-trigger">' +
-                        '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name +
+                        '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted leading-5">' + tt.name +
                             (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span>' : '') +
                         '</h3>' +
                         '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
                         perksHtml +
+                        availabilityHtml +
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
-                    '<div class="text-right relative">' +
-                        (hasDiscount && !isSoldOut ? '<span class="bg-slate-700 p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
-                        '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
+                    '<div class="text-right relative min-w-[130px] flex flex-col justify-between">' +
+                        '<div class="">' +
+                            (hasDiscount && !isSoldOut ? '<span class="bg-slate-700 p-1 px-3 rounded-md absolute -right-4 -top-6 line-through font-bold text-xs text-white">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
+                            '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
+                        '</div>' +
+                        controlsHtml +
                     '</div>' +
-                '</div>' +
-                '<div class="flex items-end justify-between">' +
-                    availabilityHtml +
-                    controlsHtml +
                 '</div>' +
             '</div>'};
         });
@@ -2059,9 +2059,9 @@ const EventPage = {
 
                 ticketCardsHtml += '<div class="mb-4 border rounded-2xl border-border">' +
                     '<button type="button" onclick="document.getElementById(\'' + groupId + '\').classList.toggle(\'hidden\');this.querySelector(\'.chevron-icon\').classList.toggle(\'rotate-180\')" ' +
-                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-surface hover:bg-gray-100 rounded-t-2xl">' +
-                        '<span class="text-sm font-bold text-secondary">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-muted">(' + groupCards.length + ')</span></span>' +
-                        '<svg class="w-5 h-5 transition-transform chevron-icon text-muted" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
+                        'class="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-primary hover:bg-primary/80 rounded-t-2xl">' +
+                        '<span class="text-sm font-bold text-white">' + self.escapeHtml(gName) + ' <span class="text-xs font-normal text-white/80">(' + groupCards.length + ')</span></span>' +
+                        '<svg class="w-5 h-5 transition-transform chevron-icon text-white/80" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>' +
                     '</button>' +
                     '<div id="' + groupId + '" class="ticket-group-content">' +
                         groupCards.join('') +
