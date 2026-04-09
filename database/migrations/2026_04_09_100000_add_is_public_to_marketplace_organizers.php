@@ -15,13 +15,19 @@ return new class extends Migration
             if (!Schema::hasColumn('marketplace_organizers', 'is_featured')) {
                 $table->boolean('is_featured')->default(false)->after('is_public');
             }
+            if (!Schema::hasColumn('marketplace_organizers', 'logo')) {
+                $table->string('logo')->nullable()->after('description');
+            }
+            if (!Schema::hasColumn('marketplace_organizers', 'cover_image')) {
+                $table->string('cover_image')->nullable()->after('logo');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('marketplace_organizers', function (Blueprint $table) {
-            $table->dropColumn(['is_public', 'is_featured']);
+            $table->dropColumn(['is_public', 'is_featured', 'logo', 'cover_image']);
         });
     }
 };
