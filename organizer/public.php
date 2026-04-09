@@ -104,7 +104,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </h2>
                 </div>
 
-                <div id="eventsGrid" class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div id="eventsGrid" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <!-- Skeleton events -->
                     <?php for ($i = 0; $i < 4; $i++): ?>
                     <div class="overflow-hidden bg-white border border-gray-200 rounded-2xl">
@@ -296,8 +296,10 @@ const OrganizerPage = {
         // Update page title
         document.title = data.name + ' — Ambilet';
 
-        // Hero image: use first upcoming event image or keep gradient
-        if (data.upcomingEvents && data.upcomingEvents.length > 0 && data.upcomingEvents[0].image) {
+        // Hero image: prefer cover_image, fallback to first event image, else keep gradient
+        if (data.cover_image) {
+            document.getElementById('heroImage').innerHTML = `<img src="${data.cover_image}" alt="${data.name}" class="absolute inset-0 object-cover object-center w-full h-full">`;
+        } else if (data.upcomingEvents && data.upcomingEvents.length > 0 && data.upcomingEvents[0].image) {
             document.getElementById('heroImage').innerHTML = `<img src="${data.upcomingEvents[0].image}" alt="${data.name}" class="absolute inset-0 object-cover object-center w-full h-full">`;
         }
 
@@ -379,86 +381,25 @@ const OrganizerPage = {
             </div>
         `;
 
-        // Upcoming Events
+        // Upcoming Events — use shared vertical card component (3 per row)
         if (data.upcomingEvents && data.upcomingEvents.length > 0) {
-            document.getElementById('eventsGrid').innerHTML = data.upcomingEvents.map(event => `
-                <a href="/bilete/${event.slug || AmbiletUtils.slugify(event.title)}" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
-                    <div class="relative overflow-hidden aspect-video">
-                        ${event.image
-                            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">`
-                            : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-200 to-gray-300"><svg class="w-12 h-12 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>`
-                        }
-                        ${event.day && event.month ? `
-                        <div class="absolute p-2 px-3 text-center bg-white rounded-lg shadow-md top-3 left-3">
-                            <div class="text-xl font-extrabold leading-none text-primary">${event.day}</div>
-                            <div class="text-[11px] font-semibold text-gray-500 uppercase">${event.month}</div>
-                        </div>` : ''}
-                        ${event.status === 'soon' ? `<span class="absolute top-3 right-3 px-3 py-1.5 bg-amber-500 text-white text-[11px] font-bold uppercase rounded-md">Curând</span>` : ''}
-                        ${event.status === 'soldout' ? `<span class="absolute top-3 right-3 px-3 py-1.5 bg-gray-500 text-white text-[11px] font-bold uppercase rounded-md">Sold Out</span>` : ''}
-                    </div>
-                    <div class="p-5">
-                        ${event.category ? `<div class="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1.5">${event.category}</div>` : ''}
-                        <h3 class="text-[17px] font-bold text-gray-900 mb-2.5 leading-tight">${event.title}</h3>
-                        <div class="flex flex-wrap gap-3 text-[13px] text-gray-500 mb-4">
-                            ${event.venue ? `
-                            <span class="flex items-center gap-1">
-                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                    <circle cx="12" cy="10" r="3"/>
-                                </svg>
-                                ${event.venue}
-                            </span>` : ''}
-                            ${event.time ? `
-                            <span class="flex items-center gap-1">
-                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                ${event.time}
-                            </span>` : ''}
-                        </div>
-                        <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                            ${event.price ? `<div class="text-[13px] text-gray-500">de la <strong class="text-lg font-bold text-emerald-500">${event.price} lei</strong></div>` : '<div></div>'}
-                            <button class="px-5 py-2.5 bg-gray-900 rounded-lg text-white text-[13px] font-semibold hover:bg-gray-800 transition-colors ${event.status === 'soldout' ? 'opacity-50 cursor-not-allowed' : ''}" ${event.status === 'soldout' ? 'disabled' : ''}>
-                                ${event.status === 'soldout' ? 'Epuizat' : 'Cumpără'}
-                            </button>
-                        </div>
-                    </div>
-                </a>
-            `).join('');
+            document.getElementById('eventsGrid').innerHTML = AmbiletEventCard.renderMany(data.upcomingEvents, { columns: 3 });
         } else {
-            document.getElementById('eventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400 col-span-2">Nu sunt evenimente viitoare momentan.</p>';
+            document.getElementById('eventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400 col-span-3">Nu sunt evenimente viitoare momentan.</p>';
         }
 
-        // Past Events
+        // Past Events — horizontal cards, no link
         if (data.pastEvents && data.pastEvents.length > 0) {
-            document.getElementById('pastEventsGrid').innerHTML = data.pastEvents.map(event => `
-                <div class="flex items-center gap-4 p-4 bg-white rounded-[14px] border border-gray-200">
-                    <div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">
-                        ${event.image
-                            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full">`
-                            : `<div class="flex items-center justify-center w-full h-full bg-gray-100"><svg class="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg></div>`
-                        }
-                    </div>
-                    <div class="flex-1">
-                        <div class="mb-1 text-xs text-gray-400">${event.date || ''}</div>
-                        <h3 class="text-[15px] font-bold text-gray-900 mb-1.5">${event.title}</h3>
-                        <div class="flex gap-4 text-[13px] text-gray-500">
-                            ${event.participants ? `
-                            <span class="flex items-center gap-1">
-                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                </svg>
-                                ${event.participants} participanți
-                            </span>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            document.getElementById('pastEventsGrid').innerHTML = AmbiletEventCard.renderManyHorizontal(data.pastEvents, { noLink: true });
         } else {
             document.getElementById('pastEventsGrid').innerHTML = '<p class="py-8 text-center text-gray-400">Nu sunt evenimente trecute.</p>';
         }
+
+        // Update tab counts
+        const upCount = data.upcomingEvents?.length || 0;
+        const pastCount = data.pastEvents?.length || 0;
+        document.getElementById('tabCountEvents').textContent = upCount;
+        document.getElementById('tabCountPast').textContent = pastCount;
 
         // About text
         document.getElementById('aboutText').textContent = data.about || 'Informații indisponibile momentan.';
