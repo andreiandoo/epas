@@ -911,7 +911,7 @@ class OrganizerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Marketplace\Resources\OrganizerResource\RelationManagers\ContactMessagesRelationManager::class,
         ];
     }
 

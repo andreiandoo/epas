@@ -2178,6 +2178,73 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
+     * Submit a contact message for an organizer
+     */
+    public function organizerContact(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'required|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'message' => 'required|string|max:5000',
+        ]);
+
+        $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->where('status', 'active');
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $organizer = $query->first();
+        if (!$organizer) {
+            return $this->error('Organizer not found', 404);
+        }
+
+        $msg = \App\Models\MarketplaceContactMessage::create([
+            'marketplace_client_id' => $client->id,
+            'marketplace_organizer_id' => $organizer->id,
+            'first_name' => $validated['first_name'],
+            'last_name' => $validated['last_name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'message' => $validated['message'],
+        ]);
+
+        // Send email to organizer
+        $organizerEmail = $organizer->email;
+        if ($organizerEmail && $client->hasMailConfigured()) {
+            try {
+                $senderName = trim($validated['first_name'] . ' ' . $validated['last_name']);
+                $subject = "Mesaj nou de la {$senderName}";
+                $html = '<div style="font-family:Arial,sans-serif;font-size:14px;color:#1f2937;">'
+                    . '<h2 style="color:#2563eb;">Mesaj nou primit pe profilul tău</h2>'
+                    . '<table cellpadding="6" style="border-collapse:collapse;">'
+                    . '<tr><td style="color:#6b7280;">Nume</td><td><strong>' . e($senderName) . '</strong></td></tr>'
+                    . '<tr><td style="color:#6b7280;">Email</td><td>' . e($validated['email']) . '</td></tr>'
+                    . ($validated['phone'] ? '<tr><td style="color:#6b7280;">Telefon</td><td>' . e($validated['phone']) . '</td></tr>' : '')
+                    . '</table>'
+                    . '<div style="margin-top:16px;padding:16px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">'
+                    . '<p style="white-space:pre-wrap;">' . e($validated['message']) . '</p>'
+                    . '</div>'
+                    . '</div>';
+
+                $emailService = new \App\Services\MarketplaceEmailService($client);
+                $emailService->sendCustomEmail($organizerEmail, $subject, $html, $organizer->name);
+            } catch (\Throwable $e) {
+                \Log::warning('Organizer contact email failed: ' . $e->getMessage());
+            }
+        }
+
+        return $this->success(['id' => $msg->id], 'Mesajul a fost trimis cu succes.');
+    }
+
+    /**
      * Format large numbers for display (e.g., 1500 -> 1.5K)
      */
     protected function formatNumber(int $number): string

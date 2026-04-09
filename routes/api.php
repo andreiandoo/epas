@@ -2255,6 +2255,8 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
         ->name('api.marketplace-client.marketplace-events.organizers');
     Route::get('/organizers/{identifier}', [PublicMarketplaceEventsController::class, 'organizer'])
         ->name('api.marketplace-client.marketplace-events.organizer');
+    Route::post('/organizers/{identifier}/contact', [PublicMarketplaceEventsController::class, 'organizerContact'])
+        ->name('api.marketplace-client.marketplace-events.organizer.contact');
     Route::get('/{identifier}', [PublicMarketplaceEventsController::class, 'show'])
         ->name('api.marketplace-client.marketplace-events.show');
     Route::post('/{identifier}/verify-password', [PublicMarketplaceEventsController::class, 'verifyPassword'])

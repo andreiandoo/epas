@@ -180,6 +180,11 @@ class MarketplaceOrganizer extends Authenticatable
     // Relationships
     // =========================================
 
+    public function contactMessages(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(MarketplaceContactMessage::class, 'marketplace_organizer_id');
+    }
+
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
