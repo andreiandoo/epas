@@ -594,10 +594,61 @@ class TicketVariableService
             $venueName = $marketplaceEvent?->venue_name ?? '';
         }
 
-        // Event date info
-        $eventDate = $event?->event_date;
-        $startTime = $event?->start_time ?? '';
-        $doorTime = $event?->door_time ?? '';
+        // Event date info — smart resolution based on duration_mode + ticket type
+        $durationMode = $event?->duration_mode ?? 'single_day';
+        $performance = $ticket->performance;
+        $isRangeDisplay = false;
+        $endDate = null;
+
+        switch ($durationMode) {
+            case 'range':
+                if ($ticketType?->is_subscription) {
+                    // Subscription (abonament): show full date range
+                    $eventDate = $event?->range_start_date;
+                    $endDate = $event?->range_end_date;
+                    $isRangeDisplay = true;
+                } elseif ($ticketType?->valid_date) {
+                    // Single-day ticket within range: show the valid_date
+                    $eventDate = $ticketType->valid_date;
+                } else {
+                    // Fallback: show range start date
+                    $eventDate = $event?->range_start_date;
+                }
+                $startTime = $event?->range_start_time ?? '';
+                $doorTime = $event?->door_time ?? '';
+                break;
+
+            case 'multi_day':
+                if ($performance?->starts_at) {
+                    // Performance-specific date/time
+                    $eventDate = $performance->starts_at->copy()->startOfDay();
+                    $startTime = $performance->starts_at->format('H:i');
+                    $doorTime = $performance->door_time ?? '';
+                } else {
+                    // Fallback to event's base fields
+                    $eventDate = $event?->event_date;
+                    $startTime = $event?->start_time ?? '';
+                    $doorTime = $event?->door_time ?? '';
+                }
+                break;
+
+            default: // single_day, recurring
+                $eventDate = $event?->event_date;
+                $startTime = $event?->start_time ?? '';
+                $doorTime = $event?->door_time ?? '';
+                break;
+        }
+
+        // Build computed date display values
+        if ($isRangeDisplay && $eventDate && $endDate) {
+            $startFormatted = $eventDate->locale('ro')->translatedFormat('j F') . ' – ' . $endDate->locale('ro')->translatedFormat('j F Y');
+            $dayName = '';
+            $dateStartRaw = $eventDate->format('Y-m-d') . ' – ' . $endDate->format('Y-m-d');
+        } else {
+            $startFormatted = $eventDate ? $eventDate->locale('ro')->translatedFormat('j F Y') : '';
+            $dayName = $eventDate ? $eventDate->locale('ro')->dayName : '';
+            $dateStartRaw = $eventDate ? $eventDate->format('Y-m-d') : '';
+        }
 
         // Seat details
         $seatDetails = $ticket->getSeatDetails();
@@ -639,11 +690,11 @@ class TicketVariableService
                 'city' => $venue?->city ?? $marketplaceEvent?->venue_city ?? '',
             ],
             'date' => [
-                'start' => $eventDate ? $eventDate->format('Y-m-d') : '',
-                'start_formatted' => $eventDate ? $eventDate->locale('ro')->translatedFormat('j F Y') : '',
+                'start' => $dateStartRaw,
+                'start_formatted' => $startFormatted,
                 'time' => $startTime,
                 'doors_open' => $doorTime,
-                'day_name' => $eventDate ? $eventDate->locale('ro')->dayName : '',
+                'day_name' => $dayName,
             ],
             'ticket' => [
                 'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
