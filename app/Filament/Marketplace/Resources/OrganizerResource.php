@@ -234,7 +234,7 @@ class OrganizerResource extends Resource
                             Forms\Components\TagsInput::make('settings.embed_domains')
                                 ->label('Domenii permise pentru embed')
                                 ->placeholder('ex: https://site-organizator.ro')
-                                ->helperText('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro')
+                                ->helperText('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro sau *.domeniu.ro pentru toate subdomeniile')
                                 ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) ($get('settings.widget_enabled') ?? false)),
                         ]),
 
