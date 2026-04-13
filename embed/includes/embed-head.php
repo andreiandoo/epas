@@ -5,9 +5,16 @@
  */
 
 // Security: set frame-ancestors dynamically
-$frameAncestors = !empty($embedDomains)
-    ? implode(' ', $embedDomains)
-    : "'none'";
+// Convert embed_domains to CSP frame-ancestors format
+// Input: "https://bilete.hailateatru.ro" → "https://bilete.hailateatru.ro"
+// Input: "*.hailateatru.ro" → "https://*.hailateatru.ro"
+$cspAncestors = [];
+foreach ($embedDomains as $domain) {
+    $host = parse_url($domain, PHP_URL_HOST) ?: $domain;
+    $scheme = parse_url($domain, PHP_URL_SCHEME) ?: 'https';
+    $cspAncestors[] = $scheme . '://' . $host;
+}
+$frameAncestors = !empty($cspAncestors) ? implode(' ', $cspAncestors) : "'none'";
 header("Content-Security-Policy: frame-ancestors {$frameAncestors}");
 header('X-Frame-Options: SAMEORIGIN');
 

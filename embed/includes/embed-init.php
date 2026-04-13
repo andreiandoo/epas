@@ -43,13 +43,36 @@ if (!$widgetEnabled) {
     exit;
 }
 
+/**
+ * Check if a hostname matches a domain pattern (supports wildcard subdomains).
+ * Examples:
+ *   matchDomain("bilete.hailateatru.ro", "*.hailateatru.ro") → true
+ *   matchDomain("hailateatru.ro", "*.hailateatru.ro") → false (wildcard requires subdomain)
+ *   matchDomain("bilete.hailateatru.ro", "bilete.hailateatru.ro") → true (exact)
+ *   matchDomain("hailateatru.ro", "hailateatru.ro") → true (exact)
+ */
+function matchEmbedDomain(string $host, string $pattern): bool
+{
+    $patternHost = parse_url($pattern, PHP_URL_HOST) ?: $pattern;
+
+    // Exact match
+    if ($host === $patternHost) return true;
+
+    // Wildcard: *.example.com
+    if (str_starts_with($patternHost, '*.')) {
+        $baseDomain = substr($patternHost, 2); // "example.com"
+        return str_ends_with($host, '.' . $baseDomain);
+    }
+
+    return false;
+}
+
 // Validate return_url against embed_domains whitelist
 if ($returnUrl) {
     $returnHost = parse_url($returnUrl, PHP_URL_HOST);
     $allowed = false;
     foreach ($embedDomains as $domain) {
-        $domainHost = parse_url($domain, PHP_URL_HOST) ?: $domain;
-        if ($returnHost === $domainHost) {
+        if (matchEmbedDomain($returnHost, $domain)) {
             $allowed = true;
             break;
         }
