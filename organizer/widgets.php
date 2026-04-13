@@ -274,22 +274,20 @@ const WidgetsPage = {
             document.getElementById('full-return-url').value = returnBase + '/multumim';
         }
 
-        // Pre-fill from saved widget config
+        // Pre-fill from saved widget config (safe — elements may not exist on older deploys)
         const wc = this.organizer.settings?.widget_config || {};
-        if (wc.logo) document.getElementById('full-logo').value = wc.logo;
-        else if (this.organizer.logo) document.getElementById('full-logo').value = this.organizer.logo;
-        if (wc.bg_image) document.getElementById('full-bg-image').value = wc.bg_image;
-        if (wc.hero_image) document.getElementById('full-hero-image').value = wc.hero_image;
-        if (wc.home_title) document.getElementById('full-home-title').value = wc.home_title;
-        if (wc.home_subtitle) document.getElementById('full-home-subtitle').value = wc.home_subtitle;
-        if (wc.address) document.getElementById('full-address').value = wc.address;
-        if (wc.phone) document.getElementById('full-phone').value = wc.phone;
-        if (wc.theme) document.getElementById('full-theme').value = wc.theme;
-        if (wc.accent) {
-            document.getElementById('full-accent').value = wc.accent;
-            document.getElementById('full-accent-hex').value = wc.accent;
-        }
-        if (wc.return_url) document.getElementById('full-return-url').value = wc.return_url;
+        const _s = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        _s('full-logo', wc.logo || this.organizer.logo);
+        _s('full-bg-image', wc.bg_image);
+        _s('full-hero-image', wc.hero_image);
+        _s('full-home-title', wc.home_title);
+        _s('full-home-subtitle', wc.home_subtitle);
+        _s('full-address', wc.address);
+        _s('full-phone', wc.phone);
+        _s('full-theme', wc.theme);
+        _s('full-accent', wc.accent);
+        _s('full-accent-hex', wc.accent);
+        _s('full-return-url', wc.return_url);
 
         await this.loadEvents();
 
@@ -386,11 +384,11 @@ const WidgetsPage = {
         const slug = this.organizer?.slug || '';
 
         if (type === 'full') {
-            const theme = document.getElementById('full-theme').value;
-            const accent = document.getElementById('full-accent').value;
-            const returnUrl = document.getElementById('full-return-url').value;
-            const logo = document.getElementById('full-logo').value;
-            const bgImage = document.getElementById('full-bg-image').value;
+            const theme = this._v('full-theme') || 'dark';
+            const accent = this._v('full-accent') || '#D4A843';
+            const returnUrl = this._v('full-return-url');
+            const logo = this._v('full-logo');
+            const bgImage = this._v('full-bg-image');
 
             let attrs = '\n  data-organizer="' + slug + '"';
             if (returnUrl) attrs += '\n  data-return-url="' + this.esc(returnUrl) + '"';
@@ -400,12 +398,13 @@ const WidgetsPage = {
             if (bgImage) attrs += '\n  data-bg-image="' + this.esc(bgImage) + '"';
 
             const code = '<div id="tixello-widget"></div>\n<script src="' + this.siteUrl + '/embed/tixello-embed.js"' + attrs + '>\n<\/script>';
-            document.getElementById('full-code').value = code;
+            const $code = document.getElementById('full-code');
+            if ($code) $code.value = code;
 
             // Preview — iframe
             const params = new URLSearchParams({ theme, accent, logo, bg_image: bgImage });
             const $preview = document.getElementById('full-preview');
-            $preview.innerHTML = '<iframe src="' + this.siteUrl + '/embed/' + slug + '?' + params.toString() + '" style="width:100%;min-height:400px;border:none;" allow="payment"></iframe>';
+            if ($preview) $preview.innerHTML = '<iframe src="' + this.siteUrl + '/embed/' + slug + '?' + params.toString() + '" style="width:100%;min-height:400px;border:none;" allow="payment"></iframe>';
         }
 
         if (type === 'single') {
