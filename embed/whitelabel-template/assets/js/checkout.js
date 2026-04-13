@@ -79,37 +79,28 @@ var WLCheckout = {
         var html = '';
 
         cart.items.forEach(function(item) {
-            var displayPrice = parseFloat(item.ticketType.price || 0);
-            var comm = item.ticketType.commission;
-            var commAmt = 0;
-            var basePrice = displayPrice;
+            var tt = item.ticketType;
+            var basePrice = parseFloat(tt.base_price ?? tt.price ?? 0);
+            var commAmt = parseFloat(tt.commission_amount ?? 0);
+            var commMode = tt.commission_mode || 'included';
 
-            // Calculate commission per unit to split display
-            if (comm && comm.type && (comm.mode === 'added_on_top' || comm.mode === 'on_top')) {
-                // Reverse-calculate base from display price
-                if (comm.type === 'percentage') {
-                    basePrice = Math.round(displayPrice / (1 + comm.rate / 100) * 100) / 100;
-                    commAmt = displayPrice - basePrice;
-                } else if (comm.type === 'fixed') {
-                    commAmt = comm.fixed || 0;
-                    basePrice = displayPrice - commAmt;
-                } else if (comm.type === 'both') {
-                    // approximate: reverse from display = base * (1 + rate/100) + fixed
-                    basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + comm.rate / 100) * 100) / 100;
-                    commAmt = displayPrice - basePrice;
-                }
+            // If commission is on_top, base and commission are separate
+            if (commMode === 'added_on_top' || commMode === 'on_top') {
+                var lineBase = Math.round(basePrice * item.quantity);
+                var lineComm = Math.round(commAmt * item.quantity);
+                subtotal += lineBase;
+                totalComm += lineComm;
+                html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineBase + ' lei</div></div>';
+            } else {
+                // Included — show full price, no separate commission
+                var lineTotal = Math.round(parseFloat(tt.price || 0) * item.quantity);
+                subtotal += lineTotal;
+                html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineTotal + ' lei</div></div>';
             }
-
-            var lineBase = Math.round(basePrice * item.quantity * 100) / 100;
-            var lineComm = Math.round(commAmt * item.quantity * 100) / 100;
-            subtotal += lineBase;
-            totalComm += lineComm;
-
-            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(item.ticketType.name) + '</div><div class="order-line-amount">' + Math.round(lineBase).toFixed(0) + ' lei</div></div>';
         });
 
         if (totalComm > 0) {
-            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + Math.round(totalComm).toFixed(0) + ' lei</div></div>';
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane serviciu</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">+' + totalComm + ' lei</div></div>';
         }
 
         var grandTotal = subtotal + totalComm;
@@ -120,7 +111,7 @@ var WLCheckout = {
         }
 
         $lines.innerHTML = html;
-        $total.textContent = Math.round(grandTotal).toFixed(0);
+        $total.textContent = grandTotal;
         $btn.disabled = !cart.items.length;
     },
 

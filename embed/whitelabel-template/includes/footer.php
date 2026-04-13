@@ -24,11 +24,6 @@
   </div>
 </footer>
 
-<!-- Cart timer bar -->
-<div id="wl-timer-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(12,12,12,0.95);border-top:1px solid var(--border);padding:10px 24px;text-align:center;font-size:13px;color:var(--text-muted);backdrop-filter:blur(8px);">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--accent);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-  Biletele sunt rezervate pentru <strong id="wl-timer-countdown" style="color:var(--accent);"></strong>
-</div>
 
 <script>var WL_BASE = <?= json_encode(BASE_PATH) ?>;</script>
 <script src="<?= BASE_PATH ?>/assets/js/cart.js"></script>
