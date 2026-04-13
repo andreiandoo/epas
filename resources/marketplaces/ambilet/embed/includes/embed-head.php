@@ -5,14 +5,24 @@
  */
 
 // Security: set frame-ancestors dynamically
-$frameAncestors = !empty($embedDomains)
-    ? implode(' ', $embedDomains)
-    : "'none'";
+// Always include the marketplace domain (for admin preview) + organizer's embed_domains
+$cspAncestors = [SITE_URL]; // Marketplace domain always allowed (for preview)
+foreach ($embedDomains as $domain) {
+    $host = parse_url($domain, PHP_URL_HOST) ?: $domain;
+    $scheme = parse_url($domain, PHP_URL_SCHEME) ?: 'https';
+    $entry = $scheme . '://' . $host;
+    if (!in_array($entry, $cspAncestors)) {
+        $cspAncestors[] = $entry;
+    }
+}
+$frameAncestors = implode(' ', $cspAncestors);
 header("Content-Security-Policy: frame-ancestors {$frameAncestors}");
 header('X-Frame-Options: SAMEORIGIN');
 
 $orgName = $orgData['data']['name'] ?? 'Organizator';
 $accentColor = $accent ?: '#6366f1';
+$embedLogo = $_GET['logo'] ?? $orgData['data']['avatar'] ?? '';
+$embedBgImage = $_GET['bg_image'] ?? '';
 $isDark = $theme === 'dark';
 $bgColor = $isDark ? '#0f172a' : '#f8fafc';
 $textColor = $isDark ? '#e2e8f0' : '#1e293b';
@@ -53,9 +63,19 @@ $mutedColor = $isDark ? '#94a3b8' : '#64748b';
             margin: 0; padding: 0;
             font-family: 'Inter', system-ui, sans-serif;
             background: <?= $bgColor ?>;
+            <?php if ($embedBgImage): ?>
+            background-image: url('<?= htmlspecialchars($embedBgImage) ?>');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            <?php endif; ?>
             color: <?= $textColor ?>;
             overflow-x: hidden;
         }
+        <?php if ($embedBgImage): ?>
+        #embed-app { background: <?= $isDark ? 'rgba(15,23,42,0.85)' : 'rgba(248,250,252,0.88)' ?>; min-height: 100vh; }
+        <?php endif; ?>
         a { color: <?= htmlspecialchars($accentColor) ?>; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .embed-card {
@@ -86,3 +106,8 @@ $mutedColor = $isDark ? '#94a3b8' : '#64748b';
 </head>
 <body>
     <div id="embed-app" style="padding: 16px; max-width: 1200px; margin: 0 auto;">
+        <?php if ($embedLogo): ?>
+        <div style="text-align:center; padding: 16px 0 8px;">
+            <img src="<?= htmlspecialchars($embedLogo) ?>" alt="<?= htmlspecialchars($orgName) ?>" style="max-height:56px; margin:0 auto; display:block;">
+        </div>
+        <?php endif; ?>

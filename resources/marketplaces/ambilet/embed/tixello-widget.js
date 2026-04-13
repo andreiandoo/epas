@@ -132,7 +132,14 @@
     }
 
     function poweredBy() {
-        return '<div class="txw-badge">Bilete prin <a href="' + baseUrl + '" target="_blank" rel="noopener">Tixello</a></div>';
+        // Derive marketplace name from domain (e.g. "bilete.online" → "AmBilet")
+        var marketplaceName = 'AmBilet';
+        try {
+            var host = new URL(baseUrl).hostname;
+            if (host.includes('ambilet') || host.includes('bilete.online')) marketplaceName = 'AmBilet';
+            else marketplaceName = host.replace(/^www\./, '');
+        } catch(e) {}
+        return '<div class="txw-badge">Bilete prin <a href="' + baseUrl + '" target="_blank" rel="noopener">' + esc(marketplaceName) + '</a></div>';
     }
 
     function formatDate(dateStr) {

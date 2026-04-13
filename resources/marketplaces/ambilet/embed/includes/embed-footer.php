@@ -2,7 +2,7 @@
 
     <!-- Powered by badge -->
     <div style="text-align:center; padding: 16px 0 8px; font-size: 11px; color: <?= $mutedColor ?>;">
-        Bilete oferite prin <a href="<?= SITE_URL ?>" target="_blank" rel="noopener" style="font-weight:600;">Tixello</a>
+        Bilete oferite prin <a href="<?= SITE_URL ?>" target="_blank" rel="noopener" style="font-weight:600;"><?= htmlspecialchars(SITE_NAME) ?></a>
     </div>
 
     <!-- Embed config for JS -->
