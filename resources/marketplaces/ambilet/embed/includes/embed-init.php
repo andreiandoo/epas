@@ -1,26 +1,45 @@
 <?php
 /**
  * Common initialization for all embed pages.
- * Sets up organizer data, validates embed_domains, handles CSP.
- *
- * After including this file, these variables are available:
- *   $organizerSlug, $returnUrl, $theme, $accent
- *   $orgData, $embedDomains, $orgName
+ * Persists embed config (theme, accent, logo, bg_image) in cookie so
+ * internal navigation within the iframe doesn't lose the settings.
  */
 
 require_once dirname(dirname(__DIR__)) . '/includes/config.php';
 require_once dirname(dirname(__DIR__)) . '/includes/api.php';
 
 $organizerSlug = $_GET['organizer'] ?? '';
-$returnUrl = $_GET['return_url'] ?? '';
-$theme = $_GET['theme'] ?? 'light';
-$accent = $_GET['accent'] ?? '';
 
 if (!$organizerSlug) {
     http_response_code(400);
     echo 'Missing organizer parameter.';
     exit;
 }
+
+// Cookie name for embed config persistence (per organizer)
+$configCookieName = 'emb_cfg_' . preg_replace('/[^a-z0-9]/', '', $organizerSlug);
+
+// Read from GET params first, then fallback to stored cookie
+$storedConfig = [];
+if (!empty($_COOKIE[$configCookieName])) {
+    $storedConfig = json_decode($_COOKIE[$configCookieName], true) ?: [];
+}
+
+$returnUrl = $_GET['return_url'] ?? $storedConfig['return_url'] ?? '';
+$theme     = $_GET['theme']      ?? $storedConfig['theme']      ?? 'light';
+$accent    = $_GET['accent']     ?? $storedConfig['accent']     ?? '';
+$embedLogo = $_GET['logo']       ?? $storedConfig['logo']       ?? '';
+$embedBgImage = $_GET['bg_image'] ?? $storedConfig['bg_image'] ?? '';
+
+// Persist config in cookie (so internal navigation keeps settings)
+$configToStore = json_encode([
+    'return_url' => $returnUrl,
+    'theme'      => $theme,
+    'accent'     => $accent,
+    'logo'       => $embedLogo,
+    'bg_image'   => $embedBgImage,
+]);
+setcookie($configCookieName, $configToStore, time() + 3600, '/embed/' . $organizerSlug . '/', '', true, false);
 
 // Fetch organizer data (cached 5 min)
 $orgData = api_cached('embed_org_' . $organizerSlug, function () use ($organizerSlug) {
@@ -37,10 +56,29 @@ $orgName = $orgData['data']['name'] ?? 'Organizator';
 $embedDomains = $orgData['data']['embed_domains'] ?? [];
 $widgetEnabled = (bool) ($orgData['data']['widget_enabled'] ?? false);
 
+// Fallback: use organizer avatar if no logo provided
+if (!$embedLogo) {
+    $embedLogo = $orgData['data']['avatar'] ?? '';
+}
+
 if (!$widgetEnabled) {
     http_response_code(403);
     echo 'Widget embedding is not enabled for this organizer.';
     exit;
+}
+
+/**
+ * Check if a hostname matches a domain pattern (supports wildcard subdomains).
+ */
+function matchEmbedDomain(string $host, string $pattern): bool
+{
+    $patternHost = parse_url($pattern, PHP_URL_HOST) ?: $pattern;
+    if ($host === $patternHost) return true;
+    if (str_starts_with($patternHost, '*.')) {
+        $baseDomain = substr($patternHost, 2);
+        return str_ends_with($host, '.' . $baseDomain);
+    }
+    return false;
 }
 
 // Validate return_url against embed_domains whitelist
@@ -48,13 +86,12 @@ if ($returnUrl) {
     $returnHost = parse_url($returnUrl, PHP_URL_HOST);
     $allowed = false;
     foreach ($embedDomains as $domain) {
-        $domainHost = parse_url($domain, PHP_URL_HOST) ?: $domain;
-        if ($returnHost === $domainHost) {
+        if (matchEmbedDomain($returnHost, $domain)) {
             $allowed = true;
             break;
         }
     }
     if (!$allowed) {
-        $returnUrl = ''; // Reset — will stay in iframe
+        $returnUrl = '';
     }
 }

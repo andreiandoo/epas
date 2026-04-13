@@ -44,9 +44,8 @@
                 const max = tt.max_per_order || 10;
                 const maxAllowed = available !== null ? Math.min(max, available) : max;
                 const qty = quantities[tt.id] || 0;
-                const price = tt.sale_price_cents
-                    ? (tt.sale_price_cents / 100)
-                    : (tt.price_cents ? tt.price_cents / 100 : (tt.price || 0));
+                const price = parseFloat(tt.price || 0);
+                const originalPrice = tt.original_price ? parseFloat(tt.original_price) : null;
 
                 html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border-color, #e2e8f0);border-radius:10px;margin-bottom:6px;' + (soldOut ? 'opacity:0.5;' : '') + '">';
                 html += '<div style="flex:1;min-width:0;">';
@@ -54,7 +53,12 @@
                 if (tt.description) html += '<div style="font-size:12px;color:var(--muted-color);margin-top:2px;">' + esc(tt.description) + '</div>';
                 if (min > 1) html += '<div style="font-size:11px;color:#d97706;margin-top:2px;">Minim ' + min + '</div>';
                 html += '</div>';
-                html += '<div style="font-weight:700;font-size:15px;white-space:nowrap;margin-right:8px;">' + price.toFixed(2) + ' ' + (tt.currency || 'RON') + '</div>';
+                html += '<div style="text-align:right;white-space:nowrap;margin-right:8px;">';
+                if (originalPrice && originalPrice > price) {
+                    html += '<div style="font-size:12px;color:var(--muted-color);text-decoration:line-through;">' + originalPrice.toFixed(2) + ' ' + (tt.currency || 'RON') + '</div>';
+                }
+                html += '<div style="font-weight:700;font-size:15px;">' + price.toFixed(2) + ' ' + (tt.currency || 'RON') + '</div>';
+                html += '</div>';
 
                 if (soldOut) {
                     html += '<div style="font-size:12px;font-weight:600;color:#ef4444;">Sold out</div>';
@@ -104,7 +108,7 @@
         ticketTypes.forEach(tt => {
             const qty = quantities[tt.id] || 0;
             if (qty <= 0) return;
-            const price = tt.sale_price_cents ? tt.sale_price_cents / 100 : (tt.price_cents ? tt.price_cents / 100 : (tt.price || 0));
+            const price = parseFloat(tt.price || 0);
             const line = qty * price;
             total += line;
             items.push({ tt, qty, line, price });
@@ -131,7 +135,7 @@
         ticketTypes.forEach(tt => {
             const qty = quantities[tt.id] || 0;
             if (qty <= 0) return;
-            const price = tt.sale_price_cents ? tt.sale_price_cents / 100 : (tt.price_cents ? tt.price_cents / 100 : (tt.price || 0));
+            const price = parseFloat(tt.price || 0);
 
             EmbedCart.addItem(
                 { id: event.id, title: event.name, slug: event.slug, image: event.poster_url || event.image },

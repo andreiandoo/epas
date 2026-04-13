@@ -4,10 +4,16 @@
     <!-- Footer -->
     <footer style="background:<?= $headerBg ?>;border-top:1px solid <?= $borderColor ?>;padding:16px;">
         <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;">
+            <?php
+            // Use organizer's website for terms/privacy, fallback to marketplace
+            $orgWebsite = $orgData['data']['social']['website'] ?? '';
+            $termsUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/terms/' : SITE_URL . '/termeni-si-conditii';
+            $privacyUrl = $orgWebsite ? rtrim($orgWebsite, '/') . '/privacy/' : SITE_URL . '/confidentialitate';
+            ?>
             <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:<?= $mutedColor ?>;">
-                <a href="<?= SITE_URL ?>/termeni-si-conditii" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Termeni și condiții</a>
+                <a href="<?= htmlspecialchars($termsUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Termeni și condiții</a>
                 <span style="color:<?= $borderColor ?>;">|</span>
-                <a href="<?= SITE_URL ?>/confidentialitate" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Confidențialitate date</a>
+                <a href="<?= htmlspecialchars($privacyUrl) ?>" target="_blank" style="color:<?= $mutedColor ?>;text-decoration:none;">Confidențialitate date</a>
             </div>
             <div style="font-size:11px;color:<?= $mutedColor ?>;">
                 Bilete oferite prin <a href="<?= SITE_URL ?>" target="_blank" rel="noopener" style="font-weight:600;color:<?= $mutedColor ?>;"><?= htmlspecialchars(SITE_NAME) ?></a>
