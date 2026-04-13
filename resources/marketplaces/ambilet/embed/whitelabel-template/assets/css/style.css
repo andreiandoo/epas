@@ -477,7 +477,15 @@ nav {
   padding: 12px 16px; display: flex; align-items: flex-start;
   justify-content: space-between; cursor: pointer; gap: 10px;
 }
-.tt-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+.tt-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; position: relative; }
+.tt-comm-trigger { position: relative; display: inline-flex; }
+.tt-comm-tooltip {
+  display: none; position: absolute; left: 0; top: 100%; margin-top: 6px; z-index: 50;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px 14px; min-width: 220px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  color: var(--text); pointer-events: none;
+}
+.tt-comm-trigger:hover .tt-comm-tooltip { display: block; }
 .tt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
 .tt-avail { font-size: 11px; margin-top: 6px; display: flex; align-items: center; gap: 5px; }
 .tt-avail.low { color: #e05c44; }

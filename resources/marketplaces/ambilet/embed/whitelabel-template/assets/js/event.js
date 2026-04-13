@@ -50,6 +50,9 @@
         return { display: base, comm: c.amount, mode: c.mode };
     }
 
+    // Filter out entry/app-only tickets (should be filtered by API but double-check)
+    ticketTypes = ticketTypes.filter(function(tt) { return !tt.is_entry_ticket; });
+
     function render() {
         if (!ticketTypes.length) {
             $types.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Nu sunt bilete disponibile.</div>';
@@ -74,10 +77,46 @@
             if (soldOut) { availCls = 'low'; availText = 'Sold out'; }
             else if (avail !== null && avail < 30) { availCls = 'low'; availText = 'Doar ' + avail + ' bilete disponibile'; }
 
+            // Build commission label
+            var base = parseFloat(tt.price || 0);
+            var c = calcComm(tt, base);
+            var commLabel = '';
+            if (c.amount > 0) {
+                var commTypeLabel = '';
+                if (tt.commission && tt.commission.type === 'fixed') commTypeLabel = c.amount.toFixed(2) + ' lei';
+                else if (tt.commission && tt.commission.type === 'both') commTypeLabel = (tt.commission.rate || defRate) + '% + ' + (tt.commission.fixed || 0).toFixed(2) + ' lei';
+                else commTypeLabel = (tt.commission && tt.commission.rate ? tt.commission.rate : defRate) + '%';
+
+                if (c.mode === 'added_on_top' || c.mode === 'on_top') {
+                    commLabel = 'Taxă procesare: +' + c.amount.toFixed(2) + ' lei (' + commTypeLabel + ')';
+                } else {
+                    commLabel = 'Taxă procesare inclusă: ' + c.amount.toFixed(2) + ' lei (' + commTypeLabel + ')';
+                }
+            }
+
             html += '<div class="ticket-type' + (selected ? ' selected' : '') + '" id="tt-' + tt.id + '">';
             html += '<div class="ticket-type-header">';
             html += '<div>';
-            html += '<div class="tt-name">' + esc(tt.name) + '</div>';
+            html += '<div class="tt-name" style="position:relative;">' + esc(tt.name);
+            // Commission tooltip trigger
+            if (commLabel && !soldOut) {
+                html += ' <span class="tt-comm-trigger" style="display:inline-flex;align-items:center;cursor:help;vertical-align:middle;margin-left:2px;">';
+                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;color:var(--text-muted);"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+                html += '<span class="tt-comm-tooltip">';
+                html += '<p style="margin:0 0 6px;font-weight:600;font-size:12px;">Detalii preț bilet</p>';
+                html += '<div style="font-size:11px;line-height:1.6;">';
+                html += '<div style="display:flex;justify-content:space-between;"><span>Preț bilet:</span><span>' + base.toFixed(2) + ' lei</span></div>';
+                if (c.mode === 'added_on_top' || c.mode === 'on_top') {
+                    html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>+' + c.amount.toFixed(2) + ' lei</span></div>';
+                    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total la plată:</span><span>' + p.display.toFixed(2) + ' lei</span></div>';
+                } else {
+                    html += '<div style="display:flex;justify-content:space-between;"><span>Taxă procesare (' + commTypeLabel + '):</span><span>' + c.amount.toFixed(2) + ' lei</span></div>';
+                    html += '<div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:4px;margin-top:4px;font-weight:600;"><span>Total:</span><span>' + p.display.toFixed(2) + ' lei</span></div>';
+                }
+                html += '</div></span>';
+                html += '</span>';
+            }
+            html += '</div>';
             if (tt.description) html += '<div class="tt-desc">' + esc(tt.description) + '</div>';
             html += '<div class="tt-avail ' + availCls + '"><div class="tt-avail-dot"></div>' + availText + '</div>';
             html += '</div>';
@@ -176,9 +215,10 @@
             var q = quantities[tt.id] || 0;
             if (q <= 0) return;
             var p = getPrice(tt);
+            var c = calcComm(tt, parseFloat(tt.price || 0));
             WLCart.addItem(
                 { id: event.id, title: event.name, slug: event.slug, image: event.poster_url || event.image },
-                { id: tt.id, name: tt.name, price: p.display, commission: tt.commission, min_per_order: tt.min_per_order, max_per_order: tt.max_per_order },
+                { id: tt.id, name: tt.name, price: p.display, base_price: parseFloat(tt.price || 0), commission_amount: c.amount, commission_mode: c.mode, commission: tt.commission, min_per_order: tt.min_per_order, max_per_order: tt.max_per_order },
                 q, null
             );
         });

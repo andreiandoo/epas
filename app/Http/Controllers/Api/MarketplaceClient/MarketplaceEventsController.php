@@ -845,6 +845,7 @@ class MarketplaceEventsController extends BaseController
                     'seating_rows' => $seatingRows,
                     // Per-ticket commission (null = use event defaults)
                     'commission' => $ticketCommission,
+                    'is_entry_ticket' => (bool) ($tt->is_entry_ticket ?? false),
                     'is_refundable' => (bool) ($tt->is_refundable ?? false),
                     'ticket_group' => $tt->ticket_group,
                     'perks' => $tt->perks ?? [],

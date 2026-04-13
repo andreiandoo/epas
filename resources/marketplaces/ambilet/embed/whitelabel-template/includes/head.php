@@ -69,6 +69,12 @@ $ac = ACCENT_COLOR ?: '#D4A843';
   </div>
 </nav>
 
+<!-- Cart timer bar (visible when cart has items) -->
+<div id="wl-timer-bar" style="display:none;background:var(--bg3);border-bottom:1px solid var(--border);padding:8px 24px;text-align:center;font-size:13px;color:var(--text-muted);">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--accent);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  Biletele sunt rezervate pentru <strong id="wl-timer-countdown" style="color:var(--accent);"></strong>
+</div>
+
 <!-- Cookie consent -->
 <div id="wl-cookie" class="cookie-banner" style="display:none;">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;max-width:1080px;margin:0 auto;">
