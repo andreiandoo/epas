@@ -26,11 +26,8 @@ if (!$org) {
     exit;
 }
 
-// Read widget config from organizer settings (saved from widgets page)
-// We need to fetch this via a separate API call since the public endpoint may not include it
-$orgSettings = $org['settings'] ?? [];
-// Also try embed_domains response which includes widget_config for authenticated organizers
-$widgetConfig = $orgSettings['widget_config'] ?? [];
+// Read widget config — API returns it at top level or in settings
+$widgetConfig = $org['widget_config'] ?? $org['settings']['widget_config'] ?? [];
 $orgName = $org['name'] ?? 'Organizator';
 $logo = $widgetConfig['logo'] ?? $org['avatar'] ?? '';
 $bgImage = $widgetConfig['bg_image'] ?? '';

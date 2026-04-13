@@ -64,23 +64,25 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <div id="tab-full" class="widget-tab-content">
                     <div class="grid gap-6 lg:grid-cols-2">
                         <div class="p-6 bg-white border rounded-2xl border-border">
-                            <h3 class="mb-4 text-base font-bold text-secondary">Configurare</h3>
+                            <h3 class="mb-4 text-base font-bold text-secondary">Configurare branding</h3>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="label">Temă</label>
-                                    <select id="full-theme" class="w-full input" onchange="WidgetsPage.updateCode('full')">
-                                        <option value="light">Light</option>
-                                        <option value="dark">Dark</option>
-                                    </select>
+                                    <label class="label">Culoare principală (accent)</label>
+                                    <div class="flex gap-3 items-center">
+                                        <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer" onchange="WidgetsPage.updateCode('full')">
+                                        <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="document.getElementById('full-accent').value=this.value;WidgetsPage.updateCode('full')">
+                                    </div>
+                                    <p class="mt-1 text-xs text-muted">Culoarea butoanelor, link-urilor și elementelor de accent.</p>
                                 </div>
                                 <div>
-                                    <label class="label">Culoare accent</label>
-                                    <input type="color" id="full-accent" value="#6366f1" class="w-full h-10 input" onchange="WidgetsPage.updateCode('full')">
-                                </div>
-                                <div>
-                                    <label class="label">Logo organizator</label>
+                                    <label class="label">Logo organizator (URL imagine)</label>
                                     <input type="text" id="full-logo" class="w-full input" placeholder="https://site-meu.ro/logo.png" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">URL-ul logo-ului tău. Va apărea centrat sus pe toate paginile embed.</p>
+                                    <p class="mt-1 text-xs text-muted">Logo-ul apare în nav bar pe toate paginile.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Imagine hero homepage (URL imagine)</label>
+                                    <input type="text" id="full-hero-image" class="w-full input" placeholder="https://site-meu.ro/hero.jpg" onchange="WidgetsPage.updateCode('full')">
+                                    <p class="mt-1 text-xs text-muted">Imaginea de fundal din secțiunea hero pe homepage. Lasă gol pentru gradient automat.</p>
                                 </div>
                                 <div>
                                     <label class="label">Imagine de fundal</label>
@@ -257,8 +259,12 @@ const WidgetsPage = {
         if (wc.logo) document.getElementById('full-logo').value = wc.logo;
         else if (this.organizer.logo) document.getElementById('full-logo').value = this.organizer.logo;
         if (wc.bg_image) document.getElementById('full-bg-image').value = wc.bg_image;
+        if (wc.hero_image) document.getElementById('full-hero-image').value = wc.hero_image;
         if (wc.theme) document.getElementById('full-theme').value = wc.theme;
-        if (wc.accent) document.getElementById('full-accent').value = wc.accent;
+        if (wc.accent) {
+            document.getElementById('full-accent').value = wc.accent;
+            document.getElementById('full-accent-hex').value = wc.accent;
+        }
         if (wc.return_url) document.getElementById('full-return-url').value = wc.return_url;
 
         await this.loadEvents();
@@ -300,6 +306,7 @@ const WidgetsPage = {
         const config = {
             logo: document.getElementById('full-logo').value.trim(),
             bg_image: document.getElementById('full-bg-image').value.trim(),
+            hero_image: document.getElementById('full-hero-image').value.trim(),
             theme: document.getElementById('full-theme').value,
             accent: document.getElementById('full-accent').value,
             return_url: document.getElementById('full-return-url').value.trim(),
