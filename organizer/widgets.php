@@ -19,19 +19,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <!-- Status check: widget_enabled -->
-            <div id="widget-disabled-alert" class="hidden p-4 mb-6 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+            <div id="widget-disabled-alert" class="hidden p-4 mb-6 text-sm border bg-amber-50 border-amber-200 rounded-xl text-amber-700">
                 <strong>Widget-urile nu sunt activate.</strong> Contactează administratorul marketplace-ului pentru a activa funcționalitatea de embed.
             </div>
 
             <!-- Domain config — single domain input -->
-            <div id="domains-section" class="hidden mb-6 p-6 bg-white border rounded-2xl border-border">
+            <div id="domains-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
                 <h2 class="mb-2 text-lg font-bold text-secondary">Domeniu site</h2>
                 <p class="mb-4 text-sm text-muted">Introdu domeniul site-ului unde vei folosi widget-urile. Dacă folosești subdomenii, adaugă cu wildcard: <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">*.numedomeniu.ro</code></p>
                 <div class="flex gap-2">
                     <input type="text" id="domain-input" class="flex-1 input" placeholder="ex: https://site-meu.ro sau *.site-meu.ro">
-                    <button onclick="WidgetsPage.saveDomain()" class="btn btn-primary bg-primary px-6">Salvează</button>
+                    <button onclick="WidgetsPage.saveDomain()" class="px-6 btn btn-primary bg-primary">Salvează</button>
                 </div>
-                <p id="domain-current" class="hidden mt-3 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg"></p>
+                <p id="domain-current" class="hidden px-3 py-2 mt-3 text-sm text-green-700 rounded-lg bg-green-50"></p>
                 <p id="domains-save-hint" class="hidden mt-2 text-xs text-green-600">Domeniul a fost salvat.</p>
             </div>
 
@@ -75,31 +75,35 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <input type="text" id="full-return-url" class="w-full input" onchange="WidgetsPage.updateCode('full')">
                                     <p class="mt-1 text-xs text-muted">Pagina unde revine clientul după plată. Lasă gol pentru a rămâne în iframe.</p>
                                 </div>
+                                <button onclick="WidgetsPage.saveWidgetConfig()" class="w-full px-4 py-2 mt-2 text-sm font-medium text-white rounded-lg bg-green-600 hover:bg-green-700 transition">
+                                    Salvează setări widget
+                                </button>
+                                <p id="widget-config-save-hint" class="hidden mt-1 text-xs text-green-600">Setările au fost salvate.</p>
                             </div>
                             <div class="mt-6">
                                 <label class="label">Fișier HTML de urcat pe server</label>
                                 <p class="mb-2 text-xs text-muted">Descarcă fișierul HTML gata de urcat pe serverul tău. Conține codul embed complet.</p>
-                                <button onclick="WidgetsPage.downloadFile('full')" class="btn btn-primary bg-primary px-4 py-2 text-sm w-full">
+                                <button onclick="WidgetsPage.downloadFile('full')" class="w-full px-4 py-2 text-sm btn btn-primary bg-primary">
                                     Descarcă fișier HTML
                                 </button>
                             </div>
                             <div class="mt-4">
                                 <label class="label">Sau copiază codul de embed</label>
-                                <textarea id="full-code" class="w-full input font-mono text-xs" rows="8" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('full')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
+                                <textarea id="full-code" class="w-full font-mono text-xs input" rows="8" readonly onclick="this.select()"></textarea>
+                                <button onclick="WidgetsPage.copyCode('full')" class="px-4 py-2 mt-2 text-sm btn bg-slate-200 text-secondary">
                                     Copiază codul
                                 </button>
                             </div>
                         </div>
                         <div class="p-6 bg-white border rounded-2xl border-border">
                             <h3 class="mb-4 text-base font-bold text-secondary">Preview</h3>
-                            <div id="full-preview" class="border rounded-xl border-border overflow-hidden" style="min-height:400px;"></div>
+                            <div id="full-preview" class="overflow-hidden border rounded-xl border-border" style="min-height:400px;"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Tab: Widget Eveniment (single) -->
-                <div id="tab-single" class="widget-tab-content hidden">
+                <div id="tab-single" class="hidden widget-tab-content">
                     <div class="grid gap-6 lg:grid-cols-2">
                         <div class="p-6 bg-white border rounded-2xl border-border">
                             <h3 class="mb-4 text-base font-bold text-secondary">Configurare</h3>
@@ -128,8 +132,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                             <div class="mt-6">
                                 <label class="label">Cod de embed</label>
-                                <textarea id="single-code" class="w-full input font-mono text-xs" rows="5" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('single')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
+                                <textarea id="single-code" class="w-full font-mono text-xs input" rows="5" readonly onclick="this.select()"></textarea>
+                                <button onclick="WidgetsPage.copyCode('single')" class="px-4 py-2 mt-2 text-sm btn bg-slate-200 text-secondary">
                                     Copiază codul
                                 </button>
                             </div>
@@ -142,7 +146,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
 
                 <!-- Tab: Widget Listă -->
-                <div id="tab-list" class="widget-tab-content hidden">
+                <div id="tab-list" class="hidden widget-tab-content">
                     <div class="grid gap-6 lg:grid-cols-2">
                         <div class="p-6 bg-white border rounded-2xl border-border">
                             <h3 class="mb-4 text-base font-bold text-secondary">Configurare</h3>
@@ -168,8 +172,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             </div>
                             <div class="mt-6">
                                 <label class="label">Cod de embed</label>
-                                <textarea id="list-code" class="w-full input font-mono text-xs" rows="5" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('list')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
+                                <textarea id="list-code" class="w-full font-mono text-xs input" rows="5" readonly onclick="this.select()"></textarea>
+                                <button onclick="WidgetsPage.copyCode('list')" class="px-4 py-2 mt-2 text-sm btn bg-slate-200 text-secondary">
                                     Copiază codul
                                 </button>
                             </div>
@@ -185,7 +189,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </div>
 
 <?php
-require_once dirname(__DIR__) . '/includes/organizer-footer.php';
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
 <script>
@@ -231,10 +234,14 @@ const WidgetsPage = {
             document.getElementById('full-return-url').value = returnBase + '/multumim';
         }
 
-        // Pre-fill logo from organizer data
-        if (this.organizer.logo) {
-            document.getElementById('full-logo').value = this.organizer.logo;
-        }
+        // Pre-fill from saved widget config
+        const wc = this.organizer.settings?.widget_config || {};
+        if (wc.logo) document.getElementById('full-logo').value = wc.logo;
+        else if (this.organizer.logo) document.getElementById('full-logo').value = this.organizer.logo;
+        if (wc.bg_image) document.getElementById('full-bg-image').value = wc.bg_image;
+        if (wc.theme) document.getElementById('full-theme').value = wc.theme;
+        if (wc.accent) document.getElementById('full-accent').value = wc.accent;
+        if (wc.return_url) document.getElementById('full-return-url').value = wc.return_url;
 
         await this.loadEvents();
 
@@ -249,7 +256,7 @@ const WidgetsPage = {
         this.domain = val;
 
         try {
-            await AmbiletAPI.put('/organizer/settings', {
+            await AmbiletAPI.put('/organizer/widget-settings', {
                 settings: { embed_domains: [val] }
             });
             const $current = document.getElementById('domain-current');
@@ -267,6 +274,27 @@ const WidgetsPage = {
             this.updateCode('full');
         } catch (e) {
             console.error('Failed to save domain:', e);
+            alert('Eroare la salvare. Încearcă din nou.');
+        }
+    },
+
+    async saveWidgetConfig() {
+        const config = {
+            logo: document.getElementById('full-logo').value.trim(),
+            bg_image: document.getElementById('full-bg-image').value.trim(),
+            theme: document.getElementById('full-theme').value,
+            accent: document.getElementById('full-accent').value,
+            return_url: document.getElementById('full-return-url').value.trim(),
+        };
+        try {
+            await AmbiletAPI.put('/organizer/widget-settings', {
+                settings: { widget_config: config }
+            });
+            const hint = document.getElementById('widget-config-save-hint');
+            hint.classList.remove('hidden');
+            setTimeout(() => hint.classList.add('hidden'), 3000);
+        } catch (e) {
+            console.error('Failed to save widget config:', e);
             alert('Eroare la salvare. Încearcă din nou.');
         }
     },
@@ -331,7 +359,7 @@ const WidgetsPage = {
             const style = document.getElementById('single-style').value;
             if (!eventSlug) {
                 document.getElementById('single-code').value = '<!-- Selectează un eveniment -->';
-                document.getElementById('single-preview').innerHTML = '<p class="text-muted text-sm">Selectează un eveniment din dropdown.</p>';
+                document.getElementById('single-preview').innerHTML = '<p class="text-sm text-muted">Selectează un eveniment din dropdown.</p>';
                 return;
             }
             let attrs = '\n  data-type="single"\n  data-event="' + eventSlug + '"\n  data-organizer="' + slug + '"\n  data-theme="' + theme + '"';
@@ -360,12 +388,15 @@ const WidgetsPage = {
     },
 
     loadWidgetPreview(containerId, type, eventSlug, orgSlug, theme, limit) {
+        // Remove old script + styles to force fresh re-execution
         const existing = document.getElementById('txw-preview-script');
         if (existing) existing.remove();
+        const oldStyles = document.getElementById('txw-styles');
+        if (oldStyles) oldStyles.remove();
 
         const s = document.createElement('script');
         s.id = 'txw-preview-script';
-        s.src = this.siteUrl + '/embed/tixello-widget.js';
+        s.src = this.siteUrl + '/embed/tixello-widget.js?_t=' + Date.now();
         s.setAttribute('data-type', type);
         s.setAttribute('data-container', containerId);
         s.setAttribute('data-theme', theme);
@@ -390,7 +421,7 @@ const WidgetsPage = {
         const blob = new Blob([html], { type: 'text/html' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'bilete-' + (this.organizer?.slug || 'widget') + '.html';
+        a.download = 'index.html';
         a.click();
         URL.revokeObjectURL(a.href);
     },

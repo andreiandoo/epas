@@ -46,8 +46,8 @@ $eventPreload = null;
 $isPreview = !empty($_GET['preview']);
 if ($eventSlug) {
     if ($isPreview) {
-        // Preview mode: always fetch fresh data, bypass cache
-        $eventPreload = api_get('/events/' . urlencode($eventSlug));
+        // Preview mode: always fetch fresh data, bypass cache, include unpublished
+        $eventPreload = api_get('/events/' . urlencode($eventSlug) . '?preview=1');
     } else {
         $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
             return api_get('/events/' . urlencode($eventSlug));
@@ -59,21 +59,6 @@ if ($eventSlug) {
         $pageTitle = $ev['name'] ?? $ev['title'] ?? $pageTitle;
         $pageDescription = !empty($ev['short_description']) ? mb_substr(strip_tags($ev['short_description']), 0, 160) : $pageDescription;
     }
-}
-
-// DEBUG: temporary - remove after testing
-if (!empty($_GET['debug'])) {
-    header('Content-Type: text/plain');
-    echo "eventSlug: " . ($eventSlug ?? 'NULL') . "\n";
-    echo "API_BASE_URL: " . (defined('API_BASE_URL') ? API_BASE_URL : 'NOT DEFINED') . "\n";
-    echo "API_KEY: " . (defined('API_KEY') ? substr(API_KEY, 0, 8) . '...' : 'NOT DEFINED') . "\n";
-    echo "full URL: " . API_BASE_URL . '/events/' . urlencode($eventSlug) . "\n";
-    echo "success: " . var_export($eventPreload['success'] ?? null, true) . "\n";
-    echo "error: " . ($eventPreload['error'] ?? 'NONE') . "\n";
-    echo "ev is null: " . ($ev === null ? 'YES' : 'NO') . "\n";
-    echo "display_template: " . ($ev['display_template'] ?? 'NOT SET') . "\n";
-    echo "data dump: " . json_encode($eventPreload['data'] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
-    exit;
 }
 
 // External redirect: if event has a redirect_url, send 302 and exit

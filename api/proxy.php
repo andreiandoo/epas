@@ -1646,6 +1646,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.settings':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/settings';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.forgot-password':
         $method = 'POST';
         $body = file_get_contents('php://input');
