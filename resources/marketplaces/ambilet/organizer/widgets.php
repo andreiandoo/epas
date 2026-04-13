@@ -49,60 +49,98 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         </div>
                     </div>
 
-                    <div class="grid gap-6 lg:grid-cols-2">
-                        <!-- Left: branding config -->
-                        <div class="space-y-4">
-                            <div>
-                                <label class="label">Culoare principală (accent)</label>
-                                <div class="flex gap-3 items-center">
-                                    <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer">
-                                    <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="var el=document.getElementById('full-accent');if(el)el.value=this.value;">
-                                </div>
-                                <p class="mt-1 text-xs text-muted">Culoarea butoanelor, link-urilor și elementelor de accent.</p>
-                            </div>
-                            <div>
-                                <label class="label">Logo organizator (URL imagine)</label>
-                                <input type="text" id="full-logo" class="w-full input" placeholder="https://site-meu.ro/logo.png">
-                                <p class="mt-1 text-xs text-muted">Logo-ul apare în nav bar pe toate paginile.</p>
-                            </div>
-                            <div>
-                                <label class="label">Imagine hero homepage (URL imagine)</label>
-                                <input type="text" id="full-hero-image" class="w-full input" placeholder="https://site-meu.ro/hero.jpg">
-                                <p class="mt-1 text-xs text-muted">Imaginea de fundal din secțiunea hero. Lasă gol pentru gradient automat.</p>
-                            </div>
-                            <div>
-                                <label class="label">Imagine de fundal (toate paginile)</label>
-                                <input type="text" id="full-bg-image" class="w-full input" placeholder="https://site-meu.ro/background.jpg">
-                                <p class="mt-1 text-xs text-muted">Opțional. Se aplică pe toate paginile din pachet.</p>
-                            </div>
-                        </div>
+                    <!-- Inner tabs: Branding | Termeni | Confidențialitate -->
+                    <div class="flex gap-1 p-1 mb-6 rounded-lg bg-slate-100">
+                        <button onclick="WidgetsPage.showInnerTab('branding')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab active bg-white text-secondary shadow-sm" data-itab="branding">Branding & Configurare</button>
+                        <button onclick="WidgetsPage.showInnerTab('terms')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab text-muted" data-itab="terms">Termeni și Condiții</button>
+                        <button onclick="WidgetsPage.showInnerTab('privacy')" class="flex-1 px-3 py-2 text-sm font-medium rounded-md wl-inner-tab text-muted" data-itab="privacy">Politica Confidențialitate</button>
+                    </div>
 
-                        <!-- Right: content + contact config -->
-                        <div class="space-y-4">
-                            <div>
-                                <label class="label">Titlu hero (acceptă HTML)</label>
-                                <input type="text" id="full-home-title" class="w-full input" placeholder='ex: Seara perfectă<br>începe cu <em>râs.</em>'>
-                                <p class="mt-1 text-xs text-muted">Folosește &lt;em&gt; pentru accent, &lt;br&gt; pentru rând nou. Lasă gol = text implicit.</p>
+                    <!-- Inner tab: Branding -->
+                    <div id="itab-branding" class="wl-inner-content">
+                        <div class="grid gap-6 lg:grid-cols-2">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="label">Culoare principală (accent)</label>
+                                    <div class="flex gap-3 items-center">
+                                        <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer">
+                                        <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="var el=document.getElementById('full-accent');if(el)el.value=this.value;">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label">Logo organizator</label>
+                                    <div class="wl-upload-zone" data-type="logo" data-field="full-logo" onclick="this.querySelector('input[type=file]').click()">
+                                        <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'logo', 'full-logo')">
+                                        <input type="hidden" id="full-logo">
+                                        <div class="wl-upload-preview" id="preview-logo"></div>
+                                        <div class="wl-upload-text">
+                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label">Imagine hero homepage</label>
+                                    <div class="wl-upload-zone" data-type="hero" data-field="full-hero-image" onclick="this.querySelector('input[type=file]').click()">
+                                        <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'hero', 'full-hero-image')">
+                                        <input type="hidden" id="full-hero-image">
+                                        <div class="wl-upload-preview" id="preview-hero"></div>
+                                        <div class="wl-upload-text">
+                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="label">Imagine de fundal (toate paginile)</label>
+                                    <div class="wl-upload-zone" data-type="background" data-field="full-bg-image" onclick="this.querySelector('input[type=file]').click()">
+                                        <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'background', 'full-bg-image')">
+                                        <input type="hidden" id="full-bg-image">
+                                        <div class="wl-upload-preview" id="preview-background"></div>
+                                        <div class="wl-upload-text">
+                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="label">Subtitlu hero</label>
-                                <input type="text" id="full-home-subtitle" class="w-full input" placeholder="ex: Clubul de comedie nr. 1 din România">
-                                <p class="mt-1 text-xs text-muted">Textul mic de deasupra titlului. Lasă gol = numele organizatorului.</p>
-                            </div>
-                            <div>
-                                <label class="label">Adresă</label>
-                                <input type="text" id="full-address" class="w-full input" placeholder="ex: Str. Lipscani 45, București">
-                            </div>
-                            <div>
-                                <label class="label">Telefon</label>
-                                <input type="text" id="full-phone" class="w-full input" placeholder="ex: +40 721 234 567">
-                            </div>
-                            <div>
-                                <label class="label">Return URL (după plată)</label>
-                                <input type="text" id="full-return-url" class="w-full input">
-                                <p class="mt-1 text-xs text-muted">Unde revine clientul după plată. Lasă gol = pagina de confirmare din pachet.</p>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="label">Titlu hero (acceptă HTML)</label>
+                                    <input type="text" id="full-home-title" class="w-full input" placeholder='ex: Seara perfectă<br>începe cu <em>râs.</em>'>
+                                    <p class="mt-1 text-xs text-muted">Folosește &lt;em&gt; pentru accent, &lt;br&gt; pentru rând nou.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Subtitlu hero</label>
+                                    <input type="text" id="full-home-subtitle" class="w-full input" placeholder="ex: Clubul de comedie nr. 1 din România">
+                                </div>
+                                <div>
+                                    <label class="label">Adresă</label>
+                                    <input type="text" id="full-address" class="w-full input" placeholder="ex: Str. Lipscani 45, București">
+                                </div>
+                                <div>
+                                    <label class="label">Telefon</label>
+                                    <input type="text" id="full-phone" class="w-full input" placeholder="ex: +40 721 234 567">
+                                </div>
+                                <div>
+                                    <label class="label">Return URL (după plată)</label>
+                                    <input type="text" id="full-return-url" class="w-full input bg-slate-50" readonly>
+                                    <p class="mt-1 text-xs text-muted">Generat automat din domeniul configurat.</p>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Inner tab: Terms -->
+                    <div id="itab-terms" class="wl-inner-content" style="display:none;">
+                        <p class="mb-3 text-sm text-muted">Conținutul paginii „Termeni și Condiții" de pe site-ul whitelabel. Acceptă HTML.</p>
+                        <textarea id="wl-terms-editor" class="w-full input" rows="14" style="font-family:monospace;font-size:13px;line-height:1.6;" placeholder="Introdu termenii și condițiile aici..."></textarea>
+                    </div>
+
+                    <!-- Inner tab: Privacy -->
+                    <div id="itab-privacy" class="wl-inner-content" style="display:none;">
+                        <p class="mb-3 text-sm text-muted">Conținutul paginii „Politica de Confidențialitate" de pe site-ul whitelabel. Acceptă HTML.</p>
+                        <textarea id="wl-privacy-editor" class="w-full input" rows="14" style="font-family:monospace;font-size:13px;line-height:1.6;" placeholder="Introdu politica de confidențialitate aici..."></textarea>
                     </div>
 
                     <!-- Actions -->
@@ -216,6 +254,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 <?php
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
+<style>
+.wl-upload-zone {
+    position: relative; border: 2px dashed #d1d5db; border-radius: 12px;
+    padding: 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
+    min-height: 80px; display: flex; align-items: center; justify-content: center;
+}
+.wl-upload-zone:hover, .wl-upload-zone.dragover { border-color: var(--primary, #6366f1); background: rgba(99,102,241,0.04); }
+.wl-upload-zone.has-image .wl-upload-text { display: none; }
+.wl-upload-preview { position: absolute; inset: 4px; border-radius: 8px; overflow: hidden; display: none; }
+.wl-upload-zone.has-image .wl-upload-preview { display: block; }
+.wl-upload-preview img { width: 100%; height: 100%; object-fit: contain; }
+</style>
 <script>
 const WidgetsPage = {
     organizer: null,
@@ -273,7 +323,35 @@ const WidgetsPage = {
         _s('full-theme', wc.theme);
         _s('full-accent', wc.accent);
         _s('full-accent-hex', wc.accent);
-        _s('full-return-url', wc.return_url);
+        // Auto-generate return URL from domain
+        if (this.domain) {
+            const baseHost = this.domain.replace(/^\*\./, 'www.');
+            const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
+            _s('full-return-url', returnBase + '/multumim');
+        }
+
+        // Show image previews for existing uploads
+        ['logo', 'hero_image', 'bg_image'].forEach(key => {
+            const url = wc[key];
+            if (url) {
+                const previewId = 'preview-' + (key === 'hero_image' ? 'hero' : (key === 'bg_image' ? 'background' : key));
+                const $preview = document.getElementById(previewId);
+                const $zone = $preview?.closest('.wl-upload-zone');
+                if ($preview && $zone) {
+                    $preview.innerHTML = '<img src="' + url + '" alt="">';
+                    $zone.classList.add('has-image');
+                }
+                // Also set hidden input value
+                const fieldMap = { logo: 'full-logo', hero_image: 'full-hero-image', bg_image: 'full-bg-image' };
+                _s(fieldMap[key], url);
+            }
+        });
+
+        // Pre-fill terms & privacy
+        const terms = this.organizer.settings?.widget_terms || '';
+        const privacy = this.organizer.settings?.widget_privacy || '';
+        _s('wl-terms-editor', terms);
+        _s('wl-privacy-editor', privacy);
 
         await this.loadEvents();
 
@@ -302,7 +380,6 @@ const WidgetsPage = {
             const returnBase = val.startsWith('http') ? val : 'https://' + baseHost;
             document.getElementById('full-return-url').value = returnBase + '/multumim';
 
-            this.updateCode('full');
         } catch (e) {
             console.error('Failed to save domain:', e);
             alert('Eroare la salvare. Încearcă din nou.');
@@ -310,6 +387,57 @@ const WidgetsPage = {
     },
 
     _v(id) { return (document.getElementById(id)?.value || '').trim(); },
+
+    showInnerTab(tab) {
+        document.querySelectorAll('.wl-inner-tab').forEach(t => {
+            t.classList.remove('active', 'bg-white', 'text-secondary', 'shadow-sm');
+            t.classList.add('text-muted');
+        });
+        document.querySelectorAll('.wl-inner-content').forEach(c => c.style.display = 'none');
+        const btn = document.querySelector('.wl-inner-tab[data-itab="' + tab + '"]');
+        if (btn) { btn.classList.add('active', 'bg-white', 'text-secondary', 'shadow-sm'); btn.classList.remove('text-muted'); }
+        const panel = document.getElementById('itab-' + tab);
+        if (panel) panel.style.display = '';
+    },
+
+    async uploadImage(fileInput, type, fieldId) {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        const zone = fileInput.closest('.wl-upload-zone');
+        const previewId = 'preview-' + type;
+        const $preview = document.getElementById(previewId);
+
+        // Show local preview immediately
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            if ($preview) { $preview.innerHTML = '<img src="' + e.target.result + '" alt="">'; }
+            if (zone) zone.classList.add('has-image');
+        };
+        reader.readAsDataURL(file);
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('type', type);
+
+        try {
+            const resp = await fetch(this.siteUrl + '/api/proxy.php?action=organizer.widget-image', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+                headers: { 'X-Organizer-Token': AmbiletAuth?.getToken?.() || '' },
+            });
+            const result = await resp.json();
+            if (result.success && result.data?.url) {
+                const $field = document.getElementById(fieldId);
+                if ($field) $field.value = result.data.url;
+            }
+        } catch (e) {
+            console.error('Upload failed:', e);
+            alert('Eroare la încărcarea imaginii.');
+        }
+    },
 
     async saveWidgetConfig() {
         const config = {
@@ -324,9 +452,13 @@ const WidgetsPage = {
             accent: this._v('full-accent'),
             return_url: this._v('full-return-url'),
         };
+        // Also save terms and privacy content
+        const terms = this._v('wl-terms-editor');
+        const privacy = this._v('wl-privacy-editor');
+
         try {
             await AmbiletAPI.put('/organizer/widget-settings', {
-                settings: { widget_config: config }
+                settings: { widget_config: config, widget_terms: terms, widget_privacy: privacy }
             });
             const hint = document.getElementById('widget-config-save-hint');
             hint.classList.remove('hidden');

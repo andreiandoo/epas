@@ -358,6 +358,53 @@ class AuthController extends BaseController
     }
 
     /**
+     * Upload a widget image (logo, hero, background)
+     */
+    public function uploadWidgetImage(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,webp,svg|max:5120',
+            'type' => 'required|string|in:logo,hero,background',
+        ]);
+
+        $clientId = $organizer->marketplace_client_id;
+        $type = $request->input('type');
+
+        // Delete old image if exists in widget_config
+        $settings = $organizer->settings ?? [];
+        $widgetConfig = $settings['widget_config'] ?? [];
+        $fieldMap = ['logo' => 'logo', 'hero' => 'hero_image', 'background' => 'bg_image'];
+        $field = $fieldMap[$type] ?? $type;
+
+        $oldPath = $widgetConfig[$field] ?? '';
+        if ($oldPath && !\Illuminate\Support\Str::startsWith($oldPath, 'http') && \Illuminate\Support\Facades\Storage::disk('public')->exists($oldPath)) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+        }
+
+        // Store new image
+        $path = $request->file('image')->store(
+            "marketplace/{$clientId}/organizers/{$organizer->id}/widget",
+            'public'
+        );
+
+        // Update widget_config
+        $widgetConfig[$field] = \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+        $settings['widget_config'] = $widgetConfig;
+        $organizer->update(['settings' => $settings]);
+
+        return $this->success([
+            'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($path),
+            'field' => $field,
+        ], 'Image uploaded');
+    }
+
+    /**
      * Update password
      */
     public function updatePassword(Request $request): JsonResponse
@@ -983,6 +1030,8 @@ class AuthController extends BaseController
                 'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
                 'embed_domains' => $organizer->settings['embed_domains'] ?? [],
                 'widget_config' => $organizer->settings['widget_config'] ?? [],
+                'widget_terms' => $organizer->settings['widget_terms'] ?? '',
+                'widget_privacy' => $organizer->settings['widget_privacy'] ?? '',
             ],
         ];
     }

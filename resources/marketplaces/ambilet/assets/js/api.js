@@ -312,6 +312,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/logout') return 'organizer.logout';
         if (endpoint === '/organizer/me') return 'organizer.me';
         if (endpoint === '/organizer/widget-settings') return 'organizer.settings';
+        if (endpoint === '/organizer/widget-image') return 'organizer.widget-image';
         if (endpoint === '/organizer/settings') return 'organizer.me';
         if (endpoint === '/organizer/settings/profile') return 'organizer.profile';
         if (endpoint === '/organizer/settings/company') return 'organizer.profile';

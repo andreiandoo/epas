@@ -1653,6 +1653,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.widget-image':
+        $method = 'POST';
+        // Forward multipart form data
+        $endpoint = '/organizer/widget-image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
     case 'organizer.forgot-password':
         $method = 'POST';
         $body = file_get_contents('php://input');

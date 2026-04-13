@@ -1550,6 +1550,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.profile.update');
         Route::put('/settings', [OrganizerAuthController::class, 'updateSettings'])
             ->name('api.marketplace-client.organizer.settings.update');
+        Route::post('/widget-image', [OrganizerAuthController::class, 'uploadWidgetImage'])
+            ->name('api.marketplace-client.organizer.widget-image.upload');
         Route::put('/password', [OrganizerAuthController::class, 'updatePassword'])
             ->name('api.marketplace-client.organizer.password.update');
         Route::put('/payout-details', [OrganizerAuthController::class, 'updatePayoutDetails'])
