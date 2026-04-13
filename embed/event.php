@@ -12,14 +12,16 @@ if (!$eventSlug) {
     exit;
 }
 
-// Fetch event data from marketplace-events endpoint (short cache)
+// Fetch event data from marketplace-events endpoint
 $eventData = api_cached('embed_mkt_event_' . $eventSlug, function () use ($eventSlug) {
     return api_get('/marketplace-events/' . urlencode($eventSlug));
 }, 60);
 
 $ev = $eventData['data']['event'] ?? null;
-// ticket_types can be at top level or inside event (depends on API endpoint)
 $ticketTypes = $eventData['data']['ticket_types'] ?? $ev['ticket_types'] ?? [];
+$artists = $eventData['data']['artists'] ?? [];
+$venue = $eventData['data']['venue'] ?? [];
+$performances = $eventData['data']['performances'] ?? [];
 
 if (!$ev) {
     http_response_code(404);
@@ -33,13 +35,17 @@ $coverUrl = $ev['hero_image_url'] ?? $ev['cover_image_url'] ?? $posterUrl;
 $description = $ev['description'] ?? '';
 $shortDescription = $ev['short_description'] ?? '';
 $ticketTerms = $ev['ticket_terms'] ?? '';
-$venueName = $ev['venue_name'] ?? '';
-$venueCity = isset($ev['venue_city']) ? $ev['venue_city'] : '';
+$venueName = $ev['venue_name'] ?? $venue['name'] ?? '';
+$venueCity = $ev['venue_city'] ?? $venue['city'] ?? '';
+$venueAddress = $venue['address'] ?? $ev['venue_address'] ?? '';
 $eventDate = !empty($ev['starts_at']) ? date('d.m.Y', strtotime($ev['starts_at'])) : '';
 $eventTime = !empty($ev['starts_at']) ? date('H:i', strtotime($ev['starts_at'])) : '';
 if ($eventTime === '00:00') $eventTime = '';
 $doorsAt = !empty($ev['doors_open_at']) ? date('H:i', strtotime($ev['doors_open_at'])) : '';
 $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
+
+// Unique shareable link for this event on the marketplace
+$eventShareUrl = SITE_URL . '/bilete/' . htmlspecialchars($eventSlug);
 
 require_once __DIR__ . '/includes/embed-head.php';
 ?>
@@ -58,7 +64,7 @@ require_once __DIR__ . '/includes/embed-head.php';
     Toate evenimentele
 </a>
 
-<div style="display:flex;flex-direction:column;gap:0;" id="event-container">
+<div id="event-container">
 
     <!-- Cover image -->
     <?php if ($coverUrl): ?>
@@ -90,12 +96,65 @@ require_once __DIR__ . '/includes/embed-head.php';
                 <?php endif; ?>
             </div>
 
+            <!-- Share link -->
+            <div style="margin-top:16px;padding:10px 14px;background:<?= $isDark ? '#1e293b' : '#f1f5f9' ?>;border-radius:10px;display:flex;align-items:center;gap:8px;">
+                <svg style="width:16px;height:16px;color:<?= $mutedColor ?>;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <input type="text" value="<?= htmlspecialchars($eventShareUrl) ?>" readonly onclick="this.select();navigator.clipboard?.writeText(this.value);" style="flex:1;background:none;border:none;font-size:12px;color:<?= $mutedColor ?>;outline:none;cursor:pointer;" title="Click pentru a copia link-ul">
+                <span style="font-size:11px;color:<?= $mutedColor ?>;">Copiază link</span>
+            </div>
+
             <!-- Description -->
             <?php if ($description): ?>
             <div style="margin-top:24px;">
                 <h2 style="margin:0 0 10px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Despre eveniment</h2>
                 <div style="font-size:14px;color:<?= $mutedColor ?>;line-height:1.7;">
                     <?= $description ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Artists -->
+            <?php if (!empty($artists)): ?>
+            <div style="margin-top:24px;">
+                <h2 style="margin:0 0 12px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Artiști</h2>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;">
+                    <?php foreach ($artists as $artist):
+                        $artistImg = $artist['image_url'] ?? '';
+                        $artistName = $artist['name'] ?? '';
+                        $artistBio = $artist['bio'] ?? '';
+                        $artistSlug = $artist['slug'] ?? '';
+                        $artistUrl = SITE_URL . '/artist/' . htmlspecialchars($artistSlug);
+                    ?>
+                    <a href="<?= $artistUrl ?>" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:12px;text-decoration:none;color:<?= $textColor ?>;flex:1;min-width:200px;">
+                        <?php if ($artistImg): ?>
+                        <img src="<?= htmlspecialchars($artistImg) ?>" alt="<?= htmlspecialchars($artistName) ?>" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                        <?php endif; ?>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;"><?= htmlspecialchars($artistName) ?></div>
+                            <?php if ($artistBio): ?>
+                            <div style="font-size:12px;color:<?= $mutedColor ?>;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"><?= htmlspecialchars($artistBio) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Venue -->
+            <?php if ($venueName || !empty($venue)): ?>
+            <div style="margin-top:24px;">
+                <h2 style="margin:0 0 12px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Locație</h2>
+                <div style="padding:14px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:12px;">
+                    <div style="font-weight:600;font-size:15px;color:<?= $textColor ?>;"><?= htmlspecialchars($venueName) ?></div>
+                    <?php if ($venueAddress || $venueCity): ?>
+                    <div style="font-size:13px;color:<?= $mutedColor ?>;margin-top:4px;">
+                        <?= htmlspecialchars($venueAddress) ?><?= $venueAddress && $venueCity ? ', ' : '' ?><?= htmlspecialchars($venueCity) ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($venue['capacity'])): ?>
+                    <div style="font-size:12px;color:<?= $mutedColor ?>;margin-top:4px;">Capacitate: <?= (int) $venue['capacity'] ?> locuri</div>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>
@@ -119,7 +178,6 @@ require_once __DIR__ . '/includes/embed-head.php';
                         <h2 style="margin:0;font-size:16px;font-weight:700;color:<?= $textColor ?>;">Bilete</h2>
                     </div>
                     <div id="embed-ticket-types" style="padding:4px 0;">
-                        <!-- Rendered by JS -->
                         <div style="padding:16px;">
                             <div class="skeleton" style="height:56px;border-radius:10px;margin-bottom:8px;"></div>
                             <div class="skeleton" style="height:56px;border-radius:10px;"></div>
@@ -143,13 +201,12 @@ require_once __DIR__ . '/includes/embed-head.php';
     </div>
 </div>
 
-<!-- Responsive: on mobile, tickets sidebar goes full width -->
 <style>
     @media (max-width: 767px) {
         #embed-tickets-sidebar { width: 100% !important; }
     }
 </style>
 
-<script src="<?= SITE_URL ?>/embed/assets/js/embed-event.js"></script>
-
 <?php require_once __DIR__ . '/includes/embed-footer.php'; ?>
+<!-- embed-event.js MUST load AFTER embed-footer.php which defines __EMBED_CONFIG__ -->
+<script src="<?= SITE_URL ?>/embed/assets/js/embed-event.js"></script>
