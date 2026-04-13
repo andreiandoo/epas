@@ -221,6 +221,23 @@ class OrganizerResource extends Resource
                         ])
                         ->columns(3),
 
+                    Section::make('Widget & Embed')
+                        ->icon('heroicon-o-code-bracket')
+                        ->description('Configurare domenii permise pentru widget-uri embed. Organizatorul va putea genera coduri de embed din dashboardul propriu doar dacă are cel puțin un domeniu configurat.')
+                        ->collapsed()
+                        ->schema([
+                            Forms\Components\Toggle::make('settings.widget_enabled')
+                                ->label('Activează widget-uri embed')
+                                ->helperText('Permite organizatorului să genereze coduri de widget pentru site-ul propriu')
+                                ->default(false)
+                                ->live(),
+                            Forms\Components\TagsInput::make('settings.embed_domains')
+                                ->label('Domenii permise pentru embed')
+                                ->placeholder('ex: https://site-organizator.ro')
+                                ->helperText('Domeniile unde organizatorul poate folosi widget-urile. iframe-ul va fi blocat pe alte domenii. Format: https://domeniu.ro')
+                                ->visible(fn (SGet $get) => (bool) ($get('settings.widget_enabled') ?? false)),
+                        ]),
+
                                 ]), // end Tab 1 (Cont)
 
                             // ── TAB 2: Date legale ──

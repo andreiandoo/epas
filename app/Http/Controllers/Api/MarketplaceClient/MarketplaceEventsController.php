@@ -2203,6 +2203,8 @@ class MarketplaceEventsController extends BaseController
             'pastEvents' => $formattedPast,
             'about' => $organizer->description ?? '',
             'facts' => $facts,
+            'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
+            'embed_domains' => $organizer->settings['embed_domains'] ?? [],
         ]);
     }
 
