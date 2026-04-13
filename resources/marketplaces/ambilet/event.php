@@ -46,8 +46,8 @@ $eventPreload = null;
 $isPreview = !empty($_GET['preview']);
 if ($eventSlug) {
     if ($isPreview) {
-        // Preview mode: always fetch fresh data, bypass cache
-        $eventPreload = api_get('/events/' . urlencode($eventSlug));
+        // Preview mode: always fetch fresh data, bypass cache, include unpublished
+        $eventPreload = api_get('/events/' . urlencode($eventSlug) . '?preview=1');
     } else {
         $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
             return api_get('/events/' . urlencode($eventSlug));
