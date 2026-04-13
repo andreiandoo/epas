@@ -2932,7 +2932,7 @@ if ($useCache) {
 }
 
 // Handle file uploads via cURL (multipart/form-data)
-if (!empty($isFileUpload) && !empty($_FILES)) {
+if ((!empty($isFileUpload) || !empty($isMultipart)) && !empty($_FILES)) {
     $url = API_BASE_URL . $endpoint;
     $curlHeaders = [
         'X-API-Key: ' . API_KEY,
@@ -2952,6 +2952,10 @@ if (!empty($isFileUpload) && !empty($_FILES)) {
     }
 
     $postFields = [];
+    // Include regular POST fields (e.g. 'type' parameter)
+    foreach ($_POST as $key => $value) {
+        $postFields[$key] = $value;
+    }
     foreach ($_FILES as $key => $file) {
         if ($file['error'] === UPLOAD_ERR_OK) {
             $postFields[$key] = new CURLFile(
