@@ -55,6 +55,8 @@ require_once __DIR__ . '/includes/embed-head.php';
     window.__EMBED_EVENT__ = <?= json_encode([
         'event' => $ev,
         'ticket_types' => $ticketTypes,
+        'commission_mode' => $eventData['data']['commission_mode'] ?? 'included',
+        'commission_rate' => (float) ($eventData['data']['commission_rate'] ?? 5),
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 
@@ -115,27 +117,43 @@ require_once __DIR__ . '/includes/embed-head.php';
 
             <!-- Artists -->
             <?php if (!empty($artists)): ?>
-            <div style="margin-top:24px;">
-                <h2 style="margin:0 0 12px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Artiști</h2>
-                <div style="display:flex;flex-wrap:wrap;gap:12px;">
+            <div style="margin-top:28px;">
+                <h2 style="margin:0 0 14px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Artiști</h2>
+                <div style="display:flex;flex-direction:column;gap:14px;">
                     <?php foreach ($artists as $artist):
                         $artistImg = $artist['image_url'] ?? '';
                         $artistName = $artist['name'] ?? '';
                         $artistBio = $artist['bio'] ?? '';
                         $artistSlug = $artist['slug'] ?? '';
                         $artistUrl = SITE_URL . '/artist/' . htmlspecialchars($artistSlug);
+                        $isHeadliner = $artist['is_headliner'] ?? false;
+                        $socialLinks = $artist['social_links'] ?? [];
                     ?>
-                    <a href="<?= $artistUrl ?>" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:12px;text-decoration:none;color:<?= $textColor ?>;flex:1;min-width:200px;">
+                    <div style="display:flex;gap:14px;padding:16px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:14px;">
                         <?php if ($artistImg): ?>
-                        <img src="<?= htmlspecialchars($artistImg) ?>" alt="<?= htmlspecialchars($artistName) ?>" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                        <a href="<?= $artistUrl ?>" target="_blank" style="flex-shrink:0;">
+                            <img src="<?= htmlspecialchars($artistImg) ?>" alt="<?= htmlspecialchars($artistName) ?>" style="width:80px;height:80px;border-radius:12px;object-fit:cover;">
+                        </a>
                         <?php endif; ?>
-                        <div>
-                            <div style="font-weight:600;font-size:14px;"><?= htmlspecialchars($artistName) ?></div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <a href="<?= $artistUrl ?>" target="_blank" style="font-weight:700;font-size:16px;color:<?= $textColor ?>;text-decoration:none;"><?= htmlspecialchars($artistName) ?></a>
+                                <?php if ($isHeadliner): ?>
+                                <span style="font-size:10px;font-weight:700;color:#f59e0b;background:#fef3c7;padding:2px 6px;border-radius:4px;">HEADLINER</span>
+                                <?php endif; ?>
+                            </div>
                             <?php if ($artistBio): ?>
-                            <div style="font-size:12px;color:<?= $mutedColor ?>;margin-top:2px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;"><?= htmlspecialchars($artistBio) ?></div>
+                            <p style="margin:6px 0 0;font-size:13px;color:<?= $mutedColor ?>;line-height:1.5;"><?= htmlspecialchars($artistBio) ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($socialLinks)): ?>
+                            <div style="display:flex;gap:10px;margin-top:8px;">
+                                <?php foreach ($socialLinks as $platform => $url): if (!$url) continue; ?>
+                                <a href="<?= htmlspecialchars($url) ?>" target="_blank" rel="noopener" style="color:<?= $mutedColor ?>;text-decoration:none;font-size:12px;font-weight:500;"><?= ucfirst($platform) ?></a>
+                                <?php endforeach; ?>
+                            </div>
                             <?php endif; ?>
                         </div>
-                    </a>
+                    </div>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -143,17 +161,34 @@ require_once __DIR__ . '/includes/embed-head.php';
 
             <!-- Venue -->
             <?php if ($venueName || !empty($venue)): ?>
-            <div style="margin-top:24px;">
-                <h2 style="margin:0 0 12px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Locație</h2>
-                <div style="padding:14px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:12px;">
-                    <div style="font-weight:600;font-size:15px;color:<?= $textColor ?>;"><?= htmlspecialchars($venueName) ?></div>
-                    <?php if ($venueAddress || $venueCity): ?>
-                    <div style="font-size:13px;color:<?= $mutedColor ?>;margin-top:4px;">
-                        <?= htmlspecialchars($venueAddress) ?><?= $venueAddress && $venueCity ? ', ' : '' ?><?= htmlspecialchars($venueCity) ?>
+            <div style="margin-top:28px;">
+                <h2 style="margin:0 0 14px;font-size:18px;font-weight:600;color:<?= $textColor ?>;">Locație</h2>
+                <div style="padding:16px;background:<?= $cardBg ?>;border:1px solid <?= $borderColor ?>;border-radius:14px;">
+                    <div style="display:flex;gap:14px;">
+                        <?php if (!empty($venue['image'])): ?>
+                        <img src="<?= htmlspecialchars($venue['image']) ?>" alt="<?= htmlspecialchars($venueName) ?>" style="width:80px;height:80px;border-radius:12px;object-fit:cover;flex-shrink:0;">
+                        <?php endif; ?>
+                        <div>
+                            <div style="font-weight:700;font-size:16px;color:<?= $textColor ?>;"><?= htmlspecialchars($venueName) ?></div>
+                            <?php if ($venueAddress || $venueCity): ?>
+                            <div style="font-size:13px;color:<?= $mutedColor ?>;margin-top:4px;display:flex;align-items:center;gap:4px;">
+                                <svg style="width:14px;height:14px;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                <?= htmlspecialchars($venueAddress) ?><?= $venueAddress && $venueCity ? ', ' : '' ?><?= htmlspecialchars($venueCity) ?>
+                            </div>
+                            <?php endif; ?>
+                            <?php if (!empty($venue['capacity'])): ?>
+                            <div style="font-size:12px;color:<?= $mutedColor ?>;margin-top:4px;">Capacitate: <?= number_format((int) $venue['capacity']) ?> locuri</div>
+                            <?php endif; ?>
+                            <?php if (!empty($venue['description'])): ?>
+                            <p style="margin:8px 0 0;font-size:13px;color:<?= $mutedColor ?>;line-height:1.5;"><?= $venue['description'] ?></p>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                    <?php endif; ?>
-                    <?php if (!empty($venue['capacity'])): ?>
-                    <div style="font-size:12px;color:<?= $mutedColor ?>;margin-top:4px;">Capacitate: <?= (int) $venue['capacity'] ?> locuri</div>
+                    <?php if (!empty($venue['google_maps_url'])): ?>
+                    <a href="<?= htmlspecialchars($venue['google_maps_url']) ?>" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;font-size:13px;font-weight:500;color:<?= htmlspecialchars($accentColor) ?>;border:1px solid <?= $borderColor ?>;border-radius:8px;text-decoration:none;">
+                        <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        Deschide în Google Maps
+                    </a>
                     <?php endif; ?>
                 </div>
             </div>
