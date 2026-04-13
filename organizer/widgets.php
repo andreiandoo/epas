@@ -36,109 +36,95 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <!-- Widget tabs -->
-            <!-- Whitelabel package download -->
-            <div id="whitelabel-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
-                <div class="flex items-start gap-4">
-                    <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10">
-                        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <!-- Widget Full — Configurare branding + Download pachet -->
+            <div id="whitelabel-section" class="hidden mb-6">
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Widget Full — Pachet Whitelabel</h2>
+                            <p class="text-sm text-muted">Site propriu de bilete. Configurează branding-ul, salvează, apoi descarcă pachetul ZIP.</p>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <h2 class="text-lg font-bold text-secondary">Pachet Whitelabel (recomandat)</h2>
-                        <p class="mt-1 text-sm text-muted">Descarcă un pachet complet de fișiere PHP pe care le urci pe serverul tău. Site propriu de bilete cu URL-uri native, SEO, fără iframe, fără restricții cross-origin. Necesită server cu Apache + PHP + cURL.</p>
-                        <button onclick="WidgetsPage.downloadPackage()" class="inline-flex items-center gap-2 px-6 py-3 mt-4 text-sm font-semibold text-white rounded-xl bg-primary hover:bg-primary-dark transition">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                            Descarcă pachet whitelabel (.zip)
+
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <!-- Left: branding config -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label">Culoare principală (accent)</label>
+                                <div class="flex gap-3 items-center">
+                                    <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer">
+                                    <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="var el=document.getElementById('full-accent');if(el)el.value=this.value;">
+                                </div>
+                                <p class="mt-1 text-xs text-muted">Culoarea butoanelor, link-urilor și elementelor de accent.</p>
+                            </div>
+                            <div>
+                                <label class="label">Logo organizator (URL imagine)</label>
+                                <input type="text" id="full-logo" class="w-full input" placeholder="https://site-meu.ro/logo.png">
+                                <p class="mt-1 text-xs text-muted">Logo-ul apare în nav bar pe toate paginile.</p>
+                            </div>
+                            <div>
+                                <label class="label">Imagine hero homepage (URL imagine)</label>
+                                <input type="text" id="full-hero-image" class="w-full input" placeholder="https://site-meu.ro/hero.jpg">
+                                <p class="mt-1 text-xs text-muted">Imaginea de fundal din secțiunea hero. Lasă gol pentru gradient automat.</p>
+                            </div>
+                            <div>
+                                <label class="label">Imagine de fundal (toate paginile)</label>
+                                <input type="text" id="full-bg-image" class="w-full input" placeholder="https://site-meu.ro/background.jpg">
+                                <p class="mt-1 text-xs text-muted">Opțional. Se aplică pe toate paginile din pachet.</p>
+                            </div>
+                        </div>
+
+                        <!-- Right: content + contact config -->
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label">Titlu hero (acceptă HTML)</label>
+                                <input type="text" id="full-home-title" class="w-full input" placeholder='ex: Seara perfectă<br>începe cu <em>râs.</em>'>
+                                <p class="mt-1 text-xs text-muted">Folosește &lt;em&gt; pentru accent, &lt;br&gt; pentru rând nou. Lasă gol = text implicit.</p>
+                            </div>
+                            <div>
+                                <label class="label">Subtitlu hero</label>
+                                <input type="text" id="full-home-subtitle" class="w-full input" placeholder="ex: Clubul de comedie nr. 1 din România">
+                                <p class="mt-1 text-xs text-muted">Textul mic de deasupra titlului. Lasă gol = numele organizatorului.</p>
+                            </div>
+                            <div>
+                                <label class="label">Adresă</label>
+                                <input type="text" id="full-address" class="w-full input" placeholder="ex: Str. Lipscani 45, București">
+                            </div>
+                            <div>
+                                <label class="label">Telefon</label>
+                                <input type="text" id="full-phone" class="w-full input" placeholder="ex: +40 721 234 567">
+                            </div>
+                            <div>
+                                <label class="label">Return URL (după plată)</label>
+                                <input type="text" id="full-return-url" class="w-full input">
+                                <p class="mt-1 text-xs text-muted">Unde revine clientul după plată. Lasă gol = pagina de confirmare din pachet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex flex-wrap items-center gap-3 pt-6 mt-6 border-t border-border">
+                        <button onclick="WidgetsPage.saveWidgetConfig()" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white rounded-xl bg-green-600 hover:bg-green-700 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Salvează setări
                         </button>
+                        <button onclick="WidgetsPage.downloadPackage()" class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white rounded-xl bg-primary hover:bg-primary-dark transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Descarcă pachet (.zip)
+                        </button>
+                        <p id="widget-config-save-hint" class="hidden text-xs text-green-600">Setările au fost salvate.</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Widget Eveniment + Widget Listă -->
             <div id="widget-tabs-section" class="hidden">
                 <div class="flex flex-wrap gap-2 pb-4 mb-6 border-b border-border">
-                    <button onclick="WidgetsPage.showTab('full')" class="px-4 py-2 text-sm font-medium text-white rounded-lg widget-tab active bg-primary" data-tab="full">Widget Full (iframe)</button>
-                    <button onclick="WidgetsPage.showTab('single')" class="px-4 py-2 text-sm font-medium rounded-lg widget-tab text-muted hover:bg-surface" data-tab="single">Widget Eveniment</button>
+                    <button onclick="WidgetsPage.showTab('single')" class="px-4 py-2 text-sm font-medium text-white rounded-lg widget-tab active bg-primary" data-tab="single">Widget Eveniment</button>
                     <button onclick="WidgetsPage.showTab('list')" class="px-4 py-2 text-sm font-medium rounded-lg widget-tab text-muted hover:bg-surface" data-tab="list">Widget Listă</button>
-                </div>
-
-                <!-- Tab: Widget Full -->
-                <div id="tab-full" class="widget-tab-content">
-                    <div class="grid gap-6 lg:grid-cols-2">
-                        <div class="p-6 bg-white border rounded-2xl border-border">
-                            <h3 class="mb-4 text-base font-bold text-secondary">Configurare branding</h3>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="label">Culoare principală (accent)</label>
-                                    <div class="flex gap-3 items-center">
-                                        <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer" onchange="WidgetsPage.updateCode('full')">
-                                        <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="document.getElementById('full-accent').value=this.value;WidgetsPage.updateCode('full')">
-                                    </div>
-                                    <p class="mt-1 text-xs text-muted">Culoarea butoanelor, link-urilor și elementelor de accent.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Logo organizator (URL imagine)</label>
-                                    <input type="text" id="full-logo" class="w-full input" placeholder="https://site-meu.ro/logo.png" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">Logo-ul apare în nav bar pe toate paginile.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Imagine hero homepage (URL imagine)</label>
-                                    <input type="text" id="full-hero-image" class="w-full input" placeholder="https://site-meu.ro/hero.jpg" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">Imaginea de fundal din secțiunea hero pe homepage. Lasă gol pentru gradient automat.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Titlu hero (acceptă HTML)</label>
-                                    <input type="text" id="full-home-title" class="w-full input" placeholder='ex: Seara perfectă<br>începe cu <em>râs.</em>'>
-                                    <p class="mt-1 text-xs text-muted">Titlul mare din hero. Folosește &lt;em&gt; pentru text cu culoare accent, &lt;br&gt; pentru rând nou. Lasă gol pentru textul implicit.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Subtitlu hero (eyebrow)</label>
-                                    <input type="text" id="full-home-subtitle" class="w-full input" placeholder="ex: Clubul de comedie nr. 1 din România">
-                                    <p class="mt-1 text-xs text-muted">Textul mic de deasupra titlului. Lasă gol pentru a folosi numele organizatorului.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Adresă</label>
-                                    <input type="text" id="full-address" class="w-full input" placeholder="ex: Str. Lipscani 45, București">
-                                    <p class="mt-1 text-xs text-muted">Afișată în hero și footer. Lasă gol dacă nu e relevant.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Telefon</label>
-                                    <input type="text" id="full-phone" class="w-full input" placeholder="ex: +40 721 234 567">
-                                    <p class="mt-1 text-xs text-muted">Afișat în footer pentru contact.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Imagine de fundal</label>
-                                    <input type="text" id="full-bg-image" class="w-full input" placeholder="https://site-meu.ro/background.jpg" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">Imagine de fundal opțională pentru paginile embed.</p>
-                                </div>
-                                <div>
-                                    <label class="label">Return URL (după plată)</label>
-                                    <input type="text" id="full-return-url" class="w-full input" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">Pagina unde revine clientul după plată. Lasă gol pentru a rămâne în iframe.</p>
-                                </div>
-                                <button onclick="WidgetsPage.saveWidgetConfig()" class="w-full px-4 py-2 mt-2 text-sm font-medium text-white rounded-lg bg-green-600 hover:bg-green-700 transition">
-                                    Salvează setări widget
-                                </button>
-                                <p id="widget-config-save-hint" class="hidden mt-1 text-xs text-green-600">Setările au fost salvate.</p>
-                            </div>
-                            <div class="mt-6">
-                                <label class="label">Fișier HTML de urcat pe server</label>
-                                <p class="mb-2 text-xs text-muted">Descarcă fișierul HTML gata de urcat pe serverul tău. Conține codul embed complet.</p>
-                                <button onclick="WidgetsPage.downloadFile('full')" class="w-full px-4 py-2 text-sm btn btn-primary bg-primary">
-                                    Descarcă fișier HTML
-                                </button>
-                            </div>
-                            <div class="mt-4">
-                                <label class="label">Sau copiază codul de embed</label>
-                                <textarea id="full-code" class="w-full font-mono text-xs input" rows="8" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('full')" class="px-4 py-2 mt-2 text-sm btn bg-slate-200 text-secondary">
-                                    Copiază codul
-                                </button>
-                            </div>
-                        </div>
-                        <div class="p-6 bg-white border rounded-2xl border-border">
-                            <h3 class="mb-4 text-base font-bold text-secondary">Preview</h3>
-                            <div id="full-preview" class="overflow-hidden border rounded-xl border-border" style="min-height:400px;"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Tab: Widget Eveniment (single) -->
@@ -291,7 +277,6 @@ const WidgetsPage = {
 
         await this.loadEvents();
 
-        this.updateCode('full');
         this.updateCode('single');
         this.updateCode('list');
     },
@@ -383,30 +368,6 @@ const WidgetsPage = {
     updateCode(type) {
         const slug = this.organizer?.slug || '';
 
-        if (type === 'full') {
-            const theme = this._v('full-theme') || 'dark';
-            const accent = this._v('full-accent') || '#D4A843';
-            const returnUrl = this._v('full-return-url');
-            const logo = this._v('full-logo');
-            const bgImage = this._v('full-bg-image');
-
-            let attrs = '\n  data-organizer="' + slug + '"';
-            if (returnUrl) attrs += '\n  data-return-url="' + this.esc(returnUrl) + '"';
-            attrs += '\n  data-theme="' + theme + '"';
-            if (accent && accent !== '#6366f1') attrs += '\n  data-accent-color="' + accent + '"';
-            if (logo) attrs += '\n  data-logo="' + this.esc(logo) + '"';
-            if (bgImage) attrs += '\n  data-bg-image="' + this.esc(bgImage) + '"';
-
-            const code = '<div id="tixello-widget"></div>\n<script src="' + this.siteUrl + '/embed/tixello-embed.js"' + attrs + '>\n<\/script>';
-            const $code = document.getElementById('full-code');
-            if ($code) $code.value = code;
-
-            // Preview — iframe
-            const params = new URLSearchParams({ theme, accent, logo, bg_image: bgImage });
-            const $preview = document.getElementById('full-preview');
-            if ($preview) $preview.innerHTML = '<iframe src="' + this.siteUrl + '/embed/' + slug + '?' + params.toString() + '" style="width:100%;min-height:400px;border:none;" allow="payment"></iframe>';
-        }
-
         if (type === 'single') {
             const eventSlug = document.getElementById('single-event').value;
             const theme = document.getElementById('single-theme').value;
@@ -463,26 +424,6 @@ const WidgetsPage = {
     downloadPackage() {
         const slug = this.organizer?.slug || '';
         window.location.href = this.siteUrl + '/embed/generate-package.php?organizer=' + encodeURIComponent(slug);
-    },
-
-    downloadFile(type) {
-        if (type !== 'full') return;
-        const code = document.getElementById('full-code').value;
-        const orgName = this.organizer?.name || 'Organizator';
-        const logo = document.getElementById('full-logo').value;
-
-        const html = '<!DOCTYPE html>\n<html lang="ro">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Bilete - ' + this.esc(orgName) + '</title>\n  <style>\n    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; }\n    .widget-container { max-width: 1200px; margin: 0 auto; padding: 20px; }\n' +
-            (logo ? '    .org-logo { display: block; max-height: 60px; margin: 20px auto; }\n' : '') +
-            '  </style>\n</head>\n<body>\n  <div class="widget-container">\n' +
-            (logo ? '    <img src="' + this.esc(logo) + '" alt="' + this.esc(orgName) + '" class="org-logo">\n' : '') +
-            '    ' + code + '\n  </div>\n</body>\n</html>';
-
-        const blob = new Blob([html], { type: 'text/html' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'index.html';
-        a.click();
-        URL.revokeObjectURL(a.href);
     },
 
     copyCode(type) {
