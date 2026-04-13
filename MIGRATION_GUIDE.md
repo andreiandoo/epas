@@ -103,8 +103,9 @@ wp_event_id, name, wp_slug, post_status, created_at, organizer_wp_user_id, start
 
 ### `import:ambilet-ticket-types` → inc_ticket_types.csv
 ```
-wp_product_id, name, wp_event_id, price, stock_qty
+wp_product_id, name, wp_event_id, price, stock_qty, sold_count
 ```
+> `stock_qty` = stoc CURENT rămas (WP `_stock`), `sold_count` = SUM(_qty) din comenzi plătite/procesate (`wc-completed/processing/on-hold`). `quota_total = stock_qty + sold_count`, `quota_sold = sold_count`.
 
 ### `import:ambilet-orders` → inc_orders.csv
 ```
@@ -171,7 +172,7 @@ wp_order_id, device_type, source_type, utm_source, utm_medium, utm_content, refe
 - **Descriptions**: JSON `{"ro": "<p>HTML content</p>"}` (Translatable trait)
 - **Ticket terms**: JSON `{"ro": "text"}` sau NULL
 - **Images**: Path relativ pe disk public: `events/hero/{md5}.webp`, `events/posters/{md5}.webp`
-- **quota_total**: `-1` = nelimitat, `0` = dezactivat/blocat, `>0` = cantitate fixă
+- **quota_total**: `-1` = nelimitat (WP `_stock` gol/NULL), `0` = epuizat/sold out (stoc zero), `>0` = cantitate fixă (stoc inițial = stock + sold)
 - **Order number**: `AMB-{wp_order_id}`
 - **Event series**: `AMB-{wp_event_id}`
 
@@ -254,14 +255,25 @@ SELECT
     p.post_title AS name,
     COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_event_name' LIMIT 1), '') AS wp_event_id,
     COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_price' LIMIT 1), '0') AS price,
-    COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_stock' LIMIT 1), '') AS stock_qty
+    COALESCE((SELECT pm.meta_value FROM wpyt_postmeta pm WHERE pm.post_id = p.ID AND pm.meta_key = '_stock' LIMIT 1), '') AS stock_qty,
+    (SELECT COALESCE(SUM(
+         CAST((SELECT oim2.meta_value FROM wpyt_woocommerce_order_itemmeta oim2
+               WHERE oim2.order_item_id = oim.order_item_id AND oim2.meta_key = '_qty' LIMIT 1)
+              AS UNSIGNED)), 0)
+     FROM wpyt_woocommerce_order_itemmeta oim
+     JOIN wpyt_woocommerce_order_items oi ON oi.order_item_id = oim.order_item_id
+     JOIN wpyt_posts o ON o.ID = oi.order_id
+     WHERE oim.meta_key = '_product_id' AND oim.meta_value = p.ID
+       AND o.post_type = 'shop_order' AND o.post_status IN ('wc-completed', 'wc-processing', 'wc-on-hold')
+    ) AS sold_count
 FROM wpyt_posts p
 WHERE p.post_type = 'product'
-  AND p.post_status IN ('publish', 'draft', 'private')
+  AND p.post_status IN ('publish', 'draft', 'private', 'future')
   AND GREATEST(p.post_date, p.post_modified) > 'DATE_START'
   AND GREATEST(p.post_date, p.post_modified) <= 'DATE_END'
 ORDER BY p.ID
 ```
+> `stock_qty` = stoc curent rămas din WP. `sold_count` = SUM(_qty) din comenzi `wc-completed/processing/on-hold` (nu COUNT — un order item poate avea qty>1). La import: `quota_total = stock_qty + sold_count`, `quota_sold = sold_count`.
 
 ### 7. Comenzi NOI
 ```sql
@@ -425,13 +437,16 @@ php artisan fix:ambilet-ticket-type-availability
 # Acestea controlează fereastra de VALIDITATE/SCANARE a biletului.
 # Disponibilitatea la vânzare e controlată de WP post_status (publish vs future).
 
-# 13. Mark scanned tickets as used (bilete cu checked_in_at dar status=valid)
+# 16. Mark scanned tickets as used (bilete cu checked_in_at dar status=valid)
 php artisan tinker --execute='$fixed=DB::table("tickets")->where("marketplace_client_id",1)->where("status","valid")->whereNotNull("checked_in_at")->update(["status"=>"used","updated_at"=>now()]);echo "Marked used: $fixed".PHP_EOL;'
 
-# 14. Clear bilete.online cache (pe serverul bilete.online)
+# 17. Import order attribution (UTM, device, referrer, IP)
+php artisan import:ambilet-order-attribution $INC/inc_order_attribution.csv
+
+# 18. Clear bilete.online cache (pe serverul bilete.online)
 # Accesează clear-cache.php sau procedura specifică
 
-# 15. Verificare
+# 19. Verificare
 php artisan tinker --execute='echo "Events: ".DB::table("events")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Ticket Types: ".DB::table("ticket_types")->whereIn("event_id",DB::table("events")->where("marketplace_client_id",1)->pluck("id"))->count().PHP_EOL;echo "Orders: ".DB::table("orders")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Tickets: ".DB::table("tickets")->where("marketplace_client_id",1)->count().PHP_EOL;echo "Customers: ".DB::table("marketplace_customers")->where("marketplace_client_id",1)->count().PHP_EOL;'
 ```
 
@@ -516,4 +531,10 @@ AND (hero_image_url LIKE 'http%' OR poster_url LIKE 'http%');
 SELECT COUNT(*) FROM ticket_types
 WHERE event_id IN (SELECT id FROM events WHERE marketplace_client_id=1)
 AND status = 'hidden';
+
+-- Ticket types cu quota_sold > quota_total (inconsistență stoc)
+-- quota_total=-1 e nelimitat, deci exclude-l
+SELECT id, name, quota_total, quota_sold FROM ticket_types
+WHERE event_id IN (SELECT id FROM events WHERE marketplace_client_id=1)
+AND quota_total >= 0 AND quota_sold > quota_total;
 ```

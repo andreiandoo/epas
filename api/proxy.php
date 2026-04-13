@@ -628,6 +628,19 @@ switch ($action) {
         $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    case 'event.dateAvailability':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['date'])) $params['date'] = $_GET['date'];
+        if (isset($_GET['month'])) $params['month'] = $_GET['month'];
+        $endpoint = '/marketplace-events/' . urlencode($slug) . '/date-availability?' . http_build_query($params);
+        break;
+
     case 'tracking.organizer-scripts':
         $organizerId = $_GET['organizer_id'] ?? '';
         if (!$organizerId) {
