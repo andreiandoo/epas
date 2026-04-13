@@ -29,6 +29,8 @@ define('HOME_TITLE', '{{HOME_TITLE}}');
 define('HOME_SUBTITLE', '{{HOME_SUBTITLE}}');
 define('ORG_ADDRESS', '{{ORG_ADDRESS}}');
 define('ORG_PHONE', '{{ORG_PHONE}}');
+define('WIDGET_TERMS', '{{WIDGET_TERMS}}');
+define('WIDGET_PRIVACY', '{{WIDGET_PRIVACY}}');
 define('THEME', '{{THEME}}');
 
 // Base path — set this to the subfolder where the site is installed.
