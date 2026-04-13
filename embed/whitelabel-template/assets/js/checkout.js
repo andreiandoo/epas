@@ -117,26 +117,13 @@ const WLCheckout = {
             const order = result.data?.order || result.data?.orders?.[0];
             if (!order) { this.showError('Comanda nu a fost creată.'); return; }
 
-            if (parseFloat(order.total) > 0) {
-                const returnUrl = window.location.origin + (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number;
-                const payResult = await WLApi.post('/orders/' + order.id + '/pay', { return_url: returnUrl, cancel_url: window.location.href });
-
-                if (payResult.data?.payment_url) {
-                    WLCart.clearCart();
-                    window.location.href = payResult.data.payment_url;
-                    return;
-                }
-                if (payResult.data?.form_data) {
-                    WLCart.clearCart();
-                    const form = document.createElement('form'); form.method = 'POST'; form.action = payResult.data.payment_url;
-                    for (const [k, v] of Object.entries(payResult.data.form_data)) { const inp = document.createElement('input'); inp.type = 'hidden'; inp.name = k; inp.value = v; form.appendChild(inp); }
-                    document.body.appendChild(form); form.submit(); return;
-                }
-                this.showError('Plata nu a putut fi inițiată.'); return;
-            }
-
+            // Redirect to marketplace for payment processing
+            // Payment must be initiated from the marketplace domain (Netopia/Stripe domain validation)
             WLCart.clearCart();
-            window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number;
+            const CONFIG = window.__WL_CONFIG__;
+            const marketplaceUrl = CONFIG?.marketplaceUrl || '<?= MARKETPLACE_URL ?>';
+            const returnUrl = encodeURIComponent(window.location.origin + (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number);
+            window.location.href = marketplaceUrl + '/plata/' + order.order_number + '?return_url=' + returnUrl;
         } catch (e) { console.error(e); this.showError('Eroare de rețea.'); }
     },
 
