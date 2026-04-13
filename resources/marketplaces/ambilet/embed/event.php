@@ -12,9 +12,9 @@ if (!$eventSlug) {
     exit;
 }
 
-// Fetch event data
+// Fetch event data (use marketplace-events endpoint which includes ticket_types)
 $eventData = api_cached('embed_event_' . $eventSlug, function () use ($eventSlug) {
-    return api_get('/events/' . urlencode($eventSlug));
+    return api_get('/marketplace-events/' . urlencode($eventSlug));
 }, 60);
 
 $ev = $eventData['data']['event'] ?? null;

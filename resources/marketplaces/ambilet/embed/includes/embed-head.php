@@ -62,7 +62,7 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
         body {
             margin: 0; padding: 0;
             font-family: 'Inter', system-ui, sans-serif;
-            background: <?= $bgColor ?>;
+            background: transparent;
             <?php if ($embedBgImage): ?>
             background-image: url('<?= htmlspecialchars($embedBgImage) ?>');
             background-size: cover; background-position: center;
@@ -70,12 +70,7 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
             <?php endif; ?>
             color: <?= $textColor ?>;
             overflow-x: hidden;
-            min-height: 100vh;
-            display: flex; flex-direction: column;
         }
-        <?php if ($embedBgImage): ?>
-        .embed-content { background: <?= $isDark ? 'rgba(15,23,42,0.88)' : 'rgba(248,250,252,0.90)' ?>; }
-        <?php endif; ?>
         a { color: <?= htmlspecialchars($accentColor) ?>; text-decoration: none; }
         a:hover { text-decoration: underline; }
         .embed-card {

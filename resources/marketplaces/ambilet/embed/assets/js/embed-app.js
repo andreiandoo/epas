@@ -12,20 +12,30 @@
 
     // ========== Iframe Auto-Resize ==========
 
+    let lastSentHeight = 0;
+
     function sendResize() {
         if (window.parent === window) return;
-        const height = document.documentElement.scrollHeight;
-        window.parent.postMessage({ type: 'tixello:resize', height: height }, '*');
+        const height = document.body.offsetHeight;
+        // Only send if height changed by more than 5px (prevents infinite loop)
+        if (Math.abs(height - lastSentHeight) > 5) {
+            lastSentHeight = height;
+            window.parent.postMessage({ type: 'tixello:resize', height: height + 20 }, '*');
+        }
     }
 
-    // Observe body size changes
+    // Observe body size changes (debounced)
+    let resizeTimer = null;
     if (typeof ResizeObserver !== 'undefined') {
-        new ResizeObserver(() => sendResize()).observe(document.body);
+        new ResizeObserver(() => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(sendResize, 100);
+        }).observe(document.body);
     }
-    // Fallback poll
-    setInterval(sendResize, 500);
-    // Initial send
-    window.addEventListener('load', () => setTimeout(sendResize, 100));
+    // Initial sends
+    window.addEventListener('load', () => setTimeout(sendResize, 200));
+    setTimeout(sendResize, 500);
+    setTimeout(sendResize, 1500);
 
     // ========== Embed Cart ==========
 
