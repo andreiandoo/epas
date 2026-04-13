@@ -165,7 +165,7 @@ const WidgetsPage = {
         // Load organizer data
         try {
             const resp = await AmbiletAPI.get('/organizer/me');
-            this.organizer = resp.data || resp;
+            this.organizer = resp.data?.organizer || resp.organizer || resp.data || resp;
         } catch (e) {
             console.error('Failed to load organizer:', e);
             return;
