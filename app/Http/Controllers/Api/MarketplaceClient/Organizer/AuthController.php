@@ -333,6 +333,31 @@ class AuthController extends BaseController
     }
 
     /**
+     * Update organizer settings (merge into existing settings JSON)
+     */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $organizer = $request->user();
+
+        if (!$organizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'settings' => 'required|array',
+        ]);
+
+        // Merge new settings into existing (don't replace)
+        $existingSettings = $organizer->settings ?? [];
+        $newSettings = array_merge($existingSettings, $validated['settings']);
+        $organizer->update(['settings' => $newSettings]);
+
+        return $this->success([
+            'organizer' => $this->formatOrganizer($organizer->fresh()),
+        ], 'Settings updated');
+    }
+
+    /**
      * Update password
      */
     public function updatePassword(Request $request): JsonResponse
@@ -957,6 +982,7 @@ class AuthController extends BaseController
             'settings' => [
                 'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
                 'embed_domains' => $organizer->settings['embed_domains'] ?? [],
+                'widget_config' => $organizer->settings['widget_config'] ?? [],
             ],
         ];
     }
