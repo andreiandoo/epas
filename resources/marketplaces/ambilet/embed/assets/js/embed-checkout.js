@@ -244,53 +244,17 @@ const EmbedCheckout = {
                 return;
             }
 
-            // Initiate payment if needed
-            if (parseFloat(order.total) > 0) {
-                const thankYouUrl = CONFIG.returnUrl || (CONFIG.siteUrl + CONFIG.baseUrl + '/multumim?order=' + order.order_number);
+            // Redirect to marketplace for payment (processor domain validation)
+            EmbedCart.clearCart();
+            const thankYouUrl = encodeURIComponent(
+                CONFIG.returnUrl || (CONFIG.siteUrl + CONFIG.baseUrl + '/multumim?order=' + order.order_number)
+            );
+            const payUrl = CONFIG.siteUrl + '/plata/' + order.order_number + '?return_url=' + thankYouUrl;
 
-                const payResp = await fetch(CONFIG.siteUrl + '/api/proxy.php?action=orders.pay&id=' + order.id, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        return_url: thankYouUrl,
-                        cancel_url: window.location.href,
-                    }),
-                    credentials: 'include',
-                });
-
-                const payResult = await payResp.json();
-
-                if (payResult.data?.payment_url) {
-                    EmbedCart.clearCart();
-                    // Break out of iframe for 3DS payment
-                    if (window.parent !== window) {
-                        window.top.location.href = payResult.data.payment_url;
-                    } else {
-                        window.location.href = payResult.data.payment_url;
-                    }
-                    return;
-                }
-
-                if (payResult.data?.form_data) {
-                    EmbedCart.clearCart();
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = payResult.data.payment_url;
-                    form.target = '_top';
-                    for (const [key, value] of Object.entries(payResult.data.form_data)) {
-                        const input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = key;
-                        input.value = value;
-                        form.appendChild(input);
-                    }
-                    document.body.appendChild(form);
-                    form.submit();
-                    return;
-                }
-
-                this.showError('Nu s-a putut iniția plata. Contactează organizatorul.');
-                return;
+            if (window.parent !== window) {
+                window.top.location.href = payUrl;
+            } else {
+                window.location.href = payUrl;
             }
 
             // Free order

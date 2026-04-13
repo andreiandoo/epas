@@ -311,6 +311,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/widget-uri/?$ organizer/widgets.php [L]
 
+# Payment redirect for whitelabel sites
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^plata/([A-Za-z0-9-]+)/?$ payment-redirect.php?order=$1 [L,QSA]
+
 # ============================================
 # AUTH ROUTES
 # ============================================
