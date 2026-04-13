@@ -7,8 +7,18 @@ $showBackLink = true;
 $backLabel = 'Înapoi';
 $bp = BASE_PATH;
 
+// Get organizer commission defaults for checkout summary
+$orgData = api_cached('wl_org_' . ORG_SLUG, function () {
+    return api_get('/marketplace-events/organizers/' . urlencode(ORG_SLUG));
+}, 300);
+$commMode = $orgData['data']['commission_mode'] ?? 'included';
+$commRate = (float) ($orgData['data']['commission_rate'] ?? 5);
+
 require_once __DIR__ . '/includes/head.php';
 ?>
+<script>
+window.__WL_COMMISSION__ = <?= json_encode(['mode' => $commMode, 'rate' => $commRate]) ?>;
+</script>
 
 <!-- Steps bar -->
 <div class="steps-bar">
