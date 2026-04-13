@@ -79,9 +79,12 @@ class FixAmbiletEventFieldsCommand extends Command
             }
 
             // Description — HTML stored as JSON {"ro": "..."}
+            // WP stores raw text with newlines; wpautop() renders them as paragraphs.
+            // We convert newlines to <br> so they display correctly in Tixello.
             if (!$this->option('skip-description')) {
                 $desc = $this->n($data['description'] ?? null);
                 if ($desc) {
+                    $desc = nl2br($desc, false);
                     $fields['description'] = json_encode(['ro' => $desc], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 }
             }
