@@ -163,6 +163,19 @@ require_once __DIR__ . '/includes/head.php';
         }
         #event-description table { display: block; overflow-x: auto; }
 
+        /* Collapsible description */
+        #event-description.is-collapsed { max-height: 300px; overflow: hidden; position: relative; }
+        #event-description.is-collapsed::after {
+            content: '';
+            position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+            pointer-events: none;
+        }
+        #event-description.is-expanded { max-height: none; }
+        #desc-toggle { transition: opacity 0.3s ease; }
+        #desc-toggle svg { transition: transform 0.3s ease; }
+        #desc-toggle.is-expanded svg { transform: rotate(180deg); }
+
         .points-counter { animation: pointsPulse 0.3s ease; }
         @keyframes pointsPulse {
             0%, 100% { transform: scale(1); }
@@ -360,6 +373,10 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <div id="event-description" class="px-6 prose prose-slate max-w-none mobile:px-4"></div>
+                        <button id="desc-toggle" style="display:none" class="flex items-center gap-2 px-6 pb-4 mx-auto text-sm font-medium transition-colors text-primary hover:text-primary/80 mobile:px-4">
+                            <span id="desc-toggle-text">Vezi mai mult</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
                     </div>
                 </div>
 

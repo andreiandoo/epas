@@ -1107,7 +1107,9 @@ const EventPage = {
         this.renderPerformanceList();
 
         // Description
-        document.getElementById(this.elements.eventDescription).innerHTML = this.formatDescription(e.description || e.content);
+        var descEl = document.getElementById(this.elements.eventDescription);
+        descEl.innerHTML = this.formatDescription(e.description || e.content);
+        this.initDescriptionToggle(descEl);
 
         // Artist section
         if (e.artist || e.artists?.length) {
@@ -1358,6 +1360,38 @@ const EventPage = {
             document.getElementById(this.elements.eventDateFull).textContent =
                 eventDate.getDate() + ' ' + months[eventDate.getMonth()] + ' ' + eventDate.getFullYear();
         }
+    },
+
+    /**
+     * Collapse long descriptions with "Vezi mai mult" toggle
+     */
+    initDescriptionToggle(descEl) {
+        requestAnimationFrame(function() {
+            if (descEl.scrollHeight <= 300) return;
+
+            descEl.classList.add('is-collapsed');
+            var btn = document.getElementById('desc-toggle');
+            var textEl = document.getElementById('desc-toggle-text');
+            btn.style.display = 'flex';
+
+            btn.addEventListener('click', function() {
+                var collapsed = descEl.classList.contains('is-collapsed');
+                if (collapsed) {
+                    descEl.style.maxHeight = descEl.scrollHeight + 'px';
+                    descEl.classList.remove('is-collapsed');
+                    descEl.classList.add('is-expanded');
+                    btn.classList.add('is-expanded');
+                    textEl.textContent = 'Vezi mai puțin';
+                } else {
+                    descEl.classList.remove('is-expanded');
+                    descEl.classList.add('is-collapsed');
+                    descEl.style.maxHeight = '';
+                    btn.classList.remove('is-expanded');
+                    textEl.textContent = 'Vezi mai mult';
+                    descEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            });
+        });
     },
 
     /**
