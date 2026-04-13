@@ -2922,7 +2922,7 @@ class EventResource extends Resource
                                 ])
                                 ->default('standard')
                                 ->live()
-                                ->helperText($t('Locație de agrement: calendar + bilete zilnice + parcare', 'Leisure venue: calendar + daily tickets + parking'))
+                                ->hintIcon('heroicon-o-information-circle', tooltip: $t('Locație de agrement: calendar + bilete zilnice + parcare', 'Leisure venue: calendar + daily tickets + parking'))
                                 ->columnSpanFull(),
                             Forms\Components\TextInput::make('redirect_url')
                                 ->label($t('Redirect', 'Redirect'))
@@ -2930,7 +2930,7 @@ class EventResource extends Resource
                                 ->maxLength(500)
                                 ->placeholder('https://...')
                                 ->prefixIcon('heroicon-o-arrow-top-right-on-square')
-                                ->helperText($t(
+                                ->hintIcon('heroicon-o-information-circle', tooltip: $t(
                                     'Dacă setezi un URL, evenimentul va apărea în listări dar link-ul va duce către acest URL (filă nouă). Pagina evenimentului nu va fi accesibilă direct.',
                                     'If you set a URL, the event will appear in listings but the link will go to this URL (new tab). The event page will not be directly accessible.'
                                 ))
