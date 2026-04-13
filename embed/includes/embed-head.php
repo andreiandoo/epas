@@ -19,8 +19,7 @@ header('X-Frame-Options: SAMEORIGIN');
 
 $orgName = $orgData['data']['name'] ?? 'Organizator';
 $accentColor = $accent ?: '#6366f1';
-$embedLogo = $_GET['logo'] ?? $orgData['data']['avatar'] ?? '';
-$embedBgImage = $_GET['bg_image'] ?? '';
+// $embedLogo and $embedBgImage come from embed-init.php (persisted in cookie)
 $isDark = $theme === 'dark';
 $bgColor = $isDark ? '#0f172a' : '#f8fafc';
 $textColor = $isDark ? '#e2e8f0' : '#1e293b';
@@ -94,7 +93,7 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
 <body>
     <!-- Header -->
     <header style="position:sticky;top:0;z-index:50;background:<?= $headerBg ?>;border-bottom:1px solid <?= $borderColor ?>;padding:12px 16px;">
-        <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
             <a href="<?= $baseUrl ?>" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
                 <?php if ($embedLogo): ?>
                 <img src="<?= htmlspecialchars($embedLogo) ?>" alt="<?= htmlspecialchars($orgName) ?>" style="max-height:40px;">
@@ -130,4 +129,4 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
 
     <!-- Main content -->
     <main class="embed-content" style="flex:1;padding:20px 16px;">
-        <div id="embed-app" style="max-width:1200px;margin:0 auto;">
+        <div id="embed-app">
