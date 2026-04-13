@@ -12,13 +12,14 @@ if (!$eventSlug) {
     exit;
 }
 
-// Fetch event data from marketplace-events endpoint
-$eventData = api_cached('embed_event_' . $eventSlug, function () use ($eventSlug) {
+// Fetch event data from marketplace-events endpoint (short cache)
+$eventData = api_cached('embed_mkt_event_' . $eventSlug, function () use ($eventSlug) {
     return api_get('/marketplace-events/' . urlencode($eventSlug));
 }, 60);
 
 $ev = $eventData['data']['event'] ?? null;
-$ticketTypes = $eventData['data']['ticket_types'] ?? [];
+// ticket_types can be at top level or inside event (depends on API endpoint)
+$ticketTypes = $eventData['data']['ticket_types'] ?? $ev['ticket_types'] ?? [];
 
 if (!$ev) {
     http_response_code(404);
