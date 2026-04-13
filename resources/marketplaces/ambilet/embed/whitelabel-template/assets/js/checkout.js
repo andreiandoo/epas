@@ -121,7 +121,7 @@ const WLCheckout = {
             // Payment must be initiated from the marketplace domain (Netopia/Stripe domain validation)
             WLCart.clearCart();
             const CONFIG = window.__WL_CONFIG__;
-            const marketplaceUrl = CONFIG?.marketplaceUrl || '<?= MARKETPLACE_URL ?>';
+            const marketplaceUrl = CONFIG?.marketplaceUrl || '{{MARKETPLACE_URL}}';
             const returnUrl = encodeURIComponent(window.location.origin + (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number);
             window.location.href = marketplaceUrl + '/plata/' + order.order_number + '?return_url=' + returnUrl;
         } catch (e) { console.error(e); this.showError('Eroare de rețea.'); }
