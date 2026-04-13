@@ -77,64 +77,44 @@ var WLCheckout = {
         var $lines = document.getElementById('wl-order-lines');
         var $total = document.getElementById('wl-total');
         var $btn = document.getElementById('wl-pay-btn');
-        var subtotal = 0;
+        var subtotalBase = 0;
         var totalComm = 0;
         var html = '';
-
         var self = this;
+        var rate = self.orgCommRate;
+
+        // Always compute commission for every item, regardless of mode
         cart.items.forEach(function(item) {
             var tt = item.ticketType;
             var displayPrice = parseFloat(tt.price || 0);
-            var basePrice, commAmt, commMode;
+            var basePrice, commAmt;
 
-            // Use pre-computed values if available (new cart format)
             if (tt.base_price !== undefined && tt.base_price !== null) {
+                // New cart format — pre-computed
                 basePrice = parseFloat(tt.base_price);
                 commAmt = parseFloat(tt.commission_amount || 0);
-                commMode = tt.commission_mode || self.orgCommMode;
             } else {
-                // Old cart format — use ticket commission object or org defaults
-                var comm = tt.commission;
-                commMode = (comm && comm.mode) ? comm.mode : self.orgCommMode;
-                var rate = (comm && comm.rate) ? comm.rate : self.orgCommRate;
-                commAmt = 0;
-                basePrice = displayPrice;
-
-                if (commMode === 'added_on_top' || commMode === 'on_top') {
-                    if (comm && comm.type === 'fixed') {
-                        commAmt = comm.fixed || 0;
-                        basePrice = displayPrice - commAmt;
-                    } else if (comm && comm.type === 'both') {
-                        basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + rate / 100) * 100) / 100;
-                        commAmt = displayPrice - basePrice;
-                    } else {
-                        // percentage (default)
-                        basePrice = Math.round(displayPrice / (1 + rate / 100) * 100) / 100;
-                        commAmt = displayPrice - basePrice;
-                    }
-                }
+                // Compute from org defaults: base = display / (1 + rate/100)
+                // This works for both modes: on_top (display includes comm) and included (display IS the price, comm is inside)
+                basePrice = Math.round(displayPrice / (1 + rate / 100) * 100) / 100;
+                commAmt = Math.round((displayPrice - basePrice) * 100) / 100;
             }
 
-            // If commission is on_top, base and commission are separate
-            if ((commMode === 'added_on_top' || commMode === 'on_top') && commAmt > 0) {
-                var lineBase = Math.round(basePrice * item.quantity);
-                var lineComm = Math.round(commAmt * item.quantity);
-                subtotal += lineBase;
-                totalComm += lineComm;
-                html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineBase + ' lei</div></div>';
-            } else {
-                // Included — show full price, no separate commission
-                var lineTotal = Math.round(displayPrice * item.quantity);
-                subtotal += lineTotal;
-                html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineTotal + ' lei</div></div>';
-            }
+            var lineBase = Math.round(basePrice * item.quantity * 100) / 100;
+            var lineComm = Math.round(commAmt * item.quantity * 100) / 100;
+            subtotalBase += lineBase;
+            totalComm += lineComm;
+
+            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + Math.round(lineBase) + ' lei</div></div>';
         });
 
+        // Always show commission line
         if (totalComm > 0) {
-            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane serviciu</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">+' + totalComm + ' lei</div></div>';
+            var commModeLabel = (self.orgCommMode === 'added_on_top' || self.orgCommMode === 'on_top') ? '' : ' (incluse)';
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane' + commModeLabel + '</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + Math.round(totalComm) + ' lei</div></div>';
         }
 
-        var grandTotal = subtotal + totalComm;
+        var grandTotal = Math.round(subtotalBase + totalComm);
 
         if (this.promoDiscount > 0) {
             grandTotal = Math.max(0, grandTotal - this.promoDiscount);
