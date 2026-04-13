@@ -61,6 +61,19 @@ if ($eventSlug) {
     }
 }
 
+// DEBUG: temporary - remove after testing
+if (!empty($_GET['debug'])) {
+    header('Content-Type: text/plain');
+    echo "eventSlug: " . ($eventSlug ?? 'NULL') . "\n";
+    echo "isPreview: " . ($isPreview ? 'true' : 'false') . "\n";
+    echo "eventPreload success: " . ($eventPreload['success'] ?? 'NULL') . "\n";
+    echo "ev is null: " . ($ev === null ? 'YES' : 'NO') . "\n";
+    echo "display_template: " . ($ev['display_template'] ?? 'NOT SET') . "\n";
+    echo "api_get result keys: " . implode(', ', array_keys($eventPreload ?? [])) . "\n";
+    echo "data keys: " . implode(', ', array_keys($eventPreload['data'] ?? [])) . "\n";
+    exit;
+}
+
 // External redirect: if event has a redirect_url, send 302 and exit
 $redirectUrl = $ev['redirect_url'] ?? null;
 if ($redirectUrl && !$isPreview) {
