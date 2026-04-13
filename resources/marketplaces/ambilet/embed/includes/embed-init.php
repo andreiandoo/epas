@@ -39,7 +39,14 @@ $configToStore = json_encode([
     'logo'       => $embedLogo,
     'bg_image'   => $embedBgImage,
 ]);
-setcookie($configCookieName, $configToStore, time() + 3600, '/embed/' . $organizerSlug . '/', '', true, false);
+// SameSite=None required for cross-origin iframe cookies
+setcookie($configCookieName, $configToStore, [
+    'expires' => time() + 3600,
+    'path' => '/embed/' . $organizerSlug . '/',
+    'secure' => true,
+    'httponly' => false,
+    'samesite' => 'None',
+]);
 
 // Fetch organizer data (cached 5 min)
 $orgData = api_cached('embed_org_' . $organizerSlug, function () use ($organizerSlug) {

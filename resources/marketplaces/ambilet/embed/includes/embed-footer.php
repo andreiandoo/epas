@@ -2,7 +2,7 @@
     </main>
 
     <!-- Footer -->
-    <footer style="background:<?= $headerBg ?>;border-top:1px solid <?= $borderColor ?>;padding:16px;">
+    <footer style="position:fixed;width:100%;bottom:0;padding:16px;">
         <div style="max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;">
             <?php
             // Use organizer's website for terms/privacy, fallback to marketplace

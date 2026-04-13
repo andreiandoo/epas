@@ -92,13 +92,12 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
 </head>
 <body>
     <!-- Header -->
-    <header style="position:sticky;top:0;z-index:50;background:<?= $headerBg ?>;border-bottom:1px solid <?= $borderColor ?>;padding:12px 16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
+    <header style="position:sticky;top:0;z-index:50;padding:12px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between; max-width:1200px;margin:0 auto;">
             <a href="<?= $baseUrl ?>" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
                 <?php if ($embedLogo): ?>
                 <img src="<?= htmlspecialchars($embedLogo) ?>" alt="<?= htmlspecialchars($orgName) ?>" style="max-height:40px;">
                 <?php endif; ?>
-                <span style="font-weight:700;font-size:16px;color:<?= $textColor ?>;"><?= htmlspecialchars($orgName) ?></span>
             </a>
             <a href="<?= $baseUrl ?>/cos" style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:500;color:<?= $mutedColor ?>;text-decoration:none;" id="embed-header-cart">
                 <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
@@ -120,7 +119,7 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
     <script>
         function acceptCookies() {
             document.getElementById('embed-cookie-banner').style.display = 'none';
-            document.cookie = 'embed_cookies_accepted=1;path=/;max-age=31536000;SameSite=Lax';
+            document.cookie = 'embed_cookies_accepted=1;path=/;max-age=31536000;SameSite=None;Secure';
         }
         if (!document.cookie.includes('embed_cookies_accepted=1')) {
             document.getElementById('embed-cookie-banner').style.display = '';
@@ -129,4 +128,5 @@ $baseUrl = '/embed/' . htmlspecialchars($organizerSlug);
 
     <!-- Main content -->
     <main class="embed-content" style="flex:1;padding:20px 16px;">
-        <div id="embed-app">
+        <div id="embed-app" style="max-width:1200px;margin:0 auto;">
+            <!-- Content will be rendered here by embed-app.js -->
