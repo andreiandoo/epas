@@ -36,6 +36,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <!-- Widget tabs -->
+            <!-- Whitelabel package download -->
+            <div id="whitelabel-section" class="hidden p-6 mb-6 bg-white border rounded-2xl border-border">
+                <div class="flex items-start gap-4">
+                    <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10">
+                        <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    </div>
+                    <div class="flex-1">
+                        <h2 class="text-lg font-bold text-secondary">Pachet Whitelabel (recomandat)</h2>
+                        <p class="mt-1 text-sm text-muted">Descarcă un pachet complet de fișiere PHP pe care le urci pe serverul tău. Site propriu de bilete cu URL-uri native, SEO, fără iframe, fără restricții cross-origin. Necesită server cu Apache + PHP + cURL.</p>
+                        <button onclick="WidgetsPage.downloadPackage()" class="inline-flex items-center gap-2 px-6 py-3 mt-4 text-sm font-semibold text-white rounded-xl bg-primary hover:bg-primary-dark transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            Descarcă pachet whitelabel (.zip)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div id="widget-tabs-section" class="hidden">
                 <div class="flex flex-wrap gap-2 pb-4 mb-6 border-b border-border">
                     <button onclick="WidgetsPage.showTab('full')" class="px-4 py-2 text-sm font-medium text-white rounded-lg widget-tab active bg-primary" data-tab="full">Widget Full (iframe)</button>
@@ -216,6 +233,7 @@ const WidgetsPage = {
         }
 
         document.getElementById('domains-section').classList.remove('hidden');
+        document.getElementById('whitelabel-section').classList.remove('hidden');
         document.getElementById('widget-tabs-section').classList.remove('hidden');
 
         // Show current domain
@@ -404,6 +422,11 @@ const WidgetsPage = {
         if (orgSlug) s.setAttribute('data-organizer', orgSlug);
         if (limit) s.setAttribute('data-limit', limit);
         document.body.appendChild(s);
+    },
+
+    downloadPackage() {
+        const slug = this.organizer?.slug || '';
+        window.location.href = this.siteUrl + '/embed/generate-package.php?organizer=' + encodeURIComponent(slug);
     },
 
     downloadFile(type) {

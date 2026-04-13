@@ -181,7 +181,7 @@
                 null
             );
         });
-        window.location.href = CONFIG.baseUrl + '/cos';
+        window.location.href = CONFIG.baseUrl + '/checkout';
     });
 
     function esc(str) {

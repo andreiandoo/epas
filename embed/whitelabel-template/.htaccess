@@ -1,0 +1,25 @@
+# Whitelabel Site — URL Routing
+RewriteEngine On
+
+# Event detail: /bilete/{slug}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^bilete/([a-z0-9-]+)/?$ event.php?slug=$1 [L,QSA]
+
+# Checkout
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^checkout/?$ checkout.php [L]
+
+# Cart (redirect to checkout)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^cos/?$ checkout.php [L]
+
+# Thank you
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^multumim/?$ thank-you.php [L,QSA]
+
+# Terms & Privacy
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^terms/?$ terms.php [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^privacy/?$ privacy.php [L]
