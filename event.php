@@ -65,12 +65,14 @@ if ($eventSlug) {
 if (!empty($_GET['debug'])) {
     header('Content-Type: text/plain');
     echo "eventSlug: " . ($eventSlug ?? 'NULL') . "\n";
-    echo "isPreview: " . ($isPreview ? 'true' : 'false') . "\n";
-    echo "eventPreload success: " . ($eventPreload['success'] ?? 'NULL') . "\n";
+    echo "API_BASE_URL: " . (defined('API_BASE_URL') ? API_BASE_URL : 'NOT DEFINED') . "\n";
+    echo "API_KEY: " . (defined('API_KEY') ? substr(API_KEY, 0, 8) . '...' : 'NOT DEFINED') . "\n";
+    echo "full URL: " . API_BASE_URL . '/events/' . urlencode($eventSlug) . "\n";
+    echo "success: " . var_export($eventPreload['success'] ?? null, true) . "\n";
+    echo "error: " . ($eventPreload['error'] ?? 'NONE') . "\n";
     echo "ev is null: " . ($ev === null ? 'YES' : 'NO') . "\n";
     echo "display_template: " . ($ev['display_template'] ?? 'NOT SET') . "\n";
-    echo "api_get result keys: " . implode(', ', array_keys($eventPreload ?? [])) . "\n";
-    echo "data keys: " . implode(', ', array_keys($eventPreload['data'] ?? [])) . "\n";
+    echo "data dump: " . json_encode($eventPreload['data'] ?? null, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
     exit;
 }
 

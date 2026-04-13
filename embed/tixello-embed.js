@@ -22,6 +22,8 @@
     var returnUrl = script.getAttribute('data-return-url') || window.location.href;
     var theme = script.getAttribute('data-theme') || 'light';
     var accent = script.getAttribute('data-accent-color') || '';
+    var logo = script.getAttribute('data-logo') || '';
+    var bgImage = script.getAttribute('data-bg-image') || '';
     var containerId = script.getAttribute('data-container') || 'tixello-widget';
 
     var container = document.getElementById(containerId) || script.parentElement;
@@ -30,7 +32,9 @@
     var baseUrl = script.src.replace(/\/embed\/tixello-embed\.js.*$/, '');
     var params = 'return_url=' + encodeURIComponent(returnUrl) +
         '&theme=' + encodeURIComponent(theme) +
-        (accent ? '&accent=' + encodeURIComponent(accent) : '');
+        (accent ? '&accent=' + encodeURIComponent(accent) : '') +
+        (logo ? '&logo=' + encodeURIComponent(logo) : '') +
+        (bgImage ? '&bg_image=' + encodeURIComponent(bgImage) : '');
 
     var iframe = document.createElement('iframe');
     iframe.src = baseUrl + '/embed/' + encodeURIComponent(organizer) + '?' + params;

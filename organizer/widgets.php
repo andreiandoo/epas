@@ -23,16 +23,16 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 <strong>Widget-urile nu sunt activate.</strong> Contactează administratorul marketplace-ului pentru a activa funcționalitatea de embed.
             </div>
 
-            <!-- Domains config -->
+            <!-- Domain config — single domain input -->
             <div id="domains-section" class="hidden mb-6 p-6 bg-white border rounded-2xl border-border">
-                <h2 class="mb-2 text-lg font-bold text-secondary">Domenii permise</h2>
-                <p class="mb-4 text-sm text-muted">Adaugă domeniile site-urilor unde vei folosi widget-urile. Widget-ul Full (iframe) va funcționa doar pe aceste domenii.</p>
-                <div id="domains-list" class="space-y-2 mb-4"></div>
+                <h2 class="mb-2 text-lg font-bold text-secondary">Domeniu site</h2>
+                <p class="mb-4 text-sm text-muted">Introdu domeniul site-ului unde vei folosi widget-urile. Dacă folosești subdomenii, adaugă cu wildcard: <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">*.numedomeniu.ro</code></p>
                 <div class="flex gap-2">
-                    <input type="text" id="new-domain-input" class="flex-1 input" placeholder="https://site-meu.ro">
-                    <button onclick="WidgetsPage.addDomain()" class="btn btn-primary bg-primary px-4">Adaugă</button>
+                    <input type="text" id="domain-input" class="flex-1 input" placeholder="ex: https://site-meu.ro sau *.site-meu.ro">
+                    <button onclick="WidgetsPage.saveDomain()" class="btn btn-primary bg-primary px-6">Salvează</button>
                 </div>
-                <p id="domains-save-hint" class="hidden mt-2 text-xs text-green-600">Domeniile se salvează automat.</p>
+                <p id="domain-current" class="hidden mt-3 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg"></p>
+                <p id="domains-save-hint" class="hidden mt-2 text-xs text-green-600">Domeniul a fost salvat.</p>
             </div>
 
             <!-- Widget tabs -->
@@ -61,15 +61,32 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <input type="color" id="full-accent" value="#6366f1" class="w-full h-10 input" onchange="WidgetsPage.updateCode('full')">
                                 </div>
                                 <div>
+                                    <label class="label">Logo organizator</label>
+                                    <input type="text" id="full-logo" class="w-full input" placeholder="https://site-meu.ro/logo.png" onchange="WidgetsPage.updateCode('full')">
+                                    <p class="mt-1 text-xs text-muted">URL-ul logo-ului tău. Va apărea centrat sus pe toate paginile embed.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Imagine de fundal</label>
+                                    <input type="text" id="full-bg-image" class="w-full input" placeholder="https://site-meu.ro/background.jpg" onchange="WidgetsPage.updateCode('full')">
+                                    <p class="mt-1 text-xs text-muted">Imagine de fundal opțională pentru paginile embed.</p>
+                                </div>
+                                <div>
                                     <label class="label">Return URL (după plată)</label>
-                                    <input type="text" id="full-return-url" class="w-full input" placeholder="https://site-meu.ro/multumesc" onchange="WidgetsPage.updateCode('full')">
-                                    <p class="mt-1 text-xs text-muted">Lasă gol pentru a rămâne în iframe după plată.</p>
+                                    <input type="text" id="full-return-url" class="w-full input" onchange="WidgetsPage.updateCode('full')">
+                                    <p class="mt-1 text-xs text-muted">Pagina unde revine clientul după plată. Lasă gol pentru a rămâne în iframe.</p>
                                 </div>
                             </div>
                             <div class="mt-6">
-                                <label class="label">Cod de embed</label>
-                                <textarea id="full-code" class="w-full input font-mono text-xs" rows="6" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('full')" class="mt-2 btn btn-primary bg-primary px-4 py-2 text-sm">
+                                <label class="label">Fișier HTML de urcat pe server</label>
+                                <p class="mb-2 text-xs text-muted">Descarcă fișierul HTML gata de urcat pe serverul tău. Conține codul embed complet.</p>
+                                <button onclick="WidgetsPage.downloadFile('full')" class="btn btn-primary bg-primary px-4 py-2 text-sm w-full">
+                                    Descarcă fișier HTML
+                                </button>
+                            </div>
+                            <div class="mt-4">
+                                <label class="label">Sau copiază codul de embed</label>
+                                <textarea id="full-code" class="w-full input font-mono text-xs" rows="8" readonly onclick="this.select()"></textarea>
+                                <button onclick="WidgetsPage.copyCode('full')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
                                     Copiază codul
                                 </button>
                             </div>
@@ -100,11 +117,19 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <option value="dark">Dark</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label class="label">Stil card</label>
+                                    <select id="single-style" class="w-full input" onchange="WidgetsPage.updateCode('single')">
+                                        <option value="card">Card vertical</option>
+                                        <option value="horizontal">Card horizontal</option>
+                                        <option value="compact">Compact (doar buton)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mt-6">
                                 <label class="label">Cod de embed</label>
                                 <textarea id="single-code" class="w-full input font-mono text-xs" rows="5" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('single')" class="mt-2 btn btn-primary bg-primary px-4 py-2 text-sm">
+                                <button onclick="WidgetsPage.copyCode('single')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
                                     Copiază codul
                                 </button>
                             </div>
@@ -133,11 +158,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         <option value="dark">Dark</option>
                                     </select>
                                 </div>
+                                <div>
+                                    <label class="label">Layout</label>
+                                    <select id="list-layout" class="w-full input" onchange="WidgetsPage.updateCode('list')">
+                                        <option value="grid">Grid (carduri)</option>
+                                        <option value="list">Listă (orizontal)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="mt-6">
                                 <label class="label">Cod de embed</label>
                                 <textarea id="list-code" class="w-full input font-mono text-xs" rows="5" readonly onclick="this.select()"></textarea>
-                                <button onclick="WidgetsPage.copyCode('list')" class="mt-2 btn btn-primary bg-primary px-4 py-2 text-sm">
+                                <button onclick="WidgetsPage.copyCode('list')" class="mt-2 btn bg-slate-200 text-secondary px-4 py-2 text-sm">
                                     Copiază codul
                                 </button>
                             </div>
@@ -159,10 +191,11 @@ require_once dirname(__DIR__) . '/includes/scripts.php';
 <script>
 const WidgetsPage = {
     organizer: null,
+    domain: '',
     siteUrl: '<?= SITE_URL ?>',
+    siteName: '<?= SITE_NAME ?>',
 
     async init() {
-        // Load organizer data
         try {
             const resp = await AmbiletAPI.get('/organizer/me');
             this.organizer = resp.data?.organizer || resp.organizer || resp.data || resp;
@@ -182,64 +215,59 @@ const WidgetsPage = {
         document.getElementById('domains-section').classList.remove('hidden');
         document.getElementById('widget-tabs-section').classList.remove('hidden');
 
-        // Render domains
-        this.domains = [...embedDomains];
-        this.renderDomains();
+        // Show current domain
+        this.domain = embedDomains[0] || '';
+        if (this.domain) {
+            document.getElementById('domain-input').value = this.domain;
+            const $current = document.getElementById('domain-current');
+            $current.textContent = 'Domeniu configurat: ' + this.domain;
+            $current.classList.remove('hidden');
+        }
 
-        // Populate event selector
+        // Pre-fill return URL with domain + /multumim
+        if (this.domain) {
+            const baseHost = this.domain.replace(/^\*\./, 'www.');
+            const returnBase = this.domain.startsWith('http') ? this.domain : 'https://' + baseHost;
+            document.getElementById('full-return-url').value = returnBase + '/multumim';
+        }
+
+        // Pre-fill logo from organizer data
+        if (this.organizer.logo) {
+            document.getElementById('full-logo').value = this.organizer.logo;
+        }
+
         await this.loadEvents();
 
-        // Generate initial codes
         this.updateCode('full');
         this.updateCode('single');
         this.updateCode('list');
     },
 
-    renderDomains() {
-        const $list = document.getElementById('domains-list');
-        if (this.domains.length === 0) {
-            $list.innerHTML = '<p class="text-sm text-muted italic">Niciun domeniu adăugat. Widget-ul Full nu va funcționa fără domenii configurate.</p>';
-            return;
-        }
-        $list.innerHTML = this.domains.map((d, i) =>
-            '<div class="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg">' +
-            '<span class="text-sm font-mono">' + this.esc(d) + '</span>' +
-            '<button onclick="WidgetsPage.removeDomain(' + i + ')" class="text-red-500 text-sm hover:underline">Elimină</button>' +
-            '</div>'
-        ).join('');
-    },
-
-    async addDomain() {
-        const input = document.getElementById('new-domain-input');
-        const val = input.value.trim();
+    async saveDomain() {
+        const val = document.getElementById('domain-input').value.trim();
         if (!val) return;
-        // Basic URL validation
-        if (!val.startsWith('http://') && !val.startsWith('https://')) {
-            alert('Domeniul trebuie să înceapă cu http:// sau https://');
-            return;
-        }
-        this.domains.push(val);
-        input.value = '';
-        this.renderDomains();
-        await this.saveDomains();
-    },
+        this.domain = val;
 
-    async removeDomain(index) {
-        this.domains.splice(index, 1);
-        this.renderDomains();
-        await this.saveDomains();
-    },
-
-    async saveDomains() {
         try {
             await AmbiletAPI.put('/organizer/settings', {
-                settings: { embed_domains: this.domains }
+                settings: { embed_domains: [val] }
             });
+            const $current = document.getElementById('domain-current');
+            $current.textContent = 'Domeniu configurat: ' + val;
+            $current.classList.remove('hidden');
             const hint = document.getElementById('domains-save-hint');
             hint.classList.remove('hidden');
             setTimeout(() => hint.classList.add('hidden'), 2000);
+
+            // Update return URL
+            const baseHost = val.replace(/^\*\./, 'www.');
+            const returnBase = val.startsWith('http') ? val : 'https://' + baseHost;
+            document.getElementById('full-return-url').value = returnBase + '/multumim';
+
+            this.updateCode('full');
         } catch (e) {
-            console.error('Failed to save domains:', e);
+            console.error('Failed to save domain:', e);
+            alert('Eroare la salvare. Încearcă din nou.');
         }
     },
 
@@ -265,7 +293,6 @@ const WidgetsPage = {
             t.classList.add('text-muted', 'hover:bg-surface');
         });
         document.querySelectorAll('.widget-tab-content').forEach(c => c.classList.add('hidden'));
-
         const btn = document.querySelector('.widget-tab[data-tab="' + tab + '"]');
         btn.classList.add('active', 'bg-primary', 'text-white');
         btn.classList.remove('text-muted', 'hover:bg-surface');
@@ -279,30 +306,39 @@ const WidgetsPage = {
             const theme = document.getElementById('full-theme').value;
             const accent = document.getElementById('full-accent').value;
             const returnUrl = document.getElementById('full-return-url').value;
-            const code = '<div id="tixello-widget"></div>\n<script src="' + this.siteUrl + '/embed/tixello-embed.js"\n  data-organizer="' + slug + '"' +
-                (returnUrl ? '\n  data-return-url="' + this.esc(returnUrl) + '"' : '') +
-                '\n  data-theme="' + theme + '"' +
-                (accent !== '#6366f1' ? '\n  data-accent-color="' + accent + '"' : '') +
-                '>\n<\/script>';
+            const logo = document.getElementById('full-logo').value;
+            const bgImage = document.getElementById('full-bg-image').value;
+
+            let attrs = '\n  data-organizer="' + slug + '"';
+            if (returnUrl) attrs += '\n  data-return-url="' + this.esc(returnUrl) + '"';
+            attrs += '\n  data-theme="' + theme + '"';
+            if (accent && accent !== '#6366f1') attrs += '\n  data-accent-color="' + accent + '"';
+            if (logo) attrs += '\n  data-logo="' + this.esc(logo) + '"';
+            if (bgImage) attrs += '\n  data-bg-image="' + this.esc(bgImage) + '"';
+
+            const code = '<div id="tixello-widget"></div>\n<script src="' + this.siteUrl + '/embed/tixello-embed.js"' + attrs + '>\n<\/script>';
             document.getElementById('full-code').value = code;
 
-            // Preview
+            // Preview — iframe
+            const params = new URLSearchParams({ theme, accent, logo, bg_image: bgImage });
             const $preview = document.getElementById('full-preview');
-            $preview.innerHTML = '<iframe src="' + this.siteUrl + '/embed/' + slug + '?theme=' + theme + '&accent=' + encodeURIComponent(accent) + '" style="width:100%;min-height:400px;border:none;"></iframe>';
+            $preview.innerHTML = '<iframe src="' + this.siteUrl + '/embed/' + slug + '?' + params.toString() + '" style="width:100%;min-height:400px;border:none;" allow="payment"></iframe>';
         }
 
         if (type === 'single') {
             const eventSlug = document.getElementById('single-event').value;
             const theme = document.getElementById('single-theme').value;
+            const style = document.getElementById('single-style').value;
             if (!eventSlug) {
                 document.getElementById('single-code').value = '<!-- Selectează un eveniment -->';
                 document.getElementById('single-preview').innerHTML = '<p class="text-muted text-sm">Selectează un eveniment din dropdown.</p>';
                 return;
             }
-            const code = '<div id="tixello-event"></div>\n<script src="' + this.siteUrl + '/embed/tixello-widget.js"\n  data-type="single"\n  data-event="' + eventSlug + '"\n  data-organizer="' + slug + '"\n  data-theme="' + theme + '">\n<\/script>';
+            let attrs = '\n  data-type="single"\n  data-event="' + eventSlug + '"\n  data-organizer="' + slug + '"\n  data-theme="' + theme + '"';
+            if (style !== 'card') attrs += '\n  data-style="' + style + '"';
+            const code = '<div id="tixello-event"></div>\n<script src="' + this.siteUrl + '/embed/tixello-widget.js"' + attrs + '>\n<\/script>';
             document.getElementById('single-code').value = code;
 
-            // Preview: load widget script dynamically
             const $preview = document.getElementById('single-preview');
             $preview.innerHTML = '<div id="txw-preview-single"></div>';
             this.loadWidgetPreview('txw-preview-single', 'single', eventSlug, slug, theme);
@@ -311,7 +347,10 @@ const WidgetsPage = {
         if (type === 'list') {
             const limit = document.getElementById('list-limit').value;
             const theme = document.getElementById('list-theme').value;
-            const code = '<div id="tixello-events"></div>\n<script src="' + this.siteUrl + '/embed/tixello-widget.js"\n  data-type="list"\n  data-organizer="' + slug + '"\n  data-limit="' + limit + '"\n  data-theme="' + theme + '">\n<\/script>';
+            const layout = document.getElementById('list-layout').value;
+            let attrs = '\n  data-type="list"\n  data-organizer="' + slug + '"\n  data-limit="' + limit + '"\n  data-theme="' + theme + '"';
+            if (layout !== 'grid') attrs += '\n  data-layout="' + layout + '"';
+            const code = '<div id="tixello-events"></div>\n<script src="' + this.siteUrl + '/embed/tixello-widget.js"' + attrs + '>\n<\/script>';
             document.getElementById('list-code').value = code;
 
             const $preview = document.getElementById('list-preview');
@@ -321,7 +360,6 @@ const WidgetsPage = {
     },
 
     loadWidgetPreview(containerId, type, eventSlug, orgSlug, theme, limit) {
-        // Create a temporary script tag to simulate the widget
         const existing = document.getElementById('txw-preview-script');
         if (existing) existing.remove();
 
@@ -337,12 +375,31 @@ const WidgetsPage = {
         document.body.appendChild(s);
     },
 
+    downloadFile(type) {
+        if (type !== 'full') return;
+        const code = document.getElementById('full-code').value;
+        const orgName = this.organizer?.name || 'Organizator';
+        const logo = document.getElementById('full-logo').value;
+
+        const html = '<!DOCTYPE html>\n<html lang="ro">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>Bilete - ' + this.esc(orgName) + '</title>\n  <style>\n    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; }\n    .widget-container { max-width: 1200px; margin: 0 auto; padding: 20px; }\n' +
+            (logo ? '    .org-logo { display: block; max-height: 60px; margin: 20px auto; }\n' : '') +
+            '  </style>\n</head>\n<body>\n  <div class="widget-container">\n' +
+            (logo ? '    <img src="' + this.esc(logo) + '" alt="' + this.esc(orgName) + '" class="org-logo">\n' : '') +
+            '    ' + code + '\n  </div>\n</body>\n</html>';
+
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'bilete-' + (this.organizer?.slug || 'widget') + '.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    },
+
     copyCode(type) {
         const textarea = document.getElementById(type + '-code');
         textarea.select();
-        document.execCommand('copy');
-        // Show feedback
-        const btn = textarea.nextElementSibling;
+        navigator.clipboard?.writeText(textarea.value).catch(() => document.execCommand('copy'));
+        const btn = textarea.parentElement.querySelector('button');
         const orig = btn.textContent;
         btn.textContent = 'Copiat!';
         setTimeout(() => btn.textContent = orig, 1500);
