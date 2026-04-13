@@ -53,6 +53,11 @@
     // Filter out entry/app-only tickets (should be filtered by API but double-check)
     ticketTypes = ticketTypes.filter(function(tt) { return !tt.is_entry_ticket; });
 
+    // Format price: show 2 decimals if fractional, otherwise integer
+    function fmtPrice(n) {
+        return n % 1 !== 0 ? n.toFixed(2) : n.toFixed(0);
+    }
+
     function render() {
         if (!ticketTypes.length) {
             $types.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);">Nu sunt bilete disponibile.</div>';
@@ -70,7 +75,7 @@
             var p = getPrice(tt);
             var origPrice = tt.original_price ? parseFloat(tt.original_price) : null;
             var selected = qty > 0;
-            var sub = qty > 0 ? (qty * p.display).toFixed(0) + ' lei' : '— lei';
+            var sub = qty > 0 ? fmtPrice(qty * p.display) + ' lei' : '— lei';
 
             // Availability class
             var availCls = 'ok', availText = 'Disponibil';
@@ -121,8 +126,8 @@
             html += '<div class="tt-avail ' + availCls + '"><div class="tt-avail-dot"></div>' + availText + '</div>';
             html += '</div>';
             html += '<div class="tt-price-block">';
-            if (origPrice && origPrice > p.display) html += '<div class="tt-price-old">' + origPrice.toFixed(0) + ' lei</div>';
-            html += '<div class="tt-price"><span class="tt-currency">lei </span>' + p.display.toFixed(0) + '</div>';
+            if (origPrice && origPrice > p.display) html += '<div class="tt-price-old">' + fmtPrice(origPrice) + ' lei</div>';
+            html += '<div class="tt-price"><span class="tt-currency">lei </span>' + fmtPrice(p.display) + '</div>';
             html += '</div></div>';
 
             if (!soldOut) {
@@ -168,7 +173,7 @@
             var p = getPrice(tt);
             var line = q * p.display;
             total += line;
-            rows.push({ label: q + '× ' + tt.name, amount: line.toFixed(0) + ' lei' });
+            rows.push({ label: q + '× ' + tt.name, amount: fmtPrice(line) + ' lei' });
         });
 
         // Check if cart already has items for this event
@@ -189,7 +194,7 @@
         rows.forEach(function(r) {
             html += '<div class="order-row"><span>' + esc(r.label) + '</span><span>' + r.amount + '</span></div>';
         });
-        html += '<div class="order-row total"><span>Total</span><span class="amount">' + total.toFixed(0) + ' lei</span></div>';
+        html += '<div class="order-row total"><span>Total</span><span class="amount">' + fmtPrice(total) + ' lei</span></div>';
         $summary.innerHTML = html;
         $summary.style.display = '';
         $addBtn.disabled = false;

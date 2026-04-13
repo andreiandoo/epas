@@ -23,16 +23,18 @@ if (!$orderNumber) {
     exit;
 }
 
-// Step 1: Look up order by order_number to get ID
-// The /customer/order-confirmation/{ref} endpoint returns order data by order_number
-$orderLookup = api_get('/customer/order-confirmation/' . urlencode($orderNumber));
-$orderId = $orderLookup['data']['id'] ?? $orderLookup['data']['order']['id'] ?? null;
+// Step 1: Get order ID — prefer direct order_id param, fall back to API lookup
+$orderId = !empty($_GET['order_id']) ? (int) $_GET['order_id'] : null;
 
-// Fallback: try nested data structures
-if (!$orderId && !empty($orderLookup['data'])) {
-    // Some endpoints return order directly in data
-    if (is_numeric($orderLookup['data']['id'] ?? null)) {
-        $orderId = $orderLookup['data']['id'];
+if (!$orderId) {
+    // Legacy: try to look up order by number via API
+    $orderLookup = api_get('/customer/orders/' . urlencode($orderNumber));
+    $orderId = $orderLookup['data']['id'] ?? $orderLookup['data']['order']['id'] ?? null;
+
+    if (!$orderId && !empty($orderLookup['data'])) {
+        if (is_numeric($orderLookup['data']['id'] ?? null)) {
+            $orderId = $orderLookup['data']['id'];
+        }
     }
 }
 
@@ -43,7 +45,7 @@ if (!$orderId) {
     <body style="font-family:system-ui;text-align:center;padding:60px 20px;background:#080808;color:#f0ede6;">
         <h2>Comanda nu a fost găsită</h2>
         <p style="color:rgba(240,237,230,0.45);margin:12px 0 24px;">Comandă: <?= htmlspecialchars($orderNumber) ?></p>
-        <a href="<?= htmlspecialchars($returnUrl) ?>" style="color:#D4A843;">Înapoi →</a>
+        <a href="<?= htmlspecialchars($cancelUrl) ?>" style="color:#D4A843;">Înapoi →</a>
     </body></html>
     <?php
     exit;
@@ -87,7 +89,7 @@ if (!empty($payData['payment_url'])) {
     <h2>Nu s-a putut iniția plata</h2>
     <p style="color:rgba(240,237,230,0.45);margin:12px 0;">Comandă: <?= htmlspecialchars($orderNumber) ?></p>
     <p style="color:rgba(240,237,230,0.45);font-size:13px;"><?= htmlspecialchars($payResult['error'] ?? 'Eroare necunoscută') ?></p>
-    <a href="<?= htmlspecialchars($returnUrl) ?>" style="color:#D4A843;display:inline-block;margin-top:24px;">Înapoi →</a>
+    <a href="<?= htmlspecialchars($cancelUrl) ?>" style="color:#D4A843;display:inline-block;margin-top:24px;">Înapoi →</a>
 </body></html>
 <?php
 exit;

@@ -4,6 +4,9 @@
 var WLCheckout = {
     promoCode: null,
     promoDiscount: 0,
+    // Organizer-level commission defaults (injected from checkout.php)
+    orgCommMode: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.mode) || 'included',
+    orgCommRate: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.rate) || 5,
 
     init: function() {
         var cart = WLCart.getCart();
@@ -78,6 +81,7 @@ var WLCheckout = {
         var totalComm = 0;
         var html = '';
 
+        var self = this;
         cart.items.forEach(function(item) {
             var tt = item.ticketType;
             var displayPrice = parseFloat(tt.price || 0);
@@ -87,23 +91,27 @@ var WLCheckout = {
             if (tt.base_price !== undefined && tt.base_price !== null) {
                 basePrice = parseFloat(tt.base_price);
                 commAmt = parseFloat(tt.commission_amount || 0);
-                commMode = tt.commission_mode || 'included';
+                commMode = tt.commission_mode || self.orgCommMode;
             } else {
-                // Old cart format — reverse-calculate from commission object
+                // Old cart format — use ticket commission object or org defaults
                 var comm = tt.commission;
+                commMode = (comm && comm.mode) ? comm.mode : self.orgCommMode;
+                var rate = (comm && comm.rate) ? comm.rate : self.orgCommRate;
                 commAmt = 0;
                 basePrice = displayPrice;
-                commMode = (comm && comm.mode) ? comm.mode : 'included';
 
-                if (comm && comm.type && (commMode === 'added_on_top' || commMode === 'on_top')) {
-                    if (comm.type === 'percentage') {
-                        basePrice = Math.round(displayPrice / (1 + comm.rate / 100) * 100) / 100;
-                    } else if (comm.type === 'fixed') {
-                        basePrice = displayPrice - (comm.fixed || 0);
-                    } else if (comm.type === 'both') {
-                        basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + comm.rate / 100) * 100) / 100;
+                if (commMode === 'added_on_top' || commMode === 'on_top') {
+                    if (comm && comm.type === 'fixed') {
+                        commAmt = comm.fixed || 0;
+                        basePrice = displayPrice - commAmt;
+                    } else if (comm && comm.type === 'both') {
+                        basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + rate / 100) * 100) / 100;
+                        commAmt = displayPrice - basePrice;
+                    } else {
+                        // percentage (default)
+                        basePrice = Math.round(displayPrice / (1 + rate / 100) * 100) / 100;
+                        commAmt = displayPrice - basePrice;
                     }
-                    commAmt = displayPrice - basePrice;
                 }
             }
 
@@ -207,9 +215,11 @@ var WLCheckout = {
             // Redirect to marketplace for payment
             WLCart.clearCart();
             var base = typeof WL_BASE !== 'undefined' ? WL_BASE : '';
-            var returnUrl = encodeURIComponent(window.location.origin + base + '/multumim?order=' + order.order_number);
+            var siteOrigin = window.location.origin + base;
+            var returnUrl = encodeURIComponent(siteOrigin + '/multumim?order=' + order.order_number);
+            var cancelUrl = encodeURIComponent(siteOrigin + '/checkout');
             var marketplaceUrl = '{{MARKETPLACE_URL}}';
-            window.location.href = marketplaceUrl + '/plata/' + order.order_number + '?return_url=' + returnUrl;
+            window.location.href = marketplaceUrl + '/plata/' + order.order_number + '?order_id=' + order.id + '&return_url=' + returnUrl + '&cancel_url=' + cancelUrl;
         }).catch(function(err) {
             console.error(err);
             self.showError('Eroare de rețea. Încearcă din nou.');
