@@ -140,6 +140,30 @@ class OrganizerResource extends Resource
                                 ->url()
                                 ->maxLength(255),
 
+                            SC\Grid::make(2)->schema([
+                                Forms\Components\Toggle::make('is_public')
+                                    ->label('Fă profil public')
+                                    ->helperText('Activează profilul public al organizatorului pe site-ul marketplace.')
+                                    ->live(),
+
+                                Forms\Components\Placeholder::make('public_profile_link')
+                                    ->label('Link profil public')
+                                    ->visible(fn ($get, $record) => $get('is_public') && $record)
+                                    ->content(function ($record) {
+                                        if (!$record) return '—';
+                                        $url = $record->getPublicProfileUrl();
+                                        if (!$url) return new \Illuminate\Support\HtmlString('<span style="color:#ef4444;">Organizatorul nu are slug sau marketplace-ul nu are domeniu setat.</span>');
+                                        return new \Illuminate\Support\HtmlString(
+                                            '<a href="' . e($url) . '" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;font-weight:600;">' . e($url) . '</a>'
+                                        );
+                                    }),
+                            ]),
+                        ])
+                        ->columns(2),
+
+                    Section::make('Media')
+                        ->icon('heroicon-o-photo')
+                        ->schema([
                             Forms\Components\FileUpload::make('logo')
                                 ->label('Logo organizator')
                                 ->image()
@@ -160,25 +184,6 @@ class OrganizerResource extends Resource
                                 ->directory('organizer-covers')
                                 ->disk('public')
                                 ->helperText('Imagine landscape, recomandat 1920×600 px.'),
-
-                            Forms\Components\Toggle::make('is_public')
-                                ->label('Fă profil public')
-                                ->helperText('Activează profilul public al organizatorului pe site-ul marketplace.')
-                                ->columnSpanFull()
-                                ->live(),
-
-                            Forms\Components\Placeholder::make('public_profile_link')
-                                ->label('Link profil public')
-                                ->visible(fn ($get, $record) => $get('is_public') && $record)
-                                ->content(function ($record) {
-                                    if (!$record) return '—';
-                                    $url = $record->getPublicProfileUrl();
-                                    if (!$url) return new \Illuminate\Support\HtmlString('<span style="color:#ef4444;">Organizatorul nu are slug sau marketplace-ul nu are domeniu setat.</span>');
-                                    return new \Illuminate\Support\HtmlString(
-                                        '<a href="' . e($url) . '" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;font-weight:600;">' . e($url) . '</a>'
-                                    );
-                                })
-                                ->columnSpanFull(),
                         ])
                         ->columns(2),
 
