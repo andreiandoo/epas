@@ -33,6 +33,10 @@ $logo = $widgetConfig['logo'] ?? $org['avatar'] ?? '';
 $bgImage = $widgetConfig['bg_image'] ?? '';
 $accent = $widgetConfig['accent'] ?? '#D4A843';
 $heroImage = $widgetConfig['hero_image'] ?? $org['cover_image'] ?? '';
+$homeTitle = $widgetConfig['home_title'] ?? '';
+$homeSubtitle = $widgetConfig['home_subtitle'] ?? '';
+$orgAddress = $widgetConfig['address'] ?? '';
+$orgPhone = $widgetConfig['phone'] ?? '';
 $theme = $widgetConfig['theme'] ?? 'dark';
 
 // Replacement map for template placeholders
@@ -48,6 +52,10 @@ $replacements = [
     '{{LOGO_URL}}' => $logo,
     '{{BG_IMAGE_URL}}' => $bgImage,
     '{{HERO_IMAGE_URL}}' => $heroImage,
+    '{{HOME_TITLE}}' => $homeTitle,
+    '{{HOME_SUBTITLE}}' => $homeSubtitle,
+    '{{ORG_ADDRESS}}' => $orgAddress,
+    '{{ORG_PHONE}}' => $orgPhone,
     '{{ACCENT_COLOR}}' => $accent,
     '{{THEME}}' => $theme,
 ];

@@ -25,6 +25,10 @@ define('LOGO_URL', '{{LOGO_URL}}');
 define('BG_IMAGE_URL', '{{BG_IMAGE_URL}}');
 define('ACCENT_COLOR', '{{ACCENT_COLOR}}');
 define('HERO_IMAGE_URL', '{{HERO_IMAGE_URL}}');
+define('HOME_TITLE', '{{HOME_TITLE}}');
+define('HOME_SUBTITLE', '{{HOME_SUBTITLE}}');
+define('ORG_ADDRESS', '{{ORG_ADDRESS}}');
+define('ORG_PHONE', '{{ORG_PHONE}}');
 define('THEME', '{{THEME}}');
 
 // Base path — set this to the subfolder where the site is installed.

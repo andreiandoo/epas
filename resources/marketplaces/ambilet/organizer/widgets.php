@@ -85,6 +85,26 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                     <p class="mt-1 text-xs text-muted">Imaginea de fundal din secțiunea hero pe homepage. Lasă gol pentru gradient automat.</p>
                                 </div>
                                 <div>
+                                    <label class="label">Titlu hero (acceptă HTML)</label>
+                                    <input type="text" id="full-home-title" class="w-full input" placeholder='ex: Seara perfectă<br>începe cu <em>râs.</em>'>
+                                    <p class="mt-1 text-xs text-muted">Titlul mare din hero. Folosește &lt;em&gt; pentru text cu culoare accent, &lt;br&gt; pentru rând nou. Lasă gol pentru textul implicit.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Subtitlu hero (eyebrow)</label>
+                                    <input type="text" id="full-home-subtitle" class="w-full input" placeholder="ex: Clubul de comedie nr. 1 din România">
+                                    <p class="mt-1 text-xs text-muted">Textul mic de deasupra titlului. Lasă gol pentru a folosi numele organizatorului.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Adresă</label>
+                                    <input type="text" id="full-address" class="w-full input" placeholder="ex: Str. Lipscani 45, București">
+                                    <p class="mt-1 text-xs text-muted">Afișată în hero și footer. Lasă gol dacă nu e relevant.</p>
+                                </div>
+                                <div>
+                                    <label class="label">Telefon</label>
+                                    <input type="text" id="full-phone" class="w-full input" placeholder="ex: +40 721 234 567">
+                                    <p class="mt-1 text-xs text-muted">Afișat în footer pentru contact.</p>
+                                </div>
+                                <div>
                                     <label class="label">Imagine de fundal</label>
                                     <input type="text" id="full-bg-image" class="w-full input" placeholder="https://site-meu.ro/background.jpg" onchange="WidgetsPage.updateCode('full')">
                                     <p class="mt-1 text-xs text-muted">Imagine de fundal opțională pentru paginile embed.</p>
@@ -260,6 +280,10 @@ const WidgetsPage = {
         else if (this.organizer.logo) document.getElementById('full-logo').value = this.organizer.logo;
         if (wc.bg_image) document.getElementById('full-bg-image').value = wc.bg_image;
         if (wc.hero_image) document.getElementById('full-hero-image').value = wc.hero_image;
+        if (wc.home_title) document.getElementById('full-home-title').value = wc.home_title;
+        if (wc.home_subtitle) document.getElementById('full-home-subtitle').value = wc.home_subtitle;
+        if (wc.address) document.getElementById('full-address').value = wc.address;
+        if (wc.phone) document.getElementById('full-phone').value = wc.phone;
         if (wc.theme) document.getElementById('full-theme').value = wc.theme;
         if (wc.accent) {
             document.getElementById('full-accent').value = wc.accent;
@@ -307,6 +331,10 @@ const WidgetsPage = {
             logo: document.getElementById('full-logo').value.trim(),
             bg_image: document.getElementById('full-bg-image').value.trim(),
             hero_image: document.getElementById('full-hero-image').value.trim(),
+            home_title: document.getElementById('full-home-title').value.trim(),
+            home_subtitle: document.getElementById('full-home-subtitle').value.trim(),
+            address: document.getElementById('full-address').value.trim(),
+            phone: document.getElementById('full-phone').value.trim(),
             theme: document.getElementById('full-theme').value,
             accent: document.getElementById('full-accent').value,
             return_url: document.getElementById('full-return-url').value.trim(),
