@@ -31,7 +31,7 @@ require_once __DIR__ . '/includes/head.php';
         $slug = $event['slug'] ?? '';
         $isSoldOut = $event['is_sold_out'] ?? false;
     ?>
-    <a href="/bilete/<?= htmlspecialchars($slug) ?>" class="wl-card">
+    <a href="<?= BASE_PATH ?>/<?= htmlspecialchars($slug) ?>" class="wl-card">
         <?php if ($imgUrl): ?>
         <div style="position:relative;">
             <img src="<?= htmlspecialchars($imgUrl) ?>" alt="<?= htmlspecialchars($title) ?>" class="wl-card-img" loading="lazy">

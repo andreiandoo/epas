@@ -2205,6 +2205,7 @@ class MarketplaceEventsController extends BaseController
             'facts' => $facts,
             'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
             'embed_domains' => $organizer->settings['embed_domains'] ?? [],
+            'widget_config' => $organizer->settings['widget_config'] ?? [],
         ]);
     }
 

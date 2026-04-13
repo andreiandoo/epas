@@ -43,7 +43,7 @@ require_once __DIR__ . '/includes/head.php';
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 
-<a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16px;">
+<a href="<?= BASE_PATH ?>/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16px;">
     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     Toate evenimentele
 </a>
@@ -167,4 +167,4 @@ require_once __DIR__ . '/includes/head.php';
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
-<script src="assets/js/event.js"></script>
+<script src="<?= BASE_PATH ?>/assets/js/event.js"></script>

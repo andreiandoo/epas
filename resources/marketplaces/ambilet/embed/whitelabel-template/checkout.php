@@ -6,7 +6,7 @@ $pageTitle = 'Checkout — ' . ORG_NAME;
 require_once __DIR__ . '/includes/head.php';
 ?>
 
-<a href="/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16px;">
+<a href="<?= BASE_PATH ?>/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16px;">
     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
     Continuă cumpărăturile
 </a>
@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes/head.php';
 
 <div id="wl-empty" style="display:none;text-align:center;padding:40px 0;color:var(--muted);">
     <p>Coșul tău este gol.</p>
-    <a href="/" class="wl-btn" style="margin-top:16px;">Vezi evenimente</a>
+    <a href="<?= BASE_PATH ?>/" class="wl-btn" style="margin-top:16px;">Vezi evenimente</a>
 </div>
 
 <div id="wl-checkout-wrap" style="display:none;">
@@ -72,4 +72,4 @@ require_once __DIR__ . '/includes/head.php';
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
-<script src="assets/js/checkout.js"></script>
+<script src="<?= BASE_PATH ?>/assets/js/checkout.js"></script>
