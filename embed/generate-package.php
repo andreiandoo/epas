@@ -26,16 +26,17 @@ if (!$org) {
     exit;
 }
 
-// Read widget config from organizer settings (saved from widgets page)
-// We need to fetch this via a separate API call since the public endpoint may not include it
-$orgSettings = $org['settings'] ?? [];
-// Also try embed_domains response which includes widget_config for authenticated organizers
-$widgetConfig = $orgSettings['widget_config'] ?? [];
+// Read widget config — API returns it at top level or in settings
+$widgetConfig = $org['widget_config'] ?? $org['settings']['widget_config'] ?? [];
 $orgName = $org['name'] ?? 'Organizator';
 $logo = $widgetConfig['logo'] ?? $org['avatar'] ?? '';
 $bgImage = $widgetConfig['bg_image'] ?? '';
 $accent = $widgetConfig['accent'] ?? '#D4A843';
 $heroImage = $widgetConfig['hero_image'] ?? $org['cover_image'] ?? '';
+$homeTitle = $widgetConfig['home_title'] ?? '';
+$homeSubtitle = $widgetConfig['home_subtitle'] ?? '';
+$orgAddress = $widgetConfig['address'] ?? '';
+$orgPhone = $widgetConfig['phone'] ?? '';
 $theme = $widgetConfig['theme'] ?? 'dark';
 
 // Replacement map for template placeholders
@@ -51,6 +52,10 @@ $replacements = [
     '{{LOGO_URL}}' => $logo,
     '{{BG_IMAGE_URL}}' => $bgImage,
     '{{HERO_IMAGE_URL}}' => $heroImage,
+    '{{HOME_TITLE}}' => $homeTitle,
+    '{{HOME_SUBTITLE}}' => $homeSubtitle,
+    '{{ORG_ADDRESS}}' => $orgAddress,
+    '{{ORG_PHONE}}' => $orgPhone,
     '{{ACCENT_COLOR}}' => $accent,
     '{{THEME}}' => $theme,
 ];
