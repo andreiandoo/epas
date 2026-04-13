@@ -24,6 +24,12 @@
   </div>
 </footer>
 
+<!-- Cart timer bar -->
+<div id="wl-timer-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:rgba(12,12,12,0.95);border-top:1px solid var(--border);padding:10px 24px;text-align:center;font-size:13px;color:var(--text-muted);backdrop-filter:blur(8px);">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px;color:var(--accent);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  Biletele sunt rezervate pentru <strong id="wl-timer-countdown" style="color:var(--accent);"></strong>
+</div>
+
 <script>var WL_BASE = <?= json_encode(BASE_PATH) ?>;</script>
 <script src="<?= BASE_PATH ?>/assets/js/cart.js"></script>
 <script src="<?= BASE_PATH ?>/assets/js/app.js"></script>
@@ -36,6 +42,38 @@
   }
   window.addEventListener('wl:cart:update', updateCartBadge);
   updateCartBadge();
+
+  // Cart expiry timer
+  (function() {
+    var bar = document.getElementById('wl-timer-bar');
+    var countdownEl = document.getElementById('wl-timer-countdown');
+    if (!bar || !countdownEl) return;
+
+    function tick() {
+      var expires = parseInt(localStorage.getItem('wl_cart_expires') || '0', 10);
+      if (!expires || typeof WLCart === 'undefined' || WLCart.getItemCount() === 0) {
+        bar.style.display = 'none';
+        return;
+      }
+
+      var remaining = expires - Date.now();
+      if (remaining <= 0) {
+        // Timer expired — clear cart and redirect
+        WLCart.clearCart();
+        bar.style.display = 'none';
+        window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/';
+        return;
+      }
+
+      var mins = Math.floor(remaining / 60000);
+      var secs = Math.floor((remaining % 60000) / 1000);
+      countdownEl.textContent = mins + ':' + (secs < 10 ? '0' : '') + secs;
+      bar.style.display = '';
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  })();
 </script>
 </body>
 </html>

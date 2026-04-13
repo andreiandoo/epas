@@ -49,7 +49,7 @@ var WLCheckout = {
 
             group.tickets.forEach(function(item) {
                 var price = parseFloat(item.ticketType.price || 0);
-                var lineTotal = price * item.quantity;
+                var lineTotal = Math.round(price * item.quantity);
                 html += '<div class="ticket-row">';
                 html += '<div class="ticket-row-left"><div class="ticket-row-type">' + esc(item.ticketType.name) + '</div></div>';
                 html += '<div class="ticket-row-right">';
@@ -75,22 +75,52 @@ var WLCheckout = {
         var $total = document.getElementById('wl-total');
         var $btn = document.getElementById('wl-pay-btn');
         var subtotal = 0;
+        var totalComm = 0;
         var html = '';
 
         cart.items.forEach(function(item) {
-            var price = parseFloat(item.ticketType.price || 0);
-            var line = price * item.quantity;
-            subtotal += line;
-            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + '</span>' + esc(item.ticketType.name) + '</div><div class="order-line-amount">' + line.toFixed(0) + ' lei</div></div>';
+            var displayPrice = parseFloat(item.ticketType.price || 0);
+            var comm = item.ticketType.commission;
+            var commAmt = 0;
+            var basePrice = displayPrice;
+
+            // Calculate commission per unit to split display
+            if (comm && comm.type && (comm.mode === 'added_on_top' || comm.mode === 'on_top')) {
+                // Reverse-calculate base from display price
+                if (comm.type === 'percentage') {
+                    basePrice = Math.round(displayPrice / (1 + comm.rate / 100) * 100) / 100;
+                    commAmt = displayPrice - basePrice;
+                } else if (comm.type === 'fixed') {
+                    commAmt = comm.fixed || 0;
+                    basePrice = displayPrice - commAmt;
+                } else if (comm.type === 'both') {
+                    // approximate: reverse from display = base * (1 + rate/100) + fixed
+                    basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + comm.rate / 100) * 100) / 100;
+                    commAmt = displayPrice - basePrice;
+                }
+            }
+
+            var lineBase = Math.round(basePrice * item.quantity * 100) / 100;
+            var lineComm = Math.round(commAmt * item.quantity * 100) / 100;
+            subtotal += lineBase;
+            totalComm += lineComm;
+
+            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(item.ticketType.name) + '</div><div class="order-line-amount">' + Math.round(lineBase).toFixed(0) + ' lei</div></div>';
         });
 
+        if (totalComm > 0) {
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + Math.round(totalComm).toFixed(0) + ' lei</div></div>';
+        }
+
+        var grandTotal = subtotal + totalComm;
+
         if (this.promoDiscount > 0) {
-            subtotal = Math.max(0, subtotal - this.promoDiscount);
+            grandTotal = Math.max(0, grandTotal - this.promoDiscount);
             html += '<div class="order-line"><div class="order-line-label" style="color:#5cc87a;">Reducere (' + esc(this.promoCode) + ')</div><div class="order-line-amount" style="color:#5cc87a;">-' + this.promoDiscount.toFixed(0) + ' lei</div></div>';
         }
 
         $lines.innerHTML = html;
-        $total.textContent = subtotal.toFixed(0);
+        $total.textContent = Math.round(grandTotal).toFixed(0);
         $btn.disabled = !cart.items.length;
     },
 
