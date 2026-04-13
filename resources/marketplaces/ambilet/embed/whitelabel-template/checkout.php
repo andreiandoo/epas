@@ -2,74 +2,115 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
-$pageTitle = 'Checkout — ' . ORG_NAME;
+$pageTitle = 'Finalizare comandă — ' . ORG_NAME;
+$showBackLink = true;
+$backLabel = 'Înapoi';
+$bp = BASE_PATH;
+
 require_once __DIR__ . '/includes/head.php';
 ?>
 
-<a href="<?= BASE_PATH ?>/" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16px;">
-    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-    Continuă cumpărăturile
-</a>
-
-<h1 style="font-size:22px;font-weight:700;margin-bottom:20px;">Finalizare comandă</h1>
-
-<div id="wl-empty" style="display:none;text-align:center;padding:40px 0;color:var(--muted);">
-    <p>Coșul tău este gol.</p>
-    <a href="<?= BASE_PATH ?>/" class="wl-btn" style="margin-top:16px;">Vezi evenimente</a>
+<!-- Steps bar -->
+<div class="steps-bar">
+  <div class="step done"><div class="step-n">✓</div>Bilete</div>
+  <div class="step active"><div class="step-n">2</div>Date contact</div>
+  <div class="step"><div class="step-n">3</div>Plată</div>
+  <div class="step"><div class="step-n">4</div>Confirmare</div>
 </div>
 
-<div id="wl-checkout-wrap" style="display:none;">
-    <div style="display:flex;gap:24px;flex-wrap:wrap;" class="wl-two-col">
-        <div style="flex:1;min-width:320px;">
-            <!-- Cart items -->
-            <div class="wl-section">
-                <h2 class="wl-section-title">Biletele tale</h2>
-                <div id="wl-ck-items"></div>
-            </div>
+<!-- Empty state -->
+<div id="wl-empty" style="display:none;text-align:center;padding:80px 40px;">
+  <h2 class="section-title" style="margin-bottom:12px;">Coșul tău este <em>gol</em></h2>
+  <p style="color:var(--text-muted);margin-bottom:24px;">Adaugă bilete la un eveniment pentru a continua.</p>
+  <a href="<?= $bp ?>/" class="btn-primary" style="width:auto;display:inline-flex;">← Înapoi la spectacole</a>
+</div>
 
-            <!-- Promo code -->
-            <div class="wl-section">
-                <div style="display:flex;gap:8px;">
-                    <input type="text" id="wl-promo" class="wl-input" placeholder="Cod reducere" style="flex:1;">
-                    <button onclick="WLCheckout.applyPromo()" class="wl-btn wl-btn-outline" style="padding:10px 16px;font-size:13px;">Aplică</button>
-                </div>
-                <div id="wl-promo-msg" style="display:none;margin-top:8px;font-size:12px;"></div>
-            </div>
+<!-- Main content -->
+<div class="page-wrap" id="wl-checkout-wrap" style="display:none;">
 
-            <!-- Customer form -->
-            <div class="wl-section">
-                <h2 class="wl-section-title">Datele tale</h2>
-                <form id="wl-form" style="display:flex;flex-direction:column;gap:12px;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div><label class="wl-label">Nume *</label><input type="text" id="wl-ln" class="wl-input" required></div>
-                        <div><label class="wl-label">Prenume *</label><input type="text" id="wl-fn" class="wl-input" required></div>
-                    </div>
-                    <div><label class="wl-label">Email *</label><input type="email" id="wl-em" class="wl-input" required></div>
-                    <div><label class="wl-label">Telefon *</label><input type="tel" id="wl-ph" class="wl-input" required></div>
-                    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;">
-                        <input type="checkbox" id="wl-terms" required style="width:16px;height:16px;">
-                        Accept <a href="/terms" target="_blank">termenii și condițiile</a>
-                    </label>
-                </form>
-            </div>
-        </div>
+  <!-- LEFT: CART + FORM -->
+  <div class="cart-section">
 
-        <!-- Right: summary -->
-        <div style="width:340px;flex-shrink:0;" class="wl-sidebar">
-            <div style="position:sticky;top:70px;" class="wl-section">
-                <h2 class="wl-section-title">Sumar comandă</h2>
-                <div id="wl-ck-summary" style="font-size:13px;color:var(--muted);"></div>
-                <div id="wl-ck-discount" style="display:none;margin-top:8px;font-size:13px;color:#16a34a;display:flex;justify-content:space-between;"></div>
-                <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-                    <span style="font-weight:700;font-size:16px;">Total</span>
-                    <span id="wl-ck-total" style="font-size:20px;font-weight:700;color:var(--accent);">0 RON</span>
-                </div>
-                <button id="wl-pay-btn" onclick="WLCheckout.submit()" class="wl-btn" style="width:100%;margin-top:14px;padding:14px;font-size:15px;" disabled>Plătește cu cardul</button>
-                <div id="wl-ck-error" style="display:none;margin-top:10px;padding:10px;background:#fef2f2;color:#dc2626;border-radius:8px;font-size:13px;text-align:center;"></div>
-            </div>
-        </div>
+    <h1 class="page-title">Coșul <em>tău</em></h1>
+
+    <!-- Cart items -->
+    <div class="block-label">Biletele selectate</div>
+    <div id="wl-cart-blocks"></div>
+
+    <!-- Contact form -->
+    <div class="block-label" style="margin-top:32px;">Date de contact</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Prenume</label>
+        <input type="text" class="form-input" id="wl-fn" placeholder="Ion">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nume</label>
+        <input type="text" class="form-input" id="wl-ln" placeholder="Popescu">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-input" id="wl-em" placeholder="ion.popescu@gmail.com">
+        <span class="form-note">Biletele vor fi trimise pe această adresă de email</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Telefon</label>
+        <input type="tel" class="form-input" id="wl-ph" placeholder="+40 7xx xxx xxx">
+      </div>
     </div>
+
+    <!-- Voucher -->
+    <div class="block-label" style="margin-top:24px;">Cod voucher</div>
+    <div class="voucher-row">
+      <input class="voucher-input" type="text" id="wl-promo" placeholder="Introdu codul...">
+      <button class="voucher-btn" onclick="WLCheckout.applyPromo()">Aplică</button>
+    </div>
+    <div id="wl-promo-msg" style="display:none;margin-top:8px;font-size:12px;"></div>
+
+    <!-- Terms -->
+    <div style="margin-top:24px;">
+      <div class="terms-row" onclick="toggleTerms(this)">
+        <div class="terms-check" id="wl-terms-check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <span>Sunt de acord cu <a href="<?= $bp ?>/terms">Termenii și Condițiile</a> și cu <a href="<?= $bp ?>/privacy">Politica de Confidențialitate</a>.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: ORDER SUMMARY -->
+  <div class="order-panel">
+    <div class="order-card">
+      <div class="order-card-header">Sumar comandă</div>
+      <div class="order-card-body" id="wl-order-lines"></div>
+      <div class="order-total">
+        <div class="order-total-label">Total de plată</div>
+        <div class="order-total-amount"><span class="order-total-currency">lei </span><span id="wl-total">0</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px;">
+      <button class="btn-checkout" id="wl-pay-btn" onclick="WLCheckout.submit()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Finalizează comanda
+      </button>
+      <div id="wl-error" style="display:none;padding:12px;background:rgba(224,92,68,0.1);border:1px solid rgba(224,92,68,0.3);border-radius:6px;font-size:13px;color:#e05c44;text-align:center;"></div>
+      <div class="security-badges">
+        <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Plată securizată SSL</div>
+        <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>3D Secure</div>
+        <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Bilet instant</div>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+function toggleTerms(row) {
+  var chk = row.querySelector('.terms-check');
+  chk.classList.toggle('checked');
+}
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
-<script src="<?= BASE_PATH ?>/assets/js/checkout.js"></script>
+<script src="<?= $bp ?>/assets/js/checkout.js"></script>
