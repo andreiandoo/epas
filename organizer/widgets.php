@@ -59,47 +59,67 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <!-- Inner tab: Branding -->
                     <div id="itab-branding" class="wl-inner-content">
                         <div class="grid gap-6 lg:grid-cols-2">
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="label">Culoare principală (accent)</label>
-                                    <div class="flex gap-3 items-center">
-                                        <input type="color" id="full-accent" value="#D4A843" class="w-16 h-10 input p-1 cursor-pointer">
-                                        <input type="text" id="full-accent-hex" value="#D4A843" class="flex-1 input font-mono text-sm" oninput="var el=document.getElementById('full-accent');if(el)el.value=this.value;">
+                            <div class="space-y-5">
+                                <!-- Color picker -->
+                                <div class="p-4 border rounded-xl border-border bg-slate-50/50">
+                                    <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Culoare principală</label>
+                                    <div class="flex items-center gap-3">
+                                        <div class="relative">
+                                            <input type="color" id="full-accent" value="#D4A843" class="w-12 h-12 p-0 border-0 rounded-lg cursor-pointer" style="appearance:none;-webkit-appearance:none;" oninput="var h=document.getElementById('full-accent-hex');if(h)h.value=this.value;">
+                                            <div class="absolute inset-0 border-2 rounded-lg pointer-events-none border-white/50" style="box-shadow:0 1px 3px rgba(0,0,0,0.1);"></div>
+                                        </div>
+                                        <input type="text" id="full-accent-hex" value="#D4A843" class="w-28 px-3 py-2 font-mono text-sm tracking-wide uppercase border rounded-lg bg-white border-border text-secondary" oninput="var el=document.getElementById('full-accent');if(el)el.value=this.value;">
+                                        <span class="text-xs text-muted">Butoane, link-uri, accente</span>
                                     </div>
                                 </div>
+
+                                <!-- Logo upload -->
                                 <div>
-                                    <label class="label">Logo organizator</label>
-                                    <div class="wl-upload-zone" data-type="logo" data-field="full-logo" onclick="this.querySelector('input[type=file]').click()">
+                                    <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Logo organizator</label>
+                                    <div class="wl-upload-zone" onclick="this.querySelector('input[type=file]').click()">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'logo', 'full-logo')">
                                         <input type="hidden" id="full-logo">
                                         <div class="wl-upload-preview" id="preview-logo"></div>
                                         <div class="wl-upload-text">
-                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10">
+                                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            </div>
+                                            <span class="text-sm font-medium text-secondary">Încarcă logo</span>
+                                            <span class="block mt-0.5 text-xs text-muted">PNG, SVG sau JPG &middot; max 5MB</span>
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Hero upload -->
                                 <div>
-                                    <label class="label">Imagine hero homepage</label>
-                                    <div class="wl-upload-zone" data-type="hero" data-field="full-hero-image" onclick="this.querySelector('input[type=file]').click()">
+                                    <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Imagine hero homepage</label>
+                                    <div class="wl-upload-zone wl-upload-wide" onclick="this.querySelector('input[type=file]').click()">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'hero', 'full-hero-image')">
                                         <input type="hidden" id="full-hero-image">
                                         <div class="wl-upload-preview" id="preview-hero"></div>
                                         <div class="wl-upload-text">
-                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-primary/10">
+                                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"/></svg>
+                                            </div>
+                                            <span class="text-sm font-medium text-secondary">Imagine hero</span>
+                                            <span class="block mt-0.5 text-xs text-muted">Recomandat: 1920×800px</span>
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Background upload -->
                                 <div>
-                                    <label class="label">Imagine de fundal (toate paginile)</label>
-                                    <div class="wl-upload-zone" data-type="background" data-field="full-bg-image" onclick="this.querySelector('input[type=file]').click()">
+                                    <label class="block mb-2 text-xs font-semibold tracking-wider uppercase text-secondary">Imagine de fundal <span class="font-normal normal-case text-muted">(opțional, toate paginile)</span></label>
+                                    <div class="wl-upload-zone" onclick="this.querySelector('input[type=file]').click()">
                                         <input type="file" accept="image/*" style="display:none" onchange="WidgetsPage.uploadImage(this, 'background', 'full-bg-image')">
                                         <input type="hidden" id="full-bg-image">
                                         <div class="wl-upload-preview" id="preview-background"></div>
                                         <div class="wl-upload-text">
-                                            <svg class="w-6 h-6 mx-auto mb-1 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                            <span class="text-xs text-muted">Click sau trage imaginea aici</span>
+                                            <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 rounded-full bg-slate-100">
+                                                <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            </div>
+                                            <span class="text-sm font-medium text-secondary">Imagine fundal</span>
+                                            <span class="block mt-0.5 text-xs text-muted">Se aplică pe toate paginile</span>
                                         </div>
                                     </div>
                                 </div>
@@ -256,15 +276,22 @@ require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
 <style>
 .wl-upload-zone {
-    position: relative; border: 2px dashed #d1d5db; border-radius: 12px;
-    padding: 16px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s;
-    min-height: 80px; display: flex; align-items: center; justify-content: center;
+    position: relative; border: 2px dashed #e2e8f0; border-radius: 16px;
+    padding: 24px 16px; text-align: center; cursor: pointer;
+    transition: all .25s ease;
+    min-height: 100px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(248,250,252,0.5) 0%, rgba(241,245,249,0.8) 100%);
 }
-.wl-upload-zone:hover, .wl-upload-zone.dragover { border-color: var(--primary, #6366f1); background: rgba(99,102,241,0.04); }
+.wl-upload-zone:hover { border-color: var(--primary, #6366f1); background: rgba(99,102,241,0.03); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+.wl-upload-zone.dragover { border-color: var(--primary, #6366f1); background: rgba(99,102,241,0.06); border-style: solid; }
+.wl-upload-zone.has-image { border-style: solid; border-color: #e2e8f0; padding: 6px; }
+.wl-upload-zone.has-image:hover { border-color: var(--primary, #6366f1); }
 .wl-upload-zone.has-image .wl-upload-text { display: none; }
-.wl-upload-preview { position: absolute; inset: 4px; border-radius: 8px; overflow: hidden; display: none; }
+.wl-upload-preview { position: absolute; inset: 6px; border-radius: 10px; overflow: hidden; display: none; }
 .wl-upload-zone.has-image .wl-upload-preview { display: block; }
 .wl-upload-preview img { width: 100%; height: 100%; object-fit: contain; }
+.wl-upload-wide { min-height: 120px; }
+.wl-upload-wide .wl-upload-preview img { object-fit: cover; }
 </style>
 <script>
 const WidgetsPage = {
