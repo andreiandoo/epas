@@ -55,7 +55,7 @@ require_once __DIR__ . '/includes/head.php';
 </script>
 
 <!-- EVENT HERO -->
-<section class="event-hero">
+<section class="event-hero" style="max-width:1200px;margin:0 auto;">
   <?php if ($coverUrl): ?>
   <div class="event-hero-img" style="background-image:url('<?= htmlspecialchars($coverUrl) ?>');"></div>
   <?php else: ?>
@@ -102,7 +102,7 @@ require_once __DIR__ . '/includes/head.php';
 </section>
 
 <!-- TWO-COLUMN LAYOUT -->
-<div class="event-layout">
+<div class="event-layout" style="max-width:1200px;margin:0 auto;">
 
   <!-- LEFT: DETAILS -->
   <div class="event-left">
@@ -216,6 +216,21 @@ require_once __DIR__ . '/includes/head.php';
       Plată securizată · Bilet trimis instant pe email
     </div>
   </div>
+</div>
+
+<!-- Share buttons -->
+<div style="max-width:1200px;margin:0 auto;padding:32px 40px;display:flex;align-items:center;gap:16px;">
+  <span style="font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);">Distribuie</span>
+  <a href="https://www.facebook.com/sharer/sharer.php?u=<?= urlencode($shareUrl) ?>" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);color:var(--text-muted);transition:border-color .2s,color .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='';this.style.color=''">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+  </a>
+  <a href="https://wa.me/?text=<?= urlencode($ev['name'] . ' — ' . $shareUrl) ?>" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);color:var(--text-muted);transition:border-color .2s,color .2s;" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='';this.style.color=''">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.625.846 5.059 2.284 7.034L.789 23.492l4.625-1.467A11.94 11.94 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818c-2.168 0-4.18-.588-5.916-1.613l-.424-.252-2.742.87.863-2.681-.276-.44A9.793 9.793 0 012.182 12c0-5.423 4.395-9.818 9.818-9.818 5.423 0 9.818 4.395 9.818 9.818 0 5.423-4.395 9.818-9.818 9.818z"/></svg>
+  </a>
+  <button onclick="navigator.clipboard?.writeText('<?= htmlspecialchars($shareUrl) ?>');this.textContent='Copiat!';setTimeout(()=>this.textContent='Copiază link',1500)" style="display:flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid var(--border);border-radius:100px;background:none;color:var(--text-muted);font-size:12px;font-weight:500;cursor:pointer;transition:border-color .2s,color .2s;font-family:var(--font-body);" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='';this.style.color=''">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+    Copiază link
+  </button>
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
