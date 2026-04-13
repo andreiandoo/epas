@@ -80,12 +80,35 @@ var WLCheckout = {
 
         cart.items.forEach(function(item) {
             var tt = item.ticketType;
-            var basePrice = parseFloat(tt.base_price ?? tt.price ?? 0);
-            var commAmt = parseFloat(tt.commission_amount ?? 0);
-            var commMode = tt.commission_mode || 'included';
+            var displayPrice = parseFloat(tt.price || 0);
+            var basePrice, commAmt, commMode;
+
+            // Use pre-computed values if available (new cart format)
+            if (tt.base_price !== undefined && tt.base_price !== null) {
+                basePrice = parseFloat(tt.base_price);
+                commAmt = parseFloat(tt.commission_amount || 0);
+                commMode = tt.commission_mode || 'included';
+            } else {
+                // Old cart format — reverse-calculate from commission object
+                var comm = tt.commission;
+                commAmt = 0;
+                basePrice = displayPrice;
+                commMode = (comm && comm.mode) ? comm.mode : 'included';
+
+                if (comm && comm.type && (commMode === 'added_on_top' || commMode === 'on_top')) {
+                    if (comm.type === 'percentage') {
+                        basePrice = Math.round(displayPrice / (1 + comm.rate / 100) * 100) / 100;
+                    } else if (comm.type === 'fixed') {
+                        basePrice = displayPrice - (comm.fixed || 0);
+                    } else if (comm.type === 'both') {
+                        basePrice = Math.round((displayPrice - (comm.fixed || 0)) / (1 + comm.rate / 100) * 100) / 100;
+                    }
+                    commAmt = displayPrice - basePrice;
+                }
+            }
 
             // If commission is on_top, base and commission are separate
-            if (commMode === 'added_on_top' || commMode === 'on_top') {
+            if ((commMode === 'added_on_top' || commMode === 'on_top') && commAmt > 0) {
                 var lineBase = Math.round(basePrice * item.quantity);
                 var lineComm = Math.round(commAmt * item.quantity);
                 subtotal += lineBase;
@@ -93,7 +116,7 @@ var WLCheckout = {
                 html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineBase + ' lei</div></div>';
             } else {
                 // Included — show full price, no separate commission
-                var lineTotal = Math.round(parseFloat(tt.price || 0) * item.quantity);
+                var lineTotal = Math.round(displayPrice * item.quantity);
                 subtotal += lineTotal;
                 html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + lineTotal + ' lei</div></div>';
             }

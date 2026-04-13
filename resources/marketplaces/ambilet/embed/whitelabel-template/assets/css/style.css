@@ -470,7 +470,7 @@ nav {
 .ticket-panel-date svg { width: 13px; height: 13px; }
 
 /* Ticket types */
-.ticket-type { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color .25s; }
+.ticket-type { border: 1px solid var(--border); border-radius: 8px; transition: border-color .25s; position: relative; }
 .ticket-type:hover { border-color: rgba(212,168,67,0.35); }
 .ticket-type.selected { border-color: var(--accent); }
 .ticket-type-header {

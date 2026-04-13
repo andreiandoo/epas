@@ -28,7 +28,8 @@ $venueAddr = $venue['address'] ?? '';
 $category = $ev['category'] ?? '';
 $mapsUrl = $venue['google_maps_url'] ?? '';
 $bp = BASE_PATH;
-$shareUrl = MARKETPLACE_URL . '/bilete/' . htmlspecialchars($slug);
+// Share URL = current organizer site, not marketplace
+$shareUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . BASE_PATH . '/' . $slug;
 
 // Date formatting
 $rawDate = $ev['starts_at'] ?? '';
