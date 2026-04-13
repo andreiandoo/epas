@@ -449,11 +449,15 @@ const WidgetsPage = {
         formData.append('type', type);
 
         try {
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            const headers = {};
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
             const resp = await fetch(this.siteUrl + '/api/proxy.php?action=organizer.widget-image', {
                 method: 'POST',
                 body: formData,
                 credentials: 'include',
-                headers: { 'X-Organizer-Token': AmbiletAuth?.getToken?.() || '' },
+                headers: headers,
             });
             const result = await resp.json();
             if (result.success && result.data?.url) {
