@@ -326,18 +326,20 @@ const WidgetsPage = {
         }
     },
 
+    _v(id) { return (document.getElementById(id)?.value || '').trim(); },
+
     async saveWidgetConfig() {
         const config = {
-            logo: document.getElementById('full-logo').value.trim(),
-            bg_image: document.getElementById('full-bg-image').value.trim(),
-            hero_image: document.getElementById('full-hero-image').value.trim(),
-            home_title: document.getElementById('full-home-title').value.trim(),
-            home_subtitle: document.getElementById('full-home-subtitle').value.trim(),
-            address: document.getElementById('full-address').value.trim(),
-            phone: document.getElementById('full-phone').value.trim(),
-            theme: document.getElementById('full-theme').value,
-            accent: document.getElementById('full-accent').value,
-            return_url: document.getElementById('full-return-url').value.trim(),
+            logo: this._v('full-logo'),
+            bg_image: this._v('full-bg-image'),
+            hero_image: this._v('full-hero-image'),
+            home_title: this._v('full-home-title'),
+            home_subtitle: this._v('full-home-subtitle'),
+            address: this._v('full-address'),
+            phone: this._v('full-phone'),
+            theme: this._v('full-theme'),
+            accent: this._v('full-accent'),
+            return_url: this._v('full-return-url'),
         };
         try {
             await AmbiletAPI.put('/organizer/widget-settings', {
