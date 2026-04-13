@@ -37,8 +37,8 @@ $homeTitle = $widgetConfig['home_title'] ?? '';
 $homeSubtitle = $widgetConfig['home_subtitle'] ?? '';
 $orgAddress = $widgetConfig['address'] ?? '';
 $orgPhone = $widgetConfig['phone'] ?? '';
-$widgetTerms = $org['settings']['widget_terms'] ?? $org['widget_terms'] ?? '';
-$widgetPrivacy = $org['settings']['widget_privacy'] ?? $org['widget_privacy'] ?? '';
+$widgetTerms = $org['widget_terms'] ?? $org['settings']['widget_terms'] ?? '';
+$widgetPrivacy = $org['widget_privacy'] ?? $org['settings']['widget_privacy'] ?? '';
 $theme = $widgetConfig['theme'] ?? 'dark';
 
 // Replacement map for template placeholders
