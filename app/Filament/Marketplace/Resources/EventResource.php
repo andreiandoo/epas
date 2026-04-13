@@ -2806,16 +2806,6 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
-                        Forms\Components\Select::make('display_template')
-                            ->label($t('Tip pagină', 'Page template'))
-                            ->options([
-                                'standard' => $t('Standard (eveniment)', 'Standard (event)'),
-                                'leisure_venue' => $t('Locație de agrement', 'Leisure venue'),
-                            ])
-                            ->default('standard')
-                            ->live()
-                            ->helperText($t('Locație de agrement: calendar + bilete zilnice + parcare', 'Leisure venue: calendar + daily tickets + parking')),
-
                         SC\Grid::make(2)->schema([
                             Forms\Components\Toggle::make('is_published')
                                 ->label($t('Publicat', 'Published'))
@@ -2923,6 +2913,27 @@ class EventResource extends Resource
                                     : null
                                 )
                                 ->prefixIcon('heroicon-o-lock-closed')
+                                ->columnSpanFull(),
+                            Forms\Components\Select::make('display_template')
+                                ->label($t('Tip pagină', 'Page template'))
+                                ->options([
+                                    'standard' => $t('Standard (eveniment)', 'Standard (event)'),
+                                    'leisure_venue' => $t('Locație de agrement', 'Leisure venue'),
+                                ])
+                                ->default('standard')
+                                ->live()
+                                ->helperText($t('Locație de agrement: calendar + bilete zilnice + parcare', 'Leisure venue: calendar + daily tickets + parking'))
+                                ->columnSpanFull(),
+                            Forms\Components\TextInput::make('redirect_url')
+                                ->label($t('Redirect', 'Redirect'))
+                                ->url()
+                                ->maxLength(500)
+                                ->placeholder('https://...')
+                                ->prefixIcon('heroicon-o-arrow-top-right-on-square')
+                                ->helperText($t(
+                                    'Dacă setezi un URL, evenimentul va apărea în listări dar link-ul va duce către acest URL (filă nouă). Pagina evenimentului nu va fi accesibilă direct.',
+                                    'If you set a URL, the event will appear in listings but the link will go to this URL (new tab). The event page will not be directly accessible.'
+                                ))
                                 ->columnSpanFull(),
                         ]),
 

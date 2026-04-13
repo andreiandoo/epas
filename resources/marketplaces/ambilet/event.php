@@ -61,6 +61,13 @@ if ($eventSlug) {
     }
 }
 
+// External redirect: if event has a redirect_url, send 302 and exit
+$redirectUrl = $ev['redirect_url'] ?? null;
+if ($redirectUrl && !$isPreview) {
+    header('Location: ' . $redirectUrl, true, 302);
+    exit;
+}
+
 // Leisure venue: delegate to custom template
 $displayTemplate = $ev['display_template'] ?? 'standard';
 if ($displayTemplate === 'leisure_venue') {

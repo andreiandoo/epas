@@ -38,7 +38,9 @@ const AmbiletEventCard = {
             showPromotedBadge = false // Show "Promovat" badge for paid promotions
         } = options;
 
-        const eventUrl = urlPrefix + event.slug;
+        const isRedirect = !!event.redirectUrl;
+        const eventUrl = isRedirect ? event.redirectUrl : urlPrefix + event.slug;
+        const targetAttr = isRedirect ? ' target="_blank" rel="noopener noreferrer"' : '';
 
         // Promoted badge (shown on top-left for paid promotions)
         let promotedBadge = '';
@@ -76,7 +78,7 @@ const AmbiletEventCard = {
         const posterSrc = getStorageUrl(event.posterImage || event.image);
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-40 mobile:h-64 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
@@ -135,7 +137,9 @@ const AmbiletEventCard = {
             isPromoted = false
         } = options;
 
-        const eventUrl = urlPrefix + event.slug;
+        const isRedirect = !!event.redirectUrl;
+        const eventUrl = isRedirect ? event.redirectUrl : urlPrefix + event.slug;
+        const targetAttr = isRedirect ? ' target="_blank" rel="noopener noreferrer"' : '';
 
         // Status badges (cancelled, postponed, sold out)
         let statusBadge = '';
@@ -187,7 +191,7 @@ const AmbiletEventCard = {
                 '<span class="">' + (event.venueCity ? (event.venueName ? '<strong>' + this.escapeHtml(event.venueCity) + '</strong>, ' + this.escapeHtml(event.venueName) : this.escapeHtml(event.venueCity)) : this.escapeHtml(event.venueName)) + '</span>' +
             '</p>' : '';
 
-        return '<a href="' + eventUrl + '" class="overflow-hidden relative transition-all bg-primary group rounded-md hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="overflow-hidden relative transition-all bg-primary group rounded-md hover:-translate-y-1 hover:shadow-xl hover:scale-105 duration-300 ease-in-out">' +
             '<div class="relative aspect-[2/3] overflow-hidden mobile:aspect-auto">' +
                 '<img src="' + posterSrc + '" alt="' + this.escapeHtml(event.title) + '" class="mobile:hidden object-cover w-full h-full transition-transform duration-300" loading="lazy" width="300" height="450" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<img src="' + heroSrc + '" alt="' + this.escapeHtml(event.title) + '" class="hidden mobile:block object-cover w-full h-52 transition-transform duration-300 relative" loading="lazy" width="400" height="208" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
@@ -239,7 +243,9 @@ const AmbiletEventCard = {
             showTime = true
         } = options;
 
-        const eventUrl = urlPrefix + event.slug;
+        const isRedirect = !!event.redirectUrl;
+        const eventUrl = isRedirect ? event.redirectUrl : urlPrefix + event.slug;
+        const targetAttr = isRedirect ? ' target="_blank" rel="noopener noreferrer"' : '';
 
         // Price display
         let priceHtml = '', buttonHtml = '';
@@ -266,7 +272,7 @@ const AmbiletEventCard = {
             '</div>';
         }
 
-        return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between">' +
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between">' +
             '<div class="flex">' +
             dateHtml +
             '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
@@ -312,7 +318,8 @@ const AmbiletEventCard = {
         const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
         if (!event) return '';
 
-        const eventUrl = '/bilete/' + event.slug;
+        const isRedirect = !!event.redirectUrl;
+        const eventUrl = isRedirect ? event.redirectUrl : '/bilete/' + event.slug;
 
         // Full date format
         const dateFormatted = event.date ? event.date.toLocaleDateString('ro-RO', {
@@ -321,7 +328,7 @@ const AmbiletEventCard = {
             month: 'long'
         }) : '';
 
-        return '<article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="window.location.href=\'' + eventUrl + '\'">' +
+        return '<article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="' + (isRedirect ? 'window.open(\'' + eventUrl + '\', \'_blank\')' : 'window.location.href=\'' + eventUrl + '\'') + '">' +
             '<div class="flex flex-col lg:flex-row">' +
                 '<div class="relative lg:w-2/3 aspect-video lg:aspect-auto overflow-hidden">' +
                     '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy" width="800" height="450">' +
@@ -368,9 +375,11 @@ const AmbiletEventCard = {
         const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
         if (!event) return '';
 
-        const eventUrl = '/bilete/' + event.slug;
+        const isRedirect = !!event.redirectUrl;
+        const eventUrl = isRedirect ? event.redirectUrl : '/bilete/' + event.slug;
+        const targetAttr = isRedirect ? ' target="_blank" rel="noopener noreferrer"' : '';
 
-        return '<a href="' + eventUrl + '" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">' +
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">' +
             '<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">' +
                 '<img src="' + getStorageUrl(event.image) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy" width="64" height="64">' +
             '</div>' +
@@ -552,6 +561,7 @@ const AmbiletEventCard = {
             postponedDate: apiEvent.postponed_date || null,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
+            redirectUrl: apiEvent.redirect_url || null,
             artists: apiEvent.artists || [],
             _raw: apiEvent
         };
