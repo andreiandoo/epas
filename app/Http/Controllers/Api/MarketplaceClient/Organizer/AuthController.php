@@ -952,6 +952,12 @@ class AuthController extends BaseController
             'has_api_key' => $organizer->hasApiKey(),
             'api_key_masked' => $organizer->getMaskedApiKey(),
             'created_at' => $organizer->created_at->toIso8601String(),
+
+            // Widget settings
+            'settings' => [
+                'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
+                'embed_domains' => $organizer->settings['embed_domains'] ?? [],
+            ],
         ];
     }
 
