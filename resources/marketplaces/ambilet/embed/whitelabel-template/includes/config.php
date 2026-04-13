@@ -24,6 +24,7 @@ define('MARKETPLACE_URL', '{{MARKETPLACE_URL}}');
 define('LOGO_URL', '{{LOGO_URL}}');
 define('BG_IMAGE_URL', '{{BG_IMAGE_URL}}');
 define('ACCENT_COLOR', '{{ACCENT_COLOR}}');
+define('HERO_IMAGE_URL', '{{HERO_IMAGE_URL}}');
 define('THEME', '{{THEME}}');
 
 // Base path — set this to the subfolder where the site is installed.

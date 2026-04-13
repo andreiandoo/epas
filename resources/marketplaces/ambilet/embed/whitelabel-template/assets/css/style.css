@@ -474,8 +474,8 @@ nav {
 .ticket-type:hover { border-color: rgba(212,168,67,0.35); }
 .ticket-type.selected { border-color: var(--accent); }
 .ticket-type-header {
-  padding: 16px 20px; display: flex; align-items: flex-start;
-  justify-content: space-between; cursor: pointer; gap: 12px;
+  padding: 12px 16px; display: flex; align-items: flex-start;
+  justify-content: space-between; cursor: pointer; gap: 10px;
 }
 .tt-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
 .tt-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
@@ -490,7 +490,7 @@ nav {
 .tt-price { font-family: var(--font-display); font-size: 24px; font-weight: 600; white-space: nowrap; }
 .tt-currency { font-size: 14px; font-weight: 400; }
 .ticket-type-footer {
-  border-top: 1px solid var(--border); padding: 12px 20px;
+  border-top: 1px solid var(--border); padding: 8px 16px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .qty-control { display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }

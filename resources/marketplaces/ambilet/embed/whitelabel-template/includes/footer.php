@@ -1,15 +1,20 @@
 <!-- FOOTER -->
-<footer>
-  <div class="footer-brand"><?= htmlspecialchars(ORG_NAME) ?></div>
+<footer style="max-width:1200px;margin:80px auto 0;">
+  <div class="footer-brand">
+    <?php if (LOGO_URL): ?>
+    <img src="<?= htmlspecialchars(LOGO_URL) ?>" alt="<?= htmlspecialchars(ORG_NAME) ?>" style="height:28px;opacity:.7;">
+    <?php else: ?>
+    <?= htmlspecialchars(ORG_NAME) ?>
+    <?php endif; ?>
+  </div>
   <ul class="footer-links">
-    <li><a href="<?= BASE_PATH ?>/terms">Termeni și condiții</a></li>
+    <li><a href="<?= BASE_PATH ?>/terms">Termeni</a></li>
     <li><a href="<?= BASE_PATH ?>/privacy">Confidențialitate</a></li>
   </ul>
   <div class="footer-powered">
-    Biletele prin
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--accent);"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+    Bilete prin
     <a href="<?= htmlspecialchars(MARKETPLACE_URL) ?>" target="_blank"><?= htmlspecialchars(MARKETPLACE_NAME) ?></a>
-    · Powered by
-    <a href="https://tixello.com" target="_blank">Tixello</a>
   </div>
 </footer>
 

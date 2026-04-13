@@ -157,7 +157,19 @@
             $voucherMsg.style.display = 'block';
             $voucherMsg.style.color = 'var(--text-muted)';
             $voucherMsg.textContent = 'Se verifică...';
-            // TODO: implement voucher validation via API
+
+            WLApi.post('/promo-codes/validate', { code: code, event_id: event.id }).then(function(resp) {
+                if (resp.success && resp.data && resp.data.valid) {
+                    $voucherMsg.style.color = '#5cc87a';
+                    $voucherMsg.textContent = 'Cod valid! Reducere aplicată.';
+                } else {
+                    $voucherMsg.style.color = '#e05c44';
+                    $voucherMsg.textContent = resp.data?.message || resp.message || 'Cod invalid sau expirat.';
+                }
+            }).catch(function() {
+                $voucherMsg.style.color = '#e05c44';
+                $voucherMsg.textContent = 'Eroare la verificare. Încearcă din nou.';
+            });
         });
     }
 

@@ -34,8 +34,9 @@ $widgetConfig = $orgSettings['widget_config'] ?? [];
 $orgName = $org['name'] ?? 'Organizator';
 $logo = $widgetConfig['logo'] ?? $org['avatar'] ?? '';
 $bgImage = $widgetConfig['bg_image'] ?? '';
-$accent = $widgetConfig['accent'] ?? '#6366f1';
-$theme = $widgetConfig['theme'] ?? 'light';
+$accent = $widgetConfig['accent'] ?? '#D4A843';
+$heroImage = $widgetConfig['hero_image'] ?? $org['cover_image'] ?? '';
+$theme = $widgetConfig['theme'] ?? 'dark';
 
 // Replacement map for template placeholders
 $replacements = [
@@ -49,6 +50,7 @@ $replacements = [
     '{{MARKETPLACE_URL}}' => SITE_URL,
     '{{LOGO_URL}}' => $logo,
     '{{BG_IMAGE_URL}}' => $bgImage,
+    '{{HERO_IMAGE_URL}}' => $heroImage,
     '{{ACCENT_COLOR}}' => $accent,
     '{{THEME}}' => $theme,
 ];
