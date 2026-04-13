@@ -270,10 +270,46 @@ RewriteRule ^organizator/report/([0-9]+)/?$ organizer/report.php?event=$1 [L,QSA
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ organizer/$1.php [L]
+RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications|widgets)/?$ organizer/$1.php [L]
 
 # Legacy: redirect /organizer/* dashboard routes to /organizator/*
 RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L]
+
+# ============================================
+# EMBED / WIDGET ROUTES
+# ============================================
+
+# Static embed scripts (served directly)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^embed/tixello-embed\.js$ embed/tixello-embed.js [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^embed/tixello-widget\.js$ embed/tixello-widget.js [L]
+
+# Embed pages: /embed/{organizer-slug}/...
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/([a-z0-9-]+)/cos/?$ embed/cart.php?organizer=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/([a-z0-9-]+)/checkout/?$ embed/checkout.php?organizer=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/([a-z0-9-]+)/multumim/?$ embed/thank-you.php?organizer=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/([a-z0-9-]+)/([a-z0-9-]+)/?$ embed/event.php?organizer=$1&slug=$2 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^embed/([a-z0-9-]+)/?$ embed/index.php?organizer=$1 [L,QSA]
+
+# Organizer widgets page
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/widget-uri/?$ organizer/widgets.php [L]
 
 # ============================================
 # AUTH ROUTES
