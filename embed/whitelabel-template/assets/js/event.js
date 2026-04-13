@@ -111,7 +111,7 @@
                 q, null
             );
         });
-        window.location.href = '/checkout';
+        window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/checkout';
     });
 
     render();

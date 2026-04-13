@@ -118,7 +118,7 @@ const WLCheckout = {
             if (!order) { this.showError('Comanda nu a fost creată.'); return; }
 
             if (parseFloat(order.total) > 0) {
-                const returnUrl = window.location.origin + '/multumim?order=' + order.order_number;
+                const returnUrl = window.location.origin + (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number;
                 const payResult = await WLApi.post('/orders/' + order.id + '/pay', { return_url: returnUrl, cancel_url: window.location.href });
 
                 if (payResult.data?.payment_url) {
@@ -136,7 +136,7 @@ const WLCheckout = {
             }
 
             WLCart.clearCart();
-            window.location.href = '/multumim?order=' + order.order_number;
+            window.location.href = (typeof WL_BASE !== 'undefined' ? WL_BASE : '') + '/multumim?order=' + order.order_number;
         } catch (e) { console.error(e); this.showError('Eroare de rețea.'); }
     },
 

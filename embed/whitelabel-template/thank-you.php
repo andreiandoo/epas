@@ -21,7 +21,7 @@ require_once __DIR__ . '/includes/head.php';
     </div>
     <?php endif; ?>
     <div style="margin-top:32px;">
-        <a href="/" class="wl-btn">Înapoi la evenimente</a>
+        <a href="<?= BASE_PATH ?>/" class="wl-btn">Înapoi la evenimente</a>
     </div>
 </div>
 

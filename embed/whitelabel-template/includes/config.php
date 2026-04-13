@@ -25,3 +25,9 @@ define('LOGO_URL', '{{LOGO_URL}}');
 define('BG_IMAGE_URL', '{{BG_IMAGE_URL}}');
 define('ACCENT_COLOR', '{{ACCENT_COLOR}}');
 define('THEME', '{{THEME}}');
+
+// Base path — set this to the subfolder where the site is installed.
+// Examples: '' for root, '/tickets' for a subfolder.
+// Auto-detect from script path:
+$scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+define('BASE_PATH', $scriptDir === '/' || $scriptDir === '\\' ? '' : $scriptDir);
