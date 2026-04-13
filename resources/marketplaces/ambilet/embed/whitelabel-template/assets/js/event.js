@@ -17,6 +17,20 @@
     var $voucherMsg = document.getElementById('wl-voucher-msg');
     var quantities = {};
 
+    // Pre-populate quantities from existing cart
+    if (typeof WLCart !== 'undefined') {
+        var existingCart = WLCart.getCart();
+        existingCart.items.forEach(function(item) {
+            if (item.event && item.event.id === event.id) {
+                ticketTypes.forEach(function(tt) {
+                    if (tt.id === item.ticketType.id) {
+                        quantities[tt.id] = item.quantity;
+                    }
+                });
+            }
+        });
+    }
+
     function calcComm(tt, base) {
         if (tt.commission && tt.commission.type) {
             var c = tt.commission, amt = 0;
@@ -118,9 +132,17 @@
             rows.push({ label: q + '× ' + tt.name, amount: line.toFixed(0) + ' lei' });
         });
 
+        // Check if cart already has items for this event
+        var hasCartItems = false;
+        if (typeof WLCart !== 'undefined') {
+            var cart = WLCart.getCart();
+            hasCartItems = cart.items.some(function(item) { return item.event && item.event.id === event.id; });
+        }
+
         if (!rows.length) {
             $summary.style.display = 'none';
-            $addBtn.disabled = true;
+            $addBtn.disabled = !hasCartItems;
+            $addBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Continuă spre finalizare';
             return;
         }
 
@@ -132,10 +154,24 @@
         $summary.innerHTML = html;
         $summary.style.display = '';
         $addBtn.disabled = false;
+
+        // Update button label
+        $addBtn.innerHTML = hasCartItems
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Actualizează și continuă'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Continuă spre finalizare';
     }
 
-    // Add to cart
+    // Add to cart (replace existing quantities for this event)
     $addBtn.addEventListener('click', function() {
+        // Remove existing items for this event first
+        var cart = WLCart.getCart();
+        var keysToRemove = [];
+        cart.items.forEach(function(item) {
+            if (item.event && item.event.id === event.id) keysToRemove.push(item.key);
+        });
+        keysToRemove.forEach(function(key) { WLCart.removeItem(key); });
+
+        // Add selected ticket types
         ticketTypes.forEach(function(tt) {
             var q = quantities[tt.id] || 0;
             if (q <= 0) return;

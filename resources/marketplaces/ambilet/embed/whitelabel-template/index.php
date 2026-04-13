@@ -19,18 +19,9 @@ foreach ($events as $ev) {
     if ($cat && !in_array($cat, $categories)) $categories[] = $cat;
 }
 
-// Calculate price with commission for display
-$commMode = 'included'; // default
-$commRate = 5;
-
-function displayPrice($price, $commMode = 'included', $commRate = 5) {
-    if ($price === null) return null;
-    $p = (float) $price;
-    if ($commMode === 'added_on_top' || $commMode === 'on_top') {
-        return ceil($p + $p * $commRate / 100);
-    }
-    return ceil($p);
-}
+// Commission mode & rate from API (organizer-level)
+$commMode = $orgData['data']['commission_mode'] ?? 'included';
+$commRate = (float) ($orgData['data']['commission_rate'] ?? 5);
 
 // Split: first 3 featured, rest list
 $featured = array_slice($events, 0, 3);
@@ -114,7 +105,7 @@ require_once __DIR__ . '/includes/head.php';
         $time = fmtTime($ev['start_time'] ?? '');
         $venue = $ev['venue_name'] ?? '';
         $city = $ev['venue_city'] ?? '';
-        $price = displayPrice($ev['price'] ?? null, $commMode, $commRate);
+        $price = $ev['display_price'] ?? ($ev['price'] !== null ? (int) ceil((float) $ev['price']) : null);
         $slug = $ev['slug'] ?? '';
         $sold = $ev['is_sold_out'] ?? false;
         $cat = $ev['category'] ?? '';
@@ -157,7 +148,7 @@ require_once __DIR__ . '/includes/head.php';
         $time = $ev['start_time'] ?? '';
         $venue = $ev['venue_name'] ?? '';
         $city = $ev['venue_city'] ?? '';
-        $price = displayPrice($ev['price'] ?? null, $commMode, $commRate);
+        $price = $ev['display_price'] ?? ($ev['price'] !== null ? (int) ceil((float) $ev['price']) : null);
         $slug = $ev['slug'] ?? '';
         $sold = $ev['is_sold_out'] ?? false;
         $cat = $ev['category'] ?? '';

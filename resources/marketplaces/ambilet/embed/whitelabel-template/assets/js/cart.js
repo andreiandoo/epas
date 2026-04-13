@@ -14,6 +14,9 @@ const WLCart = {
         window.dispatchEvent(new CustomEvent('wl:cart:update', { detail: cart }));
     },
 
+    TIMER_KEY: 'wl_cart_expires',
+    TIMER_DURATION: 600000, // 10 minutes
+
     addItem(eventData, ticketTypeData, quantity, meta) {
         const cart = this.getCart();
         const key = eventData.id + '_' + ticketTypeData.id + (meta?.visit_date ? '_' + meta.visit_date : '');
@@ -32,6 +35,10 @@ const WLCart = {
             });
         }
         this.saveCart(cart);
+        // Start or refresh the 10-minute timer
+        if (!localStorage.getItem(this.TIMER_KEY)) {
+            localStorage.setItem(this.TIMER_KEY, Date.now() + this.TIMER_DURATION);
+        }
     },
 
     removeItem(key) {
@@ -52,6 +59,7 @@ const WLCart = {
 
     clearCart() {
         localStorage.removeItem(this.KEY);
+        localStorage.removeItem(this.TIMER_KEY);
         window.dispatchEvent(new CustomEvent('wl:cart:update', { detail: { items: [] } }));
     },
 

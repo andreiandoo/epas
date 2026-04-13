@@ -2048,8 +2048,12 @@ class MarketplaceEventsController extends BaseController
         $followers = $organizer->followers_count ?? 0;
         $rating = $organizer->average_rating ?? 0;
 
+        // Commission settings for this organizer
+        $commissionMode = $organizer->getEffectiveCommissionMode();
+        $commissionRate = (float) $organizer->getEffectiveCommissionRate();
+
         // Format upcoming events
-        $formattedUpcoming = $upcomingEvents->map(function ($event) use ($language) {
+        $formattedUpcoming = $upcomingEvents->map(function ($event) use ($language, $commissionMode, $commissionRate) {
             $venue = $event->venue;
             $category = $event->marketplaceEventCategory;
             $eventDate = $event->event_date ?? $event->range_start_date;
@@ -2114,6 +2118,9 @@ class MarketplaceEventsController extends BaseController
                 'venue_name' => $venueName,
                 'venue_city' => $venue?->city ?? '',
                 'price' => $minPrice,
+                'display_price' => $minPrice !== null && ($commissionMode === 'added_on_top' || $commissionMode === 'on_top')
+                    ? (int) ceil($minPrice + $minPrice * $commissionRate / 100)
+                    : ($minPrice !== null ? (int) ceil($minPrice) : null),
                 'is_sold_out' => (bool) $event->is_sold_out,
                 'is_cancelled' => (bool) $event->is_cancelled,
                 'status' => $status,
@@ -2203,6 +2210,8 @@ class MarketplaceEventsController extends BaseController
             'pastEvents' => $formattedPast,
             'about' => $organizer->description ?? '',
             'facts' => $facts,
+            'commission_mode' => $commissionMode,
+            'commission_rate' => $commissionRate,
             'widget_enabled' => (bool) ($organizer->settings['widget_enabled'] ?? false),
             'embed_domains' => $organizer->settings['embed_domains'] ?? [],
             'widget_config' => $organizer->settings['widget_config'] ?? [],
