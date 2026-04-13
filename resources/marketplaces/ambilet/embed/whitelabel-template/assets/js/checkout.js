@@ -1,11 +1,13 @@
 /**
  * WL Checkout — premium cart + checkout with order summary.
  */
+// Format price: 2 decimals if fractional, integer if whole
+function fmtP(n) { return n % 1 !== 0 ? n.toFixed(2) : n.toFixed(0); }
+
 var WLCheckout = {
     promoCode: null,
     promoDiscount: 0,
     // Organizer-level commission defaults (injected from checkout.php)
-    orgCommMode: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.mode) || 'included',
     orgCommRate: (window.__WL_COMMISSION__ && window.__WL_COMMISSION__.rate) || 5,
 
     init: function() {
@@ -52,7 +54,7 @@ var WLCheckout = {
 
             group.tickets.forEach(function(item) {
                 var price = parseFloat(item.ticketType.price || 0);
-                var lineTotal = Math.round(price * item.quantity);
+                var lineTotal = price * item.quantity;
                 html += '<div class="ticket-row">';
                 html += '<div class="ticket-row-left"><div class="ticket-row-type">' + esc(item.ticketType.name) + '</div></div>';
                 html += '<div class="ticket-row-right">';
@@ -61,7 +63,7 @@ var WLCheckout = {
                 html += '<div class="qty-val-sm">' + item.quantity + '</div>';
                 html += '<button class="qty-btn-sm" onclick="WLCheckout.changeQty(\'' + item.key + '\',1)">+</button>';
                 html += '</div>';
-                html += '<div class="ticket-row-price">' + lineTotal.toFixed(0) + ' lei</div>';
+                html += '<div class="ticket-row-price">' + fmtP(lineTotal) + ' lei</div>';
                 html += '<button class="ticket-row-remove" onclick="WLCheckout.removeItem(\'' + item.key + '\')" title="Elimină"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></button>';
                 html += '</div></div>';
             });
@@ -105,16 +107,15 @@ var WLCheckout = {
             subtotalBase += lineBase;
             totalComm += lineComm;
 
-            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + Math.round(lineBase) + ' lei</div></div>';
+            html += '<div class="order-line"><div class="order-line-label"><span class="order-line-qty">' + item.quantity + ' × </span>' + esc(tt.name) + '</div><div class="order-line-amount">' + fmtP(lineBase) + ' lei</div></div>';
         });
 
         // Always show commission line
         if (totalComm > 0) {
-            var commModeLabel = (self.orgCommMode === 'added_on_top' || self.orgCommMode === 'on_top') ? '' : ' (incluse)';
-            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane' + commModeLabel + '</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + Math.round(totalComm) + ' lei</div></div>';
+            html += '<div class="order-line"><div class="order-line-label" style="color:var(--text-muted);font-size:12px;">Comisioane</div><div class="order-line-amount" style="color:var(--text-muted);font-size:12px;">' + fmtP(totalComm) + ' lei</div></div>';
         }
 
-        var grandTotal = Math.round(subtotalBase + totalComm);
+        var grandTotal = subtotalBase + totalComm;
 
         if (this.promoDiscount > 0) {
             grandTotal = Math.max(0, grandTotal - this.promoDiscount);
@@ -122,7 +123,7 @@ var WLCheckout = {
         }
 
         $lines.innerHTML = html;
-        $total.textContent = grandTotal;
+        $total.textContent = fmtP(grandTotal);
         $btn.disabled = !cart.items.length;
     },
 
