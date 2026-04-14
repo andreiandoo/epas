@@ -59,6 +59,7 @@ class ImportAmbiletOrdersCommand extends Command
         }
 
         $created = $skipped = $failed = 0;
+        $affectedCustomerIds = [];  // Track customers touched in this run
 
         foreach ($files as $file) {
             if (!file_exists($file)) {
@@ -162,6 +163,7 @@ class ImportAmbiletOrdersCommand extends Command
                 try {
                     $orderId               = DB::table('orders')->insertGetId($orderData);
                     $ordersMap[$wpOrderId] = $orderId;
+                    $affectedCustomerIds[$customerId] = true;
                     $created++;
 
                     if ($created % 500 === 0) {
@@ -184,22 +186,26 @@ class ImportAmbiletOrdersCommand extends Command
 
         $this->info("Done! Created: {$created} | Skipped: {$skipped} | Failed: {$failed}");
 
-        // Update customer cached stats: total_orders, total_spent
-        if (!$dryRun && $created > 0) {
-            $this->info('Updating customer stats (total_orders, total_spent)...');
-            DB::statement("
-                UPDATE marketplace_customers mc
-                SET
-                    total_orders = (
-                        SELECT COUNT(*) FROM orders o
-                        WHERE o.marketplace_customer_id = mc.id AND o.status = 'completed'
-                    ),
-                    total_spent = (
-                        SELECT COALESCE(SUM(o.total), 0) FROM orders o
-                        WHERE o.marketplace_customer_id = mc.id AND o.status = 'completed'
-                    )
-                WHERE mc.marketplace_client_id = {$clientId}
-            ");
+        // Update customer cached stats: total_orders, total_spent (only affected customers)
+        $touchedIds = array_keys($affectedCustomerIds);
+        if (!$dryRun && $created > 0 && !empty($touchedIds)) {
+            $this->info('Updating customer stats for ' . count($touchedIds) . ' affected customers...');
+            foreach (array_chunk($touchedIds, 500) as $chunk) {
+                $ids = implode(',', $chunk);
+                DB::statement("
+                    UPDATE marketplace_customers mc
+                    SET
+                        total_orders = (
+                            SELECT COUNT(*) FROM orders o
+                            WHERE o.marketplace_customer_id = mc.id AND o.status = 'completed'
+                        ),
+                        total_spent = (
+                            SELECT COALESCE(SUM(o.total), 0) FROM orders o
+                            WHERE o.marketplace_customer_id = mc.id AND o.status = 'completed'
+                        )
+                    WHERE mc.id IN ({$ids})
+                ");
+            }
             $this->info('Customer stats updated.');
         }
 
