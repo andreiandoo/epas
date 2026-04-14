@@ -570,3 +570,10 @@ Options -Indexes
 # Custom error pages (create these files if needed)
 ErrorDocument 404 /404.php
 ErrorDocument 500 /500.php
+
+
+# Force PHP 8.3
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php
+</IfModule>
+
