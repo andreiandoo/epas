@@ -1595,7 +1595,7 @@ const EventPage = {
                 return override.price;
             }
         }
-        return tt.price;
+        return tt.price ?? 0;
     },
 
     /**
@@ -1926,9 +1926,9 @@ const EventPage = {
             var commissionLabel = '';
 
             if (ticketComm.type === 'fixed') {
-                commissionLabel = ticketComm.fixed.toFixed(2) + ' lei';
+                commissionLabel = (ticketComm.fixed || 0).toFixed(2) + ' lei';
             } else if (ticketComm.type === 'both') {
-                commissionLabel = ticketComm.rate + '% + ' + ticketComm.fixed.toFixed(2) + ' lei';
+                commissionLabel = ticketComm.rate + '% + ' + (ticketComm.fixed || 0).toFixed(2) + ' lei';
             } else {
                 commissionLabel = ticketComm.rate + '%';
             }

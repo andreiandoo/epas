@@ -766,7 +766,7 @@ class MarketplaceEventsController extends BaseController
                 );
 
                 $available = ($tt->quota_total < 0 ? PHP_INT_MAX : max(0, $tt->quota_total - ($tt->quota_sold ?? 0)));
-                $basePrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                $basePrice = (($tt->sale_price_cents ?? $tt->price_cents) ?? 0) / 100;
 
                 // Calculate original_price:
                 // 1. If event has target_price and it's > display price, use target_price (highest priority)
