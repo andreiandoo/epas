@@ -60,19 +60,26 @@ function verifySignature($payload, $signature) {
 }
 
 function downloadFile($url, $destination) {
-    $context = stream_context_create([
-        'http' => [
-            'header' => "User-Agent: PHP Deploy Script\r\n",
-            'timeout' => 120
-        ]
+    $ch = curl_init($url);
+    $fp = fopen($destination, 'w');
+    if (!$fp) return false;
+    curl_setopt_array($ch, [
+        CURLOPT_FILE => $fp,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_TIMEOUT => 120,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_USERAGENT => 'PHP Deploy Script',
+        CURLOPT_SSL_VERIFYPEER => true,
     ]);
-
-    $content = @file_get_contents($url, false, $context);
-    if ($content === false) {
+    $success = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    fclose($fp);
+    if (!$success || $httpCode >= 400) {
+        @unlink($destination);
         return false;
     }
-
-    return file_put_contents($destination, $content) !== false;
+    return true;
 }
 
 function deleteDirectory($dir, $preserve = []) {
