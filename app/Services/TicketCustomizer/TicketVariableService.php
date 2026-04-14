@@ -656,15 +656,24 @@ class TicketVariableService
         // Insurance
         $isInsured = !empty($meta['has_insurance']) || !empty($orderMeta['ticket_insurance']);
 
-        // Commission
-        $commissionMode = $orderMeta['commission_mode']
-            ?? $event?->commission_mode
-            ?? $organizer?->getEffectiveCommissionMode()
-            ?? 'included';
-        $commissionRate = (float) ($order?->commission_rate
-            ?? $event?->commission_rate
-            ?? $organizer?->getEffectiveCommissionRate()
-            ?? 5);
+        // Commission — ticket type custom commission takes priority
+        if ($ticketType && $ticketType->commission_type) {
+            $commissionMode = $ticketType->commission_mode
+                ?? $orderMeta['commission_mode']
+                ?? $event?->commission_mode
+                ?? $organizer?->getEffectiveCommissionMode()
+                ?? 'included';
+            $commissionRate = (float) ($ticketType->commission_rate ?? 5);
+        } else {
+            $commissionMode = $orderMeta['commission_mode']
+                ?? $event?->commission_mode
+                ?? $organizer?->getEffectiveCommissionMode()
+                ?? 'included';
+            $commissionRate = (float) ($order?->commission_rate
+                ?? $event?->commission_rate
+                ?? $organizer?->getEffectiveCommissionRate()
+                ?? 5);
+        }
         $ticketPrice = (float) ($ticket->price ?? $ticketType?->display_price ?? 0);
         $currency = $order?->currency ?? $ticketType?->currency ?? 'RON';
 
