@@ -547,7 +547,7 @@ function fetchParticipantsWithAuth($eventIds, $authHeader) {
 session_start();
 $ip = $_SERVER['REMOTE_ADDR'];
 $rateKey = 'rate_' . md5($ip);
-$rateLimit = 60; // requests per minute
+$rateLimit = 300; // requests per minute
 $rateWindow = 60; // seconds
 
 if (!isset($_SESSION[$rateKey])) {
