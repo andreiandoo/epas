@@ -3,6 +3,39 @@ $pageCacheTTL = 1800; // 30 minutes (static page)
 require_once __DIR__ . '/includes/page-cache.php';
 
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/api.php';
+
+// Fetch real stats from API
+$statsEvents = 0;
+$statsTickets = 0;
+$statsOrganizers = 0;
+
+$eventsResp = api_get('/marketplace-events', ['per_page' => 1, 'include_archived' => 1]);
+if ($eventsResp['success'] && isset($eventsResp['meta']['total'])) {
+    $statsEvents = (int) $eventsResp['meta']['total'];
+}
+
+$orgResp = api_get('/marketplace-events/organizers', ['per_page' => 1]);
+if ($orgResp['success'] && isset($orgResp['meta']['total'])) {
+    $statsOrganizers = (int) $orgResp['meta']['total'];
+}
+
+// Tickets sold: use internal API (requires marketplace auth)
+$statsResp = api_get('/statistics/dashboard', ['from_date' => '2020-01-01', 'to_date' => date('Y-m-d')]);
+if ($statsResp['success'] && isset($statsResp['data']['summary']['total_tickets_sold'])) {
+    $statsTickets = (int) $statsResp['data']['summary']['total_tickets_sold'];
+} elseif ($statsResp['success'] && isset($statsResp['data']['summary']['completed_orders'])) {
+    // Fallback: estimate ~2.5 tickets per order
+    $statsTickets = (int) ($statsResp['data']['summary']['completed_orders'] * 2.5);
+}
+
+// Format numbers for display
+function formatStat(int $n): string {
+    if ($n >= 1000000) return number_format($n / 1000000, 1, '.', '') . 'M+';
+    if ($n >= 1000) return number_format($n / 1000, $n >= 10000 ? 0 : 1, '.', '') . 'K+';
+    return (string) $n;
+}
+
 $pageTitle = 'Despre Noi';
 $transparentHeader = false;
 $cssBundle = 'static';
@@ -47,22 +80,18 @@ require_once __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Stats Grid -->
-            <div class="grid grid-cols-2 gap-6 lg:grid-cols-4 md:gap-8 mt-14">
+            <div class="grid grid-cols-2 gap-6 lg:grid-cols-3 md:gap-8 mt-14">
                 <div class="p-6 text-center transition-all bg-white border rounded-2xl md:p-8 border-slate-200 hover:-translate-y-1 hover:shadow-xl">
-                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary">500+</div>
+                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary"><?= formatStat($statsEvents) ?></div>
                     <div class="text-sm md:text-[15px] text-slate-500 font-medium">Evenimente organizate</div>
                 </div>
                 <div class="p-6 text-center transition-all bg-white border rounded-2xl md:p-8 border-slate-200 hover:-translate-y-1 hover:shadow-xl">
-                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary">100K+</div>
+                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary"><?= formatStat($statsTickets) ?></div>
                     <div class="text-sm md:text-[15px] text-slate-500 font-medium">Bilete vandute</div>
                 </div>
                 <div class="p-6 text-center transition-all bg-white border rounded-2xl md:p-8 border-slate-200 hover:-translate-y-1 hover:shadow-xl">
-                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary">200+</div>
+                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary"><?= formatStat($statsOrganizers) ?></div>
                     <div class="text-sm md:text-[15px] text-slate-500 font-medium">Organizatori activi</div>
-                </div>
-                <div class="p-6 text-center transition-all bg-white border rounded-2xl md:p-8 border-slate-200 hover:-translate-y-1 hover:shadow-xl">
-                    <div class="mb-2 text-4xl font-extrabold md:text-5xl text-primary">99.9%</div>
-                    <div class="text-sm md:text-[15px] text-slate-500 font-medium">Uptime garantat</div>
                 </div>
             </div>
         </section>
