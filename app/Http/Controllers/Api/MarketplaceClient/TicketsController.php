@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Models\TicketTemplate;
+use App\Services\TicketCustomizer\TicketPreviewGenerator;
+use App\Services\TicketCustomizer\TicketVariableService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -128,13 +131,13 @@ class TicketsController extends BaseController
     }
 
     /**
-     * Download a single ticket PDF
+     * Download a single ticket PDF — uses custom template if available, falls back to generic.
      */
     public function download(Request $request, int $ticketId): mixed
     {
         $client = $this->requireClient($request);
 
-        $ticket = Ticket::with(['order', 'marketplaceEvent', 'marketplaceTicketType'])
+        $ticket = Ticket::with(['order', 'marketplaceEvent', 'marketplaceTicketType', 'ticketType', 'event', 'event.venue', 'event.marketplaceOrganizer'])
             ->where('id', $ticketId)
             ->whereHas('order', function ($query) use ($client) {
                 $query->where('marketplace_client_id', $client->id)
@@ -146,6 +149,48 @@ class TicketsController extends BaseController
             return $this->error('Ticket not found or not available for download', 404);
         }
 
+        $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
+        $filename = "bilet-{$ticketCode}.pdf";
+
+        // Try custom template
+        $template = $this->resolveTicketTemplate($ticket, $client);
+        if ($template) {
+            try {
+                $variableService = app(TicketVariableService::class);
+                $generator = app(TicketPreviewGenerator::class);
+
+                $data = $variableService->resolveTicketData($ticket);
+                $content = $generator->renderToHtml($template->template_data, $data);
+
+                if (!empty(trim($content))) {
+                    $size = $template->getSize();
+                    $widthPt = round($size['width'] * 2.8346, 2);
+                    $heightPt = round($size['height'] * 2.8346, 2);
+                    $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+
+                    $pdf = Pdf::loadHTML($html)
+                        ->setPaper([0, 0, $widthPt, $heightPt])
+                        ->setOption('isRemoteEnabled', true)
+                        ->setOption('isHtml5ParserEnabled', true);
+
+                    $pdfOutput = $pdf->output();
+                    if (!empty($pdfOutput)) {
+                        $template->markAsUsed();
+                        return response()->streamDownload(fn () => print($pdfOutput), $filename);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::channel('marketplace')->warning('Ticket custom PDF failed, using generic', [
+                    'ticket_id' => $ticket->id,
+                    'template_id' => $template->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Fallback to generic template
         $order = $ticket->order;
         $eventName = $ticket->marketplaceEvent?->name ?? 'Eveniment';
         $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
@@ -161,10 +206,51 @@ class TicketsController extends BaseController
             ->setOption('isRemoteEnabled', true)
             ->setPaper([0, 0, 396, 700], 'portrait');
 
-        $ticketCode = $ticket->code ?? $ticket->barcode ?? $ticket->id;
-        $filename = "bilet-{$ticketCode}.pdf";
-
         return $pdf->download($filename);
+    }
+
+    /**
+     * Resolve the best ticket template for a ticket.
+     * Priority: event's assigned template → marketplace client default → any active template.
+     */
+    protected function resolveTicketTemplate(Ticket $ticket, $client): ?TicketTemplate
+    {
+        // 1. Event's assigned template
+        $event = $ticket->event ?? $ticket->marketplaceEvent;
+        if ($event && $event->ticket_template_id) {
+            $template = TicketTemplate::find($event->ticket_template_id);
+            if ($template && $this->isTemplateUsable($template)) {
+                return $template;
+            }
+        }
+
+        // 2. Marketplace client default
+        $clientId = $ticket->marketplace_client_id ?? $client->id;
+        $default = TicketTemplate::where('marketplace_client_id', $clientId)
+            ->where('status', 'active')
+            ->where('is_default', true)
+            ->first();
+        if ($default && $this->isTemplateUsable($default)) {
+            return $default;
+        }
+
+        // 3. Any active template
+        return TicketTemplate::where('marketplace_client_id', $clientId)
+            ->where('status', 'active')
+            ->orderByDesc('is_default')
+            ->orderByDesc('last_used_at')
+            ->get()
+            ->first(fn ($t) => $this->isTemplateUsable($t));
+    }
+
+    protected function isTemplateUsable(?TicketTemplate $template): bool
+    {
+        if (!$template || $template->status !== 'active' || empty($template->template_data)) {
+            return false;
+        }
+        $layers = $template->template_data['layers'] ?? [];
+        $visible = array_filter($layers, fn ($l) => !isset($l['visible']) || $l['visible'] !== false);
+        return !empty($visible);
     }
 
     /**
