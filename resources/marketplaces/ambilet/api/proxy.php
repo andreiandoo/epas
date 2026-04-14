@@ -1190,6 +1190,18 @@ switch ($action) {
         // No auth required — uses marketplace API key + order reference
         break;
 
+    case 'ticket.download-pdf':
+        $method = 'GET';
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $endpoint = '/tickets/' . urlencode($ticketId) . '/download';
+        $rawResponse = true;
+        break;
+
     case 'customer.orders':
         $method = 'GET';
         $params = [];
