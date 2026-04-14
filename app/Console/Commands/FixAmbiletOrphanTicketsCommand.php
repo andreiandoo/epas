@@ -161,8 +161,11 @@ class FixAmbiletOrphanTicketsCommand extends Command
         // Post-analytics: set orders.event_id + marketplace_organizer_id for newly linked orders
         $this->info('Linking orders to events and organizers...');
         DB::statement("
-            UPDATE orders o
-            INNER JOIN (
+            UPDATE orders
+            SET
+                event_id                 = sub.event_id,
+                marketplace_organizer_id = sub.marketplace_organizer_id
+            FROM (
                 SELECT
                     t.order_id,
                     MIN(t.event_id)                  AS event_id,
@@ -172,12 +175,10 @@ class FixAmbiletOrphanTicketsCommand extends Command
                 WHERE t.marketplace_client_id = {$clientId}
                   AND t.order_id IS NOT NULL
                 GROUP BY t.order_id
-            ) sub ON o.id = sub.order_id
-            SET
-                o.event_id                 = sub.event_id,
-                o.marketplace_organizer_id = sub.marketplace_organizer_id
-            WHERE o.marketplace_client_id = {$clientId}
-              AND o.event_id IS NULL
+            ) sub
+            WHERE orders.id = sub.order_id
+              AND orders.marketplace_client_id = {$clientId}
+              AND orders.event_id IS NULL
         ");
 
         // Recalculate quota_sold for all ticket types
