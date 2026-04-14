@@ -486,6 +486,7 @@ class OrganizerResource extends Resource
                             Forms\Components\DatePicker::make('contract_date')
                                 ->label('Contract Date')
                                 ->native(false)
+                                ->minDate('2020-01-01')
                                 ->helperText('Auto-filled on contract generation date'),
 
                             Forms\Components\TextInput::make('invoice_due_days')
