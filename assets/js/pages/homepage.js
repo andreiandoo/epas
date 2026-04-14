@@ -36,7 +36,7 @@ const HeroSlider = {
             const city = event.venue_city || event.city || '';
             const venue = event.venue_name || (event.venue ? event.venue.name : '') || '';
             const locationText = city ? (venue ? city + ', ' + venue : city) : venue;
-            const priceFrom = event.price_from ? 'De la ' + event.price_from + ' Lei' : '';
+            const priceFrom = event.price_from ? '<span class="text-sm text-muted">De la</span> ' + event.price_from + ' Lei' : '';
 
             return '<div class="hero-item" data-index="' + index + '" style="--r: ' + (index - this.currentIndex) + ';">' +
                 '<a href="/bilete/' + (event.slug || '') + '" class="hero-item-inner">' +
@@ -205,7 +205,7 @@ const CityEventsFilter = {
 
     async loadEvents() {
         try {
-            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=30');
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=45');
             if (response.data) {
                 this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
             }

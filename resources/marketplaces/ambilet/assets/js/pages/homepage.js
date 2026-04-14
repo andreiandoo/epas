@@ -205,7 +205,7 @@ const CityEventsFilter = {
 
     async loadEvents() {
         try {
-            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=30');
+            const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=45');
             if (response.data) {
                 this.allEvents = Array.isArray(response.data) ? response.data : (response.data.events || response.data.data || []);
             }
