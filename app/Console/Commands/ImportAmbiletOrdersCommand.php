@@ -213,7 +213,7 @@ class ImportAmbiletOrdersCommand extends Command
     {
         return match (trim($wcStatus, '"')) {
             'wc-completed',  'completed'  => ['completed', 'paid'],
-            'wc-processing', 'processing' => ['pending',   'pending'],
+            'wc-processing', 'processing' => ['completed', 'paid'],
             'wc-on-hold',    'on-hold'    => ['pending',   'pending'],
             'wc-cancelled',  'cancelled'  => ['cancelled', 'failed'],
             'wc-refunded',   'refunded'   => ['refunded',  'refunded'],

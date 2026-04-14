@@ -20,9 +20,9 @@ class FixAmbiletOrderStatusesCommand extends Command
         'wc-failed'     => ['failed',    'failed',   'cancelled'],
         'wc-cancelled'  => ['cancelled', 'failed',   'cancelled'],
         'wc-refunded'   => ['refunded',  'refunded', 'void'],
-        'wc-processing' => ['pending',   'pending',  'cancelled'],
-        'wc-on-hold'    => ['pending',   'pending',  'cancelled'],
-        'wc-pending'    => ['pending',   'pending',  'cancelled'],
+        'wc-processing' => ['completed', 'paid',     'valid'],
+        'wc-on-hold'    => ['pending',   'pending',  'pending'],
+        'wc-pending'    => ['pending',   'pending',  'pending'],
     ];
 
     public function handle(): int
