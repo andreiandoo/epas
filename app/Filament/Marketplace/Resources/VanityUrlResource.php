@@ -92,7 +92,7 @@ class VanityUrlResource extends Resource
                             ->label('Slug (cale URL)')
                             ->required()
                             ->maxLength(100)
-                            ->prefix('https://bilete.online/')
+                            ->prefix('https://ambilet.ro/')
                             ->placeholder('teatrulmicilorvisatori')
                             ->helperText('Doar litere mici, cifre și liniuțe. NU folosi paths rezervate (artist, bilete, organizator, etc.).')
                             ->extraInputAttributes(['style' => 'text-transform: lowercase'])
@@ -149,7 +149,14 @@ class VanityUrlResource extends Resource
                                         ]),
                                     MarketplaceVanityUrl::TYPE_VENUE => Venue::orderBy('id')->limit(50)
                                         ->get()
-                                        ->mapWithKeys(fn ($v) => [$v->id => is_array($v->name) ? (reset($v->name) ?: '#' . $v->id) : ($v->name ?? '#' . $v->id)]),
+                                        ->mapWithKeys(function ($v) {
+                                            $raw = $v->getRawOriginal('name');
+                                            $name = is_string($raw) ? (json_decode($raw, true) ?? $raw) : $raw;
+                                            if (is_array($name)) {
+                                                $name = $name['ro'] ?? $name['en'] ?? reset($name) ?: '#' . $v->id;
+                                            }
+                                            return [$v->id => $name ?: '#' . $v->id];
+                                        }),
                                     MarketplaceVanityUrl::TYPE_ORGANIZER => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
                                         ->orderBy('name')->limit(50)->pluck('name', 'id'),
                                     default => [],
@@ -177,7 +184,14 @@ class VanityUrlResource extends Resource
                                     MarketplaceVanityUrl::TYPE_VENUE => Venue::whereRaw("LOWER(name::text) LIKE ?", ['%' . strtolower($search) . '%'])
                                         ->limit(50)
                                         ->get()
-                                        ->mapWithKeys(fn ($v) => [$v->id => is_array($v->name) ? (reset($v->name) ?: '#' . $v->id) : ($v->name ?? '#' . $v->id)]),
+                                        ->mapWithKeys(function ($v) {
+                                            $raw = $v->getRawOriginal('name');
+                                            $name = is_string($raw) ? (json_decode($raw, true) ?? $raw) : $raw;
+                                            if (is_array($name)) {
+                                                $name = $name['ro'] ?? $name['en'] ?? reset($name) ?: '#' . $v->id;
+                                            }
+                                            return [$v->id => $name ?: '#' . $v->id];
+                                        }),
                                     MarketplaceVanityUrl::TYPE_ORGANIZER => MarketplaceOrganizer::where('marketplace_client_id', $marketplace?->id)
                                         ->where('name', 'ilike', "%{$search}%")
                                         ->limit(50)
@@ -198,7 +212,10 @@ class VanityUrlResource extends Resource
                                     MarketplaceVanityUrl::TYPE_VENUE => (function ($id) {
                                         $v = Venue::find($id);
                                         if (!$v) return null;
-                                        return is_array($v->name) ? (reset($v->name) ?: '#' . $v->id) : ($v->name ?? '#' . $v->id);
+                                        $raw = $v->getRawOriginal('name');
+                                        $name = is_string($raw) ? (json_decode($raw, true) ?? $raw) : $raw;
+                                        if (is_array($name)) return $name['ro'] ?? $name['en'] ?? reset($name) ?: '#' . $v->id;
+                                        return $name ?: '#' . $v->id;
                                     })($value),
                                     MarketplaceVanityUrl::TYPE_ORGANIZER => MarketplaceOrganizer::find($value)?->name,
                                     default => null,
