@@ -3012,26 +3012,44 @@ if ($requiresAuth) {
     }
 }
 
-$context = stream_context_create([
-    'http' => [
-        'method' => $method,
-        'header' => $headers,
-        'content' => $body,
-        'timeout' => 30,
-        'ignore_errors' => true
-    ]
+// Use curl (file_get_contents requires allow_url_fopen which may be disabled)
+$ch = curl_init($url);
+$curlHeaders = [];
+foreach ($headers as $h) {
+    $curlHeaders[] = $h;
+}
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_HTTPHEADER => $curlHeaders,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_SSL_VERIFYPEER => true,
 ]);
 
-$response = @file_get_contents($url, false, $context);
+if ($method === 'POST') {
+    curl_setopt($ch, CURLOPT_POST, true);
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PUT') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'DELETE') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PATCH') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+}
 
-// Get HTTP status from response headers
-$statusCode = 200;
-if (isset($http_response_header)) {
-    foreach ($http_response_header as $header) {
-        if (preg_match('/HTTP\/\d\.\d\s+(\d+)/', $header, $matches)) {
-            $statusCode = (int)$matches[1];
-        }
-    }
+$response = curl_exec($ch);
+$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+curl_close($ch);
+
+if ($response === false || $statusCode === 0) {
+    error_log("[proxy.php] CURL ERROR: {$method} {$url} => {$curlError}");
+    $response = false;
+    $statusCode = 502;
 }
 
 // Debug log for non-2xx responses
