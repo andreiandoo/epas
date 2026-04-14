@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Evenimente — Ambilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            min-height: 100vh;
+        }
+
+        /* ==================== HEADER ==================== */
+        .header {
+            height: 72px;
+            background: #ffffff;
+            border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #A51C30 0%, #C41E3A 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1E293B;
+        }
+
+        .logo-text span {
+            color: #A51C30;
+        }
+
+        /* ==================== PAGE HERO ==================== */
+        .page-hero {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            padding: 48px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-hero::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            right: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(165, 28, 48, 0.3) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .page-hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .page-hero-content h1 {
+            font-size: 36px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .page-hero-content p {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px;
+            border-radius: 12px;
+        }
+
+        .view-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-btn:hover {
+            color: white;
+        }
+
+        .view-btn.active {
+            background: white;
+            color: #1E293B;
+        }
+
+        .view-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ==================== MAIN CONTAINER ==================== */
+        .main-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        /* ==================== CALENDAR CONTROLS ==================== */
+        .calendar-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .calendar-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .calendar-nav-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
+            color: #64748B;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-nav-btn:hover {
+            border-color: #A51C30;
+            color: #A51C30;
+        }
+
+        .calendar-nav-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .calendar-current {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .calendar-today-btn {
+            padding: 10px 20px;
+            background: #F1F5F9;
+            border: none;
+            border-radius: 10px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-today-btn:hover {
+            background: #E2E8F0;
+        }
+
+        .calendar-filters {
+            display: flex;
+            gap: 12px;
+        }
+
+        .filter-select {
+            padding: 12px 40px 12px 16px;
+            background: #ffffff;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            font-weight: 500;
+            color: #1E293B;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #A51C30;
+        }
+
+        /* ==================== CALENDAR GRID ==================== */
+        .calendar-wrapper {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .calendar-header-day {
+            padding: 16px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .calendar-body {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .calendar-day {
+            min-height: 120px;
+            padding: 8px;
+            border-right: 1px solid #E2E8F0;
+            border-bottom: 1px solid #E2E8F0;
+            background: #ffffff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .calendar-day:nth-child(7n) {
+            border-right: none;
+        }
+
+        .calendar-day:hover {
+            background: #F8FAFC;
+        }
+
+        .calendar-day.other-month {
+            background: #F8FAFC;
+        }
+
+        .calendar-day.other-month .day-number {
+            color: #CBD5E1;
+        }
+
+        .calendar-day.today {
+            background: #FEF2F2;
+        }
+
+        .calendar-day.today .day-number {
+            background: linear-gradient(135deg, #A51C30, #C41E3A);
+            color: white;
+        }
+
+        .day-number {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1E293B;
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .day-event {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .day-event:hover {
+            transform: scale(1.02);
+        }
+
+        .day-event.concert {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .day-event.festival {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .day-event.theater {
+            background: #F3E8FF;
+            color: #6B21A8;
+        }
+
+        .day-event.comedy {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .day-event.sport {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .day-more {
+            font-size: 11px;
+            font-weight: 600;
+            color: #A51C30;
+            padding: 4px 8px;
+            cursor: pointer;
+        }
+
+        .day-more:hover {
+            text-decoration: underline;
+        }
+
+        /* ==================== LEGEND ==================== */
+        .calendar-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 20px;
+            border-top: 1px solid #E2E8F0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        .legend-dot.concert { background: #FEE2E2; }
+        .legend-dot.festival { background: #DBEAFE; }
+        .legend-dot.theater { background: #F3E8FF; }
+        .legend-dot.comedy { background: #FEF3C7; }
+        .legend-dot.sport { background: #D1FAE5; }
+
+        /* ==================== UPCOMING EVENTS SIDEBAR ==================== */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 32px;
+            margin-top: 32px;
+        }
+
+        .upcoming-events {
+            background: #ffffff;
+            border-radius: 20px;
+            border: 1px solid #E2E8F0;
+            padding: 24px;
+            height: fit-content;
+            position: sticky;
+            top: 96px;
+        }
+
+        .upcoming-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .upcoming-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .upcoming-count {
+            padding: 4px 12px;
+            background: #FEF2F2;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #A51C30;
+        }
+
+        .upcoming-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .upcoming-event {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: #F8FAFC;
+            border-radius: 14px;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .upcoming-event:hover {
+            background: #F1F5F9;
+            transform: translateX(4px);
+        }
+
+        .upcoming-date {
+            width: 56px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .upcoming-date-day {
+            font-size: 24px;
+            font-weight: 800;
+            color: #A51C30;
+            line-height: 1;
+        }
+
+        .upcoming-date-month {
+            font-size: 12px;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+        }
+
+        .upcoming-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .upcoming-event-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .upcoming-event-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12px;
+            color: #64748B;
+        }
+
+        .upcoming-event-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .upcoming-event-meta svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .upcoming-category {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .upcoming-category.concert {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .upcoming-category.festival {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .upcoming-category.theater {
+            background: #F3E8FF;
+            color: #6B21A8;
+        }
+
+        .view-all-btn {
+            display: block;
+            text-align: center;
+            padding: 14px;
+            background: #F1F5F9;
+            border-radius: 12px;
+            color: #475569;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            margin-top: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .view-all-btn:hover {
+            background: #E2E8F0;
+            color: #1E293B;
+        }
+
+        /* ==================== FEATURED THIS MONTH ==================== */
+        .featured-section {
+            margin-top: 48px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .section-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #A51C30;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .section-link:hover {
+            text-decoration: underline;
+        }
+
+        .section-link svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .featured-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .featured-event-card {
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #E2E8F0;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .featured-event-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .featured-event-image {
+            height: 140px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .featured-event-date {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: white;
+            border-radius: 10px;
+            padding: 8px 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .featured-event-date-day {
+            font-size: 20px;
+            font-weight: 800;
+            color: #A51C30;
+            line-height: 1;
+        }
+
+        .featured-event-date-month {
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748B;
+            text-transform: uppercase;
+        }
+
+        .featured-event-content {
+            padding: 16px;
+        }
+
+        .featured-event-category {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #FEF2F2;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #A51C30;
+            margin-bottom: 8px;
+        }
+
+        .featured-event-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1E293B;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .featured-event-location {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #64748B;
+        }
+
+        .featured-event-location svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ==================== SUBSCRIBE SECTION ==================== */
+        .subscribe-section {
+            background: linear-gradient(135deg, #A51C30 0%, #7f1627 100%);
+            border-radius: 20px;
+            padding: 40px;
+            margin-top: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 32px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subscribe-section::before {
+            content: '';
+            position: absolute;
+            top: -50px;
+            right: -50px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        .subscribe-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .subscribe-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .subscribe-description {
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .subscribe-form {
+            display: flex;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subscribe-input {
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            color: white;
+            width: 300px;
+            outline: none;
+        }
+
+        .subscribe-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .subscribe-input:focus {
+            border-color: white;
+        }
+
+        .subscribe-btn {
+            padding: 16px 28px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            color: #A51C30;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .subscribe-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ==================== FOOTER ==================== */
+        .footer {
+            margin-top: 60px;
+            padding: 32px 24px;
+            border-top: 1px solid #E2E8F0;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 14px;
+            color: #94A3B8;
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .upcoming-events {
+                position: static;
+            }
+
+            .featured-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-hero-container {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .page-hero-content h1 {
+                font-size: 28px;
+            }
+
+            .calendar-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .calendar-nav {
+                justify-content: center;
+            }
+
+            .calendar-filters {
+                flex-direction: column;
+            }
+
+            .calendar-day {
+                min-height: 80px;
+                padding: 4px;
+            }
+
+            .day-number {
+                width: 24px;
+                height: 24px;
+                font-size: 12px;
+            }
+
+            .day-event {
+                font-size: 9px;
+                padding: 2px 4px;
+            }
+
+            .calendar-legend {
+                gap: 12px;
+            }
+
+            .featured-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .subscribe-section {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .subscribe-form {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .subscribe-input {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .calendar-header-day {
+                font-size: 10px;
+                padding: 10px 4px;
+            }
+
+            .view-toggle {
+                width: 100%;
+            }
+
+            .view-btn {
+                flex: 1;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="/" class="logo">
+            <div class="logo-icon">A</div>
+            <div class="logo-text">Ambi<span>let</span></div>
+        </a>
+    </header>
+
+    <!-- Page Hero -->
+    <section class="page-hero">
+        <div class="page-hero-container">
+            <div class="page-hero-content">
+                <h1>Calendar Evenimente</h1>
+                <p>Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.</p>
+            </div>
+            <div class="view-toggle">
+                <button class="view-btn active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Lună
+                </button>
+                <button class="view-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                    Listă
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <!-- Calendar Controls -->
+        <div class="calendar-controls">
+            <div class="calendar-nav">
+                <button class="calendar-nav-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+                <h2 class="calendar-current">Ianuarie 2025</h2>
+                <button class="calendar-nav-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
+                <button class="calendar-today-btn">Astăzi</button>
+            </div>
+            <div class="calendar-filters">
+                <select class="filter-select">
+                    <option value="">Toate categoriile</option>
+                    <option value="concerts">Concerte</option>
+                    <option value="festivals">Festivaluri</option>
+                    <option value="theater">Teatru</option>
+                    <option value="comedy">Stand-up</option>
+                    <option value="sport">Sport</option>
+                </select>
+                <select class="filter-select">
+                    <option value="">Toate orașele</option>
+                    <option value="bucuresti">București</option>
+                    <option value="cluj">Cluj-Napoca</option>
+                    <option value="timisoara">Timișoara</option>
+                    <option value="iasi">Iași</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-wrapper">
+            <div class="calendar-header">
+                <div class="calendar-header-day">Luni</div>
+                <div class="calendar-header-day">Marți</div>
+                <div class="calendar-header-day">Miercuri</div>
+                <div class="calendar-header-day">Joi</div>
+                <div class="calendar-header-day">Vineri</div>
+                <div class="calendar-header-day">Sâmbătă</div>
+                <div class="calendar-header-day">Duminică</div>
+            </div>
+            <div class="calendar-body">
+                <!-- Week 1 -->
+                <div class="calendar-day other-month">
+                    <div class="day-number">30</div>
+                </div>
+                <div class="calendar-day other-month">
+                    <div class="day-number">31</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">1</div>
+                    <div class="day-events">
+                        <div class="day-event concert">Concert Revelion</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">2</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">3</div>
+                    <div class="day-events">
+                        <div class="day-event theater">Hamlet - TNB</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">4</div>
+                    <div class="day-events">
+                        <div class="day-event comedy">Stand-up Micutzu</div>
+                        <div class="day-event concert">Carla's Dreams</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">5</div>
+                </div>
+
+                <!-- Week 2 -->
+                <div class="calendar-day">
+                    <div class="day-number">6</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">7</div>
+                    <div class="day-events">
+                        <div class="day-event sport">CFR vs Steaua</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">8</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">9</div>
+                    <div class="day-events">
+                        <div class="day-event theater">Opera Română</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">10</div>
+                    <div class="day-events">
+                        <div class="day-event concert">Subcarpați Live</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">11</div>
+                    <div class="day-events">
+                        <div class="day-event comedy">Comedy Cluj</div>
+                        <div class="day-event concert">Smiley</div>
+                        <div class="day-more">+2 mai multe</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">12</div>
+                </div>
+
+                <!-- Week 3 -->
+                <div class="calendar-day">
+                    <div class="day-number">13</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">14</div>
+                    <div class="day-events">
+                        <div class="day-event concert">Valentine's Concert</div>
+                    </div>
+                </div>
+                <div class="calendar-day today">
+                    <div class="day-number">15</div>
+                    <div class="day-events">
+                        <div class="day-event theater">Teatru Independent</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">16</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">17</div>
+                    <div class="day-events">
+                        <div class="day-event festival">Winter Fest</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">18</div>
+                    <div class="day-events">
+                        <div class="day-event festival">Winter Fest</div>
+                        <div class="day-event concert">Irina Rimes</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">19</div>
+                    <div class="day-events">
+                        <div class="day-event festival">Winter Fest</div>
+                    </div>
+                </div>
+
+                <!-- Week 4 -->
+                <div class="calendar-day">
+                    <div class="day-number">20</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">21</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">22</div>
+                    <div class="day-events">
+                        <div class="day-event comedy">Badea Show</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">23</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">24</div>
+                    <div class="day-events">
+                        <div class="day-event sport">Dinamo vs Rapid</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">25</div>
+                    <div class="day-events">
+                        <div class="day-event concert">Alternosfera</div>
+                        <div class="day-event theater">Balet</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">26</div>
+                </div>
+
+                <!-- Week 5 -->
+                <div class="calendar-day">
+                    <div class="day-number">27</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">28</div>
+                    <div class="day-events">
+                        <div class="day-event concert">The Motans</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">29</div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">30</div>
+                    <div class="day-events">
+                        <div class="day-event theater">Piesa de seară</div>
+                    </div>
+                </div>
+                <div class="calendar-day">
+                    <div class="day-number">31</div>
+                    <div class="day-events">
+                        <div class="day-event concert">End of Month Party</div>
+                    </div>
+                </div>
+                <div class="calendar-day other-month">
+                    <div class="day-number">1</div>
+                </div>
+                <div class="calendar-day other-month">
+                    <div class="day-number">2</div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <div class="legend-dot concert"></div>
+                    Concerte
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot festival"></div>
+                    Festivaluri
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot theater"></div>
+                    Teatru & Operă
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot comedy"></div>
+                    Stand-up
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot sport"></div>
+                    Sport
+                </div>
+            </div>
+        </div>
+
+        <!-- Featured This Month -->
+        <section class="featured-section">
+            <div class="section-header">
+                <h2 class="section-title">Recomandate luna aceasta</h2>
+                <a href="/events" class="section-link">
+                    Vezi toate
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="featured-grid">
+                <a href="/event/winter-fest" class="featured-event-card">
+                    <div class="featured-event-image" style="background-image: url('https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop')">
+                        <div class="featured-event-date">
+                            <div class="featured-event-date-day">17</div>
+                            <div class="featured-event-date-month">Ian</div>
+                        </div>
+                    </div>
+                    <div class="featured-event-content">
+                        <span class="featured-event-category">Festival</span>
+                        <h3 class="featured-event-title">Winter Fest 2025</h3>
+                        <p class="featured-event-location">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            Romexpo, București
+                        </p>
+                    </div>
+                </a>
+
+                <a href="/event/subcarpati" class="featured-event-card">
+                    <div class="featured-event-image" style="background-image: url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=200&fit=crop')">
+                        <div class="featured-event-date">
+                            <div class="featured-event-date-day">10</div>
+                            <div class="featured-event-date-month">Ian</div>
+                        </div>
+                    </div>
+                    <div class="featured-event-content">
+                        <span class="featured-event-category">Concert</span>
+                        <h3 class="featured-event-title">Subcarpați Live</h3>
+                        <p class="featured-event-location">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            Arenele Romane
+                        </p>
+                    </div>
+                </a>
+
+                <a href="/event/hamlet" class="featured-event-card">
+                    <div class="featured-event-image" style="background-image: url('https://images.unsplash.com/photo-1503095396549-807759245b35?w=400&h=200&fit=crop')">
+                        <div class="featured-event-date">
+                            <div class="featured-event-date-day">3</div>
+                            <div class="featured-event-date-month">Ian</div>
+                        </div>
+                    </div>
+                    <div class="featured-event-content">
+                        <span class="featured-event-category">Teatru</span>
+                        <h3 class="featured-event-title">Hamlet - Premieră</h3>
+                        <p class="featured-event-location">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            TNB, București
+                        </p>
+                    </div>
+                </a>
+
+                <a href="/event/micutzu" class="featured-event-card">
+                    <div class="featured-event-image" style="background-image: url('https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=200&fit=crop')">
+                        <div class="featured-event-date">
+                            <div class="featured-event-date-day">4</div>
+                            <div class="featured-event-date-month">Ian</div>
+                        </div>
+                    </div>
+                    <div class="featured-event-content">
+                        <span class="featured-event-category">Stand-up</span>
+                        <h3 class="featured-event-title">Micutzu - Show Nou</h3>
+                        <p class="featured-event-location">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            Sala Palatului
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Subscribe Section -->
+        <section class="subscribe-section">
+            <div class="subscribe-content">
+                <h2 class="subscribe-title">Nu rata niciun eveniment!</h2>
+                <p class="subscribe-description">Primește notificări când apar evenimente noi în orașul tău.</p>
+            </div>
+            <form class="subscribe-form">
+                <input type="email" class="subscribe-input" placeholder="Adresa ta de email">
+                <button type="submit" class="subscribe-btn">Abonează-te</button>
+            </form>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">© 2024 Ambilet.ro. Toate drepturile rezervate.</p>
+    </footer>
+</body>
+</html>

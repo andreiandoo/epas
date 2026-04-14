@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vânzări — Portal Organizator — Ambilet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="min-h-screen bg-surface font-sans">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:block">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold">AMBILET</span>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1">
+            <a href="/organizer/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="/organizer/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Evenimente
+            </a>
+            <a href="/organizer/sales.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                Vânzări
+            </a>
+            <a href="/organizer/participants.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
+                Participanți
+            </a>
+            <a href="/organizer/finance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Finanțe
+            </a>
+            <a href="/organizer/promo.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                Coduri Promo
+            </a>
+            <a href="/organizer/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Setări
+            </a>
+            <a href="/organizer/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Ajutor
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+            <button onclick="logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors w-full">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button onclick="toggleMobileMenu()" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-secondary">AMBILET</span>
+            </a>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Vânzări</h1>
+                    <p class="text-muted mt-1">Monitorizează vânzările și performanța evenimentelor tale</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <select id="period-filter" class="form-select">
+                        <option value="7">Ultimele 7 zile</option>
+                        <option value="30" selected>Ultimele 30 zile</option>
+                        <option value="90">Ultimele 90 zile</option>
+                        <option value="365">Ultimul an</option>
+                    </select>
+                    <button onclick="exportSales()" class="btn btn-secondary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Venituri Totale</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-revenue">0 RON</p>
+                    <p class="text-sm text-success mt-1">+12.5% față de luna trecută</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Bilete Vândute</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="tickets-sold">0</p>
+                    <p class="text-sm text-success mt-1">+8.3% față de luna trecută</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Comenzi</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-orders">0</p>
+                    <p class="text-sm text-success mt-1">+5.2% față de luna trecută</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Valoare Medie</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="avg-order">0 RON</p>
+                    <p class="text-sm text-muted mt-1">per comandă</p>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid lg:grid-cols-2 gap-6 mb-8">
+                <!-- Sales Chart -->
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-lg font-bold text-secondary">Evoluție Vânzări</h2>
+                        <div class="flex items-center gap-2">
+                            <button onclick="setChartType('revenue')" class="chart-tab active px-3 py-1 text-sm rounded-lg" data-type="revenue">Venituri</button>
+                            <button onclick="setChartType('tickets')" class="chart-tab px-3 py-1 text-sm rounded-lg text-muted hover:bg-surface" data-type="tickets">Bilete</button>
+                        </div>
+                    </div>
+                    <canvas id="salesChart" height="250"></canvas>
+                </div>
+
+                <!-- Sales by Event -->
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-lg font-bold text-secondary mb-6">Vânzări per Eveniment</h2>
+                    <canvas id="eventsChart" height="250"></canvas>
+                </div>
+            </div>
+
+            <!-- Recent Orders Table -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="p-6 border-b border-border">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-secondary">Comenzi Recente</h2>
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="search-orders" placeholder="Caută comenzi..." class="form-input pl-10 w-64">
+                                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <select id="status-filter" class="form-select">
+                                <option value="">Toate statusurile</option>
+                                <option value="completed">Finalizate</option>
+                                <option value="pending">În așteptare</option>
+                                <option value="refunded">Rambursate</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-surface">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Comandă</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Client</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Eveniment</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Bilete</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Total</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Status</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Data</th>
+                                <th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-list" class="divide-y divide-border">
+                            <!-- Orders will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="p-6 border-t border-border">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm text-muted">Afișare <span id="showing-start">1</span>-<span id="showing-end">10</span> din <span id="total-count">0</span> comenzi</p>
+                        <div class="flex items-center gap-2">
+                            <button onclick="prevPage()" class="btn btn-secondary btn-sm" id="prev-btn" disabled>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                                </svg>
+                            </button>
+                            <span class="px-3 py-1 text-sm text-secondary">Pagina <span id="current-page">1</span></span>
+                            <button onclick="nextPage()" class="btn btn-secondary btn-sm" id="next-btn">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-black/50 z-50 hidden lg:hidden">
+        <aside class="w-64 h-full bg-secondary text-white">
+            <div class="p-6 border-b border-white/10 flex items-center justify-between">
+                <a href="/" class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold">AMBILET</span>
+                </a>
+                <button onclick="toggleMobileMenu()" class="p-2 hover:bg-white/10 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <nav class="p-4 space-y-1">
+                <a href="/organizer/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+                <a href="/organizer/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+                <a href="/organizer/sales.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Vânzări</a>
+                <a href="/organizer/participants.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Participanți</a>
+                <a href="/organizer/finance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Finanțe</a>
+                <a href="/organizer/promo.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Coduri Promo</a>
+                <a href="/organizer/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Setări</a>
+                <a href="/organizer/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Ajutor</a>
+            </nav>
+        </aside>
+    </div>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script>
+        let salesChart, eventsChart;
+        let currentPage = 1;
+        const perPage = 10;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            AmbiletAuth.requireOrganizerAuth();
+            initCharts();
+            loadSalesData();
+            loadOrders();
+        });
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        function initCharts() {
+            // Sales Chart
+            const salesCtx = document.getElementById('salesChart').getContext('2d');
+            salesChart = new Chart(salesCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Venituri',
+                        data: [],
+                        borderColor: '#A51C30',
+                        backgroundColor: 'rgba(165, 28, 48, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return AmbiletUtils.formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Events Chart
+            const eventsCtx = document.getElementById('eventsChart').getContext('2d');
+            eventsChart = new Chart(eventsCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#A51C30',
+                            '#E67E22',
+                            '#10B981',
+                            '#3B82F6',
+                            '#8B5CF6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadSalesData() {
+            const period = document.getElementById('period-filter').value;
+
+            try {
+                const response = await AmbiletAPI.get(`/organizer/sales?period=${period}`);
+
+                if (response.success) {
+                    const data = response.data;
+
+                    // Update stats
+                    document.getElementById('total-revenue').textContent = AmbiletUtils.formatCurrency(data.total_revenue || 0);
+                    document.getElementById('tickets-sold').textContent = AmbiletUtils.formatNumber(data.tickets_sold || 0);
+                    document.getElementById('total-orders').textContent = AmbiletUtils.formatNumber(data.total_orders || 0);
+                    document.getElementById('avg-order').textContent = AmbiletUtils.formatCurrency(data.avg_order_value || 0);
+
+                    // Update sales chart
+                    if (data.chart_data) {
+                        salesChart.data.labels = data.chart_data.labels;
+                        salesChart.data.datasets[0].data = data.chart_data.revenue;
+                        salesChart.update();
+                    }
+
+                    // Update events chart
+                    if (data.sales_by_event) {
+                        eventsChart.data.labels = data.sales_by_event.map(e => e.name);
+                        eventsChart.data.datasets[0].data = data.sales_by_event.map(e => e.revenue);
+                        eventsChart.update();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading sales data:', error);
+                loadMockSalesData();
+            }
+        }
+
+        function loadMockSalesData() {
+            // Mock data for demo
+            document.getElementById('total-revenue').textContent = AmbiletUtils.formatCurrency(45250);
+            document.getElementById('tickets-sold').textContent = AmbiletUtils.formatNumber(312);
+            document.getElementById('total-orders').textContent = AmbiletUtils.formatNumber(145);
+            document.getElementById('avg-order').textContent = AmbiletUtils.formatCurrency(312);
+
+            const labels = ['1 Dec', '5 Dec', '10 Dec', '15 Dec', '20 Dec', '25 Dec', '30 Dec'];
+            const revenue = [2500, 4200, 3800, 5100, 6500, 8200, 9500];
+
+            salesChart.data.labels = labels;
+            salesChart.data.datasets[0].data = revenue;
+            salesChart.update();
+
+            eventsChart.data.labels = ['Concert Revelion', 'Festival Folk', 'Stand-up Comedy', 'Teatru', 'Altele'];
+            eventsChart.data.datasets[0].data = [15000, 12000, 8500, 6000, 3750];
+            eventsChart.update();
+        }
+
+        async function loadOrders() {
+            const search = document.getElementById('search-orders').value;
+            const status = document.getElementById('status-filter').value;
+
+            try {
+                const response = await AmbiletAPI.get(`/organizer/orders?page=${currentPage}&per_page=${perPage}&search=${search}&status=${status}`);
+
+                if (response.success) {
+                    renderOrders(response.data.orders);
+                    updatePagination(response.data.pagination);
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                loadMockOrders();
+            }
+        }
+
+        function loadMockOrders() {
+            const mockOrders = [
+                { id: 'ORD-2024-001', customer: 'Maria Ionescu', email: 'maria@email.com', event: 'Concert Revelion 2025', tickets: 2, total: 350, status: 'completed', date: '2024-12-26' },
+                { id: 'ORD-2024-002', customer: 'Ion Popescu', email: 'ion@email.com', event: 'Festival Folk', tickets: 4, total: 480, status: 'completed', date: '2024-12-25' },
+                { id: 'ORD-2024-003', customer: 'Elena Marin', email: 'elena@email.com', event: 'Stand-up Comedy', tickets: 2, total: 120, status: 'pending', date: '2024-12-24' },
+                { id: 'ORD-2024-004', customer: 'Andrei Stan', email: 'andrei@email.com', event: 'Concert Revelion 2025', tickets: 1, total: 175, status: 'completed', date: '2024-12-23' },
+                { id: 'ORD-2024-005', customer: 'Ana Gheorghe', email: 'ana@email.com', event: 'Teatru Clasic', tickets: 3, total: 270, status: 'refunded', date: '2024-12-22' },
+            ];
+
+            renderOrders(mockOrders);
+            document.getElementById('total-count').textContent = mockOrders.length;
+            document.getElementById('showing-end').textContent = mockOrders.length;
+        }
+
+        function renderOrders(orders) {
+            const container = document.getElementById('orders-list');
+
+            if (!orders || orders.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-muted">
+                            Nu există comenzi pentru această perioadă
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <tr class="hover:bg-surface/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <span class="font-medium text-secondary">${order.id}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div>
+                            <p class="font-medium text-secondary">${order.customer}</p>
+                            <p class="text-sm text-muted">${order.email}</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-secondary">${order.event}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-secondary">${order.tickets} bilet${order.tickets > 1 ? 'e' : ''}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency(order.total)}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        ${getStatusBadge(order.status)}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-muted">${AmbiletUtils.formatDate(order.date)}</span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="viewOrder('${order.id}')" class="text-primary hover:text-primary-dark">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                completed: '<span class="px-3 py-1 bg-success/10 text-success text-sm font-medium rounded-full">Finalizată</span>',
+                pending: '<span class="px-3 py-1 bg-warning/10 text-warning text-sm font-medium rounded-full">În așteptare</span>',
+                refunded: '<span class="px-3 py-1 bg-muted/10 text-muted text-sm font-medium rounded-full">Rambursată</span>'
+            };
+            return badges[status] || badges.pending;
+        }
+
+        function updatePagination(pagination) {
+            if (!pagination) return;
+
+            document.getElementById('showing-start').textContent = (pagination.current_page - 1) * perPage + 1;
+            document.getElementById('showing-end').textContent = Math.min(pagination.current_page * perPage, pagination.total);
+            document.getElementById('total-count').textContent = pagination.total;
+            document.getElementById('current-page').textContent = pagination.current_page;
+
+            document.getElementById('prev-btn').disabled = pagination.current_page <= 1;
+            document.getElementById('next-btn').disabled = pagination.current_page >= pagination.last_page;
+        }
+
+        function setChartType(type) {
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.classList.remove('active', 'bg-primary', 'text-white');
+                tab.classList.add('text-muted', 'hover:bg-surface');
+            });
+
+            const activeTab = document.querySelector(`.chart-tab[data-type="${type}"]`);
+            activeTab.classList.add('active', 'bg-primary', 'text-white');
+            activeTab.classList.remove('text-muted', 'hover:bg-surface');
+
+            // Would reload chart with different data type
+        }
+
+        function exportSales() {
+            AmbiletUtils.showToast('Exportul a fost generat și trimis pe email', 'success');
+        }
+
+        function viewOrder(orderId) {
+            window.location.href = `/organizer/order-details.html?id=${orderId}`;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadOrders();
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            loadOrders();
+        }
+
+        function logout() {
+            AmbiletAuth.logoutOrganizer();
+            window.location.href = '/organizer/login.html';
+        }
+
+        // Event listeners
+        document.getElementById('period-filter').addEventListener('change', loadSalesData);
+        document.getElementById('search-orders').addEventListener('input', AmbiletUtils.debounce(loadOrders, 300));
+        document.getElementById('status-filter').addEventListener('change', loadOrders);
+    </script>
+</body>
+</html>

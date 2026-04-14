@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilete — Redesign v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={darkMode:'class'}</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0f111a;font-family:'Inter',ui-sans-serif,sans-serif;color:#e2e8f0;padding:24px;}
+:root{
+  --bg:#0f111a;--card:#161923;--section:#1a1e2e;--row:#1e2236;--hover:#222640;
+  --border:#272c42;--border2:#323859;
+  --brand:#10b981;--brand-d:#065f46;--brand-f:#022c1e;
+  --txt-1:#e2e8f0;--txt-2:#8892a4;--txt-3:#4b5468;--txt-4:#2e3449;
+  --danger:#ef4444;--danger-d:#3b0f0f;--warn:#f59e0b;--info:#3b82f6;
+}
+.tog{position:relative;display:inline-flex;align-items:center;cursor:pointer;flex-shrink:0;}
+.tog input{opacity:0;width:0;height:0;position:absolute;}
+.tog-t{width:32px;height:18px;background:#272c42;border-radius:9px;border:1px solid #323859;transition:background .18s;flex-shrink:0;}
+.tog input:checked+.tog-t{background:var(--brand);border-color:var(--brand);}
+.tog-th{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#4b5468;border-radius:50%;transition:transform .18s,background .18s;pointer-events:none;}
+.tog input:checked~.tog-th{transform:translateX(14px);background:#fff;}
+.fi{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--txt-1);font-size:12.5px;outline:none;transition:border-color .15s;}
+.fi:focus{border-color:var(--brand);box-shadow:0 0 0 2px rgba(16,185,129,.1);}
+.fi::placeholder{color:var(--txt-4);}
+.fi[type=number]{text-align:right;}
+textarea.fi{resize:vertical;line-height:1.5;}
+.fs{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 9px;color:var(--txt-1);font-size:12.5px;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%234b5468' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;cursor:pointer;}
+.fs:focus{border-color:var(--brand);outline:none;}
+.fl{font-size:10.5px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.055em;display:block;margin-bottom:3px;}
+.bi{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:5px;border:1px solid transparent;background:transparent;cursor:pointer;transition:all .15s;color:var(--txt-3);flex-shrink:0;}
+.bi:hover{background:var(--section);border-color:var(--border);color:var(--txt-2);}
+.bi.d:hover{background:var(--danger-d);border-color:#7f1d1d;color:var(--danger);}
+.bs{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer;transition:all .15s;border:1px solid var(--border);background:var(--section);color:var(--txt-2);}
+.bs:hover{background:var(--hover);border-color:var(--border2);color:var(--txt-1);}
+.bs.g{background:var(--brand-f);border-color:var(--brand-d);color:var(--brand);}
+.bs.g:hover{background:var(--brand-d);}
+.add-row{display:flex;align-items:center;justify-content:center;gap:5px;width:100%;padding:6px;border:1px dashed var(--border);border-radius:6px;color:var(--txt-3);font-size:11.5px;cursor:pointer;background:transparent;transition:all .15s;margin-top:5px;}
+.add-row:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-f);}
+.sec-hd{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--section);border-radius:6px;cursor:pointer;user-select:none;transition:background .15s;}
+.sec-hd:hover{background:var(--hover);}
+.sec-hd .chev{transition:transform .18s;flex-shrink:0;}
+.sec-body{display:none;padding-top:8px;}
+.sec-body.open{display:block;}
+.tcard{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+.thead{display:flex;align-items:center;gap:8px;padding:9px 13px;background:var(--card);cursor:pointer;transition:background .15s;user-select:none;}
+.thead:hover{background:var(--section);}
+.thead .chev{transition:transform .18s;flex-shrink:0;}
+.tcard.collapsed .thead .chev{transform:rotate(-90deg);}
+.tcard.collapsed .tbody{display:none;}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.blk{padding:10px 13px;border-top:1px solid var(--section);}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:7px;}
+.g5{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:7px;}
+.bdg{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:10.5px;font-weight:600;}
+.bg{background:var(--brand-f);color:var(--brand);border:1px solid var(--brand-d);}
+.bb{background:#0d1f3b;color:#60a5fa;border:1px solid #1e3a6e;}
+.bgy{background:var(--section);color:var(--txt-2);border:1px solid var(--border);}
+.br{background:var(--danger-d);color:#f87171;border:1px solid #7f1d1d;}
+.bw{background:#1c1400;color:#fbbf24;border:1px solid #92400e;}
+.cond-panel{display:none;padding:9px 10px;background:var(--bg);border:1px solid var(--border);border-radius:7px;margin-top:7px;}
+.cond-panel.open{display:block;}
+.info-box{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:9px 10px;}
+.prow{display:grid;grid-template-columns:1fr 90px 80px 26px;gap:5px;align-items:center;}
+.prow+.prow{margin-top:4px;}
+.crow{display:grid;grid-template-columns:1fr 26px;gap:5px;align-items:center;}
+.crow+.crow{margin-top:4px;}
+input[type=checkbox]{width:14px;height:14px;accent-color:var(--brand);cursor:pointer;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div style="max-width:880px;margin:0 auto;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;">
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span style="font-size:14px;font-weight:700;color:var(--txt-1);">Bilete</span>
+      <span class="bdg bg">3 tipuri</span>
+    </div>
+    <button class="bs g">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+      Adaugă tip bilet
+    </button>
+  </div>
+
+
+  <!-- ══════════ TICKET 1 — Standard (expanded) ══════════ -->
+  <div class="tcard" id="t1">
+    <div class="thead" onclick="togTicket('t1')">
+      <div class="tdot" style="background:#10b981;"></div>
+      <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      <span style="font-size:13px;font-weight:600;flex:1;">Standard</span>
+      <span class="bdg bgy" style="margin-right:6px;">STD</span>
+      <span style="font-size:11.5px;color:var(--txt-3);margin-right:10px;">50 RON · 100 buc</span>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;align-items:center;gap:10px;margin-right:10px;">
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">App</span><label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label></div>
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">Publicat</span><label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label></div>
+      </div>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;gap:3px;">
+        <button class="bi" title="Duplică"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        <button class="bi d" title="Șterge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+      </div>
+    </div>
+
+    <div class="tbody">
+
+      <!-- 1. Identificare -->
+      <div class="blk">
+        <div class="g5">
+          <div><label class="fl">Nume</label><input class="fi" type="text" value="Standard"></div>
+          <div><label class="fl">SKU</label><input class="fi" type="text" value="STD" style="font-family:monospace;"></div>
+          <div><label class="fl">Preț (RON)</label><input class="fi" type="number" value="50"></div>
+          <div><label class="fl">Stoc total</label><input class="fi" type="number" value="100"></div>
+          <div><label class="fl">Afișare stoc</label><select class="fs"><option>Bilete rămase</option><option>Fără afișare</option><option>Sold out</option></select></div>
+        </div>
+        <div class="g4" style="margin-top:7px;">
+          <div><label class="fl">Grup</label><select class="fs"><option value="">— fără grup —</option><option>Categoria A</option><option>Categoria B</option></select></div>
+          <div><label class="fl">Min / tranzacție</label><input class="fi" type="number" value="1"></div>
+          <div><label class="fl">Max / tranzacție</label><input class="fi" type="number" value="10"></div>
+          <div><label class="fl">Multiplicator</label><input class="fi" type="number" value="1"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:7px;align-items:end;">
+          <div><label class="fl">Note interne</label><input class="fi" type="text" placeholder="Vizibil doar în admin…"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:80px;">
+            <span style="font-size:10.5px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.05em;">Returnabil</span>
+            <label class="tog"><input type="checkbox"><div class="tog-t"></div><div class="tog-th"></div></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Prețuri per reprezentație -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd open" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Prețuri per reprezentație</span>
+            <span class="bdg bg">2</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body open">
+          <div class="info-box">
+            <div class="prow" style="margin-bottom:5px;">
+              <span style="font-size:10px;font-weight:700;color:var(--txt-4);text-transform:uppercase;letter-spacing:.05em;padding-left:4px;">Reprezentație</span>
+              <span style="font-size:10px;font-weight:700;color:var(--txt-4);text-transform:uppercase;text-align:right;">Preț</span>
+              <span style="font-size:10px;font-weight:700;color:var(--txt-4);text-transform:uppercase;text-align:right;">Stoc</span>
+              <span></span>
+            </div>
+            <div class="prow">
+              <div style="display:flex;align-items:center;gap:5px;background:var(--section);border:1px solid var(--border);border-radius:5px;padding:5px 8px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span style="font-size:11.5px;color:var(--txt-2);">Joi, 24 Iun 2026 · 19:00</span></div>
+              <input class="fi" type="number" value="50">
+              <input class="fi" type="number" value="80">
+              <button class="bi d"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div class="prow">
+              <div style="display:flex;align-items:center;gap:5px;background:var(--section);border:1px solid var(--border);border-radius:5px;padding:5px 8px;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span style="font-size:11.5px;color:var(--txt-2);">Sâm, 10 Mar 2026 · 21:00</span></div>
+              <input class="fi" type="number" value="60">
+              <input class="fi" type="number" value="50">
+              <button class="bi d"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <button class="add-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Adaugă prețuri</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Comision personalizat -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 9h.01M15 15h.01M16 8l-8 8"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Comision personalizat</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2" style="transform:rotate(-90deg);"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="g3">
+            <div><label class="fl">Tip comision</label><select class="fs"><option>Procentual</option><option>Fix (RON)</option><option>Mixt</option></select></div>
+            <div><label class="fl">Procent (%)</label><input class="fi" type="number" placeholder="0.00" step="0.01"></div>
+            <div><label class="fl">Mod comision</label><select class="fs"><option>Adăugat la preț</option><option>Inclus în preț</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Condiții & Beneficii -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01z"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Condiții & beneficii</span>
+            <span class="bdg bgy">2</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2" style="transform:rotate(-90deg);"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="info-box">
+            <div class="crow"><input class="fi" type="text" value="Include o băutură"><button class="bi d"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+            <div class="crow"><input class="fi" type="text" value="Acces VIP lounge"><button class="bi d"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+            <button class="add-row"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>Adaugă condiție</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Disponibilitate -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd open" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Disponibilitate</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body open">
+          <!-- Activ toggle row -->
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label class="tog"><input type="checkbox" checked id="activ-t1" onchange="togActiv(this,'inactiv-t1','activ-until-t1')"><div class="tog-t"></div><div class="tog-th"></div></label>
+            <span style="font-size:12.5px;font-weight:500;color:var(--txt-1);">Activ</span>
+            <!-- shown when Activ = ON -->
+            <div id="activ-until-t1" style="display:flex;align-items:center;gap:7px;">
+              <span style="font-size:11.5px;color:var(--txt-3);">până la</span>
+              <input class="fi" type="datetime-local" style="width:200px;">
+              <span style="font-size:11px;color:var(--txt-4);">(gol = fără limită)</span>
+            </div>
+          </div>
+          <!-- shown when Activ = OFF -->
+          <div id="inactiv-t1" class="cond-panel" style="border-color:#1e2236;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+              <span class="bdg br">Inactiv</span>
+              <span style="font-size:11.5px;color:var(--txt-3);">Configurează activare automată</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+              <input type="checkbox" id="as-t1">
+              <label for="as-t1" style="font-size:12.5px;color:var(--txt-2);cursor:pointer;">Autostart când precedentul tip e sold out</label>
+            </div>
+            <div><label class="fl">Programează activare</label><input class="fi" type="datetime-local" style="max-width:240px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Reducere -->
+      <div class="blk" style="padding-top:0;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <label class="tog"><input type="checkbox" id="red-t1" onchange="togEl(this,'red-fields-t1')"><div class="tog-t"></div><div class="tog-th"></div></label>
+          <span style="font-size:12px;font-weight:600;color:var(--txt-2);">Reducere</span>
+        </div>
+        <div id="red-fields-t1" class="cond-panel">
+          <div class="g3" style="margin-bottom:7px;">
+            <div><label class="fl">Preț promoțional (RON)</label><input class="fi" type="number" placeholder="0.00"></div>
+            <div><label class="fl">Reducere (%)</label><input class="fi" type="number" placeholder="0"></div>
+            <div><label class="fl">Stoc reducere</label><input class="fi" type="number" placeholder="—"></div>
+          </div>
+          <div class="g2">
+            <div><label class="fl">Început reducere</label><input class="fi" type="datetime-local"></div>
+            <div><label class="fl">Sfârșit reducere</label><input class="fi" type="datetime-local"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Serie bilete -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M2 9V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4"/><path d="M2 15v4a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-4"/><path d="M2 12h20"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Serie bilete</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2" style="transform:rotate(-90deg);"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body">
+          <div class="g3">
+            <div><label class="fl">Start</label><input class="fi" type="text" value="ABR-0001-8001-00001" style="font-family:monospace;font-size:11px;"></div>
+            <div><label class="fl">Sfârșit</label><input class="fi" type="text" value="ABR-0001-8001-00055" style="font-family:monospace;font-size:11px;"></div>
+            <div><label class="fl">Sufix</label><select class="fs"><option>Cu sufix</option><option>Fără sufix</option></select></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════ TICKET 2 — VIP (collapsed, inactiv+reducere demo) ══════════ -->
+  <div class="tcard collapsed" id="t2">
+    <div class="thead" onclick="togTicket('t2')">
+      <div class="tdot" style="background:#3b82f6;"></div>
+      <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      <span style="font-size:13px;font-weight:600;flex:1;">VIP</span>
+      <span class="bdg bgy" style="margin-right:6px;">VIP</span>
+      <span class="bdg br" style="margin-right:6px;">Inactiv</span>
+      <span class="bdg bw" style="margin-right:8px;">-15%</span>
+      <span style="font-size:11.5px;color:var(--txt-3);margin-right:10px;">120 RON · 30 buc</span>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;align-items:center;gap:10px;margin-right:10px;">
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">App</span><label class="tog"><input type="checkbox"><div class="tog-t"></div><div class="tog-th"></div></label></div>
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">Publicat</span><label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label></div>
+      </div>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;gap:3px;">
+        <button class="bi"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        <button class="bi d"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+      </div>
+    </div>
+    <div class="tbody">
+      <div class="blk">
+        <div class="g5">
+          <div><label class="fl">Nume</label><input class="fi" type="text" value="VIP"></div>
+          <div><label class="fl">SKU</label><input class="fi" type="text" value="VIP" style="font-family:monospace;"></div>
+          <div><label class="fl">Preț (RON)</label><input class="fi" type="number" value="120"></div>
+          <div><label class="fl">Stoc total</label><input class="fi" type="number" value="30"></div>
+          <div><label class="fl">Afișare stoc</label><select class="fs"><option>Bilete rămase</option><option selected>Sold out</option></select></div>
+        </div>
+        <div class="g4" style="margin-top:7px;">
+          <div><label class="fl">Grup</label><select class="fs"><option value="">— fără grup —</option><option selected>Categoria VIP</option></select></div>
+          <div><label class="fl">Min / tranzacție</label><input class="fi" type="number" value="1"></div>
+          <div><label class="fl">Max / tranzacție</label><input class="fi" type="number" value="4"></div>
+          <div><label class="fl">Multiplicator</label><input class="fi" type="number" value="1"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:7px;align-items:end;">
+          <div><label class="fl">Note interne</label><input class="fi" type="text" value="Acces backstage inclus"></div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;min-width:80px;">
+            <span style="font-size:10.5px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.05em;">Returnabil</span>
+            <label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comision -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd open" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 9h.01M15 15h.01M16 8l-8 8"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Comision personalizat</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body open">
+          <div class="g3">
+            <div><label class="fl">Tip comision</label><select class="fs"><option selected>Procentual</option><option>Fix (RON)</option><option>Mixt</option></select></div>
+            <div><label class="fl">Procent (%)</label><input class="fi" type="number" value="2.5"></div>
+            <div><label class="fl">Mod comision</label><select class="fs"><option>Adăugat la preț</option><option selected>Inclus în preț</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disponibilitate — Inactiv -->
+      <div class="blk" style="padding-top:0;">
+        <div class="sec-hd open" onclick="togSec(this)">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <span style="font-size:11.5px;font-weight:600;color:var(--txt-2);">Disponibilitate</span>
+            <span class="bdg br">Inactiv</span>
+          </div>
+          <svg class="chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div class="sec-body open">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label class="tog"><input type="checkbox" id="activ-t2" onchange="togActiv(this,'inactiv-t2','activ-until-t2')"><div class="tog-t"></div><div class="tog-th"></div></label>
+            <span style="font-size:12.5px;font-weight:500;color:var(--txt-2);">Activ</span>
+            <div id="activ-until-t2" style="display:none;align-items:center;gap:7px;"><span style="font-size:11.5px;color:var(--txt-3);">până la</span><input class="fi" type="datetime-local" style="width:200px;"></div>
+          </div>
+          <div id="inactiv-t2" class="cond-panel open" style="border-color:#1e2236;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><span class="bdg br">Inactiv</span><span style="font-size:11.5px;color:var(--txt-3);">Configurează activare automată</span></div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+              <input type="checkbox" id="as-t2" checked>
+              <label for="as-t2" style="font-size:12.5px;color:var(--txt-2);cursor:pointer;">Autostart când precedentul tip e sold out</label>
+            </div>
+            <div><label class="fl">Programează activare</label><input class="fi" type="datetime-local" value="2026-05-01T10:00" style="max-width:240px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reducere — activa demo -->
+      <div class="blk" style="padding-top:0;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <label class="tog"><input type="checkbox" id="red-t2" onchange="togEl(this,'red-fields-t2')" checked><div class="tog-t"></div><div class="tog-th"></div></label>
+          <span style="font-size:12px;font-weight:600;color:var(--txt-2);">Reducere</span>
+          <span class="bdg bw">-15%</span>
+        </div>
+        <div id="red-fields-t2" class="cond-panel open">
+          <div class="g3" style="margin-bottom:7px;">
+            <div><label class="fl">Preț promoțional (RON)</label><input class="fi" type="number" value="102"></div>
+            <div><label class="fl">Reducere (%)</label><input class="fi" type="number" value="15"></div>
+            <div><label class="fl">Stoc reducere</label><input class="fi" type="number" value="10"></div>
+          </div>
+          <div class="g2">
+            <div><label class="fl">Început reducere</label><input class="fi" type="datetime-local" value="2026-04-01T00:00"></div>
+            <div><label class="fl">Sfârșit reducere</label><input class="fi" type="datetime-local" value="2026-04-15T23:59"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════ TICKET 3 — Early Bird (collapsed) ══════════ -->
+  <div class="tcard collapsed" id="t3">
+    <div class="thead" onclick="togTicket('t3')">
+      <div class="tdot" style="background:#f59e0b;"></div>
+      <svg class="chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--txt-3)" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      <span style="font-size:13px;font-weight:600;flex:1;">Early Bird</span>
+      <span class="bdg bgy" style="margin-right:6px;">EARLY</span>
+      <span style="font-size:11.5px;color:var(--txt-3);margin-right:10px;">35 RON · 200 buc</span>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;align-items:center;gap:10px;margin-right:10px;">
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">App</span><label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label></div>
+        <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--txt-3);">Publicat</span><label class="tog"><input type="checkbox" checked><div class="tog-t"></div><div class="tog-th"></div></label></div>
+      </div>
+      <div onclick="e=>e.stopPropagation()" style="display:flex;gap:3px;">
+        <button class="bi"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+        <button class="bi d"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg></button>
+      </div>
+    </div>
+    <div class="tbody">
+      <div class="blk">
+        <div class="g5">
+          <div><label class="fl">Nume</label><input class="fi" type="text" value="Early Bird"></div>
+          <div><label class="fl">SKU</label><input class="fi" type="text" value="EARLY" style="font-family:monospace;"></div>
+          <div><label class="fl">Preț (RON)</label><input class="fi" type="number" value="35"></div>
+          <div><label class="fl">Stoc total</label><input class="fi" type="number" value="200"></div>
+          <div><label class="fl">Afișare stoc</label><select class="fs"><option selected>Bilete rămase</option></select></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add button -->
+  <button class="add-row" style="padding:11px;border-radius:8px;font-size:13px;margin-top:0;">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Adaugă tip de bilet
+  </button>
+
+  <!-- Save bar -->
+  <div style="display:flex;align-items:center;justify-content:flex-end;gap:7px;margin-top:18px;padding-top:14px;border-top:1px solid var(--section);">
+    <button class="bs">Anulează</button>
+    <button class="bs g" style="padding:6px 18px;font-size:13px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17,21 17,13 7,13"/><polyline points="7,3 7,8 15,8"/></svg>
+      Salvează biletele
+    </button>
+  </div>
+
+</div>
+
+<script>
+function togTicket(id){document.getElementById(id).classList.toggle('collapsed');}
+
+function togSec(hd){
+  const body=hd.nextElementSibling;
+  const chev=hd.querySelector('.chev');
+  hd.classList.toggle('open');
+  body.classList.toggle('open');
+  if(chev) chev.style.transform=body.classList.contains('open')?'':'rotate(-90deg)';
+}
+
+function togEl(cb, panelId){
+  const p=document.getElementById(panelId);
+  if(p) cb.checked?p.classList.add('open'):p.classList.remove('open');
+}
+
+function togActiv(cb, inactivId, activUntilId){
+  const inactiv=document.getElementById(inactivId);
+  const until=document.getElementById(activUntilId);
+  if(cb.checked){
+    inactiv.classList.remove('open');
+    if(until) until.style.display='flex';
+  } else {
+    inactiv.classList.add('open');
+    if(until) until.style.display='none';
+  }
+}
+// init t1 Activ=checked
+document.getElementById('activ-t1').dispatchEvent(new Event('change'));
+</script>
+</body>
+</html>

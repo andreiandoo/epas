@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parteneri — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 100px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -300px; right: -300px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(165, 28, 48, 0.15) 0%, transparent 70%); }
+        .hero::after { content: ''; position: absolute; bottom: -200px; left: -200px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(165, 28, 48, 0.1) 0%, transparent 70%); }
+        .hero-content { max-width: 900px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(165, 28, 48, 0.2); border: 1px solid rgba(165, 28, 48, 0.3); border-radius: 100px; font-size: 13px; font-weight: 600; color: #f87171; margin-bottom: 24px; }
+        .hero h1 { font-size: 56px; font-weight: 800; color: white; margin-bottom: 20px; letter-spacing: -1.5px; line-height: 1.1; }
+        .hero p { font-size: 20px; color: rgba(255,255,255,0.7); line-height: 1.6; max-width: 700px; margin: 0 auto; }
+
+        .main { max-width: 1200px; margin: 0 auto; padding: 80px 48px; }
+        .section { margin-bottom: 100px; }
+        .section-label { display: inline-block; padding: 6px 14px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 6px; font-size: 12px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 24px; }
+        .section-header { text-align: center; margin-bottom: 48px; }
+        .section-title { font-size: 36px; font-weight: 800; color: #1E293B; margin-bottom: 16px; }
+        .section-desc { font-size: 17px; color: #64748B; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+        /* Partner Types */
+        .partner-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; margin-bottom: 80px; }
+        .partner-type-card { background: white; border-radius: 24px; padding: 40px; border: 1px solid #E2E8F0; text-align: center; transition: all 0.3s; }
+        .partner-type-card:hover { transform: translateY(-8px); box-shadow: 0 20px 60px rgba(0,0,0,0.1); border-color: #A51C30; }
+        .partner-type-icon { width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: #A51C30; }
+        .partner-type-icon svg { width: 40px; height: 40px; }
+        .partner-type-card h3 { font-size: 22px; font-weight: 700; color: #1E293B; margin-bottom: 12px; }
+        .partner-type-card p { font-size: 15px; color: #64748B; line-height: 1.6; margin-bottom: 24px; }
+        .partner-type-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; text-decoration: none; border-radius: 10px; font-size: 14px; font-weight: 600; transition: all 0.3s; }
+        .partner-type-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(165, 28, 48, 0.3); }
+        .partner-type-btn svg { width: 16px; height: 16px; }
+
+        /* Benefits */
+        .benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .benefit-card { display: flex; gap: 20px; background: white; border-radius: 20px; padding: 32px; border: 1px solid #E2E8F0; }
+        .benefit-icon { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #A51C30; }
+        .benefit-icon svg { width: 28px; height: 28px; }
+        .benefit-content h4 { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .benefit-content p { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+        /* Partners Logos */
+        .partners-logos { background: white; border-radius: 24px; padding: 60px; border: 1px solid #E2E8F0; }
+        .logos-title { font-size: 14px; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 40px; }
+        .logos-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 40px; align-items: center; }
+        .logo-item { height: 60px; background: #F8FAFC; border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 16px; }
+        .logo-placeholder { font-size: 18px; font-weight: 700; color: #CBD5E1; }
+
+        /* Testimonials */
+        .testimonials-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px; }
+        .testimonial-card { background: white; border-radius: 24px; padding: 40px; border: 1px solid #E2E8F0; position: relative; }
+        .testimonial-quote { font-size: 17px; color: #334155; line-height: 1.7; margin-bottom: 24px; font-style: italic; }
+        .testimonial-quote::before { content: '"'; position: absolute; top: 24px; left: 32px; font-size: 80px; font-weight: 800; color: rgba(165, 28, 48, 0.1); line-height: 1; font-family: Georgia, serif; }
+        .testimonial-author { display: flex; align-items: center; gap: 16px; }
+        .testimonial-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #E2E8F0, #CBD5E1); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #94A3B8; }
+        .testimonial-info { }
+        .testimonial-name { font-size: 16px; font-weight: 700; color: #1E293B; }
+        .testimonial-role { font-size: 14px; color: #64748B; }
+
+        /* Stats */
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; background: linear-gradient(135deg, #1E293B, #334155); border-radius: 24px; padding: 48px; margin-bottom: 80px; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 40px; font-weight: 800; color: white; margin-bottom: 8px; }
+        .stat-label { font-size: 14px; color: rgba(255,255,255,0.6); }
+
+        /* CTA */
+        .cta-section { background: linear-gradient(135deg, #A51C30, #7f1627); border-radius: 32px; padding: 80px; text-align: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 70%); }
+        .cta-section::after { content: ''; position: absolute; bottom: -100px; left: -100px; width: 300px; height: 300px; background: radial-gradient(circle, rgba(255,255,255,0.08), transparent 70%); }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-content h2 { font-size: 40px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .cta-content p { font-size: 18px; color: rgba(255,255,255,0.8); margin-bottom: 32px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .cta-form { display: flex; gap: 16px; max-width: 500px; margin: 0 auto; }
+        .cta-input { flex: 1; padding: 18px 24px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 14px; font-size: 16px; color: white; font-family: inherit; }
+        .cta-input::placeholder { color: rgba(255,255,255,0.6); }
+        .cta-input:focus { outline: none; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.4); }
+        .cta-btn { padding: 18px 36px; background: white; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; color: #A51C30; cursor: pointer; font-family: inherit; transition: all 0.3s; }
+        .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
+
+        /* How it works */
+        .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+        .step-card { text-align: center; position: relative; }
+        .step-card::after { content: ''; position: absolute; top: 40px; right: -12px; width: 24px; height: 2px; background: #E2E8F0; }
+        .step-card:last-child::after { display: none; }
+        .step-number { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #A51C30, #C41E3A); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 32px; font-weight: 800; color: white; }
+        .step-card h4 { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .step-card p { font-size: 14px; color: #64748B; line-height: 1.5; }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; margin-top: 80px; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) {
+            .partner-types { grid-template-columns: 1fr; }
+            .benefits-grid { grid-template-columns: 1fr; }
+            .logos-grid { grid-template-columns: repeat(3, 1fr); }
+            .testimonials-grid { grid-template-columns: 1fr; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .steps-grid { grid-template-columns: repeat(2, 1fr); }
+            .step-card::after { display: none; }
+        }
+        @media (max-width: 768px) {
+            .header, .main { padding-left: 24px; padding-right: 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 36px; }
+            .logos-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-bar { grid-template-columns: 1fr; padding: 32px; }
+            .cta-section { padding: 48px 24px; }
+            .cta-form { flex-direction: column; }
+            .steps-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Parteneri AmBilet</div>
+            <h1>Creștem împreună</h1>
+            <p>Alătură-te rețelei noastre de parteneri și beneficiază de avantaje exclusive. Împreună construim viitorul evenimentelor din România.</p>
+        </div>
+    </section>
+
+    <main class="main">
+        <!-- Stats -->
+        <div class="stats-bar">
+            <div class="stat-item"><div class="stat-value">50+</div><div class="stat-label">Parteneri activi</div></div>
+            <div class="stat-item"><div class="stat-value">100K+</div><div class="stat-label">Clienți referiți</div></div>
+            <div class="stat-item"><div class="stat-value">25%</div><div class="stat-label">Comision mediu</div></div>
+            <div class="stat-item"><div class="stat-value">48h</div><div class="stat-label">Timp de aprobare</div></div>
+        </div>
+
+        <!-- Partner Types -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Tipuri de parteneriate</div>
+                <h2 class="section-title">Alege programul potrivit pentru tine</h2>
+                <p class="section-desc">Oferim mai multe tipuri de parteneriate, adaptate nevoilor și obiectivelor tale.</p>
+            </div>
+            <div class="partner-types">
+                <div class="partner-type-card">
+                    <div class="partner-type-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg></div>
+                    <h3>Afiliat</h3>
+                    <p>Câștigă comision pentru fiecare client pe care îl referi către AmBilet. Perfect pentru bloggeri, influenceri și creatori de conținut.</p>
+                    <a href="#" class="partner-type-btn">Aplică acum <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+                </div>
+                <div class="partner-type-card">
+                    <div class="partner-type-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+                    <h3>Reseller</h3>
+                    <p>Oferă soluții de ticketing clienților tăi sub brandul propriu. Ideal pentru agenții de evenimente și companii de producție.</p>
+                    <a href="#" class="partner-type-btn">Aplică acum <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+                </div>
+                <div class="partner-type-card">
+                    <div class="partner-type-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+                    <h3>Integrare</h3>
+                    <p>Integrează AmBilet în platforma ta prin API. Pentru dezvoltatori și companii tech care vor să ofere ticketing.</p>
+                    <a href="#" class="partner-type-btn">Aplică acum <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Benefits -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Beneficii</div>
+                <h2 class="section-title">De ce să devii partener AmBilet</h2>
+                <p class="section-desc">Partenerii noștri beneficiază de avantaje exclusive și suport dedicat.</p>
+            </div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Comisioane competitive</h4>
+                        <p>Câștigă până la 25% din valoarea fiecărei tranzacții generate prin referrals.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Dashboard dedicat</h4>
+                        <p>Monitorizează performanța, track-uiește conversiile și gestionează plățile dintr-un singur loc.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Suport prioritar</h4>
+                        <p>Acces la echipa noastră de suport dedicată partenerilor, cu timp de răspuns garantat.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Materiale de marketing</h4>
+                        <p>Primești acces la banere, template-uri și ghiduri pentru promovare eficientă.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Plăți rapide</h4>
+                        <p>Primești comisioanele lunar, direct în contul tău bancar, fără întârzieri.</p>
+                    </div>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                    <div class="benefit-content">
+                        <h4>Program de recunoaștere</h4>
+                        <p>Top performerii primesc bonusuri, invitații la evenimente exclusive și vizibilitate pe platformă.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it works -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Cum funcționează</div>
+                <h2 class="section-title">4 pași simpli pentru a începe</h2>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h4>Aplică</h4>
+                    <p>Completează formularul de aplicare cu detalii despre tine și afacerea ta.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h4>Aprobare</h4>
+                    <p>Echipa noastră analizează aplicația și te contactează în 48 de ore.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h4>Promovează</h4>
+                    <p>Primești link-uri unice și materiale de marketing pentru a promova AmBilet.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">4</div>
+                    <h4>Câștigă</h4>
+                    <p>Pentru fiecare client referit, primești comision din tranzacțiile generate.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Partners Logos -->
+        <section class="section">
+            <div class="partners-logos">
+                <div class="logos-title">Partenerii noștri de încredere</div>
+                <div class="logos-grid">
+                    <div class="logo-item"><span class="logo-placeholder">Partner 1</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 2</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 3</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 4</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 5</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 6</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 7</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 8</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 9</span></div>
+                    <div class="logo-item"><span class="logo-placeholder">Partner 10</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="section">
+            <div class="section-header">
+                <div class="section-label">Testimoniale</div>
+                <h2 class="section-title">Ce spun partenerii noștri</h2>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">Programul de afiliere AmBilet mi-a adus un venit suplimentar consistent. Dashboard-ul este intuitiv și plățile vin mereu la timp.</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">MC</div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">Mihai Constantinescu</div>
+                            <div class="testimonial-role">Blogger, EventsRomania.ro</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <p class="testimonial-quote">Ca agenție de evenimente, parteneriatul cu AmBilet ne-a permis să oferim clienților o soluție completă de ticketing fără investiții suplimentare.</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar">AP</div>
+                        <div class="testimonial-info">
+                            <div class="testimonial-name">Ana Popa</div>
+                            <div class="testimonial-role">Director, EventPro Agency</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <div class="cta-content">
+                <h2>Devino partener AmBilet</h2>
+                <p>Lasă-ne adresa ta de email și te contactăm pentru a discuta despre oportunități.</p>
+                <div class="cta-form">
+                    <input type="email" class="cta-input" placeholder="Adresa ta de email">
+                    <button class="cta-btn">Trimite</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+</body>
+</html>

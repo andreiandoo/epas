@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centru de Ajutor — Ambilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 24px; }
+        .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: white; }
+        .logo-text { font-size: 22px; font-weight: 800; color: #1E293B; }
+        .logo-text span { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B, #0F172A); padding: 60px 24px 80px; text-align: center; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; background: radial-gradient(circle, rgba(165, 28, 48, 0.3), transparent 70%); border-radius: 50%; }
+        .hero-content { max-width: 700px; margin: 0 auto; position: relative; z-index: 1; }
+        .hero h1 { font-size: 42px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .hero p { font-size: 18px; color: rgba(255, 255, 255, 0.7); margin-bottom: 32px; }
+
+        .search-box { max-width: 600px; margin: 0 auto; position: relative; }
+        .search-box input { width: 100%; padding: 20px 24px 20px 56px; background: #fff; border: none; border-radius: 16px; font-size: 16px; font-family: inherit; color: #1E293B; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); outline: none; }
+        .search-box input::placeholder { color: #94A3B8; }
+        .search-box svg { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; color: #94A3B8; }
+
+        .main-container { max-width: 1200px; margin: 0 auto; padding: 48px 24px; }
+
+        .popular-topics { margin-top: -40px; position: relative; z-index: 10; background: #fff; border-radius: 20px; padding: 32px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 48px; }
+        .popular-topics-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .popular-topics-header svg { width: 24px; height: 24px; color: #A51C30; }
+        .popular-topics-title { font-size: 18px; font-weight: 700; color: #1E293B; }
+        .popular-tags { display: flex; gap: 10px; flex-wrap: wrap; }
+        .popular-tag { padding: 10px 20px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 50px; font-size: 14px; font-weight: 500; color: #475569; text-decoration: none; transition: all 0.2s ease; }
+        .popular-tag:hover { background: #A51C30; border-color: #A51C30; color: white; }
+
+        .categories-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 48px; }
+        .category-card { background: #fff; border-radius: 20px; padding: 32px; border: 1px solid #E2E8F0; text-decoration: none; transition: all 0.3s ease; }
+        .category-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1); border-color: #A51C30; }
+        .category-icon { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; }
+        .category-icon svg { width: 32px; height: 32px; }
+        .category-icon.tickets { background: linear-gradient(135deg, #FEE2E2, #FECACA); color: #A51C30; }
+        .category-icon.payments { background: linear-gradient(135deg, #DBEAFE, #BFDBFE); color: #2563EB; }
+        .category-icon.account { background: linear-gradient(135deg, #D1FAE5, #A7F3D0); color: #059669; }
+        .category-icon.events { background: linear-gradient(135deg, #FEF3C7, #FDE68A); color: #D97706; }
+        .category-icon.refunds { background: linear-gradient(135deg, #F3E8FF, #E9D5FF); color: #7C3AED; }
+        .category-icon.organizers { background: linear-gradient(135deg, #FCE7F3, #FBCFE8); color: #DB2777; }
+        .category-title { font-size: 20px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .category-description { font-size: 14px; color: #64748B; line-height: 1.5; margin-bottom: 16px; }
+        .category-articles { font-size: 13px; color: #94A3B8; }
+
+        .section-title { font-size: 24px; font-weight: 700; color: #1E293B; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .section-title svg { width: 28px; height: 28px; color: #A51C30; }
+
+        .articles-list { background: #fff; border-radius: 20px; border: 1px solid #E2E8F0; overflow: hidden; margin-bottom: 48px; }
+        .article-item { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid #E2E8F0; text-decoration: none; transition: all 0.2s ease; }
+        .article-item:last-child { border-bottom: none; }
+        .article-item:hover { background: #F8FAFC; }
+        .article-item:hover .article-arrow { transform: translateX(4px); }
+        .article-info { display: flex; align-items: center; gap: 16px; }
+        .article-icon { width: 44px; height: 44px; background: #F1F5F9; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #64748B; }
+        .article-icon svg { width: 22px; height: 22px; }
+        .article-title { font-size: 15px; font-weight: 600; color: #1E293B; margin-bottom: 2px; }
+        .article-meta { font-size: 13px; color: #94A3B8; }
+        .article-arrow { color: #CBD5E1; transition: all 0.2s ease; }
+        .article-arrow svg { width: 20px; height: 20px; }
+
+        .contact-section { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 48px; }
+        .contact-card { background: #fff; border-radius: 20px; padding: 32px; border: 1px solid #E2E8F0; text-align: center; transition: all 0.3s ease; }
+        .contact-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1); }
+        .contact-icon { width: 64px; height: 64px; background: linear-gradient(135deg, #A51C30, #C41E3A); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: white; }
+        .contact-icon svg { width: 28px; height: 28px; }
+        .contact-title { font-size: 18px; font-weight: 700; color: #1E293B; margin-bottom: 8px; }
+        .contact-description { font-size: 14px; color: #64748B; margin-bottom: 16px; }
+        .contact-link { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #F1F5F9; border-radius: 10px; color: #475569; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; }
+        .contact-link:hover { background: #A51C30; color: white; }
+        .contact-link svg { width: 16px; height: 16px; }
+        .contact-hours { font-size: 12px; color: #94A3B8; margin-top: 12px; }
+
+        .cta-section { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 24px; padding: 48px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; position: relative; overflow: hidden; }
+        .cta-section::before { content: ''; position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(165, 28, 48, 0.3), transparent 70%); border-radius: 50%; }
+        .cta-content { position: relative; z-index: 1; }
+        .cta-title { font-size: 28px; font-weight: 700; color: white; margin-bottom: 12px; }
+        .cta-description { font-size: 16px; color: rgba(255, 255, 255, 0.7); }
+        .cta-btn { display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; background: linear-gradient(135deg, #A51C30, #C41E3A); border: none; border-radius: 12px; color: white; font-size: 16px; font-weight: 600; text-decoration: none; transition: all 0.2s ease; position: relative; z-index: 1; }
+        .cta-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(165, 28, 48, 0.4); }
+        .cta-btn svg { width: 20px; height: 20px; }
+
+        .footer { margin-top: 60px; padding: 32px 24px; border-top: 1px solid #E2E8F0; text-align: center; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 1024px) { .categories-grid { grid-template-columns: repeat(2, 1fr); } .contact-section { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { .hero { padding: 40px 24px 60px; } .hero h1 { font-size: 32px; } .categories-grid { grid-template-columns: 1fr; } .cta-section { grid-template-columns: 1fr; text-align: center; } }
+        @media (max-width: 480px) { .hero h1 { font-size: 28px; } .popular-tags { justify-content: center; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo"><div class="logo-icon">A</div><div class="logo-text">Ambi<span>let</span></div></a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Cum te putem ajuta?</h1>
+            <p>Caută în baza noastră de cunoștințe sau explorează categoriile de mai jos.</p>
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" placeholder="Caută articole, întrebări sau subiecte...">
+            </div>
+        </div>
+    </section>
+
+    <main class="main-container">
+        <div class="popular-topics">
+            <div class="popular-topics-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                <h3 class="popular-topics-title">Subiecte populare</h3>
+            </div>
+            <div class="popular-tags">
+                <a href="#" class="popular-tag">Cum descarc biletul?</a>
+                <a href="#" class="popular-tag">Rambursare bilet</a>
+                <a href="#" class="popular-tag">Transfer bilet</a>
+                <a href="#" class="popular-tag">Resetare parolă</a>
+                <a href="#" class="popular-tag">Eveniment anulat</a>
+                <a href="#" class="popular-tag">Modificare date</a>
+                <a href="#" class="popular-tag">Plata nu a trecut</a>
+            </div>
+        </div>
+
+        <h2 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Explorează categoriile</h2>
+
+        <div class="categories-grid">
+            <a href="/help/tickets" class="category-card">
+                <div class="category-icon tickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 3 3v1a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1a3 3 0 0 1 0-6V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v1a3 3 0 0 1-3 3Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></div>
+                <h3 class="category-title">Bilete</h3>
+                <p class="category-description">Descărcare bilete, transferuri, coduri QR, acces la eveniment.</p>
+                <span class="category-articles">15 articole</span>
+            </a>
+            <a href="/help/payments" class="category-card">
+                <div class="category-icon payments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                <h3 class="category-title">Plăți</h3>
+                <p class="category-description">Metode de plată, facturi, probleme cu tranzacțiile.</p>
+                <span class="category-articles">12 articole</span>
+            </a>
+            <a href="/help/account" class="category-card">
+                <div class="category-icon account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+                <h3 class="category-title">Cont & Profil</h3>
+                <p class="category-description">Setări cont, parolă, date personale, notificări.</p>
+                <span class="category-articles">10 articole</span>
+            </a>
+            <a href="/help/events" class="category-card">
+                <div class="category-icon events"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                <h3 class="category-title">Evenimente</h3>
+                <p class="category-description">Informații eveniment, locație, program, restricții.</p>
+                <span class="category-articles">8 articole</span>
+            </a>
+            <a href="/help/refunds" class="category-card">
+                <div class="category-icon refunds"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+                <h3 class="category-title">Rambursări</h3>
+                <p class="category-description">Politica de rambursare, cereri, timp de procesare.</p>
+                <span class="category-articles">7 articole</span>
+            </a>
+            <a href="/help/organizers" class="category-card">
+                <div class="category-icon organizers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <h3 class="category-title">Pentru Organizatori</h3>
+                <p class="category-description">Creare eveniment, vânzări, dashboard, setări.</p>
+                <span class="category-articles">20 articole</span>
+            </a>
+        </div>
+
+        <h2 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>Articole recente</h2>
+
+        <div class="articles-list">
+            <a href="#" class="article-item">
+                <div class="article-info">
+                    <div class="article-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                    <div><div class="article-title">Cum descarc biletul meu în format PDF?</div><div class="article-meta">Bilete • Actualizat acum 2 zile</div></div>
+                </div>
+                <div class="article-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+            <a href="#" class="article-item">
+                <div class="article-info">
+                    <div class="article-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+                    <div><div class="article-title">Ce se întâmplă dacă evenimentul este anulat?</div><div class="article-meta">Rambursări • Actualizat acum 3 zile</div></div>
+                </div>
+                <div class="article-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+            <a href="#" class="article-item">
+                <div class="article-info">
+                    <div class="article-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <div><div class="article-title">Cum transfer un bilet altei persoane?</div><div class="article-meta">Bilete • Actualizat săptămâna trecută</div></div>
+                </div>
+                <div class="article-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+            <a href="#" class="article-item">
+                <div class="article-info">
+                    <div class="article-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                    <div><div class="article-title">Cum îmi schimb parola contului?</div><div class="article-meta">Cont • Actualizat săptămâna trecută</div></div>
+                </div>
+                <div class="article-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+            <a href="#" class="article-item">
+                <div class="article-info">
+                    <div class="article-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+                    <div><div class="article-title">Ce metode de plată sunt acceptate?</div><div class="article-meta">Plăți • Actualizat acum 2 săptămâni</div></div>
+                </div>
+                <div class="article-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>
+            </a>
+        </div>
+
+        <h2 class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Contactează-ne</h2>
+
+        <div class="contact-section">
+            <div class="contact-card">
+                <div class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <h3 class="contact-title">Chat Live</h3>
+                <p class="contact-description">Vorbește cu un agent în timp real pentru asistență imediată.</p>
+                <a href="#" class="contact-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Începe conversația</a>
+                <p class="contact-hours">Disponibil: L-V 9:00-18:00</p>
+            </div>
+            <div class="contact-card">
+                <div class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                <h3 class="contact-title">Email</h3>
+                <p class="contact-description">Trimite-ne un email și răspundem în maxim 24 de ore.</p>
+                <a href="mailto:suport@ambilet.ro" class="contact-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>suport@ambilet.ro</a>
+                <p class="contact-hours">Răspuns în 24h</p>
+            </div>
+            <div class="contact-card">
+                <div class="contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg></div>
+                <h3 class="contact-title">Telefon</h3>
+                <p class="contact-description">Sună-ne pentru probleme urgente sau întrebări complexe.</p>
+                <a href="tel:+40312345678" class="contact-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>+40 31 234 5678</a>
+                <p class="contact-hours">L-V 9:00-18:00, S 10:00-14:00</p>
+            </div>
+        </div>
+
+        <div class="cta-section">
+            <div class="cta-content">
+                <h2 class="cta-title">Nu ai găsit răspunsul?</h2>
+                <p class="cta-description">Echipa noastră de suport este aici să te ajute cu orice întrebare ai avea.</p>
+            </div>
+            <a href="/contact" class="cta-btn">Trimite o cerere<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 Ambilet.ro. Toate drepturile rezervate.</p></footer>
+</body>
+</html>

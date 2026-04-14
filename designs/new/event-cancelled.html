@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eveniment Anulat - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; min-height: 100vh; display: flex; flex-direction: column; color: #1E293B; }
+
+        .header { background: white; border-bottom: 1px solid #E2E8F0; padding: 1rem 2rem; }
+        .header-content { max-width: 800px; margin: 0 auto; display: flex; justify-content: center; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text .am { color: #1E293B; }
+        .logo-text .bilet { color: #A51C30; }
+
+        .main-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        
+        .notification-card { background: white; border-radius: 1.5rem; border: 1px solid #E2E8F0; max-width: 600px; width: 100%; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+
+        .alert-banner { background: linear-gradient(135deg, #EF4444, #DC2626); padding: 1.25rem 2rem; display: flex; align-items: center; gap: 1rem; color: white; }
+        .alert-icon { width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .alert-icon svg { width: 24px; height: 24px; }
+        .alert-content h2 { font-size: 1.125rem; font-weight: 700; margin-bottom: 0.125rem; }
+        .alert-content p { font-size: 0.875rem; opacity: 0.9; }
+
+        .card-body { padding: 2rem; }
+
+        .event-card { display: flex; gap: 1.25rem; padding: 1.25rem; background: #F8FAFC; border-radius: 1rem; margin-bottom: 1.5rem; }
+        .event-image { width: 100px; height: 100px; border-radius: 0.75rem; background: linear-gradient(135deg, #94A3B8, #64748B); flex-shrink: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+        .event-image svg { width: 40px; height: 40px; color: white; opacity: 0.5; }
+        .cancelled-badge { position: absolute; inset: 0; background: rgba(0,0,0,0.6); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; }
+        .cancelled-badge span { background: #EF4444; color: white; padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .event-details h3 { font-size: 1.125rem; font-weight: 700; color: #1E293B; margin-bottom: 0.5rem; text-decoration: line-through; color: #94A3B8; }
+        .event-meta { display: flex; flex-direction: column; gap: 0.25rem; }
+        .event-meta-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: #64748B; }
+        .event-meta-item svg { width: 16px; height: 16px; }
+        .event-meta-item.cancelled { text-decoration: line-through; }
+
+        .info-section { margin-bottom: 1.5rem; }
+        .info-section h4 { font-size: 0.9375rem; font-weight: 600; color: #1E293B; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+        .info-section h4 svg { width: 20px; height: 20px; color: #A51C30; }
+        .info-section p { font-size: 0.9375rem; color: #64748B; line-height: 1.7; }
+
+        .refund-box { background: #D1FAE5; border: 1px solid #10B981; border-radius: 0.75rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .refund-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .refund-icon { width: 40px; height: 40px; background: white; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
+        .refund-icon svg { width: 20px; height: 20px; color: #10B981; }
+        .refund-title { font-size: 1rem; font-weight: 600; color: #065F46; }
+        .refund-details { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .refund-item label { font-size: 0.75rem; color: #065F46; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 0.25rem; }
+        .refund-item span { font-size: 1rem; font-weight: 600; color: #065F46; }
+
+        .order-summary { background: #F8FAFC; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1.5rem; }
+        .order-row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.875rem; }
+        .order-row.total { border-top: 1px solid #E2E8F0; padding-top: 0.75rem; margin-top: 0.5rem; font-weight: 700; }
+        .order-label { color: #64748B; }
+        .order-value { color: #1E293B; font-weight: 500; }
+        .order-value.refund { color: #10B981; }
+
+        .actions { display: flex; gap: 0.75rem; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; flex: 1; padding: 0.875rem 1.5rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.9375rem; cursor: pointer; border: none; transition: all 0.2s; text-decoration: none; }
+        .btn-primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(165, 28, 48, 0.3); }
+        .btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+        .btn-secondary:hover { background: #F8FAFC; }
+        .btn svg { width: 20px; height: 20px; }
+
+        .help-link { display: block; text-align: center; margin-top: 1.25rem; color: #64748B; font-size: 0.875rem; }
+        .help-link a { color: #A51C30; text-decoration: none; font-weight: 500; }
+        .help-link a:hover { text-decoration: underline; }
+
+        .footer { padding: 1.5rem 2rem; text-align: center; color: #64748B; font-size: 0.8125rem; }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 1rem; }
+            .event-card { flex-direction: column; }
+            .event-image { width: 100%; height: 120px; }
+            .refund-details { grid-template-columns: 1fr; }
+            .actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#gradC)"/>
+                    <path d="M4 16C4 13.7909 5.79086 12 8 12H14V36H8C5.79086 36 4 34.2091 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/><circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <defs><linearGradient id="gradC" x1="4" y1="12" x2="44" y2="36"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="notification-card">
+            <div class="alert-banner">
+                <div class="alert-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                </div>
+                <div class="alert-content">
+                    <h2>Eveniment anulat</h2>
+                    <p>Ne pare rău, acest eveniment a fost anulat de organizator</p>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="event-card">
+                    <div class="event-image">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                        <div class="cancelled-badge"><span>Anulat</span></div>
+                    </div>
+                    <div class="event-details">
+                        <h3>Concert Acoustic Night - Sunset Sessions</h3>
+                        <div class="event-meta">
+                            <div class="event-meta-item cancelled">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                Vineri, 20 Decembrie 2024 • 20:00
+                            </div>
+                            <div class="event-meta-item cancelled">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                Hard Rock Cafe, București
+                            </div>
+                            <div class="event-meta-item">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                Comandă #AMB-2024-05892
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <h4>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        De ce a fost anulat?
+                    </h4>
+                    <p>Organizatorul a anulat evenimentul din motive neprevăzute. Ne cerem scuze pentru inconveniența cauzată. Toate biletele achiziționate vor fi rambursate automat.</p>
+                </div>
+
+                <div class="refund-box">
+                    <div class="refund-header">
+                        <div class="refund-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <span class="refund-title">Rambursare automată inițiată</span>
+                    </div>
+                    <div class="refund-details">
+                        <div class="refund-item">
+                            <label>Sumă rambursată</label>
+                            <span>298,00 RON</span>
+                        </div>
+                        <div class="refund-item">
+                            <label>Termen procesare</label>
+                            <span>5-10 zile lucrătoare</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="order-summary">
+                    <div class="order-row">
+                        <span class="order-label">2× Bilet Standard</span>
+                        <span class="order-value">280,00 RON</span>
+                    </div>
+                    <div class="order-row">
+                        <span class="order-label">Taxe servicii</span>
+                        <span class="order-value">18,00 RON</span>
+                    </div>
+                    <div class="order-row total">
+                        <span class="order-label">Total rambursat</span>
+                        <span class="order-value refund">298,00 RON</span>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a href="/events" class="btn btn-primary">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        Descoperă alte evenimente
+                    </a>
+                    <a href="/account/orders" class="btn btn-secondary">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        Vezi comenzile
+                    </a>
+                </div>
+
+                <p class="help-link">Ai întrebări despre rambursare? <a href="/contact">Contactează suportul</a></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>© 2024 AmBilet.ro - Toate drepturile rezervate</p>
+    </footer>
+</body>
+</html>

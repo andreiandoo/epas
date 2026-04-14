@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Declarație de Accesibilitate — AmBilet.ro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+
+        .header { height: 72px; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 48px; position: sticky; top: 0; z-index: 100; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 22px; font-weight: 800; display: flex; }
+        .logo-text-am { color: #1E293B; }
+        .logo-text-bilet { color: #A51C30; }
+
+        .hero { background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 80px 48px; position: relative; overflow: hidden; }
+        .hero::before { content: ''; position: absolute; top: -200px; right: -100px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(165, 28, 48, 0.15) 0%, transparent 70%); }
+        .hero-content { max-width: 800px; margin: 0 auto; text-align: center; position: relative; z-index: 1; }
+        .hero-icon { width: 80px; height: 80px; border-radius: 20px; background: rgba(165, 28, 48, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
+        .hero-icon svg { width: 40px; height: 40px; color: #f87171; }
+        .hero h1 { font-size: 44px; font-weight: 800; color: white; margin-bottom: 16px; }
+        .hero p { font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.6; }
+        .hero-meta { margin-top: 24px; font-size: 14px; color: rgba(255,255,255,0.5); }
+
+        .main { max-width: 900px; margin: 0 auto; padding: 60px 48px; }
+
+        .content-card { background: white; border-radius: 24px; border: 1px solid #E2E8F0; padding: 48px; margin-bottom: 32px; }
+        .content-card h2 { font-size: 24px; font-weight: 700; color: #1E293B; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        .content-card h2 svg { width: 28px; height: 28px; color: #A51C30; }
+        .content-card h3 { font-size: 18px; font-weight: 700; color: #1E293B; margin: 28px 0 12px; }
+        .content-card p { font-size: 16px; color: #475569; line-height: 1.8; margin-bottom: 16px; }
+        .content-card ul { list-style: none; margin: 16px 0; }
+        .content-card ul li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; font-size: 15px; color: #475569; line-height: 1.6; }
+        .content-card ul li svg { width: 20px; height: 20px; color: #10B981; flex-shrink: 0; margin-top: 2px; }
+
+        .commitment-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 24px 0; }
+        .commitment-item { background: #F8FAFC; border-radius: 16px; padding: 24px; border: 1px solid #E2E8F0; }
+        .commitment-item h4 { font-size: 16px; font-weight: 700; color: #1E293B; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+        .commitment-item h4 svg { width: 20px; height: 20px; color: #A51C30; }
+        .commitment-item p { font-size: 14px; color: #64748B; line-height: 1.6; }
+
+        .wcag-badge { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, rgba(165, 28, 48, 0.1), rgba(165, 28, 48, 0.05)); border: 1px solid rgba(165, 28, 48, 0.2); border-radius: 12px; margin: 16px 0; }
+        .wcag-badge-icon { width: 32px; height: 32px; background: #A51C30; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 800; }
+        .wcag-badge-text { font-size: 14px; font-weight: 600; color: #A51C30; }
+
+        .contact-box { background: linear-gradient(135deg, #1E293B, #334155); border-radius: 20px; padding: 32px; margin-top: 32px; }
+        .contact-box h3 { font-size: 20px; font-weight: 700; color: white; margin-bottom: 12px; }
+        .contact-box p { font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 20px; }
+        .contact-methods { display: flex; gap: 16px; flex-wrap: wrap; }
+        .contact-method { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: rgba(255,255,255,0.1); border-radius: 10px; color: white; text-decoration: none; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+        .contact-method:hover { background: rgba(255,255,255,0.15); }
+        .contact-method svg { width: 18px; height: 18px; }
+
+        .toc { background: #F8FAFC; border-radius: 16px; padding: 24px; margin-bottom: 32px; border: 1px solid #E2E8F0; }
+        .toc h3 { font-size: 14px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+        .toc-list { list-style: none; }
+        .toc-list li { margin-bottom: 8px; }
+        .toc-list a { font-size: 15px; color: #A51C30; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+        .toc-list a:hover { text-decoration: underline; }
+        .toc-list a svg { width: 16px; height: 16px; }
+
+        .footer { padding: 32px 48px; border-top: 1px solid #E2E8F0; text-align: center; }
+        .footer-text { font-size: 14px; color: #94A3B8; }
+
+        @media (max-width: 768px) {
+            .header { padding: 0 24px; }
+            .hero { padding: 60px 24px; }
+            .hero h1 { font-size: 32px; }
+            .main { padding: 40px 24px; }
+            .content-card { padding: 32px 24px; }
+            .commitment-grid { grid-template-columns: 1fr; }
+            .contact-methods { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/" class="logo">
+            <svg class="logo-icon" viewBox="0 0 48 48" fill="none"><defs><linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs><path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/><line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/><line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/><rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/></svg>
+            <div class="logo-text"><span class="logo-text-am">Am</span><span class="logo-text-bilet">Bilet</span></div>
+        </a>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h1>Declarație de Accesibilitate</h1>
+            <p>Ne angajăm să oferim o experiență digitală accesibilă tuturor utilizatorilor, indiferent de abilitățile lor.</p>
+            <div class="hero-meta">Ultima actualizare: 15 Decembrie 2024</div>
+        </div>
+    </section>
+
+    <main class="main">
+        <div class="toc">
+            <h3>Cuprins</h3>
+            <ul class="toc-list">
+                <li><a href="#angajament"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Angajamentul nostru</a></li>
+                <li><a href="#standarde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Standarde de conformitate</a></li>
+                <li><a href="#functionalitati"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Funcționalități de accesibilitate</a></li>
+                <li><a href="#limitari"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Limitări cunoscute</a></li>
+                <li><a href="#feedback"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Feedback și contact</a></li>
+            </ul>
+        </div>
+
+        <div class="content-card" id="angajament">
+            <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Angajamentul nostru</h2>
+            <p>La AmBilet, credem că evenimentele și experiențele culturale ar trebui să fie accesibile tuturor. Ne angajăm să asigurăm că platforma noastră digitală este utilizabilă de către persoanele cu dizabilități, inclusiv cele cu deficiențe de vedere, auz, mobilitate sau cognitive.</p>
+            <p>Lucrăm continuu pentru a îmbunătăți accesibilitatea platformei noastre și pentru a respecta cele mai bune practici și standarde din industrie.</p>
+            
+            <div class="commitment-grid">
+                <div class="commitment-item">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Percepție</h4>
+                    <p>Conținutul este prezentat în moduri care pot fi percepute de toți utilizatorii.</p>
+                </div>
+                <div class="commitment-item">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>Operabilitate</h4>
+                    <p>Interfața poate fi navigată și operată folosind diverse dispozitive de intrare.</p>
+                </div>
+                <div class="commitment-item">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Înțelegere</h4>
+                    <p>Conținutul și operarea interfeței sunt clare și predictibile.</p>
+                </div>
+                <div class="commitment-item">
+                    <h4><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Robustețe</h4>
+                    <p>Conținutul este compatibil cu tehnologiile asistive actuale și viitoare.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card" id="standarde">
+            <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Standarde de conformitate</h2>
+            <p>AmBilet urmărește să respecte standardele Web Content Accessibility Guidelines (WCAG) 2.1 la nivel AA. Aceste linii directoare explică cum să facem conținutul web mai accesibil pentru persoanele cu dizabilități.</p>
+            
+            <div class="wcag-badge">
+                <div class="wcag-badge-icon">AA</div>
+                <span class="wcag-badge-text">WCAG 2.1 Level AA Compliance Target</span>
+            </div>
+            
+            <p>Standardele WCAG definesc trei niveluri de conformitate:</p>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>Nivel A</strong> — Cerințele de bază care trebuie îndeplinite</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>Nivel AA</strong> — Abordează cele mai mari și comune bariere (ținta noastră)</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>Nivel AAA</strong> — Cel mai înalt nivel de accesibilitate</li>
+            </ul>
+        </div>
+
+        <div class="content-card" id="functionalitati">
+            <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Funcționalități de accesibilitate</h2>
+            <p>Am implementat următoarele funcționalități pentru a îmbunătăți accesibilitatea platformei:</p>
+            
+            <h3>Navigare și structură</h3>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Structură semantică HTML5 pentru navigare logică</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Skip links pentru a sări direct la conținutul principal</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Navigare completă prin tastatură (Tab, Enter, Escape)</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Indicatori de focus vizibili pentru elementele interactive</li>
+            </ul>
+            
+            <h3>Conținut vizual</h3>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Contrast de culoare suficient pentru text și elemente UI</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Text alternativ (alt text) pentru toate imaginile informative</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Posibilitatea de a mări textul până la 200% fără pierdere de funcționalitate</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Design responsive care se adaptează la diferite dimensiuni de ecran</li>
+            </ul>
+            
+            <h3>Formulare și interacțiuni</h3>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Etichete asociate corect cu câmpurile de formular</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Mesaje de eroare clare și descriptive</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Indicații multiple pentru stările elementelor (nu doar culoare)</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Timp suficient pentru completarea formularelor</li>
+            </ul>
+            
+            <h3>Tehnologii asistive</h3>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Compatibilitate cu cititoare de ecran (NVDA, JAWS, VoiceOver)</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Atribute ARIA pentru componente interactive complexe</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>Landmarks ARIA pentru navigare rapidă</li>
+            </ul>
+        </div>
+
+        <div class="content-card" id="limitari">
+            <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Limitări cunoscute</h2>
+            <p>Deși ne străduim să asigurăm accesibilitatea completă, există câteva limitări cunoscute pe care lucrăm să le rezolvăm:</p>
+            <ul>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>Conținut generat de utilizatori:</strong> Unele descrieri de evenimente create de organizatori pot să nu respecte integral standardele de accesibilitate. Lucrăm la ghiduri pentru organizatori.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>Hărți interactive:</strong> Hărțile pentru locații pot avea accesibilitate limitată. Oferim întotdeauna și adresa în format text.</li>
+                <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><strong>PDF-uri vechi:</strong> Unele documente PDF mai vechi pot să nu fie complet accesibile. Le actualizăm progresiv.</li>
+            </ul>
+            <p>Dacă întâmpinați dificultăți cu oricare dintre aceste aspecte, vă rugăm să ne contactați și vom găsi o soluție alternativă.</p>
+        </div>
+
+        <div class="content-card" id="feedback">
+            <h2><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Feedback și contact</h2>
+            <p>Apreciem feedback-ul dumneavoastră privind accesibilitatea platformei AmBilet. Dacă întâmpinați bariere de accesibilitate sau aveți sugestii de îmbunătățire, vă rugăm să ne contactați.</p>
+            <p>Ne angajăm să răspundem la solicitările privind accesibilitatea în termen de 2 zile lucrătoare și să oferim soluții alternative când este necesar.</p>
+            
+            <div class="contact-box">
+                <h3>Contactează echipa de accesibilitate</h3>
+                <p>Suntem aici să vă ajutăm să aveți cea mai bună experiență pe platforma noastră.</p>
+                <div class="contact-methods">
+                    <a href="mailto:accesibilitate@ambilet.ro" class="contact-method">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        accesibilitate@ambilet.ro
+                    </a>
+                    <a href="tel:+40312345678" class="contact-method">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        +40 31 234 5678
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer"><p class="footer-text">© 2024 AmBilet.ro — Toate drepturile rezervate. Powered by TIXELLO</p></footer>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# Ignore runtime data files - these are created and managed at runtime
+share-links.json
+rate-limits/

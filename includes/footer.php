@@ -1,0 +1,343 @@
+<?php
+/**
+ * New Site Footer - Tailwind CSS Version
+ *
+ * No inline styles - uses Tailwind CSS classes
+ * Cookie consent moved to separate file
+ */
+
+// Social media links (can be overridden before including)
+$socialLinks = $socialLinks ?? [
+    'facebook' => 'https://facebook.com/ambilet',
+    'instagram' => 'https://instagram.com/ambilet',
+    'youtube' => 'https://youtube.com/ambilet',
+    'tiktok' => 'https://tiktok.com/@ambilet'
+];
+$currentYear = date('Y');
+?>
+
+<!-- Footer -->
+<footer class="relative overflow-hidden text-white bg-gradient-to-b from-slate-900 to-slate-800">
+    <!-- Decorative background elements -->
+    <div class="footer-glow-top"></div>
+    <div class="footer-glow-bottom"></div>
+
+    <!-- Newsletter Section -->
+    <div class="bg-gradient-to-r from-primary to-[#7f1627] py-12 px-6 relative z-10">
+        <div class="absolute top-0 right-0 w-[300px] h-full footer-newsletter-pattern opacity-50"></div>
+        <div class="relative z-10 flex flex-col items-center justify-between gap-10 mx-auto max-w-7xl lg:flex-row">
+            <div class="flex-1 text-center lg:text-left">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/15 rounded-full text-xs font-semibold text-white mb-3">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    Fii primul care află
+                </div>
+                <h2 class="text-2xl lg:text-[28px] font-extrabold text-white mb-2">Nu rata niciun eveniment!</h2>
+                <p class="text-base text-white/80">Primește recomandări personalizate și oferte exclusive direct în inbox.</p>
+            </div>
+            <form id="newsletterForm" class="flex flex-col flex-1 w-full max-w-md gap-2">
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <input type="text" name="name" placeholder="Numele tău" class="w-full py-3 pr-3 text-sm text-white transition-all border outline-none pl-9 bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
+                    </div>
+                    <div class="relative flex-1">
+                        <svg class="absolute w-4 h-4 -translate-y-1/2 left-3 top-1/2 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <input type="text" name="city" placeholder="Orașul tău" class="w-full py-3 pr-3 text-sm text-white transition-all border outline-none pl-9 bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <svg class="absolute w-5 h-5 -translate-y-1/2 left-4 top-1/2 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                        <input type="email" name="email" placeholder="Adresa ta de email" required
+                            class="w-full py-3 pl-12 pr-5 text-sm text-white transition-all border outline-none bg-white/15 border-white/20 rounded-xl placeholder-white/50 focus:border-white focus:bg-white/20">
+                    </div>
+                    <button type="submit" class="px-7 py-3 bg-white border-none rounded-xl text-primary text-[15px] font-semibold cursor-pointer hover:-translate-y-0.5 hover:shadow-lg transition-all whitespace-nowrap flex items-center justify-center gap-2">
+                        Abonează-te
+                        <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+            <p id="newsletterMessage" class="hidden mt-4 text-white/80"></p>
+        </div>
+    </div>
+
+    <!-- Main Footer -->
+    <div class="relative z-10 px-6 py-16 mobile:pt-8 mobile:pb-12 mobile:px-0">
+        <div class="mx-auto max-w-7xl">
+            <!-- Footer Grid -->
+            <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
+                <!-- Brand Column -->
+                <div class="text-center lg:col-span-1 lg:text-left">
+                    <div class="items-center hidden gap-4 mobile:flex">
+                        <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8">
+                            <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                        </a>
+                        <div class="hidden mobile:flex gap-2.5 justify-center lg:justify-start">
+                            <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['instagram']) ?>" target="_blank" rel="noopener" aria-label="Instagram" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['tiktok']) ?>" target="_blank" rel="noopener" aria-label="TikTok" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                                </svg>
+                            </a>
+                            <a href="<?= htmlspecialchars($socialLinks['youtube']) ?>" target="_blank" rel="noopener" aria-label="YouTube" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#0F172A"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    <p class="mb-6 text-sm leading-relaxed text-white/90 mobile:px-6">
+                        Platforma ta de încredere pentru bilete la evenimente. Descoperă concerte, festivaluri, spectacole și experiențe unice în toată România.
+                    </p>
+                    <div class="flex gap-2.5 justify-center lg:justify-start mobile:hidden">
+                        <a href="<?= htmlspecialchars($socialLinks['facebook']) ?>" target="_blank" rel="noopener" aria-label="Facebook" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
+                            </svg>
+                        </a>
+                        <a href="<?= htmlspecialchars($socialLinks['instagram']) ?>" target="_blank" rel="noopener" aria-label="Instagram" class="w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                            </svg>
+                        </a>
+                        <a href="<?= htmlspecialchars($socialLinks['tiktok']) ?>" target="_blank" rel="noopener" aria-label="TikTok" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                            </svg>
+                        </a>
+                        <a href="<?= htmlspecialchars($socialLinks['youtube']) ?>" target="_blank" rel="noopener" aria-label="YouTube" class="hidden w-10 h-10 flex items-center justify-center bg-white/10 border border-white/10 rounded-xl text-white/90 hover:bg-primary hover:border-primary hover:text-white hover:-translate-y-0.5 transition-all">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/>
+                                <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="#0F172A"/>
+                            </svg>
+                        </a>
+                    </div>
+                    <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start mobile:border-b mobile:pb-5 mobile:mb-5">
+                        <span class="text-xs text-white/40">Powered by</span>
+                        <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/90 hover:text-white">
+                            <img src="/assets/images/tixello-logo.svg" alt="Tixello" width="40" height="12" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid gap-8 mobile:grid-cols-2 lg:col-span-4 lg:grid-cols-4 mobile:px-6">
+                    <!-- Evenimente Column -->
+                    <div>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Evenimente</span>
+                        <ul class="space-y-3">
+                            <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
+                            <li><a href="/bilete-concerte" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Concerte</a></li>
+                            <li><a href="/festivaluri" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Festivaluri</a></li>
+                            <li><a href="/teatru" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
+                            <li><a href="/evenimente-copii" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Evenimente copii</a></li>
+                            <li><a href="/stand-up" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
+                            <li><a href="/festival-moto" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Festivaluri Moto</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Descoperă Column -->
+                    <div class="mobile:text-right">
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Descoperă</span>
+                        <ul class="space-y-3">
+                            <li><a href="/orase" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Orașe</a></li>
+                            <li><a href="/locatii" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Locații</a></li>
+                            <li><a href="/artisti" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Artiști</a></li>                            
+                            <li><a href="/calendar" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Organizatori</a></li>
+                            <li class="hidden">
+                                <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">
+                                    Carduri cadou
+                                    <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
+                                </a>
+                            </li>
+                            <li><a href="/evenimente-trecute" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Evenimente trecute</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Companie Column -->
+                    <div>
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Companie</span>
+                        <ul class="space-y-3">
+                            <li><a href="/despre" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Despre noi</a></li>
+                            <li><a href="/press-kit" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Press Kit</a></li>
+                            <li><a href="/blog" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Blog</a></li>
+                            <li class="hidden"><a href="/parteneri" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Parteneri</a></li>
+                            <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
+                            <li><a href="/intrebari" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
+                            <li><a href="/contact" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Contact</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Organizatori Column -->
+                    <div class="mobile:text-right">
+                        <span class="block mb-5 text-sm font-bold tracking-wider text-white uppercase mobile:mb-3">Organizatori</span>
+                        <ul class="space-y-3">
+                            <li class="hidden"><a href="/organizatori" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
+                            <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>
+                            <li><a href="/organizator/login" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Login organizator</a></li>
+                            <li><a href="/ghid-organizator" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Ghid organizatori</a></li>
+                            <li class="hidden"><a href="/comisioane" class="inline-block text-sm transition-all text-white/90 hover:text-white hover:translate-x-1">Comisioane</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Section -->
+            <div class="flex flex-col items-center justify-between gap-6 py-4 mb-4 border-t border-b lg:flex-row border-white/10">
+                <!-- Trust Badges -->
+                <div class="flex flex-wrap items-center justify-center gap-6 mobile:gap-2">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
+                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500 mobile:w-8 mobile:h-8">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                        </div>
+                        <div class="text-xs text-white/90">
+                            <strong class="block text-[13px] text-white font-semibold">Plăți securizate</strong>
+                            SSL 256-bit encryption
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
+                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500 mobile:w-8 mobile:h-8">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div class="text-xs text-white/90">
+                            <strong class="block text-[13px] text-white font-semibold">Bilete garantate</strong>
+                            100% autentice
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:hidden">
+                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                        </div>
+                        <div class="text-xs text-white/90">
+                            <strong class="block text-[13px] text-white font-semibold">Suport rapid</strong>
+                            Răspundem în maxim 24h
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="flex items-center gap-3">
+                    <span class="mr-2 text-xs text-white/90">Plătești cu:</span>
+                    <div class="w-12 h-[30px] bg-white/10 rounded-md flex items-center justify-center text-[10px] font-bold text-white/90">VISA</div>
+                    <div class="w-12 h-[30px] bg-white/10 rounded-md flex items-center justify-center text-[10px] font-bold text-white/90">MC</div>
+                    <div class="w-12 h-[30px] bg-white/10 rounded-md flex items-center justify-center text-[10px] font-bold text-white/90">GPay</div>
+                    <div class="w-12 h-[30px] bg-white/10 rounded-md flex items-center justify-center text-[10px] font-bold text-white/90">Apple</div>
+                </div>
+            </div>
+
+            <!-- Bottom Section -->
+            <div class="flex flex-col flex-wrap items-center justify-between gap-5 lg:flex-row">
+                <div class="text-[13px] text-white/90 text-center lg:text-left w-[33.33%] mobile:w-full">
+                    &copy; <?= $currentYear ?> <a href="/" class="transition-colors text-white/90 hover:text-white"><?= SITE_NAME ?></a>. Toate drepturile rezervate.<br/>
+                    SC Ambilet.ro SRL • J40/7859/2017 • CUI 37653424
+                </div>
+
+                <div class="flex flex-wrap items-center justify-center gap-6 mobile:gap-4">
+                    <a href="/termeni" class="text-[13px] text-white/90 hover:text-white transition-colors">Termeni și Condiții</a>
+                    <a href="/confidentialitate" class="text-[13px] text-white/90 hover:text-white transition-colors">Confidențialitate</a>
+                    <a href="/cookies" class="text-[13px] text-white/90 hover:text-white transition-colors">Cookies</a>
+                    <a href="/gdpr" class="text-[13px] text-white/90 hover:text-white transition-colors">Drepturile GDPR</a>
+                    <a href="/anpc" class="text-[13px] text-white/90 hover:text-white transition-colors">ANPC</a>
+                </div>
+
+                <button onclick="CookieConsent.openSettings()" aria-label="Setări cookies" class="flex items-center gap-1.5 px-3.5 py-2 bg-transparent border border-white/20 rounded-lg text-white/90 text-[13px] hover:border-white/40 hover:text-white transition-all" name="cookie-settings">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Setări cookies
+                </button>
+            </div>
+
+            
+            <div class="flex items-center justify-center gap-6 mt-4 mobile:gap-4 mobile:px-4 mobile:mb-8">
+                <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="nofollow">
+                    <img style="width:250px;margin:5px;" src="/assets/images/anpc-sal.png" alt="Solutionarea Alternativa a Litigiilor" width="250" height="62">
+                </a>
+                <a href="https://ec.europa.eu/consumers/odr" target="_blank" rel="nofollow">
+                    <img style="width:250px;margin:5px;" src="/assets/images/anpc-sol.png" alt="Solutionarea Online a Litigiilor" width="250" height="62">
+                </a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Back to Top Button -->
+<button class="back-to-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Înapoi sus" aria-label="Înapoi sus" name="back-to-top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="18 15 12 9 6 15"/>
+    </svg>
+</button>
+
+<!-- Cookie Consent Component -->
+<?php include __DIR__ . '/cookie-consent.php'; ?>
+
+<script>
+// Newsletter form handler
+document.getElementById('newsletterForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = this;
+    const email = form.email.value;
+    const name = form.name.value.trim();
+    const city = form.city.value.trim();
+    const message = document.getElementById('newsletterMessage');
+    const button = form.querySelector('button');
+
+    button.disabled = true;
+    button.innerHTML = '<span class="inline-block w-4 h-4 mr-2 border-2 rounded-full border-primary animate-spin border-t-transparent"></span> Se trimite...';
+
+    try {
+        if (typeof AmbiletAPI !== 'undefined') {
+            const payload = { email };
+            if (name) payload.name = name;
+            if (city) payload.city = city;
+            await AmbiletAPI.post('/newsletter/subscribe', payload);
+        }
+        message.textContent = 'Te-ai abonat cu succes! Vei primi cele mai tari evenimente.';
+        message.classList.remove('hidden', 'text-error');
+        message.classList.add('text-white');
+        form.reset();
+    } catch (error) {
+        message.textContent = error.message || 'A apărut o eroare. Încearcă din nou.';
+        message.classList.remove('hidden', 'text-white');
+        message.classList.add('text-error');
+    } finally {
+        button.disabled = false;
+        button.innerHTML = 'Abonează-te <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    }
+});
+</script>

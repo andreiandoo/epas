@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eveniment — Ambilet</title>
+    <meta name="description" content="Detalii eveniment și achiziție bilete pe Ambilet.ro">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'primary-light': '#C41E3A',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="bg-white">
+    <div id="header"></div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-muted mb-6">
+            <a href="/" class="hover:text-primary">Acasă</a>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span id="breadcrumb-category">Evenimente</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span id="breadcrumb-title" class="text-secondary font-medium">Se încarcă...</span>
+        </nav>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Left Column - Event Details -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Main Image -->
+                <div id="event-image-container" class="relative rounded-2xl overflow-hidden aspect-video bg-surface">
+                    <div class="skeleton w-full h-full"></div>
+                </div>
+
+                <!-- Event Info -->
+                <div id="event-info" class="space-y-6">
+                    <div class="skeleton h-10 w-3/4"></div>
+                    <div class="skeleton h-6 w-1/2"></div>
+                    <div class="skeleton h-32"></div>
+                </div>
+
+                <!-- Description -->
+                <section id="event-description" class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-xl font-bold text-secondary mb-4">Despre eveniment</h2>
+                    <div class="skeleton h-48"></div>
+                </section>
+
+                <!-- Venue -->
+                <section id="event-venue" class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-xl font-bold text-secondary mb-4">Locație</h2>
+                    <div class="skeleton h-32"></div>
+                </section>
+            </div>
+
+            <!-- Right Column - Ticket Selection -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-24">
+                    <div id="ticket-panel" class="bg-white rounded-2xl border border-border overflow-hidden">
+                        <!-- Loading state -->
+                        <div class="p-6 space-y-4">
+                            <div class="skeleton h-8 w-1/2"></div>
+                            <div class="skeleton h-24"></div>
+                            <div class="skeleton h-24"></div>
+                            <div class="skeleton h-12"></div>
+                        </div>
+                    </div>
+
+                    <!-- Trust badges -->
+                    <div class="mt-6 flex items-center justify-center gap-6 text-sm text-muted">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            <span>Plată securizată</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            <span>Livrare instant</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Events -->
+        <section class="mt-16">
+            <h2 class="text-2xl font-bold text-secondary mb-6">Evenimente similare</h2>
+            <div id="related-events" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Will be populated by JS -->
+            </div>
+        </section>
+    </main>
+
+    <div id="footer"></div>
+
+    <!-- Scripts -->
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/cart.js"></script>
+    <script src="/assets/js/components/header.js"></script>
+    <script src="/assets/js/components/footer.js"></script>
+    <script src="/assets/js/components/notifications.js"></script>
+    <script src="/assets/js/components/event-card.js"></script>
+
+    <script>
+        const EventPage = {
+            event: null,
+            ticketQuantities: {},
+
+            async init() {
+                const slug = AmbiletUtils.getUrlParam('slug');
+                if (!slug) {
+                    window.location.href = '/';
+                    return;
+                }
+
+                await this.loadEvent(slug);
+            },
+
+            async loadEvent(slug) {
+                try {
+                    const response = await AmbiletAPI.getEvent(slug);
+
+                    if (response.success && response.data) {
+                        this.event = response.data;
+                        this.render();
+                        this.loadRelatedEvents();
+                    } else {
+                        this.showError('Evenimentul nu a fost găsit');
+                    }
+                } catch (error) {
+                    console.error('Failed to load event:', error);
+                    this.showError('Eroare la încărcarea evenimentului');
+                }
+            },
+
+            render() {
+                const event = this.event;
+
+                // Update page title
+                document.title = `${event.title} — Ambilet`;
+
+                // Breadcrumb
+                document.getElementById('breadcrumb-category').textContent = event.category?.name || 'Evenimente';
+                document.getElementById('breadcrumb-title').textContent = event.title;
+
+                // Main image
+                const imageContainer = document.getElementById('event-image-container');
+                imageContainer.innerHTML = `
+                    <img src="${event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT}"
+                         alt="${event.title}"
+                         class="w-full h-full object-cover">
+                    ${event.category ? `
+                    <div class="absolute top-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur rounded-full text-sm font-semibold text-secondary">
+                        ${event.category.name}
+                    </div>
+                    ` : ''}
+                `;
+
+                // Event info
+                const startDate = new Date(event.start_date);
+                const dateFormatted = startDate.toLocaleDateString('ro-RO', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+
+                document.getElementById('event-info').innerHTML = `
+                    <h1 class="text-3xl lg:text-4xl font-bold text-secondary">${event.title}</h1>
+
+                    <div class="flex flex-wrap gap-4 text-muted">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span>${dateFormatted}</span>
+                        </div>
+                        ${event.start_time ? `
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>${AmbiletUtils.formatTime(event.start_time)}</span>
+                        </div>
+                        ` : ''}
+                        ${event.venue ? `
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span>${event.venue.name}, ${event.venue.city}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Description
+                document.getElementById('event-description').innerHTML = `
+                    <h2 class="text-xl font-bold text-secondary mb-4">Despre eveniment</h2>
+                    <div class="prose prose-slate max-w-none">
+                        ${event.description || '<p class="text-muted">Nu există descriere disponibilă.</p>'}
+                    </div>
+                `;
+
+                // Venue
+                if (event.venue) {
+                    document.getElementById('event-venue').innerHTML = `
+                        <h2 class="text-xl font-bold text-secondary mb-4">Locație</h2>
+                        <div class="flex gap-4">
+                            <div class="flex-1">
+                                <h3 class="font-semibold text-secondary">${event.venue.name}</h3>
+                                <p class="text-muted">${event.venue.address || ''}</p>
+                                <p class="text-muted">${event.venue.city}${event.venue.country ? ', ' + event.venue.country : ''}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Ticket panel
+                this.renderTicketPanel();
+            },
+
+            renderTicketPanel() {
+                const event = this.event;
+                const ticketTypes = event.ticket_types || [];
+
+                if (ticketTypes.length === 0) {
+                    document.getElementById('ticket-panel').innerHTML = `
+                        <div class="p-6 text-center">
+                            <p class="text-muted">Nu există bilete disponibile momentan.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Initialize quantities
+                ticketTypes.forEach(tt => {
+                    if (!this.ticketQuantities[tt.id]) {
+                        this.ticketQuantities[tt.id] = 0;
+                    }
+                });
+
+                const minPrice = Math.min(...ticketTypes.map(tt => tt.price));
+
+                document.getElementById('ticket-panel').innerHTML = `
+                    <div class="p-6 border-b border-border">
+                        <div class="flex items-baseline justify-between">
+                            <span class="text-sm text-muted">de la</span>
+                            <span class="text-3xl font-bold text-primary">${AmbiletUtils.formatCurrency(minPrice)}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-6 space-y-4">
+                        <h3 class="font-semibold text-secondary">Selectează bilete</h3>
+
+                        ${ticketTypes.map(tt => `
+                        <div class="flex items-center justify-between p-4 bg-surface rounded-xl">
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-secondary">${tt.name}</h4>
+                                ${tt.description ? `<p class="text-sm text-muted">${tt.description}</p>` : ''}
+                                <div class="flex items-baseline gap-2 mt-1">
+                                    <span class="font-bold text-primary">${AmbiletUtils.formatCurrency(tt.price)}</span>
+                                    ${tt.original_price && tt.original_price > tt.price ? `
+                                    <span class="text-sm text-muted line-through">${AmbiletUtils.formatCurrency(tt.original_price)}</span>
+                                    ` : ''}
+                                </div>
+                                <p class="text-xs text-muted mt-1">${tt.available_quantity || 'Disponibil'} locuri</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="EventPage.updateQuantity(${tt.id}, -1)"
+                                        class="w-8 h-8 rounded-lg border border-border hover:bg-surface flex items-center justify-center disabled:opacity-50"
+                                        ${this.ticketQuantities[tt.id] === 0 ? 'disabled' : ''}>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                    </svg>
+                                </button>
+                                <span class="w-8 text-center font-semibold" id="qty-${tt.id}">${this.ticketQuantities[tt.id]}</span>
+                                <button onclick="EventPage.updateQuantity(${tt.id}, 1)"
+                                        class="w-8 h-8 rounded-lg border border-border hover:bg-surface flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Summary -->
+                    <div id="ticket-summary" class="p-6 bg-surface border-t border-border">
+                        ${this.renderSummary()}
+                    </div>
+                `;
+            },
+
+            updateQuantity(ticketTypeId, delta) {
+                const current = this.ticketQuantities[ticketTypeId] || 0;
+                const newQty = Math.max(0, current + delta);
+                this.ticketQuantities[ticketTypeId] = newQty;
+
+                // Update display
+                document.getElementById(`qty-${ticketTypeId}`).textContent = newQty;
+
+                // Update summary
+                document.getElementById('ticket-summary').innerHTML = this.renderSummary();
+
+                // Re-render to update button states
+                this.renderTicketPanel();
+            },
+
+            renderSummary() {
+                const ticketTypes = this.event.ticket_types || [];
+                let subtotal = 0;
+                let totalQty = 0;
+
+                ticketTypes.forEach(tt => {
+                    const qty = this.ticketQuantities[tt.id] || 0;
+                    subtotal += tt.price * qty;
+                    totalQty += qty;
+                });
+
+                if (totalQty === 0) {
+                    return `<p class="text-center text-muted">Selectează cel puțin un bilet</p>`;
+                }
+
+                const tax = subtotal * AMBILET_CONFIG.TAXES.RED_CROSS;
+                const total = subtotal + tax;
+                const points = Math.floor(subtotal * AMBILET_CONFIG.POINTS_PER_CURRENCY);
+
+                return `
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Subtotal (${totalQty} bilete)</span>
+                            <span class="font-medium">${AmbiletUtils.formatCurrency(subtotal)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Taxă Crucea Roșie (1%)</span>
+                            <span class="font-medium">${AmbiletUtils.formatCurrency(tax)}</span>
+                        </div>
+                        <div class="flex justify-between text-lg font-bold pt-2 border-t border-border">
+                            <span>Total</span>
+                            <span class="text-primary">${AmbiletUtils.formatCurrency(total)}</span>
+                        </div>
+                        <p class="text-xs text-muted text-center">Vei câștiga ${points} puncte</p>
+                    </div>
+
+                    <button onclick="EventPage.addToCart()" class="btn btn-primary w-full">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        Adaugă în coș
+                    </button>
+                `;
+            },
+
+            addToCart() {
+                const ticketTypes = this.event.ticket_types || [];
+                let addedCount = 0;
+
+                ticketTypes.forEach(tt => {
+                    const qty = this.ticketQuantities[tt.id] || 0;
+                    if (qty > 0) {
+                        AmbiletCart.addItem(this.event.id, this.event, tt.id, tt, qty);
+                        addedCount += qty;
+                    }
+                });
+
+                if (addedCount > 0) {
+                    toast.success(`${addedCount} bilet(e) adăugat(e) în coș!`);
+
+                    // Reset quantities
+                    Object.keys(this.ticketQuantities).forEach(key => {
+                        this.ticketQuantities[key] = 0;
+                    });
+                    this.renderTicketPanel();
+                }
+            },
+
+            async loadRelatedEvents() {
+                try {
+                    const params = {
+                        category: this.event.category?.id,
+                        per_page: 4
+                    };
+                    const response = await AmbiletAPI.getEvents(params);
+
+                    if (response.success && response.data) {
+                        const related = response.data.filter(e => e.id !== this.event.id).slice(0, 4);
+                        const container = document.getElementById('related-events');
+
+                        if (related.length > 0) {
+                            container.innerHTML = related.map(event => AmbiletEventCard.render(event)).join('');
+                        } else {
+                            container.innerHTML = '<p class="text-muted">Nu există evenimente similare.</p>';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load related events:', error);
+                }
+            },
+
+            showError(message) {
+                document.querySelector('main').innerHTML = `
+                    <div class="text-center py-20">
+                        <svg class="w-20 h-20 text-muted mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <h1 class="text-2xl font-bold text-secondary mb-2">${message}</h1>
+                        <p class="text-muted mb-6">Încearcă să cauți alt eveniment</p>
+                        <a href="/" class="btn btn-primary">Înapoi la acasă</a>
+                    </div>
+                `;
+            }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            EventPage.init();
+        });
+    </script>
+</body>
+</html>

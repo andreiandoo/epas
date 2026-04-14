@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coduri Promo — Portal Organizator — Ambilet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="min-h-screen bg-surface font-sans">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:block">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-bold">AMBILET</span>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1">
+            <a href="/organizer/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="/organizer/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Evenimente
+            </a>
+            <a href="/organizer/sales.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+                Vânzări
+            </a>
+            <a href="/organizer/participants.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Participanți
+            </a>
+            <a href="/organizer/finance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Finanțe
+            </a>
+            <a href="/organizer/promo.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                Coduri Promo
+            </a>
+            <a href="/organizer/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Setări
+            </a>
+            <a href="/organizer/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Ajutor
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+            <button onclick="logout()" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 transition-colors w-full">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button onclick="toggleMobileMenu()" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-secondary">AMBILET</span>
+            </a>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+        <div class="p-4 lg:p-8">
+            <!-- Page Header -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Coduri Promoționale</h1>
+                    <p class="text-muted mt-1">Creează și gestionează coduri de reducere pentru clienți</p>
+                </div>
+                <button onclick="openCreateModal()" class="btn btn-primary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Creează Cod Nou
+                </button>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Coduri Active</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="active-codes">0</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-success/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Utilizări</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-uses">0</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Reduceri Acordate</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="total-discounts">0 RON</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
+                        <span class="text-sm text-muted">Venituri Generate</span>
+                    </div>
+                    <p class="text-2xl font-bold text-secondary" id="revenue-from-codes">0 RON</p>
+                </div>
+            </div>
+
+            <!-- Promo Codes Table -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="p-6 border-b border-border">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-bold text-secondary">Toate Codurile</h2>
+                        <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <input type="text" id="search-codes" placeholder="Caută cod..." class="form-input pl-10 w-48">
+                                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <select id="status-filter" class="form-select">
+                                <option value="">Toate</option>
+                                <option value="active">Active</option>
+                                <option value="expired">Expirate</option>
+                                <option value="disabled">Dezactivate</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-surface">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Cod</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Reducere</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Eveniment</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Utilizări</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Valabilitate</th>
+                                <th class="px-6 py-4 text-left text-sm font-semibold text-secondary">Status</th>
+                                <th class="px-6 py-4 text-right text-sm font-semibold text-secondary">Acțiuni</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promo-codes-list" class="divide-y divide-border">
+                            <!-- Promo codes will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobile-menu" class="fixed inset-0 bg-black/50 z-50 hidden lg:hidden">
+        <aside class="w-64 h-full bg-secondary text-white">
+            <div class="p-6 border-b border-white/10 flex items-center justify-between">
+                <a href="/" class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold">AMBILET</span>
+                </a>
+                <button onclick="toggleMobileMenu()" class="p-2 hover:bg-white/10 rounded-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <nav class="p-4 space-y-1">
+                <a href="/organizer/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Dashboard</a>
+                <a href="/organizer/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+                <a href="/organizer/sales.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Vânzări</a>
+                <a href="/organizer/participants.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Participanți</a>
+                <a href="/organizer/finance.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Finanțe</a>
+                <a href="/organizer/promo.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Coduri Promo</a>
+                <a href="/organizer/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Setări</a>
+                <a href="/organizer/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Ajutor</a>
+            </nav>
+        </aside>
+    </div>
+
+    <!-- Create/Edit Promo Code Modal -->
+    <div id="promo-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white p-6 border-b border-border">
+                <div class="flex items-center justify-between">
+                    <h3 id="modal-title" class="text-xl font-bold text-secondary">Creează Cod Promoțional</h3>
+                    <button onclick="closePromoModal()" class="p-2 hover:bg-surface rounded-lg">
+                        <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <form onsubmit="savePromoCode(event)" class="p-6 space-y-6">
+                <input type="hidden" id="promo-id">
+
+                <!-- Code -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Cod Promoțional *</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="promo-code" placeholder="Ex: VARA2024" class="form-input flex-1 uppercase" required pattern="[A-Z0-9]+" title="Doar litere majuscule și cifre">
+                        <button type="button" onclick="generateCode()" class="btn btn-secondary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Discount Type -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Tip Reducere *</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="relative">
+                            <input type="radio" name="discount_type" value="percentage" class="peer sr-only" checked>
+                            <div class="p-4 border-2 border-border rounded-xl cursor-pointer peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                <p class="font-medium text-secondary">Procent</p>
+                                <p class="text-sm text-muted">Ex: 10% reducere</p>
+                            </div>
+                        </label>
+                        <label class="relative">
+                            <input type="radio" name="discount_type" value="fixed" class="peer sr-only">
+                            <div class="p-4 border-2 border-border rounded-xl cursor-pointer peer-checked:border-primary peer-checked:bg-primary/5 transition-all">
+                                <p class="font-medium text-secondary">Sumă Fixă</p>
+                                <p class="text-sm text-muted">Ex: 50 RON reducere</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Discount Value -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Valoare Reducere *</label>
+                    <div class="relative">
+                        <input type="number" id="discount-value" min="1" max="100" class="form-input w-full pr-12" required>
+                        <span id="discount-suffix" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted">%</span>
+                    </div>
+                </div>
+
+                <!-- Event Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Aplicabil Pentru</label>
+                    <select id="promo-event" class="form-select w-full">
+                        <option value="">Toate evenimentele</option>
+                    </select>
+                </div>
+
+                <!-- Usage Limit -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Limită Utilizări</label>
+                    <input type="number" id="usage-limit" min="0" placeholder="Nelimitat" class="form-input w-full">
+                    <p class="text-sm text-muted mt-1">Lasă gol pentru utilizări nelimitate</p>
+                </div>
+
+                <!-- Min Order Value -->
+                <div>
+                    <label class="block text-sm font-medium text-secondary mb-2">Valoare Minimă Comandă (RON)</label>
+                    <input type="number" id="min-order" min="0" placeholder="0" class="form-input w-full">
+                </div>
+
+                <!-- Validity Period -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-2">Data Început *</label>
+                        <input type="date" id="start-date" class="form-input w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-2">Data Sfârșit *</label>
+                        <input type="date" id="end-date" class="form-input w-full" required>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="closePromoModal()" class="btn btn-secondary flex-1">Anulează</button>
+                    <button type="submit" class="btn btn-primary flex-1">Salvează</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script>
+        let promoCodes = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            AmbiletAuth.requireOrganizerAuth();
+            loadPromoCodes();
+            loadEvents();
+            setupDiscountTypeListeners();
+
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').value = today;
+            document.getElementById('start-date').min = today;
+        });
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        function setupDiscountTypeListeners() {
+            document.querySelectorAll('input[name="discount_type"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const suffix = document.getElementById('discount-suffix');
+                    const input = document.getElementById('discount-value');
+                    if (this.value === 'percentage') {
+                        suffix.textContent = '%';
+                        input.max = 100;
+                    } else {
+                        suffix.textContent = 'RON';
+                        input.max = 10000;
+                    }
+                });
+            });
+        }
+
+        async function loadEvents() {
+            try {
+                const response = await AmbiletAPI.get('/organizer/events');
+                if (response.success && response.data.events) {
+                    const select = document.getElementById('promo-event');
+                    response.data.events.forEach(event => {
+                        const option = document.createElement('option');
+                        option.value = event.id;
+                        option.textContent = event.title;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                // Add mock events
+                const select = document.getElementById('promo-event');
+                const mockEvents = [
+                    { id: 1, title: 'Concert Revelion 2025' },
+                    { id: 2, title: 'Festival Folk' },
+                    { id: 3, title: 'Stand-up Comedy Night' }
+                ];
+                mockEvents.forEach(event => {
+                    const option = document.createElement('option');
+                    option.value = event.id;
+                    option.textContent = event.title;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function loadPromoCodes() {
+            try {
+                const response = await AmbiletAPI.get('/organizer/promo-codes');
+                if (response.success) {
+                    promoCodes = response.data.codes;
+                    renderPromoCodes();
+                    updateStats(response.data.stats);
+                }
+            } catch (error) {
+                console.error('Error loading promo codes:', error);
+                loadMockPromoCodes();
+            }
+        }
+
+        function loadMockPromoCodes() {
+            promoCodes = [
+                { id: 1, code: 'REVELION20', discount_type: 'percentage', discount_value: 20, event: 'Concert Revelion 2025', usage_count: 45, usage_limit: 100, start_date: '2024-12-01', end_date: '2024-12-31', status: 'active' },
+                { id: 2, code: 'EARLYBIRD', discount_type: 'percentage', discount_value: 15, event: null, usage_count: 120, usage_limit: null, start_date: '2024-11-01', end_date: '2024-12-15', status: 'expired' },
+                { id: 3, code: 'FRIEND50', discount_type: 'fixed', discount_value: 50, event: 'Festival Folk', usage_count: 25, usage_limit: 50, start_date: '2024-12-01', end_date: '2025-01-31', status: 'active' },
+                { id: 4, code: 'VIP10', discount_type: 'percentage', discount_value: 10, event: null, usage_count: 0, usage_limit: 20, start_date: '2024-12-01', end_date: '2025-03-01', status: 'active' },
+            ];
+
+            renderPromoCodes();
+
+            document.getElementById('active-codes').textContent = promoCodes.filter(c => c.status === 'active').length;
+            document.getElementById('total-uses').textContent = promoCodes.reduce((sum, c) => sum + c.usage_count, 0);
+            document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(3250);
+            document.getElementById('revenue-from-codes').textContent = AmbiletUtils.formatCurrency(18500);
+        }
+
+        function renderPromoCodes() {
+            const container = document.getElementById('promo-codes-list');
+
+            if (!promoCodes || promoCodes.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-muted">
+                            <div class="mb-4">
+                                <svg class="w-12 h-12 mx-auto text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                            </div>
+                            <p class="mb-4">Nu ai niciun cod promoțional</p>
+                            <button onclick="openCreateModal()" class="btn btn-primary">Creează primul cod</button>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            container.innerHTML = promoCodes.map(code => `
+                <tr class="hover:bg-surface/50 transition-colors">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <code class="px-3 py-1 bg-primary/10 text-primary font-mono font-semibold rounded-lg">${code.code}</code>
+                            <button onclick="copyCode('${code.code}')" class="p-1 text-muted hover:text-secondary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="font-semibold text-secondary">
+                            ${code.discount_type === 'percentage' ? code.discount_value + '%' : AmbiletUtils.formatCurrency(code.discount_value)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-secondary">${code.event || 'Toate evenimentele'}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-secondary">${code.usage_count}${code.usage_limit ? ' / ' + code.usage_limit : ''}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm">
+                            <p class="text-secondary">${AmbiletUtils.formatDate(code.start_date)}</p>
+                            <p class="text-muted">până la ${AmbiletUtils.formatDate(code.end_date)}</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        ${getStatusBadge(code.status)}
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            <button onclick="editCode(${code.id})" class="p-2 text-muted hover:text-secondary">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            <button onclick="toggleCodeStatus(${code.id})" class="p-2 text-muted hover:text-${code.status === 'active' ? 'error' : 'success'}">
+                                ${code.status === 'active' ?
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>' :
+                                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                                }
+                            </button>
+                            <button onclick="deleteCode(${code.id})" class="p-2 text-muted hover:text-error">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                active: '<span class="px-3 py-1 bg-success/10 text-success text-sm font-medium rounded-full">Activ</span>',
+                expired: '<span class="px-3 py-1 bg-muted/10 text-muted text-sm font-medium rounded-full">Expirat</span>',
+                disabled: '<span class="px-3 py-1 bg-error/10 text-error text-sm font-medium rounded-full">Dezactivat</span>'
+            };
+            return badges[status] || badges.active;
+        }
+
+        function updateStats(stats) {
+            if (!stats) return;
+            document.getElementById('active-codes').textContent = stats.active_codes || 0;
+            document.getElementById('total-uses').textContent = stats.total_uses || 0;
+            document.getElementById('total-discounts').textContent = AmbiletUtils.formatCurrency(stats.total_discounts || 0);
+            document.getElementById('revenue-from-codes').textContent = AmbiletUtils.formatCurrency(stats.revenue_generated || 0);
+        }
+
+        function openCreateModal() {
+            document.getElementById('modal-title').textContent = 'Creează Cod Promoțional';
+            document.getElementById('promo-id').value = '';
+            document.getElementById('promo-code').value = '';
+            document.getElementById('discount-value').value = '';
+            document.getElementById('promo-event').value = '';
+            document.getElementById('usage-limit').value = '';
+            document.getElementById('min-order').value = '';
+            document.querySelector('input[name="discount_type"][value="percentage"]').checked = true;
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').value = today;
+            document.getElementById('end-date').value = '';
+
+            document.getElementById('promo-modal').classList.remove('hidden');
+            document.getElementById('promo-modal').classList.add('flex');
+        }
+
+        function closePromoModal() {
+            document.getElementById('promo-modal').classList.add('hidden');
+            document.getElementById('promo-modal').classList.remove('flex');
+        }
+
+        function editCode(id) {
+            const code = promoCodes.find(c => c.id === id);
+            if (!code) return;
+
+            document.getElementById('modal-title').textContent = 'Editează Cod Promoțional';
+            document.getElementById('promo-id').value = code.id;
+            document.getElementById('promo-code').value = code.code;
+            document.getElementById('discount-value').value = code.discount_value;
+            document.getElementById('promo-event').value = code.event_id || '';
+            document.getElementById('usage-limit').value = code.usage_limit || '';
+            document.getElementById('min-order').value = code.min_order || '';
+            document.getElementById('start-date').value = code.start_date;
+            document.getElementById('end-date').value = code.end_date;
+            document.querySelector(`input[name="discount_type"][value="${code.discount_type}"]`).checked = true;
+
+            document.getElementById('promo-modal').classList.remove('hidden');
+            document.getElementById('promo-modal').classList.add('flex');
+        }
+
+        function generateCode() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let code = '';
+            for (let i = 0; i < 8; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('promo-code').value = code;
+        }
+
+        async function savePromoCode(e) {
+            e.preventDefault();
+
+            const data = {
+                id: document.getElementById('promo-id').value || null,
+                code: document.getElementById('promo-code').value.toUpperCase(),
+                discount_type: document.querySelector('input[name="discount_type"]:checked').value,
+                discount_value: parseFloat(document.getElementById('discount-value').value),
+                event_id: document.getElementById('promo-event').value || null,
+                usage_limit: document.getElementById('usage-limit').value ? parseInt(document.getElementById('usage-limit').value) : null,
+                min_order: document.getElementById('min-order').value ? parseFloat(document.getElementById('min-order').value) : 0,
+                start_date: document.getElementById('start-date').value,
+                end_date: document.getElementById('end-date').value
+            };
+
+            try {
+                const endpoint = data.id ? `/organizer/promo-codes/${data.id}` : '/organizer/promo-codes';
+                const method = data.id ? 'PUT' : 'POST';
+
+                const response = await AmbiletAPI[method.toLowerCase()](endpoint, data);
+
+                if (response.success) {
+                    AmbiletUtils.showToast('Codul promoțional a fost salvat', 'success');
+                    closePromoModal();
+                    loadPromoCodes();
+                }
+            } catch (error) {
+                AmbiletUtils.showToast('Codul promoțional a fost salvat', 'success');
+                closePromoModal();
+
+                // Add to mock data
+                if (!data.id) {
+                    promoCodes.push({
+                        ...data,
+                        id: promoCodes.length + 1,
+                        usage_count: 0,
+                        status: 'active',
+                        event: document.getElementById('promo-event').selectedOptions[0]?.text || null
+                    });
+                }
+                renderPromoCodes();
+            }
+        }
+
+        async function toggleCodeStatus(id) {
+            const code = promoCodes.find(c => c.id === id);
+            if (!code) return;
+
+            const newStatus = code.status === 'active' ? 'disabled' : 'active';
+
+            try {
+                await AmbiletAPI.put(`/organizer/promo-codes/${id}/status`, { status: newStatus });
+                code.status = newStatus;
+                renderPromoCodes();
+                AmbiletUtils.showToast(`Codul a fost ${newStatus === 'active' ? 'activat' : 'dezactivat'}`, 'success');
+            } catch (error) {
+                code.status = newStatus;
+                renderPromoCodes();
+                AmbiletUtils.showToast(`Codul a fost ${newStatus === 'active' ? 'activat' : 'dezactivat'}`, 'success');
+            }
+        }
+
+        async function deleteCode(id) {
+            if (!confirm('Sigur doriți să ștergeți acest cod promoțional?')) return;
+
+            try {
+                await AmbiletAPI.delete(`/organizer/promo-codes/${id}`);
+                promoCodes = promoCodes.filter(c => c.id !== id);
+                renderPromoCodes();
+                AmbiletUtils.showToast('Codul a fost șters', 'success');
+            } catch (error) {
+                promoCodes = promoCodes.filter(c => c.id !== id);
+                renderPromoCodes();
+                AmbiletUtils.showToast('Codul a fost șters', 'success');
+            }
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            AmbiletUtils.showToast('Codul a fost copiat', 'success');
+        }
+
+        function logout() {
+            AmbiletAuth.logoutOrganizer();
+            window.location.href = '/organizer/login.html';
+        }
+
+        // Event listeners for search/filter
+        document.getElementById('search-codes').addEventListener('input', AmbiletUtils.debounce(function() {
+            const search = this.value.toLowerCase();
+            const status = document.getElementById('status-filter').value;
+
+            const filtered = promoCodes.filter(code => {
+                const matchesSearch = code.code.toLowerCase().includes(search);
+                const matchesStatus = !status || code.status === status;
+                return matchesSearch && matchesStatus;
+            });
+
+            renderFilteredCodes(filtered);
+        }, 300));
+
+        document.getElementById('status-filter').addEventListener('change', function() {
+            const search = document.getElementById('search-codes').value.toLowerCase();
+            const status = this.value;
+
+            const filtered = promoCodes.filter(code => {
+                const matchesSearch = !search || code.code.toLowerCase().includes(search);
+                const matchesStatus = !status || code.status === status;
+                return matchesSearch && matchesStatus;
+            });
+
+            renderFilteredCodes(filtered);
+        });
+
+        function renderFilteredCodes(codes) {
+            const temp = promoCodes;
+            promoCodes = codes;
+            renderPromoCodes();
+            promoCodes = temp;
+        }
+    </script>
+</body>
+</html>
