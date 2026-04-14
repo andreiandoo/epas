@@ -227,7 +227,27 @@ class TicketResource extends Resource
                                 ->required(),
                         ])
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
-                            $records->each(fn ($record) => $record->update(['status' => $data['status']]));
+                            $newStatus = $data['status'];
+                            $cancelledTickets = collect();
+
+                            $records->each(function ($record) use ($newStatus, &$cancelledTickets) {
+                                $oldStatus = $record->status;
+                                $record->update(['status' => $newStatus]);
+
+                                // If changing TO cancelled from a non-cancelled status, track for stock release
+                                if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+                                    $cancelledTickets->push($record);
+                                }
+                            });
+
+                            // Release stock for newly cancelled tickets
+                            if ($cancelledTickets->isNotEmpty()) {
+                                $order = $cancelledTickets->first()->order;
+                                if ($order) {
+                                    $order->releaseStockForTickets($cancelledTickets);
+                                }
+                            }
+
                             \Filament\Notifications\Notification::make()
                                 ->title('Status actualizat pentru ' . $records->count() . ' bilete')
                                 ->success()
