@@ -93,9 +93,17 @@ class MarketplaceVanityUrl extends Model
         $target = $this->resolveTarget();
         if (!$target) return null;
 
+        $resolveName = function ($model, string $field = 'name'): string {
+            $raw = $model->getRawOriginal($field);
+            $val = is_string($raw) ? (json_decode($raw, true) ?? $raw) : $raw;
+            if (is_array($val)) return $val['ro'] ?? $val['en'] ?? reset($val) ?: '#' . $model->id;
+            return $val ?: '#' . $model->id;
+        };
+
         return match ($this->target_type) {
-            self::TYPE_ARTIST, self::TYPE_VENUE, self::TYPE_ORGANIZER => $target->name ?? '#' . $target->id,
-            self::TYPE_EVENT => is_array($target->title) ? ($target->title['ro'] ?? $target->title['en'] ?? reset($target->title) ?: '#' . $target->id) : ($target->title ?? '#' . $target->id),
+            self::TYPE_VENUE => $resolveName($target, 'name'),
+            self::TYPE_EVENT => $resolveName($target, 'title'),
+            self::TYPE_ARTIST, self::TYPE_ORGANIZER => $target->name ?? '#' . $target->id,
             default => null,
         };
     }
