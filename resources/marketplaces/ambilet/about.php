@@ -39,10 +39,10 @@ if ($statsTickets === 0) {
         $statsTickets = (int) ($statsResp['data']['summary']['completed_orders'] * 2);
     }
 }
-// If API calls failed completely, use last known values
-if ($statsEvents === 0) $statsEvents = 4100;
+// If API calls failed completely, use last known values (updated 2026-04-14)
+if ($statsEvents < 1000) $statsEvents = 4087;
 if ($statsTickets === 0) $statsTickets = 284000;
-if ($statsOrganizers === 0) $statsOrganizers = 500;
+if ($statsOrganizers < 100) $statsOrganizers = 496;
 
 // Format numbers for display
 function formatStat(int $n): string {
