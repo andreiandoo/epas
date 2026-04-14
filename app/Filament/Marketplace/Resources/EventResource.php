@@ -1657,11 +1657,14 @@ class EventResource extends Resource
                                                         )
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
-                                                            if ($record && $record->quota_sold > 0) {
+                                                            if ($record) {
                                                                 $activeCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
-                                                                    ->whereNotIn('status', ['cancelled', 'refunded'])
+                                                                    ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
                                                                     ->count();
-                                                                $cancelledCount = $record->quota_sold - $activeCount;
+                                                                $cancelledCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
+                                                                    ->whereIn('status', ['cancelled', 'refunded'])
+                                                                    ->count();
+                                                            if ($activeCount > 0 || $cancelledCount > 0) {
                                                                 $capacity = $record->quota_total ?? $record->capacity ?? null;
                                                                 $soldText = $t('Active', 'Active') . ": {$activeCount}";
                                                                 if ($cancelledCount > 0) {
@@ -1671,7 +1674,7 @@ class EventResource extends Resource
                                                                     $soldText .= " / {$capacity}";
                                                                 }
                                                                 $hints[] = '<span class="text-xs">' . $soldText . '</span>';
-                                                            }
+                                                            }}
                                                             $generalQuota = (int) ($get('../../general_quota') ?: 0);
                                                             $isIndependent = (bool) $get('is_independent_stock');
                                                             $capacity = (int) ($get('capacity') ?: 0);
