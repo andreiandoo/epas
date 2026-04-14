@@ -298,7 +298,7 @@ const CityEventsFilter = {
 
         // Use AmbiletEventCard component for rendering
         if (typeof AmbiletEventCard !== 'undefined') {
-            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 25), {
+            container.innerHTML = AmbiletEventCard.renderMany(events.slice(0, 45), {
                 urlPrefix: '/bilete/',
                 showCategory: true,
                 showPrice: true,
