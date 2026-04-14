@@ -530,10 +530,6 @@ class EventResource extends Resource
                                     ->options(function () use ($marketplace) {
                                         $venueCountries = self::expandCountryVariants($marketplace?->settings['venue_countries'] ?? []);
                                         return Venue::query()
-                                            ->where(fn($q) => $q
-                                                ->whereNull('marketplace_client_id')
-                                                ->orWhere('marketplace_client_id', $marketplace?->id)
-                                                ->orWhereHas('marketplaceClients', fn($q2) => $q2->where('marketplace_client_id', $marketplace?->id)))
                                             ->when(!empty($venueCountries), fn ($q) => $q->whereIn('country', $venueCountries))
                                             ->get()
                                             ->mapWithKeys(fn ($venue) => [
