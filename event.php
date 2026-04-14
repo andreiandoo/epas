@@ -122,8 +122,6 @@ if (!empty($ev['event_date'])) {
 } elseif (!empty($ev['starts_at'])) {
     $eventDate = date('d.m.Y, H:i', strtotime($ev['starts_at']));
 }
-$ambiletUrl = 'https://ambilet.ro/bilete/' . urlencode($eventSlug);
-
 $cssBundle = 'event';
 require_once __DIR__ . '/includes/head.php';
 ?>
@@ -606,73 +604,6 @@ require_once __DIR__ . '/includes/head.php';
         </div>
     </div>
 
-    <!-- Redirect Modal -->
-    <div id="redirectModal" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);opacity:0;transition:opacity .3s ease;">
-        <!-- Close button - top left of screen -->
-        <button onclick="closeRedirectModal()" style="position:fixed;top:16px;left:16px;z-index:10000;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:transform .2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-
-        <div style="background:#fff;border-radius:16px;max-width:520px;width:90%;padding:36px 32px;text-align:center;box-shadow:0 25px 60px rgba(0,0,0,0.3);transform:translateY(20px);transition:transform .3s ease;">
-            <!-- Icon -->
-            <div style="width:64px;height:64px;margin:0 auto 20px;border-radius:50%;background:linear-gradient(135deg,#A51C30,#8B1728);display:flex;align-items:center;justify-content:center;">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-            </div>
-
-            <h2 style="font-size:20px;font-weight:700;color:#1a1a2e;margin:0 0 12px;line-height:1.3;">Platforma în curs de testare</h2>
-
-            <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 8px;">
-                Ne bucurăm că ești interesat de
-            </p>
-            <p style="font-size:17px;font-weight:700;color:#A51C30;margin:0 0 6px;">
-                <?= htmlspecialchars($pageTitle) ?>
-            </p>
-            <?php if ($eventDate || ($venueName && $venueCity)): ?>
-            <p style="font-size:14px;color:#777;margin:0 0 20px;">
-                <?php if ($eventDate): ?>
-                    <?= htmlspecialchars($eventDate) ?>
-                <?php endif; ?>
-                <?php if ($venueName && $venueCity): ?>
-                    <?= $eventDate ? ' &middot; ' : '' ?><?= htmlspecialchars($venueName) ?>, <?= htmlspecialchars($venueCity) ?>
-                <?php endif; ?>
-            </p>
-            <?php else: ?>
-            <div style="margin-bottom:20px;"></div>
-            <?php endif; ?>
-
-            <p style="font-size:14px;color:#666;line-height:1.7;margin:0 0 28px;">
-                Platforma <strong>bilete.online</strong> este momentan în etapa de testare și nu procesează încă comenzi reale. Pentru a achiziționa bilete, te rugăm să folosești platforma noastră activă.
-            </p>
-
-            <a href="<?= htmlspecialchars($ambiletUrl) ?>" style="display:inline-flex;align-items:center;gap:8px;padding:14px 32px;background:linear-gradient(135deg,#A51C30,#8B1728);color:#fff;font-size:16px;font-weight:600;border-radius:10px;text-decoration:none;transition:all .3s;box-shadow:0 4px 15px rgba(165,28,48,0.3);" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 25px rgba(165,28,48,0.4)'" onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(165,28,48,0.3)'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                Cumpără bilete pe ambilet.ro
-            </a>
-
-            <p style="font-size:12px;color:#aaa;margin:20px 0 0;">
-                Vei fi redirecționat către aceeași pagină de eveniment
-            </p>
-        </div>
-    </div>
-
-    <script>
-    (function() {
-        var modal = document.getElementById('redirectModal');
-        if (!modal) return;
-        // Animate in
-        requestAnimationFrame(function() {
-            modal.style.opacity = '1';
-            modal.querySelector('div[style*="translateY"]').style.transform = 'translateY(0)';
-        });
-    })();
-
-    function closeRedirectModal() {
-        var modal = document.getElementById('redirectModal');
-        if (!modal) return;
-        modal.style.opacity = '0';
-        setTimeout(function() { modal.style.display = 'none'; }, 300);
-    }
-    </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
