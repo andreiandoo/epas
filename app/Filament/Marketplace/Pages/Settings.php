@@ -727,14 +727,13 @@ class Settings extends Page
         $mailSettings = $settings['mail'] ?? [];
         $incomingDriver = $data['mail_driver'] ?? null;
 
-        // Only update driver if explicitly provided; never clear an existing driver with empty string
+        // Only update driver if explicitly changed to a real value.
+        // Empty string means "field was in form but not selected" — preserve existing config
+        // to prevent tab switches from wiping mail settings.
         if (filled($incomingDriver)) {
             $mailSettings['driver'] = $incomingDriver;
-        } elseif ($incomingDriver === '') {
-            // User explicitly selected "Use Platform Default" → clear all mail settings
-            $mailSettings = ['driver' => ''];
         }
-        // If $incomingDriver is null (field missing from state), preserve existing settings entirely
+        // If $incomingDriver is null or empty, preserve existing settings entirely
 
         // Only update individual fields when a driver is actively selected
         if (!empty($mailSettings['driver'])) {
