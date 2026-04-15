@@ -3108,15 +3108,22 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     header('Cache-Control: no-store');
 }
 
-// For raw responses (PDF, exports), forward headers from upstream via curl
+// For raw responses (PDF, CSV, exports), forward headers from upstream via curl
 if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
     if (str_starts_with($response, '%PDF')) {
         header('Content-Type: application/pdf');
-        // Use filename from upstream Content-Disposition if captured, otherwise generic
         if (!empty($upstreamContentDisposition)) {
             header($upstreamContentDisposition);
         } else {
             header('Content-Disposition: attachment; filename="bilete.pdf"');
+        }
+        header('Content-Length: ' . strlen($response));
+    } elseif (!empty($upstreamContentDisposition) || str_starts_with($response, "\xEF\xBB\xBF") || str_starts_with($response, 'Ticket ID,') || str_starts_with($response, 'Comanda,')) {
+        header('Content-Type: text/csv; charset=UTF-8');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="export.csv"');
         }
         header('Content-Length: ' . strlen($response));
     }
