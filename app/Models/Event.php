@@ -332,8 +332,7 @@ class Event extends Model
             'artist_id'
         )
         ->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
-        ->orderByPivot('sort_order')
-        ->select('artists.*');
+        ->orderByPivot('sort_order');
     }
 
     /**
