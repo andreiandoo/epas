@@ -698,14 +698,10 @@ class Event extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        // Sum revenue only from valid/used tickets in paid/confirmed/completed orders
-        // This excludes individually cancelled/refunded tickets
-        return (float) \App\Models\Ticket::where('event_id', $this->id)
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
-            })
-            ->sum('price');
+        // Sum revenue from completed orders for this event (gross revenue including commission)
+        return (float) Order::where('event_id', $this->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->sum('total');
     }
 
     /**
