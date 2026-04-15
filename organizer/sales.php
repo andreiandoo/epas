@@ -158,17 +158,37 @@ function maskEmail(email) {
     return masked + '@' + domain;
 }
 
+function isEventLive(ev) {
+    if (ev.is_cancelled || ev.is_postponed || ev.is_past || ev.is_ended) return false;
+    if (ev.status !== 'published' && ev.status !== 'active') return false;
+    const endDate = ev.ends_at || ev.starts_at;
+    return !endDate || new Date(endDate) >= new Date();
+}
+
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events', { per_page: 100 });
         if (response.success) {
             eventsData = response.data.events || response.data || [];
+            // Sort: live first, then by date ascending (closest first)
+            eventsData.sort((a, b) => {
+                const aLive = isEventLive(a), bLive = isEventLive(b);
+                if (aLive && !bLive) return -1;
+                if (!aLive && bLive) return 1;
+                const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
+                return aLive ? aDate - bDate : bDate - aDate; // live: closest first, ended: most recent first
+            });
             const select = document.getElementById('filter-event');
-            select.innerHTML = '<option value="">Toate evenimentele</option>';
+            select.innerHTML = '<option value="">Selecteaza un eveniment</option>';
             eventsData.forEach(ev => {
                 const opt = document.createElement('option');
                 opt.value = ev.id;
-                opt.textContent = ev.name || ev.title;
+                const live = isEventLive(ev);
+                const dot = live ? '🟢 ' : '⚫ ';
+                const date = ev.starts_at ? AmbiletUtils.formatDate(ev.starts_at) : '';
+                const venue = ev.venue_name || '';
+                const meta = [date, venue].filter(Boolean).join(' · ');
+                opt.textContent = dot + (ev.name || ev.title) + (meta ? ' — ' + meta : '');
                 select.appendChild(opt);
             });
             // Set from URL param

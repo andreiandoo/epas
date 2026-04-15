@@ -164,15 +164,34 @@ function formatDateShort(dateStr) {
     return date.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+function isEventLive(ev) {
+    if (ev.is_cancelled || ev.is_postponed || ev.is_past || ev.is_ended) return false;
+    if (ev.status !== 'published' && ev.status !== 'active') return false;
+    const endDate = ev.ends_at || ev.starts_at;
+    return !endDate || new Date(endDate) >= new Date();
+}
+
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/documents/events');
         if (response.success && response.data.events) {
             const events = response.data.events;
+            // Sort: live first (closest date first), then ended (most recent first)
+            events.sort((a, b) => {
+                const aLive = isEventLive(a), bLive = isEventLive(b);
+                if (aLive && !bLive) return -1;
+                if (!aLive && bLive) return 1;
+                const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
+                return aLive ? aDate - bDate : bDate - aDate;
+            });
             events.forEach(e => {
                 eventsData[e.id] = e;
-                const dateStr = e.starts_at ? ' — ' + formatDateShort(e.starts_at) : '';
-                eventsList.push({ id: e.id, label: (e.name || 'Eveniment') + dateStr });
+                const live = isEventLive(e);
+                const dot = live ? '🟢 ' : '⚫ ';
+                const date = e.starts_at ? formatDateShort(e.starts_at) : '';
+                const venue = e.venue_name || '';
+                const meta = [date, venue].filter(Boolean).join(' · ');
+                eventsList.push({ id: e.id, label: dot + (e.name || 'Eveniment') + (meta ? ' — ' + meta : '') });
             });
 
             document.getElementById('events-loading').classList.add('hidden');

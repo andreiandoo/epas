@@ -133,9 +133,15 @@ window.addEventListener('load', async function() {
         // API returns {success: true, data: [...events...]} - events array is directly in data
         const events = eventsResponse.data || [];
         if (eventsResponse.success && events.length > 0) {
-            const activeEvents = events.filter(e => e.status === 'published' || e.status === 'active').length;
+            // Count only live events (published + not ended)
+            const liveEvents = events.filter(e => {
+                if (e.status !== 'published' && e.status !== 'active') return false;
+                if (e.is_cancelled || e.is_postponed || e.is_past || e.is_ended) return false;
+                const endDate = e.ends_at || e.starts_at;
+                return !endDate || new Date(endDate) >= new Date();
+            }).length;
             const navCount = document.getElementById('nav-events-count');
-            if (navCount) navCount.textContent = activeEvents || events.length;
+            if (navCount) navCount.textContent = liveEvents;
         }
 
         // Load organizer info for sidebar
