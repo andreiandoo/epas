@@ -468,8 +468,19 @@ class Dashboard extends Page
 
     private function computeMonthlyBilling(int $marketplaceId): array
     {
-        $monthStart = Carbon::now()->startOfMonth();
-        $monthEnd = Carbon::now()->endOfMonth();
+        $tz = 'Europe/Bucharest';
+        $monthStart = Carbon::now($tz)->startOfMonth()->utc();
+        $monthEnd = Carbon::now($tz)->endOfMonth()->endOfDay()->utc();
+
+        // If billing_starts_at is set and falls in the current month, use it as period start
+        $billingStartsAt = $this->marketplace->billing_starts_at ?? null;
+        if ($billingStartsAt) {
+            $billingStart = Carbon::parse($billingStartsAt)->startOfDay()->utc();
+            if ($billingStart->between($monthStart, $monthEnd)) {
+                $monthStart = $billingStart;
+            }
+        }
+
         $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
 
         // Commission rate from marketplace client settings (Tixello rate)
