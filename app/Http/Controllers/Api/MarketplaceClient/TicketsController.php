@@ -128,7 +128,7 @@ class TicketsController extends BaseController
 
                 if (!empty($pages)) {
                     $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
-                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$pagesHtml}</body></html>";
+                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$pagesHtml}</body></html>";
 
                     $pdf = Pdf::loadHTML($html)
                         ->setPaper([0, 0, $widthPt, $heightPt])
