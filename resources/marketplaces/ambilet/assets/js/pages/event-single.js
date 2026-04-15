@@ -1017,9 +1017,16 @@ const EventPage = {
 
         // Main image - responsive: poster (vertical) on mobile, hero (horizontal) on desktop
         const isMobile = window.innerWidth < 768;
-        const mainImg = (isMobile ? (e.posterImage || e.heroImage) : (e.heroImage || e.posterImage)) || e.images?.[0] || '/assets/images/default-event.png';
+        const usePoster = isMobile && e.posterImage;
+        const mainImg = (usePoster ? e.posterImage : (e.heroImage || e.posterImage)) || e.images?.[0] || '/assets/images/default-event.png';
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
+
+        // On mobile with poster image: remove fixed aspect-ratio so vertical poster shows naturally
+        const mainImageContainer = document.getElementById('mainImageContainer');
+        if (mainImageContainer && usePoster) {
+            mainImageContainer.style.aspectRatio = '';
+        }
 
         // Badges
         this.renderBadges(e);
@@ -2668,11 +2675,23 @@ const EventPage = {
         }
 
         var MONTHS_SHORT = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+        var now = new Date();
+
+        // Sort: upcoming first (closest date first), then past (most recent first)
+        tourEvents.sort(function(a, b) {
+            var aDate = a.event_date ? new Date(a.event_date) : new Date(0);
+            var bDate = b.event_date ? new Date(b.event_date) : new Date(0);
+            var aUpcoming = aDate >= now, bUpcoming = bDate >= now;
+            if (aUpcoming && !bUpcoming) return -1;
+            if (!aUpcoming && bUpcoming) return 1;
+            return aUpcoming ? aDate - bDate : bDate - aDate;
+        });
 
         var html = '';
         for (var i = 0; i < tourEvents.length; i++) {
             var te = tourEvents[i];
             var date = te.event_date ? new Date(te.event_date) : null;
+            var isPast = date && date < now;
             var dayNum = date ? date.getDate() : '';
             var monthStr = date ? MONTHS_SHORT[date.getMonth()] : '';
             var yearNum = date ? date.getFullYear() : '';
@@ -2683,29 +2702,37 @@ const EventPage = {
             var imgSrc = te.image_url || '/assets/images/default-event.png';
             var eventUrl = '/bilete/' + (te.slug || te.id);
 
-            html += '<a href="' + eventUrl + '" class="flex items-center gap-4 p-3 transition-colors rounded-xl hover:bg-gray-50 group">';
+            if (isPast) {
+                // Past event: muted, no link
+                html += '<div class="flex items-center gap-4 p-3 rounded-xl opacity-50">';
+            } else {
+                html += '<a href="' + eventUrl + '" class="flex items-center gap-4 p-3 transition-colors rounded-xl hover:bg-gray-50 group">';
+            }
             // Date badge
-            html += '<div class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl text-white text-center" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">';
+            var badgeBg = isPast ? 'background: #94a3b8;' : 'background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);';
+            html += '<div class="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl text-white text-center" style="' + badgeBg + '">';
             html += '<span class="text-xl font-bold leading-none">' + dayNum + '</span>';
             html += '<span class="text-xs font-semibold uppercase">' + monthStr + '</span>';
             html += '</div>';
             // Image
-            html += '<div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden hidden sm:block">';
+            html += '<div class="flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden hidden sm:block' + (isPast ? ' grayscale' : '') + '">';
             html += '<img src="' + imgSrc + '" alt="' + te.name + '" class="w-full h-full object-cover" width="64" height="48">';
             html += '</div>';
             // Info
             html += '<div class="flex-1 min-w-0">';
             if (location) {
-                html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">';
+                html += '<p class="font-semibold truncate ' + (isPast ? 'text-muted' : 'text-secondary group-hover:text-primary transition-colors') + '">';
                 html += city ? city : '';
-                html += '<svg class="text-primary inline w-3.5 h-3.5 ml-1 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
-                html += '<span class="text-primary">' + location + '</span></p>';
+                html += '<svg class="' + (isPast ? 'text-muted' : 'text-primary') + ' inline w-3.5 h-3.5 ml-1 mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+                html += '<span class="' + (isPast ? 'text-muted' : 'text-primary') + '">' + location + '</span></p>';
             }
             html += '<p class="text-sm text-muted">' + (te.name || 'Eveniment') + '</p>';
             html += '</div>';
-            // Arrow
-            html += '<svg class="flex-shrink-0 w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
-            html += '</a>';
+            if (!isPast) {
+                // Arrow only for upcoming
+                html += '<svg class="flex-shrink-0 w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+            }
+            html += isPast ? '</div>' : '</a>';
         }
 
         container.innerHTML = html;
