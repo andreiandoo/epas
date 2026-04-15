@@ -526,8 +526,9 @@ const ArtistPage = {
         for (var g = 0; g < groupings.length; g++) {
             var group = groupings[g];
             var typeLabel = group.type === 'turneu' ? 'Turneu' : 'Serie evenimente';
+            var groupId = group.slug || ('group-' + group.id);
 
-            html += '<div class="mt-8 mb-6">';
+            html += '<div class="mt-8 mb-6" id="' + groupId + '">';
             html += '<div class="flex items-center gap-3 mb-4">';
             html += '<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">';
             html += '<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>';
@@ -571,6 +572,19 @@ const ArtistPage = {
 
         // Append after events list
         container.insertAdjacentHTML('afterend', html);
+
+        // Scroll to hash anchor if present (e.g. /qfeel#ploiesti)
+        var hash = window.location.hash.replace('#', '');
+        if (hash) {
+            var target = document.getElementById(hash);
+            if (target) {
+                setTimeout(function() {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    target.classList.add('ring-2', 'ring-primary', 'ring-offset-4', 'rounded-2xl');
+                    setTimeout(function() { target.classList.remove('ring-2', 'ring-primary', 'ring-offset-4', 'rounded-2xl'); }, 3000);
+                }, 300);
+            }
+        }
     },
 
     /**

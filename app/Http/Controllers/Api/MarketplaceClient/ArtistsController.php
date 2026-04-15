@@ -379,6 +379,7 @@ class ArtistsController extends BaseController
                 return [
                     'id' => $tour->id,
                     'name' => $tour->name,
+                    'slug' => $tour->slug,
                     'type' => $tour->type,
                     'events' => $liveEvents->map(function ($event) use ($language) {
                         return [
