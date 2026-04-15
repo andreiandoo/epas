@@ -765,6 +765,18 @@ function renderEvents(events) {
     const statusColors = { published: 'success', draft: 'warning', ended: 'muted', pending_review: 'info', cancelled: 'error', postponed: 'warning', sold_out: 'info' };
     const statusLabels = { published: 'Publicat', draft: 'Ciornă', ended: 'Încheiat', pending_review: 'În așteptare', cancelled: 'Anulat', postponed: 'Amânat', sold_out: 'Sold Out' };
 
+    // Sort: ongoing events by closest date first, ended by most recent first
+    events = [...events].sort((a, b) => {
+        const aStatus = getEventDisplayStatus(a), bStatus = getEventDisplayStatus(b);
+        const aOngoing = aStatus === 'ongoing', bOngoing = bStatus === 'ongoing';
+        if (aOngoing && bOngoing) {
+            // Both ongoing: closest date first (ascending)
+            return new Date(a.starts_at || 0) - new Date(b.starts_at || 0);
+        }
+        // Ended/other: most recent first (descending)
+        return new Date(b.starts_at || 0) - new Date(a.starts_at || 0);
+    });
+
     container.innerHTML = events.map(event => {
         // Determine if event has ended
         const eventEndDate = event.ends_at || event.starts_at;
