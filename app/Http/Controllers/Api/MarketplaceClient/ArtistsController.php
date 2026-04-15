@@ -386,7 +386,7 @@ class ArtistsController extends BaseController
                             'name' => $event->getTranslation('title', $language),
                             'slug' => $event->slug,
                             'starts_at' => $event->start_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
-                            'venue_name' => $event->venue?->name,
+                            'venue_name' => $event->venue?->getTranslation('name', $language) ?? $event->venue?->name,
                             'venue_city' => $event->venue?->city,
                             'image' => $event->poster_url,
                             'is_sold_out' => (bool) ($event->is_sold_out ?? false),
