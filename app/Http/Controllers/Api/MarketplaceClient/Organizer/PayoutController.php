@@ -113,19 +113,17 @@ class PayoutController extends BaseController
                 $commissionMode = $event->getEffectiveCommissionMode();
                 $commissionRate = $event->getEffectiveCommissionRate();
 
-                // Calculate revenue based on commission mode
+                // Calculate revenue: gross from orders, net from ticket base prices
                 $grossRevenue = (float) $completedOrders->sum('total');
-                $subtotalRevenue = (float) $completedOrders->sum('subtotal');
 
-                if ($commissionMode === 'added_on_top') {
-                    // Organizer gets full subtotal (ticket price)
-                    $netRevenue = $subtotalRevenue;
-                    $commissionAmount = $grossRevenue - $subtotalRevenue;
-                } else {
-                    // Commission deducted from total
-                    $commissionAmount = round($grossRevenue * ($commissionRate / 100), 2);
-                    $netRevenue = $grossRevenue - $commissionAmount;
-                }
+                // Net revenue = sum of base ticket prices (what organizer actually earns)
+                // This handles per-ticket-type commission rates correctly
+                $orderIds = $completedOrders->pluck('id');
+                $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $orderIds)
+                    ->whereIn('status', ['valid', 'used'])
+                    ->sum('price');
+
+                $commissionAmount = round($grossRevenue - $netRevenue, 2);
 
                 // Get payouts for this event (if tracked per event)
                 $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)
