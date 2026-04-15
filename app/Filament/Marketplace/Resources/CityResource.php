@@ -30,7 +30,7 @@ class CityResource extends Resource
 
     protected static ?string $navigationLabel = 'Cities';
 
-    protected static ?string $navigationParentItem = 'Venues';
+    protected static ?string $navigationParentItem = 'Locații';
 
     protected static ?int $navigationSort = 3;
 
