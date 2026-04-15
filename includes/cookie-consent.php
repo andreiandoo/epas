@@ -16,7 +16,7 @@
 <!-- Cookie Banner -->
 <div id="cookieBanner" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_30px_rgba(0,0,0,0.1)] p-5 z-[9999] transform translate-y-full transition-transform duration-400 ease-out">
     <div class="flex flex-col items-center gap-6 mx-auto max-w-7xl lg:flex-row">
-        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-white bg-gradient-to-br from-primary to-primary-light rounded-xl">
+        <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-white mobile:hidden bg-gradient-to-br from-primary to-primary-light rounded-xl">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/>
                 <circle cx="12" cy="12" r="4"/>
@@ -26,12 +26,31 @@
                 <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
             </svg>
         </div>
-        <div class="flex-1 text-center lg:text-left">
+        <div class="flex-1 text-center mobile:hidden lg:text-left">
             <h3 class="mb-1 text-base font-bold text-secondary">Folosim cookie-uri</h3>
             <p class="text-sm leading-relaxed text-muted">
                 Utilizăm cookie-uri pentru a-ți oferi cea mai bună experiență pe site.
                 Află mai multe în <a href="/cookies" class="font-medium text-primary">Politica de cookies</a>.
             </p>
+        </div>
+        <div class="items-center hidden mobile:flex gap-x-4">
+            <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-white bg-gradient-to-br from-primary to-primary-light rounded-xl">
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/>
+                    <line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/>
+                    <line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/>
+                    <line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/>
+                </svg>
+            </div>
+            <div class="flex-1 text-left lg:text-left">
+                <h3 class="mb-1 text-base font-bold text-secondary">Folosim cookie-uri</h3>
+                <p class="text-sm leading-relaxed text-muted">
+                    Utilizăm cookie-uri pentru a-ți oferi cea mai bună experiență pe site.
+                    Află mai multe în <a href="/cookies" class="font-medium text-primary">Politica de cookies</a>.
+                </p>
+            </div>
         </div>
         <div class="flex flex-wrap items-center justify-center flex-shrink-0 gap-3">
             <button onclick="CookieConsent.openSettings()" class="px-6 py-3 text-sm font-semibold transition-all bg-transparent border border-gray-200 rounded-xl text-muted hover:border-gray-300 hover:text-secondary mobile:px-4 mobile:text-xs" name="customize-cookies">
