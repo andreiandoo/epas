@@ -73,6 +73,7 @@ class TicketsController extends BaseController
 
     /**
      * Download all tickets for an order as PDF.
+     * Uses custom template if available, falls back to generic.
      * Public endpoint — authenticated by marketplace API key + order reference number.
      */
     public function downloadPdf(Request $request): mixed
@@ -84,7 +85,7 @@ class TicketsController extends BaseController
             return $this->error('Missing order reference', 400);
         }
 
-        $order = Order::with(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType'])
+        $order = Order::with(['tickets.marketplaceEvent', 'tickets.marketplaceTicketType', 'tickets.ticketType', 'tickets.event', 'tickets.event.venue', 'tickets.event.marketplaceOrganizer'])
             ->where('marketplace_client_id', $client->id)
             ->where('order_number', $orderRef)
             ->whereIn('status', ['completed', 'confirmed', 'paid'])
@@ -99,12 +100,61 @@ class TicketsController extends BaseController
             return $this->error('No tickets found for this order', 404);
         }
 
-        // Get first event for filename
-        $firstEvent = $tickets->first()->marketplaceEvent;
-        $eventName = $firstEvent->name ?? 'Eveniment';
-        $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
+        $safeOrderNum = preg_replace('/[^a-zA-Z0-9_\-]/', '-', $order->order_number);
+        $filename = "bilete-{$safeOrderNum}.pdf";
 
-        // Theme color from marketplace settings
+        // Try custom template — generate one page per ticket
+        $firstTicket = $tickets->first();
+        $template = $this->resolveTicketTemplate($firstTicket, $client);
+
+        if ($template) {
+            try {
+                $variableService = app(TicketVariableService::class);
+                $generator = app(TicketPreviewGenerator::class);
+
+                $size = $template->getSize();
+                $widthPt = round($size['width'] * 2.8346, 2);
+                $heightPt = round($size['height'] * 2.8346, 2);
+                $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+                $pages = [];
+                foreach ($tickets as $ticket) {
+                    $data = $variableService->resolveTicketData($ticket);
+                    $content = $generator->renderToHtml($template->template_data, $data);
+                    if (!empty(trim($content))) {
+                        $pages[] = $content;
+                    }
+                }
+
+                if (!empty($pages)) {
+                    $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
+                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$pagesHtml}</body></html>";
+
+                    $pdf = Pdf::loadHTML($html)
+                        ->setPaper([0, 0, $widthPt, $heightPt])
+                        ->setOption('isRemoteEnabled', true)
+                        ->setOption('isHtml5ParserEnabled', true);
+
+                    $pdfOutput = $pdf->output();
+                    if (!empty($pdfOutput)) {
+                        $template->markAsUsed();
+                        return response()->streamDownload(fn () => print($pdfOutput), $filename, [
+                            'Content-Type' => 'application/pdf',
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::channel('marketplace')->warning('Order PDF custom template failed, using generic', [
+                    'order_id' => $order->id,
+                    'template_id' => $template->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Fallback to generic template
+        $eventName = $firstTicket->marketplaceEvent?->name ?? 'Eveniment';
+        $marketplaceName = $client->public_name ?? $client->name ?? 'Marketplace';
         $primaryColor = $client->settings['theme']['primary_color'] ?? '#1a1a2e';
 
         $pdf = Pdf::loadView('marketplace-tickets-pdf', [
@@ -116,16 +166,6 @@ class TicketsController extends BaseController
         ])
             ->setOption('isRemoteEnabled', true)
             ->setPaper([0, 0, 396, 700], 'portrait');
-
-        $safeEventName = preg_replace('/[^a-zA-Z0-9_\-]/', '-', $eventName);
-        $filename = "bilete-{$safeEventName}-{$order->order_number}.pdf";
-
-        Log::channel('marketplace')->info('Tickets PDF downloaded', [
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-            'client_id' => $client->id,
-            'ticket_count' => $tickets->count(),
-        ]);
 
         return $pdf->download($filename);
     }
