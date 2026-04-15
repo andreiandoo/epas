@@ -698,10 +698,20 @@ class Event extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        // Sum revenue from completed orders for this event (gross revenue including commission)
-        return (float) Order::where('event_id', $this->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->sum('total');
+        // Net revenue = gross (order.total) minus commission
+        $query = Order::where('event_id', $this->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed']);
+
+        $gross = (float) (clone $query)->sum('total');
+        $commission = (float) (clone $query)->sum('commission_amount');
+
+        // If commission_amount not set on orders, calculate from event/organizer rate
+        if ($commission == 0 && $gross > 0) {
+            $rate = $this->getEffectiveCommissionRate();
+            $commission = round($gross * $rate / 100, 2);
+        }
+
+        return round($gross - $commission, 2);
     }
 
     /**
