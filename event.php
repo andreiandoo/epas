@@ -2,18 +2,38 @@
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/api.php';
 
+$eventSlug = $_GET['slug'] ?? '';
+$isPreview = !empty($_GET['preview']);
+
+// Quick redirect check BEFORE page cache — use short-TTL API cache
+// so redirect_url changes propagate within 5 minutes
+if ($eventSlug && !$isPreview) {
+    $redirectCheck = api_cached('event_redirect_' . $eventSlug, function () use ($eventSlug) {
+        return api_get('/events/' . urlencode($eventSlug));
+    }, 300); // 5 min cache for redirect check
+    $redirectUrl = $redirectCheck['data']['event']['redirect_url'] ?? null;
+    if ($redirectUrl) {
+        // Invalidate page cache so future requests also redirect
+        $pageCacheDir = __DIR__ . '/includes/cache/pages';
+        $pageCacheKey = md5($_SERVER['REQUEST_URI'] ?? '/');
+        @unlink($pageCacheDir . '/' . $pageCacheKey . '.html');
+
+        header('Location: ' . $redirectUrl, true, 302);
+        exit;
+    }
+}
+
 // Full-page HTML cache: serves cached HTML on hit (zero API calls)
 $pageCacheTTL = 300; // 5 minutes
 require_once __DIR__ . '/includes/page-cache.php';
 
-$eventSlug = $_GET['slug'] ?? '';
 $pageTitle = 'Eveniment';
 $pageDescription = 'Detalii eveniment si cumparare bilete';
 $bodyClass = 'bg-surface';
 
 // Preview mode: prevent browser from caching the page itself
 // AND invalidate all server caches so the next public visit gets fresh data
-if (!empty($_GET['preview'])) {
+if ($isPreview) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
     header('Pragma: no-cache');
 
@@ -24,48 +44,35 @@ if (!empty($_GET['preview'])) {
         $publicCacheFile = $pageCacheDir . '/' . md5($publicUri) . '.html';
         if (file_exists($publicCacheFile)) @unlink($publicCacheFile);
 
-        // 2. Invalidate application-level api_cached() entry
+        // 2. Invalidate application-level api_cached() entries
         $appCacheDir = sys_get_temp_dir() . '/ambilet_cache';
-        $appCacheFile = $appCacheDir . '/' . md5('event_preload_' . $eventSlug) . '.json';
-        if (file_exists($appCacheFile)) @unlink($appCacheFile);
+        @unlink($appCacheDir . '/' . md5('event_preload_' . $eventSlug) . '.json');
+        @unlink($appCacheDir . '/' . md5('event_redirect_' . $eventSlug) . '.json');
 
         // 3. Invalidate proxy API cache for single event endpoint
-        //    The proxy uses action='event' with empty $params (slug is in the URL, not params)
-        //    so cache key = 'event_' + md5(serialize([])) — shared by all events (10s TTL anyway)
         $apiCacheDir = __DIR__ . '/cache/api';
         if (is_dir($apiCacheDir)) {
             $apiCacheKey = 'event_' . md5(serialize([]));
-            $apiCacheFile = $apiCacheDir . '/' . $apiCacheKey . '.json';
-            if (file_exists($apiCacheFile)) @unlink($apiCacheFile);
+            @unlink($apiCacheDir . '/' . $apiCacheKey . '.json');
         }
     }
 }
 
 // Server-side: fetch event data for LCP image preload and SEO meta
 $eventPreload = null;
-$isPreview = !empty($_GET['preview']);
 if ($eventSlug) {
     if ($isPreview) {
-        // Preview mode: always fetch fresh data, bypass cache, include unpublished
         $eventPreload = api_get('/events/' . urlencode($eventSlug) . '?preview=1');
     } else {
         $eventPreload = api_cached('event_preload_' . $eventSlug, function () use ($eventSlug) {
             return api_get('/events/' . urlencode($eventSlug));
-        }, 1800); // 30min cache (stale-while-revalidate extends to ~2.5h)
+        }, 1800); // 30min cache
     }
-    // API returns: { data: { event: {...}, venue: {...}, ... } }
     $ev = $eventPreload['data']['event'] ?? null;
     if ($ev) {
         $pageTitle = $ev['name'] ?? $ev['title'] ?? $pageTitle;
         $pageDescription = !empty($ev['short_description']) ? mb_substr(strip_tags($ev['short_description']), 0, 160) : $pageDescription;
     }
-}
-
-// External redirect: if event has a redirect_url, send 302 and exit
-$redirectUrl = $ev['redirect_url'] ?? null;
-if ($redirectUrl && !$isPreview) {
-    header('Location: ' . $redirectUrl, true, 302);
-    exit;
 }
 
 // Leisure venue: delegate to custom template
