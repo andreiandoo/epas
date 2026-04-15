@@ -299,6 +299,7 @@ class MarketplaceTrackingController extends Controller
      */
     protected function updateSession(string $sessionId, string $visitorId, Request $request, CoreCustomerEvent $event): void
     {
+        $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
         $session = CoreSession::where('session_id', $sessionId)->first();
 
         if (!$session) {
@@ -310,18 +311,18 @@ class MarketplaceTrackingController extends Controller
                 'started_at' => now(),
                 'pageviews' => $event->event_type === CoreCustomerEvent::TYPE_PAGE_VIEW ? 1 : 0,
                 'events' => 1,
-                'landing_page' => $event->page_url,
+                'landing_page' => $t($event->page_url, 2048),
                 'landing_page_type' => $event->page_type,
-                'source' => $this->determineSource($request),
-                'medium' => $request->input('utm_medium'),
-                'campaign' => $request->input('utm_campaign'),
-                'referrer' => $request->input('referrer'),
-                'utm_source' => $request->input('utm_source'),
-                'utm_medium' => $request->input('utm_medium'),
-                'utm_campaign' => $request->input('utm_campaign'),
-                'gclid' => $request->input('gclid'),
-                'fbclid' => $request->input('fbclid'),
-                'ttclid' => $request->input('ttclid'),
+                'source' => $t($this->determineSource($request)),
+                'medium' => $t($request->input('utm_medium')),
+                'campaign' => $t($request->input('utm_campaign')),
+                'referrer' => $t($request->input('referrer'), 2048),
+                'utm_source' => $t($request->input('utm_source')),
+                'utm_medium' => $t($request->input('utm_medium')),
+                'utm_campaign' => $t($request->input('utm_campaign')),
+                'gclid' => $t($request->input('gclid')),
+                'fbclid' => $t($request->input('fbclid')),
+                'ttclid' => $t($request->input('ttclid')),
                 'device_type' => $this->parseUserAgent($request->userAgent() ?? '')['device_type'],
                 'browser' => $this->parseUserAgent($request->userAgent() ?? '')['browser'],
                 'os' => $this->parseUserAgent($request->userAgent() ?? '')['os'],

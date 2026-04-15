@@ -692,23 +692,25 @@ class PlatformTrackingService
         // Create new session
         $sessionId = $sessionToken ?? Str::uuid()->toString();
 
+        $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
+
         return CoreSession::create([
             'session_id' => $sessionId,
             'tenant_id' => $data['tenant_id'] ?? null,
             'visitor_id' => $data['visitor_id'] ?? null,
             'started_at' => now(),
-            'landing_page' => $data['page_url'] ?? null,
+            'landing_page' => $t($data['page_url'] ?? null, 2048),
             'landing_page_type' => $data['page_type'] ?? null,
-            'source' => $data['source'] ?? null,
-            'medium' => $data['medium'] ?? null,
-            'campaign' => $data['campaign'] ?? null,
-            'referrer' => $data['referrer'] ?? null,
-            'utm_source' => $data['utm_source'] ?? null,
-            'utm_medium' => $data['utm_medium'] ?? null,
-            'utm_campaign' => $data['utm_campaign'] ?? null,
-            'gclid' => $data['gclid'] ?? null,
-            'fbclid' => $data['fbclid'] ?? null,
-            'ttclid' => $data['ttclid'] ?? null,
+            'source' => $t($data['source'] ?? null),
+            'medium' => $t($data['medium'] ?? null),
+            'campaign' => $t($data['campaign'] ?? null),
+            'referrer' => $t($data['referrer'] ?? null, 2048),
+            'utm_source' => $t($data['utm_source'] ?? null),
+            'utm_medium' => $t($data['utm_medium'] ?? null),
+            'utm_campaign' => $t($data['utm_campaign'] ?? null),
+            'gclid' => $t($data['gclid'] ?? null),
+            'fbclid' => $t($data['fbclid'] ?? null),
+            'ttclid' => $t($data['ttclid'] ?? null),
             'device_type' => $data['device_type'] ?? null,
             'browser' => $data['browser'] ?? null,
             'os' => $data['os'] ?? null,
