@@ -3030,6 +3030,7 @@ $curlHeaders = [];
 foreach ($headers as $h) {
     $curlHeaders[] = $h;
 }
+$upstreamContentDisposition = '';
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 30,
@@ -3037,6 +3038,12 @@ curl_setopt_array($ch, [
     CURLOPT_HTTPHEADER => $curlHeaders,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
+        if (stripos($header, 'Content-Disposition:') === 0) {
+            $upstreamContentDisposition = trim($header);
+        }
+        return strlen($header);
+    },
 ]);
 
 if ($method === 'POST') {
@@ -3101,12 +3108,16 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     header('Cache-Control: no-store');
 }
 
-// For raw responses (PDF, exports), set proper headers for download
+// For raw responses (PDF, exports), forward headers from upstream via curl
 if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
-    // Detect content type from response body
     if (str_starts_with($response, '%PDF')) {
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="bilete.pdf"');
+        // Use filename from upstream Content-Disposition if captured, otherwise generic
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="bilete.pdf"');
+        }
         header('Content-Length: ' . strlen($response));
     }
 }
