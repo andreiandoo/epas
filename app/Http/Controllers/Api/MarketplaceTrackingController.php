@@ -358,6 +358,7 @@ class MarketplaceTrackingController extends Controller
      */
     protected function updateCoreCustomer(string $visitorId, Request $request, CoreCustomerEvent $event): void
     {
+        $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
         try {
             // Find customer by visitor_id
             $customer = CoreCustomer::where('visitor_id', $visitorId)->first();
@@ -384,17 +385,17 @@ class MarketplaceTrackingController extends Controller
                     'region' => $event->region,
                     'first_seen_at' => now(),
                     'last_seen_at' => now(),
-                    'first_source' => $this->determineSource($request),
-                    'first_medium' => $request->input('utm_medium'),
-                    'first_campaign' => $request->input('utm_campaign'),
-                    'first_referrer' => $request->input('referrer'),
-                    'first_landing_page' => $request->input('page_url'),
-                    'first_utm_source' => $request->input('utm_source'),
-                    'first_utm_medium' => $request->input('utm_medium'),
-                    'first_utm_campaign' => $request->input('utm_campaign'),
-                    'first_gclid' => $request->input('gclid'),
-                    'first_fbclid' => $request->input('fbclid'),
-                    'first_ttclid' => $request->input('ttclid'),
+                    'first_source' => $t($this->determineSource($request)),
+                    'first_medium' => $t($request->input('utm_medium')),
+                    'first_campaign' => $t($request->input('utm_campaign')),
+                    'first_referrer' => $t($request->input('referrer'), 2048),
+                    'first_landing_page' => $t($request->input('page_url'), 2048),
+                    'first_utm_source' => $t($request->input('utm_source')),
+                    'first_utm_medium' => $t($request->input('utm_medium')),
+                    'first_utm_campaign' => $t($request->input('utm_campaign')),
+                    'first_gclid' => $t($request->input('gclid')),
+                    'first_fbclid' => $t($request->input('fbclid')),
+                    'first_ttclid' => $t($request->input('ttclid')),
                 ]);
             }
 

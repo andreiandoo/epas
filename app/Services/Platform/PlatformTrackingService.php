@@ -764,6 +764,7 @@ class PlatformTrackingService
 
     protected function createCustomer(array $data, CoreSession $session): CoreCustomer
     {
+        $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
         $email = $data['email'] ?? null;
 
         $customerData = [
@@ -771,11 +772,11 @@ class PlatformTrackingService
             'first_tenant_id' => $data['tenant_id'] ?? null,
             'first_seen_at' => now(),
             'last_seen_at' => now(),
-            'first_referrer' => $data['referrer'] ?? null,
-            'first_utm_source' => $data['utm_source'] ?? null,
-            'first_utm_medium' => $data['utm_medium'] ?? null,
-            'first_utm_campaign' => $data['utm_campaign'] ?? null,
-            'first_landing_page' => $data['page_url'] ?? null,
+            'first_referrer' => $t($data['referrer'] ?? null, 2048),
+            'first_utm_source' => $t($data['utm_source'] ?? null),
+            'first_utm_medium' => $t($data['utm_medium'] ?? null),
+            'first_utm_campaign' => $t($data['utm_campaign'] ?? null),
+            'first_landing_page' => $t($data['page_url'] ?? null, 2048),
             'device_type' => $data['device_type'] ?? null,
             'browser' => $data['browser'] ?? null,
             'os' => $data['os'] ?? null,
