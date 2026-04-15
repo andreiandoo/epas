@@ -287,8 +287,14 @@ class DashboardController extends BaseController
             ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
             ->count();
 
+        // Net revenue = sum of ticket base prices (without commission)
+        $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $statsOrderIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->sum('price');
+
         $stats = [
-            'total_revenue' => (float) (clone $statsQuery)->sum('total'),
+            'total_revenue' => $netRevenue,
+            'gross_revenue' => (float) (clone $statsQuery)->sum('total'),
             'total_tickets' => $validTickets,
             'completed_orders' => (int) (clone $statsQuery)->count(),
         ];
@@ -312,12 +318,18 @@ class DashboardController extends BaseController
             $eventName = $order->event?->name ?? $order->marketplaceEvent?->name;
             $eventId = $order->event_id ?? $order->marketplace_event_id;
 
+            // Net total = sum of ticket base prices for this order
+            $ticketPriceSum = $order->tickets
+                ->whereIn('status', ['valid', 'used'])
+                ->sum('price');
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'status' => $order->status,
                 'payment_status' => $order->payment_status,
                 'total' => (float) $order->total,
+                'net_total' => (float) $ticketPriceSum,
                 'event' => $eventName,
                 'event_id' => $eventId,
                 'customer' => $order->marketplaceCustomer

@@ -1774,7 +1774,22 @@ class EventsController extends BaseController
 
         // Overview metrics — always all-time (not filtered by period)
         $allTimeQuery = $scopedOrders();
-        $totalRevenue = (float) (clone $allTimeQuery)->sum('total');
+        $grossRevenue = (float) (clone $allTimeQuery)->sum('total');
+
+        // Net revenue = sum of ticket base prices (without commission)
+        $allTimeOrderIds = (clone $allTimeQuery)->pluck('id');
+        $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $allTimeOrderIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->sum('price');
+        $commissionAmount = round($grossRevenue - $netRevenue, 2);
+
+        // Refunds
+        $refundsTotal = (float) Order::where('event_id', $event->id)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->whereIn('status', ['refunded', 'partially_refunded'])
+            ->sum('total');
+
+        $totalRevenue = $grossRevenue; // Keep for backwards compat (chart/comparison)
         $ticketsSold = (int) (clone $allTimeQuery)->withCount('tickets')->get()->sum('tickets_count');
         $pageViews = $event->views_count ?? 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
@@ -1993,12 +2008,16 @@ class EventsController extends BaseController
                 'ends_at' => $event->event_end_date ? Carbon::parse($event->event_end_date)->toIso8601String() : null,
             ],
             'overview' => [
-                'total_revenue' => $totalRevenue,
+                'total_revenue' => $netRevenue,
+                'gross_revenue' => $grossRevenue,
+                'net_revenue' => $netRevenue,
+                'commission_amount' => $commissionAmount,
+                'refunds_total' => $refundsTotal,
                 'tickets_sold' => $ticketsSold,
                 'tickets_today' => $ticketsToday,
                 'capacity' => $capacity,
                 'page_views' => $pageViews,
-                'unique_visitors' => $pageViews, // Approximate: real unique tracking requires CoreCustomerEvent
+                'unique_visitors' => $pageViews,
                 'conversion_rate' => $conversionRate,
                 'revenue_change' => $revenueChange,
                 'tickets_change' => $ticketsChange,
