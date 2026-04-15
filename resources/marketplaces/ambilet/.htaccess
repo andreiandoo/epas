@@ -5,6 +5,13 @@ RewriteEngine On
 # Set default index file
 DirectoryIndex index.php index.html
 
+# Redirect old WP email tracking links and ticket downloads to old.ambilet.ro
+RewriteCond %{REQUEST_URI} ^/wp-json/wp-mail-smtp/ [NC]
+RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
+
+RewriteCond %{QUERY_STRING} download_ticket [NC]
+RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
+
 # Force HTTPS (uncomment in production)
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
