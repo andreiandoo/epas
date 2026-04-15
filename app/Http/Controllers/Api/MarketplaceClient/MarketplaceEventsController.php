@@ -229,12 +229,9 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
-        // Filter by recommended (homepage or general featured, excluding paid promotions for variety)
+        // Filter by recommended (general featured only — homepage featured is for hero carousel only)
         if ($request->boolean('recommended')) {
-            $query->where(function ($q) {
-                $q->where('is_homepage_featured', true)
-                    ->orWhere('is_general_featured', true);
-            });
+            $query->where('is_general_featured', true);
         }
 
         // Filter by price range
