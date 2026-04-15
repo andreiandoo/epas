@@ -290,7 +290,7 @@ require_once __DIR__ . '/includes/head.php';
                 <!-- Event Header -->
                 <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:border-b mobile:rounded-none">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden rounded-t-3xl mobile:rounded-none" style="aspect-ratio: 1.904/1;">
+                    <div id="mainImageContainer" class="relative overflow-hidden rounded-t-3xl mobile:rounded-none" style="aspect-ratio: 1.904/1;">
                         <img id="mainImage" src="<?= htmlspecialchars($lcpImageUrl) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="object-cover w-full h-full" fetchpriority="high" width="800" height="420">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>

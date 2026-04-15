@@ -34,10 +34,10 @@
             </p>
         </div>
         <div class="flex flex-wrap items-center justify-center flex-shrink-0 gap-3">
-            <button onclick="CookieConsent.openSettings()" class="px-6 py-3 text-sm font-semibold transition-all bg-transparent border border-gray-200 rounded-xl text-muted hover:border-gray-300 hover:text-secondary" name="customize-cookies">
+            <button onclick="CookieConsent.openSettings()" class="px-6 py-3 text-sm font-semibold transition-all bg-transparent border border-gray-200 rounded-xl text-muted hover:border-gray-300 hover:text-secondary mobile:px-4 mobile:text-xs" name="customize-cookies">
                 Personalizează
             </button>
-            <button onclick="CookieConsent.rejectAll()" class="px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 border-none rounded-xl hover:bg-gray-200" name="reject-cookies">
+            <button onclick="CookieConsent.rejectAll()" class="px-6 py-3 text-sm font-semibold text-gray-600 transition-all bg-gray-100 border-none rounded-xl hover:bg-gray-200 mobile:px-4 mobile:text-xs" name="reject-cookies">
                 Refuză
             </button>
             <button onclick="CookieConsent.acceptAll()" class="px-6 py-3 rounded-xl text-sm font-semibold bg-gradient-to-br from-primary to-primary-light border-none text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 transition-all" name="accept-cookies">
