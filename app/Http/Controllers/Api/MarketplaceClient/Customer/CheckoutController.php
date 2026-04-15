@@ -519,7 +519,11 @@ class CheckoutController extends BaseController
             $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
             $isMultiEvent = count($eventIds) > 1;
 
-            // Create single order (test orders are free, auto-confirmed)
+            // Create single order
+            // Auto-confirm: test orders AND free orders (total = 0)
+            $isFreeOrder = !$isTestOrder && $orderTotal <= 0;
+            $isAutoConfirmed = $isTestOrder || $isFreeOrder;
+
             $order = Order::create([
                 'marketplace_client_id' => $client->id,
                 'marketplace_organizer_id' => $isMultiEvent ? null : $primaryOrganizerId,
@@ -528,20 +532,20 @@ class CheckoutController extends BaseController
                 'event_id' => $isMultiEvent ? null : ($primaryEvent?->id),
                 'marketplace_event_id' => $isMultiEvent ? null : ($primaryMarketplaceEvent?->id),
                 'order_number' => ($isTestOrder ? 'TEST-' : 'MKT-') . strtoupper(Str::random(8)),
-                'status' => $isTestOrder ? 'confirmed' : 'pending',
-                'payment_status' => $isTestOrder ? 'test' : 'pending',
+                'status' => $isAutoConfirmed ? 'completed' : 'pending',
+                'payment_status' => $isTestOrder ? 'test' : ($isFreeOrder ? 'free' : 'pending'),
                 'subtotal' => $isTestOrder ? 0 : $subtotal,
                 'discount_amount' => $isTestOrder ? 0 : $discount,
                 'commission_rate' => $isTestOrder ? 0 : $avgCommissionRate,
                 'commission_amount' => $isTestOrder ? 0 : $totalCommission,
                 'total' => $isTestOrder ? 0 : $orderTotal,
                 'currency' => $currency,
-                'source' => $isTestOrder ? 'test_order' : 'marketplace',
+                'source' => $isTestOrder ? 'test_order' : ($isFreeOrder ? 'marketplace_free' : 'marketplace'),
                 'customer_email' => $customer->email,
                 'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                 'customer_phone' => $customer->phone,
-                'expires_at' => $isTestOrder ? null : now()->addMinutes(15),
-                'paid_at' => $isTestOrder ? now() : null,
+                'expires_at' => $isAutoConfirmed ? null : now()->addMinutes(15),
+                'paid_at' => $isAutoConfirmed ? now() : null,
                 'meta' => array_merge([
                     'cart_id' => isset($cart) ? $cart->id : null,
                     'promo_code' => $promoCode,
