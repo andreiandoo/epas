@@ -195,6 +195,56 @@ class ViewTicket extends ViewRecord
                             ->send();
                     }
                 }),
+
+            Actions\Action::make('change_status')
+                ->label('Schimbă status')
+                ->icon('heroicon-o-arrow-path')
+                ->color('warning')
+                ->form([
+                    \Filament\Forms\Components\Select::make('status')
+                        ->label('Status nou')
+                        ->options([
+                            'valid' => 'Valid',
+                            'used' => 'Folosit',
+                            'cancelled' => 'Anulat',
+                            'pending' => 'În așteptare',
+                        ])
+                        ->default(fn () => $this->record->status)
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    $ticket = $this->record;
+                    $oldStatus = $ticket->status;
+                    $newStatus = $data['status'];
+
+                    if ($oldStatus === $newStatus) {
+                        Notification::make()->title('Statusul nu s-a schimbat')->info()->send();
+                        return;
+                    }
+
+                    $ticket->update([
+                        'status' => $newStatus,
+                        'checked_in_at' => $newStatus === 'valid' ? null : $ticket->checked_in_at,
+                    ]);
+
+                    activity('tenant')
+                        ->performedOn($ticket)
+                        ->withProperties([
+                            'old_status' => $oldStatus,
+                            'new_status' => $newStatus,
+                            'ticket_code' => $ticket->code ?? $ticket->barcode,
+                        ])
+                        ->log("Ticket status changed: {$oldStatus} → {$newStatus}");
+
+                    Notification::make()
+                        ->title('Status actualizat')
+                        ->body("Biletul a fost schimbat din {$oldStatus} în {$newStatus}")
+                        ->success()
+                        ->send();
+                })
+                ->requiresConfirmation()
+                ->modalHeading('Schimbă statusul biletului')
+                ->modalDescription('Ești sigur că vrei să schimbi statusul acestui bilet?'),
         ];
     }
 
