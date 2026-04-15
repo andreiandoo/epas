@@ -1547,7 +1547,6 @@ class EventsController extends BaseController
                 'Ticket Type' => $ticket->ticketType?->name ?? 'Standard',
                 'Price' => $ticket->ticketType?->display_price ?? 0,
                 'Customer Name' => $customer ? $customer->first_name . ' ' . $customer->last_name : ($ticket->order->customer_name ?? 'N/A'),
-                'Customer Email' => $customer?->email ?? $ticket->order->customer_email ?? '',
                 'Customer Phone' => $customer?->phone ?? $ticket->order->customer_phone ?? '',
                 'Order Number' => $ticket->order->order_number,
                 'Purchased At' => $ticket->created_at->format('Y-m-d H:i:s'),
