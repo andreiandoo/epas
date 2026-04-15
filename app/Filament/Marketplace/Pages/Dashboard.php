@@ -475,7 +475,7 @@ class Dashboard extends Page
         // If billing_starts_at is set and falls in the current month, use it as period start
         $billingStartsAt = $this->marketplace->billing_starts_at ?? null;
         if ($billingStartsAt) {
-            $billingStart = Carbon::parse($billingStartsAt)->startOfDay()->utc();
+            $billingStart = Carbon::parse($billingStartsAt, $tz)->startOfDay()->utc();
             if ($billingStart->between($monthStart, $monthEnd)) {
                 $monthStart = $billingStart;
             }

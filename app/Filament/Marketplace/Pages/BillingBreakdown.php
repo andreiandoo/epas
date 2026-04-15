@@ -121,9 +121,19 @@ class BillingBreakdown extends Page
         }
 
         $marketplaceId = $marketplace->id;
+        $tz = 'Europe/Bucharest';
         $monthDate = Carbon::createFromFormat('Y-m', $this->month);
-        $monthStart = $monthDate->copy()->startOfMonth();
-        $monthEnd = $monthDate->copy()->endOfMonth();
+        $monthStart = $monthDate->copy()->startOfMonth()->shiftTimezone($tz)->utc();
+        $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->shiftTimezone($tz)->utc();
+
+        // If billing_starts_at falls in this month, use it as start
+        $billingStartsAt = $marketplace->billing_starts_at ?? null;
+        if ($billingStartsAt) {
+            $billingStart = Carbon::parse($billingStartsAt, $tz)->startOfDay()->utc();
+            if ($billingStart->between($monthStart, $monthEnd)) {
+                $monthStart = $billingStart;
+            }
+        }
         $currency = $marketplace->currency ?? 'RON';
         $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
         $commissionRate = (float) ($marketplace->commission_rate ?? 0);
