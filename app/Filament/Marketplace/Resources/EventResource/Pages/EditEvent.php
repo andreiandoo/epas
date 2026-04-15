@@ -891,11 +891,13 @@ class EditEvent extends EditRecord
             $data['tour_mode'] = 'existing';
             $data['existing_tour_id'] = $this->record->tour_id;
             $data['tour_name'] = $tour?->name ?? '';
+            $data['tour_slug'] = $tour?->slug ?? '';
             $data['grouping_type'] = $tour?->type ?? 'serie_evenimente';
         } else {
             $data['tour_mode'] = 'new';
             $data['existing_tour_id'] = null;
             $data['tour_name'] = '';
+            $data['tour_slug'] = '';
             $data['grouping_type'] = 'serie_evenimente';
         }
 
@@ -1271,18 +1273,19 @@ class EditEvent extends EditRecord
 
             if ($tourMode === 'new') {
                 $tourName = trim($this->data['tour_name'] ?? '');
+                $tourSlug = trim($this->data['tour_slug'] ?? '') ?: \Illuminate\Support\Str::slug($tourName);
 
                 if ($this->record->tour_id) {
-                    // Update the name and type of the existing tour
-                    Tour::where('id', $this->record->tour_id)->update([
-                        'name' => $tourName,
-                        'type' => $groupingType,
-                    ]);
+                    // Update the name, slug and type of the existing tour
+                    $updateData = ['name' => $tourName, 'type' => $groupingType];
+                    if ($tourSlug) $updateData['slug'] = $tourSlug;
+                    Tour::where('id', $this->record->tour_id)->update($updateData);
                 } else {
                     // Create a brand-new tour and assign only this event
                     $tour = Tour::create([
                         'marketplace_client_id' => $this->record->marketplace_client_id,
                         'name' => $tourName,
+                        'slug' => $tourSlug,
                         'type' => $groupingType,
                     ]);
                     $this->record->update(['tour_id' => $tour->id]);
@@ -1296,8 +1299,11 @@ class EditEvent extends EditRecord
                     $oldTourId = $this->record->tour_id;
                     $this->record->update(['tour_id' => $existingTourId]);
 
-                    // Update grouping type on the existing tour
-                    Tour::where('id', $existingTourId)->update(['type' => $groupingType]);
+                    // Update grouping type and slug on the existing tour
+                    $updateData = ['type' => $groupingType];
+                    $tourSlug = trim($this->data['tour_slug'] ?? '');
+                    if ($tourSlug) $updateData['slug'] = $tourSlug;
+                    Tour::where('id', $existingTourId)->update($updateData);
 
                     if ($oldTourId) {
                         $remaining = Event::where('tour_id', $oldTourId)->count();
@@ -1306,8 +1312,11 @@ class EditEvent extends EditRecord
                         }
                     }
                 } elseif ($existingTourId) {
-                    // Same tour, just update the type
-                    Tour::where('id', $existingTourId)->update(['type' => $groupingType]);
+                    // Same tour, just update the type and slug
+                    $updateData = ['type' => $groupingType];
+                    $tourSlug = trim($this->data['tour_slug'] ?? '');
+                    if ($tourSlug) $updateData['slug'] = $tourSlug;
+                    Tour::where('id', $existingTourId)->update($updateData);
                 }
             }
         } else {

@@ -2643,6 +2643,14 @@ class EventResource extends Resource
                                     ->maxLength(255)
                                     ->visible(fn (SGet $get) => (bool) $get('is_in_tour') && $get('tour_mode') === 'new'),
 
+                                Forms\Components\TextInput::make('tour_slug')
+                                    ->label($t('Slug grupare (pentru URL)', 'Grouping slug (for URL)'))
+                                    ->helperText($t('Folosit pentru link-uri anchor: /artist#slug. Ex: "ploiesti"', 'Used for anchor links: /artist#slug. E.g. "ploiesti"'))
+                                    ->dehydrated(false)
+                                    ->maxLength(100)
+                                    ->regex('/^[a-z0-9-]*$/')
+                                    ->visible(fn (SGet $get) => (bool) $get('is_in_tour')),
+
                                 Forms\Components\Select::make('existing_tour_id')
                                     ->label($t('Selectează gruparea', 'Select grouping'))
                                     ->helperText($t('Alege o grupare existentă. Lista este filtrată după formațiile acestui eveniment.', 'Choose an existing grouping. List is filtered by this event\'s artists.'))
