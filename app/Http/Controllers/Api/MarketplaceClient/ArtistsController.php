@@ -350,6 +350,52 @@ class ArtistsController extends BaseController
                 ->map(fn ($a) => $this->formatArtist($a, $language, true));
         }
 
+        // Get event groupings (tours/series) for this artist's events
+        $tourIds = $artist->events()
+            ->whereNotNull('tour_id')
+            ->pluck('tour_id')
+            ->unique()
+            ->values();
+
+        $eventGroupings = collect();
+        if ($tourIds->isNotEmpty()) {
+            $tours = \App\Models\Tour::whereIn('id', $tourIds)->get();
+            $eventGroupings = $tours->map(function ($tour) use ($language, $client) {
+                $liveEvents = \App\Models\Event::where('tour_id', $tour->id)
+                    ->where('marketplace_client_id', $client->id)
+                    ->where('is_published', true)
+                    ->where('is_cancelled', false)
+                    ->where(function ($q) {
+                        $q->whereNull('event_date')
+                          ->orWhere('event_date', '>=', now()->toDateString())
+                          ->orWhere('range_end_date', '>=', now()->toDateString());
+                    })
+                    ->with('venue:id,name,city')
+                    ->orderByRaw('COALESCE(event_date, range_start_date) ASC')
+                    ->get();
+
+                if ($liveEvents->isEmpty()) return null;
+
+                return [
+                    'id' => $tour->id,
+                    'name' => $tour->name,
+                    'type' => $tour->type,
+                    'events' => $liveEvents->map(function ($event) use ($language) {
+                        return [
+                            'id' => $event->id,
+                            'name' => $event->getTranslation('title', $language),
+                            'slug' => $event->slug,
+                            'starts_at' => $event->start_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+                            'venue_name' => $event->venue?->name,
+                            'venue_city' => $event->venue?->city,
+                            'image' => $event->poster_url,
+                            'is_sold_out' => (bool) ($event->is_sold_out ?? false),
+                        ];
+                    }),
+                ];
+            })->filter()->values();
+        }
+
         // Build response
         $data = [
             'id' => $artist->id,
@@ -402,6 +448,7 @@ class ArtistsController extends BaseController
             'youtube_videos' => $artist->youtube_videos ?? [],
             'booking_agency' => $artist->booking_agency ?? null,
             'upcoming_events' => $upcomingEvents,
+            'event_groupings' => $eventGroupings,
             'similar_artists' => $similarArtists,
         ];
 

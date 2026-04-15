@@ -250,6 +250,7 @@ const ArtistPage = {
             events: events,
             // Store raw events for AmbiletEventCard which handles commission
             rawEvents: api.upcoming_events || [],
+            eventGroupings: api.event_groupings || [],
             gallery: api.youtube_videos?.length > 0 ?
                 api.youtube_videos.map(function(v) { return { url: v.thumbnail, isVideo: true }; }) :
                 [],
@@ -352,6 +353,9 @@ const ArtistPage = {
 
         // Events - use rawEvents for AmbiletEventCard which handles commission
         this.renderEvents(data.rawEvents && data.rawEvents.length > 0 ? data.rawEvents : data.events);
+
+        // Event groupings (tours/series)
+        this.renderEventGroupings(data.eventGroupings);
 
         // About
         this.renderAbout(data.about, data.aboutTranslations);
@@ -505,6 +509,68 @@ const ArtistPage = {
                     '<p class="text-sm text-gray-500">Urmărește artistul pentru a fi notificat când apar concerte noi.</p>' +
                 '</div>';
         }
+    },
+
+    /**
+     * Render event groupings (tours/series) with live events
+     */
+    renderEventGroupings(groupings) {
+        if (!groupings || groupings.length === 0) return;
+
+        var container = document.getElementById(this.elements.eventsList);
+        if (!container) return;
+
+        var MONTHS = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+
+        var html = '';
+        for (var g = 0; g < groupings.length; g++) {
+            var group = groupings[g];
+            var typeLabel = group.type === 'turneu' ? 'Turneu' : 'Serie evenimente';
+
+            html += '<div class="mt-8 mb-6">';
+            html += '<div class="flex items-center gap-3 mb-4">';
+            html += '<div class="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">';
+            html += '<svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>';
+            html += '</div>';
+            html += '<div>';
+            html += '<h3 class="text-lg font-bold text-secondary">' + this.escapeHtml(group.name || typeLabel) + '</h3>';
+            html += '<p class="text-xs text-muted">' + typeLabel + ' &middot; ' + group.events.length + ' evenimente</p>';
+            html += '</div></div>';
+
+            html += '<div class="space-y-2">';
+            for (var i = 0; i < group.events.length; i++) {
+                var ev = group.events[i];
+                var date = ev.starts_at ? new Date(ev.starts_at) : null;
+                var dayNum = date ? date.getDate() : '';
+                var monthStr = date ? MONTHS[date.getMonth()] : '';
+                var venue = [ev.venue_name, ev.venue_city].filter(Boolean).join(', ');
+
+                html += '<a href="/bilete/' + (ev.slug || ev.id) + '" class="flex items-center gap-4 p-3 transition-colors rounded-xl hover:bg-gray-50 group">';
+                // Date badge
+                html += '<div class="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl text-white text-center" style="background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%);">';
+                html += '<span class="text-lg font-bold leading-none">' + dayNum + '</span>';
+                html += '<span class="text-[10px] font-semibold uppercase">' + monthStr + '</span>';
+                html += '</div>';
+                // Info
+                html += '<div class="flex-1 min-w-0">';
+                html += '<p class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + this.escapeHtml(ev.name) + '</p>';
+                if (venue) {
+                    html += '<p class="text-sm text-muted truncate">' + this.escapeHtml(venue) + '</p>';
+                }
+                html += '</div>';
+                // Sold out or arrow
+                if (ev.is_sold_out) {
+                    html += '<span class="flex-shrink-0 px-2 py-1 text-xs font-semibold text-red-600 bg-red-50 rounded-lg">Sold Out</span>';
+                } else {
+                    html += '<svg class="flex-shrink-0 w-5 h-5 text-gray-300 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+                }
+                html += '</a>';
+            }
+            html += '</div></div>';
+        }
+
+        // Append after events list
+        container.insertAdjacentHTML('afterend', html);
     },
 
     /**
