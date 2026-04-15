@@ -12,6 +12,7 @@ class ResendOrderConfirmationCommand extends Command
         {--order-ids= : Comma-separated order IDs}
         {--event-id= : Send to all completed orders for this event}
         {--ticket-type-id= : Filter by ticket type ID}
+        {--prefix= : Filter by order number prefix (e.g. MKT-)}
         {--dry-run : Show what would be sent without sending}';
 
     protected $description = 'Resend order confirmation emails (with ticket PDF) for specified orders';
@@ -30,6 +31,10 @@ class ResendOrderConfirmationCommand extends Command
             if ($this->option('ticket-type-id')) {
                 $ttId = (int) $this->option('ticket-type-id');
                 $query->whereHas('tickets', fn ($q) => $q->where('ticket_type_id', $ttId));
+            }
+
+            if ($this->option('prefix')) {
+                $query->where('order_number', 'like', $this->option('prefix') . '%');
             }
 
             $orders = $query->get();
