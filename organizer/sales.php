@@ -297,7 +297,7 @@ function renderOrders() {
                     <span class="font-semibold text-secondary">${order.tickets_count || 0}</span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency(order.net_total ?? order.total || 0)}</span>
+                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency((order.net_total ?? order.total) || 0)}</span>
                 </td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
                 <td class="px-4 py-3">
