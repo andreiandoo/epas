@@ -698,20 +698,14 @@ class Event extends Model
      */
     public function getTotalRevenueAttribute(): float
     {
-        // Net revenue = gross (order.total) minus commission
-        $query = Order::where('event_id', $this->id)
-            ->whereIn('status', ['paid', 'confirmed', 'completed']);
-
-        $gross = (float) (clone $query)->sum('total');
-        $commission = (float) (clone $query)->sum('commission_amount');
-
-        // If commission_amount not set on orders, calculate from event/organizer rate
-        if ($commission == 0 && $gross > 0) {
-            $rate = $this->getEffectiveCommissionRate();
-            $commission = round($gross * $rate / 100, 2);
-        }
-
-        return round($gross - $commission, 2);
+        // Net revenue = sum of base ticket prices (without commission)
+        // This matches the per-ticket-type breakdown on the analytics page
+        return (float) \App\Models\Ticket::where('event_id', $this->id)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
+            })
+            ->sum('price');
     }
 
     /**
