@@ -2670,10 +2670,14 @@ class EventsController extends BaseController
      */
     protected function getStartsAt(Event $event): ?string
     {
-        if ($event->event_date) {
-            $date = $event->event_date->format('Y-m-d');
-            $time = $event->start_time ?? '00:00';
-            return Carbon::parse("{$date} {$time}")->toIso8601String();
+        // Use start_date accessor which handles all duration modes (single_day, range, multi_day, recurring)
+        $date = $event->start_date;
+        if ($date) {
+            $time = match ($event->duration_mode) {
+                'range' => $event->range_start_time ?? $event->start_time ?? '00:00',
+                default => $event->start_time ?? '00:00',
+            };
+            return Carbon::parse($date->format('Y-m-d') . ' ' . $time)->toIso8601String();
         }
         return null;
     }
@@ -2683,9 +2687,14 @@ class EventsController extends BaseController
      */
     protected function getEndsAt(Event $event): ?string
     {
-        if ($event->event_date && $event->end_time) {
-            $date = $event->event_date->format('Y-m-d');
-            return Carbon::parse("{$date} {$event->end_time}")->toIso8601String();
+        // Use end_date accessor for range/multi_day, fall back to start_date for single_day
+        $endDate = $event->end_date ?? $event->start_date;
+        if ($endDate) {
+            $endTime = match ($event->duration_mode) {
+                'range' => $event->range_end_time ?? $event->end_time ?? '23:59',
+                default => $event->end_time ?? '23:59',
+            };
+            return Carbon::parse($endDate->format('Y-m-d') . ' ' . $endTime)->toIso8601String();
         }
         return null;
     }
