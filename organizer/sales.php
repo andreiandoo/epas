@@ -67,7 +67,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="text-xs text-muted mt-1" id="stat-orders-breakdown"></p>
                 </div>
                 <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Valoare totala</p>
+                    <p class="text-sm text-muted mb-1">Venituri nete</p>
                     <p class="text-2xl font-bold text-primary" id="stat-total-value">-</p>
                 </div>
                 <div class="bg-white border border-border rounded-2xl p-4">
@@ -297,7 +297,7 @@ function renderOrders() {
                     <span class="font-semibold text-secondary">${order.tickets_count || 0}</span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency(order.total || 0)}</span>
+                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency(order.net_total ?? order.total || 0)}</span>
                 </td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
                 <td class="px-4 py-3">

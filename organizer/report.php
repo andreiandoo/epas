@@ -278,7 +278,8 @@ function updateReport(data) {
     // Summary stats
     if (data.overview) {
         const o = data.overview;
-        document.getElementById('summary-revenue').textContent = formatCurrency(o.total_revenue || 0);
+        // Venituri totale = net revenue (from API, calculated from ticket base prices)
+        document.getElementById('summary-revenue').textContent = formatCurrency(o.net_revenue ?? o.total_revenue ?? 0);
         document.getElementById('summary-tickets').textContent = formatNumber(o.tickets_sold || 0);
         document.getElementById('summary-views').textContent = formatNumber(o.page_views || 0);
         document.getElementById('summary-conversion').textContent = (o.conversion_rate || 0).toFixed(1) + '%';
@@ -290,26 +291,17 @@ function updateReport(data) {
         document.getElementById('summary-commission').textContent = commissionRate + '%';
         document.getElementById('summary-commission-label').textContent = useFixedCommission ? 'Comision fix' : 'Comision';
 
-        // Financial summary - calculate based on commission mode
+        // Financial summary - use values from API (calculated from actual ticket prices)
+        const grossRevenue = o.gross_revenue ?? o.total_revenue ?? 0;
         const refunds = o.refunds_total || 0;
-        const grossRevenue = o.total_revenue || 0;
+        const commission = o.commission_amount ?? (grossRevenue * (commissionRate / 100));
+        const netRevenue = o.net_revenue ?? (grossRevenue - refunds - commission);
 
-        // Calculate commission amount
-        const commission = o.commission_amount || (grossRevenue * (commissionRate / 100));
-
-        // Net revenue depends on commission mode:
-        // - "added_on_top": commission paid by customer extra, organizer gets full ticket price
-        // - "included": commission deducted from ticket price
-        let netRevenue;
         let commissionLabel;
         if (commissionMode === 'added_on_top') {
-            // Commission was added on top - organizer receives full revenue
-            netRevenue = grossRevenue - refunds;
             commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} +preț)`;
         } else {
-            // Commission is included - deducted from revenue
-            netRevenue = grossRevenue - refunds - commission;
-            commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} inclus)`;
+            commissionLabel = `Comision platformă (inclus în preț)`;
         }
 
         document.getElementById('financial-gross').textContent = formatCurrency(grossRevenue);
