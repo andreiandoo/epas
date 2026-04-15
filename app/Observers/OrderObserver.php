@@ -217,7 +217,7 @@ class OrderObserver
         // Include tracking click IDs if available from CoreCustomer
         if ($coreCustomer) {
             $data['visitor_id'] = $coreCustomer->visitor_id;
-            $data['session_token'] = 'order_' . $order->id;
+            $data['session_token'] = $coreCustomer->session_id ?? \Illuminate\Support\Str::uuid()->toString();
 
             // Use last click IDs for attribution (last-click model)
             if ($coreCustomer->last_gclid) {

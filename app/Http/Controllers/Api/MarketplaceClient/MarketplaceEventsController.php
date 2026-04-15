@@ -1585,10 +1585,7 @@ class MarketplaceEventsController extends BaseController
 
         // Build event filter closure (reused for whereHas and withCount)
         $eventFilter = function ($q) use ($client, $categoryId) {
-            $q->where('marketplace_client_id', $client->id)
-                ->where(function ($q2) {
-                    $q2->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                });
+            $q->where('marketplace_client_id', $client->id);
             if ($categoryId) {
                 $q->where('marketplace_event_category_id', $categoryId);
             }
@@ -1916,10 +1913,7 @@ class MarketplaceEventsController extends BaseController
         $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
             ->where('status', 'active')
             ->withCount(['events' => function ($query) use ($client) {
-                $query->where('marketplace_client_id', $client->id)
-                    ->where(function ($q) {
-                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                    });
+                $query->where('marketplace_client_id', $client->id);
             }]);
 
         // Filter: only organizers with events
