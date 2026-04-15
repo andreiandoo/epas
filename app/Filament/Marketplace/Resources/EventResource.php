@@ -1728,6 +1728,11 @@ class EventResource extends Resource
                                                         ->numeric()
                                                         ->minValue(1)
                                                         ->default(1)
+                                                        ->live(onBlur: true)
+                                                        ->afterStateUpdated(fn ($state, SSet $set, SGet $get) =>
+                                                            ($get('max_per_order') && (int) $state > (int) $get('max_per_order'))
+                                                                ? $set('max_per_order', $state) : null
+                                                        )
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul minim de bilete care pot fi cumpărate într-o comandă', 'Minimum tickets that can be purchased in a single order')),
                                                     Forms\Components\TextInput::make('max_per_order')
                                                         ->label($t('Max bilete/comandă', 'Max tickets/order'))
@@ -1735,6 +1740,15 @@ class EventResource extends Resource
                                                         ->numeric()
                                                         ->minValue(1)
                                                         ->default(10)
+                                                        ->live(onBlur: true)
+                                                        ->rules([
+                                                            fn (SGet $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get) {
+                                                                $min = (int) ($get('min_per_order') ?: 1);
+                                                                if ($value && (int) $value < $min) {
+                                                                    $fail("Max bilete/comandă ({$value}) nu poate fi mai mic decât Min bilete/comandă ({$min}).");
+                                                                }
+                                                            },
+                                                        ])
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('Numărul maxim de bilete care pot fi cumpărate într-o comandă', 'Maximum tickets that can be purchased in a single order')),
                                                     Forms\Components\TextInput::make('multiplier')
                                                         ->label($t('Multiplicator', 'Multiplier'))
