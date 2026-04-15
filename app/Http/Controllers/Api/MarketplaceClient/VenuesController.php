@@ -152,6 +152,8 @@ class VenuesController extends BaseController
 
         // Get upcoming marketplace events at this venue
         // Match by venue_id OR by venue_name/city for events without venue_id
+        $upcomingEventsLimit = min((int) ($request->get('events_limit', 50)), 100);
+
         $upcomingEvents = \App\Models\MarketplaceEvent::query()
             ->where('marketplace_client_id', $client->id)
             ->where('status', 'published')
@@ -166,7 +168,7 @@ class VenuesController extends BaseController
             })
             ->with(['ticketTypes', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
             ->orderBy('starts_at')
-            ->limit(10)
+            ->limit($upcomingEventsLimit)
             ->get()
             ->map(function ($event) use ($language, $client) {
                 // Calculate min price from active ticket types
@@ -229,7 +231,7 @@ class VenuesController extends BaseController
             })
             ->with(['ticketTypes', 'artists:id,name'])
             ->orderBy('starts_at')
-            ->limit(10)
+            ->limit($upcomingEventsLimit)
             ->get()
             ->map(function ($event) use ($language, $client) {
                 $minPrice = $event->ticketTypes
@@ -261,7 +263,7 @@ class VenuesController extends BaseController
         $allUpcomingEvents = $upcomingEvents->concat($upcomingCoreEvents)
             ->sortBy('starts_at')
             ->values()
-            ->take(10);
+            ->take($upcomingEventsLimit);
 
         // Resolve facilities keys → labels (with emoji icon prefix)
         $facilitiesResolved = collect($venue->facilities ?? [])->map(function ($key) {
