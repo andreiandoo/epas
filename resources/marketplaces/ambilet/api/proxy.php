@@ -3101,12 +3101,13 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     header('Cache-Control: no-store');
 }
 
-// For raw responses (PDF, exports), forward Content-Type and Content-Disposition from upstream
-if (!empty($rawResponse) && isset($http_response_header)) {
-    foreach ($http_response_header as $header) {
-        if (preg_match('/^(Content-Type|Content-Disposition):/i', $header)) {
-            header($header);
-        }
+// For raw responses (PDF, exports), set proper headers for download
+if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
+    // Detect content type from response body
+    if (str_starts_with($response, '%PDF')) {
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="bilete.pdf"');
+        header('Content-Length: ' . strlen($response));
     }
 }
 
