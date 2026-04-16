@@ -31,10 +31,26 @@ class Dashboard extends Page
     #[Url]
     public string $chartPeriod = '30';
 
+    #[Url]
+    public string $selectedMonth = '';
+
     public function mount(): void
     {
         $admin = Auth::guard('marketplace_admin')->user();
         $this->marketplace = $admin?->marketplaceClient;
+        if (!$this->selectedMonth) {
+            $this->selectedMonth = Carbon::now('Europe/Bucharest')->format('Y-m');
+        }
+    }
+
+    public function updatedSelectedMonth(): void
+    {
+        // Clear month-related caches when month changes
+        if ($this->marketplace) {
+            $id = $this->marketplace->id;
+            Cache::forget("mp_dash_month_{$id}_{$this->selectedMonth}");
+            Cache::forget("mp_dash_billing_{$id}_{$this->selectedMonth}");
+        }
     }
 
     public function getTitle(): string
@@ -95,14 +111,19 @@ class Dashboard extends Page
                 ->get();
         });
 
-        // Tixello billing for current month
-        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}", 600, function () use ($marketplaceId) {
-            return $this->computeMonthlyBilling($marketplaceId);
+        // Selected month stats
+        $month = $this->selectedMonth ?: Carbon::now('Europe/Bucharest')->format('Y-m');
+        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}_{$month}", 600, function () use ($marketplaceId, $month) {
+            return $this->computeMonthlyBilling($marketplaceId, $month);
         });
 
-        // Current month stats
-        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}", 300, function () use ($marketplaceId) {
-            return $this->computeCurrentMonthStats($marketplaceId);
+        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}_{$month}", 300, function () use ($marketplaceId, $month) {
+            return $this->computeCurrentMonthStats($marketplaceId, $month);
+        });
+
+        // Today stats (Romania timezone)
+        $todayStats = Cache::remember("mp_dash_today_{$marketplaceId}", 120, function () use ($marketplaceId) {
+            return $this->computeTodayStats($marketplaceId);
         });
 
         return [
@@ -117,6 +138,8 @@ class Dashboard extends Page
             'topLiveEvents' => $stats['topLiveEvents'],
             'pendingReviewEvents' => $pendingReviewEvents,
             'billing' => $billingData,
+            'todayStats' => $todayStats,
+            'selectedMonth' => $month,
         ];
     }
 
@@ -357,11 +380,13 @@ class Dashboard extends Page
         return ['labels' => $labels, 'data' => $data];
     }
 
-    private function computeCurrentMonthStats(int $marketplaceId): array
+    private function computeCurrentMonthStats(int $marketplaceId, string $month = ''): array
     {
-        $monthStart = Carbon::now()->startOfMonth();
-        $monthEnd = Carbon::now()->endOfMonth();
-        $now = Carbon::now();
+        $tz = 'Europe/Bucharest';
+        $monthDate = $month ? Carbon::createFromFormat('Y-m', $month, $tz) : Carbon::now($tz);
+        $monthStart = $monthDate->copy()->startOfMonth()->utc();
+        $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->utc();
+        $now = Carbon::now($tz);
         $validStatuses = ['paid', 'confirmed', 'completed'];
 
         // New organizers this month
@@ -464,7 +489,7 @@ class Dashboard extends Page
             ->first();
 
         return [
-            'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'month_label' => $monthDate->translatedFormat('F Y'),
             'new_organizers' => $newOrganizers,
             'live_events' => $liveEvents,
             'ended_events' => $endedEvents,
@@ -479,11 +504,12 @@ class Dashboard extends Page
         ];
     }
 
-    private function computeMonthlyBilling(int $marketplaceId): array
+    private function computeMonthlyBilling(int $marketplaceId, string $month = ''): array
     {
         $tz = 'Europe/Bucharest';
-        $monthStart = Carbon::now($tz)->startOfMonth()->utc();
-        $monthEnd = Carbon::now($tz)->endOfMonth()->endOfDay()->utc();
+        $monthDate = $month ? Carbon::createFromFormat('Y-m', $month, $tz) : Carbon::now($tz);
+        $monthStart = $monthDate->copy()->startOfMonth()->utc();
+        $monthEnd = $monthDate->copy()->endOfMonth()->endOfDay()->utc();
 
         // If billing_starts_at is set and falls in the current month, use it as period start
         $billingStartsAt = $this->marketplace->billing_starts_at ?? null;
@@ -555,7 +581,7 @@ class Dashboard extends Page
         }
 
         return [
-            'month_label' => Carbon::now()->translatedFormat('F Y'),
+            'month_label' => $monthDate->translatedFormat('F Y'),
             'commission_rate' => $commissionRate,
             'order_revenue' => $orderRevenue,
             'ticketing_commission' => $ticketingCommission,
@@ -563,6 +589,53 @@ class Dashboard extends Page
             'services_total' => $servicesTotal,
             'grand_total' => $ticketingCommission + $servicesTotal,
             'currency' => $this->marketplace->currency ?? 'RON',
+        ];
+    }
+
+    private function computeTodayStats(int $marketplaceId): array
+    {
+        $tz = 'Europe/Bucharest';
+        $todayStart = Carbon::now($tz)->startOfDay()->utc();
+        $todayEnd = Carbon::now($tz)->endOfDay()->utc();
+        $validStatuses = ['paid', 'confirmed', 'completed'];
+
+        $eventSubquery = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
+
+        $orderScope = function ($q) use ($marketplaceId, $eventSubquery) {
+            $q->where('orders.marketplace_client_id', $marketplaceId)
+                ->orWhereIn('orders.marketplace_event_id', $eventSubquery)
+                ->orWhereIn('orders.event_id', $eventSubquery);
+        };
+
+        $orderStats = Order::where($orderScope)
+            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'external_import')
+            ->whereBetween('orders.created_at', [$todayStart, $todayEnd])
+            ->selectRaw('COUNT(*) as total_orders')
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid_orders")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN \"total\" ELSE 0 END) as revenue")
+            ->first();
+
+        $ticketsSold = (int) Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->where('events.marketplace_client_id', $marketplaceId)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->whereBetween('tickets.created_at', [$todayStart, $todayEnd])
+            ->count();
+
+        $newCustomers = (int) MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->count();
+
+        return [
+            'total_orders' => (int) ($orderStats->total_orders ?? 0),
+            'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
+            'revenue' => (float) ($orderStats->revenue ?? 0),
+            'tickets_sold' => $ticketsSold,
+            'new_customers' => $newCustomers,
+            'date_label' => Carbon::now($tz)->translatedFormat('d F Y'),
         ];
     }
 }

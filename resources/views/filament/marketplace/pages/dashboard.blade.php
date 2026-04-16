@@ -81,13 +81,52 @@
             </div>
         </div>
 
-        <!-- Current Month Stats -->
-        @if(isset($monthStats))
+        <!-- Today Stats -->
+        @if(isset($todayStats))
         <div class="mb-5">
             <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                <x-heroicon-o-calendar-days class="w-4 h-4" />
-                Luna in curs - {{ $monthStats['month_label'] }}
+                <x-heroicon-o-sun class="w-4 h-4" />
+                Azi — {{ $todayStats['date_label'] }}
             </h3>
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi plătite</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['paid_orders']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Venituri azi</p>
+                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 0) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($todayStats['tickets_sold']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
+                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($todayStats['new_customers']) }}</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Monthly Stats -->
+        @if(isset($monthStats))
+        <div class="mb-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="flex items-center gap-2 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                    <x-heroicon-o-calendar-days class="w-4 h-4" />
+                    {{ $monthStats['month_label'] }}
+                </h3>
+                <input type="month"
+                    wire:model.live="selectedMonth"
+                    class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
+                    max="{{ now()->format('Y-m') }}"
+                />
+            </div>
             <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Organizatori noi</p>
