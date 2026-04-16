@@ -201,10 +201,11 @@ const VenuePage = {
     render() {
         var venue = this.venue;
 
-        // Hero image
+        // Hero image — use portrait on mobile if available
         var heroImg = document.getElementById(this.elements.heroImage);
         if (heroImg) {
-            heroImg.src = venue.image;
+            var isMobile = window.innerWidth < 768;
+            heroImg.src = (isMobile && venue.portrait) ? venue.portrait : venue.image;
             heroImg.alt = venue.name;
             heroImg.classList.remove('hidden');
         }

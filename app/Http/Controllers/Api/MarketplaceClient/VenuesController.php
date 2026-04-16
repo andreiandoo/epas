@@ -298,6 +298,7 @@ class VenuesController extends BaseController
             'google_maps_url' => $venue->google_maps_url,
             'capacity' => $venue->capacity_total ?? $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
+            'portrait' => $this->formatImageUrl($venue->meta['portrait'] ?? null),
             'cover_image' => $this->formatImageUrl($venue->cover_image_url),
             'gallery' => collect($venue->gallery ?? [])->map(fn ($img) => $this->formatImageUrl($img))->filter()->values()->toArray(),
             'schedule' => $venue->schedule,
@@ -345,6 +346,7 @@ class VenuesController extends BaseController
             'address' => $venue->address,
             'capacity' => $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
+            'portrait' => $this->formatImageUrl($venue->meta['portrait'] ?? null),
             'events_count' => $this->countVenueEvents($venue, $marketplaceClientId),
             'is_featured' => $venue->is_featured ?? false,
             'is_partner' => true, // All venues returned by this API are in the marketplace's partner list

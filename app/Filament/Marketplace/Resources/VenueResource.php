@@ -299,6 +299,15 @@ class VenueResource extends Resource
                                     ->directory('venues')
                                     ->visibility('public')
                                     ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
+                                Forms\Components\FileUpload::make('meta.portrait')
+                                    ->label('Portret (mobile hero)')
+                                    ->helperText('Imagine verticală afișată pe mobile în hero-ul paginii locației')
+                                    ->image()
+                                    ->imagePreviewHeight('200')
+                                    ->disk('public')
+                                    ->directory('venues/portraits')
+                                    ->visibility('public')
+                                    ->afterStateUpdated(fn ($livewire) => $livewire->skipRender()),
                                 Forms\Components\FileUpload::make('gallery')
                                     ->label('Gallery')
                                     ->image()

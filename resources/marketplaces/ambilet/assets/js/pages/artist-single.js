@@ -227,6 +227,7 @@ const ArtistPage = {
             name: api.name,
             slug: api.slug,
             image: api.image || api.main_image_url || api.portrait_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=800&fit=crop',
+            portrait: api.portrait_url || api.portrait || null,
             verified: api.is_verified,
             genres: (api.genres || []).map(function(g) { return g.name || g; }),
             stats: {
@@ -323,10 +324,11 @@ const ArtistPage = {
             viewAllLink.href = '/evenimente?artist=' + encodeURIComponent(data.slug || data.name);
         }
 
-        // Hero image
+        // Hero image — use portrait on mobile if available
         var heroImage = document.getElementById(this.elements.heroImage);
         if (heroImage) {
-            heroImage.src = data.image;
+            var isMobile = window.innerWidth < 768;
+            heroImage.src = (isMobile && data.portrait) ? data.portrait : data.image;
             heroImage.alt = data.name;
             heroImage.onload = function() {
                 heroImage.classList.remove('hidden');
