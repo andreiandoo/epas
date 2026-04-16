@@ -254,23 +254,25 @@ const AmbiletEventCard = {
                 priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
                 buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
             } else {
-                priceHtml = '<div class="text-sm font-bold text-primary">' + event.priceFormatted + '</div>';
+                const delaPrefix = event.minPrice > 0 ? '<span class="text-xs text-muted font-normal">De la</span><br>' : '';
+                priceHtml = '<div class="text-sm font-bold text-primary text-right">' + delaPrefix + (event.minPrice > 0 ? event.minPrice + ' lei' : 'Gratuit') + '</div>';
                 buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
             }
         }
 
         // Date section - with hero image background
-        const heroImg = event.heroImage || event.image;
+        const heroImgRaw = event.heroImage || event.image;
+        const heroImg = heroImgRaw ? (typeof getStorageUrl === 'function' ? getStorageUrl(heroImgRaw) : heroImgRaw) : null;
         let dateHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
             dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
-                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
                 '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
                 '<div class="relative z-10 px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
             '</div>';
         } else {
             dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
-                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
                 '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
                 '<div class="relative z-10 text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
                 '<div class="relative z-10 mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
