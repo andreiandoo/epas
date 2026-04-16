@@ -3,11 +3,11 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = 'Setează Parolă Nouă';
 $pageDescription = 'Setează o parolă nouă pentru contul tău';
 $cssBundle = 'auth';
+$bodyClass = 'flex min-h-screen';
 require_once __DIR__ . '/includes/head.php';
 ?>
-<body class="flex min-h-screen">
     <!-- Left Side - Branding -->
-    <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern">
+    <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary">
         <div class="absolute inset-0">
             <div class="absolute w-64 h-64 rounded-full top-20 left-20 bg-white/5 blur-3xl"></div>
             <div class="absolute rounded-full bottom-20 right-20 w-96 h-96 bg-accent/10 blur-3xl"></div>
