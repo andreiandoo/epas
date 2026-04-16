@@ -347,10 +347,14 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^parola-uitata/?$ forgot-password.php [L]
 
-# /resetare-parola -> reset-password.php
+# /resetare-parola and /reset-password -> reset-password.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^resetare-parola/?$ reset-password.php [L]
+RewriteRule ^resetare-parola/?$ reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^reset-password/?$ reset-password.php [L,QSA]
 
 # /cos -> cart.php
 RewriteCond %{REQUEST_FILENAME} !-f
