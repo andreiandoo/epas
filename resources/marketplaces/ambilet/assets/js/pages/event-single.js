@@ -646,6 +646,7 @@ const EventPage = {
             performances: performancesData,
             selectedPerformanceId: eventData.selected_performance_id || null,
             start_time: resolvedStartTime,
+            end_time: eventData.end_time || (eventData.ends_at ? eventData.ends_at.substring(11, 16) : null),
             doors_time: resolvedDoorsTime,
             is_popular: eventData.is_featured,
             is_featured: eventData.is_featured,
@@ -876,7 +877,12 @@ const EventPage = {
             return false;
         }
 
-        // Single day: use starts_at
+        // Single day: use end_time if available, otherwise start_date
+        if (e.end_time && (e.start_date || e.date)) {
+            const dateStr = (e.start_date || e.date).substring(0, 10);
+            const endDateTime = new Date(dateStr + 'T' + e.end_time);
+            if (!isNaN(endDateTime.getTime())) return now > endDateTime;
+        }
         const startDate = new Date(e.start_date || e.date);
         if (!isNaN(startDate.getTime()) && now > startDate) return true;
 
