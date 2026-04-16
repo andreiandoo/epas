@@ -14,7 +14,7 @@
                         Create and manage invitation batches for VIP guests, press passes, and complimentary tickets.
                     </p>
                 </div>
-                <button wire:click="$set('showCreateModal', true)"
+                <button wire:click="openCreateModal"
                         class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors"
                         style="background-color: #4f46e5; color: white;">
                     <x-heroicon-o-plus class="w-4 h-4" />
@@ -323,17 +323,24 @@
                 </div>
 
                 <form wire:submit="submitCreateBatch" class="p-6 space-y-4">
-                    <div>
+                    <div x-data="{ open: false, search: '', selected: @entangle('batchData.event_ref'), events: {{ json_encode(collect($this->getEvents())->map(fn($title, $id) => ['id' => $id, 'title' => $title])->values()) }} }" class="relative">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Event <span class="text-red-500">*</span>
+                            Eveniment <span class="text-red-500">*</span>
                         </label>
-                        <select wire:model="batchData.event_ref" required
-                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500">
-                            <option value="">Select an event...</option>
-                            @foreach($this->getEvents() as $id => $title)
-                                <option value="{{ $id }}" @if($preselectedEventId == $id) selected @endif>{{ $title }}</option>
-                            @endforeach
-                        </select>
+                        <button type="button" @click="open = !open" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-left bg-white dark:bg-gray-700 focus:ring-2 focus:ring-indigo-500 flex items-center justify-between">
+                            <span x-text="selected ? events.find(e => e.id == selected)?.title || 'Selectează...' : 'Selectează un eveniment...'" class="truncate text-gray-900 dark:text-white"></span>
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" x-transition class="absolute z-50 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-hidden">
+                            <div class="p-2 border-b border-gray-200 dark:border-gray-600">
+                                <input type="text" x-model="search" placeholder="Caută eveniment..." class="w-full px-2 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" @keydown.escape="open = false">
+                            </div>
+                            <div class="overflow-y-auto max-h-48">
+                                <template x-for="ev in events.filter(e => !search || e.title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(search.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')))" :key="ev.id">
+                                    <div @click="selected = ev.id; open = false; search = ''" class="px-3 py-2 text-sm cursor-pointer hover:bg-indigo-50 dark:hover:bg-gray-600" :class="selected == ev.id ? 'bg-indigo-50 dark:bg-gray-600 font-medium text-indigo-700 dark:text-indigo-300' : 'text-gray-900 dark:text-white'" x-text="ev.title"></div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
 
                     <div>

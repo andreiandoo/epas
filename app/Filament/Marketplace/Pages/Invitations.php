@@ -180,6 +180,14 @@ class Invitations extends Page
         return [];
     }
 
+    public function openCreateModal(): void
+    {
+        if ($this->preselectedEventId && empty($this->batchData['event_ref'])) {
+            $this->batchData['event_ref'] = $this->preselectedEventId;
+        }
+        $this->showCreateModal = true;
+    }
+
     public function submitCreateBatch(): void
     {
         $this->createBatch($this->batchData);
