@@ -129,6 +129,7 @@ class BulkPasswordReset extends Page
             default => 0,
         };
         $templateSlug = match ($type) {
+            'guest' => 'bulk_password_reset_guest',
             'organizer' => 'bulk_password_reset_organizer',
             default => 'bulk_password_reset_customer',
         };

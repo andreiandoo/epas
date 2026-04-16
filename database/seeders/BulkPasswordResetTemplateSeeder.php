@@ -26,6 +26,21 @@ class BulkPasswordResetTemplateSeeder extends Seeder
             ]
         );
 
+        // Guest template (account creation invitation)
+        MarketplaceEmailTemplate::updateOrCreate(
+            ['marketplace_client_id' => $clientId, 'slug' => 'bulk_password_reset_guest'],
+            [
+                'name' => 'Creare cont — Invitație guests',
+                'subject' => 'Ai cumpărat bilete prin noi — acum ai și un cont',
+                'body_html' => file_get_contents(__DIR__ . '/../../resources/marketplaces/ambilet/emails/bulk-reset-guest.html'),
+                'body_text' => '',
+                'variables' => json_encode(['first_name', 'email', 'reset_link', 'site_name', 'expire_days']),
+                'category' => 'transactional',
+                'is_active' => true,
+                'is_default' => false,
+            ]
+        );
+
         // Organizer template
         MarketplaceEmailTemplate::updateOrCreate(
             ['marketplace_client_id' => $clientId, 'slug' => 'bulk_password_reset_organizer'],
