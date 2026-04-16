@@ -67,39 +67,41 @@ class Dashboard extends Page
         $marketplaceId = $marketplace->id;
         $days = (int) $this->chartPeriod;
 
-        // Cache stats for 2 minutes
-        $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 120, function () use ($marketplaceId) {
+        // Cache stats for 5 minutes (heavy queries on large tables)
+        $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 300, function () use ($marketplaceId) {
             return $this->computeStats($marketplaceId);
         });
 
-        // Cache chart data for 5 minutes (keyed by period)
+        // Cache chart data for 10 minutes (keyed by period)
         $startDate = Carbon::now()->subDays($days)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_{$days}", 300, function () use ($marketplaceId, $startDate, $endDate, $days) {
+        $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
             return $this->getChartData($marketplaceId, $startDate, $endDate, $days);
         });
 
-        $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_{$days}", 300, function () use ($marketplaceId, $startDate, $endDate, $days) {
+        $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
             return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $days);
         });
 
-        // Pending review events (not cached — always fresh)
-        $pendingReviewEvents = Event::where('marketplace_client_id', $marketplaceId)
-            ->where('is_published', false)
-            ->whereNotNull('submitted_at')
-            ->where('is_cancelled', false)
-            ->with(['marketplaceOrganizer', 'venue'])
-            ->orderBy('submitted_at', 'desc')
-            ->get();
+        // Pending review events (cached 2 min — lightweight query)
+        $pendingReviewEvents = Cache::remember("mp_dash_pending_{$marketplaceId}", 120, function () use ($marketplaceId) {
+            return Event::where('marketplace_client_id', $marketplaceId)
+                ->where('is_published', false)
+                ->whereNotNull('submitted_at')
+                ->where('is_cancelled', false)
+                ->with(['marketplaceOrganizer:id,name', 'venue:id,name,city'])
+                ->orderBy('submitted_at', 'desc')
+                ->get();
+        });
 
         // Tixello billing for current month
-        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}", 300, function () use ($marketplaceId) {
+        $billingData = Cache::remember("mp_dash_billing_{$marketplaceId}", 600, function () use ($marketplaceId) {
             return $this->computeMonthlyBilling($marketplaceId);
         });
 
         // Current month stats
-        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}", 120, function () use ($marketplaceId) {
+        $monthStats = Cache::remember("mp_dash_month_{$marketplaceId}", 300, function () use ($marketplaceId) {
             return $this->computeCurrentMonthStats($marketplaceId);
         });
 
@@ -140,15 +142,15 @@ class Dashboard extends Page
             ->selectRaw('SUM(CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END) as registered')
             ->first();
 
-        // 3. Orders - include orders linked to marketplace events (migrated may lack marketplace_client_id)
-        $marketplaceEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
-
-        $orderStats = Order::where(function ($q) use ($marketplaceId, $marketplaceEventIds) {
-                $q->where('orders.marketplace_client_id', $marketplaceId);
-                if (!empty($marketplaceEventIds)) {
-                    $q->orWhereIn('orders.marketplace_event_id', $marketplaceEventIds)
-                      ->orWhereIn('orders.event_id', $marketplaceEventIds);
-                }
+        // 3. Orders - use subquery instead of loading all event IDs into PHP array
+        $orderStats = Order::where(function ($q) use ($marketplaceId) {
+                $q->where('orders.marketplace_client_id', $marketplaceId)
+                    ->orWhereIn('orders.marketplace_event_id', function ($sub) use ($marketplaceId) {
+                        $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+                    })
+                    ->orWhereIn('orders.event_id', function ($sub) use ($marketplaceId) {
+                        $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+                    });
             })
             ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->selectRaw('COUNT(*) as total')
@@ -171,34 +173,39 @@ class Dashboard extends Page
             ->first();
         $serviceOrdersTotal = (float) $serviceStats->total;
 
-        // 5. Tickets — use same logic as TicketResource: whereHas ticketType.event
-        $ticketStats = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
-                $q->where('marketplace_client_id', $marketplaceId);
-            })
+        // 5. Tickets — use efficient join instead of nested whereHas
+        $ticketStats = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->where('events.marketplace_client_id', $marketplaceId)
             ->selectRaw('COUNT(*) as total_db')
-            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
-            ->selectRaw("SUM(CASE WHEN status IN ('valid', 'used') AND DATE(created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
+            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') THEN 1 ELSE 0 END) as sold")
+            ->selectRaw("SUM(CASE WHEN tickets.status IN ('valid', 'used') AND DATE(tickets.created_at) = ? THEN 1 ELSE 0 END) as sold_today", [today()->toDateString()])
             ->first();
 
-        // External import counts (for "din care import" display)
-        $externalTickets = Ticket::whereHas('ticketType.event', fn ($q) => $q->where('marketplace_client_id', $marketplaceId))
-            ->whereHas('order', fn ($q) => $q->where('source', 'external_import'))
-            ->whereIn('status', ['valid', 'used'])
-            ->count();
+        // External import counts — single combined query
         $externalOrders = Order::where('marketplace_client_id', $marketplaceId)
             ->where('source', 'external_import')
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->count();
-        $externalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+        $externalTickets = Ticket::where('marketplace_client_id', $marketplaceId)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))->from('orders')
+                    ->whereColumn('orders.id', 'tickets.order_id')
+                    ->where('orders.source', 'external_import');
+            })
+            ->count();
+        $externalCustomers = DB::table('marketplace_customers as mc')
+            ->where('mc.marketplace_client_id', $marketplaceId)
             ->whereExists(function ($q) use ($marketplaceId) {
-                $q->select(\DB::raw(1))->from('orders')
-                    ->whereColumn('orders.marketplace_customer_id', 'marketplace_customers.id')
+                $q->select(DB::raw(1))->from('orders')
+                    ->whereColumn('orders.marketplace_customer_id', 'mc.id')
                     ->where('orders.source', 'external_import')
                     ->where('orders.marketplace_client_id', $marketplaceId);
             })
             ->whereNotExists(function ($q) use ($marketplaceId) {
-                $q->select(\DB::raw(1))->from('orders')
-                    ->whereColumn('orders.marketplace_customer_id', 'marketplace_customers.id')
+                $q->select(DB::raw(1))->from('orders')
+                    ->whereColumn('orders.marketplace_customer_id', 'mc.id')
                     ->where('orders.source', '!=', 'external_import')
                     ->where('orders.marketplace_client_id', $marketplaceId);
             })
@@ -280,9 +287,11 @@ class Dashboard extends Page
                 'order_revenue' => $orderRevenue,
                 'service_revenue' => $serviceOrdersTotal,
                 'commissions' => $commissions,
-                // All-time marketplace commissions — single source of truth
-                'all_time_commissions' => BillingBreakdown::calculateMarketplaceCommission(
-                    $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
+                // All-time marketplace commissions — cached separately (very expensive query)
+                'all_time_commissions' => Cache::remember("mp_alltime_comm_{$marketplaceId}", 3600, fn () =>
+                    BillingBreakdown::calculateMarketplaceCommission(
+                        $marketplaceId, null, null, (float) ($this->marketplace->commission_rate ?? 5)
+                    )
                 ),
                 'service_orders_total' => $serviceOrdersTotal,
                 'total_tickets' => (int) $ticketStats->sold,
@@ -391,16 +400,16 @@ class Dashboard extends Page
             })
             ->count();
 
-        // Sales this month — include orders for marketplace events (migrated may lack marketplace_client_id)
-        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
+        // Sales this month — use subquery instead of loading IDs into memory
         $allStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+        $eventSubquery = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
 
-        $orderScope = function ($q) use ($marketplaceId, $mpEventIds) {
-            $q->where('orders.marketplace_client_id', $marketplaceId);
-            if (!empty($mpEventIds)) {
-                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
-                  ->orWhereIn('orders.event_id', $mpEventIds);
-            }
+        $orderScope = function ($q) use ($marketplaceId, $eventSubquery) {
+            $q->where('orders.marketplace_client_id', $marketplaceId)
+                ->orWhereIn('orders.marketplace_event_id', $eventSubquery)
+                ->orWhereIn('orders.event_id', $eventSubquery);
         };
 
         // Revenue (excl refunded)
@@ -416,13 +425,17 @@ class Dashboard extends Page
             $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
         );
 
-        // Tickets sold this month — exclude external imports
-        $ticketsSold = Ticket::whereHas('ticketType.event', function ($q) use ($marketplaceId) {
-                $q->where('marketplace_client_id', $marketplaceId);
+        // Tickets sold this month — efficient join instead of nested whereHas
+        $ticketsSold = Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('events', 'ticket_types.event_id', '=', 'events.id')
+            ->where('events.marketplace_client_id', $marketplaceId)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->whereBetween('tickets.created_at', [$monthStart, $monthEnd])
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))->from('orders')
+                    ->whereColumn('orders.id', 'tickets.order_id')
+                    ->where('orders.source', '!=', 'external_import');
             })
-            ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
-            ->whereIn('status', ['valid', 'used'])
-            ->whereBetween('created_at', [$monthStart, $monthEnd])
             ->count();
 
         // New customers this month — exclude those created only via external import
@@ -486,14 +499,14 @@ class Dashboard extends Page
         // Commission rate from marketplace client settings (Tixello rate)
         $commissionRate = (float) ($this->marketplace->commission_rate ?? 0);
 
-        // Include orders for marketplace events (migrated may lack marketplace_client_id)
-        $mpEventIds = Event::where('marketplace_client_id', $marketplaceId)->pluck('id')->toArray();
-        $billingScope = function ($q) use ($marketplaceId, $mpEventIds) {
-            $q->where('orders.marketplace_client_id', $marketplaceId);
-            if (!empty($mpEventIds)) {
-                $q->orWhereIn('orders.marketplace_event_id', $mpEventIds)
-                  ->orWhereIn('orders.event_id', $mpEventIds);
-            }
+        // Include orders for marketplace events — subquery instead of loading IDs
+        $eventSub = function ($sub) use ($marketplaceId) {
+            $sub->select('id')->from('events')->where('marketplace_client_id', $marketplaceId);
+        };
+        $billingScope = function ($q) use ($marketplaceId, $eventSub) {
+            $q->where('orders.marketplace_client_id', $marketplaceId)
+                ->orWhereIn('orders.marketplace_event_id', $eventSub)
+                ->orWhereIn('orders.event_id', $eventSub);
         };
 
         // 1. Ticketing: per-event commission (matches BillingBreakdown logic exactly)
