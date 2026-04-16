@@ -41,10 +41,12 @@ class MarketplaceCustomer extends Authenticatable
         'settings',
         'total_orders',
         'total_spent',
+        'wp_password_hash',
     ];
 
     protected $hidden = [
         'password',
+        'wp_password_hash',
         'remember_token',
     ];
 
@@ -228,6 +230,63 @@ class MarketplaceCustomer extends Authenticatable
     public function isGuest(): bool
     {
         return $this->password === null;
+    }
+
+    /**
+     * Verify a password against a WordPress phpass hash ($P$B...).
+     * If valid, re-hash with bcrypt and clear the WP hash (one-time migration).
+     */
+    public function verifyAndMigrateWpPassword(string $plainPassword): bool
+    {
+        if (empty($this->wp_password_hash)) {
+            return false;
+        }
+
+        $wpHash = $this->wp_password_hash;
+
+        // WordPress phpass portable hash verification
+        if (!str_starts_with($wpHash, '$P$') && !str_starts_with($wpHash, '$H$')) {
+            return false;
+        }
+
+        $itoa64 = './0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+        $countLog2 = strpos($itoa64, $wpHash[3]);
+        $count = 1 << $countLog2;
+        $salt = substr($wpHash, 4, 8);
+
+        $hash = md5($salt . $plainPassword, true);
+        do {
+            $hash = md5($hash . $plainPassword, true);
+        } while (--$count);
+
+        $encoded = '';
+        $i = 0;
+        $hashBytes = $hash;
+        do {
+            $value = ord($hashBytes[$i++]);
+            $encoded .= $itoa64[$value & 0x3f];
+            if ($i < 16) $value |= ord($hashBytes[$i]) << 8;
+            $encoded .= $itoa64[($value >> 6) & 0x3f];
+            if ($i++ >= 16) break;
+            if ($i < 16) $value |= ord($hashBytes[$i]) << 16;
+            $encoded .= $itoa64[($value >> 12) & 0x3f];
+            if ($i++ >= 16) break;
+            $encoded .= $itoa64[($value >> 18) & 0x3f];
+        } while ($i < 16);
+
+        $computed = substr($wpHash, 0, 12) . $encoded;
+
+        if (!hash_equals($wpHash, $computed)) {
+            return false;
+        }
+
+        // Password matches — migrate to bcrypt and clear WP hash
+        $this->forceFill([
+            'password' => \Illuminate\Support\Facades\Hash::make($plainPassword),
+            'wp_password_hash' => null,
+        ])->saveQuietly();
+
+        return true;
     }
 
     // =========================================

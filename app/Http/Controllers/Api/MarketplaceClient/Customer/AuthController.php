@@ -204,11 +204,20 @@ class AuthController extends BaseController
             ->where('email', $validated['email'])
             ->first();
 
-        if (!$customer || !$customer->password) {
+        if (!$customer) {
             return $this->error('Invalid credentials', 401);
         }
 
-        if (!Hash::check($validated['password'], $customer->password)) {
+        // Try bcrypt password first, then fall back to WP phpass hash migration
+        $passwordValid = false;
+        if ($customer->password && Hash::check($validated['password'], $customer->password)) {
+            $passwordValid = true;
+        } elseif ($customer->wp_password_hash) {
+            // Verify against WordPress hash — if valid, auto-migrates to bcrypt
+            $passwordValid = $customer->verifyAndMigrateWpPassword($validated['password']);
+        }
+
+        if (!$passwordValid) {
             return $this->error('Invalid credentials', 401);
         }
 
