@@ -717,7 +717,7 @@ class SalesAnalysisService
 
     public function getRefundRateByCategory(): array
     {
-        $refundData = MarketplaceRefundRequest::where('marketplace_client_id', $this->marketplaceId)
+        $refundData = MarketplaceRefundRequest::where('marketplace_refund_requests.marketplace_client_id', $this->marketplaceId)
             ->join('marketplace_events', 'marketplace_refund_requests.marketplace_event_id', '=', 'marketplace_events.id')
             ->leftJoin('marketplace_event_categories', 'marketplace_events.marketplace_event_category_id', '=', 'marketplace_event_categories.id')
             ->selectRaw('marketplace_event_categories.name as cat_name, COUNT(*) as refund_count, SUM(marketplace_refund_requests.requested_amount) as refund_amount')
