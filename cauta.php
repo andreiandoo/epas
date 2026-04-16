@@ -31,7 +31,7 @@ require_once __DIR__ . '/includes/header.php';
 
         <!-- Search Box -->
         <div class="max-w-2xl mt-6">
-            <form id="searchForm" class="relative">
+            <form id="searchForm" class="relative" onsubmit="event.preventDefault(); var q = document.getElementById('searchInput').value.trim(); if (q.length >= 2) { SearchPage.updateUrl(q); SearchPage.performSearch(q); }">
                 <input type="text"
                        id="searchInput"
                        name="q"
