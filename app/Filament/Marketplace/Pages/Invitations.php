@@ -149,9 +149,22 @@ class Invitations extends Page
         }
 
         return Event::where('marketplace_client_id', $marketplace->id)
-            ->orderBy('created_at', 'desc')
+            ->with('venue:id,name,city')
+            ->orderByDesc('event_date')
             ->get()
-            ->mapWithKeys(fn ($event) => [$event->id => $event->getTranslation('title')])
+            ->mapWithKeys(function ($event) {
+                $title = $event->getTranslation('title');
+                $date = $event->event_date?->format('d.m.Y') ?? '';
+                $venue = '';
+                if ($event->venue) {
+                    $vName = is_array($event->venue->name)
+                        ? ($event->venue->name['ro'] ?? $event->venue->name['en'] ?? reset($event->venue->name) ?: '')
+                        : ($event->venue->name ?? '');
+                    $venue = $vName;
+                }
+                $parts = array_filter([$title, $venue, $date]);
+                return [$event->id => implode(' — ', $parts)];
+            })
             ->all();
     }
 
