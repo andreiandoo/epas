@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/head.php';
                     </form>
 
                     <p class="mt-6 text-sm text-center text-muted">
-                        <a href="/login" class="font-semibold text-primary">Înapoi la autentificare</a>
+                        <a href="/autentificare" class="font-semibold text-primary">Înapoi la autentificare</a>
                     </p>
                 </div>
 
@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/head.php';
                     <h2 class="mb-2 text-2xl font-bold text-secondary">Parolă schimbată!</h2>
                     <p class="mb-8 text-muted">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
 
-                    <a href="/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
+                    <a href="/autentificare" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
                         Mergi la autentificare
                     </a>
 
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/head.php';
                     <a href="/forgot-password" class="btn-primary bg-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center mb-3">
                         Solicită link nou
                     </a>
-                    <a href="/login" class="block w-full py-3 text-sm font-medium text-center text-primary">
+                    <a href="/autentificare" class="block w-full py-3 text-sm font-medium text-center text-primary">
                         Înapoi la autentificare
                     </a>
                 </div>
@@ -340,7 +340,7 @@ const ResetPage = {
 
                     if (countdown <= 0) {
                         clearInterval(timer);
-                        window.location.href = '/login';
+                        window.location.href = '/autentificare';
                     }
                 }, 1000);
             } else {
