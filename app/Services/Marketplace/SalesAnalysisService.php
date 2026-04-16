@@ -698,7 +698,7 @@ class SalesAnalysisService
             ->whereNotNull('marketplace_events.starts_at')
             ->selectRaw('marketplace_event_categories.name as cat_name, AVG(EXTRACT(EPOCH FROM (marketplace_events.starts_at - orders.created_at)) / 86400)::int as avg_lead_days, COUNT(*) as orders')
             ->groupBy('cat_name')
-            ->having('orders', '>=', 3)
+            ->havingRaw('COUNT(*) >= 3')
             ->get();
 
         return $data->map(function ($row) {
@@ -1028,7 +1028,7 @@ class SalesAnalysisService
 
     public function getRefundTimeline(): array
     {
-        $data = MarketplaceRefundRequest::where('marketplace_client_id', $this->marketplaceId)
+        $data = MarketplaceRefundRequest::where('marketplace_refund_requests.marketplace_client_id', $this->marketplaceId)
             ->join('marketplace_events', 'marketplace_refund_requests.marketplace_event_id', '=', 'marketplace_events.id')
             ->whereNotNull('marketplace_events.starts_at')
             ->selectRaw('(EXTRACT(EPOCH FROM (marketplace_refund_requests.created_at - marketplace_events.starts_at)) / 86400)::int as days_diff, COUNT(*) as refunds')
