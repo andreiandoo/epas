@@ -107,12 +107,13 @@ class SalesAnalysisService
         $repeatCustomers = $this->getRepeatCustomerRateQuick();
 
         $bestDay = (clone $current)
-            ->selectRaw('DAYOFWEEK(created_at) as dow, SUM(total) as rev')
+            ->selectRaw('EXTRACT(ISODOW FROM created_at)::int as dow, SUM(total) as rev')
             ->groupBy('dow')
             ->orderByDesc('rev')
             ->first();
 
-        $dayNames = [1 => 'Dum', 2 => 'Lun', 3 => 'Mar', 4 => 'Mie', 5 => 'Joi', 6 => 'Vin', 7 => 'Sam'];
+        // ISODOW: 1=Mon, 2=Tue, ..., 7=Sun
+        $dayNames = [1 => 'Lun', 2 => 'Mar', 3 => 'Mie', 4 => 'Joi', 5 => 'Vin', 6 => 'Sam', 7 => 'Dum'];
         $bestDayName = $bestDay ? ($dayNames[$bestDay->dow] ?? '-') : '-';
 
         $prevTickets = $prev ? Ticket::whereIn('order_id', (clone $prev)->select('id'))->whereIn('status', ['valid', 'used'])->count() : 0;
@@ -124,7 +125,7 @@ class SalesAnalysisService
             ->where('source', '!=', 'test_order')
             ->where('source', '!=', 'external_import')
             ->where('created_at', '>=', Carbon::now()->subWeeks(8))
-            ->selectRaw("YEARWEEK(created_at, 1) as yw, SUM(total) as revenue")
+            ->selectRaw("TO_CHAR(created_at, 'IYYY-IW') as yw, SUM(total) as revenue")
             ->groupBy('yw')
             ->orderBy('yw')
             ->pluck('revenue')
@@ -168,13 +169,13 @@ class SalesAnalysisService
     public function getDayOfWeekRevenue(): array
     {
         $data = $this->baseOrderQuery()
-            ->selectRaw('DAYOFWEEK(created_at) as dow, SUM(total) as revenue, COUNT(*) as orders')
+            ->selectRaw('EXTRACT(ISODOW FROM created_at)::int as dow, SUM(total) as revenue, COUNT(*) as orders')
             ->groupBy('dow')
             ->orderBy('dow')
             ->get()
             ->keyBy('dow');
 
-        $dayNames = [2 => 'Luni', 3 => 'Marti', 4 => 'Miercuri', 5 => 'Joi', 6 => 'Vineri', 7 => 'Sambata', 1 => 'Duminica'];
+        $dayNames = [1 => 'Luni', 2 => 'Marti', 3 => 'Miercuri', 4 => 'Joi', 5 => 'Vineri', 6 => 'Sambata', 7 => 'Duminica'];
         $labels = [];
         $revenue = [];
         $orders = [];
@@ -195,13 +196,13 @@ class SalesAnalysisService
         $data = Ticket::whereIn('order_id', $orderIds)
             ->whereIn('status', ['valid', 'used'])
             ->join('orders', 'tickets.order_id', '=', 'orders.id')
-            ->selectRaw('DAYOFWEEK(orders.created_at) as dow, COUNT(tickets.id) as tickets')
+            ->selectRaw('EXTRACT(ISODOW FROM orders.created_at)::int as dow, COUNT(tickets.id) as tickets')
             ->groupBy('dow')
             ->orderBy('dow')
             ->get()
             ->keyBy('dow');
 
-        $dayNames = [2 => 'Luni', 3 => 'Marti', 4 => 'Miercuri', 5 => 'Joi', 6 => 'Vineri', 7 => 'Sambata', 1 => 'Duminica'];
+        $dayNames = [1 => 'Luni', 2 => 'Marti', 3 => 'Miercuri', 4 => 'Joi', 5 => 'Vineri', 6 => 'Sambata', 7 => 'Duminica'];
         $labels = [];
         $tickets = [];
 
@@ -218,11 +219,11 @@ class SalesAnalysisService
         $data = $this->baseOrderQuery()
             ->join('marketplace_events', 'orders.marketplace_event_id', '=', 'marketplace_events.id')
             ->join('marketplace_event_categories', 'marketplace_events.marketplace_event_category_id', '=', 'marketplace_event_categories.id')
-            ->selectRaw('marketplace_event_categories.id as cat_id, marketplace_event_categories.name as cat_name, DAYOFWEEK(orders.created_at) as dow, SUM(orders.total) as revenue')
+            ->selectRaw('marketplace_event_categories.id as cat_id, marketplace_event_categories.name as cat_name, EXTRACT(ISODOW FROM orders.created_at)::int as dow, SUM(orders.total) as revenue')
             ->groupBy('cat_id', 'cat_name', 'dow')
             ->get();
 
-        $dayMap = [2 => 'Lun', 3 => 'Mar', 4 => 'Mie', 5 => 'Joi', 6 => 'Vin', 7 => 'Sam', 1 => 'Dum'];
+        $dayMap = [1 => 'Lun', 2 => 'Mar', 3 => 'Mie', 4 => 'Joi', 5 => 'Vin', 6 => 'Sam', 7 => 'Dum'];
         $categories = [];
         $matrix = [];
 
@@ -241,11 +242,11 @@ class SalesAnalysisService
     public function getHourlyHeatmap(): array
     {
         $data = $this->baseOrderQuery()
-            ->selectRaw('DAYOFWEEK(created_at) as dow, HOUR(created_at) as hour, SUM(total) as revenue, COUNT(*) as orders')
+            ->selectRaw('EXTRACT(ISODOW FROM created_at)::int as dow, EXTRACT(HOUR FROM created_at)::int as hour, SUM(total) as revenue, COUNT(*) as orders')
             ->groupBy('dow', 'hour')
             ->get();
 
-        $dayMap = [2 => 'Lun', 3 => 'Mar', 4 => 'Mie', 5 => 'Joi', 6 => 'Vin', 7 => 'Sam', 1 => 'Dum'];
+        $dayMap = [1 => 'Lun', 2 => 'Mar', 3 => 'Mie', 4 => 'Joi', 5 => 'Vin', 6 => 'Sam', 7 => 'Dum'];
         $matrix = [];
 
         foreach ($dayMap as $dow => $name) {
@@ -268,13 +269,13 @@ class SalesAnalysisService
     public function getPeakSalesWindows(): array
     {
         $data = $this->baseOrderQuery()
-            ->selectRaw('DAYOFWEEK(created_at) as dow, HOUR(created_at) as hour, SUM(total) as revenue, COUNT(*) as orders')
+            ->selectRaw('EXTRACT(ISODOW FROM created_at)::int as dow, EXTRACT(HOUR FROM created_at)::int as hour, SUM(total) as revenue, COUNT(*) as orders')
             ->groupBy('dow', 'hour')
             ->orderByDesc('revenue')
             ->limit(10)
             ->get();
 
-        $dayNames = [1 => 'Duminica', 2 => 'Luni', 3 => 'Marti', 4 => 'Miercuri', 5 => 'Joi', 6 => 'Vineri', 7 => 'Sambata'];
+        $dayNames = [1 => 'Luni', 2 => 'Marti', 3 => 'Miercuri', 4 => 'Joi', 5 => 'Vineri', 6 => 'Sambata', 7 => 'Duminica'];
 
         return $data->map(fn($row) => [
             'day' => $dayNames[$row->dow] ?? '-',
@@ -295,7 +296,7 @@ class SalesAnalysisService
             ->where('source', '!=', 'test_order')
             ->where('source', '!=', 'external_import')
             ->where('created_at', '>=', Carbon::now()->subMonths(24))
-            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, SUM(total) as revenue, COUNT(*) as orders")
+            ->selectRaw("TO_CHAR(created_at, 'YYYY-MM') as month, SUM(total) as revenue, COUNT(*) as orders")
             ->groupBy('month')
             ->orderBy('month')
             ->get();
@@ -339,7 +340,7 @@ class SalesAnalysisService
             ->whereIn('status', $this->paidStatuses)
             ->where('source', '!=', 'test_order')
             ->where('source', '!=', 'external_import')
-            ->selectRaw("YEAR(created_at) as year, MONTH(created_at) as month, SUM(total) as revenue")
+            ->selectRaw("EXTRACT(YEAR FROM created_at)::int as year, EXTRACT(MONTH FROM created_at)::int as month, SUM(total) as revenue")
             ->groupBy('year', 'month')
             ->orderBy('year')
             ->orderBy('month')
@@ -403,7 +404,7 @@ class SalesAnalysisService
             ->whereIn('status', $this->paidStatuses)
             ->where('source', '!=', 'test_order')
             ->where('source', '!=', 'external_import')
-            ->selectRaw('MONTH(created_at) as month, SUM(total) as revenue')
+            ->selectRaw('EXTRACT(MONTH FROM created_at)::int as month, SUM(total) as revenue')
             ->groupBy('month')
             ->orderBy('month')
             ->get()
@@ -871,7 +872,7 @@ class SalesAnalysisService
             ->where('source', '!=', 'external_import')
             ->whereNotNull('marketplace_customer_id')
             ->where('created_at', '>=', Carbon::now()->subMonths(6))
-            ->selectRaw("marketplace_customer_id, MIN(DATE_FORMAT(created_at, '%Y-%m')) as cohort_month")
+            ->selectRaw("marketplace_customer_id, MIN(TO_CHAR(created_at, 'YYYY-MM')) as cohort_month")
             ->groupBy('marketplace_customer_id');
 
         $cohortData = DB::table('orders')
@@ -880,7 +881,7 @@ class SalesAnalysisService
             ->whereIn('orders.status', $this->paidStatuses)
             ->where('orders.source', '!=', 'test_order')
             ->where('orders.source', '!=', 'external_import')
-            ->selectRaw("cohorts.cohort_month, TIMESTAMPDIFF(MONTH, STR_TO_DATE(CONCAT(cohorts.cohort_month, '-01'), '%Y-%m-%d'), orders.created_at) as month_offset, COUNT(DISTINCT orders.marketplace_customer_id) as customers, SUM(orders.total) as revenue")
+            ->selectRaw("cohorts.cohort_month, (EXTRACT(YEAR FROM AGE(orders.created_at, TO_DATE(cohorts.cohort_month || '-01', 'YYYY-MM-DD'))) * 12 + EXTRACT(MONTH FROM AGE(orders.created_at, TO_DATE(cohorts.cohort_month || '-01', 'YYYY-MM-DD'))))::int as month_offset, COUNT(DISTINCT orders.marketplace_customer_id) as customers, SUM(orders.total) as revenue")
             ->groupBy('cohort_month', 'month_offset')
             ->orderBy('cohort_month')
             ->orderBy('month_offset')
