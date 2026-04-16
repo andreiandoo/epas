@@ -502,10 +502,10 @@ class AuthController extends BaseController
             'password' => ['required', 'confirmed', PasswordRules::min(8)],
         ]);
 
-        // Find the reset record
+        // Find the reset record (support both normal and bulk tokens)
         $record = DB::table('marketplace_password_resets')
             ->where('email', $validated['email'])
-            ->where('type', 'customer')
+            ->whereIn('type', ['customer', 'bulk_customer'])
             ->where('marketplace_client_id', $client->id)
             ->first();
 
@@ -513,8 +513,10 @@ class AuthController extends BaseController
             return $this->error('Invalid or expired reset token', 400);
         }
 
-        // Check if token is expired (60 minutes)
-        if (now()->diffInMinutes($record->created_at) > 60) {
+        // Check if token is expired — bulk tokens get 7 days, normal tokens 60 minutes
+        $isBulkToken = str_starts_with($record->type, 'bulk_');
+        $maxMinutes = $isBulkToken ? 10080 : 60; // 7 days vs 60 min
+        if (now()->diffInMinutes($record->created_at) > $maxMinutes) {
             DB::table('marketplace_password_resets')->where('id', $record->id)->delete();
             return $this->error('Reset token has expired', 400);
         }
