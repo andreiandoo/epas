@@ -17,7 +17,7 @@ class BulkPasswordReset extends Page
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Resetare parolă în masă';
-    protected static ?string $navigationGroup = 'Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
     protected static ?int $navigationSort = 90;
     protected static string $view = 'filament.marketplace.pages.bulk-password-reset';
 
