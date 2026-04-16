@@ -35,13 +35,19 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Section -->
+<style>
+@media (max-width: 768px) {
+    #artistHero { aspect-ratio: 1 / 1; height: auto; top: 4rem; margin-bottom: 8rem; }
+    #artistHero .hero-content-wrap { padding-bottom: 2rem !important; }
+}
+</style>
 <section class="relative h-[800px] overflow-hidden mt-17 mobile:mt-0" id="artistHero">
     <!-- Skeleton -->
     <div class="absolute inset-0 bg-gray-200 skeleton-hero animate-pulse"></div>
     <!-- Hero Image (loaded via JS) -->
     <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover object-[center_30%] hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-black/20 to-black/70"></div>
-    <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-20 mx-auto max-w-7xl">
+    <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-20 mx-auto max-w-7xl hero-content-wrap">
         <!-- Genre Tags -->
         <div id="genreTags" class="flex flex-wrap gap-2 mb-4">
             <span class="inline-block w-20 h-8 rounded-full bg-white/20 animate-pulse"></span>
