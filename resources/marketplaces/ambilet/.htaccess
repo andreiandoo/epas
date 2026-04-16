@@ -115,6 +115,18 @@ RewriteRule ^organizator/landing/?$ organizer/landing.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/forgot-password/?$ organizer/forgot-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/resetare-parola/?$ organizer/reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/reset-password/?$ organizer/reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/facturare/?$ organizer/billing.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f

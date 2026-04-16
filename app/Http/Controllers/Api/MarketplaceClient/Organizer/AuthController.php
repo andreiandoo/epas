@@ -1249,7 +1249,7 @@ HTML;
             $domain = 'https://' . $domain;
         }
 
-        $resetUrl = $domain . '/organizer/reset-password?' . http_build_query([
+        $resetUrl = $domain . '/organizator/resetare-parola?' . http_build_query([
             'token' => $token,
             'email' => $organizer->email,
         ]);
