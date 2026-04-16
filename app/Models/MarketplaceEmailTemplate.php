@@ -61,6 +61,10 @@ class MarketplaceEmailTemplate extends Model
         'admin_new_order' => 'Admin: Comandă nouă bilete',
         'admin_refund_request' => 'Admin: Cerere de retur',
         'admin_new_service_order' => 'Admin: Comandă servicii extra',
+        // Bulk Password Reset
+        'bulk_password_reset_customer' => 'Resetare parolă în masă — Clienți',
+        'bulk_password_reset_guest' => 'Creare cont — Invitație Guests',
+        'bulk_password_reset_organizer' => 'Resetare parolă în masă — Organizatori',
         // Stock Alerts
         'stock_low_alert' => 'Low Stock Alert',
         // Gift Card Templates
