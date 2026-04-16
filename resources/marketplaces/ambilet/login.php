@@ -19,6 +19,17 @@ require_once __DIR__ . '/includes/auth-branding.php';
     <!-- Right Side - Login Form -->
     <div class="flex items-center justify-center flex-1 p-8">
         <div class="w-full max-w-md">
+            <!-- Organizer CTA -->
+            <a href="/organizator/login" class="flex items-center gap-3 p-4 mb-6 transition-all rounded-xl" style="background:linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);">
+                <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-white/20">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-white">Ești organizator?</p>
+                    <p class="text-xs text-white/70">Click aici pentru autentificare →</p>
+                </div>
+            </a>
+
             <!-- Mobile Logo -->
             <div class="mb-8 text-center lg:hidden">
                 <a href="/" class="inline-flex items-center gap-3">
