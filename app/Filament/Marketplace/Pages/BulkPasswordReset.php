@@ -15,7 +15,7 @@ class BulkPasswordReset extends Page
 {
     use HasMarketplaceContext;
 
-    protected static ?string $navigationIcon = 'heroicon-o-envelope';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Resetare parolă în masă';
     protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
     protected static ?int $navigationSort = 90;
