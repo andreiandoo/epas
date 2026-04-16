@@ -22,30 +22,58 @@
                 </button>
             </div>
 
-            {{-- Workflow Steps --}}
+            {{-- Workflow Steps — dynamic coloring based on latest batch status --}}
+            @php
+                $latestBatch = $this->getBatches()->first();
+                $batchStatus = $latestBatch?->status ?? 'none';
+                $hasRecipients = $latestBatch ? $latestBatch->invites()->whereNotNull('recipient')->exists() : false;
+                $hasRendered = $latestBatch ? $latestBatch->invites()->whereNotNull('rendered_at')->exists() : false;
+                $hasEmailed = $latestBatch ? $latestBatch->invites()->whereNotNull('emailed_at')->exists() : false;
+
+                // Determine active step: 1=create, 2=recipients, 3=generate, 4=send
+                $step = 0;
+                if ($latestBatch) $step = 1;
+                if ($hasRecipients) $step = 2;
+                if ($hasRendered) $step = 3;
+                if ($hasEmailed || $batchStatus === 'completed') $step = 4;
+            @endphp
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Workflow</p>
                 <div class="flex flex-wrap items-center gap-2 text-sm">
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                        <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-                        Create Batch
-                    </div>
-                    <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-                        <span class="w-5 h-5 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">2</span>
-                        <span>Add Recipients</span>
-                        <span class="text-xs text-purple-500 dark:text-purple-400">(Manual / CSV)</span>
-                    </div>
-                    <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
-                        <span class="w-5 h-5 rounded-full bg-orange-600 text-white text-xs flex items-center justify-center font-bold">3</span>
-                        Generate PDFs
-                    </div>
-                    <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                        <span class="w-5 h-5 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">4</span>
-                        <span>Download / Send</span>
-                    </div>
+                    @php
+                        $steps = [
+                            ['num' => 1, 'label' => 'Create Batch', 'sub' => null, 'done' => '#3b82f6', 'doneBg' => 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'],
+                            ['num' => 2, 'label' => 'Add Recipients', 'sub' => '(Manual / CSV)', 'done' => '#9333ea', 'doneBg' => 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'],
+                            ['num' => 3, 'label' => 'Generate PDFs', 'sub' => null, 'done' => '#ea580c', 'doneBg' => 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'],
+                            ['num' => 4, 'label' => 'Download / Send', 'sub' => null, 'done' => '#16a34a', 'doneBg' => 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'],
+                        ];
+                    @endphp
+                    @foreach($steps as $i => $s)
+                        @if($i > 0)
+                            <x-heroicon-o-arrow-right @class(['w-4 h-4', 'text-gray-300' => $step < $s['num'], 'text-gray-500' => $step >= $s['num']]) />
+                        @endif
+                        <div @class([
+                            'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all',
+                            $s['doneBg'] => $step >= $s['num'],
+                            'bg-gray-50 dark:bg-gray-700 text-gray-400 dark:text-gray-500' => $step < $s['num'],
+                        ])>
+                            <span @class([
+                                'w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold',
+                                'text-white' => $step >= $s['num'],
+                                'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400' => $step < $s['num'],
+                            ]) @if($step >= $s['num']) style="background-color:{{ $s['done'] }}" @endif>
+                                @if($step > $s['num'])
+                                    ✓
+                                @else
+                                    {{ $s['num'] }}
+                                @endif
+                            </span>
+                            {{ $s['label'] }}
+                            @if($s['sub'] && $step >= $s['num'])
+                                <span class="text-xs opacity-60">{{ $s['sub'] }}</span>
+                            @endif
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>

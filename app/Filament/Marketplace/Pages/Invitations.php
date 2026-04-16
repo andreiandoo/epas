@@ -10,6 +10,7 @@ use App\Models\TicketTemplate;
 use App\Models\TicketType;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -675,25 +676,92 @@ class Invitations extends Page
                 $qrData = url("/verify/{$invite->invite_code}");
                 $qrCode = $this->generateQrCode($qrData);
 
-                // Generate PDF
-                $pdf = Pdf::loadView('pdf.invitation', [
-                    'invite' => $invite,
-                    'eventTitle' => $eventTitle,
-                    'eventSubtitle' => $eventSubtitle,
-                    'eventDate' => $eventDate,
-                    'eventTime' => $eventTime,
-                    'venueName' => $venueName,
-                    'watermark' => $watermark,
-                    'qrCode' => $qrCode,
-                ]);
+                // Generate PDF — try custom TicketTemplate first, fallback to Blade
+                $template = $batch->template ?? TicketTemplate::where('marketplace_client_id', $marketplace->id)
+                    ->where('status', 'active')
+                    ->where('is_default', true)
+                    ->first();
 
-                // Set PDF options
-                $pdf->setPaper('a4', 'portrait');
+                $pdfOutput = null;
+
+                if ($template && !empty($template->template_data['layers'])) {
+                    try {
+                        $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
+                        $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
+
+                        // Build data matching TicketVariableService format
+                        $recipientName = $invite->getRecipientName() ?: 'Invitat';
+                        $recipientEmail = $invite->getRecipientEmail() ?: '';
+                        $data = $variableService->getSampleData();
+                        $data['event'] = array_merge($data['event'], [
+                            'name' => $eventTitle,
+                            'date' => $eventDate,
+                            'time' => $eventTime ?? '',
+                            'venue' => $venueName ?? '',
+                        ]);
+                        $data['ticket'] = array_merge($data['ticket'], [
+                            'type' => 'INVITAȚIE',
+                            'price' => 'GRATUIT',
+                            'price_detail' => 'Invitație',
+                            'code_short' => $invite->invite_code,
+                            'code_long' => $invite->invite_code,
+                            'serial' => $invite->invite_code,
+                            'seat' => $invite->seat_ref ?? '',
+                        ]);
+                        $data['buyer'] = array_merge($data['buyer'], [
+                            'name' => $recipientName,
+                            'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
+                            'last_name' => explode(' ', $recipientName, 2)[1] ?? '',
+                            'email' => $recipientEmail,
+                        ]);
+                        $data['barcode'] = $invite->invite_code;
+                        $data['qrcode'] = $qrData;
+
+                        $content = $generator->renderToHtml($template->template_data, $data);
+
+                        if (!empty(trim($content))) {
+                            $size = $template->getSize();
+                            $widthPt = round($size['width'] * 2.8346, 2);
+                            $heightPt = round($size['height'] * 2.8346, 2);
+                            $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+
+                            $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$content}</body></html>";
+
+                            $customPdf = Pdf::loadHTML($html)
+                                ->setPaper([0, 0, $widthPt, $heightPt])
+                                ->setOption('isRemoteEnabled', true)
+                                ->setOption('isHtml5ParserEnabled', true);
+
+                            $pdfOutput = $customPdf->output();
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('Invitation custom PDF failed, using fallback', [
+                            'invite_id' => $invite->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // Fallback to hardcoded Blade template
+                if (empty($pdfOutput)) {
+                    $pdf = Pdf::loadView('pdf.invitation', [
+                        'invite' => $invite,
+                        'eventTitle' => $eventTitle,
+                        'eventSubtitle' => $eventSubtitle,
+                        'eventDate' => $eventDate,
+                        'eventTime' => $eventTime,
+                        'venueName' => $venueName,
+                        'watermark' => $watermark,
+                        'qrCode' => $qrCode,
+                    ]);
+                    $pdf->setPaper('a4', 'portrait');
+                    $pdfOutput = $pdf->output();
+                }
 
                 // Save PDF to storage
                 $pdfFilename = "{$invite->invite_code}.pdf";
                 $pdfPath = "{$storagePath}/{$pdfFilename}";
-                Storage::disk('local')->put($pdfPath, $pdf->output());
+                Storage::disk('local')->put($pdfPath, $pdfOutput);
 
                 // Update invite with PDF URL
                 $invite->setUrls([
@@ -782,12 +850,81 @@ class Invitations extends Page
             ->whereNull('emailed_at')
             ->get();
 
+        $event = Event::find($batch->event_ref);
+        $eventTitle = $event ? $event->getTranslation('title') : 'Eveniment';
+        $siteName = $marketplace->name ?? 'AmBilet';
+
         $sent = 0;
+        $failed = 0;
+
         foreach ($invites as $invite) {
-            // In production: dispatch email job
-            // For now, just mark as emailed
-            $invite->markAsEmailed();
-            $sent++;
+            $email = $invite->getRecipientEmail();
+            $name = $invite->getRecipientName() ?: 'Invitat';
+
+            if (!$email) {
+                $failed++;
+                continue;
+            }
+
+            try {
+                // Build email HTML
+                $subject = "Invitație — {$eventTitle}";
+                $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc">'
+                    . '<div style="max-width:600px;margin:0 auto;padding:40px 20px">'
+                    . '<div style="background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">'
+                    . '<div style="background:linear-gradient(135deg,#A51C30 0%,#8B1728 100%);padding:32px;text-align:center">'
+                    . '<h1 style="color:white;margin:0;font-size:24px">Invitație</h1>'
+                    . '</div>'
+                    . '<div style="padding:32px">'
+                    . '<p style="font-size:16px;color:#1e293b;margin:0 0 16px">Salut ' . htmlspecialchars($name) . ',</p>'
+                    . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Ai primit o invitație pentru <strong>' . htmlspecialchars($eventTitle) . '</strong>.</p>'
+                    . '<p style="font-size:15px;color:#475569;margin:0 0 16px">Biletul tău de invitație este atașat în format PDF. Prezintă-l la intrare (digital sau printat).</p>'
+                    . '<p style="font-size:13px;color:#94a3b8;margin:16px 0 0;text-align:center">Cod: <strong>' . htmlspecialchars($invite->invite_code) . '</strong></p>'
+                    . '</div>'
+                    . '<div style="padding:16px 32px;background:#f8fafc;text-align:center;border-top:1px solid #e2e8f0">'
+                    . '<p style="font-size:13px;color:#94a3b8;margin:0">Echipa ' . htmlspecialchars($siteName) . '</p>'
+                    . '</div></div></div></body></html>';
+
+                // Get PDF attachment
+                $pdfPath = $invite->urls['pdf'] ?? null;
+                $pdfData = $pdfPath ? Storage::disk('local')->get($pdfPath) : null;
+
+                if ($pdfData && $marketplace->hasMailConfigured()) {
+                    $transport = $marketplace->getMailTransport();
+                    if ($transport) {
+                        $symfonyEmail = (new \Symfony\Component\Mime\Email())
+                            ->from(new \Symfony\Component\Mime\Address(
+                                $marketplace->getEmailFromAddress(),
+                                $marketplace->getEmailFromName()
+                            ))
+                            ->to(new \Symfony\Component\Mime\Address($email, $name))
+                            ->subject($subject)
+                            ->html($html)
+                            ->attach($pdfData, "invitatie-{$invite->invite_code}.pdf", 'application/pdf');
+
+                        $transport->send($symfonyEmail);
+                    } else {
+                        // Fallback to Laravel mailer without attachment
+                        \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+                            $marketplace, $email, $name, $subject, $html, ['template_slug' => 'invitation']
+                        );
+                    }
+                } else {
+                    \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+                        $marketplace, $email, $name, $subject, $html, ['template_slug' => 'invitation']
+                    );
+                }
+
+                $invite->markAsEmailed();
+                $sent++;
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::warning('Invitation email failed', [
+                    'invite_id' => $invite->id,
+                    'email' => $email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $batch->updateStatus('completed');
