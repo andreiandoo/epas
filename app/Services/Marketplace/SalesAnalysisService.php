@@ -45,16 +45,16 @@ class SalesAnalysisService
 
     protected function baseOrderQuery()
     {
-        $q = Order::where('marketplace_client_id', $this->marketplaceId)
-            ->whereIn('status', $this->paidStatuses)
-            ->where('source', '!=', 'test_order')
-            ->where('source', '!=', 'external_import');
+        $q = Order::where('orders.marketplace_client_id', $this->marketplaceId)
+            ->whereIn('orders.status', $this->paidStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'external_import');
 
         if ($start = $this->getStartDate()) {
-            $q->where('created_at', '>=', $start);
+            $q->where('orders.created_at', '>=', $start);
         }
         if ($this->currency) {
-            $q->where('currency', $this->currency);
+            $q->where('orders.currency', $this->currency);
         }
         if ($this->categoryId) {
             $q->whereHas('marketplaceEvent', fn($eq) => $eq->where('marketplace_event_category_id', $this->categoryId));
@@ -70,14 +70,14 @@ class SalesAnalysisService
         $days = $start->diffInDays(Carbon::now());
         $prevStart = (clone $start)->subDays($days);
 
-        $q = Order::where('marketplace_client_id', $this->marketplaceId)
-            ->whereIn('status', $this->paidStatuses)
-            ->where('source', '!=', 'test_order')
-            ->where('source', '!=', 'external_import')
-            ->whereBetween('created_at', [$prevStart, $start]);
+        $q = Order::where('orders.marketplace_client_id', $this->marketplaceId)
+            ->whereIn('orders.status', $this->paidStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'external_import')
+            ->whereBetween('orders.created_at', [$prevStart, $start]);
 
         if ($this->currency) {
-            $q->where('currency', $this->currency);
+            $q->where('orders.currency', $this->currency);
         }
         if ($this->categoryId) {
             $q->whereHas('marketplaceEvent', fn($eq) => $eq->where('marketplace_event_category_id', $this->categoryId));
@@ -866,12 +866,12 @@ class SalesAnalysisService
     {
         // Get first order month per customer, then track their revenue in subsequent months
         $firstOrders = DB::table('orders')
-            ->where('marketplace_client_id', $this->marketplaceId)
-            ->whereIn('status', $this->paidStatuses)
-            ->where('source', '!=', 'test_order')
-            ->where('source', '!=', 'external_import')
-            ->whereNotNull('marketplace_customer_id')
-            ->where('created_at', '>=', Carbon::now()->subMonths(6))
+            ->where('orders.marketplace_client_id', $this->marketplaceId)
+            ->whereIn('orders.status', $this->paidStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'external_import')
+            ->whereNotNull('orders.marketplace_customer_id')
+            ->where('orders.created_at', '>=', Carbon::now()->subMonths(6))
             ->selectRaw("marketplace_customer_id, MIN(TO_CHAR(created_at, 'YYYY-MM')) as cohort_month")
             ->groupBy('marketplace_customer_id');
 
