@@ -159,11 +159,11 @@
                                 <td class="px-1 py-1 text-center" title="{{ $day }} {{ sprintf('%02d:00', $h) }}: {{ $currencySymbol }}{{ number_format($val, 0) }} ({{ $hours[$h]['orders'] ?? 0 }} comenzi)">
                                     <div @class([
                                         'w-7 h-7 rounded flex items-center justify-center text-[10px] font-medium mx-auto',
-                                        'bg-indigo-700 text-white' => $intensity > 0.8,
-                                        'bg-indigo-500 text-white' => $intensity > 0.6 && $intensity <= 0.8,
-                                        'bg-indigo-400 text-white' => $intensity > 0.4 && $intensity <= 0.6,
-                                        'bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200' => $intensity > 0.2 && $intensity <= 0.4,
-                                        'bg-indigo-50 dark:bg-gray-700 text-indigo-400 dark:text-gray-500' => $intensity > 0 && $intensity <= 0.2,
+                                        'bg-red-600 text-white' => $intensity > 0.8,
+                                        'bg-orange-500 text-white' => $intensity > 0.6 && $intensity <= 0.8,
+                                        'bg-amber-400 text-gray-900' => $intensity > 0.4 && $intensity <= 0.6,
+                                        'bg-yellow-200 text-gray-800' => $intensity > 0.2 && $intensity <= 0.4,
+                                        'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' => $intensity > 0 && $intensity <= 0.2,
                                         'bg-gray-50 dark:bg-gray-900 text-gray-300 dark:text-gray-600' => $intensity == 0,
                                     ])>
                                         {{ $hours[$h]['orders'] ?? 0 }}

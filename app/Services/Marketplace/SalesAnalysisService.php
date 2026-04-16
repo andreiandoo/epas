@@ -428,8 +428,8 @@ class SalesAnalysisService
             ->where('status', 'published')
             ->whereNotNull('starts_at')
             ->with(['eventCategory'])
-            ->withCount(['orders as paid_orders_count' => fn($q) => $q->whereIn('status', $this->paidStatuses)])
-            ->having('paid_orders_count', '>', 0)
+            ->withCount(['orders as paid_orders_count' => fn($q) => $q->whereIn('orders.status', $this->paidStatuses)])
+            ->whereHas('orders', fn($q) => $q->whereIn('orders.status', $this->paidStatuses))
             ->limit(50)
             ->get();
 
@@ -696,7 +696,7 @@ class SalesAnalysisService
             ->join('marketplace_events', 'orders.marketplace_event_id', '=', 'marketplace_events.id')
             ->leftJoin('marketplace_event_categories', 'marketplace_events.marketplace_event_category_id', '=', 'marketplace_event_categories.id')
             ->whereNotNull('marketplace_events.starts_at')
-            ->selectRaw('marketplace_event_categories.name as cat_name, AVG(DATEDIFF(marketplace_events.starts_at, orders.created_at)) as avg_lead_days, COUNT(*) as orders')
+            ->selectRaw('marketplace_event_categories.name as cat_name, AVG(EXTRACT(EPOCH FROM (marketplace_events.starts_at - orders.created_at)) / 86400)::int as avg_lead_days, COUNT(*) as orders')
             ->groupBy('cat_name')
             ->having('orders', '>=', 3)
             ->get();
@@ -1031,7 +1031,7 @@ class SalesAnalysisService
         $data = MarketplaceRefundRequest::where('marketplace_client_id', $this->marketplaceId)
             ->join('marketplace_events', 'marketplace_refund_requests.marketplace_event_id', '=', 'marketplace_events.id')
             ->whereNotNull('marketplace_events.starts_at')
-            ->selectRaw('DATEDIFF(marketplace_refund_requests.created_at, marketplace_events.starts_at) as days_diff, COUNT(*) as refunds')
+            ->selectRaw('(EXTRACT(EPOCH FROM (marketplace_refund_requests.created_at - marketplace_events.starts_at)) / 86400)::int as days_diff, COUNT(*) as refunds')
             ->groupBy('days_diff')
             ->orderBy('days_diff')
             ->get();
