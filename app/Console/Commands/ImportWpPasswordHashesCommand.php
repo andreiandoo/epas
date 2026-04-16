@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Models\MarketplaceCustomer;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 
 class ImportWpPasswordHashesCommand extends Command
 {
@@ -49,7 +48,8 @@ class ImportWpPasswordHashesCommand extends Command
             return self::FAILURE;
         }
 
-        $updated = 0;
+        $bcryptDirect = 0;
+        $phpassStored = 0;
         $skipped = 0;
         $notFound = 0;
         $alreadyHasPassword = 0;
@@ -65,12 +65,6 @@ class ImportWpPasswordHashesCommand extends Command
                 continue;
             }
 
-            // Only import phpass hashes
-            if (!str_starts_with($wpHash, '$P$') && !str_starts_with($wpHash, '$H$')) {
-                $skipped++;
-                continue;
-            }
-
             $customer = MarketplaceCustomer::where('marketplace_client_id', $clientId)
                 ->where('email', $email)
                 ->first();
@@ -80,26 +74,50 @@ class ImportWpPasswordHashesCommand extends Command
                 continue;
             }
 
-            // Skip if customer already has a bcrypt password (already migrated/registered)
+            // Skip if customer already has a bcrypt password
             if ($customer->password) {
                 $alreadyHasPassword++;
                 continue;
             }
 
-            $updated++;
-            if (!$dryRun) {
-                $customer->forceFill(['wp_password_hash' => $wpHash])->saveQuietly();
+            // Detect hash type and handle accordingly
+            if (str_starts_with($wpHash, '$wp$2y$') || str_starts_with($wpHash, '$wp$2a$')) {
+                // WordPress bcrypt with $wp$ prefix — strip prefix and set as password directly
+                $cleanHash = substr($wpHash, 3); // Remove '$wp' prefix → '$2y$10$...'
+                $bcryptDirect++;
+                if (!$dryRun) {
+                    $customer->forceFill(['password' => $cleanHash])->saveQuietly();
+                }
+            } elseif (str_starts_with($wpHash, '$2y$') || str_starts_with($wpHash, '$2a$')) {
+                // Standard bcrypt — set as password directly
+                $bcryptDirect++;
+                if (!$dryRun) {
+                    $customer->forceFill(['password' => $wpHash])->saveQuietly();
+                }
+            } elseif (str_starts_with($wpHash, '$P$') || str_starts_with($wpHash, '$H$')) {
+                // Old phpass hash — store in wp_password_hash for runtime migration
+                $phpassStored++;
+                if (!$dryRun) {
+                    $customer->forceFill(['wp_password_hash' => $wpHash])->saveQuietly();
+                }
+            } else {
+                $skipped++;
+                continue;
             }
         }
 
         fclose($handle);
 
         $mode = $dryRun ? ' (dry run)' : '';
+        $total = $bcryptDirect + $phpassStored;
         $this->info("Done{$mode}. Processed {$row} rows:");
-        $this->line("  Updated:              {$updated}");
-        $this->line("  Already has password:  {$alreadyHasPassword}");
-        $this->line("  Not found in DB:      {$notFound}");
-        $this->line("  Skipped (bad data):   {$skipped}");
+        $this->line("  Passwords set (bcrypt):   {$bcryptDirect}");
+        $this->line("  WP hash stored (phpass):  {$phpassStored}");
+        $this->line("  Already has password:     {$alreadyHasPassword}");
+        $this->line("  Not found in DB:          {$notFound}");
+        $this->line("  Skipped (bad data):       {$skipped}");
+        $this->newLine();
+        $this->info("Total customers updated: {$total}");
 
         return self::SUCCESS;
     }
