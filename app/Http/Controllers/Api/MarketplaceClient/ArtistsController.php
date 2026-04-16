@@ -296,10 +296,18 @@ class ArtistsController extends BaseController
                 $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
                 $currency = $ticketTypes->first()?->currency ?? 'RON';
 
-                // is_sold_out: empty collection should NOT be sold out
-                $isSoldOut = $ticketTypes->isNotEmpty()
-                    ? $ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0))
-                    : (bool) $event->is_sold_out;
+                // is_sold_out: use event flag if explicitly set, otherwise compute from ticket types
+                $isSoldOut = (bool) $event->is_sold_out;
+                if (!$isSoldOut && $ticketTypes->isNotEmpty()) {
+                    $isSoldOut = $ticketTypes
+                        ->where('status', 'active')
+                        ->filter(fn ($tt) => $tt->quota_total >= 0)
+                        ->isNotEmpty()
+                        && $ticketTypes
+                            ->where('status', 'active')
+                            ->filter(fn ($tt) => $tt->quota_total >= 0)
+                            ->every(fn ($tt) => $tt->quota_total <= ($tt->quota_sold ?? 0));
+                }
 
                 // Get commission settings (event > organizer > marketplace default)
                 $organizer = $event->marketplaceOrganizer;
@@ -530,10 +538,12 @@ class ArtistsController extends BaseController
             $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
             $currency = $ticketTypes->first()?->currency ?? 'RON';
 
-            // is_sold_out: empty collection returns true for ->every(), so check count first
-            $isSoldOut = $ticketTypes->isNotEmpty()
-                ? $ticketTypes->every(fn ($tt) => $tt->quota_total >= 0 && $tt->quota_total <= ($tt->quota_sold ?? 0))
-                : (bool) $event->is_sold_out;
+            // is_sold_out: use event flag if explicitly set, otherwise compute from active ticket types
+            $isSoldOut = (bool) $event->is_sold_out;
+            if (!$isSoldOut && $ticketTypes->isNotEmpty()) {
+                $active = $ticketTypes->where('status', 'active')->filter(fn ($tt) => $tt->quota_total >= 0);
+                $isSoldOut = $active->isNotEmpty() && $active->every(fn ($tt) => $tt->quota_total <= ($tt->quota_sold ?? 0));
+            }
 
             return [
                 'id' => $event->id,
