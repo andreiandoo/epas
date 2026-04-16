@@ -42,7 +42,7 @@ require_once __DIR__ . '/includes/header.php';
                 <svg class="absolute w-6 h-6 text-gray-400 -translate-y-1/2 left-4 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
-                <button type="submit" class="absolute px-6 py-2 font-semibold text-white transition-colors -translate-y-1/2 right-2 top-1/2 bg-primary hover:bg-primary-dark rounded-xl">
+                <button type="button" onclick="var q = document.getElementById('searchInput').value.trim(); if (q.length >= 2) { SearchPage.updateUrl(q); SearchPage.performSearch(q); }" class="absolute px-6 py-2 font-semibold text-white transition-colors -translate-y-1/2 right-2 top-1/2 bg-primary hover:bg-primary-dark rounded-xl">
                     Caută
                 </button>
             </form>
