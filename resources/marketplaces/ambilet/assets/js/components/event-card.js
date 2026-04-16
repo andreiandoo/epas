@@ -280,9 +280,9 @@ const AmbiletEventCard = {
         return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between">' +
             '<div class="flex mobile:flex-col">' +
                 '<div class="w-[260px] mobile:w-full">' +
-                    (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
+                    (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
                 '</div>' +
-                '<div class="mobile:flex">' +
+                '<div class="flex">' +
                     dateHtml +
                     '<div class="flex flex-col justify-center flex-1 px-4 py-2 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                         (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
@@ -297,12 +297,13 @@ const AmbiletEventCard = {
                         '</div>' +
                     '</div>' +
                 '</div>' +
+            
+                (showPrice ?
+                    '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
+                        priceHtml +
+                        buttonHtml +
+                    '</div>' : '') +
             '</div>' +
-            (showPrice ?
-                '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
-                    priceHtml +
-                    buttonHtml +
-                '</div>' : '') +
         '</a>';
     },
 

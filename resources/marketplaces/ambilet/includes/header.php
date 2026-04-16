@@ -277,7 +277,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex rounded-tl-none rounded-tr-none pb-2">
                             <!-- Categories -->
                             <div class="w-[250px] px-3 py-2 bg-gray-50 border-r border-gray-200">

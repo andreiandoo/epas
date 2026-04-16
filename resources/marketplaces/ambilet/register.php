@@ -73,8 +73,8 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div class="flex items-start">
                         <input type="checkbox" id="terms" name="terms" required class="w-4 h-4 mt-1 rounded text-primary border-border focus:ring-primary">
                         <label for="terms" class="ml-2 text-sm text-muted">
-                            Sunt de acord cu <a href="/terms" class="text-primary">Termenii și condițiile</a>
-                            și <a href="/privacy" class="text-primary">Politica de confidențialitate</a>
+                            Sunt de acord cu <a href="/termeni" class="text-primary">Termenii și condițiile</a>
+                            și <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a>
                         </label>
                     </div>
 
