@@ -618,6 +618,7 @@ class Event extends Model
         return LogOptions::defaults()
             ->logFillable()
             ->logOnlyDirty()
+            ->dontLogIfAttributesChangedOnly(['views_count', 'updated_at'])
             ->setDescriptionForEvent(fn (string $eventName) => "Event {$eventName}");
     }
 
