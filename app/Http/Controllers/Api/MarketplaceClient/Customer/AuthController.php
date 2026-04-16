@@ -456,9 +456,10 @@ class AuthController extends BaseController
             'email' => 'required|email',
         ]);
 
+        // Include guests (imported from WP without password) so they can
+        // set their password via the reset flow
         $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
             ->where('email', $validated['email'])
-            ->whereNotNull('password')
             ->first();
 
         // Always return success to prevent email enumeration
