@@ -59,16 +59,8 @@ class SendBulkPasswordResetJob implements ShouldQueue
             return;
         }
 
-        // Get next batch of recipients
-        if ($type === 'customer') {
-            $recipients = MarketplaceCustomer::where('marketplace_client_id', $client->id)
-                ->whereNotNull('password')
-                ->where('id', '>', $lastId)
-                ->where('status', 'active')
-                ->orderBy('id')
-                ->limit($batchSize)
-                ->get(['id', 'email', 'first_name', 'last_name']);
-        } else {
+        // Get next batch of recipients based on campaign type
+        if ($type === 'organizer') {
             $recipients = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
                 ->whereNotNull('password')
                 ->where('id', '>', $lastId)
@@ -76,6 +68,25 @@ class SendBulkPasswordResetJob implements ShouldQueue
                 ->orderBy('id')
                 ->limit($batchSize)
                 ->get(['id', 'email', 'name', 'contact_name']);
+        } else {
+            $query = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+                ->where('id', '>', $lastId)
+                ->where('status', 'active')
+                ->orderBy('id')
+                ->limit($batchSize);
+
+            if ($type === 'customer') {
+                // Registered customers: have bcrypt password, no WP hash
+                $query->whereNotNull('password')->whereNull('wp_password_hash');
+            } elseif ($type === 'wp_user') {
+                // WP imported: have phpass hash, no bcrypt password
+                $query->whereNull('password')->whereNotNull('wp_password_hash');
+            } elseif ($type === 'guest') {
+                // Pure guests: no password at all
+                $query->whereNull('password')->whereNull('wp_password_hash');
+            }
+
+            $recipients = $query->get(['id', 'email', 'first_name', 'last_name']);
         }
 
         if ($recipients->isEmpty()) {
@@ -90,8 +101,8 @@ class SendBulkPasswordResetJob implements ShouldQueue
             $domain = 'https://' . $domain;
         }
         $siteName = $client->name ?? 'AmBilet';
-        $tokenType = $type === 'customer' ? 'bulk_customer' : 'bulk_organizer';
-        $resetPath = $type === 'customer' ? '/resetare-parola' : '/organizator/resetare-parola';
+        $tokenType = $type === 'organizer' ? 'bulk_organizer' : 'bulk_customer';
+        $resetPath = $type === 'organizer' ? '/organizator/resetare-parola' : '/resetare-parola';
 
         $sent = 0;
         $failed = 0;
