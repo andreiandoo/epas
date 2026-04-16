@@ -57,8 +57,8 @@ class EventActivityLog extends Page
                     'causer_email' => $this->getCauserEmail($activity),
                     'changes' => $this->formatChanges($activity),
                     'created_at' => $activity->created_at,
-                    'formatted_date' => $activity->created_at->format('d M Y'),
-                    'formatted_time' => $activity->created_at->format('H:i:s'),
+                    'formatted_date' => $activity->created_at->timezone('Europe/Bucharest')->format('d M Y'),
+                    'formatted_time' => $activity->created_at->timezone('Europe/Bucharest')->format('H:i:s'),
                     'relative_time' => $activity->created_at->diffForHumans(),
                 ];
             });

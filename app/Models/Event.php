@@ -616,11 +616,10 @@ class Event extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['title', 'slug', 'event_date', 'is_cancelled', 'is_postponed', 'is_sold_out', 'status'])
+            ->logFillable()
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
-            ->setDescriptionForEvent(fn (string $eventName) => "Event {$eventName}")
-            ->useLogName('tenant');
+            ->setDescriptionForEvent(fn (string $eventName) => "Event {$eventName}");
     }
 
     /**
