@@ -401,17 +401,20 @@ class MarketplaceClient extends Model
      */
     public function getMailSettings(): array
     {
-        // First check new settings['mail'] structure
-        $mailSettings = $this->settings['mail'] ?? [];
-
-        if (!empty($mailSettings['driver'])) {
-            return $mailSettings;
-        }
-
-        // Fallback to legacy smtp_settings column
+        // Primary: smtp_settings column (dedicated, survives settings JSON rebuilds)
         $smtp = $this->smtp_settings ?? [];
+        if (!empty($smtp['driver'])) {
+            return $smtp;
+        }
+        // Legacy: smtp_settings without driver key (old SMTP format)
         if (!empty($smtp['host'])) {
             return array_merge(['driver' => 'smtp'], $smtp);
+        }
+
+        // Fallback: settings['mail'] (deprecated, may be lost on save)
+        $mailSettings = $this->settings['mail'] ?? [];
+        if (!empty($mailSettings['driver'])) {
+            return $mailSettings;
         }
 
         return [];

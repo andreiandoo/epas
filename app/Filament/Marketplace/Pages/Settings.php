@@ -37,6 +37,7 @@ class Settings extends Page
 
         if ($marketplace) {
             $settings = $marketplace->settings ?? [];
+            $smtp = $marketplace->smtp_settings ?? [];
 
             $this->form->fill([
                 // Business Details
@@ -99,19 +100,19 @@ class Settings extends Page
                 'social_tiktok' => $settings['social']['tiktok'] ?? '',
                 'social_linkedin' => $settings['social']['linkedin'] ?? '',
 
-                // Mail Settings
-                'mail_driver' => $settings['mail']['driver'] ?? '',
-                'mail_host' => $settings['mail']['host'] ?? '',
-                'mail_port' => $settings['mail']['port'] ?? '',
-                'mail_username' => $settings['mail']['username'] ?? '',
-                'mail_password' => $this->decryptSetting($settings['mail']['password'] ?? ''),
-                'mail_api_key' => $this->decryptSetting($settings['mail']['api_key'] ?? ''),
-                'mail_api_secret' => $this->decryptSetting($settings['mail']['api_secret'] ?? ''),
-                'mail_encryption' => $settings['mail']['encryption'] ?? '',
-                'mail_from_address' => $settings['mail']['from_address'] ?? '',
-                'mail_from_name' => $settings['mail']['from_name'] ?? '',
-                'mail_domain' => $settings['mail']['domain'] ?? '',
-                'mail_region' => $settings['mail']['region'] ?? '',
+                // Mail Settings — read from smtp_settings column (primary) with settings.mail fallback
+                'mail_driver' => $smtp['driver'] ?? $settings['mail']['driver'] ?? '',
+                'mail_host' => $smtp['host'] ?? $settings['mail']['host'] ?? '',
+                'mail_port' => $smtp['port'] ?? $settings['mail']['port'] ?? '',
+                'mail_username' => $smtp['username'] ?? $settings['mail']['username'] ?? '',
+                'mail_password' => $this->decryptSetting($smtp['password'] ?? $settings['mail']['password'] ?? ''),
+                'mail_api_key' => $this->decryptSetting($smtp['api_key'] ?? $settings['mail']['api_key'] ?? ''),
+                'mail_api_secret' => $this->decryptSetting($smtp['api_secret'] ?? $settings['mail']['api_secret'] ?? ''),
+                'mail_encryption' => $smtp['encryption'] ?? $settings['mail']['encryption'] ?? '',
+                'mail_from_address' => $smtp['from_address'] ?? $settings['mail']['from_address'] ?? '',
+                'mail_from_name' => $smtp['from_name'] ?? $settings['mail']['from_name'] ?? '',
+                'mail_domain' => $smtp['domain'] ?? $settings['mail']['domain'] ?? '',
+                'mail_region' => $smtp['region'] ?? $settings['mail']['region'] ?? '',
 
                 // Stock alert settings
                 'stock_alert_threshold' => $settings['stock_alert_threshold'] ?? null,
@@ -675,12 +676,8 @@ class Settings extends Page
             'ticket_terms' => $data['ticket_terms'],
         ]);
 
-        // Update settings JSON
+        // Update settings JSON — start from existing to preserve all keys
         $settings = $marketplace->settings ?? [];
-
-        // Preserve existing mail settings before rebuilding $settings
-        // (other assignments below don't touch 'mail', but we must keep it safe)
-        $existingMailSettings = $settings['mail'] ?? [];
         $settings['site_title'] = $data['site_title'];
         // Language is set in Core Admin (Tenant Edit page)
         // $settings['site_language'] = $data['site_language'];
@@ -699,9 +696,10 @@ class Settings extends Page
         $settings['general_invoice_client_name'] = $data['general_invoice_client_name'] ?? 'Client general';
         $settings['general_invoice_client_cui'] = $data['general_invoice_client_cui'] ?? '';
         $settings['general_invoice_client_address'] = $data['general_invoice_client_address'] ?? '';
+        $existingNotif = $settings['admin_notifications'] ?? [];
         $settings['admin_notifications'] = [
-            'orders_email' => $data['admin_notification_orders_email'] ?? '',
-            'service_orders_email' => $data['admin_notification_service_orders_email'] ?? '',
+            'orders_email' => filled($data['admin_notification_orders_email'] ?? null) ? $data['admin_notification_orders_email'] : ($existingNotif['orders_email'] ?? ''),
+            'service_orders_email' => filled($data['admin_notification_service_orders_email'] ?? null) ? $data['admin_notification_service_orders_email'] : ($existingNotif['service_orders_email'] ?? ''),
         ];
 
         // Document Series
@@ -726,69 +724,55 @@ class Settings extends Page
             'linkedin' => $data['social_linkedin'] ?? '',
         ];
 
-        // Update mail settings — preserve existing values when form fields are empty.
-        // This prevents Livewire re-renders or tab switches from wiping encrypted credentials.
-        // Use $existingMailSettings saved before $settings was rebuilt (not $settings['mail'] which may be empty)
-        $mailSettings = $existingMailSettings;
+        // Update mail settings — saved in dedicated smtp_settings column (not settings JSON)
+        // to prevent loss when settings JSON is rebuilt on save.
+        $currentSmtp = $marketplace->smtp_settings ?? [];
         $incomingDriver = $data['mail_driver'] ?? null;
 
-        // Only update driver if explicitly changed to a real value.
-        // Empty string means "field was in form but not selected" — preserve existing config
-        // to prevent tab switches from wiping mail settings.
+        // Only update if driver is explicitly provided
         if (filled($incomingDriver)) {
-            $mailSettings['driver'] = $incomingDriver;
-        }
-        // If $incomingDriver is null or empty, preserve existing settings entirely
+            $currentSmtp['driver'] = $incomingDriver;
 
-        // Only update individual fields when a driver is actively selected
-        if (!empty($mailSettings['driver'])) {
-            // Common fields — always overwrite when provided, keep existing otherwise
+            // Common fields
             if (array_key_exists('mail_from_address', $data) && filled($data['mail_from_address'])) {
-                $mailSettings['from_address'] = $data['mail_from_address'];
+                $currentSmtp['from_address'] = $data['mail_from_address'];
             }
             if (array_key_exists('mail_from_name', $data) && filled($data['mail_from_name'])) {
-                $mailSettings['from_name'] = $data['mail_from_name'];
+                $currentSmtp['from_name'] = $data['mail_from_name'];
             }
 
             // SMTP-specific fields
-            if (!empty($data['mail_host'])) {
-                $mailSettings['host'] = $data['mail_host'];
-            }
-            if (!empty($data['mail_port'])) {
-                $mailSettings['port'] = $data['mail_port'];
-            }
+            if (!empty($data['mail_host'])) $currentSmtp['host'] = $data['mail_host'];
+            if (!empty($data['mail_port'])) $currentSmtp['port'] = $data['mail_port'];
             if (array_key_exists('mail_username', $data) && filled($data['mail_username'])) {
-                $mailSettings['username'] = $data['mail_username'];
+                $currentSmtp['username'] = $data['mail_username'];
             }
-            if (!empty($data['mail_password'])) {
-                $mailSettings['password'] = encrypt($data['mail_password']);
-            }
-            if (isset($data['mail_encryption'])) {
-                $mailSettings['encryption'] = $data['mail_encryption'];
-            }
+            if (!empty($data['mail_password'])) $currentSmtp['password'] = encrypt($data['mail_password']);
+            if (isset($data['mail_encryption'])) $currentSmtp['encryption'] = $data['mail_encryption'];
 
-            // API-based providers — only re-encrypt when a new value is provided
-            if (!empty($data['mail_api_key'])) {
-                $mailSettings['api_key'] = encrypt($data['mail_api_key']);
-            }
-            if (!empty($data['mail_api_secret'])) {
-                $mailSettings['api_secret'] = encrypt($data['mail_api_secret']);
-            }
+            // API-based providers
+            if (!empty($data['mail_api_key'])) $currentSmtp['api_key'] = encrypt($data['mail_api_key']);
+            if (!empty($data['mail_api_secret'])) $currentSmtp['api_secret'] = encrypt($data['mail_api_secret']);
 
             // Mailgun/SES specific
-            if (!empty($data['mail_domain'])) {
-                $mailSettings['domain'] = $data['mail_domain'];
-            }
-            if (!empty($data['mail_region'])) {
-                $mailSettings['region'] = $data['mail_region'];
-            }
+            if (!empty($data['mail_domain'])) $currentSmtp['domain'] = $data['mail_domain'];
+            if (!empty($data['mail_region'])) $currentSmtp['region'] = $data['mail_region'];
         }
+        // If no driver selected, don't touch smtp_settings at all
 
-        $settings['mail'] = $mailSettings;
+        // Save mail settings to dedicated column (survives settings JSON rebuilds)
+        $marketplace->smtp_settings = $currentSmtp;
 
-        // Stock alert settings
-        $settings['stock_alert_threshold'] = !empty($data['stock_alert_threshold']) ? (int) $data['stock_alert_threshold'] : null;
-        $settings['stock_alert_email'] = $data['stock_alert_email'] ?? null;
+        // Clear settings.mail to avoid stale data (smtp_settings is the source of truth now)
+        unset($settings['mail']);
+
+        // Stock alert settings — preserve existing if form fields are empty
+        if (!empty($data['stock_alert_threshold'])) {
+            $settings['stock_alert_threshold'] = (int) $data['stock_alert_threshold'];
+        }
+        if (filled($data['stock_alert_email'] ?? null)) {
+            $settings['stock_alert_email'] = $data['stock_alert_email'];
+        }
 
         $marketplace->update([
             'settings' => $settings,
