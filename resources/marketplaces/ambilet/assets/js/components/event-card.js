@@ -261,7 +261,7 @@ const AmbiletEventCard = {
         }
 
         // Date section - with hero image background
-        const heroImgRaw = event.heroImage || event.image;
+        const heroImgRaw = event.heroImage;
         const heroImg = heroImgRaw ? (typeof getStorageUrl === 'function' ? getStorageUrl(heroImgRaw) : heroImgRaw) : null;
         let dateHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
@@ -288,7 +288,6 @@ const AmbiletEventCard = {
                 '<div class="flex">' +
                     dateHtml +
                     '<div class="flex flex-col justify-center flex-1 px-4 py-2 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
-                        (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
                         '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + soldOutBadge + '</h3>' +
                         '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
                             (showTime ? '<span class="flex items-center gap-1">' +
@@ -302,7 +301,7 @@ const AmbiletEventCard = {
                 '</div>' +
             
                 (showPrice ?
-                    '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2">' +
+                    '<div class="py-2 px-4 flex flex-col items-center justify-center gap-1.5 mobile:flex-row mobile:items-center mobile:justify-between mobile:py-2 mobile:px-2 flex-none">' +
                         priceHtml +
                         buttonHtml +
                     '</div>' : '') +
@@ -555,7 +554,7 @@ const AmbiletEventCard = {
             title: apiEvent.name || apiEvent.title || 'Eveniment',
             image: apiEvent.poster_url || apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
             posterImage: apiEvent.poster_url || apiEvent.image_url || apiEvent.image || null,
-            heroImage: apiEvent.hero_image_url || apiEvent.cover_image_url || apiEvent.image_url || apiEvent.image || null,
+            heroImage: apiEvent.hero_image_url || apiEvent.cover_image_url || null,
             date: date,
             day: date ? date.getDate() : '',
             month: date ? this.MONTHS[date.getMonth()] : '',

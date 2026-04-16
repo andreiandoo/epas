@@ -329,6 +329,8 @@ class ArtistsController extends BaseController
                     'price_from' => $minPrice,
                     'currency' => $currency,
                     'image' => $event->main_image_url ?? $event->poster_url,
+                    'hero_image_url' => $event->hero_image_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($event->hero_image_url) : null,
+                    'poster_url' => $event->poster_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($event->poster_url) : null,
                     'is_sold_out' => $isSoldOut,
                     'category' => $categoryName ? ['name' => $categoryName] : null,
                     'commission_mode' => $commissionMode,
@@ -561,6 +563,8 @@ class ArtistsController extends BaseController
                 'min_price' => $minPrice,
                 'currency' => $currency,
                 'image' => $event->main_image_url ?? $event->poster_url,
+                'hero_image_url' => $event->hero_image_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($event->hero_image_url) : null,
+                'poster_url' => $event->poster_url ? \Illuminate\Support\Facades\Storage::disk('public')->url($event->poster_url) : null,
                 'is_sold_out' => $isSoldOut,
             ];
         });
