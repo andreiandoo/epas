@@ -677,6 +677,10 @@ class Settings extends Page
 
         // Update settings JSON
         $settings = $marketplace->settings ?? [];
+
+        // Preserve existing mail settings before rebuilding $settings
+        // (other assignments below don't touch 'mail', but we must keep it safe)
+        $existingMailSettings = $settings['mail'] ?? [];
         $settings['site_title'] = $data['site_title'];
         // Language is set in Core Admin (Tenant Edit page)
         // $settings['site_language'] = $data['site_language'];
@@ -724,7 +728,8 @@ class Settings extends Page
 
         // Update mail settings — preserve existing values when form fields are empty.
         // This prevents Livewire re-renders or tab switches from wiping encrypted credentials.
-        $mailSettings = $settings['mail'] ?? [];
+        // Use $existingMailSettings saved before $settings was rebuilt (not $settings['mail'] which may be empty)
+        $mailSettings = $existingMailSettings;
         $incomingDriver = $data['mail_driver'] ?? null;
 
         // Only update driver if explicitly changed to a real value.
