@@ -2,11 +2,10 @@
 require_once __DIR__ . '/../includes/config.php';
 $pageTitle = 'Resetare Parolă Organizator';
 $pageDescription = 'Resetează parola contului de organizator';
-$bodyClass = 'min-h-screen flex bg-surface';
+$bodyClass = 'flex min-h-screen';
 $cssBundle = 'auth';
 require_once __DIR__ . '/../includes/head.php';
 ?>
-<body class="flex min-h-screen">
     <!-- Left Side - Branding -->
     <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary bg-pattern">
         <div class="absolute inset-0">
