@@ -208,70 +208,90 @@ class SalesAnalysis extends Page
             return ['marketplace' => null];
         }
 
-        $service = $this->getService();
-        $cacheKey = "sa_{$marketplace->id}_{$this->dateRange}_{$this->categoryFilter}_{$this->currencyFilter}";
+        $emptyKpis = ['total_revenue' => 0, 'total_orders' => 0, 'total_tickets' => 0, 'avg_order_value' => 0, 'revenue_change' => 0, 'orders_change' => 0, 'tickets_change' => 0, 'repeat_rate' => 0, 'best_day' => '-', 'trend' => []];
 
-        // KPI stats (always loaded)
-        $kpis = Cache::remember("{$cacheKey}_kpis", 900, fn() => $service->getKpiStats());
+        try {
+            $service = $this->getService();
+            $cacheKey = "sa_{$marketplace->id}_{$this->dateRange}_{$this->categoryFilter}_{$this->currencyFilter}";
 
-        // Tab-specific data
-        $tabData = Cache::remember("{$cacheKey}_{$this->activeTab}", 900, function () use ($service) {
-            return match ($this->activeTab) {
-                'patterns' => [
-                    'dowRevenue' => $service->getDayOfWeekRevenue(),
-                    'dowTickets' => $service->getDayOfWeekTickets(),
-                    'categoryDay' => $service->getCategoryDayHeatmap(),
-                    'hourly' => $service->getHourlyHeatmap(),
-                    'peakWindows' => $service->getPeakSalesWindows(),
-                ],
-                'predictions' => [
-                    'monthlyForecast' => $service->getMonthlyForecast(),
-                    'yearlyForecast' => $service->getYearlyForecast(),
-                    'seasonality' => $service->getSeasonalityIndex(),
-                    'salesVelocity' => $service->getSalesVelocity(),
-                ],
-                'optimization' => [
-                    'goldenPrice' => $service->getGoldenPriceZone(),
-                    'priceVolume' => $service->getPriceVolumeAnalysis(),
-                    'pareto' => $service->getRevenueConcentration(),
-                    'repeatCustomer' => $service->getRepeatCustomerAnalysis(),
-                    'leadTime' => $service->getBookingLeadTime(),
-                    'refundRate' => $service->getRefundRateByCategory(),
-                ],
-                'audience' => [
-                    'rfm' => $service->getRfmSegmentation(),
-                    'geographic' => $service->getGeographicRevenue(),
-                    'affinity' => $service->getCrossCategoryAffinity(),
-                    'cohort' => $service->getCohortAnalysis(),
-                ],
-                'operational' => [
-                    'organizers' => $service->getOrganizerLeaderboard(),
-                    'capacity' => $service->getCapacityUtilization(),
-                    'discount' => $service->getDiscountImpact(),
-                    'payments' => $service->getPaymentMethodDistribution(),
-                    'refundTimeline' => $service->getRefundTimeline(),
-                ],
-                default => [],
-            };
-        });
+            // KPI stats
+            $kpis = Cache::remember("{$cacheKey}_kpis", 900, fn() => $service->getKpiStats());
 
-        // AI Insights for current tab
-        $insights = Cache::remember("{$cacheKey}_{$this->activeTab}_insights", 900, fn() => $service->generateInsights($this->activeTab));
+            // Tab-specific data
+            $tabData = Cache::remember("{$cacheKey}_{$this->activeTab}", 900, function () use ($service) {
+                return match ($this->activeTab) {
+                    'patterns' => [
+                        'dowRevenue' => $service->getDayOfWeekRevenue(),
+                        'dowTickets' => $service->getDayOfWeekTickets(),
+                        'categoryDay' => $service->getCategoryDayHeatmap(),
+                        'hourly' => $service->getHourlyHeatmap(),
+                        'peakWindows' => $service->getPeakSalesWindows(),
+                    ],
+                    'predictions' => [
+                        'monthlyForecast' => $service->getMonthlyForecast(),
+                        'yearlyForecast' => $service->getYearlyForecast(),
+                        'seasonality' => $service->getSeasonalityIndex(),
+                        'salesVelocity' => $service->getSalesVelocity(),
+                    ],
+                    'optimization' => [
+                        'goldenPrice' => $service->getGoldenPriceZone(),
+                        'priceVolume' => $service->getPriceVolumeAnalysis(),
+                        'pareto' => $service->getRevenueConcentration(),
+                        'repeatCustomer' => $service->getRepeatCustomerAnalysis(),
+                        'leadTime' => $service->getBookingLeadTime(),
+                        'refundRate' => $service->getRefundRateByCategory(),
+                    ],
+                    'audience' => [
+                        'rfm' => $service->getRfmSegmentation(),
+                        'geographic' => $service->getGeographicRevenue(),
+                        'affinity' => $service->getCrossCategoryAffinity(),
+                        'cohort' => $service->getCohortAnalysis(),
+                    ],
+                    'operational' => [
+                        'organizers' => $service->getOrganizerLeaderboard(),
+                        'capacity' => $service->getCapacityUtilization(),
+                        'discount' => $service->getDiscountImpact(),
+                        'payments' => $service->getPaymentMethodDistribution(),
+                        'refundTimeline' => $service->getRefundTimeline(),
+                    ],
+                    default => [],
+                };
+            });
 
-        // Category options for filter
-        $categories = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $marketplace->id)
-            ->where('is_visible', true)
-            ->orderBy('sort_order')
-            ->get()
-            ->mapWithKeys(fn($cat) => [$cat->id => $cat->getLocalizedName('ro')]);
+            // Insights
+            $insights = Cache::remember("{$cacheKey}_{$this->activeTab}_insights", 900, fn() => $service->generateInsights($this->activeTab));
 
-        return [
-            'marketplace' => $marketplace,
-            'kpis' => $kpis,
-            'tabData' => $tabData,
-            'insights' => $insights,
-            'categories' => $categories,
-            'currencySymbol' => $this->getCurrencySymbol(),
-        ];
+            // Category filter options
+            $categories = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $marketplace->id)
+                ->where('is_visible', true)
+                ->orderBy('sort_order')
+                ->get()
+                ->mapWithKeys(fn($cat) => [$cat->id => $cat->getLocalizedName('ro')]);
+
+            return [
+                'marketplace' => $marketplace,
+                'kpis' => $kpis,
+                'tabData' => $tabData,
+                'insights' => $insights,
+                'categories' => $categories,
+                'currencySymbol' => $this->getCurrencySymbol(),
+            ];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::channel('marketplace')->error('SalesAnalysis error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+                'trace' => substr($e->getTraceAsString(), 0, 2000),
+            ]);
+
+            return [
+                'marketplace' => $marketplace,
+                'error' => $e->getMessage(),
+                'kpis' => $emptyKpis,
+                'tabData' => [],
+                'insights' => [],
+                'categories' => collect(),
+                'currencySymbol' => $this->getCurrencySymbol(),
+            ];
+        }
     }
 }

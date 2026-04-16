@@ -3,6 +3,11 @@
     <div class="p-6 text-center border border-yellow-200 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
         <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found.</p>
     </div>
+@elseif(!empty($error))
+    <div class="p-6 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+        <p class="font-bold text-red-800 dark:text-red-200">Eroare la încărcarea analizei:</p>
+        <pre class="mt-2 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">{{ $error }}</pre>
+    </div>
 @else
 <div class="space-y-5" x-data="{ activeTab: @entangle('activeTab') }">
     {{-- Header --}}
