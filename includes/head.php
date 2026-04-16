@@ -364,7 +364,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <?php if (isset($headExtra)) echo $headExtra; ?>
 </head>
 <?php
-    $bgMap = ['bg-surface' => '#F8FAFC', 'bg-white' => '#fff', 'bg-slate-100' => '#f1f5f9'];
+    $bgMap = ['bg-surface' => '#F8FAFC', 'bg-white' => '#fff', 'bg-slate-100' => '#f1f5f9', 'flex min-h-screen' => '#fff'];
     $bgClass = isset($bodyClass) ? $bodyClass : 'bg-white';
     $bgColor = $bgMap[$bgClass] ?? '#F8FAFC';
 ?>
