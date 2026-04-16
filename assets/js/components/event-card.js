@@ -277,16 +277,19 @@ const AmbiletEventCard = {
             '</div>';
         }
 
-        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between">' +
+        const soldOutBadge = event.isSoldOut ? '<span class="inline-block px-2 py-0.5 ml-2 text-[10px] font-bold uppercase bg-red-100 text-red-600 rounded align-middle">Sold out</span>' : '';
+        const cardOpacity = event.isSoldOut ? ' opacity-60' : '';
+
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all mobile:flex-col justify-between' + cardOpacity + '">' +
             '<div class="flex mobile:flex-col">' +
-                '<div class="w-[260px] mobile:w-full">' +
+                '<div class="w-[260px] mobile:w-full flex-none">' +
                     (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" style="inset:0;width:100%;height:100%;object-fit:cover;">' : '') +
                 '</div>' +
                 '<div class="flex">' +
                     dateHtml +
                     '<div class="flex flex-col justify-center flex-1 px-4 py-2 mobile:py-2 mobile:px-4 mobile:border-b mobile:border-border">' +
                         (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
-                        '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + '</h3>' +
+                        '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + soldOutBadge + '</h3>' +
                         '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
                             (showTime ? '<span class="flex items-center gap-1">' +
                                 '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
