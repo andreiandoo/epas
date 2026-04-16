@@ -14,7 +14,8 @@ class MarkEndedEvents extends Command
 
     public function handle(): int
     {
-        $now = Carbon::now();
+        // Use Romania timezone — events end times are set in local time
+        $now = Carbon::now('Europe/Bucharest');
         $count = 0;
 
         // Get all published, non-cancelled events that are not yet archived
@@ -28,10 +29,11 @@ class MarkEndedEvents extends Command
         foreach ($events as $event) {
             $effectiveEnd = $event->getEffectiveEndDatetime();
 
-            if ($effectiveEnd && $effectiveEnd->isPast()) {
+            if ($effectiveEnd && $now->greaterThan($effectiveEnd)) {
+                // Only set status to archived — keep is_published true
+                // so the event page remains accessible (shows "Încheiat" badge)
                 $event->update([
                     'status' => 'archived',
-                    'is_published' => false,
                 ]);
                 $count++;
             }
