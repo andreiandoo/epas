@@ -238,7 +238,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         </svg>
                     </button>
                     <?php if (!empty($navCities)): ?>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2 rounded-tl-none rounded-tr-none pb-2">
                             <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Alege orașul</span>
@@ -403,7 +403,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <path d="M6 9l6 6 6-6"/>
                         </svg>
                     </button>
-                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto mt-[3px]">
+                    <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2 rounded-tl-none rounded-tr-none pb-2">
                             <div class="flex items-center justify-between px-1 mb-2">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Locații populare</span>
