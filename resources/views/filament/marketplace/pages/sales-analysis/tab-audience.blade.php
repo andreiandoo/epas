@@ -2,6 +2,17 @@
     $rfm = $data['rfm'] ?? ['segments' => [], 'total' => 0];
     $geographic = $data['geographic'] ?? [];
     $affinity = $data['affinity'] ?? [];
+    $cohort = $data['cohort'] ?? [];
+
+    // Static color map for RFM (avoids JIT issues with dynamic Tailwind classes)
+    $rfmStyles = [
+        'Champions' => ['bg' => '#ecfdf5', 'bgDark' => 'rgba(16,185,129,0.15)', 'text' => '#047857', 'textDark' => '#34d399'],
+        'Fideli' => ['bg' => '#eef2ff', 'bgDark' => 'rgba(99,102,241,0.15)', 'text' => '#4338ca', 'textDark' => '#818cf8'],
+        'Potentiali' => ['bg' => '#fffbeb', 'bgDark' => 'rgba(245,158,11,0.15)', 'text' => '#b45309', 'textDark' => '#fbbf24'],
+        'Noi' => ['bg' => '#eff6ff', 'bgDark' => 'rgba(59,130,246,0.15)', 'text' => '#1d4ed8', 'textDark' => '#60a5fa'],
+        'La Risc' => ['bg' => '#fef2f2', 'bgDark' => 'rgba(239,68,68,0.15)', 'text' => '#b91c1c', 'textDark' => '#f87171'],
+        'Pierduti' => ['bg' => '#f9fafb', 'bgDark' => 'rgba(156,163,175,0.15)', 'text' => '#374151', 'textDark' => '#9ca3af'],
+    ];
 @endphp
 
 <div class="space-y-6">
@@ -11,7 +22,7 @@
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Segmentare RFM</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Recency-Frequency-Monetary: cine sunt clientii tai</p>
             @if($rfm['total'] > 0)
-            <div class="h-56" x-data="{
+            <div class="h-56" wire:ignore x-data="{
                 init() {
                     const seg = {{ Js::from($rfm['segments']) }};
                     const labels = Object.keys(seg);
@@ -27,14 +38,11 @@
                 <canvas x-ref="canvas"></canvas>
             </div>
             <div class="grid grid-cols-3 gap-2 mt-4">
-                @php
-                    $segColors = ['Champions' => 'emerald', 'Fideli' => 'indigo', 'Potentiali' => 'amber', 'Noi' => 'blue', 'La Risc' => 'red', 'Pierduti' => 'gray'];
-                @endphp
                 @foreach($rfm['segments'] as $name => $count)
-                    @php $color = $segColors[$name] ?? 'gray'; @endphp
-                    <div class="p-2 rounded-lg bg-{{ $color }}-50 dark:bg-{{ $color }}-900/20 text-center">
-                        <div class="text-lg font-bold text-{{ $color }}-700 dark:text-{{ $color }}-400">{{ $count }}</div>
-                        <div class="text-[10px] text-{{ $color }}-600 dark:text-{{ $color }}-500">{{ $name }}</div>
+                    @php $s = $rfmStyles[$name] ?? $rfmStyles['Pierduti']; @endphp
+                    <div class="p-2 text-center rounded-lg" style="background-color: {{ $s['bg'] }}">
+                        <div class="text-lg font-bold" style="color: {{ $s['text'] }}">{{ $count }}</div>
+                        <div class="text-[10px] font-medium" style="color: {{ $s['text'] }}">{{ $name }}</div>
                     </div>
                 @endforeach
             </div>
@@ -48,7 +56,7 @@
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Revenue pe orase</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cele mai profitabile orase</p>
             @if(!empty($geographic))
-            <div class="h-72" x-data="{
+            <div class="h-72" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($geographic) }};
                     new Chart(this.$refs.canvas.getContext('2d'), {
@@ -74,6 +82,62 @@
             @endif
         </div>
     </div>
+
+    {{-- Cohort Retention Analysis --}}
+    @if(!empty($cohort))
+    <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
+        <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Analiza cohorte - retentie clienti</h3>
+        <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">% clienti care revin in lunile urmatoare primei achizitii</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr>
+                        <th class="px-3 py-2 text-left text-gray-500 dark:text-gray-400">Cohorta</th>
+                        <th class="px-3 py-2 text-center text-gray-500 dark:text-gray-400">Clienti</th>
+                        @for($i = 0; $i <= 6; $i++)
+                            <th class="px-2 py-2 text-center text-gray-500 dark:text-gray-400">Luna {{ $i }}</th>
+                        @endfor
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($cohort as $row)
+                        <tr class="border-t border-gray-100 dark:border-gray-700">
+                            <td class="px-3 py-2 font-medium text-gray-900 dark:text-white whitespace-nowrap">{{ $row['month'] }}</td>
+                            <td class="px-3 py-2 text-center text-gray-600 dark:text-gray-400">{{ $row['size'] }}</td>
+                            @for($i = 0; $i <= 6; $i++)
+                                @php
+                                    $pct = $row['retention'][$i] ?? null;
+                                    if ($pct === null) {
+                                        $cellStyle = 'background-color: #f9fafb; color: #d1d5db;';
+                                        $cellText = '-';
+                                    } elseif ($pct >= 80) {
+                                        $cellStyle = 'background-color: #047857; color: white;';
+                                        $cellText = $pct . '%';
+                                    } elseif ($pct >= 50) {
+                                        $cellStyle = 'background-color: #10b981; color: white;';
+                                        $cellText = $pct . '%';
+                                    } elseif ($pct >= 20) {
+                                        $cellStyle = 'background-color: #a7f3d0; color: #065f46;';
+                                        $cellText = $pct . '%';
+                                    } elseif ($pct > 0) {
+                                        $cellStyle = 'background-color: #fef3c7; color: #92400e;';
+                                        $cellText = $pct . '%';
+                                    } else {
+                                        $cellStyle = 'background-color: #fee2e2; color: #991b1b;';
+                                        $cellText = '0%';
+                                    }
+                                @endphp
+                                <td class="px-2 py-2 text-center">
+                                    <span class="inline-block px-2 py-0.5 text-xs font-medium rounded" style="{{ $cellStyle }}">{{ $cellText }}</span>
+                                </td>
+                            @endfor
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 
     {{-- Cross-Category Affinity --}}
     @if(!empty($affinity))

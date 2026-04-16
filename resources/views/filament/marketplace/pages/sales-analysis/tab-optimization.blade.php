@@ -47,7 +47,7 @@
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
         <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Pret vs Volum vandut</h3>
         <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Fiecare punct = un tip de bilet. Marime = revenue</p>
-        <div class="h-80" x-data="{
+        <div class="h-80" wire:ignore x-data="{
             init() {
                 const raw = {{ Js::from($priceVolume) }};
                 const cats = [...new Set(raw.map(r => r.category))];
@@ -84,7 +84,7 @@
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Concentrare revenue (Pareto)</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cum este distribuit revenue-ul intre evenimente</p>
-            <div class="h-64" x-data="{
+            <div class="h-64" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from(array_slice($pareto, 0, 15)) }};
                     new Chart(this.$refs.canvas.getContext('2d'), {
@@ -137,7 +137,7 @@
                     <div class="text-xs text-gray-500">Avg cheltuiala one-time</div>
                 </div>
             </div>
-            <div class="h-32" x-data="{
+            <div class="h-32" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($repeatCustomer['distribution'] ?? []) }};
                     new Chart(this.$refs.canvas.getContext('2d'), {
@@ -164,7 +164,7 @@
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Lead time de cumparare</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Cu cate zile inainte de eveniment se cumpara biletele</p>
-            <div class="h-48" x-data="{
+            <div class="h-48" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($leadTime) }};
                     new Chart(this.$refs.canvas.getContext('2d'), {
@@ -187,7 +187,7 @@
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Rata de refund pe categorii</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Categorii cu cele mai multe refund-uri</p>
-            <div class="h-48" x-data="{
+            <div class="h-48" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($refundRate) }};
                     new Chart(this.$refs.canvas.getContext('2d'), {

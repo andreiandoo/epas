@@ -115,6 +115,23 @@ class SalesAnalysisService
         $dayNames = [1 => 'Dum', 2 => 'Lun', 3 => 'Mar', 4 => 'Mie', 5 => 'Joi', 6 => 'Vin', 7 => 'Sam'];
         $bestDayName = $bestDay ? ($dayNames[$bestDay->dow] ?? '-') : '-';
 
+        $prevTickets = $prev ? Ticket::whereIn('order_id', (clone $prev)->select('id'))->whereIn('status', ['valid', 'used'])->count() : 0;
+        $ticketsChange = $prevTickets > 0 ? round((($totalTickets - $prevTickets) / $prevTickets) * 100, 1) : 0;
+
+        // Weekly revenue trend (last 8 weeks for sparkline)
+        $trend = Order::where('marketplace_client_id', $this->marketplaceId)
+            ->whereIn('status', $this->paidStatuses)
+            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'external_import')
+            ->where('created_at', '>=', Carbon::now()->subWeeks(8))
+            ->selectRaw("YEARWEEK(created_at, 1) as yw, SUM(total) as revenue")
+            ->groupBy('yw')
+            ->orderBy('yw')
+            ->pluck('revenue')
+            ->map(fn($v) => (float) $v)
+            ->values()
+            ->toArray();
+
         return [
             'total_revenue' => (float) $totalRevenue,
             'total_orders' => $totalOrders,
@@ -122,8 +139,10 @@ class SalesAnalysisService
             'avg_order_value' => round((float) $avgOrderValue, 2),
             'revenue_change' => $revenueChange,
             'orders_change' => $ordersChange,
+            'tickets_change' => $ticketsChange,
             'repeat_rate' => $repeatCustomers,
             'best_day' => $bestDayName,
+            'trend' => $trend,
         ];
     }
 
@@ -842,6 +861,70 @@ class SalesAnalysisService
         return $result;
     }
 
+    public function getCohortAnalysis(): array
+    {
+        // Get first order month per customer, then track their revenue in subsequent months
+        $firstOrders = DB::table('orders')
+            ->where('marketplace_client_id', $this->marketplaceId)
+            ->whereIn('status', $this->paidStatuses)
+            ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'external_import')
+            ->whereNotNull('marketplace_customer_id')
+            ->where('created_at', '>=', Carbon::now()->subMonths(6))
+            ->selectRaw("marketplace_customer_id, MIN(DATE_FORMAT(created_at, '%Y-%m')) as cohort_month")
+            ->groupBy('marketplace_customer_id');
+
+        $cohortData = DB::table('orders')
+            ->joinSub($firstOrders, 'cohorts', fn($j) => $j->on('orders.marketplace_customer_id', '=', 'cohorts.marketplace_customer_id'))
+            ->where('orders.marketplace_client_id', $this->marketplaceId)
+            ->whereIn('orders.status', $this->paidStatuses)
+            ->where('orders.source', '!=', 'test_order')
+            ->where('orders.source', '!=', 'external_import')
+            ->selectRaw("cohorts.cohort_month, TIMESTAMPDIFF(MONTH, STR_TO_DATE(CONCAT(cohorts.cohort_month, '-01'), '%Y-%m-%d'), orders.created_at) as month_offset, COUNT(DISTINCT orders.marketplace_customer_id) as customers, SUM(orders.total) as revenue")
+            ->groupBy('cohort_month', 'month_offset')
+            ->orderBy('cohort_month')
+            ->orderBy('month_offset')
+            ->get();
+
+        $cohorts = [];
+        $cohortSizes = [];
+
+        foreach ($cohortData as $row) {
+            $offset = (int) $row->month_offset;
+            if ($offset < 0 || $offset > 6) continue;
+
+            if (!isset($cohorts[$row->cohort_month])) {
+                $cohorts[$row->cohort_month] = [];
+            }
+            $cohorts[$row->cohort_month][$offset] = [
+                'customers' => (int) $row->customers,
+                'revenue' => (float) $row->revenue,
+            ];
+
+            if ($offset === 0) {
+                $cohortSizes[$row->cohort_month] = (int) $row->customers;
+            }
+        }
+
+        // Convert to retention rates
+        $result = [];
+        foreach ($cohorts as $month => $offsets) {
+            $baseSize = $cohortSizes[$month] ?? 1;
+            $row = ['month' => Carbon::parse($month . '-01')->format('M Y'), 'size' => $baseSize, 'retention' => []];
+
+            for ($i = 0; $i <= 6; $i++) {
+                if (isset($offsets[$i])) {
+                    $row['retention'][$i] = round(($offsets[$i]['customers'] / $baseSize) * 100, 1);
+                } else {
+                    $row['retention'][$i] = null;
+                }
+            }
+            $result[] = $row;
+        }
+
+        return $result;
+    }
+
     // ==========================================
     // Tab 5: Operational Insights
     // ==========================================
@@ -984,38 +1067,77 @@ class SalesAnalysisService
 
         if ($tab === 'patterns') {
             $dow = $this->getDayOfWeekRevenue();
-            $maxIdx = array_search(max($dow['revenue']), $dow['revenue']);
-            $minIdx = array_search(min(array_filter($dow['revenue'], fn($v) => $v > 0) ?: [0]), $dow['revenue']);
-            $totalRev = array_sum($dow['revenue']);
-            $bestPct = $totalRev > 0 ? round(($dow['revenue'][$maxIdx] / $totalRev) * 100, 1) : 0;
-
-            if ($maxIdx !== false) {
+            $nonZeroRevenue = array_filter($dow['revenue'], fn($v) => $v > 0);
+            if (!empty($nonZeroRevenue)) {
+                $maxIdx = array_search(max($dow['revenue']), $dow['revenue']);
+                $totalRev = array_sum($dow['revenue']);
+                $bestPct = $totalRev > 0 ? round(($dow['revenue'][$maxIdx] / $totalRev) * 100, 1) : 0;
                 $insights[] = "{$dow['labels'][$maxIdx]} este cea mai profitabila zi, generand {$bestPct}% din revenue-ul total.";
+
+                // Weekend vs weekday comparison
+                $weekdayRev = ($dow['revenue'][0] ?? 0) + ($dow['revenue'][1] ?? 0) + ($dow['revenue'][2] ?? 0) + ($dow['revenue'][3] ?? 0) + ($dow['revenue'][4] ?? 0);
+                $weekendRev = ($dow['revenue'][5] ?? 0) + ($dow['revenue'][6] ?? 0);
+                if ($totalRev > 0) {
+                    $weekendPct = round(($weekendRev / $totalRev) * 100, 1);
+                    $insights[] = "Weekend-ul genereaza {$weekendPct}% din revenue " . ($weekendPct > 50 ? '- clientii tai prefera sa cumpere in weekend.' : '- majority of sales happen during the week.');
+                }
             }
 
             $peak = $this->getPeakSalesWindows();
             if (!empty($peak)) {
-                $insights[] = "Golden window: {$peak[0]['day']} {$peak[0]['hour']} cu " . number_format($peak[0]['revenue'], 0) . " revenue.";
+                $insights[] = "Golden window: {$peak[0]['day']} {$peak[0]['hour']} - programeaza campaniile de marketing inainte de acest interval.";
+            }
+
+            $dowTickets = $this->getDayOfWeekTickets();
+            $maxTicketIdx = !empty($dowTickets['tickets']) ? array_search(max($dowTickets['tickets']), $dowTickets['tickets']) : false;
+            $maxRevIdx = !empty($dow['revenue']) ? array_search(max($dow['revenue']), $dow['revenue']) : false;
+            if ($maxTicketIdx !== false && $maxRevIdx !== false && $maxTicketIdx !== $maxRevIdx) {
+                $insights[] = "Observatie: ziua cu cele mai multe bilete ({$dowTickets['labels'][$maxTicketIdx]}) difera de ziua cu cel mai mare revenue ({$dow['labels'][$maxRevIdx]}) - biletele mai scumpe se vand in alta zi.";
             }
         }
 
         if ($tab === 'predictions') {
             $season = $this->getSeasonalityIndex();
-            $maxMonth = array_search(max($season['index']), $season['index']);
-            $minMonth = array_search(min(array_filter($season['index'], fn($v) => $v > 0) ?: [0]), $season['index']);
+            $nonZeroIndex = array_filter($season['index'], fn($v) => $v > 0);
+            if (!empty($nonZeroIndex)) {
+                $maxMonth = array_search(max($season['index']), $season['index']);
+                $minMonth = array_search(min($nonZeroIndex), $season['index']);
 
-            if ($maxMonth !== false) {
-                $insights[] = "Luna de varf este {$season['labels'][$maxMonth]} (index {$season['index'][$maxMonth]}% din medie).";
+                $insights[] = "Luna de varf este {$season['labels'][$maxMonth]} (index {$season['index'][$maxMonth]}%). Planifica inventar si marketing cu 30-45 zile inainte.";
+                $insights[] = "Low season: {$season['labels'][$minMonth]} (index {$season['index'][$minMonth]}%). Foloseste aceasta perioada pentru promotii agresive si early-bird offers.";
+
+                // Variance - how seasonal is the business
+                $variance = count($nonZeroIndex) > 1 ? (max($nonZeroIndex) - min($nonZeroIndex)) : 0;
+                if ($variance > 100) {
+                    $insights[] = "Sezonalitate puternica detectata (variatie {$variance}%). Considera diversificarea categoriilor pentru a aplatiza sezonalitatea.";
+                }
             }
-            if ($minMonth !== false) {
-                $insights[] = "Low season: {$season['labels'][$minMonth]} (index {$season['index'][$minMonth]}% din medie).";
+
+            $velocity = $this->getSalesVelocity();
+            $fastSellers = collect($velocity)->filter(fn($v) => $v['sell_through'] >= 90)->count();
+            if ($fastSellers > 0) {
+                $insights[] = "{$fastSellers} evenimente au sell-through peste 90% - ai loc sa cresti preturile sau sa adaugi capacitate.";
             }
         }
 
         if ($tab === 'optimization') {
             $golden = $this->getGoldenPriceZone();
             foreach (array_slice($golden, 0, 2) as $g) {
-                $insights[] = "Categoria {$g['category']}: sweet spot de pret intre {$g['golden_min']}-{$g['golden_max']} RON ({$g['golden_pct']}% din vanzari).";
+                $insights[] = "Categoria {$g['category']}: sweet spot {$g['golden_min']}-{$g['golden_max']} ({$g['golden_pct']}% din vanzari). Biletele in acest range se vand cel mai bine.";
+            }
+
+            $repeat = $this->getRepeatCustomerAnalysis();
+            if ($repeat['total_customers'] > 0 && $repeat['avg_repeat_spent'] > $repeat['avg_single_spent']) {
+                $multiplier = $repeat['avg_single_spent'] > 0 ? round($repeat['avg_repeat_spent'] / $repeat['avg_single_spent'], 1) : 0;
+                $insights[] = "Clientii recurenti cheltuiesc {$multiplier}x mai mult decat cei one-time. Investeste in retentie - returul este garantat.";
+            }
+
+            $pareto = $this->getRevenueConcentration();
+            if (count($pareto) >= 5) {
+                $top20Pct = $pareto[(int)(count($pareto) * 0.2)]['cumulative_pct'] ?? 0;
+                if ($top20Pct > 70) {
+                    $insights[] = "Top 20% din evenimente genereaza {$top20Pct}% din revenue - concentrare mare. Diversifica portofoliul de evenimente.";
+                }
             }
         }
 
@@ -1024,18 +1146,67 @@ class SalesAnalysisService
             if ($rfm['total'] > 0) {
                 $champPct = round(($rfm['segments']['Champions'] / $rfm['total']) * 100, 1);
                 $riskPct = round(($rfm['segments']['La Risc'] / $rfm['total']) * 100, 1);
-                $insights[] = "{$champPct}% din clienti sunt Champions - cei mai valorosi cumparatori.";
+                $newPct = round(($rfm['segments']['Noi'] / $rfm['total']) * 100, 1);
+                $lostPct = round(($rfm['segments']['Pierduti'] / $rfm['total']) * 100, 1);
+
+                $insights[] = "{$champPct}% Champions - protejeaza-i cu beneficii exclusive si acces prioritar.";
+
                 if ($riskPct > 15) {
-                    $insights[] = "Atentie: {$riskPct}% din clienti sunt La Risc - consider campanii de re-engagement.";
+                    $insights[] = "Alerta: {$riskPct}% clienti La Risc - trimite campanii de re-engagement cu oferte personalizate.";
                 }
+                if ($lostPct > 30) {
+                    $insights[] = "{$lostPct}% clienti Pierduti - consider win-back campaigns cu discounturi agresive.";
+                }
+                if ($newPct > 40) {
+                    $insights[] = "{$newPct}% clienti Noi - focus pe conversia lor in clienti recurenti (email follow-up, recomandari).";
+                }
+            }
+
+            $geo = $this->getGeographicRevenue();
+            if (count($geo) >= 2) {
+                $topCity = $geo[0]['city'] ?? 'N/A';
+                $topPct = array_sum(array_column($geo, 'revenue')) > 0
+                    ? round(($geo[0]['revenue'] / array_sum(array_column($geo, 'revenue'))) * 100, 1)
+                    : 0;
+                $insights[] = "{$topCity} genereaza {$topPct}% din revenue. Concentreaza bugetul de marketing pe acest oras.";
             }
         }
 
         if ($tab === 'operational') {
             $capacity = $this->getCapacityUtilization();
             $lowUtil = collect($capacity)->filter(fn($c) => $c['utilization'] < 50 && $c['events'] >= 2);
+            $highUtil = collect($capacity)->filter(fn($c) => $c['utilization'] >= 85);
+
             if ($lowUtil->isNotEmpty()) {
-                $insights[] = "Categorii cu utilizare sub 50%: " . $lowUtil->pluck('category')->join(', ') . ". Oportunitate de optimizare pret/marketing.";
+                $insights[] = "Categorii cu utilizare sub 50%: " . $lowUtil->pluck('category')->join(', ') . " - oportunitate de crestere prin promotii targetate.";
+            }
+            if ($highUtil->isNotEmpty()) {
+                $insights[] = "Categorii cu sold-out frecvent: " . $highUtil->pluck('category')->join(', ') . " - creste preturile sau adauga shows suplimentare.";
+            }
+
+            $discount = $this->getDiscountImpact();
+            $wdOrders = $discount['with_discount']['orders'] ?? 0;
+            $wodOrders = $discount['without_discount']['orders'] ?? 0;
+            $totalDisc = $wdOrders + $wodOrders;
+            if ($totalDisc > 0 && $wdOrders > 0) {
+                $discPct = round(($wdOrders / $totalDisc) * 100, 1);
+                $wdAov = $discount['with_discount']['avg_order'] ?? 0;
+                $wodAov = $discount['without_discount']['avg_order'] ?? 0;
+                if ($wdAov < $wodAov * 0.7) {
+                    $insights[] = "Discounturile reduc AOV cu " . round((1 - $wdAov / max(1, $wodAov)) * 100) . "%. Verifica daca volumul extra justifica reducerea de marja.";
+                }
+            }
+
+            $orgs = $this->getOrganizerLeaderboard();
+            if (count($orgs) >= 3) {
+                $topRev = $orgs[0]['revenue'] ?? 0;
+                $totalOrgRev = array_sum(array_column($orgs, 'revenue'));
+                if ($totalOrgRev > 0) {
+                    $topPct = round(($topRev / $totalOrgRev) * 100, 1);
+                    if ($topPct > 50) {
+                        $insights[] = "Dependenta mare de top organizator ({$topPct}% din revenue). Diversifica baza de organizatori.";
+                    }
+                }
             }
         }
 

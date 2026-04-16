@@ -28,12 +28,18 @@
                         <option value="{{ $id }}">{{ $name }}</option>
                     @endforeach
                 </select>
+                {{-- Export CSV --}}
+                <button wire:click="exportCsv" class="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white/20 backdrop-blur rounded-lg text-white hover:bg-white/30 transition-colors">
+                    <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
+                    Export
+                </button>
             </div>
         </div>
     </div>
 
     {{-- KPI Cards --}}
-    <div class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+    @php $revPerTicket = $kpis['total_tickets'] > 0 ? $kpis['total_revenue'] / $kpis['total_tickets'] : 0; @endphp
+    <div class="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-8">
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Revenue</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($kpis['total_revenue'], 0) }}</div>
@@ -57,10 +63,20 @@
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Bilete</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ number_format($kpis['total_tickets']) }}</div>
+            @if(($kpis['tickets_change'] ?? 0) != 0)
+                <div class="flex items-center gap-1 mt-1 text-xs {{ $kpis['tickets_change'] > 0 ? 'text-green-600' : 'text-red-600' }}">
+                    <x-dynamic-component :component="$kpis['tickets_change'] > 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down'" class="w-3 h-3" />
+                    {{ abs($kpis['tickets_change']) }}%
+                </div>
+            @endif
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">AOV</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($kpis['avg_order_value'], 0) }}</div>
+        </div>
+        <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Rev / Bilet</div>
+            <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $currencySymbol }}{{ number_format($revPerTicket, 0) }}</div>
         </div>
         <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Repeat Rate</div>
@@ -70,9 +86,22 @@
             <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Cea mai buna zi</div>
             <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ $kpis['best_day'] }}</div>
         </div>
-        <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700 lg:col-span-1 col-span-2">
-            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Perioada</div>
-            <div class="mt-1 text-xl font-bold text-gray-900 dark:text-white">{{ match($dateRange) { '30d' => '30 zile', '90d' => '90 zile', '6m' => '6 luni', '1y' => '1 an', default => 'Tot' } }}</div>
+        {{-- Revenue Trend Sparkline --}}
+        <div class="p-4 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:ignore>
+            <div class="text-xs font-medium tracking-wider text-gray-500 uppercase dark:text-gray-400">Trend</div>
+            <div class="h-10 mt-1" x-data="{
+                init() {
+                    const d = {{ Js::from($kpis['trend'] ?? []) }};
+                    if (!d.length) return;
+                    new Chart(this.$refs.spark.getContext('2d'), {
+                        type: 'line',
+                        data: { labels: d.map((_,i) => i), datasets: [{ data: d, borderColor: d[d.length-1] >= d[0] ? '#10b981' : '#ef4444', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+                    });
+                }
+            }">
+                <canvas x-ref="spark"></canvas>
+            </div>
         </div>
     </div>
 
@@ -117,6 +146,14 @@
         </div>
     </div>
     @endif
+
+    {{-- Loading overlay --}}
+    <div wire:loading wire:target="setTab,dateRange,categoryFilter,currencyFilter,exportCsv" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+        <div class="flex items-center gap-3 px-5 py-3 bg-white shadow-lg dark:bg-gray-800 rounded-xl">
+            <svg class="w-5 h-5 text-indigo-600 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Se incarca...</span>
+        </div>
+    </div>
 
     {{-- Tab Content --}}
     <div wire:key="tab-{{ $activeTab }}-{{ $dateRange }}-{{ $categoryFilter }}">

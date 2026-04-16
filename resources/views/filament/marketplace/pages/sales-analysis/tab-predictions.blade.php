@@ -10,7 +10,7 @@
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
         <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Predictie lunara</h3>
         <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Revenue actual vs predictie (Holt-Winters)</p>
-        <div class="h-72" x-data="{
+        <div class="h-72" wire:ignore x-data="{
             init() {
                 const ctx = this.$refs.canvas.getContext('2d');
                 new Chart(ctx, {
@@ -59,7 +59,7 @@
     <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
         <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Predictie anuala {{ $yearlyForecast['current_year'] }}</h3>
         <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Anul curent vs anul trecut + predictie lunile ramase</p>
-        <div class="h-72" x-data="{
+        <div class="h-72" wire:ignore x-data="{
             init() {
                 const ctx = this.$refs.canvas.getContext('2d');
                 new Chart(ctx, {
@@ -108,7 +108,7 @@
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Index de sezonalitate</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">100 = medie. Peste 100 = luna peste medie</p>
-            <div class="h-64" x-data="{
+            <div class="h-64" wire:ignore x-data="{
                 init() {
                     const idx = {{ Js::from($seasonality['index']) }};
                     const ctx = this.$refs.canvas.getContext('2d');

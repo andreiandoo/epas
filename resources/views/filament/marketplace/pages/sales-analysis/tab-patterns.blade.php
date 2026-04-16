@@ -12,7 +12,7 @@
         {{-- Revenue by Day --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Revenue pe zi a saptamanii</h3>
-            <div class="h-64" x-data="{
+            <div class="h-64" wire:ignore x-data="{
                 init() {
                     const ctx = this.$refs.canvas.getContext('2d');
                     new Chart(ctx, {
@@ -47,7 +47,7 @@
         {{-- Tickets by Day --}}
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Bilete vandute pe zi a saptamanii</h3>
-            <div class="h-64" x-data="{
+            <div class="h-64" wire:ignore x-data="{
                 init() {
                     const ctx = this.$refs.canvas.getContext('2d');
                     new Chart(ctx, {

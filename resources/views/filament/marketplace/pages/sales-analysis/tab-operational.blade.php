@@ -107,7 +107,7 @@
         <div class="p-5 bg-white border border-gray-200 dark:bg-gray-800 rounded-xl dark:border-gray-700">
             <h3 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Metode de plata</h3>
             @if(!empty($payments))
-            <div class="h-44" x-data="{
+            <div class="h-44" wire:ignore x-data="{
                 init() {
                     const d = {{ Js::from($payments) }};
                     const colors = ['rgb(99,102,241)', 'rgb(16,185,129)', 'rgb(249,115,22)', 'rgb(239,68,68)', 'rgb(168,85,247)'];
@@ -133,7 +133,7 @@
             <h3 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Cand se cer refund-uri</h3>
             <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">Raportat la data evenimentului</p>
             @if(!empty($refundTimeline['data']) && array_sum($refundTimeline['data']) > 0)
-            <div class="h-44" x-data="{
+            <div class="h-44" wire:ignore x-data="{
                 init() {
                     new Chart(this.$refs.canvas.getContext('2d'), {
                         type: 'bar',
