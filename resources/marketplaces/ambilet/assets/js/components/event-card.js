@@ -259,16 +259,21 @@ const AmbiletEventCard = {
             }
         }
 
-        // Date section - show range for festivals
+        // Date section - with hero image background
+        const heroImg = event.heroImage || event.image;
         let dateHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
-                '<div class="px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
+            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
+                '<div class="relative z-10 px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
             '</div>';
         } else {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
-                '<div class="text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
-                '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
+            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
+                '<div class="relative z-10 text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
+                '<div class="relative z-10 mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
             '</div>';
         }
 

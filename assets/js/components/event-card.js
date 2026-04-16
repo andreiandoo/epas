@@ -259,16 +259,21 @@ const AmbiletEventCard = {
             }
         }
 
-        // Date section - show range for festivals
+        // Date section - with hero image background
+        const heroImg = event.heroImage || event.image;
         let dateHtml;
         if (event.isDateRange && event.dateRangeFormatted) {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
-                '<div class="px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
+            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
+                '<div class="relative z-10 px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
             '</div>';
         } else {
-            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light mobile:max-w-[96px]">' +
-                '<div class="text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
-                '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
+            dateHtml = '<div class="relative flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center overflow-hidden mobile:max-w-[96px]">' +
+                (heroImg ? '<img src="' + this.escapeHtml(heroImg) + '" alt="" class="absolute inset-0 w-full h-full object-cover">' : '') +
+                '<div class="absolute inset-0 bg-gradient-to-br from-primary/85 to-primary-light/85"></div>' +
+                '<div class="relative z-10 text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
+                '<div class="relative z-10 mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
             '</div>';
         }
 
@@ -279,11 +284,11 @@ const AmbiletEventCard = {
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
                 '<h3 class="mb-2 text-base font-bold leading-tight text-secondary mobile:text-lg mobile:leading-tight">' + this.escapeHtml(event.title) + '</h3>' +
                 '<div class="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">' +
-                    (showTime ? '<span class="flex items-center gap-1 mobile:hidden">' +
+                    (showTime ? '<span class="flex items-center gap-1">' +
                         '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
                         event.time +
                     '</span>' : '') +
-                    (event.venueName ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
+                    (event.venueName ? '<span class="flex items-center gap-1"><svg class="mobile:hidden w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
                     (showArtists && event.artists && event.artists.length > 0 ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' + this.escapeHtml(event.artists.join(', ')) + '</span>' : '') +
                 '</div>' +
             '</div>' +
