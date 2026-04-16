@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="max-w-2xl mt-6">
             <form id="searchForm" class="relative" onsubmit="return false;">
                 <input type="text"
-                       id="searchInput"
+                       id="pageSearchInput"
                        name="q"
                        value="<?= htmlspecialchars($searchQuery) ?>"
                        placeholder="Caută evenimente, artiști, locații..."
@@ -46,9 +46,9 @@ require_once __DIR__ . '/includes/header.php';
                     Caută
                 </button>
                 <script>
-                function doSearch(){var q=document.getElementById('searchInput').value.trim();if(q.length>=2){SearchPage.updateUrl(q);SearchPage.performSearch(q);}}
+                function doSearch(){var q=document.getElementById('pageSearchInput').value.trim();if(q.length>=2){SearchPage.updateUrl(q);SearchPage.performSearch(q);}}
                 document.getElementById('searchButton').addEventListener('click',doSearch);
-                document.getElementById('searchInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSearch();}});
+                document.getElementById('pageSearchInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();doSearch();}});
                 </script>
             </form>
         </div>
