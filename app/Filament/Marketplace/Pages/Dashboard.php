@@ -50,6 +50,7 @@ class Dashboard extends Page
             $id = $this->marketplace->id;
             Cache::forget("mp_dash_month_{$id}_{$this->selectedMonth}");
             Cache::forget("mp_dash_billing_{$id}_{$this->selectedMonth}");
+            Cache::forget("mp_month_comm_{$id}_{$this->selectedMonth}");
         }
     }
 
@@ -83,8 +84,8 @@ class Dashboard extends Page
         $marketplaceId = $marketplace->id;
         $days = (int) $this->chartPeriod;
 
-        // Cache stats for 5 minutes (heavy queries on large tables)
-        $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 300, function () use ($marketplaceId) {
+        // Cache stats for 30 minutes (heavy queries on large tables)
+        $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 1800, function () use ($marketplaceId) {
             return $this->computeStats($marketplaceId);
         });
 
@@ -445,9 +446,12 @@ class Dashboard extends Page
             ->selectRaw("SUM(CASE WHEN orders.status = 'refunded' THEN 0 ELSE orders.total END) as revenue")
             ->value('revenue') ?? 0;
 
-        // Marketplace commission — reuse BillingBreakdown's per-event logic (single source of truth)
-        $totalCommission = BillingBreakdown::calculateMarketplaceCommission(
-            $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
+        // Marketplace commission — cached per month (expensive per-event calculation)
+        $monthKey = $monthDate->format('Y-m');
+        $totalCommission = Cache::remember("mp_month_comm_{$marketplaceId}_{$monthKey}", 600, fn () =>
+            BillingBreakdown::calculateMarketplaceCommission(
+                $marketplaceId, $monthStart, $monthEnd, (float) ($this->marketplace->commission_rate ?? 5)
+            )
         );
 
         // Tickets sold this month — efficient join instead of nested whereHas
