@@ -27,7 +27,7 @@ const SearchPage = {
      */
     bindEvents() {
         const form = document.getElementById('searchForm');
-        const input = document.getElementById('searchInput');
+        const input = document.getElementById('pageSearchInput');
 
         // Form submission
         form?.addEventListener('submit', (e) => {
