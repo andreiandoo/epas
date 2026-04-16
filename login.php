@@ -42,7 +42,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                 </div>
             </div>
 
-            <div class="p-8 bg-white border rounded-2xl border-border" id="loginCardForm" style="display:none;">
+            <div class="p-8 mb-8 bg-white border rounded-2xl border-border" id="loginCardForm" style="display:none;">
                 <div class="mb-8 text-center">
                     <h2 class="text-2xl font-bold text-secondary">Conectează-te</h2>
                     <p class="mt-2 text-muted">Introdu datele tale pentru a accesa contul de client</p>
