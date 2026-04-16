@@ -194,7 +194,7 @@ class SalesAnalysisService
         $orderIds = $this->baseOrderQuery()->select('id');
 
         $data = Ticket::whereIn('order_id', $orderIds)
-            ->whereIn('status', ['valid', 'used'])
+            ->whereIn('tickets.status', ['valid', 'used'])
             ->join('orders', 'tickets.order_id', '=', 'orders.id')
             ->selectRaw('EXTRACT(ISODOW FROM orders.created_at)::int as dow, COUNT(tickets.id) as tickets')
             ->groupBy('dow')
