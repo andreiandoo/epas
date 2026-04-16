@@ -618,7 +618,6 @@ class Event extends Model
         return LogOptions::defaults()
             ->logFillable()
             ->logOnlyDirty()
-            ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Event {$eventName}");
     }
 
