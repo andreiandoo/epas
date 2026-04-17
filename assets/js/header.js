@@ -570,11 +570,21 @@
         var cart = getCart();
         var items = cart.items || [];
         if (index < 0 || index >= items.length) return;
-        if (action === 'increase') {
-            items[index].quantity = (items[index].quantity || 1) + 1;
-        } else if (action === 'decrease') {
-            items[index].quantity = (items[index].quantity || 1) - 1;
-            if (items[index].quantity <= 0) items.splice(index, 1);
+        var item = items[index];
+        var currentQty = item.quantity || 1;
+        var newQty = action === 'increase' ? currentQty + 1 : currentQty - 1;
+
+        // When quantity drops to 0, go through AmbiletCart.removeItem so seats get released
+        if (newQty <= 0 && window.AmbiletCart && typeof window.AmbiletCart.removeItem === 'function' && item.key) {
+            window.AmbiletCart.removeItem(item.key);
+            updateCartUI();
+            return;
+        }
+
+        if (newQty <= 0) {
+            items.splice(index, 1);
+        } else {
+            item.quantity = newQty;
         }
         cart.items = items;
         cart.updatedAt = new Date().toISOString();
@@ -585,6 +595,15 @@
         var cart = getCart();
         var items = cart.items || [];
         if (index < 0 || index >= items.length) return;
+        var item = items[index];
+
+        // Delegate to AmbiletCart.removeItem so seats are released via API
+        if (window.AmbiletCart && typeof window.AmbiletCart.removeItem === 'function' && item && item.key) {
+            window.AmbiletCart.removeItem(item.key);
+            updateCartUI();
+            return;
+        }
+
         items.splice(index, 1);
         cart.items = items;
         cart.updatedAt = new Date().toISOString();

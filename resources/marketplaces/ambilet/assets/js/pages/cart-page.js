@@ -81,7 +81,7 @@ const CartPage = {
 
             // Release held seats via API before clearing cart
             this.releaseAllSeats().then(() => {
-                AmbiletCart.clear();
+                AmbiletCart.clear({ skipRelease: true });
                 localStorage.removeItem('cart_end_time');
                 this.render();
                 if (typeof AmbiletNotifications !== 'undefined') {

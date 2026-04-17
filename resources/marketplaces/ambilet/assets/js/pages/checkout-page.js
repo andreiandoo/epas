@@ -881,7 +881,7 @@ const CheckoutPage = {
                 });
 
                 if (payResponse.success && payResponse.data.payment_url) {
-                    AmbiletCart.clear();
+                    AmbiletCart.clear({ skipRelease: true });
                     localStorage.removeItem('cart_end_time');
 
                     // Check if payment requires POST form submission (e.g., Netopia)
@@ -910,7 +910,7 @@ const CheckoutPage = {
                 }
             } else {
                 // No payment required (free tickets or zero total)
-                AmbiletCart.clear();
+                AmbiletCart.clear({ skipRelease: true });
                 localStorage.removeItem('cart_end_time');
                 window.location.href = '/multumim?order=' + order.order_number;
             }

@@ -33,10 +33,20 @@ const AmbiletCart = {
     /**
      * Add item to cart
      */
-    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1) {
+    addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity = 1, meta = null) {
+        // Support alternative signature: addItem(eventData, ticketTypeData, quantity, meta)
+        if (typeof eventId === 'object' && eventId !== null) {
+            meta = ticketTypeId; // 4th arg
+            quantity = ticketTypeData || 1; // 3rd arg
+            ticketTypeData = eventData; // 2nd arg
+            eventData = eventId; // 1st arg
+            ticketTypeId = ticketTypeData.id;
+            eventId = eventData.id;
+        }
         const cart = this.getCart();
         const perfId = eventData.performance_id || 0;
-        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}`;
+        const visitDate = meta?.visit_date || eventData.visit_date || '';
+        const itemKey = `${eventId}_${ticketTypeId}${perfId ? '_' + perfId : ''}${visitDate ? '_' + visitDate : ''}`;
 
         // Find existing item
         const existingIndex = cart.items.findIndex(item => item.key === itemKey);
@@ -78,9 +88,12 @@ const AmbiletCart = {
                     min_per_order: ticketTypeData.min_per_order || 1,
                     max_per_order: ticketTypeData.max_per_order || 10,
                     commission: ticketTypeData.commission || null, // Per-ticket commission settings
-                    is_refundable: ticketTypeData.is_refundable || false
+                    is_refundable: ticketTypeData.is_refundable || false,
+                    is_parking: ticketTypeData.is_parking || false,
+                    requires_vehicle_info: ticketTypeData.requires_vehicle_info || false
                 },
                 quantity,
+                meta: meta || null,
                 addedAt: new Date().toISOString()
             });
         }
@@ -104,8 +117,9 @@ const AmbiletCart = {
 
         if (index >= 0) {
             if (quantity <= 0) {
-                // Remove item if quantity is 0 or less
-                cart.items.splice(index, 1);
+                // Remove item if quantity is 0 or less; release seats first
+                const [removed] = cart.items.splice(index, 1);
+                this._releaseItemSeats(removed);
             } else {
                 cart.items[index].quantity = quantity;
             }
@@ -116,7 +130,27 @@ const AmbiletCart = {
     },
 
     /**
-     * Remove item from cart
+     * Release held seats for a cart item via API (best-effort).
+     * Silently skips items without seats and never throws — local cart
+     * mutation must proceed even if the network call fails.
+     */
+    _releaseItemSeats(item) {
+        if (!item || !item.seat_uids || item.seat_uids.length === 0 || !item.event_seating_id) {
+            return Promise.resolve();
+        }
+        if (typeof AmbiletAPI === 'undefined' || !AmbiletAPI.delete) {
+            return Promise.resolve();
+        }
+        return AmbiletAPI.delete('/cart/seats', {
+            event_seating_id: item.event_seating_id,
+            seat_uids: item.seat_uids
+        }).catch(function(error) {
+            console.warn('[AmbiletCart] Failed to release seats (cleanup job will handle):', error);
+        });
+    },
+
+    /**
+     * Remove item from cart. Releases any held seats via API before mutating storage.
      */
     removeItem(itemKey) {
         const cart = this.getCart();
@@ -124,6 +158,7 @@ const AmbiletCart = {
 
         if (index >= 0) {
             const removed = cart.items.splice(index, 1)[0];
+            this._releaseItemSeats(removed);
             this.saveCart(cart);
             this.showNotification(`${removed.ticketType.name} eliminat din coș`);
         }
@@ -132,9 +167,15 @@ const AmbiletCart = {
     },
 
     /**
-     * Clear entire cart
+     * Clear entire cart. Releases all held seats unless skipRelease is set
+     * (used after a successful checkout where seats are already sold).
      */
-    clearCart() {
+    clearCart(options = {}) {
+        if (!options.skipRelease) {
+            const current = this.getCart();
+            (current.items || []).forEach(item => this._releaseItemSeats(item));
+        }
+
         const cart = { items: [], updatedAt: new Date().toISOString() };
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
         localStorage.removeItem(this.PROMO_KEY);
@@ -683,8 +724,8 @@ const AmbiletCart = {
     /**
      * Alias for clearCart (CartPage compatibility)
      */
-    clear() {
-        return this.clearCart();
+    clear(options = {}) {
+        return this.clearCart(options);
     }
 };
 
