@@ -105,6 +105,7 @@
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
                         @if($chartPeriod === 'month')
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 rounded" style="border-top: 1.5px dashed rgba(16,185,129,0.7);"></span> Predicție</span>
                         @endif
                     </div>
                 </div>
@@ -563,6 +564,60 @@
                 });
             }
 
+            // Prediction line (only for month view with prev year data)
+            if (prevSalesData && salesData.data.length > 0) {
+                const today = new Date();
+                const currentDay = today.getDate(); // 1-based day of month
+                const totalDays = salesData.labels.length;
+
+                // Calculate avg growth ratio from completed days
+                let ratios = [];
+                for (let i = 0; i < currentDay && i < salesData.data.length; i++) {
+                    const curr = salesData.data[i];
+                    const prev = (prevSalesData.data[i] || 0);
+                    if (prev > 0 && curr > 0) {
+                        ratios.push(curr / prev);
+                    }
+                }
+                const avgRatio = ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 1;
+
+                // Fallback: avg daily revenue from current month
+                let currentDaysWithData = 0;
+                let currentTotal = 0;
+                for (let i = 0; i < currentDay && i < salesData.data.length; i++) {
+                    currentTotal += salesData.data[i];
+                    if (salesData.data[i] > 0) currentDaysWithData++;
+                }
+                const avgDaily = currentDaysWithData > 0 ? currentTotal / currentDaysWithData : 0;
+
+                // Build prediction: null for past days, predicted for future
+                const predictionData = [];
+                for (let i = 0; i < totalDays; i++) {
+                    if (i < currentDay - 1) {
+                        predictionData.push(null); // Past days: no prediction
+                    } else if (i === currentDay - 1) {
+                        predictionData.push(salesData.data[i]); // Today: connect point
+                    } else {
+                        // Future: prev year * ratio, or avg daily
+                        const prevVal = prevSalesData.data[i] || 0;
+                        predictionData.push(Math.round(prevVal > 0 ? prevVal * avgRatio : avgDaily));
+                    }
+                }
+
+                datasets.push({
+                    type: 'line',
+                    label: 'Predicție (RON)',
+                    data: predictionData,
+                    borderColor: isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(5, 150, 105, 0.7)',
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(5, 150, 105, 0.05)',
+                    borderWidth: 2, borderDash: [6, 3], fill: true, tension: 0.3,
+                    pointRadius: 0, pointHoverRadius: 4,
+                    spanGaps: false,
+                    yAxisID: 'y',
+                    order: 0,
+                });
+            }
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -609,6 +664,9 @@
                                 },
                                 labelColor: function(context) {
                                     const label = context.dataset.label || '';
+                                    if (label.includes('Predic')) {
+                                        return { backgroundColor: 'rgba(5, 150, 105, 0.7)', borderColor: 'rgba(5, 150, 105, 0.7)', borderWidth: 1 };
+                                    }
                                     if (label.includes('Anul trecut') || label.includes('anul trecut')) {
                                         return { backgroundColor: 'rgba(202, 138, 4, 0.7)', borderColor: 'rgba(202, 138, 4, 0.7)', borderWidth: 1 };
                                     }
