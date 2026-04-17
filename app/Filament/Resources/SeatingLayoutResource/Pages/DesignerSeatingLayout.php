@@ -3544,8 +3544,9 @@ class DesignerSeatingLayout extends Page
         }
 
         $metadata = $section->metadata ?? [];
-        $metadata['show_label'] = $settings['show_label'] ?? true;
+        $metadata['show_label'] = (bool) ($settings['show_label'] ?? true);
         $metadata['label_position'] = $settings['label_position'] ?? 'inside';
+        $metadata['auto_show_row_labels'] = (bool) ($settings['auto_show_row_labels'] ?? true);
 
         $section->update(['metadata' => $metadata]);
 
