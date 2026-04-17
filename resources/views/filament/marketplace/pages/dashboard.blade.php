@@ -66,10 +66,13 @@
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
+                    @if(($todayStats['total_orders'] ?? 0) > 0)
+                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['paid_orders'] ?? 0 }} plătite · {{ $todayStats['cancelled_orders'] ?? 0 }} anulate · {{ $todayStats['expired_orders'] ?? 0 }} expirate · {{ $todayStats['refunded_orders'] ?? 0 }} rambursate</p>
+                    @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi plătite</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['paid_orders']) }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comisioane azi</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['commission'] ?? 0, 2) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
                     <p class="text-xs text-gray-500 dark:text-gray-400">Încasări azi</p>

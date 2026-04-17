@@ -619,7 +619,11 @@ class Dashboard extends Page
             ->whereBetween('orders.created_at', [$todayStart, $todayEnd])
             ->selectRaw('COUNT(*) as total_orders')
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid_orders")
+            ->selectRaw("SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders")
+            ->selectRaw("SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired_orders")
+            ->selectRaw("SUM(CASE WHEN status IN ('refunded','partially_refunded') THEN 1 ELSE 0 END) as refunded_orders")
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN \"total\" ELSE 0 END) as revenue")
+            ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN COALESCE(commission_amount, 0) ELSE 0 END) as commission_from_db")
             ->first();
 
         $ticketsSold = (int) Ticket::join('ticket_types', 'tickets.ticket_type_id', '=', 'ticket_types.id')
@@ -641,10 +645,20 @@ class Dashboard extends Page
             ->whereBetween('created_at', [$todayStart, $todayEnd])
             ->count();
 
+        // Commission: use DB commission_amount if available, otherwise calculate from rate
+        $revenue = (float) ($orderStats->revenue ?? 0);
+        $commissionFromDb = (float) ($orderStats->commission_from_db ?? 0);
+        $commissionRate = (float) ($this->marketplace->commission_rate ?? 5);
+        $commission = $commissionFromDb > 0 ? $commissionFromDb : round($revenue * $commissionRate / 100, 2);
+
         return [
             'total_orders' => (int) ($orderStats->total_orders ?? 0),
             'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
-            'revenue' => (float) ($orderStats->revenue ?? 0),
+            'cancelled_orders' => (int) ($orderStats->cancelled_orders ?? 0),
+            'expired_orders' => (int) ($orderStats->expired_orders ?? 0),
+            'refunded_orders' => (int) ($orderStats->refunded_orders ?? 0),
+            'revenue' => $revenue,
+            'commission' => $commission,
             'tickets_sold' => $ticketsSold,
             'new_customers' => (int) ($customerStats->total ?? 0),
             'registered_customers' => (int) ($customerStats->registered ?? 0),
