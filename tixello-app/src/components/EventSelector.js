@@ -79,31 +79,29 @@ function ChevronRight() {
   );
 }
 
-function formatEventDate(event) {
+function formatEventDateShort(event) {
   if (!event) return '';
-  const startDate = event.start_date || event.date;
+  const startDate = event.start_date || event.date || event.event_date;
   if (!startDate) return '';
 
   try {
     const d = new Date(startDate);
-    const options = { month: 'short', day: 'numeric', year: 'numeric' };
-    let dateStr = d.toLocaleDateString('en-US', options);
-
-    if (event.start_time) {
-      dateStr += ' \u00B7 ' + event.start_time.slice(0, 5);
-    }
-
-    return dateStr;
+    // Romanian short date: "15 Mar"
+    const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Noi', 'Dec'];
+    return `${d.getDate()} ${months[d.getMonth()]}`;
   } catch {
-    return startDate;
+    return '';
   }
 }
 
-function getVenueName(event) {
+function getVenueAndCity(event) {
   if (!event) return '';
-  if (event.venue?.name) return event.venue.name;
-  if (event.venue_name) return event.venue_name;
-  return '';
+  const parts = [];
+  const venueName = event.venue?.name || event.venue_name;
+  const cityName = event.venue?.city || event.venue_city;
+  if (venueName) parts.push(venueName);
+  if (cityName && cityName !== venueName) parts.push(cityName);
+  return parts.join(', ');
 }
 
 export default function EventSelector({ onPress }) {
@@ -123,9 +121,9 @@ export default function EventSelector({ onPress }) {
     );
   }
 
-  const dateStr = formatEventDate(selectedEvent);
-  const venueName = getVenueName(selectedEvent);
-  const metaParts = [dateStr, venueName].filter(Boolean);
+  const dateShort = formatEventDateShort(selectedEvent);
+  const venueCity = getVenueAndCity(selectedEvent);
+  const eventTitle = selectedEvent.title || selectedEvent.name || 'Eveniment Fără Titlu';
   const timeCategory = selectedEvent.timeCategory || 'upcoming';
 
   return (
@@ -134,15 +132,20 @@ export default function EventSelector({ onPress }) {
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <Text style={styles.eventName} numberOfLines={1}>
-              {selectedEvent.title || selectedEvent.name || 'Eveniment Fără Titlu'}
+              {dateShort ? (
+                <>
+                  <Text style={styles.eventDatePrefix}>{dateShort}  </Text>
+                  <Text>{eventTitle}</Text>
+                </>
+              ) : (
+                eventTitle
+              )}
             </Text>
             <StatusBadge timeCategory={timeCategory} />
           </View>
-          {metaParts.length > 0 && (
-            <Text style={styles.metaText} numberOfLines={1}>
-              {metaParts.join(' \u00B7 ')}
-            </Text>
-          )}
+          {venueCity ? (
+            <Text style={styles.metaText} numberOfLines={1}>{venueCity}</Text>
+          ) : null}
         </View>
         <ChevronRight />
       </View>
@@ -178,6 +181,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     flexShrink: 1,
+  },
+  eventDatePrefix: {
+    color: colors.purple,
+    fontWeight: '700',
   },
   noEventText: {
     fontSize: 15,

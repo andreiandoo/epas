@@ -12,7 +12,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useEvent } from '../context/EventContext';
-import { getParticipants } from '../api/participants';
+import { getParticipants, checkinByBarcode } from '../api/participants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -91,31 +91,60 @@ function StatusBadge({ status, checkedInAt }) {
 
 // ─── Ticket Card Component ───────────────────────────────────────────────────
 
-function TicketCard({ item }) {
-  const name = item.customer?.name || item.name || item.full_name || 'Anonim';
-  const code = item.barcode || item.ticket_code || '—';
+function TicketCard({ item, onCheckIn, isCheckingIn }) {
+  const attendeeName = item.attendee?.name;
+  const buyerName = item.customer?.name || item.name || item.full_name || 'Anonim';
+  const primaryName = attendeeName || buyerName;
+  const secondaryName = attendeeName && attendeeName !== buyerName ? `cumpărat de ${buyerName}` : null;
+  const code = item.code || item.barcode || item.ticket_code || '—';
   const ticketType = item.ticket_type || item.ticket_type_name || '—';
+  const isCheckedIn = !!item.checked_in_at || item.status === 'checked_in';
+  const isInvalid = item.status === 'cancelled' || item.status === 'refunded';
+  const canCheckIn = !isCheckedIn && !isInvalid && !!item.barcode;
 
   return (
-    <View style={styles.ticketCard}>
+    <View style={[styles.ticketCard, isCheckedIn && styles.ticketCardChecked]}>
       <View style={styles.ticketCardLeft}>
-        <Text style={styles.ticketBeneficiary} numberOfLines={1}>{name}</Text>
+        <Text style={styles.ticketBeneficiary} numberOfLines={1}>{primaryName}</Text>
+        {secondaryName ? (
+          <Text style={styles.ticketBuyer} numberOfLines={1}>{secondaryName}</Text>
+        ) : null}
         <Text style={styles.ticketCode} numberOfLines={1}>{code}</Text>
         <Text style={styles.ticketType} numberOfLines={1}>{ticketType}</Text>
       </View>
-      <StatusBadge status={item.status} checkedInAt={item.checked_in_at} />
+      {isCheckedIn ? (
+        <StatusBadge status={item.status} checkedInAt={item.checked_in_at} />
+      ) : isInvalid ? (
+        <StatusBadge status={item.status} checkedInAt={null} />
+      ) : canCheckIn ? (
+        <TouchableOpacity
+          style={styles.checkInButton}
+          onPress={() => onCheckIn(item)}
+          disabled={isCheckingIn}
+          activeOpacity={0.7}
+        >
+          {isCheckingIn ? (
+            <ActivityIndicator size="small" color={colors.white} />
+          ) : (
+            <Text style={styles.checkInButtonText}>Check-in</Text>
+          )}
+        </TouchableOpacity>
+      ) : (
+        <StatusBadge status={item.status} checkedInAt={null} />
+      )}
     </View>
   );
 }
 
 // ─── Main TicketListScreen Component ─────────────────────────────────────────
 
-export default function TicketListScreen({ onClose }) {
-  const { selectedEvent } = useEvent();
+export default function TicketListScreen({ onClose, onCheckInSuccess }) {
+  const { selectedEvent, refreshStats, refreshTicketTypes, incrementCheckedIn } = useEvent();
   const [participants, setParticipants] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [checkingInId, setCheckingInId] = useState(null);
 
   // Fetch all participants paginated
   const fetchAllParticipants = useCallback(async (silent = false) => {
@@ -166,16 +195,61 @@ export default function TicketListScreen({ onClose }) {
     return () => clearInterval(interval);
   }, [selectedEvent?.id, fetchAllParticipants]);
 
-  // Filter by search query
+  // Filter by search query — matches code, buyer/beneficiary name or phone
   const filteredParticipants = participants.filter((p) => {
     if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const name = (p.customer?.name || p.name || p.full_name || '').toLowerCase();
-    const code = (p.barcode || p.ticket_code || '').toLowerCase();
-    const email = (p.customer?.email || '').toLowerCase();
+    const query = searchQuery.toLowerCase().trim();
+    const buyerName = (p.customer?.name || p.name || p.full_name || '').toLowerCase();
+    const buyerPhone = (p.customer?.phone || '').toLowerCase();
+    const buyerEmail = (p.customer?.email || '').toLowerCase();
+    const attendeeName = (p.attendee?.name || '').toLowerCase();
+    const attendeePhone = (p.attendee?.phone || '').toLowerCase();
+    const attendeeEmail = (p.attendee?.email || '').toLowerCase();
+    const code = (p.code || p.barcode || p.ticket_code || '').toLowerCase();
     const orderNum = (p.order_number || '').toLowerCase();
-    return name.includes(query) || code.includes(query) || email.includes(query) || orderNum.includes(query);
+    return (
+      code.includes(query) ||
+      buyerName.includes(query) ||
+      attendeeName.includes(query) ||
+      buyerPhone.includes(query) ||
+      attendeePhone.includes(query) ||
+      buyerEmail.includes(query) ||
+      attendeeEmail.includes(query) ||
+      orderNum.includes(query)
+    );
   });
+
+  const handleCheckIn = useCallback(async (item) => {
+    if (!selectedEvent?.id || !item.barcode) return;
+    setCheckingInId(item.id);
+    try {
+      await checkinByBarcode(selectedEvent.id, item.barcode);
+      // Update local state immediately
+      setParticipants(prev =>
+        prev.map(p => p.id === item.id
+          ? { ...p, checked_in_at: new Date().toISOString(), status: 'checked_in' }
+          : p
+        )
+      );
+      // Refresh dashboard stats (card + per-type modals)
+      if (incrementCheckedIn) incrementCheckedIn();
+      if (refreshStats) refreshStats();
+      if (refreshTicketTypes) refreshTicketTypes();
+      if (onCheckInSuccess) onCheckInSuccess();
+    } catch (e) {
+      console.error('Check-in failed:', e);
+      // If already checked in, still mark as such
+      if (e.message?.toLowerCase().includes('already')) {
+        setParticipants(prev =>
+          prev.map(p => p.id === item.id
+            ? { ...p, checked_in_at: new Date().toISOString(), status: 'checked_in' }
+            : p
+          )
+        );
+      }
+    }
+    setCheckingInId(null);
+  }, [selectedEvent?.id, incrementCheckedIn, refreshStats, refreshTicketTypes, onCheckInSuccess]);
 
   // Sort: unchecked first, checked-in last
   const sortedParticipants = [...filteredParticipants].sort((a, b) => {
@@ -191,7 +265,16 @@ export default function TicketListScreen({ onClose }) {
     (p) => p.checked_in_at || p.status === 'checked_in'
   ).length;
 
-  const renderItem = useCallback(({ item }) => <TicketCard item={item} />, []);
+  const renderItem = useCallback(
+    ({ item }) => (
+      <TicketCard
+        item={item}
+        onCheckIn={handleCheckIn}
+        isCheckingIn={checkingInId === item.id}
+      />
+    ),
+    [handleCheckIn, checkingInId]
+  );
 
   const keyExtractor = useCallback(
     (item, index) => item.id?.toString() || item.barcode || index.toString(),
@@ -231,7 +314,7 @@ export default function TicketListScreen({ onClose }) {
         <SearchIcon size={18} color={colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Caută după nume sau cod..."
+          placeholder="Caută după cod, nume, telefon..."
           placeholderTextColor={colors.textQuaternary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -379,10 +462,19 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  ticketCardChecked: {
+    opacity: 0.55,
+  },
   ticketBeneficiary: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  ticketBuyer: {
+    fontSize: 11,
+    color: colors.textTertiary,
+    fontStyle: 'italic',
     marginBottom: 3,
   },
   ticketCode: {
@@ -407,6 +499,22 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 11,
     fontWeight: '700',
+  },
+
+  // ── Check-in Button ─────────────────────────────────────────────────────────
+  checkInButton: {
+    backgroundColor: colors.purple,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkInButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.white,
   },
 
   // ── Loading ─────────────────────────────────────────────────────────────────

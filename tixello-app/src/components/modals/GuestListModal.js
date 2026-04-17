@@ -94,7 +94,7 @@ function GuestItem({ guest, onCheckIn, isCheckingIn }) {
 
 export default function GuestListModal({ visible, onClose }) {
   const { translateY, panResponder } = useSwipeToDismiss(onClose);
-  const { selectedEvent } = useEvent();
+  const { selectedEvent, refreshStats, refreshTicketTypes, incrementCheckedIn } = useEvent();
   const [searchQuery, setSearchQuery] = useState('');
   const [guests, setGuests] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -157,6 +157,10 @@ export default function GuestListModal({ visible, onClose }) {
       setGuests(prev =>
         prev.map(g => g.id === guest.id ? { ...g, checkedIn: true } : g)
       );
+      // Refresh dashboard stats so card + per-type modals update
+      if (incrementCheckedIn) incrementCheckedIn();
+      if (refreshStats) refreshStats();
+      if (refreshTicketTypes) refreshTicketTypes();
     } catch (e) {
       console.error('Check-in failed:', e);
       // If already checked in, mark as such

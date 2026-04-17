@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import Svg, { Rect, Path, Circle } from 'react-native-svg';
 
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.4.4';
 
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -110,6 +110,7 @@ function MainTabs() {
   const [showGateManager, setShowGateManager] = useState(false);
   const [showStaffAssignment, setShowStaffAssignment] = useState(false);
   const [updateAvailable, setUpdateAvailable] = useState(null);
+  const [activeTab, setActiveTab] = useState('Dashboard');
 
   useEffect(() => {
     fetchEvents();
@@ -142,12 +143,23 @@ function MainTabs() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={colors.background} />
       <Header onNotificationPress={() => setShowNotifications(true)} />
-      <EventSelector onPress={() => setShowEventsModal(true)} />
+      {activeTab === 'Dashboard' && (
+        <EventSelector onPress={() => setShowEventsModal(true)} />
+      )}
       {shiftStartTime && (
         <ShiftBar onEmergencyPress={() => setShowEmergency(true)} />
       )}
 
       <Tab.Navigator
+        screenListeners={{
+          state: (e) => {
+            const routes = e.data?.state?.routes;
+            const index = e.data?.state?.index;
+            if (routes && typeof index === 'number') {
+              setActiveTab(routes[index].name);
+            }
+          },
+        }}
         screenOptions={({ route }) => {
           const isDisabledTab = isReportsOnlyMode && (route.name === 'CheckIn' || route.name === 'Sales');
           return {
