@@ -71,8 +71,8 @@ class ApiCache {
         'locations.cities.featured' => 1800,
         'cities' => 1800,
 
-        // Short cache (5 minutes) - frequently changing but still cacheable
-        'events' => 300,
+        // Short cache — events use 30s for near-instant visibility of newly published events
+        'events' => 30,
         'venues' => 300,
         'artists' => 300,
         'organizers' => 300,
@@ -3148,8 +3148,10 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     $browserTtl = match(true) {
         // Static/rarely changing content — 1 day browser cache
         in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,
-        // Listings — 5 min browser cache
-        in_array($action, ['events', 'events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
+        // Events — 30s browser cache for near-instant visibility of newly published events
+        $action === 'events' => 30,
+        // Other listings — 5 min browser cache
+        in_array($action, ['events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
         // Single items — 2 min browser cache
         str_starts_with($action, 'event') || str_starts_with($action, 'venue') || str_starts_with($action, 'artist') || str_starts_with($action, 'organizer') => 120,
         // Search — 1 min

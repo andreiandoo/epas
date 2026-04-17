@@ -8,7 +8,7 @@ const AmbiletAPI = {
     _cache: new Map(),
     _cacheTTL: {
         'config': 300000,        // 5 min
-        'events': 60000,         // 1 min
+        'events': 30000,         // 30 sec — near-instant visibility of newly published events
         'events.featured': 60000,
         'events.past': 300000,   // 5 min
         'categories': 300000,
