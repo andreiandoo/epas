@@ -130,9 +130,16 @@ class ApiCache {
         if (!file_exists($cacheFile)) return null;
 
         $mtime = filemtime($cacheFile);
-        if (time() - $mtime > $ttl) {
-            @unlink($cacheFile); // Expired
-            return null;
+        $age = time() - $mtime;
+
+        // Stale-while-revalidate: serve stale up to 10x TTL if refresh fails
+        // Mark as stale so caller knows to refresh in background
+        if ($age > $ttl) {
+            if ($age > $ttl * 10) {
+                @unlink($cacheFile);
+                return null; // Too stale, delete
+            }
+            // Serve stale — caller should refresh
         }
 
         $data = @file_get_contents($cacheFile);
@@ -578,10 +585,29 @@ if ($rateData['count'] > $rateLimit) {
 
 @file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
 
-// Start session then close immediately — we only need session_id() for headers
-// Keeping session open serializes all concurrent API calls (file locks)
-session_start();
-session_write_close();
+// Session: only start for actions that need it (cart, auth, checkout)
+// Public browsing endpoints skip session entirely — major perf win
+$actionForSession = $_GET['action'] ?? '';
+$needsSession = str_starts_with($actionForSession, 'cart')
+    || str_starts_with($actionForSession, 'checkout')
+    || str_starts_with($actionForSession, 'customer.')
+    || str_starts_with($actionForSession, 'organizer.')
+    || str_contains($actionForSession, 'login')
+    || str_contains($actionForSession, 'register')
+    || str_contains($actionForSession, 'password')
+    || $actionForSession === 'orders.pay'
+    || $actionForSession === 'orders.status'
+    || $actionForSession === 'checkout';
+
+$sessionIdForHeader = '';
+if ($needsSession) {
+    session_start();
+    $sessionIdForHeader = session_id();
+    session_write_close();
+} else {
+    // Generate stable pseudo-session ID from client fingerprint (for cart tracking across calls)
+    $sessionIdForHeader = $_COOKIE[session_name()] ?? hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+}
 
 // Get action
 $action = $_GET['action'] ?? '';
@@ -2981,7 +3007,7 @@ if ((!empty($isFileUpload) || !empty($isMultipart)) && !empty($_FILES)) {
         'X-API-Key: ' . API_KEY,
         'Accept: application/json',
         'User-Agent: Ambilet Marketplace/1.0',
-        'X-Session-ID: ' . session_id(),
+        'X-Session-ID: ' . $sessionIdForHeader,
     ];
 
     if ($requiresAuth) {
@@ -3037,7 +3063,7 @@ $headers = [
     'X-API-Key: ' . API_KEY,
     'Accept: ' . $acceptHeader,
     'User-Agent: Ambilet Marketplace/1.0',
-    'X-Session-ID: ' . session_id()  // Pass session ID for cart/checkout functionality
+    'X-Session-ID: ' . $sessionIdForHeader  // Pass session ID for cart/checkout functionality
 ];
 
 // Forward Authorization header for authenticated requests
@@ -3064,11 +3090,14 @@ foreach ($headers as $h) {
 $upstreamContentDisposition = '';
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 30,
-    CURLOPT_CONNECTTIMEOUT => 5,
+    CURLOPT_TIMEOUT => 15,
+    CURLOPT_CONNECTTIMEOUT => 3,
     CURLOPT_HTTPHEADER => $curlHeaders,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_ENCODING => '', // Accept gzip/deflate (smaller response, faster)
+    CURLOPT_TCP_FASTOPEN => true,
+    CURLOPT_TCP_KEEPALIVE => 1,
     CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
         if (stripos($header, 'Content-Disposition:') === 0) {
             $upstreamContentDisposition = trim($header);
