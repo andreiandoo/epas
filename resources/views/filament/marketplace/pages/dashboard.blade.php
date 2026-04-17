@@ -590,13 +590,19 @@
                 }
                 const avgDaily = currentDaysWithData > 0 ? currentTotal / currentDaysWithData : 0;
 
-                // Build prediction: null for past days, predicted for future
+                // Build prediction: null for past days, predicted for today + future
                 const predictionData = [];
+                // Estimate today's full-day total based on hours elapsed
+                const hoursElapsed = today.getHours() + today.getMinutes() / 60;
+                const todayActual = salesData.data[currentDay - 1] || 0;
+                const todayEstimated = hoursElapsed > 1 ? Math.round(todayActual * (24 / hoursElapsed)) : todayActual;
+
                 for (let i = 0; i < totalDays; i++) {
                     if (i < currentDay - 1) {
-                        predictionData.push(null); // Past days: no prediction
+                        predictionData.push(null); // Past completed days: no prediction
                     } else if (i === currentDay - 1) {
-                        predictionData.push(salesData.data[i]); // Today: connect point
+                        // Today: extrapolate based on hours passed
+                        predictionData.push(todayEstimated);
                     } else {
                         // Future: prev year * ratio, or avg daily
                         const prevVal = prevSalesData.data[i] || 0;
