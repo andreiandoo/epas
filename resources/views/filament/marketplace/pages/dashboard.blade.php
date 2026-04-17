@@ -104,7 +104,7 @@
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
                         @if($chartPeriod === 'month')
-                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500/30 rounded border-dashed"></span> Anul trecut</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-yellow-500/50 rounded" style="border-top: 1.5px dashed rgba(202,138,4,0.5);"></span> Anul trecut</span>
                         @endif
                     </div>
                 </div>
@@ -541,9 +541,9 @@
             if (prevSalesData) {
                 datasets.push({
                     type: 'line',
-                    label: 'Vânzări anul trecut',
+                    label: 'Anul trecut (RON)',
                     data: prevSalesData.data,
-                    borderColor: isDark ? 'rgba(129, 140, 248, 0.3)' : 'rgba(99, 102, 241, 0.3)',
+                    borderColor: isDark ? 'rgba(234, 179, 8, 0.5)' : 'rgba(202, 138, 4, 0.5)',
                     backgroundColor: 'transparent',
                     borderWidth: 1.5, borderDash: [4, 4], fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 3,
                     yAxisID: 'y',
@@ -555,9 +555,9 @@
                     type: 'bar',
                     label: 'Bilete anul trecut',
                     data: prevTicketsData.data,
-                    backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(147, 51, 234, 0.15)',
-                    borderColor: 'transparent',
-                    borderWidth: 0, borderRadius: 3,
+                    backgroundColor: isDark ? 'rgba(234, 179, 8, 0.15)' : 'rgba(202, 138, 4, 0.15)',
+                    borderColor: isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(202, 138, 4, 0.3)',
+                    borderWidth: 1, borderRadius: 3,
                     yAxisID: 'y1',
                     order: 3,
                 });
