@@ -579,14 +579,51 @@
                             titleColor: isDark ? '#f3f4f6' : '#111827',
                             bodyColor: isDark ? '#d1d5db' : '#4b5563',
                             borderColor: isDark ? '#374151' : '#e5e7eb',
-                            borderWidth: 1, padding: 10, displayColors: true,
+                            borderWidth: 1, padding: 12, displayColors: true,
+                            usePointStyle: false,
                             callbacks: {
                                 label: function(context) {
-                                    if (context.dataset.yAxisID === 'y') {
-                                        return 'Vânzări: ' + new Intl.NumberFormat('ro-RO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(context.parsed.y) + ' ' + currency;
+                                    const label = context.dataset.label || '';
+                                    const val = context.parsed.y;
+                                    if (label.includes('anul trecut') || label.includes('Anul trecut')) {
+                                        if (context.dataset.yAxisID === 'y') {
+                                            return '  Vânzări: ' + new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' ' + currency;
+                                        }
+                                        return '  Bilete: ' + val;
                                     }
-                                    return 'Bilete: ' + context.parsed.y;
+                                    if (context.dataset.yAxisID === 'y') {
+                                        return 'Vânzări: ' + new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' ' + currency;
+                                    }
+                                    return 'Bilete: ' + val;
+                                },
+                                beforeBody: function(tooltipItems) {
+                                    // Check if we have prev year data
+                                    const hasPrev = tooltipItems.some(t => (t.dataset.label || '').includes('trecut'));
+                                    if (!hasPrev) return [];
+                                    return [];
+                                },
+                                afterBody: function(tooltipItems) {
+                                    const hasPrev = tooltipItems.some(t => (t.dataset.label || '').includes('trecut'));
+                                    if (!hasPrev) return [];
+                                    return ['─── Anul trecut ───'];
+                                },
+                                labelColor: function(context) {
+                                    const label = context.dataset.label || '';
+                                    if (label.includes('Anul trecut') || label.includes('anul trecut')) {
+                                        return { backgroundColor: 'rgba(202, 138, 4, 0.7)', borderColor: 'rgba(202, 138, 4, 0.7)', borderWidth: 1 };
+                                    }
+                                    if (context.dataset.yAxisID === 'y') {
+                                        return { backgroundColor: '#6366f1', borderColor: '#6366f1', borderWidth: 1 };
+                                    }
+                                    return { backgroundColor: 'rgba(147, 51, 234, 0.6)', borderColor: '#9333ea', borderWidth: 1 };
                                 }
+                            },
+                            itemSort: function(a, b) {
+                                // Current year first (order 1,2), then prev year (order 0,3)
+                                const aIsPrev = (a.dataset.label || '').includes('trecut') ? 1 : 0;
+                                const bIsPrev = (b.dataset.label || '').includes('trecut') ? 1 : 0;
+                                if (aIsPrev !== bIsPrev) return aIsPrev - bIsPrev;
+                                return a.datasetIndex - b.datasetIndex;
                             }
                         }
                     },
