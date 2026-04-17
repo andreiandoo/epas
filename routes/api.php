@@ -1539,6 +1539,12 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
     Route::post('/resend-verification', [OrganizerAuthController::class, 'resendVerification'])
         ->name('api.marketplace-client.organizer.resend-verification');
 
+    // Public team invite acceptance (no auth required)
+    Route::get('/team/validate-invite', [OrganizerTeamController::class, 'validateInvite'])
+        ->name('api.marketplace-client.organizer.team.validate-invite');
+    Route::post('/team/accept-invite', [OrganizerTeamController::class, 'acceptInvitePublic'])
+        ->name('api.marketplace-client.organizer.team.accept-invite');
+
     // Protected routes (require organizer auth)
     Route::middleware('auth:sanctum')->group(function () {
         // Auth

@@ -12,6 +12,9 @@ RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
 RewriteCond %{QUERY_STRING} download_ticket [NC]
 RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
 
+# Android app download redirect
+RewriteRule ^android/?$ https://core.tixello.com/android [R=302,L]
+
 # Force HTTPS (uncomment in production)
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
@@ -112,6 +115,10 @@ RewriteRule ^organizator/register/?$ organizer/register.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/landing/?$ organizer/landing.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/accept-invite/?$ organizer/accept-invite.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

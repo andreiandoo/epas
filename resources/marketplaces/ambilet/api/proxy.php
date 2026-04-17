@@ -1685,6 +1685,20 @@ switch ($action) {
         $endpoint = '/organizer/reset-password';
         break;
 
+    case 'organizer.validate-invite':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['token'])) $params['token'] = $_GET['token'];
+        if (isset($_GET['email'])) $params['email'] = $_GET['email'];
+        $endpoint = '/organizer/team/validate-invite?' . http_build_query($params);
+        break;
+
+    case 'organizer.accept-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/accept-invite';
+        break;
+
     case 'organizer.verify-email':
         $method = 'POST';
         $body = file_get_contents('php://input');

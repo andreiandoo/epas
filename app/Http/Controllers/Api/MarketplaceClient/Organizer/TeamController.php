@@ -494,4 +494,77 @@ class TeamController extends BaseController
 </html>
 HTML;
     }
+
+    /**
+     * Public: Validate an invite token and return invitation details.
+     * No authentication required — called from the accept-invite page.
+     */
+    public function validateInvite(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+        ]);
+
+        $member = MarketplaceOrganizerTeamMember::whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $client->id))
+            ->where('email', $validated['email'])
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$member || !$member->verifyInviteToken($validated['token'])) {
+            return $this->error('Invitația este invalidă sau a expirat.', 400);
+        }
+
+        $organizer = $member->organizer;
+
+        return $this->success([
+            'member' => [
+                'name' => $member->name,
+                'email' => $member->email,
+                'role' => $member->role,
+            ],
+            'organizer' => [
+                'name' => $organizer->name,
+                'company_name' => $organizer->company_name,
+            ],
+        ]);
+    }
+
+    /**
+     * Public: Accept an invite — set password and activate membership.
+     * No authentication required.
+     */
+    public function acceptInvitePublic(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'token' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'nullable|string|max:30',
+        ]);
+
+        $member = MarketplaceOrganizerTeamMember::whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $client->id))
+            ->where('email', $validated['email'])
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$member || !$member->verifyInviteToken($validated['token'])) {
+            return $this->error('Invitația este invalidă sau a expirat.', 400);
+        }
+
+        $member->acceptInvite($validated['password']);
+
+        if (!empty($validated['phone'])) {
+            $member->update(['phone' => $validated['phone']]);
+        }
+
+        return $this->success([
+            'message' => 'Contul a fost activat cu succes!',
+            'organizer_name' => $member->organizer->name,
+        ]);
+    }
 }
