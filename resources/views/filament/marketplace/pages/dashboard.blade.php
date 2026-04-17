@@ -55,6 +55,43 @@
         </div>
         @endif
 
+        <!-- Today Stats -->
+        @if(isset($todayStats))
+        <div class="mb-5">
+            <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
+                <x-heroicon-o-sun class="w-4 h-4" />
+                Azi — {{ $todayStats['date_label'] }}
+            </h3>
+            <div class="grid grid-cols-2 gap-3 lg:grid-cols-6">
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
+                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi plătite</p>
+                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['paid_orders']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Încasări azi</p>
+                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 0) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
+                    <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($todayStats['tickets_sold']) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Evenimente publicate azi</p>
+                    <p class="mt-1 text-2xl font-bold text-amber-600 dark:text-amber-400">{{ number_format($todayStats['events_published'] ?? 0) }}</p>
+                </div>
+                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
+                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($todayStats['new_customers']) }}</p>
+                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['registered_customers'] ?? 0 }} registered · {{ $todayStats['guest_customers'] ?? 0 }} guest</p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <!-- Combined Chart: Sales + Tickets -->
         <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700" wire:key="charts-{{ $chartPeriod }}">
             <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -80,38 +117,6 @@
                 <canvas id="combinedChart" data-sales='@json($chartData)' data-tickets='@json($ticketChartData)' data-currency="RON"></canvas>
             </div>
         </div>
-
-        <!-- Today Stats -->
-        @if(isset($todayStats))
-        <div class="mb-5">
-            <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
-                <x-heroicon-o-sun class="w-4 h-4" />
-                Azi — {{ $todayStats['date_label'] }}
-            </h3>
-            <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi plătite</p>
-                    <p class="mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($todayStats['paid_orders']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Venituri azi</p>
-                    <p class="mt-1 text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($todayStats['revenue'], 0) }} <span class="text-sm font-normal text-gray-400">RON</span></p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Bilete vândute</p>
-                    <p class="mt-1 text-2xl font-bold text-purple-600 dark:text-purple-400">{{ number_format($todayStats['tickets_sold']) }}</p>
-                </div>
-                <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Clienți noi</p>
-                    <p class="mt-1 text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ number_format($todayStats['new_customers']) }}</p>
-                </div>
-            </div>
-        </div>
-        @endif
 
         <!-- Monthly Stats -->
         @if(isset($monthStats))

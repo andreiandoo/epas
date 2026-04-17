@@ -629,7 +629,15 @@ class Dashboard extends Page
             ->whereBetween('tickets.created_at', [$todayStart, $todayEnd])
             ->count();
 
-        $newCustomers = (int) MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+        $customerStats = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN password IS NOT NULL THEN 1 ELSE 0 END) as registered')
+            ->selectRaw('SUM(CASE WHEN password IS NULL THEN 1 ELSE 0 END) as guests')
+            ->first();
+
+        $eventsPublished = (int) Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_published', true)
             ->whereBetween('created_at', [$todayStart, $todayEnd])
             ->count();
 
@@ -638,7 +646,10 @@ class Dashboard extends Page
             'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
             'revenue' => (float) ($orderStats->revenue ?? 0),
             'tickets_sold' => $ticketsSold,
-            'new_customers' => $newCustomers,
+            'new_customers' => (int) ($customerStats->total ?? 0),
+            'registered_customers' => (int) ($customerStats->registered ?? 0),
+            'guest_customers' => (int) ($customerStats->guests ?? 0),
+            'events_published' => $eventsPublished,
             'date_label' => Carbon::now($tz)->translatedFormat('d F Y'),
         ];
     }
