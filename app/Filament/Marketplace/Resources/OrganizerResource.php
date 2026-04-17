@@ -450,6 +450,9 @@ class OrganizerResource extends Resource
                                         ->required()
                                         ->maxLength(34)
                                         ->placeholder('RO49AAAA1B31007593840000')
+                                        ->dehydrateStateUsing(fn ($state) => strtoupper(preg_replace('/\s+/', '', $state ?? '')))
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set, string $path) => $set($path, strtoupper(preg_replace('/\s+/', '', $state ?? ''))))
                                         ->regex('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/')
                                         ->validationMessages([
                                             'regex' => 'Invalid IBAN format. Must start with 2 letters, 2 digits, then alphanumeric characters.',
