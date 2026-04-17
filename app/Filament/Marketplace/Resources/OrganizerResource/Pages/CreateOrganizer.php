@@ -14,6 +14,7 @@ class CreateOrganizer extends CreateRecord
     {
         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
         $data['marketplace_client_id'] = $marketplaceAdmin->marketplace_client_id;
+        $data['verified_at'] = $data['verified_at'] ?? now();
 
         return $data;
     }
