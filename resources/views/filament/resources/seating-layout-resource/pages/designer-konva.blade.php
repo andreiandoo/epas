@@ -1050,7 +1050,6 @@
                             // acts as a master switch — when false, no auto labels are drawn
                             // regardless of per-row or global settings (user will add manually).
                             const rowMetadata = row.metadata || {};
-                            const sectionMeta = section.metadata || {};
                             const autoShowSection = sectionMeta.auto_show_row_labels !== false;
                             const showLabel = rowMetadata.show_label !== undefined ? rowMetadata.show_label : this.showRowLabel;
                             if (autoShowSection && showLabel && row.label && !isTable) {

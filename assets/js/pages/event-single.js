@@ -3073,12 +3073,13 @@ const EventPage = {
         document.body.appendChild(modal);
         this.seatSelectionModal = modal;
 
-        // Setup zoom with mouse wheel
+        // Setup zoom with mouse wheel — anchored at cursor position
         var mapWrapper = document.getElementById('seat-map-wrapper');
         mapWrapper.addEventListener('wheel', function(e) {
             e.preventDefault();
             var delta = e.deltaY > 0 ? -0.1 : 0.1;
-            self.zoomMap(delta);
+            var rect = mapWrapper.getBoundingClientRect();
+            self.zoomMap(delta, e.clientX - rect.left, e.clientY - rect.top);
         }, { passive: false });
 
         // Setup pan with mouse drag (using transform instead of scroll for better zoom support)
@@ -3141,17 +3142,26 @@ const EventPage = {
 
         mapWrapper.addEventListener('touchmove', function(e) {
             if (e.touches.length === 2) {
-                // Pinch zoom
+                // Pinch zoom — anchor at midpoint between the two fingers
                 e.preventDefault();
                 var dx = e.touches[0].clientX - e.touches[1].clientX;
                 var dy = e.touches[0].clientY - e.touches[1].clientY;
                 var dist = Math.sqrt(dx * dx + dy * dy);
                 if (touchStartDist > 0) {
                     var scale = dist / touchStartDist;
-                    self.mapZoom = Math.max(0.5, Math.min(3, touchStartZoom * scale));
-                    self.applyMapTransform();
-                    var zoomEl = document.getElementById('zoom-level');
-                    if (zoomEl) zoomEl.textContent = Math.round(self.mapZoom * 100) + '%';
+                    var newZoom = Math.max(0.5, Math.min(3, touchStartZoom * scale));
+                    if (newZoom !== self.mapZoom) {
+                        var rect = mapWrapper.getBoundingClientRect();
+                        var focalX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+                        var focalY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+                        var ratio = newZoom / self.mapZoom;
+                        self.mapPan.x = focalX - (focalX - self.mapPan.x) * ratio;
+                        self.mapPan.y = focalY - (focalY - self.mapPan.y) * ratio;
+                        self.mapZoom = newZoom;
+                        self.applyMapTransform();
+                        var zoomEl = document.getElementById('zoom-level');
+                        if (zoomEl) zoomEl.textContent = Math.round(self.mapZoom * 100) + '%';
+                    }
                 }
             } else if (e.touches.length === 1 && isTouchDragging) {
                 // Single finger pan
@@ -3185,10 +3195,30 @@ const EventPage = {
     },
 
     /**
-     * Zoom the map
+     * Zoom the map, keeping a focal point stationary in wrapper coordinates.
+     * When focalX/focalY are omitted, zooms around the wrapper center so the
+     * +/- buttons feel natural.
      */
-    zoomMap(delta) {
-        this.mapZoom = Math.max(0.5, Math.min(3, this.mapZoom + delta));
+    zoomMap(delta, focalX, focalY) {
+        var wrapper = document.getElementById('seat-map-wrapper');
+        if (!wrapper) return;
+
+        if (typeof focalX !== 'number' || typeof focalY !== 'number') {
+            var rect = wrapper.getBoundingClientRect();
+            focalX = rect.width / 2;
+            focalY = rect.height / 2;
+        }
+
+        var oldZoom = this.mapZoom;
+        var newZoom = Math.max(0.5, Math.min(3, oldZoom + delta));
+        if (newZoom === oldZoom) return;
+
+        // Keep the focal point fixed: newPan = focal - (focal - oldPan) * (newZoom / oldZoom)
+        var ratio = newZoom / oldZoom;
+        this.mapPan.x = focalX - (focalX - this.mapPan.x) * ratio;
+        this.mapPan.y = focalY - (focalY - this.mapPan.y) * ratio;
+        this.mapZoom = newZoom;
+
         this.applyMapTransform();
         document.getElementById('zoom-level').textContent = Math.round(this.mapZoom * 100) + '%';
     },
