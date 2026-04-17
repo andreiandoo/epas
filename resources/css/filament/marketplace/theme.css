@@ -132,9 +132,18 @@ body {
     padding: 0 !important;
 }
 
-/* No padding on repeater item content */
-.fi-fo-repeater-item-content {
+/* No padding on ticket-type repeater item content (scoped to tab context) */
+.fi-sc-tabs .fi-fo-repeater-item-content {
     padding: 0 !important;
+}
+
+/* Bank accounts repeater: proper spacing */
+.bank-accounts-repeater .fi-fo-repeater-item-content {
+    padding: 1rem !important;
+}
+.bank-accounts-repeater .fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
+    gap: 0.5rem !important;
+    column-gap: 0.5rem !important;
 }
 
 /* Larger ticket type header title */
@@ -162,7 +171,7 @@ body {
 }
 
 /* Remove gap between sections inside ticket type repeater items */
-.fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
+.fi-sc-tabs .fi-fo-repeater-item-content > .fi-sc.fi-sc-has-gap {
     gap: 0 !important;
 }
 

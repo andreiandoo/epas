@@ -472,7 +472,8 @@ class OrganizerResource extends Resource
                                 ->maxItems(5)
                                 ->collapsible()
                                 ->collapsed()
-                                ->itemLabel(fn (array $state): ?string => $state['bank_name'] ?? 'New Account'),
+                                ->itemLabel(fn (array $state): ?string => $state['bank_name'] ?? 'New Account')
+                                ->extraAttributes(['class' => 'bank-accounts-repeater']),
                         ]),
 
                     Section::make('Contract Details')
