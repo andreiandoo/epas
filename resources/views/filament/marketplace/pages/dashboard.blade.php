@@ -608,18 +608,20 @@
                 const todayActual = salesData.data[currentDay - 1] || 0;
                 const todayEstimated = hoursElapsed > 1 ? Math.round(todayActual * (24 / hoursElapsed)) : todayActual;
 
-                // Build prediction: blend current month pattern + previous year behavior
+                // Build prediction for ALL days (past + today + future)
+                // Past days: shows what the model would have predicted (for validation)
+                // Today: extrapolated from hours elapsed
+                // Future: blended prediction
                 const predictionData = [];
                 for (let i = 0; i < totalDays; i++) {
-                    if (i < currentDay - 1) {
-                        predictionData.push(null);
-                    } else if (i === currentDay - 1) {
+                    const dayDate = new Date(monthStart);
+                    dayDate.setDate(i + 1);
+                    const dow = dayDate.getDay();
+
+                    if (i === currentDay - 1) {
+                        // Today: extrapolate from hours passed
                         predictionData.push(todayEstimated);
                     } else {
-                        const futureDate = new Date(monthStart);
-                        futureDate.setDate(i + 1);
-                        const dow = futureDate.getDay();
-
                         // Signal 1: day-of-week avg from current month
                         const dowSignal = dowAvg[dow] > 0 ? dowAvg[dow] : overallAvg;
 
@@ -642,10 +644,26 @@
                     }
                 }
 
+                // Split prediction into past (solid) and future (dashed) segments
+                const predPast = predictionData.map((v, i) => i < currentDay ? v : null);
+                const predFuture = predictionData.map((v, i) => i >= currentDay - 1 ? v : null);
+
+                datasets.push({
+                    type: 'line',
+                    label: 'Predicție verificare',
+                    data: predPast,
+                    borderColor: isDark ? 'rgba(16, 185, 129, 0.4)' : 'rgba(5, 150, 105, 0.4)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5, fill: false, tension: 0.3,
+                    pointRadius: 0, pointHoverRadius: 3,
+                    spanGaps: false,
+                    yAxisID: 'y',
+                    order: 0,
+                });
                 datasets.push({
                     type: 'line',
                     label: 'Predicție (RON)',
-                    data: predictionData,
+                    data: predFuture,
                     borderColor: isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(5, 150, 105, 0.7)',
                     backgroundColor: isDark ? 'rgba(16, 185, 129, 0.05)' : 'rgba(5, 150, 105, 0.05)',
                     borderWidth: 2, borderDash: [6, 3], fill: true, tension: 0.3,
@@ -677,7 +695,7 @@
                             filter: function(tooltipItem) {
                                 // Hide prev year + prediction from main labels — shown in afterBody
                                 const label = tooltipItem.dataset.label || '';
-                                return !label.includes('trecut') && !label.includes('Predic');
+                                return !label.includes('trecut') && !label.includes('Predic') && !label.includes('verificare');
                             },
                             callbacks: {
                                 label: function(context) {
@@ -713,12 +731,13 @@
                                         }
                                     }
 
-                                    if (predictionDs) {
-                                        const v = predictionDs.data[idx];
-                                        if (v !== null && v !== undefined) {
-                                            lines.push('');
-                                            lines.push('🟢 Predicție: ' + fmt(v) + ' ' + currency);
-                                        }
+                                    // Show prediction (future or verification)
+                                    const predFutureDs = chart.data.datasets.find(d => d.label === 'Predicție (RON)');
+                                    const predPastDs = chart.data.datasets.find(d => (d.label || '').includes('verificare'));
+                                    const predVal = predFutureDs?.data[idx] ?? predPastDs?.data[idx] ?? null;
+                                    if (predVal !== null && predVal !== undefined) {
+                                        lines.push('');
+                                        lines.push('🟢 Predicție: ' + fmt(predVal) + ' ' + currency);
                                     }
 
                                     return lines;
