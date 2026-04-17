@@ -82,7 +82,7 @@ class Dashboard extends Page
         }
 
         $marketplaceId = $marketplace->id;
-        $days = (int) $this->chartPeriod;
+        $days = $this->chartPeriod === 'month' ? 30 : (int) $this->chartPeriod;
 
         // Cache stats for 30 minutes (heavy queries on large tables)
         $stats = Cache::remember("mp_dash_stats_{$marketplaceId}", 1800, function () use ($marketplaceId) {
@@ -91,16 +91,44 @@ class Dashboard extends Page
 
         // Cache chart data for 10 minutes (keyed by period) — use Romania timezone
         $tz = 'Europe/Bucharest';
-        $startDate = Carbon::now($tz)->subDays($days)->startOfDay()->utc();
-        $endDate = Carbon::now($tz)->endOfDay()->utc();
+        $isMonthView = $this->chartPeriod === 'month';
+        $prevYearChartData = null;
+        $prevYearTicketChartData = null;
 
-        $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
-            return $this->getChartData($marketplaceId, $startDate, $endDate, $days);
-        });
+        if ($isMonthView) {
+            $nowRo = Carbon::now($tz);
+            $startDate = $nowRo->copy()->startOfMonth()->utc();
+            $endDate = $nowRo->copy()->endOfMonth()->endOfDay()->utc();
+            $chartDays = $nowRo->daysInMonth;
 
-        $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
-            return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $days);
-        });
+            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_month_{$nowRo->format('Y-m')}", 600, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                return $this->getChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+            });
+            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_month_{$nowRo->format('Y-m')}", 600, function () use ($marketplaceId, $startDate, $endDate, $chartDays) {
+                return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $chartDays, true);
+            });
+
+            // Previous year same month
+            $prevStart = $nowRo->copy()->subYear()->startOfMonth()->utc();
+            $prevEnd = $nowRo->copy()->subYear()->endOfMonth()->endOfDay()->utc();
+            $prevDays = $nowRo->copy()->subYear()->daysInMonth;
+            $prevYearChartData = Cache::remember("mp_dash_chart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+                return $this->getChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
+            });
+            $prevYearTicketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_prevyear_{$nowRo->copy()->subYear()->format('Y-m')}", 3600, function () use ($marketplaceId, $prevStart, $prevEnd, $prevDays) {
+                return $this->getTicketChartData($marketplaceId, $prevStart, $prevEnd, $prevDays, true);
+            });
+        } else {
+            $startDate = Carbon::now($tz)->subDays($days)->startOfDay()->utc();
+            $endDate = Carbon::now($tz)->endOfDay()->utc();
+
+            $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
+                return $this->getChartData($marketplaceId, $startDate, $endDate, $days);
+            });
+            $ticketChartData = Cache::remember("mp_dash_tchart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
+                return $this->getTicketChartData($marketplaceId, $startDate, $endDate, $days);
+            });
+        }
 
         // Pending review events (cached 2 min — lightweight query)
         $pendingReviewEvents = Cache::remember("mp_dash_pending_{$marketplaceId}", 120, function () use ($marketplaceId) {
@@ -141,6 +169,8 @@ class Dashboard extends Page
             'pendingReviewEvents' => $pendingReviewEvents,
             'billing' => $billingData,
             'todayStats' => $todayStats,
+            'prevYearChartData' => $prevYearChartData,
+            'prevYearTicketChartData' => $prevYearTicketChartData,
             'selectedMonth' => $month,
         ];
     }
@@ -335,7 +365,7 @@ class Dashboard extends Page
         ];
     }
 
-    private function getChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days): array
+    private function getChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
     {
         $tz = 'Europe/Bucharest';
         $dailySales = Order::where('marketplace_client_id', $marketplaceId)
@@ -349,19 +379,31 @@ class Dashboard extends Page
 
         $labels = [];
         $data = [];
-        $current = Carbon::now($tz)->subDays($days)->startOfDay();
-        $end = Carbon::now($tz)->endOfDay();
-        while ($current <= $end) {
-            $dateKey = $current->format('Y-m-d');
-            $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
-            $data[] = (float) ($dailySales[$dateKey] ?? 0);
-            $current->addDay();
+        if ($fullMonth) {
+            $monthStart = Carbon::parse($startDate)->timezone($tz)->startOfMonth();
+            $monthEnd = Carbon::parse($endDate)->timezone($tz)->endOfMonth();
+            $current = $monthStart->copy();
+            while ($current <= $monthEnd) {
+                $dateKey = $current->format('Y-m-d');
+                $labels[] = $current->format('d');
+                $data[] = (float) ($dailySales[$dateKey] ?? 0);
+                $current->addDay();
+            }
+        } else {
+            $current = Carbon::now($tz)->subDays($days)->startOfDay();
+            $end = Carbon::now($tz)->endOfDay();
+            while ($current <= $end) {
+                $dateKey = $current->format('Y-m-d');
+                $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
+                $data[] = (float) ($dailySales[$dateKey] ?? 0);
+                $current->addDay();
+            }
         }
 
         return ['labels' => $labels, 'data' => $data];
     }
 
-    private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days): array
+    private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days, bool $fullMonth = false): array
     {
         $tz = 'Europe/Bucharest';
         $dailyTickets = Ticket::where('marketplace_client_id', $marketplaceId)
@@ -374,13 +416,25 @@ class Dashboard extends Page
 
         $labels = [];
         $data = [];
-        $current = Carbon::now($tz)->subDays($days)->startOfDay();
-        $end = Carbon::now($tz)->endOfDay();
-        while ($current <= $end) {
-            $dateKey = $current->format('Y-m-d');
-            $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
-            $data[] = (int) ($dailyTickets[$dateKey] ?? 0);
-            $current->addDay();
+        if ($fullMonth) {
+            $monthStart = Carbon::parse($startDate)->timezone($tz)->startOfMonth();
+            $monthEnd = Carbon::parse($endDate)->timezone($tz)->endOfMonth();
+            $current = $monthStart->copy();
+            while ($current <= $monthEnd) {
+                $dateKey = $current->format('Y-m-d');
+                $labels[] = $current->format('d');
+                $data[] = (int) ($dailyTickets[$dateKey] ?? 0);
+                $current->addDay();
+            }
+        } else {
+            $current = Carbon::now($tz)->subDays($days)->startOfDay();
+            $end = Carbon::now($tz)->endOfDay();
+            while ($current <= $end) {
+                $dateKey = $current->format('Y-m-d');
+                $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
+                $data[] = (int) ($dailyTickets[$dateKey] ?? 0);
+                $current->addDay();
+            }
         }
 
         return ['labels' => $labels, 'data' => $data];

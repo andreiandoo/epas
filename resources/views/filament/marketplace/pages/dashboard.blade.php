@@ -103,12 +103,16 @@
                     <div class="flex items-center gap-3 text-xs text-gray-500">
                         <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500 rounded"></span> Vânzări (RON)</span>
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-sm bg-purple-500/70"></span> Bilete</span>
+                        @if($chartPeriod === 'month')
+                        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-500/30 rounded border-dashed"></span> Anul trecut</span>
+                        @endif
                     </div>
                 </div>
                 <select
                     wire:model.live="chartPeriod"
                     class="py-1 text-xs border-gray-300 rounded-lg dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 focus:ring-primary-500 focus:border-primary-500"
                 >
+                    <option value="month">Luna în curs</option>
                     <option value="7">7 zile</option>
                     <option value="15">15 zile</option>
                     <option value="30">30 zile</option>
@@ -117,7 +121,7 @@
                 </select>
             </div>
             <div class="h-64">
-                <canvas id="combinedChart" data-sales='@json($chartData)' data-tickets='@json($ticketChartData)' data-currency="RON"></canvas>
+                <canvas id="combinedChart" data-sales='@json($chartData)' data-tickets='@json($ticketChartData)' data-prev-sales='@json($prevYearChartData ?? null)' data-prev-tickets='@json($prevYearTicketChartData ?? null)' data-currency="RON"></canvas>
             </div>
         </div>
 
@@ -500,38 +504,70 @@
 
             const salesStr = ctx.getAttribute('data-sales');
             const ticketsStr = ctx.getAttribute('data-tickets');
+            const prevSalesStr = ctx.getAttribute('data-prev-sales');
+            const prevTicketsStr = ctx.getAttribute('data-prev-tickets');
             if (!salesStr || !ticketsStr) return;
 
             const salesData = JSON.parse(salesStr);
             const ticketData = JSON.parse(ticketsStr);
+            const prevSalesData = prevSalesStr && prevSalesStr !== 'null' ? JSON.parse(prevSalesStr) : null;
+            const prevTicketsData = prevTicketsStr && prevTicketsStr !== 'null' ? JSON.parse(prevTicketsStr) : null;
             const currency = ctx.getAttribute('data-currency') || 'RON';
+
+            const datasets = [
+                {
+                    type: 'line',
+                    label: 'Vânzări (RON)',
+                    data: salesData.data,
+                    borderColor: isDark ? '#818cf8' : '#6366f1',
+                    backgroundColor: isDark ? 'rgba(129, 140, 248, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+                    borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 4,
+                    yAxisID: 'y',
+                    order: 1,
+                },
+                {
+                    type: 'bar',
+                    label: 'Bilete',
+                    data: ticketData.data,
+                    backgroundColor: isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)',
+                    borderColor: isDark ? '#a855f7' : '#9333ea',
+                    borderWidth: 1, borderRadius: 3,
+                    yAxisID: 'y1',
+                    order: 2,
+                }
+            ];
+
+            // Previous year comparison (only for month view)
+            if (prevSalesData) {
+                datasets.push({
+                    type: 'line',
+                    label: 'Vânzări anul trecut',
+                    data: prevSalesData.data,
+                    borderColor: isDark ? 'rgba(129, 140, 248, 0.3)' : 'rgba(99, 102, 241, 0.3)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 1.5, borderDash: [4, 4], fill: false, tension: 0.3, pointRadius: 0, pointHoverRadius: 3,
+                    yAxisID: 'y',
+                    order: 0,
+                });
+            }
+            if (prevTicketsData) {
+                datasets.push({
+                    type: 'bar',
+                    label: 'Bilete anul trecut',
+                    data: prevTicketsData.data,
+                    backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(147, 51, 234, 0.15)',
+                    borderColor: 'transparent',
+                    borderWidth: 0, borderRadius: 3,
+                    yAxisID: 'y1',
+                    order: 3,
+                });
+            }
 
             new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: salesData.labels,
-                    datasets: [
-                        {
-                            type: 'line',
-                            label: 'Vânzări (RON)',
-                            data: salesData.data,
-                            borderColor: isDark ? '#818cf8' : '#6366f1',
-                            backgroundColor: isDark ? 'rgba(129, 140, 248, 0.08)' : 'rgba(99, 102, 241, 0.08)',
-                            borderWidth: 2, fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 4,
-                            yAxisID: 'y',
-                            order: 1,
-                        },
-                        {
-                            type: 'bar',
-                            label: 'Bilete',
-                            data: ticketData.data,
-                            backgroundColor: isDark ? 'rgba(168, 85, 247, 0.6)' : 'rgba(147, 51, 234, 0.6)',
-                            borderColor: isDark ? '#a855f7' : '#9333ea',
-                            borderWidth: 1, borderRadius: 3,
-                            yAxisID: 'y1',
-                            order: 2,
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
