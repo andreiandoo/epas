@@ -640,27 +640,39 @@
                                 label: function(context) {
                                     const label = context.dataset.label || '';
                                     const val = context.parsed.y;
-                                    if (label.includes('anul trecut') || label.includes('Anul trecut')) {
+                                    const fmt = (v) => new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(v);
+
+                                    // Check if this is the first "prev year" item — insert separator
+                                    const allItems = context.chart.tooltip.dataPoints || [];
+                                    const sortedItems = [...allItems].sort((a, b) => {
+                                        const aP = (a.dataset.label || '').includes('trecut') || (a.dataset.label || '').includes('Predic') ? 1 : 0;
+                                        const bP = (b.dataset.label || '').includes('trecut') || (b.dataset.label || '').includes('Predic') ? 1 : 0;
+                                        return aP - bP;
+                                    });
+                                    const prevItems = sortedItems.filter(t => (t.dataset.label || '').includes('trecut'));
+                                    const isFirstPrev = prevItems.length > 0 && prevItems[0].datasetIndex === context.datasetIndex;
+
+                                    const lines = [];
+                                    if (isFirstPrev) {
+                                        lines.push('─── Anul trecut ───');
+                                    }
+
+                                    if (label.includes('Predic')) {
+                                        lines.push('Predicție: ' + fmt(val) + ' ' + currency);
+                                    } else if (label.includes('trecut')) {
                                         if (context.dataset.yAxisID === 'y') {
-                                            return '  Vânzări: ' + new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' ' + currency;
+                                            lines.push('Vânzări: ' + fmt(val) + ' ' + currency);
+                                        } else {
+                                            lines.push('Bilete: ' + val);
                                         }
-                                        return '  Bilete: ' + val;
+                                    } else {
+                                        if (context.dataset.yAxisID === 'y') {
+                                            lines.push('Vânzări: ' + fmt(val) + ' ' + currency);
+                                        } else {
+                                            lines.push('Bilete: ' + val);
+                                        }
                                     }
-                                    if (context.dataset.yAxisID === 'y') {
-                                        return 'Vânzări: ' + new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(val) + ' ' + currency;
-                                    }
-                                    return 'Bilete: ' + val;
-                                },
-                                beforeBody: function(tooltipItems) {
-                                    // Check if we have prev year data
-                                    const hasPrev = tooltipItems.some(t => (t.dataset.label || '').includes('trecut'));
-                                    if (!hasPrev) return [];
-                                    return [];
-                                },
-                                afterBody: function(tooltipItems) {
-                                    const hasPrev = tooltipItems.some(t => (t.dataset.label || '').includes('trecut'));
-                                    if (!hasPrev) return [];
-                                    return ['─── Anul trecut ───'];
+                                    return lines;
                                 },
                                 labelColor: function(context) {
                                     const label = context.dataset.label || '';
