@@ -127,8 +127,16 @@ class TicketsController extends BaseController
                 }
 
                 if (!empty($pages)) {
-                    $pagesHtml = implode('<div style="page-break-after: always;"></div>', $pages);
-                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style></head><body>{$pagesHtml}</body></html>";
+                    // Wrap each page in a relative container so position:fixed
+                    // elements are scoped to their page, not the whole document
+                    $wrappedPages = array_map(fn ($content) =>
+                        "<div style=\"position: relative; width: {$widthPt}pt; height: {$heightPt}pt; overflow: hidden; background-color: {$bgColor};\">" .
+                        str_replace('position: fixed;', 'position: absolute;', $content) .
+                        "</div>",
+                        $pages
+                    );
+                    $pagesHtml = implode('<div style="page-break-after: always;"></div>', $wrappedPages);
+                    $html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; font-family: 'DejaVu Sans', sans-serif; }</style></head><body>{$pagesHtml}</body></html>";
 
                     $pdf = Pdf::loadHTML($html)
                         ->setPaper([0, 0, $widthPt, $heightPt])
