@@ -90,6 +90,7 @@
             sectionFontSize: 14,
             showSectionLabel: true,
             sectionLabelPosition: 'inside',
+            sectionAutoShowRowLabels: true,
             addSeatsMode: false,
             savedViewState: null,
             rowSeatSize: 15,
@@ -1045,10 +1046,14 @@
                                 rowGroup.add(seatLabel);
                             });
 
-                            // Draw row label if enabled (check per-row setting from metadata, then global)
+                            // Draw row label if enabled. Section-level auto_show_row_labels
+                            // acts as a master switch — when false, no auto labels are drawn
+                            // regardless of per-row or global settings (user will add manually).
                             const rowMetadata = row.metadata || {};
+                            const sectionMeta = section.metadata || {};
+                            const autoShowSection = sectionMeta.auto_show_row_labels !== false;
                             const showLabel = rowMetadata.show_label !== undefined ? rowMetadata.show_label : this.showRowLabel;
-                            if (showLabel && row.label && !isTable) {
+                            if (autoShowSection && showLabel && row.label && !isTable) {
                                 // Use per-row label position from metadata, fallback to global setting
                                 const labelPos = rowMetadata.label_position || this.rowLabelPos || 'left';
                                 let labelX, labelY, labelAlign = 'center';
@@ -1292,6 +1297,7 @@
                         const metadata = section.metadata || {};
                         this.showSectionLabel = metadata.show_label !== false;
                         this.sectionLabelPosition = metadata.label_position || 'inside';
+                        this.sectionAutoShowRowLabels = metadata.auto_show_row_labels !== false;
 
                         // Initialize text editing if it's a text layer
                         if (section.section_type === 'decorative' && section.metadata?.shape === 'text') {
@@ -2364,7 +2370,8 @@
                 // Save label visibility and position
                 wire.updateSectionLabel(this.selectedSection, {
                     show_label: this.showSectionLabel,
-                    label_position: this.sectionLabelPosition
+                    label_position: this.sectionLabelPosition,
+                    auto_show_row_labels: this.sectionAutoShowRowLabels
                 });
             },
             applySectionChanges() {
@@ -4418,6 +4425,12 @@
                                 <option value="outside-right">Dreapta (exterior)</option>
                             </select>
                         </div>
+
+                        {{-- Auto-show row labels --}}
+                        <label class="flex items-center gap-1 text-xs text-gray-600" title="Dacă e dezactivat, nu se afișează automat numele rândurilor. Le poți adăuga manual ca elemente de text.">
+                            <input type="checkbox" x-model="sectionAutoShowRowLabels" x-on:change="updateSectionPreview()" class="w-3 h-3">
+                            Afișare automată nume rânduri
+                        </label>
 
                         {{-- Colors --}}
                         <div class="flex items-center gap-1">

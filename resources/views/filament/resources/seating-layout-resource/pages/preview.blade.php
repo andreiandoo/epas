@@ -121,8 +121,8 @@
                                     @endif
                                 @endforeach
 
-                                {{-- Row labels (only for non-table rows) --}}
-                                @if(!$isTable)
+                                {{-- Row labels (only for non-table rows, and only when section opts in) --}}
+                                @if(!$isTable && ($section->metadata['auto_show_row_labels'] ?? true))
                                     @php
                                         $firstSeat = $row->seats->first();
                                         $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
