@@ -89,9 +89,10 @@ class Dashboard extends Page
             return $this->computeStats($marketplaceId);
         });
 
-        // Cache chart data for 10 minutes (keyed by period)
-        $startDate = Carbon::now()->subDays($days)->startOfDay();
-        $endDate = Carbon::now()->endOfDay();
+        // Cache chart data for 10 minutes (keyed by period) — use Romania timezone
+        $tz = 'Europe/Bucharest';
+        $startDate = Carbon::now($tz)->subDays($days)->startOfDay()->utc();
+        $endDate = Carbon::now($tz)->endOfDay()->utc();
 
         $chartData = Cache::remember("mp_dash_chart_{$marketplaceId}_{$days}", 600, function () use ($marketplaceId, $startDate, $endDate, $days) {
             return $this->getChartData($marketplaceId, $startDate, $endDate, $days);
@@ -336,19 +337,21 @@ class Dashboard extends Page
 
     private function getChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days): array
     {
+        $tz = 'Europe/Bucharest';
         $dailySales = Order::where('marketplace_client_id', $marketplaceId)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+            ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, SUM(total) as total")
             ->groupBy('date')
             ->pluck('total', 'date')
             ->toArray();
 
         $labels = [];
         $data = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
+        $current = Carbon::now($tz)->subDays($days)->startOfDay();
+        $end = Carbon::now($tz)->endOfDay();
+        while ($current <= $end) {
             $dateKey = $current->format('Y-m-d');
             $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
             $data[] = (float) ($dailySales[$dateKey] ?? 0);
@@ -360,18 +363,20 @@ class Dashboard extends Page
 
     private function getTicketChartData(int $marketplaceId, Carbon $startDate, Carbon $endDate, int $days): array
     {
+        $tz = 'Europe/Bucharest';
         $dailyTickets = Ticket::where('marketplace_client_id', $marketplaceId)
             ->where('tickets.status', 'valid')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
             ->groupBy('date')
             ->pluck('count', 'date')
             ->toArray();
 
         $labels = [];
         $data = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
+        $current = Carbon::now($tz)->subDays($days)->startOfDay();
+        $end = Carbon::now($tz)->endOfDay();
+        while ($current <= $end) {
             $dateKey = $current->format('Y-m-d');
             $labels[] = $current->format($days <= 7 ? 'D' : 'M d');
             $data[] = (int) ($dailyTickets[$dateKey] ?? 0);
