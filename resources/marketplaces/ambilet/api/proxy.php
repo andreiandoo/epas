@@ -3096,8 +3096,6 @@ curl_setopt_array($ch, [
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_SSL_VERIFYPEER => true,
     CURLOPT_ENCODING => '', // Accept gzip/deflate (smaller response, faster)
-    CURLOPT_TCP_FASTOPEN => true,
-    CURLOPT_TCP_KEEPALIVE => 1,
     CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
         if (stripos($header, 'Content-Disposition:') === 0) {
             $upstreamContentDisposition = trim($header);
