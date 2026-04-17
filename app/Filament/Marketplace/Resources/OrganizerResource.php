@@ -431,10 +431,10 @@ class OrganizerResource extends Resource
                     Section::make('Bank Accounts')
                         ->icon('heroicon-o-credit-card')
                         ->description('Manage organizer bank accounts for payouts. The primary account will be used for payments.')
-                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                         ->schema([
                             Forms\Components\Placeholder::make('bank_accounts_list')
                                 ->hiddenLabel()
+                                ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderBankAccounts($record)),
 
                             Forms\Components\Repeater::make('bankAccounts')
@@ -469,6 +469,8 @@ class OrganizerResource extends Resource
                                 ->columns(4)
                                 ->addActionLabel('Add Bank Account')
                                 ->reorderable(false)
+                                ->defaultItems(0)
+                                ->minItems(0)
                                 ->maxItems(5)
                                 ->collapsible()
                                 ->collapsed()
@@ -479,7 +481,6 @@ class OrganizerResource extends Resource
                     Section::make('Contract Details')
                         ->icon('heroicon-o-document-check')
                         ->description('Contract number/series and date. Auto-filled when a contract is generated, but can be overridden by admin.')
-                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
                         ->schema([
                             Forms\Components\TextInput::make('contract_number_series')
                                 ->label('Contract Number & Series')
