@@ -571,37 +571,39 @@
                 const totalDays = salesData.labels.length;
                 const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-                // Calculate avg revenue per day-of-week from current month data
-                const dowTotals = {}; // 0=Sun..6=Sat
-                const dowCounts = {};
+                // Calculate growth ratio per day-of-week (current month vs same month last year)
+                const dowRatios = {}; // 0=Sun..6=Sat -> array of ratios
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
                     const d = new Date(monthStart);
                     d.setDate(i + 1);
                     const dow = d.getDay();
-                    dowTotals[dow] = (dowTotals[dow] || 0) + salesData.data[i];
-                    dowCounts[dow] = (dowCounts[dow] || 0) + 1;
+                    const curr = salesData.data[i];
+                    const prev = prevSalesData.data[i] || 0;
+                    if (!dowRatios[dow]) dowRatios[dow] = [];
+                    if (prev > 0 && curr > 0) dowRatios[dow].push(curr / prev);
                 }
-                const dowAvg = {};
+                const dowGrowth = {};
                 for (let dow = 0; dow < 7; dow++) {
-                    dowAvg[dow] = dowCounts[dow] ? dowTotals[dow] / dowCounts[dow] : 0;
+                    const r = dowRatios[dow] || [];
+                    dowGrowth[dow] = r.length > 0 ? r.reduce((a, b) => a + b, 0) / r.length : null;
                 }
 
-                // Overall avg for fallback
+                // Overall growth ratio as fallback
+                let allRatios = [];
+                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
+                    const curr = salesData.data[i];
+                    const prev = prevSalesData.data[i] || 0;
+                    if (prev > 0 && curr > 0) allRatios.push(curr / prev);
+                }
+                const overallGrowth = allRatios.length > 0 ? allRatios.reduce((a, b) => a + b, 0) / allRatios.length : 1;
+
+                // Overall avg daily for fallback when prev year has no data
                 let completedTotal = 0, completedDays = 0;
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
                     completedTotal += salesData.data[i];
                     if (salesData.data[i] > 0) completedDays++;
                 }
                 const overallAvg = completedDays > 0 ? completedTotal / completedDays : 0;
-
-                // Growth ratio vs previous year (for blending)
-                let ratios = [];
-                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
-                    const curr = salesData.data[i];
-                    const prev = prevSalesData.data[i] || 0;
-                    if (prev > 0 && curr > 0) ratios.push(curr / prev);
-                }
-                const growthRatio = ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 1;
 
                 // Estimate today's full-day total based on hours elapsed
                 const hoursElapsed = today.getHours() + today.getMinutes() / 60;
@@ -619,24 +621,15 @@
                     const dow = dayDate.getDay();
 
                     if (i === currentDay - 1) {
-                        // Today: extrapolate from hours passed
                         predictionData.push(todayEstimated);
                     } else {
-                        // Signal 1: day-of-week avg from current month
-                        const dowSignal = dowAvg[dow] > 0 ? dowAvg[dow] : overallAvg;
-
-                        // Signal 2: previous year same day × growth ratio
                         const prevVal = prevSalesData.data[i] || 0;
-                        const prevSignal = prevVal > 0 ? prevVal * growthRatio : 0;
+                        // Use DOW-specific growth ratio, fallback to overall
+                        const ratio = dowGrowth[dow] !== null ? dowGrowth[dow] : overallGrowth;
 
-                        // Blend: 60% current pattern + 40% historical behavior
                         let predicted;
-                        if (dowSignal > 0 && prevSignal > 0) {
-                            predicted = dowSignal * 0.6 + prevSignal * 0.4;
-                        } else if (dowSignal > 0) {
-                            predicted = dowSignal;
-                        } else if (prevSignal > 0) {
-                            predicted = prevSignal;
+                        if (prevVal > 0) {
+                            predicted = prevVal * ratio;
                         } else {
                             predicted = overallAvg;
                         }
