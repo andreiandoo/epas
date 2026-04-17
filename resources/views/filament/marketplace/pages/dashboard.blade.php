@@ -564,49 +564,55 @@
                 });
             }
 
-            // Prediction line (only for month view with prev year data)
+            // Prediction line (only for month view)
             if (prevSalesData && salesData.data.length > 0) {
                 const today = new Date();
                 const currentDay = today.getDate(); // 1-based day of month
                 const totalDays = salesData.labels.length;
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-                // Calculate avg growth ratio from completed days
-                let ratios = [];
-                for (let i = 0; i < currentDay && i < salesData.data.length; i++) {
-                    const curr = salesData.data[i];
-                    const prev = (prevSalesData.data[i] || 0);
-                    if (prev > 0 && curr > 0) {
-                        ratios.push(curr / prev);
-                    }
+                // Calculate avg revenue per day-of-week from current month data
+                const dowTotals = {}; // 0=Sun..6=Sat
+                const dowCounts = {};
+                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
+                    const d = new Date(monthStart);
+                    d.setDate(i + 1);
+                    const dow = d.getDay();
+                    dowTotals[dow] = (dowTotals[dow] || 0) + salesData.data[i];
+                    dowCounts[dow] = (dowCounts[dow] || 0) + 1;
                 }
-                const avgRatio = ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 1;
-
-                // Fallback: avg daily revenue from current month
-                let currentDaysWithData = 0;
-                let currentTotal = 0;
-                for (let i = 0; i < currentDay && i < salesData.data.length; i++) {
-                    currentTotal += salesData.data[i];
-                    if (salesData.data[i] > 0) currentDaysWithData++;
+                const dowAvg = {};
+                for (let dow = 0; dow < 7; dow++) {
+                    dowAvg[dow] = dowCounts[dow] ? dowTotals[dow] / dowCounts[dow] : 0;
                 }
-                const avgDaily = currentDaysWithData > 0 ? currentTotal / currentDaysWithData : 0;
 
-                // Build prediction: null for past days, predicted for today + future
-                const predictionData = [];
+                // Overall avg for fallback (days without enough dow data)
+                let completedTotal = 0, completedDays = 0;
+                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
+                    completedTotal += salesData.data[i];
+                    if (salesData.data[i] > 0) completedDays++;
+                }
+                const overallAvg = completedDays > 0 ? completedTotal / completedDays : 0;
+
                 // Estimate today's full-day total based on hours elapsed
                 const hoursElapsed = today.getHours() + today.getMinutes() / 60;
                 const todayActual = salesData.data[currentDay - 1] || 0;
                 const todayEstimated = hoursElapsed > 1 ? Math.round(todayActual * (24 / hoursElapsed)) : todayActual;
 
+                // Build prediction
+                const predictionData = [];
                 for (let i = 0; i < totalDays; i++) {
                     if (i < currentDay - 1) {
-                        predictionData.push(null); // Past completed days: no prediction
+                        predictionData.push(null); // Past completed days
                     } else if (i === currentDay - 1) {
-                        // Today: extrapolate based on hours passed
-                        predictionData.push(todayEstimated);
+                        predictionData.push(todayEstimated); // Today extrapolated
                     } else {
-                        // Future: prev year * ratio, or avg daily
-                        const prevVal = prevSalesData.data[i] || 0;
-                        predictionData.push(Math.round(prevVal > 0 ? prevVal * avgRatio : avgDaily));
+                        // Future: use day-of-week avg from current month
+                        const futureDate = new Date(monthStart);
+                        futureDate.setDate(i + 1);
+                        const dow = futureDate.getDay();
+                        const predicted = dowAvg[dow] > 0 ? dowAvg[dow] : overallAvg;
+                        predictionData.push(Math.round(predicted));
                     }
                 }
 
