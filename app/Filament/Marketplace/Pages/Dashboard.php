@@ -407,7 +407,7 @@ class Dashboard extends Page
     {
         $tz = 'Europe/Bucharest';
         $dailyTickets = Ticket::where('marketplace_client_id', $marketplaceId)
-            ->where('tickets.status', 'valid')
+            ->whereIn('tickets.status', ['valid', 'used'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw("DATE(created_at AT TIME ZONE 'UTC' AT TIME ZONE '{$tz}') as date, COUNT(*) as count")
             ->groupBy('date')
