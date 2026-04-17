@@ -23,3 +23,11 @@ export async function logout() {
 export async function getMe() {
   return apiGet('/organizer/me');
 }
+
+export async function switchOrganizer(organizerId) {
+  const data = await apiPost('/organizer/switch-organizer', { organizer_id: organizerId });
+  if (data.success && data.data?.token) {
+    setToken(data.data.token);
+  }
+  return data;
+}

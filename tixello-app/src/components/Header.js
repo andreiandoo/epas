@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Image } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { colors } from '../theme/colors';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
+import OrganizerSwitcherModal from './modals/OrganizerSwitcherModal';
 
 function PulsingDot({ color }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -36,21 +38,42 @@ function PulsingDot({ color }) {
   );
 }
 
-export default function Header({ onNotificationPress }) {
+export default function Header({ onNotificationPress, onOrganizerSwitched }) {
   const { isOnline, notifications } = useApp();
+  const { user, hasMultipleOrganizers } = useAuth();
   const unreadCount = notifications.filter(n => n.unread).length;
+  const [switcherOpen, setSwitcherOpen] = useState(false);
 
   return (
     <View style={styles.container}>
       <View style={styles.inner}>
-        {/* Left: Logo */}
+        {/* Left: Logo + (optional) organizer switcher */}
         <View style={styles.left}>
           <Image
             source={require('../../assets/logo-header.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />
+
+          {hasMultipleOrganizers && user ? (
+            <TouchableOpacity
+              style={styles.orgSwitcher}
+              onPress={() => setSwitcherOpen(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.orgSwitcherName} numberOfLines={1}>{user.name}</Text>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none">
+                <Path d="M6 9l6 6 6-6" stroke={colors.textSecondary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </TouchableOpacity>
+          ) : null}
         </View>
+
+        <OrganizerSwitcherModal
+          visible={switcherOpen}
+          onClose={() => setSwitcherOpen(false)}
+          onSwitched={onOrganizerSwitched}
+        />
 
         {/* Right: Connection Status + Notifications */}
         <View style={styles.right}>
@@ -119,10 +142,30 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    gap: 8,
   },
   logoImage: {
     width: 120,
     height: 54,
+  },
+  orgSwitcher: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    maxWidth: 140,
+  },
+  orgSwitcherName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    flexShrink: 1,
   },
   right: {
     flexDirection: 'row',

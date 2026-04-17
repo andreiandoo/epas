@@ -97,7 +97,7 @@ function TabIcon({ name, focused, disabled }) {
 
 function MainTabs() {
   useKeepAwake(); // Prevent screen from sleeping
-  const { userRole, userPermissions } = useAuth();
+  const { userRole, userPermissions, user } = useAuth();
   const insets = useSafeAreaInsets();
   const { groupedEvents, selectEvent, fetchEvents, isReportsOnlyMode } = useEvent();
   const { notifications, markAllRead, shiftStartTime } = useApp();
@@ -112,8 +112,14 @@ function MainTabs() {
   const [updateAvailable, setUpdateAvailable] = useState(null);
   const [activeTab, setActiveTab] = useState('Dashboard');
 
+  // Re-fetch events whenever the active organizer changes (including switches)
   useEffect(() => {
-    fetchEvents();
+    if (user?.id) {
+      fetchEvents();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
     // Check for app updates
     (async () => {
       try {

@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { getEvents, getEvent } from '../api/events';
 import { getParticipants } from '../api/participants';
 import { categorizeEvent, groupEventsByCategory } from '../utils/eventCategories';
+import { useAuth } from './AuthContext';
 
 const EventContext = createContext(null);
 
 export function EventProvider({ children }) {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventStats, setEventStats] = useState(null);
@@ -14,6 +16,25 @@ export function EventProvider({ children }) {
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [eventCommission, setEventCommission] = useState(null);
+
+  // When the active organizer changes (switch-organizer), clear all cached
+  // event data so the next fetch loads the new organizer's events.
+  const previousOrganizerId = useRef(null);
+  useEffect(() => {
+    if (!user?.id) {
+      previousOrganizerId.current = null;
+      return;
+    }
+    if (previousOrganizerId.current && previousOrganizerId.current !== user.id) {
+      setEvents([]);
+      setSelectedEvent(null);
+      setEventStats(null);
+      setTicketTypes([]);
+      setAllTicketTypes([]);
+      setEventCommission(null);
+    }
+    previousOrganizerId.current = user.id;
+  }, [user?.id]);
 
   const isReportsOnlyMode = selectedEvent?.timeCategory === 'past';
 
