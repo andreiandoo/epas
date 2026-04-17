@@ -55,9 +55,9 @@
         </div>
         @endif
 
-        <!-- Today Stats -->
+        <!-- Today Stats (auto-refresh every 30s) -->
         @if(isset($todayStats))
-        <div class="mb-5">
+        <div class="mb-5" wire:poll.30s>
             <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400">
                 <x-heroicon-o-sun class="w-4 h-4" />
                 Azi — {{ $todayStats['date_label'] }}

@@ -123,7 +123,7 @@ class Dashboard extends Page
         });
 
         // Today stats (Romania timezone)
-        $todayStats = Cache::remember("mp_dash_today_{$marketplaceId}", 120, function () use ($marketplaceId) {
+        $todayStats = Cache::remember("mp_dash_today_{$marketplaceId}", 30, function () use ($marketplaceId) {
             return $this->computeTodayStats($marketplaceId);
         });
 
