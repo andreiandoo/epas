@@ -182,6 +182,9 @@ class EditEvent extends EditRecord
                 $newEvent->interested_count = 0;
                 $newEvent->save();
 
+                // Clear M2M relationships that may have been carried over by replicate
+                $newEvent->artists()->detach();
+
                 $newEvent->slug = $baseSlug . '-' . $newEvent->id;
                 $newEvent->save();
 
