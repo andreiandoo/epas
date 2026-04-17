@@ -144,12 +144,12 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 </button>
                             </div>
                             <div class="flex flex-col items-center gap-4">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fcore.tixello.com%2Fdownload-android&size=160x160&margin=8" alt="QR Code - Descarcă aplicația" class="w-40 h-40 border rounded-lg border-border" loading="lazy">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?data=https%3A%2F%2Fambilet.ro%2Fandroid&size=160x160&margin=8" alt="QR Code - Descarcă aplicația" class="w-40 h-40 border rounded-lg border-border" loading="lazy">
                                 <div class="text-center">
                                     <p class="text-sm text-muted">Scanează codul QR sau apasă butonul</p>
-                                    <p class="mt-1 text-xs text-muted/70">Versiune curentă: <strong>1.3.5</strong></p>
+                                    <p class="mt-1 text-xs text-muted/70">Versiune curentă: <strong>1.4.5</strong></p>
                                 </div>
-                                <a href="https://core.tixello.com/download-android" target="_blank" class="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+                                <a href="https://ambilet.ro/android" target="_blank" class="flex items-center justify-center w-full gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                     Descarcă Aplicatia
                                 </a>
