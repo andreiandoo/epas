@@ -18,7 +18,7 @@ const AMBILET_CONFIG = {
     SITE_NAME: PHP_CONFIG.siteName || 'Ambilet',
     SITE_URL: PHP_CONFIG.siteUrl || 'https://ambilet.ro',
     STORAGE_URL: PHP_CONFIG.storageUrl || 'https://core.tixello.com/storage',
-    SUPPORT_EMAIL: 'support@ambilet.ro',
+    SUPPORT_EMAIL: 'bilete@ambilet.ro',
 
     // Currency
     CURRENCY: 'RON',

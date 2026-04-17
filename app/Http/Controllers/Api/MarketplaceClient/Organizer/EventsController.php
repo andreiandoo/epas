@@ -857,9 +857,13 @@ class EventsController extends BaseController
         return $this->paginated($tickets, function ($ticket) {
             $customer = $ticket->order->marketplaceCustomer;
             $ticketType = $ticket->ticketType;
+            $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
+            $attendeePhone = $ticketMeta['attendee_phone'] ?? $ticketMeta['beneficiary_phone'] ?? null;
+
             return [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
+                'code' => $ticket->code,
                 'qr_code' => $ticket->qr_code_url ?? null,
                 'ticket_type' => $ticketType?->name,
                 'ticket_type_id' => $ticket->ticket_type_id,
@@ -873,6 +877,11 @@ class EventsController extends BaseController
                         : $ticket->order->customer_name,
                     'email' => $customer?->email ?? $ticket->order->customer_email,
                     'phone' => $customer?->phone ?? $ticket->order->customer_phone,
+                ],
+                'attendee' => [
+                    'name' => $ticket->attendee_name,
+                    'email' => $ticket->attendee_email,
+                    'phone' => $attendeePhone,
                 ],
                 'order_number' => $ticket->order->order_number,
                 'source' => $ticket->order->source,

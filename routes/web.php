@@ -423,11 +423,15 @@ Route::get('/gate', [\App\Http\Controllers\Public\GateController::class, 'show']
 
 // Android APK Download
 Route::get('/download-android', function () {
-    $path = public_path('downloads/tixello-staff.apk');
+    // Prefer new filename, fall back to legacy filename for backwards compat
+    $path = public_path('downloads/ambilet-android.apk');
+    if (!file_exists($path)) {
+        $path = public_path('downloads/tixello-staff.apk');
+    }
     if (!file_exists($path)) {
         abort(404, 'APK not available yet');
     }
-    return response()->download($path, 'tixello-staff.apk', [
+    return response()->download($path, 'ambilet-android.apk', [
         'Content-Type' => 'application/vnd.android.package-archive',
     ]);
 })->name('download.android');
