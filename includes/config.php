@@ -36,14 +36,14 @@ define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');
-define('SITE_URL', 'https://bilete.online'); // Change to ambilet.ro in production
+define('SITE_URL', 'https://ambilet.ro');
 define('SITE_LOCALE', 'ro');
 
 $siteName = SITE_NAME;
 
 // Support Contact
-define('SUPPORT_EMAIL', 'suport@bilete.online'); // Change to suport@ambilet.ro in production
-define('SUPPORT_PHONE', '+40 21 XXX XXXX'); // Replace with actual phone number
+define('SUPPORT_EMAIL', 'contact@ambilet.ro');
+define('SUPPORT_PHONE', '+40 726 13 15 16'); // Replace with actual phone number
 
 // ===========================================
 // BREVO (Sendinblue) Email Configuration
@@ -51,7 +51,7 @@ define('SUPPORT_PHONE', '+40 21 XXX XXXX'); // Replace with actual phone number
 // Get your API key from: https://app.brevo.com/settings/keys/api
 define('BREVO_API_KEY', 'xkeysib-YOUR-API-KEY-HERE'); // Replace with actual Brevo API key
 define('BREVO_SENDER_NAME', SITE_NAME);
-define('BREVO_SENDER_EMAIL', 'noreply@bilete.online'); // Must be verified in Brevo
+define('BREVO_SENDER_EMAIL', 'noreply@ambilet.ro'); // Must be verified in Brevo
 
 // Email templates directory
 define('EMAIL_TEMPLATES_DIR', AMBILET_ROOT . '/emails');

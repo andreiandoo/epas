@@ -48,41 +48,43 @@ class ApiCache {
 
     // Cache TTL in seconds by action pattern
     private static $ttlMap = [
-        // Long cache (1 hour) - static/rarely changing content
-        'categories' => 3600,
-        'event-categories' => 3600,
-        'event-genres' => 3600,
-        'event-types' => 3600,
-        'venue-categories' => 3600,
-        'artists.genre-counts' => 3600,
-        'artists.alphabet' => 3600,
-        'locations.stats' => 3600,
-        'locations.regions' => 3600,
-        'locations.cities.alphabet' => 3600,
+        // Very long cache (24 hours) - truly static content
+        'categories' => 86400,
+        'event-categories' => 86400,
+        'event-types' => 86400,
+        'venue-categories' => 86400,
+        'locations.regions' => 86400,
+        'locations.cities.alphabet' => 86400,
+        'artists.alphabet' => 86400,
 
-        // Medium cache (10 minutes) - content that changes occasionally
-        'events.featured' => 600,
-        'events.cities' => 600,
-        'venues.featured' => 600,
-        'artists.featured' => 600,
-        'artists.trending' => 600,
-        'locations.cities.featured' => 600,
-        'cities' => 600,
+        // Long cache (6 hours) - rarely changing
+        'event-genres' => 21600,
+        'artists.genre-counts' => 21600,
+        'locations.stats' => 21600,
 
-        // Short cache (3 minutes) - frequently changing but still cacheable
-        'events' => 180,
-        'venues' => 180,
-        'artists' => 180,
-        'organizers' => 180,
-        'organizer' => 180,
+        // Medium cache (30 minutes) - content that changes occasionally
+        'events.featured' => 1800,
+        'events.cities' => 1800,
+        'venues.featured' => 1800,
+        'artists.featured' => 1800,
+        'artists.trending' => 1800,
+        'locations.cities.featured' => 1800,
+        'cities' => 1800,
 
-        // Very short cache (10 seconds) - single item views need quick updates
-        'event' => 10,
-        'venue' => 10,
-        'artist' => 10,
+        // Short cache — events use 30s for near-instant visibility of newly published events
+        'events' => 30,
+        'venues' => 300,
+        'artists' => 300,
+        'organizers' => 300,
+        'organizer' => 300,
 
-        // Very short cache (1 minute) - search results
-        'search' => 60,
+        // Very short cache (30 seconds) - single item views need quick updates
+        'event' => 30,
+        'venue' => 60,
+        'artist' => 60,
+
+        // Very short cache (2 minutes) - search results
+        'search' => 120,
     ];
 
     public static function init() {
@@ -128,9 +130,16 @@ class ApiCache {
         if (!file_exists($cacheFile)) return null;
 
         $mtime = filemtime($cacheFile);
-        if (time() - $mtime > $ttl) {
-            @unlink($cacheFile); // Expired
-            return null;
+        $age = time() - $mtime;
+
+        // Stale-while-revalidate: serve stale up to 10x TTL if refresh fails
+        // Mark as stale so caller knows to refresh in background
+        if ($age > $ttl) {
+            if ($age > $ttl * 10) {
+                @unlink($cacheFile);
+                return null; // Too stale, delete
+            }
+            // Serve stale — caller should refresh
         }
 
         $data = @file_get_contents($cacheFile);
@@ -543,27 +552,61 @@ function fetchParticipantsWithAuth($eventIds, $authHeader) {
     return $result;
 }
 
-// Rate limiting (simple IP-based)
-session_start();
+// Rate limiting (simple IP-based, file-based to avoid session locks)
 $ip = $_SERVER['REMOTE_ADDR'];
-$rateKey = 'rate_' . md5($ip);
-$rateLimit = 60; // requests per minute
+$rateLimit = 300; // requests per minute
 $rateWindow = 60; // seconds
+$rateKey = 'rate_' . md5($ip);
+$rateFile = dirname(__DIR__) . '/data/rate-limits/' . $rateKey . '.json';
 
-if (!isset($_SESSION[$rateKey])) {
-    $_SESSION[$rateKey] = ['count' => 0, 'start' => time()];
+if (!is_dir(dirname($rateFile))) {
+    @mkdir(dirname($rateFile), 0755, true);
 }
 
-if (time() - $_SESSION[$rateKey]['start'] > $rateWindow) {
-    $_SESSION[$rateKey] = ['count' => 0, 'start' => time()];
+$now = time();
+$rateData = ['count' => 0, 'start' => $now];
+if (file_exists($rateFile)) {
+    $raw = @file_get_contents($rateFile);
+    if ($raw) {
+        $decoded = @json_decode($raw, true);
+        if (is_array($decoded)) $rateData = $decoded;
+    }
 }
+if ($now - ($rateData['start'] ?? 0) > $rateWindow) {
+    $rateData = ['count' => 0, 'start' => $now];
+}
+$rateData['count']++;
 
-$_SESSION[$rateKey]['count']++;
-
-if ($_SESSION[$rateKey]['count'] > $rateLimit) {
+if ($rateData['count'] > $rateLimit) {
     http_response_code(429);
     echo json_encode(['error' => 'Too many requests. Please try again later.']);
     exit;
+}
+
+@file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+// Session: only start for actions that need it (cart, auth, checkout)
+// Public browsing endpoints skip session entirely — major perf win
+$actionForSession = $_GET['action'] ?? '';
+$needsSession = str_starts_with($actionForSession, 'cart')
+    || str_starts_with($actionForSession, 'checkout')
+    || str_starts_with($actionForSession, 'customer.')
+    || str_starts_with($actionForSession, 'organizer.')
+    || str_contains($actionForSession, 'login')
+    || str_contains($actionForSession, 'register')
+    || str_contains($actionForSession, 'password')
+    || $actionForSession === 'orders.pay'
+    || $actionForSession === 'orders.status'
+    || $actionForSession === 'checkout';
+
+$sessionIdForHeader = '';
+if ($needsSession) {
+    session_start();
+    $sessionIdForHeader = session_id();
+    session_write_close();
+} else {
+    // Generate stable pseudo-session ID from client fingerprint (for cart tracking across calls)
+    $sessionIdForHeader = $_COOKIE[session_name()] ?? hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . ($_SERVER['HTTP_USER_AGENT'] ?? ''));
 }
 
 // Get action
@@ -1190,6 +1233,18 @@ switch ($action) {
         // No auth required — uses marketplace API key + order reference
         break;
 
+    case 'ticket.download-pdf':
+        $method = 'GET';
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $endpoint = '/tickets/' . urlencode($ticketId) . '/download';
+        $rawResponse = true;
+        break;
+
     case 'customer.orders':
         $method = 'GET';
         $params = [];
@@ -1671,6 +1726,20 @@ switch ($action) {
         $method = 'POST';
         $body = file_get_contents('php://input');
         $endpoint = '/organizer/reset-password';
+        break;
+
+    case 'organizer.validate-invite':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['token'])) $params['token'] = $_GET['token'];
+        if (isset($_GET['email'])) $params['email'] = $_GET['email'];
+        $endpoint = '/organizer/team/validate-invite?' . http_build_query($params);
+        break;
+
+    case 'organizer.accept-invite':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/team/accept-invite';
         break;
 
     case 'organizer.verify-email':
@@ -2938,7 +3007,7 @@ if ((!empty($isFileUpload) || !empty($isMultipart)) && !empty($_FILES)) {
         'X-API-Key: ' . API_KEY,
         'Accept: application/json',
         'User-Agent: Ambilet Marketplace/1.0',
-        'X-Session-ID: ' . session_id(),
+        'X-Session-ID: ' . $sessionIdForHeader,
     ];
 
     if ($requiresAuth) {
@@ -2994,7 +3063,7 @@ $headers = [
     'X-API-Key: ' . API_KEY,
     'Accept: ' . $acceptHeader,
     'User-Agent: Ambilet Marketplace/1.0',
-    'X-Session-ID: ' . session_id()  // Pass session ID for cart/checkout functionality
+    'X-Session-ID: ' . $sessionIdForHeader  // Pass session ID for cart/checkout functionality
 ];
 
 // Forward Authorization header for authenticated requests
@@ -3012,26 +3081,52 @@ if ($requiresAuth) {
     }
 }
 
-$context = stream_context_create([
-    'http' => [
-        'method' => $method,
-        'header' => $headers,
-        'content' => $body,
-        'timeout' => 30,
-        'ignore_errors' => true
-    ]
+// Use curl (file_get_contents requires allow_url_fopen which may be disabled)
+$ch = curl_init($url);
+$curlHeaders = [];
+foreach ($headers as $h) {
+    $curlHeaders[] = $h;
+}
+$upstreamContentDisposition = '';
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 15,
+    CURLOPT_CONNECTTIMEOUT => 3,
+    CURLOPT_HTTPHEADER => $curlHeaders,
+    CURLOPT_FOLLOWLOCATION => true,
+    CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_ENCODING => '', // Accept gzip/deflate (smaller response, faster)
+    CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
+        if (stripos($header, 'Content-Disposition:') === 0) {
+            $upstreamContentDisposition = trim($header);
+        }
+        return strlen($header);
+    },
 ]);
 
-$response = @file_get_contents($url, false, $context);
+if ($method === 'POST') {
+    curl_setopt($ch, CURLOPT_POST, true);
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PUT') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PUT');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'DELETE') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+} elseif ($method === 'PATCH') {
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'PATCH');
+    if ($body) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+}
 
-// Get HTTP status from response headers
-$statusCode = 200;
-if (isset($http_response_header)) {
-    foreach ($http_response_header as $header) {
-        if (preg_match('/HTTP\/\d\.\d\s+(\d+)/', $header, $matches)) {
-            $statusCode = (int)$matches[1];
-        }
-    }
+$response = curl_exec($ch);
+$statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+$curlError = curl_error($ch);
+curl_close($ch);
+
+if ($response === false || $statusCode === 0) {
+    error_log("[proxy.php] CURL ERROR: {$method} {$url} => {$curlError}");
+    $response = false;
+    $statusCode = 502;
 }
 
 // Debug log for non-2xx responses
@@ -3053,8 +3148,10 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     $browserTtl = match(true) {
         // Static/rarely changing content — 1 day browser cache
         in_array($action, ['categories', 'event-categories', 'event-genres', 'venue-categories', 'locations.regions', 'locations.stats']) => 86400,
-        // Listings — 5 min browser cache
-        in_array($action, ['events', 'events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
+        // Events — 30s browser cache for near-instant visibility of newly published events
+        $action === 'events' => 30,
+        // Other listings — 5 min browser cache
+        in_array($action, ['events.featured', 'venues', 'venues.featured', 'artists', 'organizers', 'locations.cities']) => 300,
         // Single items — 2 min browser cache
         str_starts_with($action, 'event') || str_starts_with($action, 'venue') || str_starts_with($action, 'artist') || str_starts_with($action, 'organizer') => 120,
         // Search — 1 min
@@ -3071,12 +3168,24 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     header('Cache-Control: no-store');
 }
 
-// For raw responses (PDF, exports), forward Content-Type and Content-Disposition from upstream
-if (!empty($rawResponse) && isset($http_response_header)) {
-    foreach ($http_response_header as $header) {
-        if (preg_match('/^(Content-Type|Content-Disposition):/i', $header)) {
-            header($header);
+// For raw responses (PDF, CSV, exports), forward headers from upstream via curl
+if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
+    if (str_starts_with($response, '%PDF')) {
+        header('Content-Type: application/pdf');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="bilete.pdf"');
         }
+        header('Content-Length: ' . strlen($response));
+    } elseif (!empty($upstreamContentDisposition) || str_starts_with($response, "\xEF\xBB\xBF") || str_starts_with($response, 'Ticket ID,') || str_starts_with($response, 'Comanda,')) {
+        header('Content-Type: text/csv; charset=UTF-8');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="export.csv"');
+        }
+        header('Content-Length: ' . strlen($response));
     }
 }
 

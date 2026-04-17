@@ -43,8 +43,8 @@ require_once dirname(__DIR__) . '/includes/head.php';
         <div class="flex items-center justify-center flex-1 p-6 lg:p-12">
             <div class="w-full max-w-md">
                 <div class="mb-8 text-center">
-                    <h2 class="mb-2 text-2xl font-bold lg:text-3xl text-secondary">Autentificare</h2>
-                    <p class="text-muted">Introdu datele pentru a accesa dashboard-ul</p>
+                    <h2 class="mb-2 text-2xl font-bold lg:text-3xl text-secondary">Autentificare Organizator</h2>
+                    <p class="text-muted">Introdu datele pentru a accesa panoul</p>
                 </div>
                 <div id="error-message" class="hidden p-4 mb-6 text-sm border border-red-200 bg-red-50 rounded-xl text-error"></div>
                 <form id="login-form" class="space-y-4">

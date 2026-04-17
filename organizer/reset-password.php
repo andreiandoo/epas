@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/includes/config.php';
-$pageTitle = 'Setează Parolă Nouă';
-$pageDescription = 'Setează o parolă nouă pentru contul tău';
+require_once __DIR__ . '/../includes/config.php';
+$pageTitle = 'Setează Parolă Nouă — Organizator';
+$pageDescription = 'Setează o parolă nouă pentru contul de organizator';
 $cssBundle = 'auth';
 $bodyClass = 'flex min-h-screen';
-require_once __DIR__ . '/includes/head.php';
+require_once __DIR__ . '/../includes/head.php';
 ?>
     <!-- Left Side - Branding -->
     <div class="relative hidden overflow-hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary via-primary-dark to-secondary">
@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/head.php';
                     </form>
 
                     <p class="mt-6 text-sm text-center text-muted">
-                        <a href="/autentificare" class="font-semibold text-primary">Înapoi la autentificare</a>
+                        <a href="/organizator/login" class="font-semibold text-primary">Înapoi la autentificare</a>
                     </p>
                 </div>
 
@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/head.php';
                     <h2 class="mb-2 text-2xl font-bold text-secondary">Parolă schimbată!</h2>
                     <p class="mb-8 text-muted">Parola ta a fost actualizată cu succes. Poți acum să te autentifici cu noua parolă.</p>
 
-                    <a href="/autentificare" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
+                    <a href="/organizator/login" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center bg-primary">
                         Mergi la autentificare
                     </a>
 
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/head.php';
                     <a href="/forgot-password" class="btn-primary bg-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center mb-3">
                         Solicită link nou
                     </a>
-                    <a href="/autentificare" class="block w-full py-3 text-sm font-medium text-center text-primary">
+                    <a href="/organizator/login" class="block w-full py-3 text-sm font-medium text-center text-primary">
                         Înapoi la autentificare
                     </a>
                 </div>
@@ -319,7 +319,7 @@ const ResetPage = {
         btn.textContent = 'Se salvează...';
 
         try {
-            const response = await AmbiletAPI.post('/customer/reset-password', {
+            const response = await AmbiletAPI.post('/organizer/reset-password', {
                 token,
                 email,
                 password,
@@ -340,7 +340,7 @@ const ResetPage = {
 
                     if (countdown <= 0) {
                         clearInterval(timer);
-                        window.location.href = '/autentificare';
+                        window.location.href = '/organizator/login';
                     }
                 }, 1000);
             } else {
@@ -369,4 +369,4 @@ document.addEventListener('DOMContentLoaded', () => ResetPage.init());
 </script>
 SCRIPTS;
 
-require_once __DIR__ . '/includes/scripts.php';
+require_once __DIR__ . '/../includes/scripts.php';

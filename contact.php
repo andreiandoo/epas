@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/header.php';
 <main class="px-6 py-12 mx-auto max-w-7xl">
     <!-- Contact Options -->
     <div class="relative z-10 grid grid-cols-1 gap-5 mb-12 -mt-20 sm:grid-cols-2 lg:grid-cols-3">
-        <a href="mailto:support@ambilet.ro" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
+        <a href="mailto:bilete@ambilet.ro" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">
             <div class="w-14 h-14 bg-gradient-to-br from-primary to-primary-light rounded-[14px] flex items-center justify-center mx-auto mb-4 text-white">
                 <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
@@ -44,7 +44,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <h3 class="text-base font-bold text-gray-900 mb-1.5">Email</h3>
             <p class="mb-3 text-sm text-gray-500">Răspundem în 24h</p>
-            <span class="text-sm font-semibold text-primary">support@ambilet.ro</span>
+            <span class="text-sm font-semibold text-primary">bilete@ambilet.ro</span>
         </a>
 
         <a href="tel:+40729121232" class="text-center transition-all bg-white border border-gray-200 shadow-lg rounded-2xl p-7 hover:-translate-y-1 hover:shadow-xl hover:border-primary group">

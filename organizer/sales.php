@@ -67,7 +67,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <p class="text-xs text-muted mt-1" id="stat-orders-breakdown"></p>
                 </div>
                 <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Valoare totala</p>
+                    <p class="text-sm text-muted mb-1">Venituri nete</p>
                     <p class="text-2xl font-bold text-primary" id="stat-total-value">-</p>
                 </div>
                 <div class="bg-white border border-border rounded-2xl p-4">
@@ -158,17 +158,37 @@ function maskEmail(email) {
     return masked + '@' + domain;
 }
 
+function isEventLive(ev) {
+    if (ev.is_cancelled || ev.is_postponed || ev.is_past || ev.is_ended) return false;
+    if (ev.status !== 'published' && ev.status !== 'active') return false;
+    const endDate = ev.ends_at || ev.starts_at;
+    return !endDate || new Date(endDate) >= new Date();
+}
+
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events', { per_page: 100 });
         if (response.success) {
             eventsData = response.data.events || response.data || [];
+            // Sort: live first, then by date ascending (closest first)
+            eventsData.sort((a, b) => {
+                const aLive = isEventLive(a), bLive = isEventLive(b);
+                if (aLive && !bLive) return -1;
+                if (!aLive && bLive) return 1;
+                const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
+                return aLive ? aDate - bDate : bDate - aDate; // live: closest first, ended: most recent first
+            });
             const select = document.getElementById('filter-event');
-            select.innerHTML = '<option value="">Toate evenimentele</option>';
+            select.innerHTML = '<option value="">Selecteaza un eveniment</option>';
             eventsData.forEach(ev => {
                 const opt = document.createElement('option');
                 opt.value = ev.id;
-                opt.textContent = ev.name || ev.title;
+                const live = isEventLive(ev);
+                const dot = live ? '🟢 ' : '⚫ ';
+                const date = ev.starts_at ? AmbiletUtils.formatDate(ev.starts_at) : '';
+                const venue = ev.venue_name || '';
+                const meta = [date, venue].filter(Boolean).join(' · ');
+                opt.textContent = dot + (ev.name || ev.title) + (meta ? ' — ' + meta : '');
                 select.appendChild(opt);
             });
             // Set from URL param
@@ -277,7 +297,7 @@ function renderOrders() {
                     <span class="font-semibold text-secondary">${order.tickets_count || 0}</span>
                 </td>
                 <td class="px-4 py-3 text-right">
-                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency(order.total || 0)}</span>
+                    <span class="font-semibold text-secondary">${AmbiletUtils.formatCurrency((order.net_total ?? order.total) || 0)}</span>
                 </td>
                 <td class="px-4 py-3 text-center">${statusBadge}</td>
                 <td class="px-4 py-3">

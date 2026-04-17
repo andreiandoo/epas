@@ -143,26 +143,35 @@ function escapeHtmlP(str) {
     return div.innerHTML;
 }
 
+function isEventLive(ev) {
+    if (ev.is_cancelled || ev.is_postponed || ev.is_past || ev.is_ended) return false;
+    if (ev.status !== 'published' && ev.status !== 'active') return false;
+    const endDate = ev.ends_at || ev.starts_at;
+    return !endDate || new Date(endDate) >= new Date();
+}
+
 async function loadEvents() {
     try {
         const response = await AmbiletAPI.get('/organizer/events');
         const events = response.data || [];
 
         if (response.success && events.length > 0) {
-            // Sort events: live/published first, then by date (most recent first)
+            // Sort: live first (closest date first), then ended (most recent first)
             const sortedEvents = events.sort((a, b) => {
-                const aIsLive = a.status === 'live' || a.status === 'published' || a.is_published;
-                const bIsLive = b.status === 'live' || b.status === 'published' || b.is_published;
-                if (aIsLive && !bIsLive) return -1;
-                if (!aIsLive && bIsLive) return 1;
-                const aDate = new Date(a.event_date || a.created_at || 0);
-                const bDate = new Date(b.event_date || b.created_at || 0);
-                return bDate - aDate;
+                const aLive = isEventLive(a), bLive = isEventLive(b);
+                if (aLive && !bLive) return -1;
+                if (!aLive && bLive) return 1;
+                const aDate = new Date(a.starts_at || 0), bDate = new Date(b.starts_at || 0);
+                return aLive ? aDate - bDate : bDate - aDate;
             });
 
             eventsList = sortedEvents.map(event => {
-                const eventDate = event.event_date ? AmbiletUtils.formatDate(event.event_date) : '';
-                return { id: event.id, label: (event.name || event.title) + (eventDate ? ' - ' + eventDate : '') };
+                const live = isEventLive(event);
+                const dot = live ? '🟢 ' : '⚫ ';
+                const date = event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : '';
+                const venue = event.venue_name || '';
+                const meta = [date, venue].filter(Boolean).join(' · ');
+                return { id: event.id, label: dot + (event.name || event.title) + (meta ? ' — ' + meta : ''), live };
             });
 
             // Pre-select first event (most recent live)

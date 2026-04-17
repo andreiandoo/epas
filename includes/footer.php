@@ -79,9 +79,9 @@ $currentYear = date('Y');
             <!-- Footer Grid -->
             <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
                 <!-- Brand Column -->
-                <div class="text-center lg:col-span-1 lg:text-left">
-                    <div class="items-center hidden gap-4 mobile:flex">
-                        <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8">
+                <div class="text-center mobile:border-b mobile:mb-5 mobile:pb-5 mobile:border-white/10 lg:col-span-1 lg:text-left ">
+                    <div class="items-center hidden gap-4 mobile:flex mobile:justify-center mobile:pb-4">
+                        <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4 mobile:gap-8 mobile:hidden">
                             <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                         </a>
                         <div class="hidden mobile:flex gap-2.5 justify-center lg:justify-start">
@@ -138,7 +138,7 @@ $currentYear = date('Y');
                             </svg>
                         </a>
                     </div>
-                    <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start mobile:border-b mobile:pb-5 mobile:mb-5">
+                    <div class="items-center justify-center hidden gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start mobile:border-b mobile:pb-5 mobile:mb-5">
                         <span class="text-xs text-white/40">Powered by</span>
                         <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/90 hover:text-white">
                             <img src="/assets/images/tixello-logo.svg" alt="Tixello" width="40" height="12" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>

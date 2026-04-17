@@ -51,6 +51,33 @@ function isContentCorrupted(string $content): bool {
 }
 
 /**
+ * HTTP GET via curl (works without allow_url_fopen)
+ */
+function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
+    $defaultHeaders = ['Accept: application/json'];
+    if (defined('API_KEY')) {
+        $defaultHeaders[] = 'X-API-Key: ' . API_KEY;
+    }
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => $timeout,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_FOLLOWLOCATION => true,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_HTTPHEADER => $headers ?: $defaultHeaders,
+    ]);
+    $response = curl_exec($ch);
+    $err = curl_error($ch);
+    curl_close($ch);
+    if ($response === false || $err) {
+        error_log('[nav-cache] Curl failed for ' . $url . ': ' . $err);
+        return false;
+    }
+    return $response;
+}
+
+/**
  * Get navigation counts with caching
  *
  * @return array Associative array of counts by type and slug
@@ -133,14 +160,7 @@ function fetchNavCountsFromAPI(): array|false {
     // Try to fetch from API
     $apiUrl = (defined('SITE_URL') ? SITE_URL : '') . NAV_API_URL;
 
-    $context = stream_context_create([
-        'http' => [
-            'timeout' => 5, // 5 second timeout
-            'ignore_errors' => true
-        ]
-    ]);
-
-    $response = @file_get_contents($apiUrl, false, $context);
+    $response = navCacheFetch($apiUrl);
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch nav counts from API: ' . $apiUrl);
@@ -344,23 +364,9 @@ function fetchFeaturedCitiesFromAPI(): array|false {
     // Call API directly (not through proxy) for server-side requests
     $apiUrl = API_BASE_URL . '/locations/cities/featured';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+
+    $response = navCacheFetch($apiUrl);
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch featured cities from API: ' . $apiUrl);
@@ -538,52 +544,11 @@ function fetchEventCategoriesFromAPI(): array|false {
     // Call API directly (not through proxy) for server-side requests
     $apiUrl = API_BASE_URL . '/event-categories';
 
-    // Use curl for more reliable HTTPS connections
-    if (function_exists('curl_init')) {
-        $ch = curl_init($apiUrl);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT => 5,
-            CURLOPT_HTTPHEADER => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => 0,
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
+    $response = navCacheFetch($apiUrl);
 
-        if ($response === false || $httpCode >= 400) {
-            error_log('[nav-cache] Curl failed for event categories: ' . ($error ?: "HTTP $httpCode") . ' URL: ' . $apiUrl);
-            return false;
-        }
-    } else {
-        // Fallback to file_get_contents
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => [
-                    'X-API-Key: ' . API_KEY,
-                    'Accept: application/json',
-                ],
-                'timeout' => 5,
-                'ignore_errors' => true
-            ],
-            'ssl' => [
-                'verify_peer' => false,
-                'verify_peer_name' => false
-            ]
-        ]);
-
-        $response = @file_get_contents($apiUrl, false, $context);
-
-        if ($response === false) {
-            error_log('[nav-cache] Failed to fetch event categories from API: ' . $apiUrl);
-            return false;
-        }
+    if ($response === false) {
+        error_log('[nav-cache] Failed to fetch event categories from API: ' . $apiUrl);
+        return false;
     }
 
     $data = json_decode($response, true);
@@ -704,23 +669,9 @@ function fetchTrendingEventsFromAPI(): array|false {
     // First try featured events
     $apiUrl = API_BASE_URL . '/events/featured?type=any&limit=3';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+
+    $response = navCacheFetch($apiUrl);
     $events = [];
 
     if ($response !== false) {
@@ -734,7 +685,7 @@ function fetchTrendingEventsFromAPI(): array|false {
     if (empty($events)) {
         $apiUrl = API_BASE_URL . '/events?per_page=3&sort=date_asc';
 
-        $response = @file_get_contents($apiUrl, false, $context);
+        $response = navCacheFetch($apiUrl);
 
         if ($response !== false) {
             $data = json_decode($response, true);
@@ -887,23 +838,9 @@ function fetchFeaturedVenuesFromAPI(): array|false {
     // Request more than 8 so we can randomly pick 8 if more are promoted
     $apiUrl = API_BASE_URL . '/venues/featured?limit=20';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+
+    $response = navCacheFetch($apiUrl);
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch featured venues from API: ' . $apiUrl);
@@ -1082,23 +1019,9 @@ function fetchVenueCategoriesFromAPI(): array|false {
     // Call API directly (not through proxy) for server-side requests
     $apiUrl = API_BASE_URL . '/venue-categories';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+
+    $response = navCacheFetch($apiUrl);
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch venue categories from API: ' . $apiUrl);
@@ -1342,23 +1265,9 @@ function fetchEventGenresFromAPI(): array {
     // Call API directly (not through proxy) for server-side requests
     $apiUrl = API_BASE_URL . '/event-genres';
 
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => [
-                'X-API-Key: ' . API_KEY,
-                'Accept: application/json',
-            ],
-            'timeout' => 5,
-            'ignore_errors' => true
-        ],
-        'ssl' => [
-            'verify_peer' => false,
-            'verify_peer_name' => false
-        ]
-    ]);
 
-    $response = @file_get_contents($apiUrl, false, $context);
+
+    $response = navCacheFetch($apiUrl);
 
     if ($response === false) {
         error_log('[nav-cache] Failed to fetch event genres from API: ' . $apiUrl);

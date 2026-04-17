@@ -5,6 +5,16 @@ RewriteEngine On
 # Set default index file
 DirectoryIndex index.php index.html
 
+# Redirect old WP email tracking links and ticket downloads to old.ambilet.ro
+RewriteCond %{REQUEST_URI} ^/wp-json/wp-mail-smtp/ [NC]
+RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
+
+RewriteCond %{QUERY_STRING} download_ticket [NC]
+RewriteRule ^(.*)$ https://old.ambilet.ro/$1 [R=302,L,QSA]
+
+# Android app download redirect
+RewriteRule ^android/?$ https://core.tixello.com/android [R=302,L]
+
 # Force HTTPS (uncomment in production)
 # RewriteCond %{HTTPS} off
 # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
@@ -105,6 +115,22 @@ RewriteRule ^organizator/register/?$ organizer/register.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^organizator/landing/?$ organizer/landing.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/accept-invite/?$ organizer/accept-invite.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/forgot-password/?$ organizer/forgot-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/resetare-parola/?$ organizer/reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/reset-password/?$ organizer/reset-password.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -340,10 +366,14 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^parola-uitata/?$ forgot-password.php [L]
 
-# /resetare-parola -> reset-password.php
+# /resetare-parola and /reset-password -> reset-password.php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^resetare-parola/?$ reset-password.php [L]
+RewriteRule ^resetare-parola/?$ reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^reset-password/?$ reset-password.php [L,QSA]
 
 # /cos -> cart.php
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -570,3 +600,10 @@ Options -Indexes
 # Custom error pages (create these files if needed)
 ErrorDocument 404 /404.php
 ErrorDocument 500 /500.php
+
+
+# Force PHP 8.3
+<IfModule mime_module>
+  AddHandler application/x-httpd-ea-php83 .php
+</IfModule>
+
