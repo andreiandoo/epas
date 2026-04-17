@@ -3421,11 +3421,15 @@ class DesignerSeatingLayout extends Page
         }
 
         $metadata = $section->metadata ?? [];
-        $metadata['show_label'] = $settings['show_label'] ?? true;
+        $metadata['show_label'] = (bool) ($settings['show_label'] ?? true);
         $metadata['label_position'] = $settings['label_position'] ?? 'inside';
-        if (array_key_exists('auto_show_row_labels', $settings)) {
-            $metadata['auto_show_row_labels'] = (bool) $settings['auto_show_row_labels'];
-        }
+        $metadata['auto_show_row_labels'] = (bool) ($settings['auto_show_row_labels'] ?? true);
+
+        \Illuminate\Support\Facades\Log::debug('updateSectionLabel', [
+            'section_id' => $sectionId,
+            'received' => $settings,
+            'saved_metadata' => $metadata,
+        ]);
 
         $section->update(['metadata' => $metadata]);
 
