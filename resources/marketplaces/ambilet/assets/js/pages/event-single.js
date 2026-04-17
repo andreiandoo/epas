@@ -3017,7 +3017,7 @@ const EventPage = {
                         // Map SVG container with legend
                         '<div class="flex-1 overflow-hidden p-1 md:p-2 relative" id="seat-map-container">' +
                             '<div id="seat-map-wrapper" class="w-full h-full overflow-hidden touch-none" style="cursor: grab;">' +
-                                '<div id="seat-map-svg" class="inline-block min-w-full min-h-full flex items-center justify-center" style="transform-origin: center center;">' +
+                                '<div id="seat-map-svg" class="inline-block min-w-full min-h-full flex items-center justify-center" style="transform-origin: 0 0;">' +
                                     '<div class="text-center text-muted">' +
                                         '<svg class="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>' +
                                         'Se încarcă harta...' +
@@ -3766,6 +3766,30 @@ const EventPage = {
             var seatFontSize = Math.round(seatRadius * 0.85 * 10) / 10;
             var xOff = Math.round(seatRadius * 0.5 * 10) / 10;
 
+            // Section-wide seat X bounds and gap — used to align row labels on a
+            // single column per section (matches admin seating preview).
+            var allSeatXs = [];
+            var seatGap = seatRadius * 3;
+            var gapDetected = false;
+            if (section.rows) {
+                section.rows.forEach(function(_r) {
+                    if (!_r.seats) return;
+                    _r.seats.forEach(function(_s) {
+                        allSeatXs.push(_s.x || 0);
+                    });
+                    if (!gapDetected && _r.seats.length >= 2) {
+                        var sortedXs = _r.seats.map(function(s) { return s.x || 0; }).sort(function(a, b) { return a - b; });
+                        seatGap = Math.abs(sortedXs[1] - sortedXs[0]);
+                        gapDetected = true;
+                    }
+                });
+            }
+            var secMinX = allSeatXs.length > 0 ? Math.min.apply(null, allSeatXs) : 0;
+            var secMaxX = allSeatXs.length > 0 ? Math.max.apply(null, allSeatXs) : 0;
+            var leftLabelX = section.x + secMinX - seatGap;
+            var rightLabelX = section.x + secMaxX + seatGap;
+            var rowLabelSize = Math.max(10, Math.round(seatFontSize * 1.1 * 10) / 10);
+
             // Render seats using actual x/y coordinates from the layout
             if (section.rows) {
                 section.rows.forEach(function(row) {
@@ -3795,13 +3819,14 @@ const EventPage = {
                     // Seat color from the first ticket type assigned to this row
                     var availableSeatColor = isRowAssigned ? self.getTicketTypeColor(ticketTypesForRow[0]) : '#E5E7EB';
 
-                    // Row label near first seat (only for non-table rows)
+                    // Row labels aligned to section-wide leftmost/rightmost seat columns
+                    // (only for non-table rows). Rendered on both sides like admin preview.
                     if (!row.is_table) {
                         var firstSeat = row.seats[0];
                         if (firstSeat) {
-                            var rlX = section.x + firstSeat.x - seatRadius - 6;
-                            var rlY = section.y + firstSeat.y;
-                            svg += '<text x="' + rlX + '" y="' + (rlY + 3) + '" text-anchor="end" font-size="9" font-weight="500" fill="rgba(0,0,0,0.6)" class="pointer-events-none select-none">' + row.label + '</text>';
+                            var rlY = section.y + firstSeat.y + seatRadius * 0.4;
+                            svg += '<text x="' + leftLabelX + '" y="' + rlY + '" text-anchor="end" font-size="' + rowLabelSize + '" font-weight="600" fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">' + row.label + '</text>';
+                            svg += '<text x="' + rightLabelX + '" y="' + rlY + '" text-anchor="start" font-size="' + rowLabelSize + '" font-weight="600" fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">' + row.label + '</text>';
                         }
                     }
 
