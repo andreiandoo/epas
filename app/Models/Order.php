@@ -191,10 +191,15 @@ class Order extends Model
                 return;
             }
 
-            // Update ticket statuses based on order status
-            if ($order->wasChanged('status')) {
-                $newStatus = $order->status;
+            if (!$order->wasChanged('status')) {
+                return;
+            }
 
+            // Sync ticket statuses defensively — any failure here must NOT bubble up
+            // and leave the order in a partially-reconciled state (status=expired
+            // but tickets still pending). The reconcile command is the backstop.
+            $newStatus = $order->status;
+            try {
                 if (in_array($newStatus, ['paid', 'confirmed', 'completed'])) {
                     $order->tickets()->update(['status' => 'valid']);
                 } elseif (in_array($newStatus, ['cancelled', 'refunded', 'expired'])) {
@@ -203,6 +208,12 @@ class Order extends Model
                 } elseif ($newStatus === 'pending') {
                     $order->tickets()->update(['status' => 'pending']);
                 }
+            } catch (\Throwable $e) {
+                Log::error('Order: saved observer ticket/seat sync failed', [
+                    'order_id' => $order->id,
+                    'new_status' => $newStatus,
+                    'error' => $e->getMessage(),
+                ]);
             }
         });
 
