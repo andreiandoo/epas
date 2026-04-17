@@ -624,6 +624,8 @@ class Dashboard extends Page
             ->whereBetween('orders.created_at', [$todayStart, $todayEnd])
             ->selectRaw('COUNT(*) as total_orders')
             ->selectRaw("SUM(CASE WHEN status IN ('paid','confirmed','completed') THEN 1 ELSE 0 END) as paid_orders")
+            ->selectRaw("SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders")
+            ->selectRaw("SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_orders")
             ->selectRaw("SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders")
             ->selectRaw("SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired_orders")
             ->selectRaw("SUM(CASE WHEN status IN ('refunded','partially_refunded') THEN 1 ELSE 0 END) as refunded_orders")
@@ -659,6 +661,8 @@ class Dashboard extends Page
         return [
             'total_orders' => (int) ($orderStats->total_orders ?? 0),
             'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
+            'pending_orders' => (int) ($orderStats->pending_orders ?? 0),
+            'failed_orders' => (int) ($orderStats->failed_orders ?? 0),
             'cancelled_orders' => (int) ($orderStats->cancelled_orders ?? 0),
             'expired_orders' => (int) ($orderStats->expired_orders ?? 0),
             'refunded_orders' => (int) ($orderStats->refunded_orders ?? 0),

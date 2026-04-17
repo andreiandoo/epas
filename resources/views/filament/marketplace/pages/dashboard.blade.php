@@ -67,7 +67,7 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400">Comenzi azi</p>
                     <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($todayStats['total_orders']) }}</p>
                     @if(($todayStats['total_orders'] ?? 0) > 0)
-                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['paid_orders'] ?? 0 }} plătite · {{ $todayStats['cancelled_orders'] ?? 0 }} anulate · {{ $todayStats['expired_orders'] ?? 0 }} expirate · {{ $todayStats['refunded_orders'] ?? 0 }} rambursate</p>
+                    <p class="mt-0.5 text-[10px] text-gray-400">{{ $todayStats['paid_orders'] ?? 0 }} plătite · {{ $todayStats['pending_orders'] ?? 0 }} pending · {{ $todayStats['failed_orders'] ?? 0 }} eșuate · {{ $todayStats['cancelled_orders'] ?? 0 }} anulate · {{ $todayStats['expired_orders'] ?? 0 }} expirate · {{ $todayStats['refunded_orders'] ?? 0 }} rambursate</p>
                     @endif
                 </div>
                 <div class="p-4 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
