@@ -4330,6 +4330,7 @@ const EventPage = {
                 price: basePrice,
                 original_price: baseOriginalPrice,
                 description: tt.description,
+                commission: tt.commission || null,
                 is_refundable: tt.is_refundable || false
             };
 
@@ -4395,6 +4396,7 @@ const EventPage = {
                                 price: ticketTypeData.price,
                                 originalPrice: ticketTypeData.original_price,
                                 description: ticketTypeData.description,
+                                commission: ticketTypeData.commission || null,
                                 is_refundable: ticketTypeData.is_refundable || false
                             },
                             quantity: seats.length,
@@ -4448,6 +4450,7 @@ const EventPage = {
                         price: ticketTypeData.price,
                         originalPrice: ticketTypeData.original_price,
                         description: ticketTypeData.description,
+                        commission: ticketTypeData.commission || null,
                         is_refundable: ticketTypeData.is_refundable || false
                     },
                     quantity: seats.length,
