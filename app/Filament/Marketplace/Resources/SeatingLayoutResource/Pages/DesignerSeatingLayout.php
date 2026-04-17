@@ -3425,7 +3425,7 @@ class DesignerSeatingLayout extends Page
         $metadata['label_position'] = $settings['label_position'] ?? 'inside';
         $metadata['auto_show_row_labels'] = (bool) ($settings['auto_show_row_labels'] ?? true);
 
-        \Illuminate\Support\Facades\Log::debug('updateSectionLabel', [
+        \Illuminate\Support\Facades\Log::info('updateSectionLabel', [
             'section_id' => $sectionId,
             'received' => $settings,
             'saved_metadata' => $metadata,
