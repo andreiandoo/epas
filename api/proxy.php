@@ -48,41 +48,43 @@ class ApiCache {
 
     // Cache TTL in seconds by action pattern
     private static $ttlMap = [
-        // Long cache (1 hour) - static/rarely changing content
-        'categories' => 3600,
-        'event-categories' => 3600,
-        'event-genres' => 3600,
-        'event-types' => 3600,
-        'venue-categories' => 3600,
-        'artists.genre-counts' => 3600,
-        'artists.alphabet' => 3600,
-        'locations.stats' => 3600,
-        'locations.regions' => 3600,
-        'locations.cities.alphabet' => 3600,
+        // Very long cache (24 hours) - truly static content
+        'categories' => 86400,
+        'event-categories' => 86400,
+        'event-types' => 86400,
+        'venue-categories' => 86400,
+        'locations.regions' => 86400,
+        'locations.cities.alphabet' => 86400,
+        'artists.alphabet' => 86400,
 
-        // Medium cache (10 minutes) - content that changes occasionally
-        'events.featured' => 600,
-        'events.cities' => 600,
-        'venues.featured' => 600,
-        'artists.featured' => 600,
-        'artists.trending' => 600,
-        'locations.cities.featured' => 600,
-        'cities' => 600,
+        // Long cache (6 hours) - rarely changing
+        'event-genres' => 21600,
+        'artists.genre-counts' => 21600,
+        'locations.stats' => 21600,
 
-        // Short cache (3 minutes) - frequently changing but still cacheable
-        'events' => 180,
-        'venues' => 180,
-        'artists' => 180,
-        'organizers' => 180,
-        'organizer' => 180,
+        // Medium cache (30 minutes) - content that changes occasionally
+        'events.featured' => 1800,
+        'events.cities' => 1800,
+        'venues.featured' => 1800,
+        'artists.featured' => 1800,
+        'artists.trending' => 1800,
+        'locations.cities.featured' => 1800,
+        'cities' => 1800,
 
-        // Very short cache (10 seconds) - single item views need quick updates
-        'event' => 10,
-        'venue' => 10,
-        'artist' => 10,
+        // Short cache (5 minutes) - frequently changing but still cacheable
+        'events' => 300,
+        'venues' => 300,
+        'artists' => 300,
+        'organizers' => 300,
+        'organizer' => 300,
 
-        // Very short cache (1 minute) - search results
-        'search' => 60,
+        // Very short cache (30 seconds) - single item views need quick updates
+        'event' => 30,
+        'venue' => 60,
+        'artist' => 60,
+
+        // Very short cache (2 minutes) - search results
+        'search' => 120,
     ];
 
     public static function init() {

@@ -209,6 +209,10 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
+    <!-- Preconnect to API/storage origins for faster first call -->
+    <link rel="preconnect" href="https://core.tixello.com" crossorigin>
+    <link rel="dns-prefetch" href="https://core.tixello.com">
+
     <!-- Primary Meta Tags -->
     <title><?= htmlspecialchars($pageTitle) ?> — <?= SITE_NAME ?></title>
     <meta name="title" content="<?= htmlspecialchars($pageTitle) ?> — <?= SITE_NAME ?>">
