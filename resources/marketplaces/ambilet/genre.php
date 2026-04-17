@@ -120,7 +120,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
 </section>
 
 <!-- Desktop Filters Bar -->
-<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
+<section class="sticky top-[67px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex flex-wrap items-center gap-3">
             <select id="filterCity" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="GenrePage.loadEvents()">

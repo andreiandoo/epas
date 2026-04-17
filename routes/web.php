@@ -444,7 +444,7 @@ Route::get('/android', function () {
 Route::get('/api/app-version', function () {
     return response()->json([
         'latest_version' => config('app.staff_app_version', '1.0.0'),
-        'download_url' => url('/download-android'),
+        'download_url' => 'https://ambilet.ro/android',
         'force_update' => false,
     ]);
 });
