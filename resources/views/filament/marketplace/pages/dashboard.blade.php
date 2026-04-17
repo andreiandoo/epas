@@ -642,42 +642,53 @@
                             borderColor: isDark ? '#374151' : '#e5e7eb',
                             borderWidth: 1, padding: 12, displayColors: true,
                             usePointStyle: false,
+                            filter: function(tooltipItem) {
+                                // Hide prev year + prediction from main labels — shown in afterBody
+                                const label = tooltipItem.dataset.label || '';
+                                return !label.includes('trecut') && !label.includes('Predic');
+                            },
                             callbacks: {
                                 label: function(context) {
-                                    const label = context.dataset.label || '';
                                     const val = context.parsed.y;
                                     const fmt = (v) => new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(v);
-
-                                    // Check if this is the first "prev year" item — insert separator
-                                    const allItems = context.chart.tooltip.dataPoints || [];
-                                    const sortedItems = [...allItems].sort((a, b) => {
-                                        const aP = (a.dataset.label || '').includes('trecut') || (a.dataset.label || '').includes('Predic') ? 1 : 0;
-                                        const bP = (b.dataset.label || '').includes('trecut') || (b.dataset.label || '').includes('Predic') ? 1 : 0;
-                                        return aP - bP;
-                                    });
-                                    const prevItems = sortedItems.filter(t => (t.dataset.label || '').includes('trecut'));
-                                    const isFirstPrev = prevItems.length > 0 && prevItems[0].datasetIndex === context.datasetIndex;
-
+                                    if (context.dataset.yAxisID === 'y') {
+                                        return 'Vânzări: ' + fmt(val) + ' ' + currency;
+                                    }
+                                    return 'Bilete: ' + val;
+                                },
+                                afterBody: function(tooltipItems) {
+                                    if (!tooltipItems.length) return [];
+                                    const idx = tooltipItems[0].dataIndex;
+                                    const chart = tooltipItems[0].chart;
+                                    const fmt = (v) => new Intl.NumberFormat('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}).format(v);
                                     const lines = [];
-                                    if (isFirstPrev) {
+
+                                    // Find prev year datasets
+                                    const prevSalesDs = chart.data.datasets.find(d => (d.label || '').includes('Anul trecut'));
+                                    const prevTicketsDs = chart.data.datasets.find(d => (d.label || '').includes('Bilete anul'));
+                                    const predictionDs = chart.data.datasets.find(d => (d.label || '').includes('Predic'));
+
+                                    if (prevSalesDs || prevTicketsDs) {
+                                        lines.push('');
                                         lines.push('─── Anul trecut ───');
+                                        if (prevSalesDs) {
+                                            const v = prevSalesDs.data[idx] || 0;
+                                            lines.push('🟡 Vânzări: ' + fmt(v) + ' ' + currency);
+                                        }
+                                        if (prevTicketsDs) {
+                                            const v = prevTicketsDs.data[idx] || 0;
+                                            lines.push('🟡 Bilete: ' + v);
+                                        }
                                     }
 
-                                    if (label.includes('Predic')) {
-                                        lines.push('Predicție: ' + fmt(val) + ' ' + currency);
-                                    } else if (label.includes('trecut')) {
-                                        if (context.dataset.yAxisID === 'y') {
-                                            lines.push('Vânzări: ' + fmt(val) + ' ' + currency);
-                                        } else {
-                                            lines.push('Bilete: ' + val);
-                                        }
-                                    } else {
-                                        if (context.dataset.yAxisID === 'y') {
-                                            lines.push('Vânzări: ' + fmt(val) + ' ' + currency);
-                                        } else {
-                                            lines.push('Bilete: ' + val);
+                                    if (predictionDs) {
+                                        const v = predictionDs.data[idx];
+                                        if (v !== null && v !== undefined) {
+                                            lines.push('');
+                                            lines.push('🟢 Predicție: ' + fmt(v) + ' ' + currency);
                                         }
                                     }
+
                                     return lines;
                                 },
                                 labelColor: function(context) {
