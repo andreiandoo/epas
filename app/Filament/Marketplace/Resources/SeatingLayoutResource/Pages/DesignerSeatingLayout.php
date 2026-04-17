@@ -3414,6 +3414,10 @@ class DesignerSeatingLayout extends Page
      */
     public function updateSectionLabel(int $sectionId, array $settings): void
     {
+        if (opcache_get_status(false) !== false) {
+            @opcache_reset();
+        }
+
         $section = SeatingSection::find($sectionId);
 
         if (!$section || $section->layout_id !== $this->seatingLayout->id) {
@@ -3424,7 +3428,7 @@ class DesignerSeatingLayout extends Page
         $metadata['show_label'] = (bool) ($settings['show_label'] ?? true);
         $metadata['label_position'] = $settings['label_position'] ?? 'inside';
         $metadata['auto_show_row_labels'] = (bool) ($settings['auto_show_row_labels'] ?? true);
-        $metadata['_debug_received_keys'] = array_keys($settings);
+        $metadata['_debug_received_at'] = now()->toIso8601String();
 
         $section->update(['metadata' => $metadata]);
 
