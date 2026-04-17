@@ -106,7 +106,7 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Desktop Filters Bar -->
-<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
+<section class="sticky top-[67px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex flex-wrap items-center gap-3">
             <!-- City Filter -->
