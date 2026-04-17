@@ -545,28 +545,43 @@ function fetchParticipantsWithAuth($eventIds, $authHeader) {
     return $result;
 }
 
-// Rate limiting (simple IP-based)
-session_start();
+// Rate limiting (simple IP-based, file-based to avoid session locks)
 $ip = $_SERVER['REMOTE_ADDR'];
-$rateKey = 'rate_' . md5($ip);
 $rateLimit = 300; // requests per minute
 $rateWindow = 60; // seconds
+$rateKey = 'rate_' . md5($ip);
+$rateFile = dirname(__DIR__) . '/data/rate-limits/' . $rateKey . '.json';
 
-if (!isset($_SESSION[$rateKey])) {
-    $_SESSION[$rateKey] = ['count' => 0, 'start' => time()];
+if (!is_dir(dirname($rateFile))) {
+    @mkdir(dirname($rateFile), 0755, true);
 }
 
-if (time() - $_SESSION[$rateKey]['start'] > $rateWindow) {
-    $_SESSION[$rateKey] = ['count' => 0, 'start' => time()];
+$now = time();
+$rateData = ['count' => 0, 'start' => $now];
+if (file_exists($rateFile)) {
+    $raw = @file_get_contents($rateFile);
+    if ($raw) {
+        $decoded = @json_decode($raw, true);
+        if (is_array($decoded)) $rateData = $decoded;
+    }
 }
+if ($now - ($rateData['start'] ?? 0) > $rateWindow) {
+    $rateData = ['count' => 0, 'start' => $now];
+}
+$rateData['count']++;
 
-$_SESSION[$rateKey]['count']++;
-
-if ($_SESSION[$rateKey]['count'] > $rateLimit) {
+if ($rateData['count'] > $rateLimit) {
     http_response_code(429);
     echo json_encode(['error' => 'Too many requests. Please try again later.']);
     exit;
 }
+
+@file_put_contents($rateFile, json_encode($rateData), LOCK_EX);
+
+// Start session then close immediately — we only need session_id() for headers
+// Keeping session open serializes all concurrent API calls (file locks)
+session_start();
+session_write_close();
 
 // Get action
 $action = $_GET['action'] ?? '';
