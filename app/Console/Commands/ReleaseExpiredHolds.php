@@ -23,11 +23,8 @@ class ReleaseExpiredHolds extends Command
      */
     public function handle(SeatHoldService $holdService): int
     {
-        if (config('seating.use_redis_holds')) {
-            $this->info('Redis holds are enabled - seats are automatically released by Redis TTL.');
-            $this->info('This command only runs in DB fallback mode.');
-            return 0;
-        }
+        // Always run DB cleanup — Redis TTL only handles Redis cache,
+        // but DB rows in seat_holds + event_seats.status='held' must be cleaned.
 
         $this->info('Starting expired holds cleanup...');
 
