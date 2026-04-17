@@ -586,7 +586,7 @@
                     dowAvg[dow] = dowCounts[dow] ? dowTotals[dow] / dowCounts[dow] : 0;
                 }
 
-                // Overall avg for fallback (days without enough dow data)
+                // Overall avg for fallback
                 let completedTotal = 0, completedDays = 0;
                 for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
                     completedTotal += salesData.data[i];
@@ -594,24 +594,50 @@
                 }
                 const overallAvg = completedDays > 0 ? completedTotal / completedDays : 0;
 
+                // Growth ratio vs previous year (for blending)
+                let ratios = [];
+                for (let i = 0; i < currentDay - 1 && i < salesData.data.length; i++) {
+                    const curr = salesData.data[i];
+                    const prev = prevSalesData.data[i] || 0;
+                    if (prev > 0 && curr > 0) ratios.push(curr / prev);
+                }
+                const growthRatio = ratios.length > 0 ? ratios.reduce((a, b) => a + b, 0) / ratios.length : 1;
+
                 // Estimate today's full-day total based on hours elapsed
                 const hoursElapsed = today.getHours() + today.getMinutes() / 60;
                 const todayActual = salesData.data[currentDay - 1] || 0;
                 const todayEstimated = hoursElapsed > 1 ? Math.round(todayActual * (24 / hoursElapsed)) : todayActual;
 
-                // Build prediction
+                // Build prediction: blend current month pattern + previous year behavior
                 const predictionData = [];
                 for (let i = 0; i < totalDays; i++) {
                     if (i < currentDay - 1) {
-                        predictionData.push(null); // Past completed days
+                        predictionData.push(null);
                     } else if (i === currentDay - 1) {
-                        predictionData.push(todayEstimated); // Today extrapolated
+                        predictionData.push(todayEstimated);
                     } else {
-                        // Future: use day-of-week avg from current month
                         const futureDate = new Date(monthStart);
                         futureDate.setDate(i + 1);
                         const dow = futureDate.getDay();
-                        const predicted = dowAvg[dow] > 0 ? dowAvg[dow] : overallAvg;
+
+                        // Signal 1: day-of-week avg from current month
+                        const dowSignal = dowAvg[dow] > 0 ? dowAvg[dow] : overallAvg;
+
+                        // Signal 2: previous year same day × growth ratio
+                        const prevVal = prevSalesData.data[i] || 0;
+                        const prevSignal = prevVal > 0 ? prevVal * growthRatio : 0;
+
+                        // Blend: 60% current pattern + 40% historical behavior
+                        let predicted;
+                        if (dowSignal > 0 && prevSignal > 0) {
+                            predicted = dowSignal * 0.6 + prevSignal * 0.4;
+                        } else if (dowSignal > 0) {
+                            predicted = dowSignal;
+                        } else if (prevSignal > 0) {
+                            predicted = prevSignal;
+                        } else {
+                            predicted = overallAvg;
+                        }
                         predictionData.push(Math.round(predicted));
                     }
                 }
