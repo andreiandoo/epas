@@ -59,28 +59,42 @@ $email = $_GET['email'] ?? '';
                     </div>
                 </div>
 
+                <!-- Notice shown when user already has a password set on another team membership -->
+                <div id="existingPasswordNotice" class="hidden p-4 mb-6 rounded-xl bg-green-50 border border-green-200">
+                    <div class="flex items-start gap-3">
+                        <svg class="flex-shrink-0 w-5 h-5 mt-0.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                            <p class="text-sm font-semibold text-green-800">Ești deja înregistrat</p>
+                            <p class="mt-1 text-sm text-green-700">Vei folosi parola ta existentă pentru a accesa și acest organizator. Apasă butonul pentru a activa invitația.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <hr class="my-6 border-border">
 
                 <!-- Password form -->
                 <form onsubmit="AcceptInvite.submit(event)" class="space-y-4">
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-secondary">Parola</label>
-                        <input type="password" id="password" required minlength="8" placeholder="Minim 8 caractere"
-                            class="w-full px-4 py-3 text-sm bg-white border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            oninput="AcceptInvite.checkStrength(this.value)">
-                        <div class="flex gap-1 mt-2">
-                            <div id="str1" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
-                            <div id="str2" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
-                            <div id="str3" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
-                            <div id="str4" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
+                    <!-- Password fields — hidden if user already has a password from previous invite -->
+                    <div id="passwordFields">
+                        <div>
+                            <label class="block mb-2 text-sm font-medium text-secondary">Parola</label>
+                            <input type="password" id="password" minlength="8" placeholder="Minim 8 caractere"
+                                class="w-full px-4 py-3 text-sm bg-white border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                oninput="AcceptInvite.checkStrength(this.value)">
+                            <div class="flex gap-1 mt-2">
+                                <div id="str1" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
+                                <div id="str2" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
+                                <div id="str3" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
+                                <div id="str4" class="h-1.5 flex-1 rounded-full bg-gray-200"></div>
+                            </div>
+                            <p id="strLabel" class="mt-1 text-xs text-muted"></p>
                         </div>
-                        <p id="strLabel" class="mt-1 text-xs text-muted"></p>
-                    </div>
 
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-secondary">Confirmă parola</label>
-                        <input type="password" id="password_confirmation" required minlength="8" placeholder="Repetă parola"
-                            class="w-full px-4 py-3 text-sm bg-white border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        <div class="mt-4">
+                            <label class="block mb-2 text-sm font-medium text-secondary">Confirmă parola</label>
+                            <input type="password" id="password_confirmation" minlength="8" placeholder="Repetă parola"
+                                class="w-full px-4 py-3 text-sm bg-white border border-border rounded-xl focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20">
+                        </div>
                     </div>
 
                     <div>
@@ -130,6 +144,7 @@ $scriptsExtra = <<<SCRIPTS
 const AcceptInvite = {
     token: '{$token}',
     email: '{$email}',
+    hasExistingPassword: false,
 
     async init() {
         if (!this.token || !this.email) {
@@ -146,6 +161,15 @@ const AcceptInvite = {
             document.getElementById('orgCompany').textContent = resp.data.organizer.company_name || '';
             document.getElementById('memberName').textContent = resp.data.member.name || '';
             document.getElementById('memberEmail').textContent = resp.data.member.email || '';
+
+            // If user already has a password set on another active team membership,
+            // skip the password form and just show an activation notice.
+            this.hasExistingPassword = !!resp.data.has_existing_password;
+            if (this.hasExistingPassword) {
+                document.getElementById('passwordFields').classList.add('hidden');
+                document.getElementById('existingPasswordNotice').classList.remove('hidden');
+            }
+
             document.getElementById('loadingState').classList.add('hidden');
             document.getElementById('acceptForm').classList.remove('hidden');
         } catch (e) {
@@ -176,27 +200,37 @@ const AcceptInvite = {
 
     async submit(e) {
         e.preventDefault();
-        const pw = document.getElementById('password').value;
-        const pwc = document.getElementById('password_confirmation').value;
         const phone = document.getElementById('phone').value;
         const btn = document.getElementById('submitBtn');
 
-        if (pw !== pwc) {
-            if (typeof AmbiletNotifications !== 'undefined') AmbiletNotifications.error('Parolele nu coincid.');
-            return;
+        const payload = {
+            token: this.token,
+            email: this.email,
+            phone: phone,
+        };
+
+        // Only include password fields if this is a first-time acceptance
+        if (!this.hasExistingPassword) {
+            const pw = document.getElementById('password').value;
+            const pwc = document.getElementById('password_confirmation').value;
+
+            if (!pw || pw.length < 8) {
+                if (typeof AmbiletNotifications !== 'undefined') AmbiletNotifications.error('Parola trebuie să aibă minim 8 caractere.');
+                return;
+            }
+            if (pw !== pwc) {
+                if (typeof AmbiletNotifications !== 'undefined') AmbiletNotifications.error('Parolele nu coincid.');
+                return;
+            }
+            payload.password = pw;
+            payload.password_confirmation = pwc;
         }
 
         btn.disabled = true;
         btn.textContent = 'Se activează...';
 
         try {
-            const resp = await AmbiletAPI.post('/organizer/team/accept-invite', {
-                token: this.token,
-                email: this.email,
-                password: pw,
-                password_confirmation: pwc,
-                phone: phone
-            });
+            const resp = await AmbiletAPI.post('/organizer/team/accept-invite', payload);
             if (resp.success) {
                 document.getElementById('acceptForm').classList.add('hidden');
                 document.getElementById('qrCode').src = 'https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=' + encodeURIComponent('https://ambilet.ro/android');

@@ -1552,6 +1552,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.logout');
         Route::get('/me', [OrganizerAuthController::class, 'me'])
             ->name('api.marketplace-client.organizer.me');
+        Route::post('/switch-organizer', [OrganizerAuthController::class, 'switchOrganizer'])
+            ->name('api.marketplace-client.organizer.switch');
         Route::put('/profile', [OrganizerAuthController::class, 'updateProfile'])
             ->name('api.marketplace-client.organizer.profile.update');
         Route::put('/settings', [OrganizerAuthController::class, 'updateSettings'])

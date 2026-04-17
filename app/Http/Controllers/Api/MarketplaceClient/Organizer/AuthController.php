@@ -218,40 +218,131 @@ class AuthController extends BaseController
             ], 'Login successful');
         }
 
-        // Try team member login
-        $teamMember = MarketplaceOrganizerTeamMember::whereHas('organizer', function ($q) use ($client) {
+        // Try team member login — find ALL active team memberships for this email
+        // (user may be on multiple organizers' teams with the same email+password)
+        $teamMembers = MarketplaceOrganizerTeamMember::with('organizer')
+            ->whereHas('organizer', function ($q) use ($client) {
                 $q->where('marketplace_client_id', $client->id);
             })
             ->where('email', $validated['email'])
             ->where('status', 'active')
-            ->first();
+            ->whereNotNull('password')
+            ->get();
 
-        if ($teamMember && $teamMember->password && Hash::check($validated['password'], $teamMember->password)) {
-            $organizer = $teamMember->organizer;
+        // Find the first one whose password matches
+        $authenticatedMember = $teamMembers->first(function ($tm) use ($validated) {
+            return Hash::check($validated['password'], $tm->password);
+        });
+
+        if ($authenticatedMember) {
+            $organizer = $authenticatedMember->organizer;
 
             if ($organizer->isSuspended()) {
                 return $this->error('Your account has been suspended', 403);
             }
 
             // Create token on parent organizer with team member identifier
-            $token = $organizer->createToken('team-member-' . $teamMember->id)->plainTextToken;
+            $token = $organizer->createToken('team-member-' . $authenticatedMember->id)->plainTextToken;
 
             $organizerData = $this->formatOrganizer($organizer);
             $organizerData['team_member'] = [
-                'id' => (string) $teamMember->id,
-                'name' => $teamMember->name,
-                'email' => $teamMember->email,
-                'role' => $teamMember->role,
-                'permissions' => $teamMember->getEffectivePermissions(),
+                'id' => (string) $authenticatedMember->id,
+                'name' => $authenticatedMember->name,
+                'email' => $authenticatedMember->email,
+                'role' => $authenticatedMember->role,
+                'permissions' => $authenticatedMember->getEffectivePermissions(),
             ];
+
+            // Build list of all organizers this user has access to (team memberships
+            // where the password matches — typically all, since we sync passwords).
+            $availableOrganizers = $teamMembers
+                ->filter(fn ($tm) => Hash::check($validated['password'], $tm->password))
+                ->map(fn ($tm) => [
+                    'organizer_id' => (string) $tm->organizer->id,
+                    'team_member_id' => (string) $tm->id,
+                    'name' => $tm->organizer->name,
+                    'logo' => $tm->organizer->logo_url,
+                    'role' => $tm->role,
+                    'is_current' => $tm->id === $authenticatedMember->id,
+                ])
+                ->values()
+                ->toArray();
 
             return $this->success([
                 'organizer' => $organizerData,
                 'token' => $token,
+                'available_organizers' => $availableOrganizers,
             ], 'Login successful');
         }
 
         return $this->error('Invalid credentials', 401);
+    }
+
+    /**
+     * Switch to another organizer the team member has access to.
+     * Requires an existing valid token. Issues a new token for the target organizer
+     * and revokes the current one.
+     */
+    public function switchOrganizer(Request $request): JsonResponse
+    {
+        $currentOrganizer = $request->user();
+
+        if (!$currentOrganizer instanceof MarketplaceOrganizer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'organizer_id' => 'required|integer',
+        ]);
+
+        // Only team member tokens can switch — owners are tied to their org
+        $tokenName = $request->user()->currentAccessToken()->name ?? '';
+        if (!str_starts_with($tokenName, 'team-member-')) {
+            return $this->error('Only team members can switch organizers', 403);
+        }
+
+        $currentMemberId = (int) str_replace('team-member-', '', $tokenName);
+        $currentMember = MarketplaceOrganizerTeamMember::find($currentMemberId);
+
+        if (!$currentMember) {
+            return $this->error('Team member not found', 404);
+        }
+
+        // Find the target team membership: same email, requested organizer, active
+        $targetMember = MarketplaceOrganizerTeamMember::with('organizer')
+            ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $currentOrganizer->marketplace_client_id))
+            ->where('email', $currentMember->email)
+            ->where('marketplace_organizer_id', $validated['organizer_id'])
+            ->where('status', 'active')
+            ->first();
+
+        if (!$targetMember) {
+            return $this->error('You do not have access to this organizer', 403);
+        }
+
+        $targetOrganizer = $targetMember->organizer;
+
+        if ($targetOrganizer->isSuspended()) {
+            return $this->error('The target organizer account has been suspended', 403);
+        }
+
+        // Revoke current token and issue a new one for the target organizer
+        $request->user()->currentAccessToken()->delete();
+        $token = $targetOrganizer->createToken('team-member-' . $targetMember->id)->plainTextToken;
+
+        $organizerData = $this->formatOrganizer($targetOrganizer);
+        $organizerData['team_member'] = [
+            'id' => (string) $targetMember->id,
+            'name' => $targetMember->name,
+            'email' => $targetMember->email,
+            'role' => $targetMember->role,
+            'permissions' => $targetMember->getEffectivePermissions(),
+        ];
+
+        return $this->success([
+            'organizer' => $organizerData,
+            'token' => $token,
+        ], 'Organizer switched');
     }
 
     /**
@@ -276,6 +367,7 @@ class AuthController extends BaseController
         }
 
         $organizerData = $this->formatOrganizer($organizer);
+        $availableOrganizers = [];
 
         // Check if this is a team member token
         $tokenName = $request->user()->currentAccessToken()->name ?? '';
@@ -290,11 +382,30 @@ class AuthController extends BaseController
                     'role' => $teamMember->role,
                     'permissions' => $teamMember->getEffectivePermissions(),
                 ];
+
+                // Load all other active team memberships for this email
+                $availableOrganizers = MarketplaceOrganizerTeamMember::with('organizer')
+                    ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $organizer->marketplace_client_id))
+                    ->where('email', $teamMember->email)
+                    ->where('status', 'active')
+                    ->whereNotNull('password')
+                    ->get()
+                    ->map(fn ($tm) => [
+                        'organizer_id' => (string) $tm->organizer->id,
+                        'team_member_id' => (string) $tm->id,
+                        'name' => $tm->organizer->name,
+                        'logo' => $tm->organizer->logo_url,
+                        'role' => $tm->role,
+                        'is_current' => $tm->id === $teamMember->id,
+                    ])
+                    ->values()
+                    ->toArray();
             }
         }
 
         return $this->success([
             'organizer' => $organizerData,
+            'available_organizers' => $availableOrganizers,
         ]);
     }
 

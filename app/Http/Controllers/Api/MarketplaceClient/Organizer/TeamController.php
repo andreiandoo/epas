@@ -519,6 +519,10 @@ HTML;
 
         $organizer = $member->organizer;
 
+        // Check if this email already has a password set on another active team member
+        // (from a previous invite acceptance). If so, frontend can skip the password form.
+        $hasExistingPassword = $this->findExistingPasswordHash($validated['email'], $client->id, $member->id) !== null;
+
         return $this->success([
             'member' => [
                 'name' => $member->name,
@@ -529,42 +533,85 @@ HTML;
                 'name' => $organizer->name,
                 'company_name' => $organizer->company_name,
             ],
+            'has_existing_password' => $hasExistingPassword,
         ]);
     }
 
     /**
      * Public: Accept an invite — set password and activate membership.
+     * If the email already has a password set on another team member record
+     * (from a previous invite), the password form is skipped and the hash
+     * is copied from the existing record.
      * No authentication required.
      */
     public function acceptInvitePublic(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
 
-        $validated = $request->validate([
+        // Base validation — token and email always required
+        $request->validate([
             'token' => 'required|string',
             'email' => 'required|email',
-            'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:30',
         ]);
 
+        $email = $request->input('email');
+        $token = $request->input('token');
+        $phone = $request->input('phone');
+
         $member = MarketplaceOrganizerTeamMember::whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $client->id))
-            ->where('email', $validated['email'])
+            ->where('email', $email)
             ->where('status', 'pending')
             ->first();
 
-        if (!$member || !$member->verifyInviteToken($validated['token'])) {
+        if (!$member || !$member->verifyInviteToken($token)) {
             return $this->error('Invitația este invalidă sau a expirat.', 400);
         }
 
-        $member->acceptInvite($validated['password']);
+        // Check if email already has a password hash on another active team member
+        $existingHash = $this->findExistingPasswordHash($email, $client->id, $member->id);
 
-        if (!empty($validated['phone'])) {
-            $member->update(['phone' => $validated['phone']]);
+        if ($existingHash !== null) {
+            // Reuse existing password hash — no new password required
+            $member->update([
+                'password' => $existingHash,
+                'status' => 'active',
+                'invite_token' => null,
+                'invite_expires_at' => null,
+                'accepted_at' => now(),
+            ]);
+        } else {
+            // First-time acceptance — require password
+            $request->validate([
+                'password' => 'required|string|min:8|confirmed',
+            ]);
+            $member->acceptInvite($request->input('password'));
+        }
+
+        if (!empty($phone)) {
+            $member->update(['phone' => $phone]);
         }
 
         return $this->success([
             'message' => 'Contul a fost activat cu succes!',
             'organizer_name' => $member->organizer->name,
+            'reused_existing_password' => $existingHash !== null,
         ]);
+    }
+
+    /**
+     * Find an existing password hash for the given email on another active team member
+     * record within the same marketplace. Returns null if none found.
+     */
+    protected function findExistingPasswordHash(string $email, int $marketplaceClientId, int $excludeMemberId): ?string
+    {
+        $existing = MarketplaceOrganizerTeamMember::whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId))
+            ->where('email', $email)
+            ->where('status', 'active')
+            ->whereNotNull('password')
+            ->where('id', '!=', $excludeMemberId)
+            ->first();
+
+        return $existing?->password;
     }
 }

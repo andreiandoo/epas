@@ -34,6 +34,35 @@ class MarketplaceOrganizerTeamMember extends Model
         'accepted_at' => 'datetime',
     ];
 
+    /**
+     * When password changes on one team member record, propagate the new hash to
+     * all other active team member records with the same email within the same
+     * marketplace. This keeps the "one password across organizers" UX consistent.
+     */
+    protected static function booted(): void
+    {
+        static::updated(function (self $member) {
+            if (!$member->wasChanged('password') || empty($member->password)) {
+                return;
+            }
+
+            $marketplaceClientId = $member->organizer?->marketplace_client_id;
+            if (!$marketplaceClientId) {
+                return;
+            }
+
+            static::query()
+                ->whereHas('organizer', fn ($q) => $q->where('marketplace_client_id', $marketplaceClientId))
+                ->where('email', $member->email)
+                ->where('status', 'active')
+                ->where('id', '!=', $member->id)
+                ->get()
+                ->each(function (self $other) use ($member) {
+                    $other->updateQuietly(['password' => $member->password]);
+                });
+        });
+    }
+
     // =========================================
     // Relationships
     // =========================================
