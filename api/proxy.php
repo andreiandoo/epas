@@ -827,7 +827,9 @@ switch ($action) {
             echo json_encode(['error' => 'Missing artist slug']);
             exit;
         }
-        $endpoint = '/artists/' . urlencode($slug);
+        $params = [];
+        if (isset($_GET['tour_slug'])) $params['tour_slug'] = $_GET['tour_slug'];
+        $endpoint = '/artists/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'artist.events':
