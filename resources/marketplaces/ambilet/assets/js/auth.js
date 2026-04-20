@@ -633,10 +633,24 @@ const AmbiletAuth = {
 };
 
 // Handle admin impersonation token IMMEDIATELY (before DOMContentLoaded)
-// so organizer pages don't redirect to login before the token is stored
+// so organizer/customer pages don't redirect to login before the token is stored
 (function () {
     const urlParams = new URLSearchParams(window.location.search);
     const adminToken = urlParams.get('_admin_token');
+    const adminCustomerToken = urlParams.get('_admin_customer_token');
+
+    if (adminCustomerToken) {
+        localStorage.setItem('ambilet_customer_token', adminCustomerToken);
+        localStorage.setItem('ambilet_user_type', 'customer');
+        localStorage.removeItem('ambilet_organizer_token');
+        localStorage.removeItem('ambilet_organizer_data');
+
+        urlParams.delete('_admin_customer_token');
+        const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
+        history.replaceState(null, '', cleanUrl);
+        return;
+    }
+
     if (!adminToken) return;
 
     localStorage.setItem('ambilet_organizer_token', adminToken);

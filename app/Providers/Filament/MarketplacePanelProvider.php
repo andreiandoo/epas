@@ -102,6 +102,20 @@ class MarketplacePanelProvider extends PanelProvider
                     $url = 'https://' . $domain . '/organizator/panou?_admin_token=' . urlencode($token);
                     return redirect($url);
                 })->name('filament.marketplace.organizer.login-as');
+
+                Route::get('/marketplace-customers/{id}/login-as', function (int $id) {
+                    $customer = \App\Models\MarketplaceCustomer::findOrFail($id);
+                    $marketplace = \App\Models\MarketplaceClient::find($customer->marketplace_client_id);
+                    if (!$marketplace || !$marketplace->domain) {
+                        abort(404, 'Marketplace domain not configured');
+                    }
+                    // Revoke old impersonation tokens and create a fresh one
+                    $customer->tokens()->where('name', 'admin-impersonation')->delete();
+                    $token = $customer->createToken('admin-impersonation')->plainTextToken;
+                    $domain = preg_replace('#^https?://#', '', rtrim($marketplace->domain, '/'));
+                    $url = 'https://' . $domain . '/cont/dashboard?_admin_customer_token=' . urlencode($token);
+                    return redirect($url);
+                })->name('filament.marketplace.customer.login-as');
             })
 
             // Define navigation group order

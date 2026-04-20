@@ -377,6 +377,18 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
 (function(){
     var p=new URLSearchParams(window.location.search);
     var t=p.get('_admin_token');
+    var ct=p.get('_admin_customer_token');
+    if(ct){
+        try{
+            localStorage.setItem('ambilet_customer_token',ct);
+            localStorage.setItem('ambilet_user_type','customer');
+            localStorage.removeItem('ambilet_organizer_token');
+            localStorage.removeItem('ambilet_organizer_data');
+        }catch(e){}
+        p.delete('_admin_customer_token');
+        history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
+        return;
+    }
     if(!t)return;
     try{
         localStorage.setItem('ambilet_organizer_token',t);

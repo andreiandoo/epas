@@ -528,6 +528,11 @@ class MarketplaceCustomerResource extends Resource
                     ),
             ])
             ->recordActions([
+                Action::make('login_as')
+                    ->label('Login as')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('warning')
+                    ->url(fn ($record) => url('/marketplace/marketplace-customers/' . $record->id . '/login-as'), shouldOpenInNewTab: true),
                 ViewAction::make(),
                 EditAction::make(),
             ])
