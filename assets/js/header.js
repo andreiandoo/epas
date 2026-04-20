@@ -164,7 +164,7 @@
     var currentSearchQuery = '';
 
     function resetSearchUI() {
-        searchQuickLinks.classList.remove('hidden');
+        if (searchQuickLinks) searchQuickLinks.classList.remove('hidden');
         searchResults.classList.add('hidden');
         searchMinChars.classList.add('hidden');
         searchLoading.classList.add('hidden');
@@ -177,7 +177,7 @@
     }
 
     function showLoading() {
-        searchQuickLinks.classList.add('hidden');
+        if (searchQuickLinks) searchQuickLinks.classList.add('hidden');
         searchMinChars.classList.add('hidden');
         searchResults.classList.remove('hidden');
         searchLoading.classList.remove('hidden');
@@ -194,7 +194,7 @@
     }
 
     function showMinChars() {
-        searchQuickLinks.classList.add('hidden');
+        if (searchQuickLinks) searchQuickLinks.classList.add('hidden');
         searchResults.classList.add('hidden');
         searchMinChars.classList.remove('hidden');
     }
