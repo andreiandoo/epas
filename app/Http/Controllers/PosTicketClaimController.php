@@ -374,13 +374,32 @@ class PosTicketClaimController extends Controller
             <p style='color:#999;font-size:12px;margin-top:30px;'>Trimis de {$marketplaceName}</p>
         </div>";
 
-        $fromEmail = $client?->getEmailFromAddress() ?? 'noreply@ambilet.ro';
-        $fromName = $client?->getEmailFromName() ?? $marketplaceName;
+        $subject = "Biletele tale - {$eventName}";
 
-        Mail::html($html, function ($message) use ($email, $fromEmail, $fromName, $eventName) {
+        // Route through marketplace transport so the slug auto-routes to the
+        // transactional provider (ticket_delivery is in EmailRouting whitelist).
+        if ($client) {
+            \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+                $client,
+                $email,
+                '',
+                $subject,
+                $html,
+                [
+                    'order_id' => $order->id,
+                    'template_slug' => 'ticket_delivery',
+                ]
+            );
+            return;
+        }
+
+        // No marketplace context — fall back to default mailer (legacy behaviour).
+        $fromEmail = 'noreply@ambilet.ro';
+        $fromName = $marketplaceName;
+        Mail::html($html, function ($message) use ($email, $fromEmail, $fromName, $subject) {
             $message->to($email)
                 ->from($fromEmail, $fromName)
-                ->subject("Biletele tale - {$eventName}");
+                ->subject($subject);
         });
     }
 }

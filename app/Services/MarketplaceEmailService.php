@@ -9,6 +9,7 @@ use App\Models\MarketplaceEmailLog;
 use App\Models\Order;
 use App\Models\MarketplaceRefundRequest;
 use App\Models\MarketplaceOrganizer;
+use App\Support\EmailRouting;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Address;
 use Illuminate\Support\Facades\Log;
@@ -353,9 +354,29 @@ class MarketplaceEmailService
             return false;
         }
 
-        // Check SMTP
-        if (!$this->marketplace->hasMailConfigured()) {
+        // Decide which transport this template uses. Transactional slugs route to
+        // the platform-owned provider; everything else stays on the primary one.
+        // Both transactional getters fall back to the primary when not configured.
+        $useTransactional = EmailRouting::isTransactional($templateSlug);
+        $fromAddress = $useTransactional
+            ? $this->marketplace->getTransactionalEmailFromAddress()
+            : $this->marketplace->getEmailFromAddress();
+        $fromName = $useTransactional
+            ? $this->marketplace->getTransactionalEmailFromName()
+            : $this->marketplace->getEmailFromName();
+
+        // For transactional sends we don't require the primary to be configured
+        // because the secondary may be set instead; either of the two transports
+        // is enough. Non-transactional still requires the primary.
+        if (!$useTransactional && !$this->marketplace->hasMailConfigured()) {
             Log::warning("SMTP not configured for marketplace {$this->marketplace->id}");
+            return false;
+        }
+        if ($useTransactional
+            && !$this->marketplace->hasTransactionalMailConfigured()
+            && !$this->marketplace->hasMailConfigured()
+        ) {
+            Log::warning("Neither transactional nor primary SMTP configured for marketplace {$this->marketplace->id}");
             return false;
         }
 
@@ -372,8 +393,8 @@ class MarketplaceEmailService
             'template_slug' => $templateSlug,
             'to_email' => $toEmail,
             'to_name' => $toName,
-            'from_email' => $this->marketplace->getEmailFromAddress(),
-            'from_name' => $this->marketplace->getEmailFromName(),
+            'from_email' => $fromAddress,
+            'from_name' => $fromName,
             'subject' => $subject,
             'body_html' => $bodyHtml,
             'body_text' => $bodyText,
@@ -381,7 +402,9 @@ class MarketplaceEmailService
         ]);
 
         try {
-            $transport = $this->marketplace->getMailTransport();
+            $transport = $useTransactional
+                ? $this->marketplace->getTransactionalMailTransport()
+                : $this->marketplace->getMailTransport();
 
             if (!$transport) {
                 $log->markFailed('Could not create SMTP transport');
@@ -389,7 +412,7 @@ class MarketplaceEmailService
             }
 
             $email = (new Email())
-                ->from(new Address($this->marketplace->getEmailFromAddress(), $this->marketplace->getEmailFromName()))
+                ->from(new Address($fromAddress, $fromName))
                 ->to(new Address($toEmail, $toName ?? ''))
                 ->subject($subject)
                 ->html($bodyHtml);

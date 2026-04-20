@@ -38,6 +38,7 @@ class Settings extends Page
         if ($marketplace) {
             $settings = $marketplace->settings ?? [];
             $smtp = $marketplace->smtp_settings ?? [];
+            $txSmtp = $marketplace->transactional_smtp_settings ?? [];
 
             $this->form->fill([
                 // Business Details
@@ -113,6 +114,20 @@ class Settings extends Page
                 'mail_from_name' => $smtp['from_name'] ?? $settings['mail']['from_name'] ?? '',
                 'mail_domain' => $smtp['domain'] ?? $settings['mail']['domain'] ?? '',
                 'mail_region' => $smtp['region'] ?? $settings['mail']['region'] ?? '',
+
+                // Transactional Mail Settings — second provider for the 14 transactional templates
+                'transactional_mail_driver' => $txSmtp['driver'] ?? '',
+                'transactional_mail_host' => $txSmtp['host'] ?? '',
+                'transactional_mail_port' => $txSmtp['port'] ?? '',
+                'transactional_mail_username' => $txSmtp['username'] ?? '',
+                'transactional_mail_password' => $this->decryptSetting($txSmtp['password'] ?? ''),
+                'transactional_mail_api_key' => $this->decryptSetting($txSmtp['api_key'] ?? ''),
+                'transactional_mail_api_secret' => $this->decryptSetting($txSmtp['api_secret'] ?? ''),
+                'transactional_mail_encryption' => $txSmtp['encryption'] ?? '',
+                'transactional_mail_from_address' => $txSmtp['from_address'] ?? '',
+                'transactional_mail_from_name' => $txSmtp['from_name'] ?? '',
+                'transactional_mail_domain' => $txSmtp['domain'] ?? '',
+                'transactional_mail_region' => $txSmtp['region'] ?? '',
 
                 // Stock alert settings
                 'stock_alert_threshold' => $settings['stock_alert_threshold'] ?? null,
@@ -504,17 +519,7 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\Select::make('mail_driver')
                                             ->label('Mail Provider')
-                                            ->options([
-                                                '' => 'Use Platform Default',
-                                                'smtp' => 'SMTP (Generic)',
-                                                'brevo' => 'Brevo (Sendinblue)',
-                                                'postmark' => 'Postmark',
-                                                'mailgun' => 'Mailgun',
-                                                'sendgrid' => 'SendGrid',
-                                                'ses' => 'Amazon SES',
-                                                'gmail' => 'Gmail',
-                                                'outlook' => 'Microsoft 365 / Outlook',
-                                            ])
+                                            ->options($this->getMailDriverOptions())
                                             ->placeholder('Select mail provider')
                                             ->live()
                                             ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
@@ -594,6 +599,91 @@ class Settings extends Page
                                                 }),
                                         ])
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('mail_driver')))
+                                        ->columnSpanFull(),
+                                    ])->columns(2),
+
+                                SC\Section::make('Provider tranzacțional (SMTP propriu platformă)')
+                                    ->description('Provider dedicat pentru emailurile tranzacționale (confirmări comandă, parolă reset, livrare bilete, alerte stoc, etc.). Lasă gol pentru a folosi providerul principal de mai sus.')
+                                    ->icon('heroicon-o-shield-check')
+                                    ->collapsible()
+                                    ->collapsed(fn () => empty(static::getMarketplaceClient()?->transactional_smtp_settings['driver'] ?? null))
+                                    ->schema([
+                                        Forms\Components\Select::make('transactional_mail_driver')
+                                            ->label('Mail Provider')
+                                            ->options($this->getMailDriverOptions())
+                                            ->placeholder('Select mail provider')
+                                            ->live()
+                                            ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
+                                                ->getContainer()
+                                                ->getComponent('transactionalMailProviderFields')
+                                                ?->getChildComponentContainer()
+                                                ->fill())
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Folosit doar pentru cele 14 tipuri de emailuri tranzacționale.')
+                                            ->columnSpanFull(),
+
+                                        SC\Group::make()
+                                            ->key('transactionalMailProviderFields')
+                                            ->schema(fn (\Filament\Schemas\Components\Utilities\Get $get): array => match ($get('transactional_mail_driver')) {
+                                                'smtp' => $this->getSmtpFields('transactional_mail_'),
+                                                'brevo' => $this->getBrevoFields('transactional_mail_'),
+                                                'postmark' => $this->getPostmarkFields('transactional_mail_'),
+                                                'mailgun' => $this->getMailgunFields('transactional_mail_'),
+                                                'sendgrid' => $this->getSendgridFields('transactional_mail_'),
+                                                'ses' => $this->getSesFields('transactional_mail_'),
+                                                'gmail' => $this->getGmailFields('transactional_mail_'),
+                                                'outlook' => $this->getOutlookFields('transactional_mail_'),
+                                                default => [],
+                                            })
+                                            ->columnSpanFull(),
+
+                                        SC\Actions::make([
+                                            \Filament\Actions\Action::make('testTransactionalConnection')
+                                                ->label('Test Transactional Email Connection')
+                                                ->icon('heroicon-o-paper-airplane')
+                                                ->color('gray')
+                                                ->requiresConfirmation()
+                                                ->modalHeading('Test Transactional Email Connection')
+                                                ->modalDescription('A test email will be sent through the transactional provider to verify the configuration.')
+                                                ->modalSubmitActionLabel('Send Test Email')
+                                                ->form([
+                                                    Forms\Components\TextInput::make('test_email')
+                                                        ->label('Send test email to')
+                                                        ->email()
+                                                        ->required()
+                                                        ->default(fn () => auth()->user()?->email),
+                                                ])
+                                                ->action(function (array $data) {
+                                                    $this->save();
+
+                                                    $marketplace = static::getMarketplaceClient();
+                                                    if (!$marketplace) {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title('Error')
+                                                            ->body('Could not find marketplace configuration.')
+                                                            ->send();
+                                                        return;
+                                                    }
+
+                                                    $result = $marketplace->sendTransactionalTestEmail($data['test_email']);
+
+                                                    if ($result['success']) {
+                                                        Notification::make()
+                                                            ->success()
+                                                            ->title('Test email sent!')
+                                                            ->body($result['message'])
+                                                            ->send();
+                                                    } else {
+                                                        Notification::make()
+                                                            ->danger()
+                                                            ->title('Failed to send test email')
+                                                            ->body($result['error'] ?? 'Unknown error occurred')
+                                                            ->duration(10000)
+                                                            ->send();
+                                                    }
+                                                }),
+                                        ])
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('transactional_mail_driver')))
                                         ->columnSpanFull(),
                                     ])->columns(2),
 
@@ -766,6 +856,42 @@ class Settings extends Page
         // Clear settings.mail to avoid stale data (smtp_settings is the source of truth now)
         unset($settings['mail']);
 
+        // Transactional mail settings — secondary provider stored in its own column.
+        // Mirrors the primary save logic; when no driver is selected we leave the
+        // existing config alone (or reset to empty when explicitly cleared).
+        $currentTxSmtp = $marketplace->transactional_smtp_settings ?? [];
+        $incomingTxDriver = $data['transactional_mail_driver'] ?? null;
+
+        if (filled($incomingTxDriver)) {
+            $currentTxSmtp['driver'] = $incomingTxDriver;
+
+            if (array_key_exists('transactional_mail_from_address', $data) && filled($data['transactional_mail_from_address'])) {
+                $currentTxSmtp['from_address'] = $data['transactional_mail_from_address'];
+            }
+            if (array_key_exists('transactional_mail_from_name', $data) && filled($data['transactional_mail_from_name'])) {
+                $currentTxSmtp['from_name'] = $data['transactional_mail_from_name'];
+            }
+
+            if (!empty($data['transactional_mail_host'])) $currentTxSmtp['host'] = $data['transactional_mail_host'];
+            if (!empty($data['transactional_mail_port'])) $currentTxSmtp['port'] = $data['transactional_mail_port'];
+            if (array_key_exists('transactional_mail_username', $data) && filled($data['transactional_mail_username'])) {
+                $currentTxSmtp['username'] = $data['transactional_mail_username'];
+            }
+            if (!empty($data['transactional_mail_password'])) $currentTxSmtp['password'] = encrypt($data['transactional_mail_password']);
+            if (isset($data['transactional_mail_encryption'])) $currentTxSmtp['encryption'] = $data['transactional_mail_encryption'];
+
+            if (!empty($data['transactional_mail_api_key'])) $currentTxSmtp['api_key'] = encrypt($data['transactional_mail_api_key']);
+            if (!empty($data['transactional_mail_api_secret'])) $currentTxSmtp['api_secret'] = encrypt($data['transactional_mail_api_secret']);
+
+            if (!empty($data['transactional_mail_domain'])) $currentTxSmtp['domain'] = $data['transactional_mail_domain'];
+            if (!empty($data['transactional_mail_region'])) $currentTxSmtp['region'] = $data['transactional_mail_region'];
+        } else {
+            // Driver was cleared — wipe the secondary config so we fall back to primary
+            $currentTxSmtp = [];
+        }
+
+        $marketplace->transactional_smtp_settings = $currentTxSmtp;
+
         // Stock alert settings — preserve existing if form fields are empty
         if (!empty($data['stock_alert_threshold'])) {
             $settings['stock_alert_threshold'] = (int) $data['stock_alert_threshold'];
@@ -808,20 +934,39 @@ class Settings extends Page
     }
 
     /**
-     * SMTP provider fields
+     * Shared mail-driver options used by both the primary and transactional providers.
      */
-    private function getSmtpFields(): array
+    private function getMailDriverOptions(): array
+    {
+        return [
+            '' => 'Use Platform Default',
+            'smtp' => 'SMTP (Generic)',
+            'brevo' => 'Brevo (Sendinblue)',
+            'postmark' => 'Postmark',
+            'mailgun' => 'Mailgun',
+            'sendgrid' => 'SendGrid',
+            'ses' => 'Amazon SES',
+            'gmail' => 'Gmail',
+            'outlook' => 'Microsoft 365 / Outlook',
+        ];
+    }
+
+    /**
+     * SMTP provider fields. $prefix lets the same helper render either the
+     * primary ('mail_') or the transactional ('transactional_mail_') section.
+     */
+    private function getSmtpFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_host')
+                Forms\Components\TextInput::make($prefix . 'host')
                     ->label('SMTP Host')
                     ->placeholder('smtp.example.com')
                     ->maxLength(255)
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your mail server hostname'),
 
-                Forms\Components\TextInput::make('mail_port')
+                Forms\Components\TextInput::make($prefix . 'port')
                     ->label('SMTP Port')
                     ->numeric()
                     ->default(587)
@@ -829,13 +974,13 @@ class Settings extends Page
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually 587 for TLS, 465 for SSL'),
 
-                Forms\Components\TextInput::make('mail_username')
+                Forms\Components\TextInput::make($prefix . 'username')
                     ->label('Username')
                     ->maxLength(255)
                     ->placeholder('your-username')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP authentication username'),
 
-                Forms\Components\TextInput::make('mail_password')
+                Forms\Components\TextInput::make($prefix . 'password')
                     ->label('Password')
                     ->password()
                     ->maxLength(255)
@@ -844,7 +989,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to keep existing')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\Select::make('mail_encryption')
+                Forms\Components\Select::make($prefix . 'encryption')
                     ->label('Encryption')
                     ->options([
                         'tls' => 'TLS (Recommended)',
@@ -854,7 +999,7 @@ class Settings extends Page
                     ->default('tls')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Security protocol'),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -862,7 +1007,7 @@ class Settings extends Page
                     ->placeholder('noreply@yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender email address'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -875,11 +1020,11 @@ class Settings extends Page
     /**
      * Brevo (Sendinblue) provider fields
      */
-    private function getBrevoFields(): array
+    private function getBrevoFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_username')
+                Forms\Components\TextInput::make($prefix . 'username')
                     ->label('SMTP Login (Account Email)')
                     ->email()
                     ->maxLength(255)
@@ -887,7 +1032,7 @@ class Settings extends Page
                     ->placeholder('your-brevo-account@email.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Brevo account email used for SMTP login'),
 
-                Forms\Components\TextInput::make('mail_api_key')
+                Forms\Components\TextInput::make($prefix . 'api_key')
                     ->label('SMTP Key')
                     ->password()
                     ->maxLength(255)
@@ -897,7 +1042,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP Key from Brevo Settings > SMTP & API (different from API Key)')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -905,7 +1050,7 @@ class Settings extends Page
                     ->placeholder('noreply@yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be a verified sender in Brevo'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -918,11 +1063,11 @@ class Settings extends Page
     /**
      * Postmark provider fields
      */
-    private function getPostmarkFields(): array
+    private function getPostmarkFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_api_key')
+                Forms\Components\TextInput::make($prefix . 'api_key')
                     ->label('Server API Token')
                     ->password()
                     ->maxLength(255)
@@ -933,7 +1078,7 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -941,7 +1086,7 @@ class Settings extends Page
                     ->placeholder('noreply@yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender signature'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -954,11 +1099,11 @@ class Settings extends Page
     /**
      * Mailgun provider fields
      */
-    private function getMailgunFields(): array
+    private function getMailgunFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_api_key')
+                Forms\Components\TextInput::make($prefix . 'api_key')
                     ->label('API Key')
                     ->password()
                     ->maxLength(255)
@@ -968,14 +1113,14 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Private API key from Mailgun')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\TextInput::make('mail_domain')
+                Forms\Components\TextInput::make($prefix . 'domain')
                     ->label('Sending Domain')
                     ->maxLength(255)
                     ->placeholder('mg.yourdomain.com')
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified sending domain'),
 
-                Forms\Components\Select::make('mail_region')
+                Forms\Components\Select::make($prefix . 'region')
                     ->label('Region')
                     ->options([
                         'us' => 'US (api.mailgun.net)',
@@ -985,7 +1130,7 @@ class Settings extends Page
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Mailgun API region'),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -993,7 +1138,7 @@ class Settings extends Page
                     ->placeholder('noreply@mg.yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must use verified domain'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -1006,11 +1151,11 @@ class Settings extends Page
     /**
      * SendGrid provider fields
      */
-    private function getSendgridFields(): array
+    private function getSendgridFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_api_key')
+                Forms\Components\TextInput::make($prefix . 'api_key')
                     ->label('API Key')
                     ->password()
                     ->maxLength(255)
@@ -1021,7 +1166,7 @@ class Settings extends Page
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -1029,7 +1174,7 @@ class Settings extends Page
                     ->placeholder('noreply@yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -1042,11 +1187,11 @@ class Settings extends Page
     /**
      * Amazon SES provider fields
      */
-    private function getSesFields(): array
+    private function getSesFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('mail_api_key')
+                Forms\Components\TextInput::make($prefix . 'api_key')
                     ->label('Access Key ID')
                     ->password()
                     ->maxLength(255)
@@ -1056,7 +1201,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'AWS IAM access key')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\TextInput::make('mail_api_secret')
+                Forms\Components\TextInput::make($prefix . 'api_secret')
                     ->label('Secret Access Key')
                     ->password()
                     ->maxLength(255)
@@ -1066,7 +1211,7 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'AWS IAM secret key')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\Select::make('mail_region')
+                Forms\Components\Select::make($prefix . 'region')
                     ->label('AWS Region')
                     ->options([
                         'us-east-1' => 'US East (N. Virginia)',
@@ -1081,7 +1226,7 @@ class Settings extends Page
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'SES region'),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
@@ -1089,7 +1234,7 @@ class Settings extends Page
                     ->placeholder('noreply@yourdomain.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified email or domain'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -1102,11 +1247,11 @@ class Settings extends Page
     /**
      * Gmail provider fields
      */
-    private function getGmailFields(): array
+    private function getGmailFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\Placeholder::make('gmail_info')
+                Forms\Components\Placeholder::make($prefix . 'gmail_info')
                     ->label('')
                     ->content(new HtmlString('
                         <div class="p-3 text-sm text-gray-600 rounded-lg dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20">
@@ -1116,7 +1261,7 @@ class Settings extends Page
                     '))
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('mail_username')
+                Forms\Components\TextInput::make($prefix . 'username')
                     ->label('Gmail Address')
                     ->email()
                     ->maxLength(255)
@@ -1124,7 +1269,7 @@ class Settings extends Page
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Gmail address'),
 
-                Forms\Components\TextInput::make('mail_password')
+                Forms\Components\TextInput::make($prefix . 'password')
                     ->label('App Password')
                     ->password()
                     ->maxLength(255)
@@ -1134,14 +1279,14 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: '16-character app password')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@gmail.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as Gmail address'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
@@ -1154,11 +1299,11 @@ class Settings extends Page
     /**
      * Microsoft 365 / Outlook provider fields
      */
-    private function getOutlookFields(): array
+    private function getOutlookFields(string $prefix = 'mail_'): array
     {
         return [
             SC\Grid::make(2)->schema([
-                Forms\Components\Placeholder::make('outlook_info')
+                Forms\Components\Placeholder::make($prefix . 'outlook_info')
                     ->label('')
                     ->content(new HtmlString('
                         <div class="p-3 text-sm text-gray-600 rounded-lg dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20">
@@ -1168,7 +1313,7 @@ class Settings extends Page
                     '))
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('mail_username')
+                Forms\Components\TextInput::make($prefix . 'username')
                     ->label('Email Address')
                     ->email()
                     ->maxLength(255)
@@ -1176,7 +1321,7 @@ class Settings extends Page
                     ->required()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Microsoft 365 / Outlook email'),
 
-                Forms\Components\TextInput::make('mail_password')
+                Forms\Components\TextInput::make($prefix . 'password')
                     ->label('Password / App Password')
                     ->password()
                     ->maxLength(255)
@@ -1186,14 +1331,14 @@ class Settings extends Page
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Account or app password')
                     ->dehydrated(fn ($state) => filled($state)),
 
-                Forms\Components\TextInput::make('mail_from_address')
+                Forms\Components\TextInput::make($prefix . 'from_address')
                     ->label('From Email')
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@outlook.com')
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as login email'),
 
-                Forms\Components\TextInput::make('mail_from_name')
+                Forms\Components\TextInput::make($prefix . 'from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()

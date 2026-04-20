@@ -1126,9 +1126,26 @@ class CheckoutController extends BaseController
 
             $recipients = array_unique($recipients);
 
-            \Illuminate\Support\Facades\Mail::html($html, function ($message) use ($recipients, $subject) {
-                $message->to($recipients)->subject($subject);
-            });
+            // Route through marketplace transport so the slug is auto-routed to the
+            // transactional provider (stock_low_alert is in EmailRouting whitelist).
+            foreach ($recipients as $recipient) {
+                \App\Http\Controllers\Api\MarketplaceClient\BaseController::sendViaMarketplace(
+                    $client,
+                    $recipient,
+                    '',
+                    $subject,
+                    $html,
+                    [
+                        'template_slug' => 'stock_low_alert',
+                        'metadata' => [
+                            'ticket_type_id' => $ticketType->id,
+                            'event_id' => $event->id,
+                            'remaining' => $remaining,
+                            'threshold' => $threshold,
+                        ],
+                    ]
+                );
+            }
 
             \Log::info('Low stock alert sent', [
                 'ticket_type_id' => $ticketType->id,

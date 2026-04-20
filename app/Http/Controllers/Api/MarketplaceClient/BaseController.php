@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Http\Controllers\Controller;
 use App\Models\MarketplaceClient;
+use App\Support\EmailRouting;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -90,8 +91,25 @@ abstract class BaseController extends Controller
      */
     public static function sendViaMarketplace(MarketplaceClient $client, string $toEmail, string $toName, string $subject, string $html, array $logExtra = []): void
     {
-        $fromAddress = $client->getEmailFromAddress();
-        $fromName = $client->getEmailFromName();
+        // Auto-route by template_slug: transactional templates use the platform-owned
+        // (transactional) provider; everything else stays on the primary provider.
+        // Both transactional accessors fall back to the primary when not configured,
+        // so behavior for marketplaces that haven't set a second provider is unchanged.
+        $slug = $logExtra['template_slug'] ?? null;
+        $useTransactional = EmailRouting::isTransactional($slug);
+
+        $fromAddress = $useTransactional
+            ? $client->getTransactionalEmailFromAddress()
+            : $client->getEmailFromAddress();
+        $fromName = $useTransactional
+            ? $client->getTransactionalEmailFromName()
+            : $client->getEmailFromName();
+
+        $hasPrimaryConfig = $client->hasMailConfigured();
+        $hasTransactionalConfig = $client->hasTransactionalMailConfigured();
+        $marketplaceConfigured = $useTransactional
+            ? ($hasTransactionalConfig || $hasPrimaryConfig)
+            : $hasPrimaryConfig;
 
         // Log the email
         $log = \App\Models\MarketplaceEmailLog::create(array_merge([
@@ -106,9 +124,10 @@ abstract class BaseController extends Controller
         ], $logExtra));
 
         try {
-            // Try marketplace-specific mail config first
-            if ($client->hasMailConfigured()) {
-                $transport = $client->getMailTransport();
+            if ($marketplaceConfigured) {
+                $transport = $useTransactional
+                    ? $client->getTransactionalMailTransport()
+                    : $client->getMailTransport();
                 if ($transport) {
                     $email = (new \Symfony\Component\Mime\Email())
                         ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
@@ -120,19 +139,26 @@ abstract class BaseController extends Controller
                     $messageId = $sentMessage?->getMessageId();
                     $log->markSent($messageId);
 
+                    $settingsForLog = $useTransactional
+                        ? $client->getTransactionalMailSettings()
+                        : $client->getMailSettings();
                     Log::channel('marketplace')->info('Email sent via marketplace transport', [
                         'marketplace_client_id' => $client->id,
                         'to' => $toEmail,
                         'subject' => $subject,
                         'message_id' => $messageId,
-                        'driver' => $client->getMailSettings()['driver'] ?? 'unknown',
+                        'driver' => $settingsForLog['driver'] ?? 'unknown',
+                        'transport' => $useTransactional
+                            ? ($hasTransactionalConfig ? 'transactional' : 'primary (transactional fallback)')
+                            : 'primary',
+                        'template_slug' => $slug,
                     ]);
                     return;
                 }
 
                 Log::channel('marketplace')->warning('Marketplace mail configured but transport creation failed, falling back to Laravel mailer', [
                     'marketplace_client_id' => $client->id,
-                    'driver' => $client->getMailSettings()['driver'] ?? 'unknown',
+                    'transport' => $useTransactional ? 'transactional' : 'primary',
                 ]);
             }
 
@@ -146,6 +172,7 @@ abstract class BaseController extends Controller
                 'marketplace_client_id' => $client->id,
                 'to' => $toEmail,
                 'subject' => $subject,
+                'template_slug' => $slug,
             ]);
         } catch (\Throwable $e) {
             Log::channel('marketplace')->error('Failed to send marketplace email', [

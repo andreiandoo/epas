@@ -54,6 +54,7 @@ class MarketplaceClient extends Model
         'locale',
         'language',
         'smtp_settings',
+        'transactional_smtp_settings',
         'email_settings',
         'next_contract_number',
         'signature_image',
@@ -66,6 +67,7 @@ class MarketplaceClient extends Model
         'allowed_tenants' => 'array',
         'settings' => 'array',
         'smtp_settings' => 'array',
+        'transactional_smtp_settings' => 'array',
         'email_settings' => 'array',
         'last_api_call_at' => 'datetime',
         'billing_starts_at' => 'date',
@@ -468,7 +470,7 @@ class MarketplaceClient extends Model
             $factory = new EsmtpTransportFactory();
 
             return match ($driver) {
-                'brevo' => $this->createBrevoTransport($apiKey),
+                'brevo' => $this->createBrevoTransport($mail, $apiKey),
                 'smtp' => $this->createSmtpTransport($mail, $password),
                 'postmark' => $this->createPostmarkTransport($apiKey),
                 'sendgrid' => $this->createSendgridTransport($apiKey),
@@ -494,9 +496,8 @@ class MarketplaceClient extends Model
     /**
      * Create Brevo SMTP transport
      */
-    protected function createBrevoTransport(string $apiKey): \Symfony\Component\Mailer\Transport\TransportInterface
+    protected function createBrevoTransport(array $mail, string $apiKey): \Symfony\Component\Mailer\Transport\TransportInterface
     {
-        $mail = $this->getMailSettings();
         $username = $mail['username'] ?? $mail['from_address'] ?? $this->contact_email;
 
         $factory = new EsmtpTransportFactory();
@@ -641,6 +642,131 @@ class MarketplaceClient extends Model
             $transport->send($email);
 
             return ['success' => true, 'message' => 'Test email sent successfully to ' . $toEmail];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Transactional mail provider (secondary) — used for the 14 transactional
+    // template slugs (see App\Support\EmailRouting). Falls back to the primary
+    // mail provider when not configured, so existing flows keep working.
+    // ------------------------------------------------------------------
+
+    public function getTransactionalMailSettings(): array
+    {
+        $smtp = $this->transactional_smtp_settings ?? [];
+        if (!empty($smtp['driver'])) {
+            return $smtp;
+        }
+        if (!empty($smtp['host'])) {
+            return array_merge(['driver' => 'smtp'], $smtp);
+        }
+        return [];
+    }
+
+    public function hasTransactionalMailConfigured(): bool
+    {
+        $mail = $this->getTransactionalMailSettings();
+        $driver = $mail['driver'] ?? '';
+
+        return match ($driver) {
+            'smtp' => !empty($mail['host']) && !empty($mail['username']) && !empty($mail['password']),
+            'brevo' => !empty($mail['api_key']),
+            'postmark' => !empty($mail['api_key']),
+            'mailgun' => !empty($mail['api_key']) && !empty($mail['domain']),
+            'sendgrid' => !empty($mail['api_key']),
+            'ses' => !empty($mail['api_key']) && !empty($mail['api_secret']) && !empty($mail['region']),
+            default => false,
+        };
+    }
+
+    /**
+     * Returns the transactional transport when configured, otherwise the primary one.
+     */
+    public function getTransactionalMailTransport(): ?\Symfony\Component\Mailer\Transport\TransportInterface
+    {
+        if (!$this->hasTransactionalMailConfigured()) {
+            return $this->getMailTransport();
+        }
+
+        $mail = $this->getTransactionalMailSettings();
+        $driver = $mail['driver'] ?? 'smtp';
+
+        try {
+            $apiKey = isset($mail['api_key']) ? $this->decryptIfNeeded($mail['api_key']) : null;
+            $apiSecret = isset($mail['api_secret']) ? $this->decryptIfNeeded($mail['api_secret']) : null;
+            $password = isset($mail['password']) ? $this->decryptIfNeeded($mail['password']) : null;
+
+            return match ($driver) {
+                'brevo' => $this->createBrevoTransport($mail, $apiKey),
+                'smtp' => $this->createSmtpTransport($mail, $password),
+                'postmark' => $this->createPostmarkTransport($apiKey),
+                'sendgrid' => $this->createSendgridTransport($apiKey),
+                default => $this->createSmtpTransport($mail, $password),
+            };
+        } catch (\Exception $e) {
+            \Log::error('Failed to create transactional mail transport for marketplace ' . $this->id, [
+                'driver' => $driver,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->getMailTransport();
+        }
+    }
+
+    public function getTransactionalEmailFromAddress(): string
+    {
+        $mail = $this->getTransactionalMailSettings();
+        if (!empty($mail['from_address'])) {
+            return $mail['from_address'];
+        }
+        return $this->getEmailFromAddress();
+    }
+
+    public function getTransactionalEmailFromName(): string
+    {
+        $mail = $this->getTransactionalMailSettings();
+        if (!empty($mail['from_name'])) {
+            return $mail['from_name'];
+        }
+        return $this->getEmailFromName();
+    }
+
+    /**
+     * Send a test email via the transactional transport.
+     */
+    public function sendTransactionalTestEmail(string $toEmail): array
+    {
+        $transport = $this->getTransactionalMailTransport();
+        if (!$transport) {
+            return ['success' => false, 'error' => 'Mail is not configured (neither transactional nor primary)'];
+        }
+
+        $usingFallback = !$this->hasTransactionalMailConfigured();
+
+        try {
+            $email = (new \Symfony\Component\Mime\Email())
+                ->from(new \Symfony\Component\Mime\Address(
+                    $this->getTransactionalEmailFromAddress(),
+                    $this->getTransactionalEmailFromName()
+                ))
+                ->to($toEmail)
+                ->subject('Test Email (transactional) from ' . $this->name)
+                ->html(
+                    '<h1>Test Transactional Email</h1>'
+                    . '<p>This message was sent via the <strong>'
+                    . ($usingFallback ? 'primary (fallback)' : 'transactional')
+                    . '</strong> provider for marketplace <strong>' . e($this->name) . '</strong>.</p>'
+                    . '<p>Sent at: ' . now()->format('Y-m-d H:i:s') . '</p>'
+                );
+
+            $transport->send($email);
+
+            return [
+                'success' => true,
+                'message' => 'Test email sent successfully to ' . $toEmail
+                    . ($usingFallback ? ' (using primary provider as fallback)' : ''),
+            ];
         } catch (\Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
