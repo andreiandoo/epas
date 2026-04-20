@@ -1264,7 +1264,20 @@ class EditEvent extends EditRecord
 
         // Tour management — only act if the tour field is present in form data
         // (prevents accidental clearing when the field value is missing/undefined)
+        \Log::info('[TourDebug] afterSave entered', [
+            'event_id' => $this->record->id,
+            'current_tour_id' => $this->record->tour_id,
+            'has_is_in_tour_key' => array_key_exists('is_in_tour', $this->data),
+            'is_in_tour' => $this->data['is_in_tour'] ?? null,
+            'tour_mode' => $this->data['tour_mode'] ?? null,
+            'tour_name' => $this->data['tour_name'] ?? null,
+            'tour_slug' => $this->data['tour_slug'] ?? null,
+            'existing_tour_id' => $this->data['existing_tour_id'] ?? null,
+            'grouping_type' => $this->data['grouping_type'] ?? null,
+        ]);
+
         if (!array_key_exists('is_in_tour', $this->data)) {
+            \Log::info('[TourDebug] EARLY RETURN — is_in_tour key missing');
             return;
         }
 
@@ -1278,11 +1291,19 @@ class EditEvent extends EditRecord
                 $tourName = trim($this->data['tour_name'] ?? '');
                 $tourSlug = trim($this->data['tour_slug'] ?? '') ?: \Illuminate\Support\Str::slug($tourName);
 
+                \Log::info('[TourDebug] tour_mode=new branch', [
+                    'event_id' => $this->record->id,
+                    'tour_name' => $tourName,
+                    'tour_slug' => $tourSlug,
+                    'record_tour_id' => $this->record->tour_id,
+                ]);
+
                 if ($this->record->tour_id) {
                     // Update the name, slug and type of the existing tour
                     $updateData = ['name' => $tourName, 'type' => $groupingType];
                     if ($tourSlug) $updateData['slug'] = $tourSlug;
                     Tour::where('id', $this->record->tour_id)->update($updateData);
+                    \Log::info('[TourDebug] UPDATED existing tour', ['tour_id' => $this->record->tour_id, 'data' => $updateData]);
                 } else {
                     // Create a brand-new tour and assign only this event
                     $tour = Tour::create([
@@ -1292,10 +1313,17 @@ class EditEvent extends EditRecord
                         'type' => $groupingType,
                     ]);
                     $this->record->update(['tour_id' => $tour->id]);
+                    \Log::info('[TourDebug] CREATED new tour', ['tour_id' => $tour->id, 'event_assigned' => $this->record->id]);
                 }
             } else {
                 // Existing tour selected
                 $existingTourId = (int) ($this->data['existing_tour_id'] ?? 0);
+
+                \Log::info('[TourDebug] tour_mode=existing branch', [
+                    'event_id' => $this->record->id,
+                    'existing_tour_id_from_data' => $existingTourId,
+                    'record_tour_id' => $this->record->tour_id,
+                ]);
 
                 if ($existingTourId && $existingTourId !== (int) $this->record->tour_id) {
                     // Remove this event from old tour and clean up if orphaned
