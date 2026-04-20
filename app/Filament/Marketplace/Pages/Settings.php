@@ -605,8 +605,6 @@ class Settings extends Page
                                 SC\Section::make('Provider tranzacțional (SMTP propriu platformă)')
                                     ->description('Provider dedicat pentru emailurile tranzacționale (confirmări comandă, parolă reset, livrare bilete, alerte stoc, etc.). Lasă gol pentru a folosi providerul principal de mai sus.')
                                     ->icon('heroicon-o-shield-check')
-                                    ->collapsible()
-                                    ->collapsed(fn () => empty(static::getMarketplaceClient()?->transactional_smtp_settings['driver'] ?? null))
                                     ->schema([
                                         Forms\Components\Select::make('transactional_mail_driver')
                                             ->label('Mail Provider')
