@@ -2281,6 +2281,38 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
 
 /*
 |--------------------------------------------------------------------------
+| Marketplace Client Venue Owner API Routes
+|--------------------------------------------------------------------------
+|
+| Read-only API for Tixello tenants of type venue whose venue(s) partner with
+| the current marketplace. Venue owners log in from the mobile app, see events
+| hosted at their venue, attendees, ticket info, and maintain private notes.
+| They cannot check-in, sell tickets, or change ticket state.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AuthController as VenueOwnerAuthController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\EventsController as VenueOwnerEventsController;
+
+Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::post('/login', [VenueOwnerAuthController::class, 'login'])
+        ->name('api.marketplace-client.venue-owner.login');
+
+    Route::middleware(['auth:sanctum', 'venue.owner'])->group(function () {
+        Route::post('/logout', [VenueOwnerAuthController::class, 'logout'])
+            ->name('api.marketplace-client.venue-owner.logout');
+        Route::get('/me', [VenueOwnerAuthController::class, 'me'])
+            ->name('api.marketplace-client.venue-owner.me');
+
+        Route::get('/events', [VenueOwnerEventsController::class, 'index'])
+            ->name('api.marketplace-client.venue-owner.events');
+        Route::get('/events/{event}', [VenueOwnerEventsController::class, 'show'])
+            ->name('api.marketplace-client.venue-owner.events.show');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Marketplace Client Locations API Routes
 |--------------------------------------------------------------------------
 |

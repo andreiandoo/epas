@@ -52,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'vendor.auth' => \App\Http\Middleware\AuthenticateVendor::class,
             'web-template.domain' => \App\Http\Middleware\WebTemplateDomainMapping::class,
             'cashless.active' => \App\Http\Middleware\EnsureCashlessActive::class,
+            'venue.owner' => \App\Http\Middleware\EnsureVenueOwner::class,
         ]);
 
         // Add global middleware for API routes
