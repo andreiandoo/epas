@@ -536,6 +536,12 @@ RewriteRule ^ - [L]
 # Must come after all other explicit routes
 # ============================================
 
+# Handle 2-segment artist+tour URLs (e.g. /qfeel/bucuresti for serie_evenimente).
+# Resolves first segment as an artist via vanity, second as the tour slug.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/([a-z0-9-]{1,100})/?$ vanity-tour.php?slug=$1&tour=$2 [L,QSA]
+
 # Handle single-segment slugs via vanity URL resolver, with fallback to city pages.
 # vanity.php first checks marketplace_vanity_urls; if no match it includes city.php.
 RewriteCond %{REQUEST_FILENAME} !-f
