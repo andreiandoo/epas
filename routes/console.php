@@ -751,17 +751,18 @@ Schedule::command('sms:send-scheduled-campaigns')
     ->everyMinute()
     ->withoutOverlapping();
 
-// Auto-generate deconts for finished events with remaining balance (daily at 6 AM)
-Schedule::command('marketplace:generate-auto-deconts --days-after=3')
-    ->dailyAt('06:00')
-    ->timezone('Europe/Bucharest')
-    ->withoutOverlapping()
-    ->onSuccess(function () {
-        \Log::info('Auto-deconts generation completed');
-    })
-    ->onFailure(function () {
-        \Log::error('Failed to generate auto-deconts');
-    });
+// Auto-generate deconts DISABLED — payouts are created only manually by admins
+// or on request by organizers. Re-enable by uncommenting if policy changes.
+// Schedule::command('marketplace:generate-auto-deconts --days-after=3')
+//     ->dailyAt('06:00')
+//     ->timezone('Europe/Bucharest')
+//     ->withoutOverlapping()
+//     ->onSuccess(function () {
+//         \Log::info('Auto-deconts generation completed');
+//     })
+//     ->onFailure(function () {
+//         \Log::error('Failed to generate auto-deconts');
+//     });
 
 /*
 |--------------------------------------------------------------------------
