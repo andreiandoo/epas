@@ -2281,39 +2281,6 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
 
 /*
 |--------------------------------------------------------------------------
-| Marketplace Client Venue Staff API Routes
-|--------------------------------------------------------------------------
-|
-| API endpoints for staff members of venue-operator tenants. Lets them log
-| into the mobile app and operate (scan / POS sell) events hosted at their
-| venue(s), regardless of which organizer owns the event.
-|
-*/
-
-use App\Http\Controllers\Api\MarketplaceClient\VenueStaff\AuthController as VenueStaffAuthController;
-use App\Http\Controllers\Api\MarketplaceClient\VenueStaff\EventsController as VenueStaffEventsController;
-
-Route::prefix('marketplace-client/venue-staff')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
-    // Public auth
-    Route::post('/login', [VenueStaffAuthController::class, 'login'])
-        ->name('api.marketplace-client.venue-staff.login');
-
-    // Protected (Sanctum + venue.staff guard)
-    Route::middleware(['auth:sanctum', 'venue.staff'])->group(function () {
-        Route::post('/logout', [VenueStaffAuthController::class, 'logout'])
-            ->name('api.marketplace-client.venue-staff.logout');
-        Route::get('/me', [VenueStaffAuthController::class, 'me'])
-            ->name('api.marketplace-client.venue-staff.me');
-
-        Route::get('/events', [VenueStaffEventsController::class, 'index'])
-            ->name('api.marketplace-client.venue-staff.events');
-        Route::get('/events/{event}', [VenueStaffEventsController::class, 'show'])
-            ->name('api.marketplace-client.venue-staff.events.show');
-    });
-});
-
-/*
-|--------------------------------------------------------------------------
 | Marketplace Client Locations API Routes
 |--------------------------------------------------------------------------
 |
