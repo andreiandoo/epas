@@ -144,7 +144,7 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Upcoming Events Section -->
                 <section class="mb-10">
                     <div class="flex items-center justify-between mb-5">
-                        <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                        <h2 id="upcomingEventsTitle" class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
                             Evenimente viitoare
                         </h2>
                         <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
