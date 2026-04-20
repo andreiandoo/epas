@@ -205,8 +205,16 @@ const ArtistPage = {
 
         // Tour filter: when window.TOUR_SLUG is set, the backend has already
         // narrowed upcoming_events to that serie_evenimente grouping. We only
-        // need to hide the duplicate event_groupings section and sync the stat.
+        // need to hide the duplicate event_groupings section, sync the stat,
+        // and append the tour name to the "Evenimente viitoare" heading.
         if (window.TOUR_SLUG) {
+            var matchedTour = (api.event_groupings || []).find(function (g) {
+                return g.slug === window.TOUR_SLUG && g.type === 'serie_evenimente';
+            });
+            if (matchedTour && matchedTour.name) {
+                var titleEl = document.getElementById('upcomingEventsTitle');
+                if (titleEl) titleEl.textContent = 'Evenimente viitoare - ' + matchedTour.name;
+            }
             api.event_groupings = [];
             if (api.stats) api.stats.upcoming_events = (api.upcoming_events || []).length;
         }
