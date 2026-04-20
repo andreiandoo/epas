@@ -32,7 +32,7 @@ class EventsController extends BaseController
             ->where('marketplace_client_id', $client->id)
             ->whereHas('venue', function ($q) use ($tenant, $client) {
                 $q->where('tenant_id', $tenant->id)
-                  ->whereHas('marketplaceClients', fn ($mq) => $mq->where('marketplace_clients.id', $client->id));
+                  ->partnerOfMarketplace($client->id);
             })
             ->with([
                 'organizer:id,name,logo,slug',

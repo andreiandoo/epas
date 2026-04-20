@@ -46,7 +46,7 @@ class AuthController extends BaseController
         }
 
         $partnerVenueIds = $tenant->venues()
-            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_clients.id', $client->id))
+            ->partnerOfMarketplace($client->id)
             ->pluck('id');
 
         if ($partnerVenueIds->isEmpty()) {
@@ -86,7 +86,7 @@ class AuthController extends BaseController
         $tenant = $request->attributes->get('venue_owner_tenant') ?: $user->tenant;
 
         $partnerVenueIds = $tenant->venues()
-            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_clients.id', $client->id))
+            ->partnerOfMarketplace($client->id)
             ->pluck('id');
 
         return $this->success([

@@ -51,7 +51,7 @@ class EnsureVenueOwner
         }
 
         $hasPartnership = $tenant->venues()
-            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_clients.id', $client->id))
+            ->partnerOfMarketplace($client->id)
             ->exists();
 
         if (!$hasPartnership) {
@@ -94,8 +94,8 @@ class EnsureVenueOwner
             }
 
             // Also enforce partnership at event-level (defensive)
-            $venueIsPartner = $venue->marketplaceClients()
-                ->where('marketplace_clients.id', $client->id)
+            $venueIsPartner = \App\Models\Venue::where('id', $venue->id)
+                ->partnerOfMarketplace($client->id)
                 ->exists();
 
             if (!$venueIsPartner) {

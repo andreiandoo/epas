@@ -329,6 +329,24 @@ class Venue extends Model
             ->exists();
     }
 
+    /**
+     * Scope: venues that are confirmed partners of the given marketplace client,
+     * either via the direct FK (venues.marketplace_client_id + is_partner=true)
+     * or via the marketplace_venue_partners pivot (with pivot is_partner=true).
+     */
+    public function scopePartnerOfMarketplace($query, int $marketplaceClientId)
+    {
+        return $query->where(function ($q) use ($marketplaceClientId) {
+            $q->where(function ($direct) use ($marketplaceClientId) {
+                $direct->where('marketplace_client_id', $marketplaceClientId)
+                       ->where('is_partner', true);
+            })->orWhereHas('marketplaceClients', function ($pivot) use ($marketplaceClientId) {
+                $pivot->where('marketplace_clients.id', $marketplaceClientId)
+                      ->where('marketplace_venue_partners.is_partner', true);
+            });
+        });
+    }
+
     public function venueType(): BelongsTo
     {
         return $this->belongsTo(VenueType::class);
