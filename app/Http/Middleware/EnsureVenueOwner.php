@@ -3,7 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\TenantType;
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -67,9 +67,9 @@ class EnsureVenueOwner
         // If route has {event}, authorize event scope
         $eventParam = $request->route('event');
         if ($eventParam !== null) {
-            $event = $eventParam instanceof MarketplaceEvent
+            $event = $eventParam instanceof Event
                 ? $eventParam
-                : MarketplaceEvent::find($eventParam);
+                : Event::find($eventParam);
 
             if (!$event) {
                 return response()->json([
