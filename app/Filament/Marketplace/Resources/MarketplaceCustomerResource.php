@@ -61,7 +61,12 @@ class MarketplaceCustomerResource extends Resource
                                 ->email()
                                 ->required()
                                 ->maxLength(255)
-                                ->disabled(fn ($record) => $record !== null),
+                                ->unique(
+                                    table: 'marketplace_customers',
+                                    column: 'email',
+                                    ignoreRecord: true,
+                                    modifyRuleUsing: fn ($rule) => $rule->where('marketplace_client_id', static::getMarketplaceClient()?->id),
+                                ),
 
                             Forms\Components\Select::make('status')
                                 ->options([
