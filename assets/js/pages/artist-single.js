@@ -376,8 +376,12 @@ const ArtistPage = {
         // Events - use rawEvents for AmbiletEventCard which handles commission
         this.renderEvents(data.rawEvents && data.rawEvents.length > 0 ? data.rawEvents : data.events);
 
-        // Event groupings (tours/series)
-        this.renderEventGroupings(data.eventGroupings);
+        // Event groupings (tours/series) — only rendered when URL has a hash
+        // anchor (e.g. /qfeel#bucuresti). On the plain /qfeel page they stay
+        // hidden; users navigate to /qfeel/{slug} for the dedicated view.
+        if (window.location.hash) {
+            this.renderEventGroupings(data.eventGroupings);
+        }
 
         // About
         this.renderAbout(data.about, data.aboutTranslations);
