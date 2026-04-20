@@ -578,6 +578,14 @@ const ArtistPage = {
         // Scroll to hash anchor if present (e.g. /qfeel#ploiesti)
         var hash = window.location.hash.replace('#', '');
         if (hash) {
+            // Hide other groupings — only show the one matching the hash
+            var allGroupings = document.querySelectorAll('div.mt-8.mb-6');
+            for (var k = 0; k < allGroupings.length; k++) {
+                if (allGroupings[k].id !== hash) {
+                    allGroupings[k].style.display = 'none';
+                }
+            }
+
             var target = document.getElementById(hash);
             if (target) {
                 setTimeout(function() {
