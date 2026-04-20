@@ -199,6 +199,31 @@ const ArtistPage = {
     transformApiData(api) {
         var self = this;
 
+        // Tour filter: when window.TOUR_SLUG is set (e.g. /qfeel/bucuresti), only
+        // show events from the matching grouping. Restricted to serie_evenimente.
+        var tourSlug = window.TOUR_SLUG || null;
+        if (tourSlug) {
+            var groupings = api.event_groupings || [];
+            var match = null;
+            for (var gi = 0; gi < groupings.length; gi++) {
+                if (groupings[gi].slug === tourSlug && groupings[gi].type === 'serie_evenimente') {
+                    match = groupings[gi];
+                    break;
+                }
+            }
+            if (match) {
+                var allowed = {};
+                for (var ei = 0; ei < match.events.length; ei++) allowed[match.events[ei].id] = true;
+                api.upcoming_events = (api.upcoming_events || []).filter(function (e) { return allowed[e.id]; });
+                api.event_groupings = [];
+                if (api.stats) api.stats.upcoming_events = api.upcoming_events.length;
+            } else {
+                api.upcoming_events = [];
+                api.event_groupings = [];
+                if (api.stats) api.stats.upcoming_events = 0;
+            }
+        }
+
         // Calculate total followers (sum of all social platforms)
         var totalFollowers = (api.stats?.spotify_listeners || 0) +
                             (api.stats?.instagram_followers || 0) +

@@ -331,8 +331,13 @@ require_once __DIR__ . '/includes/header.php';
 // Include footer
 require_once __DIR__ . '/includes/footer.php';
 
-// Pass artist slug to JavaScript
-echo '<script>window.ARTIST_SLUG = ' . json_encode($artistSlug) . ';</script>';
+// Pass artist slug (and optional tour-slug filter) to JavaScript
+$tourFilterSlug = $_GET['tour_slug'] ?? null;
+echo '<script>window.ARTIST_SLUG = ' . json_encode($artistSlug) . ';';
+if (!empty($tourFilterSlug)) {
+    echo ' window.TOUR_SLUG = ' . json_encode($tourFilterSlug) . ';';
+}
+echo '</script>';
 
 // Load external artist page controller
 $scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single-theater.js') . '"></script>
