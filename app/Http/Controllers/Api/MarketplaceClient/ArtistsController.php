@@ -247,6 +247,17 @@ class ArtistsController extends BaseController
 
         $language = $client->language ?? 'ro';
 
+        // Optional tour-slug filter: when present, restricts upcoming_events to
+        // a specific serie_evenimente grouping (used by the /{artist}/{tour} URL).
+        $tourSlugFilter = $request->query('tour_slug');
+        $tourIdFilter = null;
+        if ($tourSlugFilter) {
+            $tourIdFilter = \App\Models\Tour::where('slug', $tourSlugFilter)
+                ->where('marketplace_client_id', $client->id)
+                ->where('type', 'serie_evenimente')
+                ->value('id');
+        }
+
         // Get upcoming events with ticket types for price calculation
         $upcomingEvents = $artist->events()
             ->with(['ticketTypes' => function ($q) {
@@ -254,8 +265,9 @@ class ArtistsController extends BaseController
             }, 'venue', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
             ->where('event_date', '>=', now()->toDateString())
             ->where('is_cancelled', false)
+            ->when($tourIdFilter, fn ($q) => $q->where('tour_id', $tourIdFilter))
             ->orderBy('event_date')
-            ->limit(10)
+            ->when(!$tourIdFilter, fn ($q) => $q->limit(10))
             ->get()
             ->map(function ($event) use ($language, $client) {
                 // For child events (multi-day), inherit ticket types from parent

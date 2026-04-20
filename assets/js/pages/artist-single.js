@@ -70,7 +70,11 @@ const ArtistPage = {
         }
 
         try {
-            var response = await AmbiletAPI.get('/artists/' + this.artistSlug);
+            var endpoint = '/artists/' + this.artistSlug;
+            if (window.TOUR_SLUG) {
+                endpoint += '?tour_slug=' + encodeURIComponent(window.TOUR_SLUG);
+            }
+            var response = await AmbiletAPI.get(endpoint);
             if (response.success && response.data) {
                 // Check if this is a Core-only artist (coming soon)
                 if (response.data.is_coming_soon) {
@@ -199,29 +203,12 @@ const ArtistPage = {
     transformApiData(api) {
         var self = this;
 
-        // Tour filter: when window.TOUR_SLUG is set (e.g. /qfeel/bucuresti), only
-        // show events from the matching grouping. Restricted to serie_evenimente.
-        var tourSlug = window.TOUR_SLUG || null;
-        if (tourSlug) {
-            var groupings = api.event_groupings || [];
-            var match = null;
-            for (var gi = 0; gi < groupings.length; gi++) {
-                if (groupings[gi].slug === tourSlug && groupings[gi].type === 'serie_evenimente') {
-                    match = groupings[gi];
-                    break;
-                }
-            }
-            if (match) {
-                var allowed = {};
-                for (var ei = 0; ei < match.events.length; ei++) allowed[match.events[ei].id] = true;
-                api.upcoming_events = (api.upcoming_events || []).filter(function (e) { return allowed[e.id]; });
-                api.event_groupings = [];
-                if (api.stats) api.stats.upcoming_events = api.upcoming_events.length;
-            } else {
-                api.upcoming_events = [];
-                api.event_groupings = [];
-                if (api.stats) api.stats.upcoming_events = 0;
-            }
+        // Tour filter: when window.TOUR_SLUG is set, the backend has already
+        // narrowed upcoming_events to that serie_evenimente grouping. We only
+        // need to hide the duplicate event_groupings section and sync the stat.
+        if (window.TOUR_SLUG) {
+            api.event_groupings = [];
+            if (api.stats) api.stats.upcoming_events = (api.upcoming_events || []).length;
         }
 
         // Calculate total followers (sum of all social platforms)
