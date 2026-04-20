@@ -86,6 +86,19 @@
 @endif
 <div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700">
     <div class="flex items-center justify-between max-w-full gap-4">
+        {{-- Mobile: Sidebar toggle (hidden on desktop where sidebar is always visible) --}}
+        <button
+            type="button"
+            x-data
+            x-on:click="$store.sidebar.open()"
+            class="flex items-center justify-center w-10 h-10 text-gray-600 transition rounded-lg shrink-0 lg:hidden dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+            aria-label="Open sidebar"
+        >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
+
         {{-- Center: Global Search --}}
         <div class="flex-1 hidden md:block">
             <div class="epas-global-search">
