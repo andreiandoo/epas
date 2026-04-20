@@ -154,7 +154,7 @@ class EventsController extends BaseController
             'status' => $event->status,
             'venue' => $event->venue ? [
                 'id' => (string) $event->venue->id,
-                'name' => $event->venue->name,
+                'name' => $event->venue->getTranslation('name'),
                 'city' => $event->venue->city ?? null,
                 'address' => $event->venue->address ?? null,
             ] : null,

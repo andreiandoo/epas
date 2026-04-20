@@ -122,7 +122,7 @@ class AuthController extends BaseController
             ] : null,
             'venues' => $venues->map(fn ($v) => [
                 'id' => (string) $v->id,
-                'name' => $v->name,
+                'name' => $v->getTranslation('name'),
                 'city' => $v->city ?? null,
                 'address' => $v->address ?? null,
             ])->values()->toArray(),
