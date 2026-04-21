@@ -623,12 +623,28 @@ class AuthController extends BaseController
             'password' => ['required', 'confirmed', PasswordRules::min(8)],
         ]);
 
-        // Find the reset record (support both normal and bulk tokens)
-        $record = DB::table('marketplace_password_resets')
+        // Find all reset records for this email (an organizer can have both
+        // a normal 'organizer' token and a 'bulk_organizer' token at the same
+        // time). Match the submitted token's hash against each one — picking
+        // the first row would otherwise reject valid bulk-reset links.
+        $records = DB::table('marketplace_password_resets')
             ->where('email', $validated['email'])
             ->whereIn('type', ['organizer', 'bulk_organizer'])
             ->where('marketplace_client_id', $client->id)
-            ->first();
+            ->orderByDesc('created_at')
+            ->get();
+
+        if ($records->isEmpty()) {
+            return $this->error('Invalid or expired reset token', 400);
+        }
+
+        $record = null;
+        foreach ($records as $candidate) {
+            if (Hash::check($validated['token'], $candidate->token)) {
+                $record = $candidate;
+                break;
+            }
+        }
 
         if (!$record) {
             return $this->error('Invalid or expired reset token', 400);
@@ -637,14 +653,11 @@ class AuthController extends BaseController
         // Check if token is expired — bulk tokens get 7 days, normal tokens 60 minutes
         $isBulkToken = str_starts_with($record->type, 'bulk_');
         $maxMinutes = $isBulkToken ? 10080 : 60;
-        if (now()->diffInMinutes($record->created_at) > $maxMinutes) {
+        // Carbon 3 returns signed minutes; use abs() so an "in the past" token
+        // doesn't read as a huge negative number that bypasses the check.
+        if (abs(now()->diffInMinutes($record->created_at)) > $maxMinutes) {
             DB::table('marketplace_password_resets')->where('id', $record->id)->delete();
             return $this->error('Reset token has expired', 400);
-        }
-
-        // Verify token
-        if (!Hash::check($validated['token'], $record->token)) {
-            return $this->error('Invalid or expired reset token', 400);
         }
 
         // Find and update organizer
