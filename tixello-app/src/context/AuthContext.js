@@ -5,32 +5,57 @@ import { setToken, initApiClient, getToken } from '../api/client';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [availableOrganizers, setAvailableOrganizers] = useState([]);
+  // Common
+  const [userType, setUserType] = useState(null); // 'organizer' | 'venue_owner'
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  // Determine role from team_member info or default to 'owner'
+  // Organizer / team member
+  const [user, setUser] = useState(null);
+  const [availableOrganizers, setAvailableOrganizers] = useState([]);
+
+  // Venue owner
+  const [venueOwner, setVenueOwner] = useState(null);
+
+  // Derived — organizer flow
   const userRole = user?.team_member?.role || 'owner';
   const userPermissions = user?.team_member?.permissions || ['events', 'orders', 'reports', 'team', 'checkin'];
   const isTeamMember = !!user?.team_member;
   const hasMultipleOrganizers = availableOrganizers.length > 1;
 
-  const login = useCallback(async (email, password) => {
-    const data = await apiLogin(email, password);
-    if (data.success && data.data) {
-      setUser(data.data.organizer);
-      setAvailableOrganizers(data.data.available_organizers || []);
-      setIsAuthenticated(true);
+  const isVenueOwner = userType === 'venue_owner';
+  const isOrganizer = userType === 'organizer';
+
+  const applyLoginPayload = useCallback((payload) => {
+    const type = payload?.user_type || 'organizer';
+    setUserType(type);
+    if (type === 'venue_owner') {
+      setVenueOwner(payload.venue_owner || null);
+      setUser(null);
+      setAvailableOrganizers([]);
+    } else {
+      setUser(payload.organizer || null);
+      setAvailableOrganizers(payload.available_organizers || []);
+      setVenueOwner(null);
     }
-    return data;
+    setIsAuthenticated(true);
   }, []);
+
+  const login = useCallback(async (email, password) => {
+    const response = await apiLogin(email, password);
+    if (response?.success && response.data) {
+      applyLoginPayload(response.data);
+    }
+    return response;
+  }, [applyLoginPayload]);
 
   const logout = useCallback(async () => {
     await apiLogout();
     setUser(null);
+    setVenueOwner(null);
     setAvailableOrganizers([]);
+    setUserType(null);
     setIsAuthenticated(false);
   }, []);
 
@@ -40,7 +65,6 @@ export function AuthProvider({ children }) {
       const data = await apiSwitchOrganizer(organizerId);
       if (data.success && data.data) {
         setUser(data.data.organizer);
-        // Update current flag on list without re-fetching
         setAvailableOrganizers((prev) =>
           prev.map((o) => ({ ...o, is_current: String(o.organizer_id) === String(organizerId) }))
         );
@@ -60,10 +84,8 @@ export function AuthProvider({ children }) {
         return false;
       }
       const data = await getMe();
-      if (data.success && data.data) {
-        setUser(data.data.organizer || data.data);
-        setAvailableOrganizers(data.data.available_organizers || []);
-        setIsAuthenticated(true);
+      if (data?.success && data.data) {
+        applyLoginPayload(data.data);
         setIsLoading(false);
         return true;
       }
@@ -72,24 +94,34 @@ export function AuthProvider({ children }) {
     }
     setIsLoading(false);
     setIsAuthenticated(false);
+    setUserType(null);
     return false;
-  }, []);
+  }, [applyLoginPayload]);
 
   return (
     <AuthContext.Provider value={{
-      user,
-      userRole,
-      userPermissions,
-      isTeamMember,
+      // Common
+      userType,
+      isVenueOwner,
+      isOrganizer,
       isLoading,
       isAuthenticated,
-      availableOrganizers,
-      hasMultipleOrganizers,
       isSwitching,
       login,
       logout,
       checkAuth,
+
+      // Organizer flow
+      user,
+      userRole,
+      userPermissions,
+      isTeamMember,
+      availableOrganizers,
+      hasMultipleOrganizers,
       switchOrganizer,
+
+      // Venue owner
+      venueOwner,
     }}>
       {children}
     </AuthContext.Provider>
