@@ -8,6 +8,7 @@ use App\Services\Platform\PlatformTrackingService;
 use App\Services\Analytics\MilestoneAttributionService;
 use App\Services\Analytics\RealTimeAnalyticsService;
 use App\Services\OrganizerNotificationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
@@ -41,6 +42,10 @@ class OrderObserver
 
     /**
      * Handle the Order "created" event.
+     *
+     * Tracking is deferred to afterCommit so its DB writes can never poison
+     * the outer checkout transaction. If the observer runs outside any
+     * transaction, afterCommit fires immediately.
      */
     public function created(Order $order): void
     {
@@ -51,7 +56,7 @@ class OrderObserver
 
         // Track new orders if they're already paid/confirmed
         if (in_array($order->status, ['paid', 'confirmed', 'completed'])) {
-            $this->trackPurchaseConversion($order);
+            DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
         }
     }
 
@@ -69,7 +74,7 @@ class OrderObserver
             // Not when already in that status
             if (in_array($newStatus, ['paid', 'confirmed', 'completed']) &&
                 !in_array($oldStatus, ['paid', 'confirmed', 'completed'])) {
-                $this->trackPurchaseConversion($order);
+                DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
             }
         }
     }
