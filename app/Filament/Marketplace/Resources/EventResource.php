@@ -3083,6 +3083,71 @@ class EventResource extends Resource
                                             </div>
                                         ");
                                     }),
+
+                                Forms\Components\Placeholder::make('ticket_type_breakdown')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) use ($t) {
+                                        if (!$record || !$record->exists) return '';
+
+                                        $eventId = $record->id;
+                                        $rows = $record->ticketTypes->map(function ($tt) use ($eventId) {
+                                            $valid = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                                                ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
+                                                ->whereIn('status', ['valid', 'used'])
+                                                ->count();
+                                            $cancelled = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                                                ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
+                                                ->where('status', 'cancelled')
+                                                ->count();
+                                            $stock = $tt->quota_total ?? $tt->capacity ?? 0;
+                                            return [
+                                                'name' => $tt->name,
+                                                'valid' => $valid,
+                                                'cancelled' => $cancelled,
+                                                'stock' => $stock,
+                                            ];
+                                        });
+
+                                        $nameLabel = $t('Tip bilet', 'Ticket type');
+                                        $validLabel = $t('Valide', 'Valid');
+                                        $cancelledLabel = $t('Anulate', 'Cancelled');
+                                        $stockLabel = $t('Stoc', 'Stock');
+
+                                        $rowsHtml = '';
+                                        foreach ($rows as $r) {
+                                            $name = e($r['name'] ?? '—');
+                                            $rowsHtml .= "
+                                                <tr class='border-t border-gray-700'>
+                                                    <td class='py-2 pr-2 text-gray-200'>{$name}</td>
+                                                    <td class='py-2 px-2 text-right text-emerald-400 font-semibold'>{$r['valid']}</td>
+                                                    <td class='py-2 px-2 text-right text-red-400 font-semibold'>{$r['cancelled']}</td>
+                                                    <td class='py-2 pl-2 text-right text-gray-300'>{$r['stock']}</td>
+                                                </tr>";
+                                        }
+
+                                        $exportUrl = url('/marketplace/tickets/export-csv?event_id=' . $eventId);
+                                        $exportLabel = $t('Export date', 'Export data');
+
+                                        return new HtmlString("
+                                            <div class='pt-3 mt-3 border-t border-gray-700'>
+                                                <table class='w-full text-xs'>
+                                                    <thead>
+                                                        <tr class='text-gray-400 uppercase tracking-wide'>
+                                                            <th class='py-1 pr-2 text-left'>{$nameLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$validLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$cancelledLabel}</th>
+                                                            <th class='py-1 pl-2 text-right'>{$stockLabel}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>{$rowsHtml}</tbody>
+                                                </table>
+                                                <a href='{$exportUrl}' class='inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 mt-3 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
+                                                    <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
+                                                    {$exportLabel}
+                                                </a>
+                                            </div>
+                                        ");
+                                    }),
                             ]),
 
                         // External Sales Section (only if external imports exist)

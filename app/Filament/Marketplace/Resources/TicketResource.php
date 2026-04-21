@@ -254,6 +254,15 @@ class TicketResource extends Resource
                                 ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
+                    \Filament\Actions\BulkAction::make('export_data')
+                        ->label('Export date')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('info')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $ids = $records->pluck('id')->implode(',');
+                            return redirect(url('/marketplace/tickets/export-csv?ids=' . $ids));
+                        })
+                        ->deselectRecordsAfterCompletion(),
                     \Filament\Actions\BulkAction::make('bulk_delete')
                         ->label('Șterge')
                         ->icon('heroicon-o-trash')

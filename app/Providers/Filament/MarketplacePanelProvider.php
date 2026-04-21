@@ -103,6 +103,32 @@ class MarketplacePanelProvider extends PanelProvider
                     return redirect($url);
                 })->name('filament.marketplace.organizer.login-as');
 
+                Route::get('/tickets/export-csv', function (\Illuminate\Http\Request $request) {
+                    $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()
+                        ?? auth()->user();
+                    $marketplace = ($admin && method_exists($admin, 'marketplaceClient'))
+                        ? $admin->marketplaceClient
+                        : null;
+                    if (!$marketplace) abort(403);
+
+                    $query = \App\Models\Ticket::query()
+                        ->whereHas('ticketType.event', fn ($q) => $q->where('marketplace_client_id', $marketplace->id));
+
+                    if ($eventId = $request->query('event_id')) {
+                        $query->where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId));
+                    } elseif ($idsParam = $request->query('ids')) {
+                        $ids = array_filter(array_map('intval', explode(',', $idsParam)));
+                        if (empty($ids)) abort(400, 'No ticket IDs provided');
+                        $query->whereIn('id', $ids);
+                    } else {
+                        abort(400, 'Provide event_id or ids');
+                    }
+
+                    $filename = 'tickets-export-' . now()->format('Y-m-d-His') . '.csv';
+                    return app(\App\Services\Marketplace\TicketExportService::class)
+                        ->streamCsv($query, $filename);
+                })->name('filament.marketplace.tickets.export-csv');
+
                 Route::get('/marketplace-customers/{id}/login-as', function (int $id) {
                     $customer = \App\Models\MarketplaceCustomer::findOrFail($id);
                     $marketplace = \App\Models\MarketplaceClient::find($customer->marketplace_client_id);
