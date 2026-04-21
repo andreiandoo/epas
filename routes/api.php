@@ -2310,11 +2310,14 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         Route::get('/events', [VenueOwnerEventsController::class, 'index'])
             ->name('api.marketplace-client.venue-owner.events');
         Route::get('/events/{event}', [VenueOwnerEventsController::class, 'show'])
+            ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.show');
         Route::get('/events/{event}/attendees', [VenueOwnerAttendeesController::class, 'index'])
+            ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.attendees');
 
         Route::get('/tickets/{ticket}', [VenueOwnerTicketsController::class, 'show'])
+            ->whereNumber('ticket')
             ->name('api.marketplace-client.venue-owner.tickets.show');
 
         Route::post('/scan', [VenueOwnerScanController::class, 'lookup'])
