@@ -139,20 +139,26 @@ abstract class BaseController extends Controller
                     $messageId = $sentMessage?->getMessageId();
                     $log->markSent($messageId);
 
-                    $settingsForLog = $useTransactional
-                        ? $client->getTransactionalMailSettings()
-                        : $client->getMailSettings();
-                    Log::channel('marketplace')->info('Email sent via marketplace transport', [
-                        'marketplace_client_id' => $client->id,
-                        'to' => $toEmail,
-                        'subject' => $subject,
-                        'message_id' => $messageId,
-                        'driver' => $settingsForLog['driver'] ?? 'unknown',
-                        'transport' => $useTransactional
-                            ? ($hasTransactionalConfig ? 'transactional' : 'primary (transactional fallback)')
-                            : 'primary',
-                        'template_slug' => $slug,
-                    ]);
+                    // Audit log is best-effort. If the channel write fails (e.g. log
+                    // file perms), the email already went out — never propagate.
+                    try {
+                        $settingsForLog = $useTransactional
+                            ? $client->getTransactionalMailSettings()
+                            : $client->getMailSettings();
+                        Log::channel('marketplace')->info('Email sent via marketplace transport', [
+                            'marketplace_client_id' => $client->id,
+                            'to' => $toEmail,
+                            'subject' => $subject,
+                            'message_id' => $messageId,
+                            'driver' => $settingsForLog['driver'] ?? 'unknown',
+                            'transport' => $useTransactional
+                                ? ($hasTransactionalConfig ? 'transactional' : 'primary (transactional fallback)')
+                                : 'primary',
+                            'template_slug' => $slug,
+                        ]);
+                    } catch (\Throwable $logEx) {
+                        // swallow — DB row already marked sent with message_id
+                    }
                     return;
                 }
 
@@ -168,20 +174,28 @@ abstract class BaseController extends Controller
             });
             $log->markSent();
 
-            Log::channel('marketplace')->info('Email sent via Laravel default mailer (fallback)', [
-                'marketplace_client_id' => $client->id,
-                'to' => $toEmail,
-                'subject' => $subject,
-                'template_slug' => $slug,
-            ]);
+            try {
+                Log::channel('marketplace')->info('Email sent via Laravel default mailer (fallback)', [
+                    'marketplace_client_id' => $client->id,
+                    'to' => $toEmail,
+                    'subject' => $subject,
+                    'template_slug' => $slug,
+                ]);
+            } catch (\Throwable $logEx) {
+                // swallow — DB row already marked sent
+            }
         } catch (\Throwable $e) {
-            Log::channel('marketplace')->error('Failed to send marketplace email', [
-                'marketplace_client_id' => $client->id,
-                'to' => $toEmail,
-                'subject' => $subject,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile() . ':' . $e->getLine(),
-            ]);
+            try {
+                Log::channel('marketplace')->error('Failed to send marketplace email', [
+                    'marketplace_client_id' => $client->id,
+                    'to' => $toEmail,
+                    'subject' => $subject,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile() . ':' . $e->getLine(),
+                ]);
+            } catch (\Throwable $logEx) {
+                // swallow — preserve original exception
+            }
             $log->markFailed($e->getMessage());
             throw $e;
         }
