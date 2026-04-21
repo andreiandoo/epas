@@ -542,6 +542,17 @@ const ThankYouPage = {
 
     downloadTickets() {
         const order = this.order;
+        if (!order || !order.order_number) return;
+
+        // Use the backend PDF endpoint which renders with the event's assigned
+        // ticket template (falling back to the marketplace default). The old
+        // client-side window.print() path ignored the template entirely.
+        window.location.href = '/api/proxy.php?action=order.download-tickets-pdf&order='
+            + encodeURIComponent(order.order_number);
+    },
+
+    downloadTicketsLegacyPrint() {
+        const order = this.order;
         if (!order || !order.tickets) return;
 
         const event = order.event;
