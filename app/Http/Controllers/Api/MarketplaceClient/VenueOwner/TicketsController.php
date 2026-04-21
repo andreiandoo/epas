@@ -44,8 +44,13 @@ class TicketsController extends BaseController
             $event->load('venue:id,name,city,address');
         }
 
-        return $this->success([
-            'ticket' => $this->formatTicket($ticketModel, $event, includeEvent: true),
-        ]);
+        $tenant = $request->attributes->get('venue_owner_tenant');
+
+        $ticketData = $this->formatTicket($ticketModel, $event, includeEvent: true);
+        if ($tenant) {
+            $ticketData['notes'] = $this->notesForTicket((int) $tenant->id, $ticketModel);
+        }
+
+        return $this->success(['ticket' => $ticketData]);
     }
 }

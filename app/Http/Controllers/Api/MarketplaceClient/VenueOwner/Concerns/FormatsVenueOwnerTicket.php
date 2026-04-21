@@ -4,9 +4,37 @@ namespace App\Http\Controllers\Api\MarketplaceClient\VenueOwner\Concerns;
 
 use App\Models\Event;
 use App\Models\Ticket;
+use App\Models\VenueOwnerNote;
 
 trait FormatsVenueOwnerTicket
 {
+    /**
+     * Attach all notes visible for a ticket's context (ticket + order + customer)
+     * scoped to the given tenant. Returns an array shaped for the API response.
+     */
+    protected function notesForTicket(int $tenantId, Ticket $ticket): array
+    {
+        return VenueOwnerNote::forTicketContext($tenantId, $ticket)
+            ->map(function (VenueOwnerNote $n) {
+                $a = $n->author;
+                return [
+                    'id' => (string) $n->id,
+                    'target_type' => $n->target_type,
+                    'target_id' => (string) $n->target_id,
+                    'note' => $n->note,
+                    'created_at' => $n->created_at?->toIso8601String(),
+                    'updated_at' => $n->updated_at?->toIso8601String(),
+                    'author' => $a ? [
+                        'id' => (string) $a->id,
+                        'name' => $a->name,
+                        'first_name' => $a->first_name,
+                        'last_name' => $a->last_name,
+                    ] : null,
+                ];
+            })->values()->toArray();
+    }
+
+
     /**
      * Shape a ticket for venue-owner consumption. Never includes email/phone.
      */

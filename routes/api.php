@@ -2296,6 +2296,7 @@ use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\EventsController as Ve
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AttendeesController as VenueOwnerAttendeesController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\TicketsController as VenueOwnerTicketsController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ScanController as VenueOwnerScanController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\NotesController as VenueOwnerNotesController;
 
 Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     Route::post('/login', [VenueOwnerAuthController::class, 'login'])
@@ -2322,6 +2323,17 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
 
         Route::post('/scan', [VenueOwnerScanController::class, 'lookup'])
             ->name('api.marketplace-client.venue-owner.scan');
+
+        Route::get('/notes', [VenueOwnerNotesController::class, 'index'])
+            ->name('api.marketplace-client.venue-owner.notes.index');
+        Route::post('/notes', [VenueOwnerNotesController::class, 'store'])
+            ->name('api.marketplace-client.venue-owner.notes.store');
+        Route::patch('/notes/{note}', [VenueOwnerNotesController::class, 'update'])
+            ->whereNumber('note')
+            ->name('api.marketplace-client.venue-owner.notes.update');
+        Route::delete('/notes/{note}', [VenueOwnerNotesController::class, 'destroy'])
+            ->whereNumber('note')
+            ->name('api.marketplace-client.venue-owner.notes.destroy');
     });
 });
 

@@ -10,6 +10,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\TicketType;
 use App\Models\MarketplaceTransaction;
 use App\Models\Order;
+use App\Models\VenueOwnerNote;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -1061,6 +1062,9 @@ class EventsController extends BaseController
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
+        // Venue-owner private notes (visible to marketplace scanners per product requirement)
+        $venueNotes = $this->resolveVenueNotesForTicket($ticket);
+
         if ($ticket->checked_in_at) {
             $dupCustomer = $ticket->order->marketplaceCustomer;
             $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
@@ -1086,6 +1090,7 @@ class EventsController extends BaseController
                     'source' => $ticket->order->source ?? 'online',
                     'customer_name' => $ticket->order->customer_name,
                 ],
+                'venue_notes' => $venueNotes,
             ], 400);
         }
 
@@ -1121,6 +1126,7 @@ class EventsController extends BaseController
                 'source' => $orderSource,
                 'customer_name' => $ticket->order->customer_name,
             ],
+            'venue_notes' => $venueNotes,
         ], 'Ticket checked in successfully');
     }
 
@@ -1159,6 +1165,9 @@ class EventsController extends BaseController
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
+        // Venue-owner private notes (visible to marketplace scanners per product requirement)
+        $venueNotes = $this->resolveVenueNotesForTicket($ticket);
+
         if ($ticket->checked_in_at) {
             $dupCustomer = $ticket->order->marketplaceCustomer;
             $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
@@ -1184,6 +1193,7 @@ class EventsController extends BaseController
                     'source' => $ticket->order->source ?? 'online',
                     'customer_name' => $ticket->order->customer_name,
                 ],
+                'venue_notes' => $venueNotes,
             ], 400);
         }
 
@@ -1219,6 +1229,7 @@ class EventsController extends BaseController
                 'source' => $orderSource,
                 'customer_name' => $ticket->order->customer_name,
             ],
+            'venue_notes' => $venueNotes,
         ], 'Ticket checked in successfully');
     }
 
@@ -3414,5 +3425,43 @@ class EventsController extends BaseController
         $gate->delete();
 
         return $this->success(null, 'Gate deleted');
+    }
+
+    /**
+     * Resolve any private venue-owner notes attached to a ticket's context
+     * (ticket / order / customer). Venue-type tenants can leave notes that are
+     * intentionally visible to marketplace scan users (per product spec).
+     *
+     * Returns an empty array when the event's venue is not owned by a tenant,
+     * when no notes exist, or on unexpected errors.
+     */
+    protected function resolveVenueNotesForTicket(\App\Models\Ticket $ticket): array
+    {
+        try {
+            $eventId = $ticket->event_id;
+            if (!$eventId) return [];
+
+            $event = Event::with('venue:id,tenant_id')->find($eventId);
+            $venueTenantId = $event?->venue?->tenant_id;
+            if (!$venueTenantId) return [];
+
+            return VenueOwnerNote::forTicketContext((int) $venueTenantId, $ticket)
+                ->map(function (VenueOwnerNote $n) {
+                    $a = $n->author;
+                    return [
+                        'id' => (string) $n->id,
+                        'target_type' => $n->target_type,
+                        'note' => $n->note,
+                        'created_at' => $n->created_at?->toIso8601String(),
+                        'author' => $a ? [
+                            'name' => $a->name,
+                            'first_name' => $a->first_name,
+                            'last_name' => $a->last_name,
+                        ] : null,
+                    ];
+                })->values()->toArray();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 }

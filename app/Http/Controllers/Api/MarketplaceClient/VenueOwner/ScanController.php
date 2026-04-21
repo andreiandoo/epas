@@ -64,8 +64,9 @@ class ScanController extends BaseController
             return $this->error('Ticket is not for an event at your venue', 403);
         }
 
-        return $this->success([
-            'ticket' => $this->formatTicket($ticket, $event, includeEvent: true),
-        ]);
+        $ticketData = $this->formatTicket($ticket, $event, includeEvent: true);
+        $ticketData['notes'] = $this->notesForTicket((int) $tenant->id, $ticket);
+
+        return $this->success(['ticket' => $ticketData]);
     }
 }
