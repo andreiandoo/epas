@@ -3090,15 +3090,16 @@ class EventResource extends Resource
                                         if (!$record || !$record->exists) return '';
 
                                         $eventId = $record->id;
-                                        $rows = $record->ticketTypes->map(function ($tt) use ($eventId) {
-                                            $valid = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                                                ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
-                                                ->whereIn('status', ['valid', 'used'])
-                                                ->count();
-                                            $cancelled = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                                                ->whereHas('order', fn ($q) => $q->where('source', '!=', 'external_import'))
-                                                ->where('status', 'cancelled')
-                                                ->count();
+                                        $rows = $record->ticketTypes->map(function ($tt) {
+                                            // Include invitations (tickets without an order) and all
+                                            // non-external-import tickets. Excludes external imports only.
+                                            $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                                                ->where(function ($q) {
+                                                    $q->whereDoesntHave('order')
+                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                                                });
+                                            $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
+                                            $cancelled = (clone $base)->where('status', 'cancelled')->count();
                                             $stock = $tt->quota_total ?? $tt->capacity ?? 0;
                                             return [
                                                 'name' => $tt->name,
