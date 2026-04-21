@@ -1611,7 +1611,22 @@ class EventResource extends Resource
                                                         ->required()
                                                         ->hintIcon('heroicon-o-information-circle', tooltip: $t('-1 = nelimitat', '-1 = unlimited'))
                                                         ->live(onBlur: true)
-                                                        ->skipRenderAfterStateUpdated()
+                                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                            // Regenerate series_end when stock changes
+                                                            $eventSeries = $get('../../event_series');
+                                                            $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                            if (!$eventSeries || !$ticketTypeIdentifier) return;
+
+                                                            $capacity = (int) ($state ?: 0);
+                                                            if ($capacity === -1) $capacity = 1000;
+                                                            if ($capacity <= 0) return;
+
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($capacity, 5, '0', STR_PAD_LEFT));
+                                                            // Ensure series_start is set too
+                                                            if (!$get('series_start')) {
+                                                                $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
+                                                            }
+                                                        })
                                                         ->afterStateHydrated(function ($component, $state, SGet $get, $record) {
                                                             // Default for NEW ticket types: remaining pool capacity
                                                             if ($state === null || $state === '') {
