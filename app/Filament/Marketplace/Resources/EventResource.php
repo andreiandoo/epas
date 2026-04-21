@@ -3090,7 +3090,9 @@ class EventResource extends Resource
                                         if (!$record || !$record->exists) return '';
 
                                         $eventId = $record->id;
-                                        $rows = $record->ticketTypes->map(function ($tt) {
+                                        $totals = ['online' => 0, 'app' => 0, 'invitations' => 0];
+
+                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals) {
                                             // Include invitations (tickets without an order) and all
                                             // non-external-import tickets. Excludes external imports only.
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
@@ -3101,6 +3103,16 @@ class EventResource extends Resource
                                             $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
                                             $cancelled = (clone $base)->where('status', 'cancelled')->count();
                                             $stock = $tt->quota_total ?? $tt->capacity ?? 0;
+
+                                            $isInvitation = ($tt->name === 'Invitatie') || ($tt->meta['is_invitation'] ?? false);
+                                            if ($isInvitation) {
+                                                $totals['invitations'] += $valid;
+                                            } elseif ($tt->is_entry_ticket) {
+                                                $totals['app'] += $valid;
+                                            } else {
+                                                $totals['online'] += $valid;
+                                            }
+
                                             return [
                                                 'name' => $tt->name,
                                                 'valid' => $valid,
@@ -3129,6 +3141,10 @@ class EventResource extends Resource
                                         $exportUrl = url('/marketplace/tickets/export-csv?event_id=' . $eventId);
                                         $exportLabel = $t('Export date', 'Export data');
 
+                                        $onlineLabel = $t('Vândute online', 'Sold online');
+                                        $appLabel = $t('Vândute prin aplicație', 'Sold via app');
+                                        $invitationsLabel = $t('Invitații', 'Invitations');
+
                                         return new HtmlString("
                                             <div class='pt-3 mt-3 border-t border-gray-700'>
                                                 <table class='w-full text-xs'>
@@ -3142,6 +3158,20 @@ class EventResource extends Resource
                                                     </thead>
                                                     <tbody>{$rowsHtml}</tbody>
                                                 </table>
+                                                <div class='grid grid-cols-3 gap-2 mt-3'>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-emerald-400'>" . number_format($totals['online']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$onlineLabel}</div>
+                                                    </div>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-sky-400'>" . number_format($totals['app']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$appLabel}</div>
+                                                    </div>
+                                                    <div class='p-2 text-center bg-gray-800 rounded-lg'>
+                                                        <div class='text-lg font-bold text-purple-400'>" . number_format($totals['invitations']) . "</div>
+                                                        <div class='text-[10px] text-gray-400 leading-tight'>{$invitationsLabel}</div>
+                                                    </div>
+                                                </div>
                                                 <a href='{$exportUrl}' class='inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 mt-3 text-sm font-semibold text-white transition-colors rounded-lg bg-indigo-600 hover:bg-indigo-700 no-underline'>
                                                     <svg class='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3'/></svg>
                                                     {$exportLabel}
