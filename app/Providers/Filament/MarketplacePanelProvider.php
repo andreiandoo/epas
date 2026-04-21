@@ -126,7 +126,7 @@ class MarketplacePanelProvider extends PanelProvider
 
                     $filename = 'tickets-export-' . now()->format('Y-m-d-His') . '.csv';
                     return app(\App\Services\Marketplace\TicketExportService::class)
-                        ->streamCsv($query, $filename);
+                        ->buildCsvResponse($query, $filename);
                 })->name('filament.marketplace.tickets.export-csv');
 
                 Route::get('/marketplace-customers/{id}/login-as', function (int $id) {

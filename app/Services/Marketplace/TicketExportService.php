@@ -2,18 +2,21 @@
 
 namespace App\Services\Marketplace;
 
-use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Builder;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Http\Response;
 
 class TicketExportService
 {
     /**
-     * Stream a CSV of tickets matching the given query, scoped to a marketplace.
+     * Build a CSV download Response of tickets matching the given query.
+     *
+     * Builds the file in-memory so it works reliably even when the route
+     * lives inside a Filament panel context (where streamed responses
+     * occasionally get wrapped or buffered by panel middleware).
      */
-    public function streamCsv(Builder $ticketsQuery, string $filename): StreamedResponse
+    public function buildCsvResponse(Builder $ticketsQuery, string $filename): Response
     {
-        $headers = [
+        $columns = [
             'Eveniment',
             'Organizator',
             'Bilet (ID)',
@@ -30,24 +33,21 @@ class TicketExportService
             'Nume client',
         ];
 
-        $query = (clone $ticketsQuery)
+        $handle = fopen('php://temp', 'r+');
+
+        // Excel-friendly UTF-8 BOM
+        fwrite($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, $columns);
+
+        (clone $ticketsQuery)
             ->with([
                 'ticketType:id,name,event_id',
                 'ticketType.event:id,title,marketplace_organizer_id',
                 'ticketType.event.marketplaceOrganizer:id,public_name,name',
                 'order:id,order_number,total,status,promo_code,promo_discount,discount_amount,customer_email,customer_name,created_at',
             ])
-            ->orderBy('id');
-
-        return response()->streamDownload(function () use ($query, $headers) {
-            $handle = fopen('php://output', 'w');
-
-            // Excel-friendly UTF-8 BOM
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            fputcsv($handle, $headers);
-
-            $query->chunk(500, function ($tickets) use ($handle) {
+            ->orderBy('id')
+            ->chunk(500, function ($tickets) use ($handle) {
                 foreach ($tickets as $ticket) {
                     $event = $ticket->ticketType?->event;
                     $organizer = $event?->marketplaceOrganizer;
@@ -82,9 +82,14 @@ class TicketExportService
                 }
             });
 
-            fclose($handle);
-        }, $filename, [
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
         ]);
     }
 }
