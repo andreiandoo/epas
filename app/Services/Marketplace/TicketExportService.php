@@ -41,7 +41,7 @@ class TicketExportService
 
         // Excel-friendly UTF-8 BOM
         fwrite($handle, "\xEF\xBB\xBF");
-        fputcsv($handle, $columns);
+        fputcsv($handle, $columns, ',', '"', '');
 
         (clone $ticketsQuery)
             ->with([
@@ -89,7 +89,7 @@ class TicketExportService
                         $order?->created_at?->format('Y-m-d H:i:s') ?? '',
                         $order?->customer_email ?? '',
                         $order?->customer_name ?? '',
-                    ]);
+                    ], ',', '"', '');
                 }
             });
 
@@ -123,10 +123,13 @@ class TicketExportService
 
         if ($event->event_date) $parts[] = $event->event_date->format('Y-m-d');
 
-        $venueName = $event->venue?->name;
-        if ($venueName) $parts[] = $venueName;
+        $venue = $event->venue;
+        $venueName = $venue
+            ? ($venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? '')
+            : '';
+        if ($venueName !== '') $parts[] = $venueName;
 
-        $city = $event->venue?->city;
+        $city = $venue?->city;
         if ($city) $parts[] = $city;
 
         $slug = \Illuminate\Support\Str::slug(implode(' ', $parts));
