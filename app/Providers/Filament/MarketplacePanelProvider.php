@@ -103,7 +103,7 @@ class MarketplacePanelProvider extends PanelProvider
                     return redirect($url);
                 })->name('filament.marketplace.organizer.login-as');
 
-                Route::get('/tickets/export-csv', function (\Illuminate\Http\Request $request) {
+                Route::get('/tickets-export-csv', function (\Illuminate\Http\Request $request) {
                     $admin = \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()
                         ?? auth()->user();
                     $marketplace = ($admin && method_exists($admin, 'marketplaceClient'))

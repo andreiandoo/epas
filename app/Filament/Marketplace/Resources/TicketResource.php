@@ -260,7 +260,7 @@ class TicketResource extends Resource
                         ->color('info')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
                             $ids = $records->pluck('id')->implode(',');
-                            return redirect(url('/marketplace/tickets/export-csv?ids=' . $ids));
+                            return redirect(url('/marketplace/tickets-export-csv?ids=' . $ids));
                         })
                         ->deselectRecordsAfterCompletion(),
                     \Filament\Actions\BulkAction::make('bulk_delete')

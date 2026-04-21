@@ -3138,11 +3138,11 @@ class EventResource extends Resource
                                                 </tr>";
                                         }
 
-                                        $exportUrl = url('/marketplace/tickets/export-csv?event_id=' . $eventId);
+                                        $exportUrl = url('/marketplace/tickets-export-csv?event_id=' . $eventId);
                                         $exportLabel = $t('Export date', 'Export data');
 
-                                        $onlineLabel = $t('Vândute online', 'Sold online');
-                                        $appLabel = $t('Vândute prin aplicație', 'Sold via app');
+                                        $onlineLabel = $t('Online', 'Online');
+                                        $appLabel = $t('Aplicație', 'App');
                                         $invitationsLabel = $t('Invitații', 'Invitations');
 
                                         return new HtmlString("
