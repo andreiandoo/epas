@@ -114,17 +114,29 @@ class MarketplacePanelProvider extends PanelProvider
                     $query = \App\Models\Ticket::query()
                         ->whereHas('ticketType.event', fn ($q) => $q->where('marketplace_client_id', $marketplace->id));
 
+                    $resolvedEvent = null;
+
                     if ($eventId = $request->query('event_id')) {
                         $query->where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId));
+                        $resolvedEvent = \App\Models\Event::with('venue:id,name,city')->find($eventId);
                     } elseif ($idsParam = $request->query('ids')) {
                         $ids = array_filter(array_map('intval', explode(',', $idsParam)));
                         if (empty($ids)) abort(400, 'No ticket IDs provided');
                         $query->whereIn('id', $ids);
+
+                        // If all selected tickets share the same event, use it for the filename
+                        $eventIds = \App\Models\Ticket::whereIn('id', $ids)
+                            ->pluck('event_id')->filter()->unique()->values();
+                        if ($eventIds->count() === 1) {
+                            $resolvedEvent = \App\Models\Event::with('venue:id,name,city')->find($eventIds->first());
+                        }
                     } else {
                         abort(400, 'Provide event_id or ids');
                     }
 
-                    $filename = 'tickets-export-' . now()->format('Y-m-d-His') . '.csv';
+                    $filename = app(\App\Services\Marketplace\TicketExportService::class)
+                        ->buildFilename($resolvedEvent);
+
                     return app(\App\Services\Marketplace\TicketExportService::class)
                         ->buildCsvResponse($query, $filename);
                 })->name('filament.marketplace.tickets.export-csv');
