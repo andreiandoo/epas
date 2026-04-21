@@ -101,10 +101,13 @@ class SearchController extends BaseController
             ->where(function ($q) {
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
-            // Upcoming events only
+            // Upcoming events only — also cover date-range events (festivals)
+            // where event_date/starts_at are null but range_end_date is set.
             ->where(function ($q) {
                 $q->where('event_date', '>=', now()->toDateString())
-                  ->orWhere('starts_at', '>=', now());
+                  ->orWhere('starts_at', '>=', now())
+                  ->orWhere('range_end_date', '>=', now()->toDateString())
+                  ->orWhere('range_start_date', '>=', now()->toDateString());
             })
             // Not cancelled
             ->where(function ($q) {
@@ -136,7 +139,7 @@ class SearchController extends BaseController
                             ->orWhereRaw("{$cityNorm} LIKE ?", ["%{$normalizedQuery}%"]);
                     });
             })
-            ->orderByRaw('COALESCE(event_date, DATE(starts_at)) ASC')
+            ->orderByRaw('COALESCE(event_date, DATE(starts_at), range_start_date) ASC')
             ->limit($limit)
             ->get();
 
