@@ -43,7 +43,7 @@ class TicketExportService
             ->with([
                 'ticketType:id,name,event_id',
                 'ticketType.event:id,title,marketplace_organizer_id',
-                'ticketType.event.marketplaceOrganizer:id,public_name,name',
+                'ticketType.event.marketplaceOrganizer:id,name',
                 'order:id,order_number,total,status,promo_code,promo_discount,discount_amount,customer_email,customer_name,created_at',
             ])
             ->orderBy('id')
@@ -57,7 +57,7 @@ class TicketExportService
                         ? ($event->getTranslation('title', 'ro') ?? $event->getTranslation('title', 'en') ?? '')
                         : '';
 
-                    $orgName = $organizer?->public_name ?: $organizer?->name ?: '';
+                    $orgName = $organizer?->name ?? '';
 
                     $promoCode = $order?->promo_code;
                     $discountAmount = (float) ($order?->discount_amount ?? $order?->promo_discount ?? 0);
