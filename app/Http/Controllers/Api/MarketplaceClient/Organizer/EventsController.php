@@ -3455,8 +3455,6 @@ class EventsController extends BaseController
                         'created_at' => $n->created_at?->toIso8601String(),
                         'author' => $a ? [
                             'name' => $a->name,
-                            'first_name' => $a->first_name,
-                            'last_name' => $a->last_name,
                         ] : null,
                     ];
                 })->values()->toArray();

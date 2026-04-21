@@ -38,7 +38,7 @@ class NotesController extends BaseController
         $notes = VenueOwnerNote::where('tenant_id', $tenant->id)
             ->where('target_type', $validated['target_type'])
             ->where('target_id', (int) $validated['target_id'])
-            ->with('author:id,name,first_name,last_name')
+            ->with('author:id,name')
             ->orderByDesc('created_at')
             ->get();
 
@@ -68,7 +68,7 @@ class NotesController extends BaseController
             'note'        => $validated['note'],
         ]);
 
-        $note->load('author:id,name,first_name,last_name');
+        $note->load('author:id,name');
 
         return $this->success(['note' => $this->formatNote($note)], 'Note created', 201);
     }
@@ -95,7 +95,7 @@ class NotesController extends BaseController
         ]);
 
         $model->update(['note' => $validated['note']]);
-        $model->load('author:id,name,first_name,last_name');
+        $model->load('author:id,name');
 
         return $this->success(['note' => $this->formatNote($model)], 'Note updated');
     }
@@ -223,8 +223,6 @@ class NotesController extends BaseController
             'author' => $author ? [
                 'id' => (string) $author->id,
                 'name' => $author->name,
-                'first_name' => $author->first_name,
-                'last_name' => $author->last_name,
             ] : null,
         ];
     }

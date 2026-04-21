@@ -73,7 +73,7 @@ class VenueOwnerNote extends Model
                     });
                 }
             })
-            ->with('author:id,name,first_name,last_name,email')
+            ->with('author:id,name')
             ->orderByDesc('created_at');
 
         return $query->get();

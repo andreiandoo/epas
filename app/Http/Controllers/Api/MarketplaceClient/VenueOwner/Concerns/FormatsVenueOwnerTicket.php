@@ -27,8 +27,6 @@ trait FormatsVenueOwnerTicket
                     'author' => $a ? [
                         'id' => (string) $a->id,
                         'name' => $a->name,
-                        'first_name' => $a->first_name,
-                        'last_name' => $a->last_name,
                     ] : null,
                 ];
             })->values()->toArray();
