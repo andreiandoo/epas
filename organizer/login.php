@@ -96,7 +96,7 @@ function togglePassword() {
     }
 }
 document.addEventListener('DOMContentLoaded', function() {
-if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/panou'; }
+if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer()) { window.location.href = '/organizator/events'; }
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -109,7 +109,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         const result = await AmbiletAuth.loginOrganizer(form.email.value, form.password.value);
         if (result.success) {
             AmbiletNotifications.success('Autentificare reusita!');
-            setTimeout(() => { window.location.href = '/organizator/panou'; }, 500);
+            setTimeout(() => { window.location.href = '/organizator/events'; }, 500);
         } else {
             errorDiv.textContent = result.message || 'Autentificare esuata. Verifica email-ul si parola.';
             errorDiv.classList.remove('hidden');
