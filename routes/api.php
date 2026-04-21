@@ -2293,6 +2293,9 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
 
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AuthController as VenueOwnerAuthController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\EventsController as VenueOwnerEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AttendeesController as VenueOwnerAttendeesController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\TicketsController as VenueOwnerTicketsController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ScanController as VenueOwnerScanController;
 
 Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     Route::post('/login', [VenueOwnerAuthController::class, 'login'])
@@ -2308,6 +2311,14 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
             ->name('api.marketplace-client.venue-owner.events');
         Route::get('/events/{event}', [VenueOwnerEventsController::class, 'show'])
             ->name('api.marketplace-client.venue-owner.events.show');
+        Route::get('/events/{event}/attendees', [VenueOwnerAttendeesController::class, 'index'])
+            ->name('api.marketplace-client.venue-owner.events.attendees');
+
+        Route::get('/tickets/{ticket}', [VenueOwnerTicketsController::class, 'show'])
+            ->name('api.marketplace-client.venue-owner.tickets.show');
+
+        Route::post('/scan', [VenueOwnerScanController::class, 'lookup'])
+            ->name('api.marketplace-client.venue-owner.scan');
     });
 });
 

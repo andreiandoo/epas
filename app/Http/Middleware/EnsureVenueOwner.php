@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\TenantType;
 use App\Models\Event;
+use App\Models\Ticket;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -106,6 +107,47 @@ class EnsureVenueOwner
             }
 
             $request->attributes->set('venue_owner_event', $event);
+        }
+
+        // If route has {ticket}, authorize ticket belongs to an event at this venue
+        $ticketParam = $request->route('ticket');
+        if ($ticketParam !== null) {
+            $ticket = $ticketParam instanceof Ticket
+                ? $ticketParam
+                : Ticket::find($ticketParam);
+
+            if (!$ticket) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket not found',
+                ], 404);
+            }
+
+            $ticketEvent = Event::with('venue')->find($ticket->event_id);
+            if (!$ticketEvent) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket event not found',
+                ], 404);
+            }
+
+            if ((int) $ticketEvent->marketplace_client_id !== (int) $client->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket does not belong to this marketplace',
+                ], 403);
+            }
+
+            $venue = $ticketEvent->venue;
+            if (!$venue || (int) $venue->tenant_id !== (int) $tenant->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ticket is not for an event at your venue',
+                ], 403);
+            }
+
+            $request->attributes->set('venue_owner_ticket', $ticket);
+            $request->attributes->set('venue_owner_event', $ticketEvent);
         }
 
         return $next($request);
