@@ -149,7 +149,7 @@ class TicketExportService
      * - commission_mode: 'included' means base IS the gross (commission carved out);
      *   'added_on_top' means commission is charged on top of base.
      */
-    protected function computeTicketAmounts(?\App\Models\TicketType $tt): array
+    public function computeTicketAmounts(?\App\Models\TicketType $tt): array
     {
         if (!$tt) return [null, null, null];
 

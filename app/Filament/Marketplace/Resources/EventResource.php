@@ -3040,6 +3040,28 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
+                                        // Net (organizer share) and commission totals across valid tickets
+                                        $exportSvc = app(\App\Services\Marketplace\TicketExportService::class);
+                                        $totalNet = 0.0;
+                                        $totalCommission = 0.0;
+                                        foreach ($record->ticketTypes as $tt) {
+                                            $validQty = \App\Models\Ticket::where('ticket_type_id', $tt->id)
+                                                ->where(function ($q) {
+                                                    $q->whereDoesntHave('order')
+                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                                                })
+                                                ->whereIn('status', ['valid', 'used'])
+                                                ->count();
+                                            if ($validQty === 0) continue;
+                                            [, $netPer, $commPer] = $exportSvc->computeTicketAmounts($tt);
+                                            $totalNet += ($netPer ?? 0) * $validQty;
+                                            $totalCommission += ($commPer ?? 0) * $validQty;
+                                        }
+                                        $netLabel = $t('Net (RON)', 'Net (RON)');
+                                        $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
+                                        $netFormatted = number_format($totalNet, 2, ',', '.');
+                                        $commissionFormatted = number_format($totalCommission, 2, ',', '.');
+
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
@@ -3057,6 +3079,14 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-amber-400'>" . number_format($ticketCountRefunded) . "</div>
                                                     <div class='text-xs text-gray-400'>{$refundedLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-emerald-300'>{$netFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$netLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$commissionLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
@@ -3106,8 +3136,9 @@ class EventResource extends Resource
 
                                         $eventId = $record->id;
                                         $totals = ['online' => 0, 'app' => 0, 'invitations' => 0];
+                                        $exportSvc = app(\App\Services\Marketplace\TicketExportService::class);
 
-                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals) {
+                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $exportSvc) {
                                             // Include invitations (tickets without an order) and all
                                             // non-external-import tickets. Excludes external imports only.
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
@@ -3118,6 +3149,9 @@ class EventResource extends Resource
                                             $valid = (clone $base)->whereIn('status', ['valid', 'used'])->count();
                                             $cancelled = (clone $base)->where('status', 'cancelled')->count();
                                             $stock = $tt->quota_total ?? $tt->capacity ?? 0;
+
+                                            [, $netPerTicket, ] = $exportSvc->computeTicketAmounts($tt);
+                                            $netTotal = ($netPerTicket ?? 0) * $valid;
 
                                             $isInvitation = ($tt->name === 'Invitatie') || ($tt->meta['is_invitation'] ?? false);
                                             if ($isInvitation) {
@@ -3133,6 +3167,7 @@ class EventResource extends Resource
                                                 'valid' => $valid,
                                                 'cancelled' => $cancelled,
                                                 'stock' => $stock,
+                                                'net' => $netTotal,
                                             ];
                                         });
 
@@ -3140,16 +3175,19 @@ class EventResource extends Resource
                                         $validLabel = $t('Valide', 'Valid');
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $stockLabel = $t('Stoc', 'Stock');
+                                        $netLabel = $t('Net', 'Net');
 
                                         $rowsHtml = '';
                                         foreach ($rows as $r) {
                                             $name = e($r['name'] ?? '—');
+                                            $netFmt = number_format($r['net'] ?? 0, 2, ',', '.');
                                             $rowsHtml .= "
                                                 <tr class='border-t border-gray-700'>
                                                     <td class='py-2 pr-2 text-gray-200'>{$name}</td>
                                                     <td class='py-2 px-2 text-right text-emerald-400 font-semibold'>{$r['valid']}</td>
                                                     <td class='py-2 px-2 text-right text-red-400 font-semibold'>{$r['cancelled']}</td>
-                                                    <td class='py-2 pl-2 text-right text-gray-300'>{$r['stock']}</td>
+                                                    <td class='py-2 px-2 text-right text-gray-300'>{$r['stock']}</td>
+                                                    <td class='py-2 pl-2 text-right text-emerald-300 font-semibold'>{$netFmt}</td>
                                                 </tr>";
                                         }
 
@@ -3168,7 +3206,8 @@ class EventResource extends Resource
                                                             <th class='py-1 pr-2 text-left'>{$nameLabel}</th>
                                                             <th class='py-1 px-2 text-right'>{$validLabel}</th>
                                                             <th class='py-1 px-2 text-right'>{$cancelledLabel}</th>
-                                                            <th class='py-1 pl-2 text-right'>{$stockLabel}</th>
+                                                            <th class='py-1 px-2 text-right'>{$stockLabel}</th>
+                                                            <th class='py-1 pl-2 text-right'>{$netLabel}</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>{$rowsHtml}</tbody>
