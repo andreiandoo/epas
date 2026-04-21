@@ -677,7 +677,7 @@ class CheckoutController extends BaseController
                         'marketplace_customer_id' => $customer->id,
                         'code' => strtoupper(Str::random(8)),
                         'barcode' => Str::uuid()->toString(),
-                        'status' => $isTestOrder ? 'valid' : 'pending',
+                        'status' => $isAutoConfirmed ? 'valid' : 'pending',
                         'price' => $isTestOrder ? 0 : $item['unit_price'],
                         'seat_label' => $seatLabel,
                         'attendee_name' => $beneficiary['name'] ?? null,
@@ -783,7 +783,7 @@ class CheckoutController extends BaseController
                 'insurance' => (float) ($hasInsurance ? $insuranceAmount : 0),
                 'total' => (float) $order->total,
                 'currency' => $order->currency,
-                'expires_at' => $order->expires_at->toIso8601String(),
+                'expires_at' => $order->expires_at?->toIso8601String(),
             ]];
 
             Log::channel('marketplace')->info('Checkout completed', [
