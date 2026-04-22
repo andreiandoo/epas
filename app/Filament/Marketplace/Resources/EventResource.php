@@ -4505,8 +4505,9 @@ class EventResource extends Resource
      *   Discount (card)    = sum Order.discount_amount  (FULL, informational)
      *   Extras (card)      = sum (insurance + surcharge) (FULL, informational)
      *
-     *   Per-type Net in the breakdown table = ticket.price × valid_count (raw gross).
-     *   Sum of per-type Net = valid_gross (not the Net card, which subtracts deductions).
+     *   Per-type Net in the breakdown table = tt's gross minus its share of
+     *   discount/included_commission/extras, allocated with the same rules used
+     *   for the order-level totals. Sum of per-type Net = Net card.
      */
     protected static array $salesBreakdownCache = [];
 
@@ -4576,10 +4577,13 @@ class EventResource extends Resource
             $order = $ordersById->get($orderId);
             if (!$order) continue;
 
+            // Two-pass per order so we can allocate order-level values back to
+            // each ticket_type row in the table.
             $orderValidGross = 0.0;
+            $orderValidCount = 0;
             $orderOnTop = 0.0;
             $orderIncluded = 0.0;
-            $orderValidCount = 0;
+            $ttSlices = []; // in-order slice data, keyed by tt_id
 
             foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
                 $tt = $group->first()->ticketType;
@@ -4608,6 +4612,14 @@ class EventResource extends Resource
                 $commission = $commPerTicket * $validCount;
                 $mode = $effective['mode'];
 
+                $ttSlices[$ttId] = [
+                    'tt' => $tt,
+                    'valid_count' => $validCount,
+                    'gross' => $gross,
+                    'commission' => $commission,
+                    'mode' => $mode,
+                ];
+
                 $orderValidGross += $gross;
                 $orderValidCount += $validCount;
                 if (in_array($mode, ['on_top', 'added_on_top'], true)) {
@@ -4615,18 +4627,6 @@ class EventResource extends Resource
                 } else {
                     $orderIncluded += $commission;
                 }
-
-                if (!isset($perType[$ttId])) {
-                    $perType[$ttId] = [
-                        'tt' => $tt,
-                        'valid_count' => 0,
-                        'net' => 0.0,
-                        'commission' => 0.0,
-                    ];
-                }
-                $perType[$ttId]['valid_count'] += $validCount;
-                $perType[$ttId]['net'] += $gross;            // per-type Net = raw gross
-                $perType[$ttId]['commission'] += $commission;
             }
 
             // ── Discount_valid per order (exact based on discount type) ──
@@ -4637,20 +4637,28 @@ class EventResource extends Resource
             $promoType = $promoInfo['type'] ?? null;  // 'percentage' or 'fixed' (or null)
 
             $discountValid = 0.0;
+            $discountRate = null;        // set for percentage
+            $discountPerTicket = null;   // set for fixed/unknown
             if ($orderDiscount > 0) {
                 if ($promoType === 'percentage' && $orderSubtotal > 0) {
-                    // Percentage: rate is uniform → exact via gross ratio.
-                    $rate = $orderDiscount / $orderSubtotal;
-                    $discountValid = $orderValidGross * $rate;
+                    // Percentage: rate uniform → exact via gross ratio.
+                    $discountRate = $orderDiscount / $orderSubtotal;
+                    $discountValid = $orderValidGross * $discountRate;
                 } else {
                     // Fixed amount (or unknown): rule of 3 on ticket count.
                     $totalCount = (int) ($totalTicketsPerOrder[$orderId] ?? $orderValidCount);
                     if ($totalCount > 0) {
-                        $discountValid = $orderDiscount * ($orderValidCount / $totalCount);
+                        $discountPerTicket = $orderDiscount / $totalCount;
+                        $discountValid = $orderValidCount * $discountPerTicket;
                     }
                 }
                 if ($discountValid > $orderDiscount) {
                     $discountValid = $orderDiscount; // defensive cap
+                    if ($discountRate !== null && $orderValidGross > 0) {
+                        $discountRate = $discountValid / $orderValidGross;
+                    } elseif ($discountPerTicket !== null && $orderValidCount > 0) {
+                        $discountPerTicket = $discountValid / $orderValidCount;
+                    }
                 }
             }
 
@@ -4663,6 +4671,44 @@ class EventResource extends Resource
                     ? min(1.0, $orderValidGross / $orderSubtotal)
                     : 1.0;
                 $extrasValid = ($insurance + $surcharge) * $ratio;
+            }
+
+            // ── Second pass: allocate discount / extras / included-commission to each tt ──
+            foreach ($ttSlices as $ttId => $slice) {
+                // Discount share for this tt within this order
+                $sliceDiscount = 0.0;
+                if ($discountRate !== null) {
+                    $sliceDiscount = $slice['gross'] * $discountRate;
+                } elseif ($discountPerTicket !== null) {
+                    $sliceDiscount = $slice['valid_count'] * $discountPerTicket;
+                }
+
+                // Extras share (by gross share within order's valid gross)
+                $sliceExtras = 0.0;
+                if ($extrasValid > 0 && $orderValidGross > 0) {
+                    $sliceExtras = $extrasValid * ($slice['gross'] / $orderValidGross);
+                }
+
+                // Net contribution of this slice for the organizer:
+                //   on_top   → gross - discount - extras  (commission is paid by customer on top)
+                //   included → gross - discount - commission - extras
+                $sliceNet = $slice['gross'] - $sliceDiscount - $sliceExtras;
+                if (!in_array($slice['mode'], ['on_top', 'added_on_top'], true)) {
+                    $sliceNet -= $slice['commission'];
+                }
+                if ($sliceNet < 0) $sliceNet = 0.0;
+
+                if (!isset($perType[$ttId])) {
+                    $perType[$ttId] = [
+                        'tt' => $slice['tt'],
+                        'valid_count' => 0,
+                        'net' => 0.0,
+                        'commission' => 0.0,
+                    ];
+                }
+                $perType[$ttId]['valid_count'] += $slice['valid_count'];
+                $perType[$ttId]['net'] += $sliceNet;
+                $perType[$ttId]['commission'] += $slice['commission'];
             }
 
             $sumValidGross += $orderValidGross;
