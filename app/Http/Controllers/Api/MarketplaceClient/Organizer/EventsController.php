@@ -1793,7 +1793,6 @@ class EventsController extends BaseController
 
         // Overview metrics — always all-time (not filtered by period)
         $allTimeQuery = $scopedOrders();
-        $grossRevenue = (float) (clone $allTimeQuery)->sum('total');
 
         // Per-ticket-type net price (organizer's take per ticket, with commission
         // logic applied by mode). Used below for net revenue and ticket_performance.
@@ -1820,6 +1819,14 @@ class EventsController extends BaseController
             $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
             return max(0.0, $basePrice - $commPerTicket);
         };
+        // Per-ticket commission (platform's share) using the tt's base price.
+        $commissionPerTicket = function (\App\Models\TicketType $tt) use ($defaultRate, $defaultMode): float {
+            $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
+                ? (int) $tt->sale_price_cents
+                : (int) ($tt->price_cents ?? 0);
+            $basePrice = $basePriceCents / 100;
+            return (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
+        };
 
         // Broad valid-ticket filter for this event — includes POS tickets and
         // invitations (which may have no order, and sometimes no event_id
@@ -1845,17 +1852,56 @@ class EventsController extends BaseController
             ->groupBy('ticket_type_id')
             ->pluck('cnt', 'ticket_type_id');
 
-        // Net revenue = sum over VALID tickets of the ticket_type's net price
-        // (uses the ticket_type's configured price, ignoring individual ticket.price
-        // which can be 0 for invitations / free tickets).
+        // Net revenue & commission = sum over VALID tickets of the ticket_type's
+        // net price / commission. Uses the ticket_type configured price (ignoring
+        // individual ticket.price which can be 0 for invitations/free tickets).
         $netRevenue = 0.0;
+        $commissionAmount = 0.0;
         foreach ($event->ticketTypes as $tt) {
             $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
             if ($validCount === 0) continue;
             $netRevenue += $netPricePerTicket($tt) * $validCount;
+            $commissionAmount += $commissionPerTicket($tt) * $validCount;
         }
         $netRevenue = round($netRevenue, 2);
-        $commissionAmount = round($grossRevenue - $netRevenue, 2);
+        $commissionAmount = round($commissionAmount, 2);
+
+        // Extras attributable to the VALID portion of paid orders (insurance +
+        // cultural card surcharge from Order.meta, proportional to valid_gross
+        // / Order.subtotal). These go to the platform, not the organizer.
+        $extrasValid = 0.0;
+        $paidOrders = (clone $allTimeQuery)->get(['id', 'subtotal', 'meta']);
+        if ($paidOrders->isNotEmpty()) {
+            $paidOrderIds = $paidOrders->pluck('id');
+            $validGrossPerOrder = \App\Models\Ticket::whereIn('order_id', $paidOrderIds)
+                ->whereIn('status', ['valid', 'used'])
+                ->get(['order_id', 'ticket_type_id'])
+                ->groupBy('order_id')
+                ->map(function ($group) use ($event, $netPricePerTicket, $commissionPerTicket) {
+                    $gross = 0.0;
+                    foreach ($group as $t) {
+                        $tt = $event->ticketTypes->firstWhere('id', $t->ticket_type_id);
+                        if (!$tt) continue;
+                        // gross per ticket for allocation = net + commission
+                        $gross += $netPricePerTicket($tt) + $commissionPerTicket($tt);
+                    }
+                    return $gross;
+                });
+            foreach ($paidOrders as $o) {
+                $m = is_array($o->meta) ? $o->meta : [];
+                $orderExtras = (float) ($m['insurance_amount'] ?? 0) + (float) ($m['cultural_card_surcharge'] ?? 0);
+                if ($orderExtras <= 0) continue;
+                $orderSubtotal = (float) $o->subtotal;
+                $orderValidGross = (float) ($validGrossPerOrder[$o->id] ?? 0);
+                $ratio = $orderSubtotal > 0 ? min(1.0, $orderValidGross / $orderSubtotal) : 1.0;
+                $extrasValid += $orderExtras * $ratio;
+            }
+        }
+        $extrasValid = round($extrasValid, 2);
+
+        // Gross = what customer paid for VALID tickets only (matches admin's
+        // Venituri): net + commission + extras.
+        $grossRevenue = round($netRevenue + $commissionAmount + $extrasValid, 2);
 
         // Refunds
         $refundsTotal = (float) Order::where('event_id', $event->id)
