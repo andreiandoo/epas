@@ -90,7 +90,8 @@ class EventsController extends BaseController
 
         // Per-ticket-type breakdown
         $ticketTypeStats = Ticket::where('event_id', $eventModel->id)
-            ->where('is_cancelled', false)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
             ->selectRaw('ticket_type_id, count(*) as sold, count(checked_in_at) as checked_in')
             ->groupBy('ticket_type_id')
             ->get()
@@ -115,8 +116,10 @@ class EventsController extends BaseController
             return collect();
         }
 
+        // Match admin's definition of "valid" tickets: status valid/used on a paid/confirmed/completed order
         $ticketStats = Ticket::whereIn('event_id', $eventIds)
-            ->where('is_cancelled', false)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q->whereIn('status', ['paid', 'confirmed', 'completed']))
             ->selectRaw('event_id, count(*) as tickets_sold, count(checked_in_at) as checked_in_count')
             ->groupBy('event_id')
             ->get()
