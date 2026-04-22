@@ -388,14 +388,18 @@ const UserTickets = {
     },
 
     formatDate(dateStr) {
+        if (!dateStr) return 'Dată necunoscută';
         const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'Dată necunoscută';
         const days = ['Duminică', 'Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă'];
         const months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
         return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
     },
 
     formatDateShort(dateStr) {
+        if (!dateStr) return '—';
         const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return '—';
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
     },

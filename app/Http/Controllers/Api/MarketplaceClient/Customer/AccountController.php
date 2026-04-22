@@ -693,36 +693,31 @@ class AccountController extends BaseController
 
         $filter = $request->get('filter', 'upcoming'); // upcoming, past, all
 
-        $query = Order::where('marketplace_customer_id', $customer->id)
+        // NOTE: We deliberately don't filter by date in SQL anymore because the
+        // event "Încheiat" status is derived from Event::isPast() which is
+        // range-aware (festivals have event_date=NULL but range_start_date /
+        // range_end_date set, and a SQL `event_date < now` would push them into
+        // "past" with a 1970-01-01 date). We fetch all the customer's orders
+        // (always a small set) and split by isPast() in PHP below.
+        $orders = Order::where('marketplace_customer_id', $customer->id)
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
-                'event:id,title,slug,event_date,featured_image,poster_url',
+                'event' => function ($q) {
+                    $q->select(['id', 'title', 'slug', 'event_date', 'start_time', 'end_time', 'door_time',
+                        'featured_image', 'poster_url', 'venue_id',
+                        'duration_mode', 'multi_slots',
+                        'range_start_date', 'range_end_date', 'range_start_time', 'range_end_time',
+                        'starts_at', 'ends_at', 'doors_open_at',
+                        'is_cancelled', 'is_postponed']);
+                },
                 'event.venue:id,name,city',
                 'tickets.marketplaceTicketType:id,name',
                 'tickets.ticketType:id,name,is_refundable',
                 'tickets.marketplaceTicketType:id,name,is_refundable',
-            ]);
-
-        if ($filter === 'upcoming') {
-            $query->where(function ($q) {
-                $q->whereHas('marketplaceEvent', function ($sub) {
-                    $sub->where('starts_at', '>=', now());
-                })->orWhereHas('event', function ($sub) {
-                    $sub->where('event_date', '>=', now());
-                });
-            });
-        } elseif ($filter === 'past') {
-            $query->where(function ($q) {
-                $q->whereHas('marketplaceEvent', function ($sub) {
-                    $sub->where('starts_at', '<', now());
-                })->orWhereHas('event', function ($sub) {
-                    $sub->where('event_date', '<', now());
-                });
-            });
-        }
-
-        $orders = $query->orderByDesc('created_at')->get();
+            ])
+            ->orderByDesc('created_at')
+            ->get();
 
         $tickets = $orders->flatMap(function ($order) {
             $customer = $order->marketplaceCustomer;
@@ -730,6 +725,10 @@ class AccountController extends BaseController
                 // Handle both marketplace events and tenant events
                 if ($order->marketplaceEvent) {
                     $event = $order->marketplaceEvent;
+                    // For MarketplaceEvent the "Încheiat" status hits when ends_at (or
+                    // starts_at if no end) has passed — covers single-day and ranged events alike.
+                    $effectiveEnd = $event->ends_at ?? $event->starts_at;
+                    $isPast = $effectiveEnd ? $effectiveEnd->isPast() : false;
                     $seatDetails = $ticket->getSeatDetails();
                     return [
                         'id' => $ticket->id,
@@ -746,15 +745,17 @@ class AccountController extends BaseController
                             'id' => $event->id,
                             'name' => $event->name,
                             'slug' => $event->slug,
-                            'date' => $event->starts_at->toIso8601String(),
-                            'date_formatted' => $event->starts_at->format('d M Y'),
-                            'time' => $event->starts_at->format('H:i'),
+                            'date' => $event->starts_at?->toIso8601String(),
+                            'date_formatted' => $event->starts_at?->format('d M Y'),
+                            'time' => $event->starts_at?->format('H:i'),
                             'doors_time' => $event->doors_open_at?->format('H:i'),
                             'end_time' => $event->ends_at?->format('H:i'),
                             'venue' => $event->venue_name,
                             'city' => $event->venue_city,
                             'image' => $event->image_url,
-                            'is_upcoming' => $event->starts_at >= now(),
+                            // is_upcoming follows the event status: anything not finished is "upcoming",
+                            // matching getStatusLabelAttribute()'s "Completed" rule (only past = finished).
+                            'is_upcoming' => !$isPast,
                         ],
                     ];
                 } elseif ($order->event) {
@@ -770,6 +771,12 @@ class AccountController extends BaseController
                     $eventTitle = is_array($event->title)
                         ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
                         : $event->title;
+
+                    // Range/festival-aware: use the duration_mode-aware accessors so a festival
+                    // (event_date NULL, range_start_date/range_end_date set) gets a real date
+                    // and "Încheiat" only fires once range_end_date has passed.
+                    $startDate = $event->start_date;
+                    $isPast = $event->isPast();
 
                     $seatDetails = $ticket->getSeatDetails();
                     return [
@@ -787,15 +794,17 @@ class AccountController extends BaseController
                             'id' => $event->id,
                             'name' => $eventTitle,
                             'slug' => $event->slug,
-                            'date' => $event->event_date?->toIso8601String(),
-                            'date_formatted' => $event->event_date?->format('d M Y'),
-                            'time' => $event->start_time,
+                            'date' => $startDate ? \Carbon\Carbon::parse($startDate)->toIso8601String() : null,
+                            'date_formatted' => $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : null,
+                            'time' => $event->duration_mode === 'range' ? ($event->range_start_time ?? $event->start_time) : $event->start_time,
                             'doors_time' => $event->door_time,
-                            'end_time' => $event->end_time,
+                            'end_time' => $event->duration_mode === 'range' ? ($event->range_end_time ?? $event->end_time) : $event->end_time,
                             'venue' => $event->venue?->name ?? null,
                             'city' => $event->venue?->city ?? null,
                             'image' => $imageUrl,
-                            'is_upcoming' => $event->event_date ? $event->event_date >= now() : false,
+                            // Status-based: "past" tab shows only events whose end-of-window has elapsed,
+                            // matching the admin's "Încheiat" badge (festivals stay upcoming until range_end_date).
+                            'is_upcoming' => !$isPast,
                         ],
                     ];
                 }
@@ -804,11 +813,20 @@ class AccountController extends BaseController
             })->filter();
         });
 
-        // Sort by event date
+        // Apply filter in PHP since the upcoming/past split now uses status-based logic
+        // (Event::isPast()) which can't be expressed cleanly in SQL across the
+        // single_day / range / multi_day / recurring duration modes.
         if ($filter === 'upcoming') {
-            $tickets = $tickets->sortBy('event.date')->values();
+            $tickets = $tickets->where('event.is_upcoming', true)->values();
+        } elseif ($filter === 'past') {
+            $tickets = $tickets->where('event.is_upcoming', false)->values();
+        }
+
+        // Sort by event date — null dates fall back to far-future / far-past so they group together.
+        if ($filter === 'past') {
+            $tickets = $tickets->sortByDesc(fn ($t) => $t['event']['date'] ?? '0000-00-00')->values();
         } else {
-            $tickets = $tickets->sortByDesc('event.date')->values();
+            $tickets = $tickets->sortBy(fn ($t) => $t['event']['date'] ?? '9999-12-31')->values();
         }
 
         return $this->success([
