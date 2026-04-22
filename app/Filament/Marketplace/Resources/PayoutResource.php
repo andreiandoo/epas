@@ -287,15 +287,45 @@ class PayoutResource extends Resource
                                     ->html()
                                     ->columnSpanFull(),
 
-                                // 2. Ce s-a cerut în acest decont
-                                Infolists\Components\TextEntry::make('gross_amount')
-                                    ->label('Suma brută decont')
-                                    ->money('RON'),
+                                // 2. Ce s-a cerut în acest decont — split online vs app/POS
+                                Infolists\Components\TextEntry::make('online_gross')
+                                    ->label('Suma brută decont bilete online')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['gross'])
+                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON'),
 
-                                Infolists\Components\TextEntry::make('commission_amount')
-                                    ->label('Comision decont')
+                                Infolists\Components\TextEntry::make('online_commission')
+                                    ->label('Comision bilete online')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['commission'])
                                     ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
                                     ->color('danger'),
+
+                                Infolists\Components\TextEntry::make('online_net')
+                                    ->label('Sumă netă bilete online')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['net'])
+                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
+                                    ->weight('bold')
+                                    ->size('lg')
+                                    ->color('success'),
+
+                                Infolists\Components\TextEntry::make('pos_gross')
+                                    ->label('Suma brută decont bilete aplicație')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['gross'])
+                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['gross'] > 0),
+
+                                Infolists\Components\TextEntry::make('pos_commission')
+                                    ->label('Comision bilete aplicație')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['commission'])
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['commission'] > 0),
+
+                                Infolists\Components\TextEntry::make('pos_net')
+                                    ->label('Sumă netă bilete aplicație')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['net'])
+                                    ->formatStateUsing(fn ($state) => number_format((float) $state, 2) . ' RON')
+                                    ->weight('bold')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['net'] != 0),
 
                                 Infolists\Components\TextEntry::make('fees_amount')
                                     ->label('Taxe')
@@ -307,13 +337,6 @@ class PayoutResource extends Resource
                                     ->label('Ajustări')
                                     ->formatStateUsing(fn ($state, $record) => ($state >= 0 ? '+' : '') . number_format((float) $state, 2) . ' RON' . ($record->adjustments_note ? " ({$record->adjustments_note})" : ''))
                                     ->visible(fn ($record) => (float) $record->adjustments_amount != 0),
-
-                                Infolists\Components\TextEntry::make('amount')
-                                    ->label('Sumă netă (de plată)')
-                                    ->money('RON')
-                                    ->weight('bold')
-                                    ->size('lg')
-                                    ->color('success'),
 
                                 Infolists\Components\TextEntry::make('commission_mode')
                                     ->label('Mod comision')

@@ -154,6 +154,53 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Split gross / commission / net for this payout across online vs POS rows
+     * of the breakdown. POS rows are those whose ticket_type sells exclusively
+     * via pos_app orders (see getPosTicketTypeIds()).
+     *
+     * Per-line math mirrors the Detalii bilete blade:
+     *   gross = price*qty (+ commission for added_on_top)
+     *   commission = commission_per_ticket * qty
+     *   net = gross - commission
+     *
+     * @return array{online: array{gross: float, commission: float, net: float}, pos: array{gross: float, commission: float, net: float}}
+     */
+    public function getBreakdownTotals(): array
+    {
+        $posSet = array_flip($this->getPosTicketTypeIds());
+        $result = [
+            'online' => ['gross' => 0.0, 'commission' => 0.0, 'net' => 0.0],
+            'pos'    => ['gross' => 0.0, 'commission' => 0.0, 'net' => 0.0],
+        ];
+
+        foreach ($this->ticket_breakdown ?? [] as $item) {
+            $ttId = $item['ticket_type_id'] ?? null;
+            $bucket = ($ttId && isset($posSet[$ttId])) ? 'pos' : 'online';
+
+            $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            $commPer = (float) ($item['commission_per_ticket'] ?? 0);
+            $itemMode = $item['commission_mode'] ?? null;
+
+            $commission = $commPer * $qty;
+            $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
+            $net = $gross - $commission;
+
+            $result[$bucket]['gross'] += $gross;
+            $result[$bucket]['commission'] += $commission;
+            $result[$bucket]['net'] += $net;
+        }
+
+        foreach ($result as $k => $v) {
+            $result[$k]['gross'] = round($v['gross'], 2);
+            $result[$k]['commission'] = round($v['commission'], 2);
+            $result[$k]['net'] = round($v['net'], 2);
+        }
+
+        return $result;
+    }
+
+    /**
      * Commission value attributable to online (non-POS) tickets in this payout.
      * Derived from stored commission_amount minus POS commission; this is what
      * the regular Factură should bill, since POS commission is invoiced separately.
