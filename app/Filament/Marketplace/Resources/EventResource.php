@@ -232,9 +232,9 @@ class EventResource extends Resource
                                         ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                                 ]),
 
-                                Forms\Components\Textarea::make('cancel_reason')
+                                Forms\Components\RichEditor::make('cancel_reason')
                                     ->label($t('Motivul anulării', 'Cancellation reason'))
-                                    ->rows(2)
+                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList', 'undo', 'redo'])
                                     ->visible(fn (SGet $get) => (bool) $get('is_cancelled')),
 
                                 SC\Grid::make(4)->schema([
@@ -256,9 +256,9 @@ class EventResource extends Resource
                                         ->native(true),
                                 ])->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
-                                Forms\Components\Textarea::make('postponed_reason')
+                                Forms\Components\RichEditor::make('postponed_reason')
                                     ->label($t('Motivul amânării', 'Postponement reason'))
-                                    ->rows(2)
+                                    ->toolbarButtons(['bold', 'italic', 'underline', 'link', 'bulletList', 'orderedList', 'undo', 'redo'])
                                     ->visible(fn (SGet $get) => (bool) $get('is_postponed')),
 
                                 Forms\Components\DatePicker::make('promoted_until')

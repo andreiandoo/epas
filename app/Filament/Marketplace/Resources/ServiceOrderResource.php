@@ -79,11 +79,24 @@ class ServiceOrderResource extends Resource
                             ->content(function (?ServiceOrder $record): string {
                                 if (! $record) return '-';
                                 $config = $record->config ?? [];
+                                // For "category"/"city" promotions, the actual category/city is inherited
+                                // from the event itself — show it inline so the admin doesn't have to
+                                // open the event to know which category page the ad runs on.
+                                $eventCategory = null;
+                                $eventCity = null;
+                                if ($record->event) {
+                                    $cat = $record->event->marketplaceEventCategory;
+                                    if ($cat) {
+                                        $name = is_array($cat->name) ? ($cat->name['ro'] ?? $cat->name['en'] ?? reset($cat->name)) : $cat->name;
+                                        $eventCategory = trim(($name ?: '') . ($cat->slug ? " ({$cat->slug})" : ''));
+                                    }
+                                    $eventCity = $record->event->venue?->city;
+                                }
                                 $locationLabels = [
                                     'home_hero'            => 'Prima pagina - Hero',
                                     'home_recommendations' => 'Prima pagina - Recomandari',
-                                    'category'             => 'Pagina categorie',
-                                    'city'                 => 'Pagina oras',
+                                    'category'             => 'Pagina categorie' . ($eventCategory ? ": {$eventCategory}" : ' (categoria evenimentului)'),
+                                    'city'                 => 'Pagina oras' . ($eventCity ? ": {$eventCity}" : ' (orasul evenimentului)'),
                                 ];
                                 return match ($record->service_type) {
                                     'featuring' => implode(', ', array_map(

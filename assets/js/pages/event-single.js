@@ -1233,7 +1233,7 @@ const EventPage = {
                         </svg>
                         <div>
                             <h3 class="font-bold text-red-800">Eveniment anulat</h3>
-                            ${e.cancel_reason ? '<p class="mt-1 text-sm text-red-700">' + e.cancel_reason + '</p>' : ''}
+                            ${e.cancel_reason ? '<div class="mt-1 text-sm text-red-700 prose prose-sm prose-red max-w-none">' + e.cancel_reason + '</div>' : ''}
                             <p class="mt-2 text-sm text-red-600">Biletele nu mai sunt disponibile pentru acest eveniment.</p>
                         </div>
                     </div>
@@ -1258,7 +1258,7 @@ const EventPage = {
                         </svg>
                         <div>
                             <h3 class="font-bold text-orange-800">Eveniment amânat</h3>
-                            ${e.postponed_reason ? '<p class="mt-1 text-sm text-orange-700">' + e.postponed_reason + '</p>' : ''}
+                            ${e.postponed_reason ? '<div class="mt-1 text-sm text-orange-700 prose prose-sm prose-orange max-w-none">' + e.postponed_reason + '</div>' : ''}
                             ${newDateText ? '<p class="mt-2 text-sm font-semibold text-orange-800">Noua dată: ' + newDateText + '</p>' : '<p class="mt-2 text-sm text-orange-600">Noua dată va fi anunțată în curând.</p>'}
                         </div>
                     </div>
