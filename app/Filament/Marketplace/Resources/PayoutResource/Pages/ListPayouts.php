@@ -1182,12 +1182,15 @@ class ListPayouts extends ListRecords
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
 
-        // Load orders
+        // Load orders. Exclude pos_app: POS/app sales don't flow through marketplace
+        // (organizer collects cash on their own), so they must not appear in payout
+        // gross/commission/net totals. POS commission is billed separately.
         $completedOrders = Order::where(function ($q) use ($event) {
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('source', '!=', 'test_order')
+            ->where('source', '!=', 'pos_app')
             ->with(['items.ticketType'])
             ->get();
 
@@ -1295,11 +1298,12 @@ class ListPayouts extends ListRecords
             }
         }
 
-        // Refunds
+        // Refunds (also exclude pos_app for same reason as above)
         $refundedAmount = (float) Order::where(function ($q) use ($event) {
                 $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
             })
             ->where('status', 'refunded')
+            ->where('source', '!=', 'pos_app')
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
         $netRevenue = $grossRevenue - $totalCommission - $refundedAmount;

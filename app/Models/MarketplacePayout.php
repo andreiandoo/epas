@@ -307,6 +307,65 @@ class MarketplacePayout extends Model
     // =========================================
 
     /**
+     * Return the list of ticket_type_ids in this payout's breakdown whose sales
+     * come exclusively from POS/app orders (source=pos_app). These rows must
+     * be shown in the table for transparency but excluded from totals, since
+     * POS money doesn't flow through the marketplace.
+     *
+     * @return array<int>  ticket_type_ids
+     */
+    public function getPosTicketTypeIds(): array
+    {
+        $typeIds = collect($this->ticket_breakdown ?? [])
+            ->pluck('ticket_type_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($typeIds) || !$this->event_id) {
+            return [];
+        }
+
+        // For each ticket type, check: are there any non-pos_app tickets?
+        // If not, and there are pos_app tickets, it's a POS-only type.
+        $posTypeIds = [];
+        foreach ($typeIds as $typeId) {
+            $hasNonPos = Ticket::where('ticket_type_id', $typeId)
+                ->whereHas('order', function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('event_id', $this->event_id)
+                            ->orWhere('marketplace_event_id', $this->event_id);
+                    })
+                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'pos_app');
+                })
+                ->exists();
+
+            if ($hasNonPos) {
+                continue;
+            }
+
+            $hasPos = Ticket::where('ticket_type_id', $typeId)
+                ->whereHas('order', function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('event_id', $this->event_id)
+                            ->orWhere('marketplace_event_id', $this->event_id);
+                    })
+                    ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', 'pos_app');
+                })
+                ->exists();
+
+            if ($hasPos) {
+                $posTypeIds[] = $typeId;
+            }
+        }
+
+        return $posTypeIds;
+    }
+
+    /**
      * Compute discount amount attributable to each ticket type in this payout.
      * For each paid order in the payout's event + period that carries a discount,
      * the discount is distributed across ticket types proportionally to each

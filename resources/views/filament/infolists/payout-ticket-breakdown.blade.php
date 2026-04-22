@@ -3,6 +3,8 @@
     $breakdown = $record->ticket_breakdown ?? [];
     $currency = $record->currency ?? 'RON';
     $discountsByType = !empty($breakdown) ? $record->getDiscountsPerTicketType() : [];
+    $posTypeIds = !empty($breakdown) ? $record->getPosTicketTypeIds() : [];
+    $posTypeIdsSet = array_flip($posTypeIds);
     $totalQty = 0;
     $totalGross = 0;
     $totalCommission = 0;
@@ -31,6 +33,7 @@
             @foreach($breakdown as $item)
                 @php
                     $ticketTypeId = $item['ticket_type_id'] ?? null;
+                    $isPos = $ticketTypeId && isset($posTypeIdsSet[$ticketTypeId]);
                     $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Tip bilet';
                     $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
                     $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
@@ -50,15 +53,23 @@
                         'included' => 'Inclus' . ($commissionRate ? " ({$commissionRate})" : ''),
                         default => $commissionMode,
                     };
-                    $totalQty += $qty;
-                    $totalGross += $gross;
-                    $totalCommission += $commission;
-                    $totalNetTickets += $netTickets;
-                    $totalDiscounts += $discounts;
-                    $totalNetFinal += $netFinal;
+                    // POS rows are shown for transparency but excluded from totals
+                    if (!$isPos) {
+                        $totalQty += $qty;
+                        $totalGross += $gross;
+                        $totalCommission += $commission;
+                        $totalNetTickets += $netTickets;
+                        $totalDiscounts += $discounts;
+                        $totalNetFinal += $netFinal;
+                    }
                 @endphp
-                <tr>
-                    <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">{{ $name }}</td>
+                <tr class="{{ $isPos ? 'bg-amber-50 dark:bg-amber-950/30 opacity-80' : '' }}">
+                    <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">
+                        {{ $name }}
+                        @if($isPos)
+                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" title="Vândut prin aplicație/POS — nu intră în calculul decontului">POS</span>
+                        @endif
+                    </td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($price, 2) }}</td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-semibold">{{ $qty }}</td>
                     <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($gross, 2) }}</td>
@@ -72,7 +83,12 @@
         </tbody>
         <tfoot>
             <tr class="border-t-2 border-gray-300 dark:border-gray-600 font-semibold">
-                <td class="py-2 px-3 text-gray-900 dark:text-white">Total</td>
+                <td class="py-2 px-3 text-gray-900 dark:text-white">
+                    Total
+                    @if(!empty($posTypeIds))
+                        <span class="ml-1 text-[10px] font-normal text-gray-500 dark:text-gray-400">(excl. POS)</span>
+                    @endif
+                </td>
                 <td class="py-2 px-3"></td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white">{{ $totalQty }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalGross, 2) }} {{ $currency }}</td>
