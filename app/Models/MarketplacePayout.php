@@ -154,6 +154,17 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Commission value attributable to online (non-POS) tickets in this payout.
+     * Derived from stored commission_amount minus POS commission; this is what
+     * the regular Factură should bill, since POS commission is invoiced separately.
+     */
+    public function getCommissionExclPos(): float
+    {
+        $stored = (float) ($this->commission_amount ?? 0);
+        return round(max(0, $stored - $this->getPosCommissionTotal()), 2);
+    }
+
+    /**
      * Total commission value attributable to POS/app-only tickets in this payout.
      * Used to generate a separate invoice billed to the organizer.
      */

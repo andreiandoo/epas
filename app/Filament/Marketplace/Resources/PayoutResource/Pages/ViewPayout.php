@@ -219,6 +219,13 @@ class ViewPayout extends ViewRecord
                     $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
                     $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
+                    // Use commission EXCLUDING POS — POS commission is billed on a
+                    // separate Factură POS, since those sales never flowed through
+                    // the marketplace.
+                    $commissionSubtotal = $payout->getCommissionExclPos();
+                    $vatRate = $marketplace->vat_payer ? 19 : 0;
+                    $vatAmount = $vatRate > 0 ? round($commissionSubtotal * $vatRate / 100, 2) : 0;
+
                     $invoice = Invoice::create([
                         'marketplace_client_id' => $marketplace->id,
                         'marketplace_organizer_id' => $organizer->id,
@@ -230,10 +237,10 @@ class ViewPayout extends ViewRecord
                         'period_start' => $payout->period_start,
                         'period_end' => $payout->period_end,
                         'due_date' => now()->addDays(30),
-                        'subtotal' => $payout->commission_amount ?? 0,
-                        'vat_rate' => $marketplace->vat_payer ? 19 : 0,
-                        'vat_amount' => $marketplace->vat_payer ? round(($payout->commission_amount ?? 0) * 0.19, 2) : 0,
-                        'amount' => $marketplace->vat_payer ? round(($payout->commission_amount ?? 0) * 1.19, 2) : ($payout->commission_amount ?? 0),
+                        'subtotal' => $commissionSubtotal,
+                        'vat_rate' => $vatRate,
+                        'vat_amount' => $vatAmount,
+                        'amount' => $commissionSubtotal + $vatAmount,
                         'currency' => $payout->currency ?? 'RON',
                         'status' => 'outstanding',
                         'meta' => [
@@ -248,8 +255,8 @@ class ViewPayout extends ViewRecord
                             'items' => [[
                                 'description' => 'Comision servicii ticketing - ' . $payout->reference,
                                 'quantity' => 1,
-                                'unit_price' => $payout->commission_amount ?? 0,
-                                'amount' => $payout->commission_amount ?? 0,
+                                'unit_price' => $commissionSubtotal,
+                                'amount' => $commissionSubtotal,
                             ]],
                         ],
                     ]);
@@ -434,6 +441,9 @@ class ViewPayout extends ViewRecord
 
     /**
      * Create an invoice billing the organizer for commission on POS/app ticket sales.
+     * One line item per POS ticket type: qty = tickets sold, unit_price = commission
+     * per ticket, amount = qty * unit_price. Description carries ticket name, rate %,
+     * commission mode and event/venue context.
      */
     protected function generatePosInvoice(): void
     {
@@ -446,8 +456,60 @@ class ViewPayout extends ViewRecord
             return;
         }
 
-        $posCommission = $payout->getPosCommissionTotal();
-        if ($posCommission <= 0) {
+        $posTypeIds = $payout->getPosTicketTypeIds();
+        if (empty($posTypeIds)) {
+            Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
+            return;
+        }
+        $posSet = array_flip($posTypeIds);
+
+        // Event/venue context for each line description
+        $eventSuffix = $this->buildEventContextSuffix($payout->event);
+
+        $items = [];
+        $subtotal = 0.0;
+        foreach ($payout->ticket_breakdown ?? [] as $item) {
+            $ttId = $item['ticket_type_id'] ?? null;
+            if (!$ttId || !isset($posSet[$ttId])) {
+                continue;
+            }
+
+            $name = $item['ticket_type_name'] ?? $item['name'] ?? 'Bilet';
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            $commPerTicket = (float) ($item['commission_per_ticket'] ?? 0);
+            if ($qty <= 0 || $commPerTicket <= 0) {
+                continue;
+            }
+
+            $commMode = $item['commission_mode'] ?? null;
+            $commRate = $item['commission_rate'] ?? null;
+
+            $modeWord = match ($commMode) {
+                'added_on_top' => 'peste preț',
+                'included' => 'inclus',
+                default => null,
+            };
+            $rateModePart = '';
+            if ($commRate !== null && $modeWord) {
+                $rateModePart = ' (' . $commRate . '% ' . $modeWord . ')';
+            } elseif ($commRate !== null) {
+                $rateModePart = ' (' . $commRate . '%)';
+            } elseif ($modeWord) {
+                $rateModePart = ' (' . $modeWord . ')';
+            }
+
+            $lineTotal = round($qty * $commPerTicket, 2);
+            $subtotal += $lineTotal;
+
+            $items[] = [
+                'description' => 'Comision servicii ticketing pentru bilet "' . $name . '"' . $rateModePart . $eventSuffix,
+                'quantity' => $qty,
+                'unit_price' => $commPerTicket,
+                'amount' => $lineTotal,
+            ];
+        }
+
+        if ($subtotal <= 0) {
             Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
             return;
         }
@@ -466,7 +528,6 @@ class ViewPayout extends ViewRecord
         $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
 
         $vatRate = $marketplace->vat_payer ? 19 : 0;
-        $subtotal = $posCommission;
         $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
         $total = $subtotal + $vatAmount;
 
@@ -481,10 +542,10 @@ class ViewPayout extends ViewRecord
             'period_start' => $payout->period_start,
             'period_end' => $payout->period_end,
             'due_date' => now()->addDays(30),
-            'subtotal' => $subtotal,
+            'subtotal' => round($subtotal, 2),
             'vat_rate' => $vatRate,
             'vat_amount' => $vatAmount,
-            'amount' => $total,
+            'amount' => round($total, 2),
             'currency' => $payout->currency ?? 'RON',
             'status' => 'outstanding',
             'meta' => [
@@ -497,17 +558,63 @@ class ViewPayout extends ViewRecord
                 ],
                 'client' => $client,
                 'recipient_type' => 'organizer',
-                'items' => [[
-                    'description' => 'Comision servicii ticketing vândute prin aplicație - ' . $payout->reference,
-                    'quantity' => 1,
-                    'unit_price' => $subtotal,
-                    'amount' => $subtotal,
-                ]],
+                'items' => $items,
             ],
         ]);
 
         Notification::make()->title('Factură POS generată: ' . $invoiceNumber)->success()->send();
         $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+    }
+
+    /**
+     * Build the " la eveniment NAME (DATE) VENUE, CITY" suffix used in invoice
+     * line descriptions. Returns empty string when event is null.
+     */
+    protected function buildEventContextSuffix(?\App\Models\Event $event): string
+    {
+        if (!$event) {
+            return '';
+        }
+
+        $title = $event->title;
+        $eventName = is_array($title)
+            ? ($title['ro'] ?? $title['en'] ?? (reset($title) ?: ''))
+            : ($title ?? '');
+
+        $eventDate = '';
+        if ($event->event_date) {
+            $eventDate = $event->event_date->format('d.m.Y');
+        } elseif ($event->range_start_date) {
+            $eventDate = $event->range_start_date->format('d.m.Y');
+        }
+
+        $venueName = '';
+        $venueCity = '';
+        if ($event->venue) {
+            $vName = $event->venue->name;
+            $venueName = is_array($vName)
+                ? ($vName['ro'] ?? $vName['en'] ?? (reset($vName) ?: ''))
+                : ($vName ?? '');
+            $venueCity = $event->venue->city ?? '';
+        }
+
+        if (!$eventName) {
+            return '';
+        }
+
+        $suffix = ' la eveniment ' . $eventName;
+        if ($eventDate !== '') {
+            $suffix .= ' (' . $eventDate . ')';
+        }
+        if ($venueName !== '' && $venueCity !== '') {
+            $suffix .= ' ' . $venueName . ', ' . $venueCity;
+        } elseif ($venueName !== '') {
+            $suffix .= ' ' . $venueName;
+        } elseif ($venueCity !== '') {
+            $suffix .= ' ' . $venueCity;
+        }
+
+        return $suffix;
     }
 
     /**
