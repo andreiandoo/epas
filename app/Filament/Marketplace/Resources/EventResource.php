@@ -4473,19 +4473,17 @@ class EventResource extends Resource
     /**
      * Per-request memoized sales breakdown for an event.
      *
-     * Walks each paid order's order_items, applies the ticket_type's own
-     * commission settings (with event/organizer/marketplace default inheritance)
-     * to the unit_price actually paid, and allocates order-level discounts
-     * proportionally across items. Produces both totals (for the top metric
-     * card) and a per-ticket-type breakdown (for the ticket-type table) so
-     * both stay in sync.
+     * Iterates each valid/used ticket belonging to a paid, non-external order,
+     * groups by (order_id, ticket_type_id), resolves unit price with fallbacks
+     * (ticket.price → order_item.unit_price → ticket_type catalog), applies the
+     * ticket_type's commission settings (with event/organizer/marketplace
+     * default inheritance) and allocates order-level discounts proportionally
+     * across ticket types within the order. Produces both totals (for the top
+     * metric card) and a per-ticket-type breakdown (for the ticket-type table)
+     * so both stay in sync.
      *
-     * Return shape:
-     *   [
-     *     'total_net' => float,
-     *     'total_commission' => float,
-     *     'per_type' => [ tt_id => ['valid_count'=>int,'net'=>float,'commission'=>float,'tt'=>TicketType] ],
-     *   ]
+     * Counting via tickets directly (rather than order_items.tickets) avoids
+     * undercounting when historical tickets have order_id but no order_item_id.
      */
     protected static array $salesBreakdownCache = [];
 
@@ -4497,13 +4495,22 @@ class EventResource extends Resource
 
         $eventId = $event->id;
 
-        $paidOrders = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'external_import')
-            ->with(['items.ticketType', 'items.tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used'])])
-            ->get();
+        // Fetch valid/used tickets from paid, non-external orders for this event
+        $tickets = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where('source', '!=', 'external_import'))
+            ->with(['ticketType'])
+            ->get(['id', 'order_id', 'ticket_type_id', 'price']);
 
-        // Resolve default commission settings from the event/organizer/marketplace
+        // Load the orders + their items in bulk for discount allocation and price fallback
+        $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
+        $ordersById = $orderIds->isEmpty()
+            ? collect()
+            : \App\Models\Order::with('items')->whereIn('id', $orderIds)->get()->keyBy('id');
+
+        // Resolve default commission settings from the event / organizer / marketplace
         $defaultRate = (float) (
             $event->commission_rate
             ?? $event->marketplaceOrganizer?->commission_rate
@@ -4520,19 +4527,36 @@ class EventResource extends Resource
         $totalCommission = 0.0;
         $perType = []; // keyed by ticket_type_id
 
-        foreach ($paidOrders as $ord) {
-            $orderItems = $ord->items;
-            if ($orderItems->isEmpty()) continue;
+        // Group tickets by order, then by ticket_type within the order
+        foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
+            $order = $ordersById->get($orderId);
+            if (!$order) continue;
 
-            // First pass: compute gross + commission + mode per item
+            // First pass: per ticket_type in this order, compute gross + commission + mode
             $orderData = [];
             $orderGross = 0.0;
-            foreach ($orderItems as $item) {
-                $tt = $item->ticketType;
-                $validCount = $item->tickets->count();
-                if (!$tt || $validCount === 0) continue;
 
-                $unitPrice = (float) $item->unit_price;
+            foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
+                $tt = $group->first()->ticketType;
+                if (!$tt) continue;
+
+                $validCount = $group->count();
+
+                // Resolve unit price: ticket.price → order_item.unit_price → tt catalog
+                $firstTicketPrice = (float) ($group->first()->price ?? 0);
+                if ($firstTicketPrice > 0) {
+                    $unitPrice = $firstTicketPrice;
+                } else {
+                    $orderItem = $order->items->first(fn ($it) => (int) $it->ticket_type_id === (int) $ttId);
+                    if ($orderItem && (float) $orderItem->unit_price > 0) {
+                        $unitPrice = (float) $orderItem->unit_price;
+                    } else {
+                        $unitPrice = ((int) ($tt->sale_price_cents ?? 0) > 0
+                            ? $tt->sale_price_cents
+                            : (int) ($tt->price_cents ?? 0)) / 100;
+                    }
+                }
+
                 $gross = $unitPrice * $validCount;
 
                 // Ticket-type commission with default inheritance
@@ -4550,18 +4574,18 @@ class EventResource extends Resource
                 ];
             }
 
-            // Second pass: allocate order-level discount proportionally by item gross
-            $discount = (float) $ord->discount_amount;
+            // Second pass: allocate order-level discount proportionally by gross
+            $discount = (float) $order->discount_amount;
             foreach ($orderData as $d) {
                 $itemDiscountShare = $orderGross > 0 ? $discount * ($d['gross'] / $orderGross) : 0;
 
                 if (in_array($d['mode'], ['on_top', 'added_on_top'], true)) {
                     // on_top: organizer keeps base price minus its share of discount;
-                    // commission is paid separately by customer
+                    // commission is paid on top by customer, separate from base.
                     $itemNet = $d['gross'] - $itemDiscountShare;
-                } else { // included (or other)
+                } else { // included
                     // included: commission is embedded in gross; organizer gets
-                    // gross - commission - discount share
+                    // gross - commission - discount share.
                     $itemNet = $d['gross'] - $d['commission'] - $itemDiscountShare;
                 }
                 $itemNet = max(0.0, $itemNet);
