@@ -208,6 +208,15 @@ const RewardsPage = {
             return;
         }
 
+        // Render cached points immediately so #user-points isn't '0' for the
+        // few seconds the API needs — fresh value from loadPoints() overwrites it.
+        const cachedUser = AmbiletAuth.getUser();
+        if (cachedUser && typeof cachedUser.points === 'number') {
+            this.points = cachedUser.points;
+            const el = document.getElementById('user-points');
+            if (el) el.textContent = this.points.toLocaleString();
+        }
+
         // Load all data in parallel
         await Promise.all([
             this.loadPoints(),
