@@ -631,10 +631,12 @@ class Dashboard extends Page
         ];
 
         // Always show all service types, even if 0
+        // Tixello collects only TIXELLO_SHARE of each service order; the rest stays with the marketplace operator.
         $services = [];
         $servicesTotal = 0;
         foreach ($serviceLabels as $type => $label) {
-            $amount = (float) ($serviceBreakdown[$type] ?? 0);
+            $gross = (float) ($serviceBreakdown[$type] ?? 0);
+            $amount = round($gross * ServiceOrder::TIXELLO_SHARE, 2);
             $services[] = [
                 'type' => $type,
                 'label' => $label,

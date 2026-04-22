@@ -150,7 +150,8 @@
                             <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Plan</th>
                             @endif
                             <th class="px-3 py-2 text-xs font-medium text-left text-gray-500 dark:text-gray-400">Data</th>
-                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Valoare</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-gray-500 dark:text-gray-400">Valoare totală</th>
+                            <th class="px-3 py-2 text-xs font-medium text-right text-rose-600 dark:text-rose-400">Cotă Tixello (50%)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -161,7 +162,8 @@
                             <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $order['organizer_name'] }}</td>
                             <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ $order['config_label'] ?? '-' }}</td>
                             <td class="px-3 py-2 text-gray-500 dark:text-gray-400">{{ $order['created_at'] }}</td>
-                            <td class="px-3 py-2 font-medium text-right text-gray-900 whitespace-nowrap dark:text-white">{{ number_format($order['total'], 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2 text-right text-gray-600 whitespace-nowrap dark:text-gray-300">{{ number_format($order['gross_total'] ?? $order['total'] * 2, 2) }} {{ $d['currency'] }}</td>
+                            <td class="px-3 py-2 font-medium text-right text-rose-600 whitespace-nowrap dark:text-rose-400">{{ number_format($order['total'], 2) }} {{ $d['currency'] }}</td>
                         </tr>
                         @endforeach
                     </tbody>

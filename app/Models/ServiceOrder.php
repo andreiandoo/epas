@@ -76,6 +76,9 @@ class ServiceOrder extends Model
     public const TYPE_TRACKING = 'tracking';
     public const TYPE_CAMPAIGN = 'campaign';
 
+    // Tixello collects 50% of every extra-service total; the other 50% stays with the marketplace operator.
+    public const TIXELLO_SHARE = 0.5;
+
     protected static function boot()
     {
         parent::boot();

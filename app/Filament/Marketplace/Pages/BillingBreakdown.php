@@ -257,23 +257,27 @@ class BillingBreakdown extends Page
         ];
 
         // Group by service type
+        // Tixello collects only TIXELLO_SHARE of each service order; per-row and per-type totals reflect that share.
+        $tixelloShare = ServiceOrder::TIXELLO_SHARE;
         $servicesByType = [];
         foreach ($serviceLabels as $type => $label) {
             $typeOrders = $serviceOrders->where('service_type', $type);
             $servicesByType[$type] = [
                 'label' => $label,
-                'orders' => $typeOrders->map(function ($so) {
+                'orders' => $typeOrders->map(function ($so) use ($tixelloShare) {
+                    $gross = (float) $so->total;
                     return [
                         'id' => $so->id,
                         'order_number' => $so->order_number,
                         'event_name' => $so->event ? ($so->event->getTranslation('title', 'ro') ?: $so->event->getTranslation('title', 'en')) : '-',
                         'organizer_name' => $so->organizer?->name ?? '-',
-                        'total' => (float) $so->total,
+                        'total' => round($gross * $tixelloShare, 2),
+                        'gross_total' => $gross,
                         'created_at' => $so->created_at->format('d.m.Y'),
                         'config_label' => $so->config['package'] ?? $so->config['plan'] ?? null,
                     ];
                 })->values()->toArray(),
-                'total' => (float) $typeOrders->sum('total'),
+                'total' => round((float) $typeOrders->sum('total') * $tixelloShare, 2),
             ];
         }
 
