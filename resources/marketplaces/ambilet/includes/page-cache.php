@@ -26,7 +26,14 @@ if (
 
 $pageCacheTTL = $pageCacheTTL ?? 300; // Default 5 minutes
 $pageCacheDir = __DIR__ . '/cache/pages';
-$pageCacheKey = md5($_SERVER['REQUEST_URI'] ?? '/');
+
+// Include $_GET params (other than our control flags) in the cache key so
+// different query strings (e.g. tour_slug injected by vanity-tour.php) get
+// their own cache file and don't collide on stale content.
+$cacheParams = $_GET;
+unset($cacheParams['preview'], $cacheParams['nocache']);
+ksort($cacheParams);
+$pageCacheKey = md5(($_SERVER['REQUEST_URI'] ?? '/') . '|' . serialize($cacheParams));
 $pageCacheFile = $pageCacheDir . '/' . $pageCacheKey . '.html';
 
 // Check cache
