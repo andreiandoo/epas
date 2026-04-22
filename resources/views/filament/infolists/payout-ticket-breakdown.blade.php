@@ -13,6 +13,19 @@
     $totalNetFinal = 0;
 @endphp
 
+@once
+<style>
+    /* Zero out padding + gap on the Filament section that wraps the ticket breakdown.
+       Section is tagged via ->extraAttributes(['class' => 'ep-breakdown-section']) in
+       PayoutResource.php. The actual padded element carries fi-section-content. */
+    .ep-breakdown-section .fi-section-content,
+    .ep-breakdown-section .fi-section-content-ctn {
+        padding: 0 !important;
+        gap: 0 !important;
+    }
+</style>
+@endonce
+
 @if(!empty($breakdown))
 <div class="overflow-x-auto">
     <table class="w-full text-sm">

@@ -781,14 +781,45 @@ class MarketplaceTaxTemplate extends Model
 
         // Payout variables
         if ($payout) {
+            // Compute POS-excluded totals once. All amount-like variables below must
+            // use these, since POS/app sales never flow through marketplace — their
+            // money and commission are settled separately between organizer and
+            // customer, and billed to the organizer via a dedicated POS invoice.
+            $posTypeIds = method_exists($payout, 'getPosTicketTypeIds') ? $payout->getPosTicketTypeIds() : [];
+            $posTypeIdsSet = array_flip($posTypeIds);
+            $grossExclPos = 0.0;
+            $commissionExclPos = 0.0;
+            $netExclPos = 0.0;
+            $hasBreakdown = !empty($payout->ticket_breakdown);
+            foreach ($payout->ticket_breakdown ?? [] as $item) {
+                $ttId = $item['ticket_type_id'] ?? null;
+                if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                    continue;
+                }
+                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+                $commPer = (float) ($item['commission_per_ticket'] ?? 0);
+                $commission = $commPer * $qty;
+                $itemMode = $item['commission_mode'] ?? null;
+                $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
+
+                $grossExclPos += $gross;
+                $commissionExclPos += $commission;
+                $netExclPos += ($gross - $commission);
+            }
+            // Fall back to stored values if no breakdown (e.g. legacy payouts)
+            $payoutGross = $hasBreakdown ? $grossExclPos : (float) ($payout->gross_amount ?? 0);
+            $payoutCommission = $hasBreakdown ? $commissionExclPos : (float) ($payout->commission_amount ?? 0);
+            $payoutAmount = $hasBreakdown ? $netExclPos : (float) ($payout->amount ?? 0);
+
             $variables['payout_number'] = $payout->reference ?? '';
             $variables['payout_date'] = $payout->completed_at
                 ? $payout->completed_at->format('d.m.Y')
                 : now()->format('d.m.Y');
-            $variables['payout_amount'] = number_format($payout->amount ?? 0, 2);
+            $variables['payout_amount'] = number_format($payoutAmount, 2);
             $variables['payout_currency'] = $payout->currency ?? 'RON';
-            $variables['payout_gross_amount'] = number_format($payout->gross_amount ?? 0, 2);
-            $variables['payout_commission_amount'] = number_format($payout->commission_amount ?? 0, 2);
+            $variables['payout_gross_amount'] = number_format($payoutGross, 2);
+            $variables['payout_commission_amount'] = number_format($payoutCommission, 2);
 
             // Commission percentage: use per-ticket rate if available, then organizer rate, then calculate from amounts
             $commissionPercent = null;
@@ -815,36 +846,14 @@ class MarketplaceTaxTemplate extends Model
 
             $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
             $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
-            // payout_net_amount must exclude POS/app tickets — marketplace never collects
-            // that money (organizer sells directly via app). Compute from breakdown so
-            // the decont reflects only what marketplace actually pays out.
-            $posTypeIds = method_exists($payout, 'getPosTicketTypeIds') ? $payout->getPosTicketTypeIds() : [];
-            $posTypeIdsSet = array_flip($posTypeIds);
-            $netAmountExclPos = 0.0;
-            foreach ($payout->ticket_breakdown ?? [] as $item) {
-                $ttId = $item['ticket_type_id'] ?? null;
-                if ($ttId && isset($posTypeIdsSet[$ttId])) {
-                    continue;
-                }
-                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
-                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
-                $commPer = (float) ($item['commission_per_ticket'] ?? 0);
-                $commission = $commPer * $qty;
-                $itemMode = $item['commission_mode'] ?? null;
-                $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
-                $netAmountExclPos += ($gross - $commission);
-            }
-            // Fall back to stored amount if breakdown is empty
-            $variables['payout_net_amount'] = number_format(
-                !empty($payout->ticket_breakdown) ? $netAmountExclPos : (float) ($payout->amount ?? 0),
-                2
-            );
+            $variables['payout_net_amount'] = number_format($payoutAmount, 2);
             $variables['payout_commission_mode'] = $payout->commission_mode ?? 'included';
 
-            // VAT calculations
+            // VAT calculations — use POS-excluded commission so the VAT on the decont
+            // only reflects the online-commission portion
             $vatPayer = $organizer?->vat_payer ?? false;
             $vatRate = $vatPayer ? 19 : 0;
-            $vatAmount = $vatPayer ? round(($payout->commission_amount ?? 0) * $vatRate / 100, 2) : 0;
+            $vatAmount = $vatPayer ? round($payoutCommission * $vatRate / 100, 2) : 0;
             $variables['payout_vat_rate'] = $vatRate > 0 ? $vatRate . '%' : '0%';
             $variables['payout_vat_amount'] = number_format($vatAmount, 2);
             $variables['payout_total_with_vat'] = number_format(($payout->fees_amount ?? 0) + $vatAmount, 2);

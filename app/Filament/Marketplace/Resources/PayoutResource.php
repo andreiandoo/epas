@@ -213,8 +213,10 @@ class PayoutResource extends Resource
                             ])
                             ->columns(3),
 
-                        // Ticket breakdown table — Section padding neutralized so the table
-                        // extends edge-to-edge inside the card
+                        // Ticket breakdown table — the blade injects CSS that zeros padding
+                        // on the fi-section-content inside this specific Section (tagged
+                        // with the ep-breakdown-section class) so the table sits flush with
+                        // the card edges.
                         Section::make('Detalii bilete')
                             ->icon('heroicon-o-ticket')
                             ->schema([
@@ -223,9 +225,7 @@ class PayoutResource extends Resource
                                     ->view('filament.infolists.payout-ticket-breakdown')
                                     ->columnSpanFull(),
                             ])
-                            ->extraAttributes([
-                                'class' => '[&_.fi-section-content-ctn]:!p-0 [&_.fi-section-content]:!p-0 [&_.fi-in-component-ctn]:!p-0 [&_.fi-in-entry-wrp]:!p-0',
-                            ])
+                            ->extraAttributes(['class' => 'ep-breakdown-section'])
                             ->visible(fn ($record) => !empty($record->ticket_breakdown)),
 
                         // Financial summary with full event context
