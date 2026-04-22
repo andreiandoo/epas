@@ -253,6 +253,12 @@ class Order extends Model
         static::deleting(function (Order $order) {
             // Release seats and restore stock before deletion
             $order->releaseSeatsAndRestoreStock();
+
+            // Delete child tickets explicitly — the FK on tickets.order_id is
+            // nullOnDelete, so without this tickets would be orphaned (order_id
+            // set to NULL) and keep showing in listings. order_items already
+            // cascade at the DB level.
+            $order->tickets()->delete();
         });
     }
 
