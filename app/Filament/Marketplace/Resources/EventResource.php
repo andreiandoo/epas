@@ -3043,16 +3043,19 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Shared helper: computes Net + Commission per ticket_type using actual
-                                        // order_items and ticket_type commission settings (with default inheritance).
+                                        // Shared helper: Net derived from money flow (Revenue - Commission - Extras)
+                                        // so totals always reconcile. Commission is precise per ticket_type.
                                         // See self::getSalesBreakdown() for the full formula.
                                         $breakdown = self::getSalesBreakdown($record);
                                         $totalNet = $breakdown['total_net'];
                                         $totalCommission = $breakdown['total_commission'];
+                                        $totalExtras = $breakdown['total_extras'];
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
+                                        $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');
                                         $commissionFormatted = number_format($totalCommission, 2, ',', '.');
+                                        $extrasFormatted = number_format($totalExtras, 2, ',', '.');
 
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
@@ -3079,6 +3082,12 @@ class EventResource extends Resource
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-sky-400'>{$commissionFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$commissionLabel}</div>
+                                                </div>
+                                            </div>
+                                            <div class='mt-3'>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$extrasLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
@@ -4473,17 +4482,20 @@ class EventResource extends Resource
     /**
      * Per-request memoized sales breakdown for an event.
      *
-     * Iterates each valid/used ticket belonging to a paid, non-external order,
-     * groups by (order_id, ticket_type_id), resolves unit price with fallbacks
-     * (ticket.price → order_item.unit_price → ticket_type catalog), applies the
-     * ticket_type's commission settings (with event/organizer/marketplace
-     * default inheritance) and allocates order-level discounts proportionally
-     * across ticket types within the order. Produces both totals (for the top
-     * metric card) and a per-ticket-type breakdown (for the ticket-type table)
-     * so both stay in sync.
+     * Money-flow approach so the top metric math always reconciles:
      *
-     * Counting via tickets directly (rather than order_items.tickets) avoids
-     * undercounting when historical tickets have order_id but no order_item_id.
+     *   Revenue (Order.total) = Net + Commission + Extras
+     *
+     *   Revenue    = sum(Order.total) for paid, non-external orders
+     *   Commission = sum over valid tickets of per-ticket commission computed
+     *                from the ticket_type's own settings (with event/organizer/
+     *                marketplace default inheritance) and actual unit_price paid
+     *   Extras     = sum(insurance_amount + cultural_card_surcharge from meta)
+     *   Net        = Revenue - Commission - Extras  (money the organizer keeps)
+     *
+     * Per-ticket-type Net is then allocated proportionally to each type's gross
+     * share (unit_price × valid_count), so summing the table equals the headline Net.
+     * Per-ticket-type Commission uses the exact per-tt computation (precision).
      */
     protected static array $salesBreakdownCache = [];
 
@@ -4504,7 +4516,7 @@ class EventResource extends Resource
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price']);
 
-        // Load the orders + their items in bulk for discount allocation and price fallback
+        // Load the orders + their items in bulk (for price fallback, total, meta)
         $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
         $ordersById = $orderIds->isEmpty()
             ? collect()
@@ -4523,18 +4535,22 @@ class EventResource extends Resource
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
 
-        $totalNet = 0.0;
-        $totalCommission = 0.0;
+        // Per-type aggregates (gross for allocation; commission computed precisely)
         $perType = []; // keyed by ticket_type_id
+        $totalGross = 0.0;
+        $totalCommission = 0.0;
+        $totalRevenue = 0.0;
+        $totalExtras = 0.0;
 
-        // Group tickets by order, then by ticket_type within the order
         foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
             $order = $ordersById->get($orderId);
             if (!$order) continue;
 
-            // First pass: per ticket_type in this order, compute gross + commission + mode
-            $orderData = [];
-            $orderGross = 0.0;
+            $totalRevenue += (float) $order->total;
+
+            $meta = is_array($order->meta) ? $order->meta : [];
+            $totalExtras += (float) ($meta['insurance_amount'] ?? 0);
+            $totalExtras += (float) ($meta['cultural_card_surcharge'] ?? 0);
 
             foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
                 $tt = $group->first()->ticketType;
@@ -4559,64 +4575,47 @@ class EventResource extends Resource
 
                 $gross = $unitPrice * $validCount;
 
-                // Ticket-type commission with default inheritance
+                // Precise commission from ticket_type settings (with default inheritance)
                 $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
-                $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-                $itemCommission = $commPerTicket * $validCount;
+                $commission = $commPerTicket * $validCount;
 
-                $orderGross += $gross;
-                $orderData[] = [
-                    'tt' => $tt,
-                    'valid_count' => $validCount,
-                    'gross' => $gross,
-                    'commission' => $itemCommission,
-                    'mode' => $effective['mode'],
-                ];
-            }
-
-            // Second pass: allocate order-level discount proportionally by gross
-            $discount = (float) $order->discount_amount;
-            foreach ($orderData as $d) {
-                $itemDiscountShare = $orderGross > 0 ? $discount * ($d['gross'] / $orderGross) : 0;
-
-                if (in_array($d['mode'], ['on_top', 'added_on_top'], true)) {
-                    // on_top: organizer keeps base price minus its share of discount;
-                    // commission is paid on top by customer, separate from base.
-                    $itemNet = $d['gross'] - $itemDiscountShare;
-                } else { // included
-                    // included: commission is embedded in gross; organizer gets
-                    // gross - commission - discount share.
-                    $itemNet = $d['gross'] - $d['commission'] - $itemDiscountShare;
-                }
-                $itemNet = max(0.0, $itemNet);
-
-                $ttId = $d['tt']->id;
                 if (!isset($perType[$ttId])) {
                     $perType[$ttId] = [
-                        'tt' => $d['tt'],
+                        'tt' => $tt,
                         'valid_count' => 0,
-                        'net' => 0.0,
+                        'gross' => 0.0,
                         'commission' => 0.0,
                     ];
                 }
-                $perType[$ttId]['valid_count'] += $d['valid_count'];
-                $perType[$ttId]['net'] += $itemNet;
-                $perType[$ttId]['commission'] += $d['commission'];
+                $perType[$ttId]['valid_count'] += $validCount;
+                $perType[$ttId]['gross'] += $gross;
+                $perType[$ttId]['commission'] += $commission;
 
-                $totalNet += $itemNet;
-                $totalCommission += $d['commission'];
+                $totalGross += $gross;
+                $totalCommission += $commission;
             }
         }
 
-        return self::$salesBreakdownCache[$event->id] = [
-            'total_net' => round($totalNet, 2),
-            'total_commission' => round($totalCommission, 2),
-            'per_type' => array_map(fn ($d) => [
+        // Net from actual money flow so Revenue = Net + Commission + Extras always holds
+        $totalNet = max(0.0, $totalRevenue - $totalCommission - $totalExtras);
+
+        // Allocate per-type Net proportionally to each type's gross share
+        $finalPerType = array_map(function ($d) use ($totalNet, $totalGross) {
+            $share = $totalGross > 0 ? ($d['gross'] / $totalGross) : 0;
+            return [
                 'tt' => $d['tt'],
                 'valid_count' => $d['valid_count'],
-                'net' => round($d['net'], 2),
+                'net' => round($totalNet * $share, 2),
                 'commission' => round($d['commission'], 2),
-            ], $perType),
+            ];
+        }, $perType);
+
+        return self::$salesBreakdownCache[$event->id] = [
+            'total_revenue' => round($totalRevenue, 2),
+            'total_net' => round($totalNet, 2),
+            'total_commission' => round($totalCommission, 2),
+            'total_extras' => round($totalExtras, 2),
+            'per_type' => $finalPerType,
         ];
     }
 }
