@@ -29,11 +29,11 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
+        // Cancelled events are intentionally NOT excluded here — they must stay in
+        // category listings (with an "Anulat" badge on the card) until they become
+        // past/"Încheiat". The applyUpcomingFilter() above handles time scoping.
         $query = Event::where('marketplace_client_id', $client->id)
             ->where('is_published', true)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
             ->with([
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'marketplaceEventCategory',
@@ -481,12 +481,12 @@ class MarketplaceEventsController extends BaseController
             $query->where('slug', $identifier);
         }
 
-        // Only show published events unless preview mode is enabled
+        // Only show published events unless preview mode is enabled.
+        // Cancelled events are kept visible so their detail page still loads
+        // (with an "Anulat" banner) when a user follows a card from the
+        // category listing — they'll become unavailable naturally once past.
         if (!$request->boolean('preview')) {
-            $query->where('is_published', true)
-                ->where(function ($q) {
-                    $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-                });
+            $query->where('is_published', true);
         }
 
         $event = $query->with([
