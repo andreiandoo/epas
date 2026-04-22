@@ -1795,11 +1795,48 @@ class EventsController extends BaseController
         $allTimeQuery = $scopedOrders();
         $grossRevenue = (float) (clone $allTimeQuery)->sum('total');
 
-        // Net revenue = sum of ticket base prices (without commission)
+        // Per-ticket-type net price (organizer's take per ticket, with commission
+        // logic applied by mode). Used below for net revenue and ticket_performance.
+        $defaultRate = (float) ($event->commission_rate
+            ?? $event->marketplaceOrganizer?->commission_rate
+            ?? $event->marketplaceClient?->commission_rate
+            ?? 5);
+        $defaultMode = $event->commission_mode
+            ?? $event->marketplaceOrganizer?->default_commission_mode
+            ?? $event->marketplaceClient?->commission_mode
+            ?? 'included';
+        $netPricePerTicket = function (\App\Models\TicketType $tt) use ($defaultRate, $defaultMode): float {
+            $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
+                ? (int) $tt->sale_price_cents
+                : (int) ($tt->price_cents ?? 0);
+            $basePrice = $basePriceCents / 100;
+            $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+            $mode = $effective['mode'];
+            // on_top: organizer keeps the full base price (commission is charged on top to the customer)
+            // included: organizer keeps base minus the included commission portion
+            if (in_array($mode, ['on_top', 'added_on_top'], true)) {
+                return $basePrice;
+            }
+            $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
+            return max(0.0, $basePrice - $commPerTicket);
+        };
+
+        // Net revenue = sum over VALID tickets of the ticket_type's net price
+        // (ignores individual ticket.price which can be 0 for invitations / free tickets).
         $allTimeOrderIds = (clone $allTimeQuery)->pluck('id');
-        $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $allTimeOrderIds)
+        $validCountsByType = \App\Models\Ticket::whereIn('order_id', $allTimeOrderIds)
             ->whereIn('status', ['valid', 'used'])
-            ->sum('price');
+            ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id');
+
+        $netRevenue = 0.0;
+        foreach ($event->ticketTypes as $tt) {
+            $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
+            if ($validCount === 0) continue;
+            $netRevenue += $netPricePerTicket($tt) * $validCount;
+        }
+        $netRevenue = round($netRevenue, 2);
         $commissionAmount = round($grossRevenue - $netRevenue, 2);
 
         // Refunds
@@ -1862,18 +1899,44 @@ class EventsController extends BaseController
         $currentDate = $rangeStart->copy();
         $totalDays = max(1, $rangeStart->diffInDays($rangeEnd) + 1);
 
+        // Pre-index per-ticket-type net price once so the daily revenue loop
+        // below doesn't recompute it per day.
+        $ttNetById = [];
+        foreach ($event->ticketTypes as $tt) {
+            $ttNetById[$tt->id] = $netPricePerTicket($tt);
+        }
+
         while ($currentDate <= $rangeEnd) {
             $dayStart = $currentDate->copy()->startOfDay();
             $dayEnd = $currentDate->copy()->endOfDay();
 
             $dayOrders = $scopedOrders()
                 ->whereBetween('created_at', [$dayStart, $dayEnd]);
+            $dayOrderIds = (clone $dayOrders)->pluck('id');
+
+            // Daily net revenue = sum over that day's VALID tickets of their
+            // ticket_type's net price (matches the overview and ticket_performance
+            // definitions). Using raw Order.total would show gross, not net.
+            $dayNetRevenue = 0.0;
+            $dayTickets = 0;
+            if ($dayOrderIds->isNotEmpty()) {
+                $dayCountsByType = \App\Models\Ticket::whereIn('order_id', $dayOrderIds)
+                    ->whereIn('status', ['valid', 'used'])
+                    ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+                    ->groupBy('ticket_type_id')
+                    ->pluck('cnt', 'ticket_type_id');
+                foreach ($dayCountsByType as $ttId => $cnt) {
+                    $net = (float) ($ttNetById[$ttId] ?? 0);
+                    $dayNetRevenue += $net * (int) $cnt;
+                    $dayTickets += (int) $cnt;
+                }
+            }
 
             $dailyData[] = [
                 'label' => $currentDate->format('M d'),
                 'date' => $currentDate->format('Y-m-d'),
-                'revenue' => (float) $dayOrders->sum('total'),
-                'tickets' => (int) $dayOrders->withCount('tickets')->get()->sum('tickets_count'),
+                'revenue' => round($dayNetRevenue, 2),
+                'tickets' => $dayTickets,
             ];
 
             $currentDate->addDay();
@@ -1937,14 +2000,20 @@ class EventsController extends BaseController
         }
 
         // Ticket performance with trend and conversion
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews) {
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netPricePerTicket) {
             $ticketQuery = fn () => \App\Models\Ticket::where('ticket_type_id', $tt->id)
                 ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses)
                     ->where('marketplace_organizer_id', $organizer->id));
 
-            $sold = $ticketQuery()->count();
+            // Sold = valid/used tickets only (excludes cancelled/refunded)
+            $sold = (clone $ticketQuery())
+                ->whereIn('status', ['valid', 'used'])
+                ->count();
 
-            $revenue = (float) $ticketQuery()->sum('price');
+            // Revenue = valid_count × ticket_type's net price (organizer's take per
+            // ticket). Using the ticket_type's configured price avoids zero-priced
+            // invitations / free tickets distorting the revenue.
+            $revenue = round($netPricePerTicket($tt) * $sold, 2);
 
             // Trend: compare sales in current period vs previous period
             $currentPeriodSold = $ticketQuery()
