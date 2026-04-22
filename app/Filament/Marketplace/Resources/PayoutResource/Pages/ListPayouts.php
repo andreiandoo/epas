@@ -1182,120 +1182,56 @@ class ListPayouts extends ListRecords
         $commissionMode = $event->getEffectiveCommissionMode();
         $commissionRate = $event->getEffectiveCommissionRate();
 
-        // Load orders. Exclude pos_app: POS/app sales don't flow through marketplace
-        // (organizer collects cash on their own), so they must not appear in payout
-        // gross/commission/net totals. POS commission is billed separately.
-        $completedOrders = Order::where(function ($q) use ($event) {
-                $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id);
+        // Build gross/commission from valid tickets grouped by ticket_type, using
+        // each ticket_type's base price + commission config (same logic as the
+        // Detalii bilete table in payout-ticket-breakdown.blade.php). This ensures
+        // Rezumat financiar matches the breakdown totals exactly. POS/app tickets
+        // are excluded via a whereHas on their parent order — money for pos_app
+        // never flows through marketplace, only the commission is billed separately.
+        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', function ($q) {
+                $q->whereIn('status', ['paid', 'confirmed', 'completed'])
+                    ->where('source', '!=', 'test_order')
+                    ->where('source', '!=', 'pos_app');
             })
-            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('source', '!=', 'test_order')
-            ->where('source', '!=', 'pos_app')
-            ->with(['items.ticketType'])
-            ->get();
+            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id')
+            ->toArray();
 
-        $grossRevenue = (float) $completedOrders->sum('total');
-
-        // Load event ticket types for commission info
         $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
 
-        // Per-ticket-type commission calculation
-        $totalCommission = 0;
-        foreach ($completedOrders as $order) {
-            if ($order->items->isNotEmpty()) {
-                foreach ($order->items as $item) {
-                    // Prefer event's ticket type (has commission info) over eager-loaded
-                    $tt = ($item->ticket_type_id ? $eventTicketTypes->get($item->ticket_type_id) : null) ?? $item->ticketType;
-                    $itemTotal = (float) $item->total;
-                    $itemQty = (int) $item->quantity;
-                    $itemBasePerUnit = $itemQty > 0 ? $itemTotal / $itemQty : $itemTotal;
+        $grossRevenue = 0.0;
+        $totalCommission = 0.0;
 
-                    $ttCommType = $tt?->commission_type;
-                    $ttCommMode = $tt?->commission_mode ?: $commissionMode;
+        foreach ($ticketCounts as $ttId => $qty) {
+            $tt = $eventTicketTypes->get($ttId);
+            if (!$tt) continue;
 
-                    if ($ttCommType && $ttCommType !== '') {
-                        $ttCommRate = (float) ($tt->commission_rate ?? 0);
-                        $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
 
-                        // For ON TOP: item total includes commission. Extract base first.
-                        // For INCLUDED: item total = base price. Commission deducted from organizer.
-                        if ($ttCommMode === 'added_on_top') {
-                            $base = match ($ttCommType) {
-                                'percentage' => round($itemTotal / (1 + $ttCommRate / 100), 2),
-                                'fixed' => $itemTotal - round($ttCommFixed * $itemQty, 2),
-                                'both' => round(($itemTotal - $ttCommFixed * $itemQty) / (1 + $ttCommRate / 100), 2),
-                                default => round($itemTotal / (1 + $commissionRate / 100), 2),
-                            };
-                            $totalCommission += round($itemTotal - $base, 2);
-                        } else {
-                            $totalCommission += match ($ttCommType) {
-                                'percentage' => round($itemTotal * ($ttCommRate / 100), 2),
-                                'fixed' => round($ttCommFixed * $itemQty, 2),
-                                'both' => round($itemTotal * ($ttCommRate / 100), 2) + round($ttCommFixed * $itemQty, 2),
-                                default => round($itemTotal * ($commissionRate / 100), 2),
-                            };
-                        }
-                    } else {
-                        // No per-ticket commission — use event-level
-                        if ($commissionMode === 'added_on_top') {
-                            $base = round($itemTotal / (1 + $commissionRate / 100), 2);
-                            $totalCommission += round($itemTotal - $base, 2);
-                        } else {
-                            $totalCommission += round($itemTotal * ($commissionRate / 100), 2);
-                        }
-                    }
-                }
+            $ttCommType = $tt->commission_type;
+            $ttCommMode = $tt->commission_mode ?: $commissionMode;
+            $ttCommRate = (float) ($tt->commission_rate ?? 0);
+            $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
+
+            if ($ttCommType && $ttCommType !== '') {
+                $commPerTicket = match ($ttCommType) {
+                    'percentage' => round($basePrice * ($ttCommRate / 100), 2),
+                    'fixed' => $ttCommFixed,
+                    'both' => round($basePrice * ($ttCommRate / 100), 2) + $ttCommFixed,
+                    default => round($basePrice * ($commissionRate / 100), 2),
+                };
             } else {
-                // Orders without items — look up ticket records for ticket_type commission info
-                $orderTickets = \App\Models\Ticket::where('order_id', $order->id)->get();
-                if ($orderTickets->isNotEmpty()) {
-                    foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $tickets) {
-                        $tt = $eventTicketTypes->get($ttId);
-                        $ticketPrice = (float) ($tickets->first()->price ?? 0);
-                        $ticketQty = $tickets->count();
-
-                        if ($tt && $tt->commission_type && $tt->commission_type !== '') {
-                            $ttCommRate = (float) ($tt->commission_rate ?? 0);
-                            $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
-                            $ttCommMode = $tt->commission_mode ?: $commissionMode;
-
-                            // price_cents is BASE price. Ticket.price may be base or base+commission.
-                            $basePrice = (float) ($tt->price_cents ? $tt->price_cents / 100 : $ticketPrice);
-
-                            if ($ttCommMode === 'added_on_top') {
-                                // Commission is calculated on base price, added to what customer pays
-                                $comm = match ($tt->commission_type) {
-                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
-                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
-                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
-                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
-                                };
-                            } else {
-                                $comm = match ($tt->commission_type) {
-                                    'percentage' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2),
-                                    'fixed' => round($ttCommFixed * $ticketQty, 2),
-                                    'both' => round($basePrice * ($ttCommRate / 100) * $ticketQty, 2) + round($ttCommFixed * $ticketQty, 2),
-                                    default => round($basePrice * ($commissionRate / 100) * $ticketQty, 2),
-                                };
-                            }
-                            $totalCommission += $comm;
-                        } else {
-                            // No per-type commission, use event-level
-                            $basePrice = (float) ($tt?->price_cents ? $tt->price_cents / 100 : $ticketPrice);
-                            $totalCommission += round($basePrice * ($commissionRate / 100) * $ticketQty, 2);
-                        }
-                    }
-                } else {
-                    // No items AND no tickets — last resort event-level
-                    $orderTotal = (float) $order->total;
-                    if ($commissionMode === 'added_on_top') {
-                        $base = round($orderTotal / (1 + $commissionRate / 100), 2);
-                        $totalCommission += round($orderTotal - $base, 2);
-                    } else {
-                        $totalCommission += round($orderTotal * ($commissionRate / 100), 2);
-                    }
-                }
+                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
             }
+
+            $typeCommission = $commPerTicket * $qty;
+            $typeGross = $basePrice * $qty + ($ttCommMode === 'added_on_top' ? $typeCommission : 0);
+
+            $grossRevenue += $typeGross;
+            $totalCommission += $typeCommission;
         }
 
         // Refunds (also exclude pos_app for same reason as above)

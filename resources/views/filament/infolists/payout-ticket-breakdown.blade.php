@@ -14,7 +14,7 @@
 @endphp
 
 @if(!empty($breakdown))
-<div class="overflow-x-auto">
+<div class="overflow-x-auto -mx-6 -my-6">
     <table class="w-full text-sm">
         <thead>
             <tr class="border-b border-gray-200 dark:border-gray-700">
@@ -63,21 +63,21 @@
                         $totalNetFinal += $netFinal;
                     }
                 @endphp
-                <tr class="{{ $isPos ? 'bg-amber-50 dark:bg-amber-950/30 opacity-80' : '' }}">
+                <tr class="{{ $isPos ? 'bg-gray-100 dark:bg-gray-800' : '' }}">
                     <td class="py-2 px-3 font-medium text-gray-900 dark:text-white">
-                        {{ $name }}
                         @if($isPos)
-                            <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" title="Vândut prin aplicație/POS — nu intră în calculul decontului">POS</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="inline-block w-4 h-4 mr-1.5 -mt-0.5 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" title="Vândut prin aplicație/POS — nu intră în calculul decontului"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" /></svg>
                         @endif
+                        {{ $name }}
                     </td>
-                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($price, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-semibold">{{ $qty }}</td>
-                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($gross, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($commission, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-gray-600 dark:text-gray-300 font-mono">{{ number_format($netTickets, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $discounts > 0 ? '-' . number_format($discounts, 2) : '0.00' }}</td>
-                    <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono font-semibold">{{ number_format($netFinal, 2) }}</td>
-                    <td class="py-2 px-3 text-right text-gray-500 dark:text-gray-400 text-xs">{{ $commissionLabel }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($price, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-semibold">{{ $qty }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($gross, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">-{{ number_format($commission, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($netTickets, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $discounts > 0 ? '-' . number_format($discounts, 2) : '0.00' }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-900 dark:text-white' }} font-mono font-semibold">{{ number_format($netFinal, 2) }}</td>
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400' }} text-xs">{{ $commissionLabel }}</td>
                 </tr>
             @endforeach
         </tbody>
