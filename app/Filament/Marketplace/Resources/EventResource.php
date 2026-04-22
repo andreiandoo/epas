@@ -3043,79 +3043,12 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Net (organizer share) and commission, computed per ticket-type for maximum
-                                        // precision. For each paid order we walk its order_items, count the valid
-                                        // tickets in each item, and apply the ticket_type's own commission settings
-                                        // (type/rate/fixed/mode) against the actual unit_price paid. Commission is
-                                        // then subtracted from Order.total (which already reflects discounts,
-                                        // insurance and surcharges in the opposite direction) to get Net.
-                                        //
-                                        //   Commission_item = per_ticket_commission(tt, unit_price) × valid_count
-                                        //   Commission_order = sum of item commissions
-                                        //   Net_order = Order.total - Commission_order - Insurance - Surcharge
-                                        //
-                                        // This formula holds for both 'on_top' and 'included' modes because
-                                        // Order.total already accounts for the discount in each case.
-                                        $paidOrders = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                                            ->where('source', '!=', 'external_import')
-                                            ->with(['items.ticketType', 'items.tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used'])])
-                                            ->get(['id', 'total', 'meta', 'commission_amount', 'commission_rate', 'subtotal', 'discount_amount']);
-
-                                        $computeItemCommission = function ($tt, float $unitPrice): array {
-                                            // Returns [commission_per_ticket, mode]
-                                            if (!$tt) return [0.0, 'included'];
-                                            $type = $tt->commission_type ?? 'percentage';
-                                            $rate = (float) ($tt->commission_rate ?? 0);
-                                            $fixed = (float) ($tt->commission_fixed ?? 0);
-                                            $mode = $tt->commission_mode ?? 'included';
-                                            $comm = match ($type) {
-                                                'fixed' => $fixed,
-                                                'both' => ($unitPrice * $rate / 100) + $fixed,
-                                                default => ($unitPrice * $rate / 100), // percentage
-                                            };
-                                            return [round($comm, 2), $mode];
-                                        };
-
-                                        $totalNet = 0.0;
-                                        $totalCommission = 0.0;
-
-                                        foreach ($paidOrders as $ord) {
-                                            $meta = is_array($ord->meta) ? $ord->meta : [];
-                                            $insurance = (float) ($meta['insurance_amount'] ?? 0);
-                                            $surcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
-                                            $total = (float) $ord->total;
-
-                                            $commOrd = 0.0;
-                                            $items = $ord->items;
-
-                                            if ($items->isEmpty()) {
-                                                // Fallback for orders without order_items: use stored commission_amount,
-                                                // else rate × (subtotal - discount).
-                                                $storedComm = (float) $ord->commission_amount;
-                                                if ($storedComm > 0) {
-                                                    $commOrd = $storedComm;
-                                                } else {
-                                                    $rate = (float) ($ord->commission_rate ?? 0);
-                                                    $net = max(0.0, (float) $ord->subtotal - (float) $ord->discount_amount);
-                                                    $commOrd = $rate > 0 ? round($net * ($rate / 100), 2) : 0.0;
-                                                }
-                                            } else {
-                                                foreach ($items as $item) {
-                                                    $validCount = $item->tickets->count();
-                                                    if ($validCount === 0) continue;
-
-                                                    [$commPerTicket, ] = $computeItemCommission($item->ticketType, (float) $item->unit_price);
-                                                    $commOrd += $commPerTicket * $validCount;
-                                                }
-                                                $commOrd = round($commOrd, 2);
-                                            }
-
-                                            $netOrd = max(0.0, $total - $commOrd - $insurance - $surcharge);
-
-                                            $totalNet += $netOrd;
-                                            $totalCommission += $commOrd;
-                                        }
+                                        // Shared helper: computes Net + Commission per ticket_type using actual
+                                        // order_items and ticket_type commission settings (with default inheritance).
+                                        // See self::getSalesBreakdown() for the full formula.
+                                        $breakdown = self::getSalesBreakdown($record);
+                                        $totalNet = $breakdown['total_net'];
+                                        $totalCommission = $breakdown['total_commission'];
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');
@@ -3195,11 +3128,16 @@ class EventResource extends Resource
 
                                         $eventId = $record->id;
                                         $totals = ['online' => 0, 'app' => 0, 'invitations' => 0];
-                                        $exportSvc = app(\App\Services\Marketplace\TicketExportService::class);
 
-                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $exportSvc) {
-                                            // Include invitations (tickets without an order) and all
-                                            // non-external-import tickets. Excludes external imports only.
+                                        // Pull per-type Net from the same breakdown used by the top metric so
+                                        // the table rows sum to the headline Net (discounts allocated, commission
+                                        // inheritance resolved, invitations excluded from Net).
+                                        $breakdown = self::getSalesBreakdown($record);
+                                        $perType = $breakdown['per_type']; // keyed by tt_id
+
+                                        $rows = $record->ticketTypes->map(function ($tt) use (&$totals, $perType) {
+                                            // Valid/cancelled counts include all non-external-import tickets
+                                            // (including invitations without an order) — displayed for inventory.
                                             $base = \App\Models\Ticket::where('ticket_type_id', $tt->id)
                                                 ->where(function ($q) {
                                                     $q->whereDoesntHave('order')
@@ -3209,8 +3147,8 @@ class EventResource extends Resource
                                             $cancelled = (clone $base)->where('status', 'cancelled')->count();
                                             $stock = $tt->quota_total ?? $tt->capacity ?? 0;
 
-                                            [, $netPerTicket, ] = $exportSvc->computeTicketAmounts($tt);
-                                            $netTotal = ($netPerTicket ?? 0) * $valid;
+                                            // Net comes from the authoritative breakdown (paid orders only).
+                                            $netTotal = $perType[$tt->id]['net'] ?? 0.0;
 
                                             $isInvitation = ($tt->name === 'Invitatie') || ($tt->meta['is_invitation'] ?? false);
                                             if ($isInvitation) {
@@ -4529,6 +4467,132 @@ class EventResource extends Resource
             'import-external-tickets' => Pages\ImportExternalTickets::route('/{record}/external-tickets'),
             'import' => Pages\ImportEvents::route('/import'),
             'daily-capacities' => Pages\DailyCapacities::route('/{record}/daily-capacities'),
+        ];
+    }
+
+    /**
+     * Per-request memoized sales breakdown for an event.
+     *
+     * Walks each paid order's order_items, applies the ticket_type's own
+     * commission settings (with event/organizer/marketplace default inheritance)
+     * to the unit_price actually paid, and allocates order-level discounts
+     * proportionally across items. Produces both totals (for the top metric
+     * card) and a per-ticket-type breakdown (for the ticket-type table) so
+     * both stay in sync.
+     *
+     * Return shape:
+     *   [
+     *     'total_net' => float,
+     *     'total_commission' => float,
+     *     'per_type' => [ tt_id => ['valid_count'=>int,'net'=>float,'commission'=>float,'tt'=>TicketType] ],
+     *   ]
+     */
+    protected static array $salesBreakdownCache = [];
+
+    public static function getSalesBreakdown(Event $event): array
+    {
+        if (isset(self::$salesBreakdownCache[$event->id])) {
+            return self::$salesBreakdownCache[$event->id];
+        }
+
+        $eventId = $event->id;
+
+        $paidOrders = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('source', '!=', 'external_import')
+            ->with(['items.ticketType', 'items.tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used'])])
+            ->get();
+
+        // Resolve default commission settings from the event/organizer/marketplace
+        $defaultRate = (float) (
+            $event->commission_rate
+            ?? $event->marketplaceOrganizer?->commission_rate
+            ?? $event->tenant?->commission_rate
+            ?? $event->marketplaceClient?->commission_rate
+            ?? 5
+        );
+        $defaultMode = $event->commission_mode
+            ?? $event->marketplaceOrganizer?->default_commission_mode
+            ?? $event->marketplaceClient?->commission_mode
+            ?? 'included';
+
+        $totalNet = 0.0;
+        $totalCommission = 0.0;
+        $perType = []; // keyed by ticket_type_id
+
+        foreach ($paidOrders as $ord) {
+            $orderItems = $ord->items;
+            if ($orderItems->isEmpty()) continue;
+
+            // First pass: compute gross + commission + mode per item
+            $orderData = [];
+            $orderGross = 0.0;
+            foreach ($orderItems as $item) {
+                $tt = $item->ticketType;
+                $validCount = $item->tickets->count();
+                if (!$tt || $validCount === 0) continue;
+
+                $unitPrice = (float) $item->unit_price;
+                $gross = $unitPrice * $validCount;
+
+                // Ticket-type commission with default inheritance
+                $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
+                $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+                $itemCommission = $commPerTicket * $validCount;
+
+                $orderGross += $gross;
+                $orderData[] = [
+                    'tt' => $tt,
+                    'valid_count' => $validCount,
+                    'gross' => $gross,
+                    'commission' => $itemCommission,
+                    'mode' => $effective['mode'],
+                ];
+            }
+
+            // Second pass: allocate order-level discount proportionally by item gross
+            $discount = (float) $ord->discount_amount;
+            foreach ($orderData as $d) {
+                $itemDiscountShare = $orderGross > 0 ? $discount * ($d['gross'] / $orderGross) : 0;
+
+                if (in_array($d['mode'], ['on_top', 'added_on_top'], true)) {
+                    // on_top: organizer keeps base price minus its share of discount;
+                    // commission is paid separately by customer
+                    $itemNet = $d['gross'] - $itemDiscountShare;
+                } else { // included (or other)
+                    // included: commission is embedded in gross; organizer gets
+                    // gross - commission - discount share
+                    $itemNet = $d['gross'] - $d['commission'] - $itemDiscountShare;
+                }
+                $itemNet = max(0.0, $itemNet);
+
+                $ttId = $d['tt']->id;
+                if (!isset($perType[$ttId])) {
+                    $perType[$ttId] = [
+                        'tt' => $d['tt'],
+                        'valid_count' => 0,
+                        'net' => 0.0,
+                        'commission' => 0.0,
+                    ];
+                }
+                $perType[$ttId]['valid_count'] += $d['valid_count'];
+                $perType[$ttId]['net'] += $itemNet;
+                $perType[$ttId]['commission'] += $d['commission'];
+
+                $totalNet += $itemNet;
+                $totalCommission += $d['commission'];
+            }
+        }
+
+        return self::$salesBreakdownCache[$event->id] = [
+            'total_net' => round($totalNet, 2),
+            'total_commission' => round($totalCommission, 2),
+            'per_type' => array_map(fn ($d) => [
+                'tt' => $d['tt'],
+                'valid_count' => $d['valid_count'],
+                'net' => round($d['net'], 2),
+                'commission' => round($d['commission'], 2),
+            ], $perType),
         ];
     }
 }

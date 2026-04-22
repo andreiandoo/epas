@@ -1267,8 +1267,12 @@ class OrganizerResource extends Resource
             $eventName = e($name);
             $venueDisplay = e(trim(implode(' · ', array_filter([$venueName, $venueCity]))) ?: '-');
 
+            $editUrl = \App\Filament\Marketplace\Resources\EventResource::getUrl('edit', ['record' => $event->id]);
+
             $rows .= '<tr style="border-bottom:1px solid rgba(148,163,184,0.18);">'
-                . '<td style="padding:8px 10px;font-size:13px;color:#ffffff;font-weight:500;">' . $eventName . '</td>'
+                . '<td style="padding:8px 10px;font-size:13px;font-weight:500;">'
+                    . '<a href="' . e($editUrl) . '" style="color:#ffffff;text-decoration:none;" onmouseover="this.style.color=\'#93c5fd\';this.style.textDecoration=\'underline\'" onmouseout="this.style.color=\'#ffffff\';this.style.textDecoration=\'none\'">' . $eventName . '</a>'
+                . '</td>'
                 . '<td style="padding:8px 10px;font-size:12px;color:#cbd5e1;white-space:nowrap;">' . $eventDateStr . '</td>'
                 . '<td style="padding:8px 10px;font-size:12px;color:#cbd5e1;">' . $venueDisplay . '</td>'
                 . '<td style="padding:8px 10px;text-align:center;">' . $statusBadge . '</td>'
