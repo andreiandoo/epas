@@ -79,30 +79,27 @@ class ServiceTypeResource extends Resource
                 Section::make('Featuring Pricing')
                     ->icon('heroicon-o-star')
                     ->description('Prices per day for featuring an event on different pages')
+                    ->statePath('pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.home_hero')
+                        Forms\Components\TextInput::make('home_hero')
                             ->label('Prima pagina - Hero (RON/zi)')
                             ->numeric()
-                            ->step(0.01)
-                            ->default(120),
+                            ->step(0.01),
 
-                        Forms\Components\TextInput::make('pricing.home_recommendations')
+                        Forms\Components\TextInput::make('home_recommendations')
                             ->label('Prima pagina - Recomandari (RON/zi)')
                             ->numeric()
-                            ->step(0.01)
-                            ->default(80),
+                            ->step(0.01),
 
-                        Forms\Components\TextInput::make('pricing.category')
+                        Forms\Components\TextInput::make('category')
                             ->label('Pagina categorie eveniment (RON/zi)')
                             ->numeric()
-                            ->step(0.01)
-                            ->default(60),
+                            ->step(0.01),
 
-                        Forms\Components\TextInput::make('pricing.city')
+                        Forms\Components\TextInput::make('city')
                             ->label('Pagina oras eveniment (RON/zi)')
                             ->numeric()
-                            ->step(0.01)
-                            ->default(40),
+                            ->step(0.01),
                     ])
                     ->columns(4)
                     ->visible(fn ($record) => $record?->code === 'featuring'),
@@ -111,25 +108,23 @@ class ServiceTypeResource extends Resource
                 Section::make('Email Marketing Pricing')
                     ->icon('heroicon-o-envelope')
                     ->description('Prices per email for different audience types')
+                    ->statePath('pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.own_per_email')
+                        Forms\Components\TextInput::make('own_per_email')
                             ->label('Own Customers (RON/email)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(0.40)
                             ->helperText('Price for emailing the organizer\'s own customers'),
 
-                        Forms\Components\TextInput::make('pricing.marketplace_per_email')
+                        Forms\Components\TextInput::make('marketplace_per_email')
                             ->label('Marketplace Database (RON/email)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(0.50)
                             ->helperText('Price for emailing the marketplace\'s user base'),
 
-                        Forms\Components\TextInput::make('pricing.minimum')
+                        Forms\Components\TextInput::make('minimum')
                             ->label('Minimum Order (emails)')
                             ->numeric()
-                            ->default(100)
                             ->helperText('Minimum number of emails per order'),
                     ])
                     ->columns(3)
@@ -139,33 +134,30 @@ class ServiceTypeResource extends Resource
                 Section::make('Ad Tracking Pricing')
                     ->icon('heroicon-o-chart-bar')
                     ->description('Multiple pricing tiers for ad tracking integration')
+                    ->statePath('pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.monthly')
+                        Forms\Components\TextInput::make('monthly')
                             ->label('Cost lunar (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(49)
                             ->helperText('Preț per lună, facturat lunar'),
 
-                        Forms\Components\TextInput::make('pricing.biannual')
+                        Forms\Components\TextInput::make('biannual')
                             ->label('Cost bianual (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(249)
                             ->helperText('Preț total pentru 6 luni'),
 
-                        Forms\Components\TextInput::make('pricing.annual')
+                        Forms\Components\TextInput::make('annual')
                             ->label('Cost anual (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(449)
                             ->helperText('Preț total pentru 12 luni'),
 
-                        Forms\Components\TextInput::make('pricing.one_time')
+                        Forms\Components\TextInput::make('one_time')
                             ->label('Cost one-time (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(999)
                             ->helperText('Plată unică, acces permanent'),
                     ])
                     ->columns(4)
@@ -175,26 +167,24 @@ class ServiceTypeResource extends Resource
                 Section::make('Campaign Creation Pricing')
                     ->icon('heroicon-o-megaphone')
                     ->description('Prices for professional ad campaign creation packages')
+                    ->statePath('pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('pricing.basic')
+                        Forms\Components\TextInput::make('basic')
                             ->label('Basic Package (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(499)
                             ->helperText('Basic campaign setup'),
 
-                        Forms\Components\TextInput::make('pricing.standard')
+                        Forms\Components\TextInput::make('standard')
                             ->label('Standard Package (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(899)
                             ->helperText('Standard campaign with optimization'),
 
-                        Forms\Components\TextInput::make('pricing.premium')
+                        Forms\Components\TextInput::make('premium')
                             ->label('Premium Package (RON)')
                             ->numeric()
                             ->step(0.01)
-                            ->default(1499)
                             ->helperText('Full-service campaign management'),
                     ])
                     ->columns(3)

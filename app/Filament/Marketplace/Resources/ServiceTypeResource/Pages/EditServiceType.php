@@ -27,6 +27,12 @@ class EditServiceType extends EditRecord
         // Ensure the marketplace_client_id is preserved
         $data['marketplace_client_id'] = $this->record->marketplace_client_id;
 
+        // Merge pricing with existing record so legacy keys not present in form aren't dropped.
+        if (isset($data['pricing']) && is_array($data['pricing'])) {
+            $existing = $this->record->pricing ?? [];
+            $data['pricing'] = array_merge($existing, $data['pricing']);
+        }
+
         return $data;
     }
 }
