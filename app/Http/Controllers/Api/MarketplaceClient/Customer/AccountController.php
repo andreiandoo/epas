@@ -772,7 +772,19 @@ class AccountController extends BaseController
                     // (event_date NULL, range_start_date/range_end_date set) gets a real date
                     // and "Încheiat" only fires once range_end_date has passed.
                     $startDate = $event->start_date;
+                    $endDate = $event->end_date;
                     $isPast = $event->isPast();
+                    $isMultiDay = $endDate && $startDate && \Carbon\Carbon::parse($endDate)->toDateString() !== \Carbon\Carbon::parse($startDate)->toDateString();
+
+                    // Venue name is a translatable JSON column; unwrap before sending or
+                    // the JS template literal serializes it as "[object Object]".
+                    $venueName = null;
+                    if ($event->venue) {
+                        $rawVenue = $event->venue->name;
+                        $venueName = is_array($rawVenue)
+                            ? ($rawVenue['ro'] ?? $rawVenue['en'] ?? reset($rawVenue) ?: null)
+                            : $rawVenue;
+                    }
 
                     $seatDetails = $ticket->getSeatDetails();
                     return [
@@ -792,10 +804,15 @@ class AccountController extends BaseController
                             'slug' => $event->slug,
                             'date' => $startDate ? \Carbon\Carbon::parse($startDate)->toIso8601String() : null,
                             'date_formatted' => $startDate ? \Carbon\Carbon::parse($startDate)->format('d M Y') : null,
+                            // For festivals/multi-day events JS uses end_date to render "22 May - 24 May"
+                            // and skips the start/end time concat (which doesn't make sense across days).
+                            'end_date' => $isMultiDay ? \Carbon\Carbon::parse($endDate)->toIso8601String() : null,
+                            'end_date_formatted' => $isMultiDay ? \Carbon\Carbon::parse($endDate)->format('d M Y') : null,
+                            'duration_mode' => $event->duration_mode,
                             'time' => $event->duration_mode === 'range' ? ($event->range_start_time ?? $event->start_time) : $event->start_time,
                             'doors_time' => $event->door_time,
                             'end_time' => $event->duration_mode === 'range' ? ($event->range_end_time ?? $event->end_time) : $event->end_time,
-                            'venue' => $event->venue?->name ?? null,
+                            'venue' => $venueName,
                             'city' => $event->venue?->city ?? null,
                             'image' => $imageUrl,
                             // Status-based: "past" tab shows only events whose end-of-window has elapsed,

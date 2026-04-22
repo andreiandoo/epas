@@ -100,8 +100,21 @@ const UserTickets = {
         element.appendChild(img);
     },
 
-    // Format time display with doors
+    // Format date display — handles festivals/multi-day (start - end), single day uses start only
+    formatDateDisplay(event) {
+        const start = event.date_formatted || (event.date ? this.formatDateShort(event.date) : '');
+        if (event.end_date_formatted && event.end_date_formatted !== start) {
+            return `${start} - ${event.end_date_formatted}`;
+        }
+        return start;
+    },
+
+    // Format time display with doors. Returns empty string for multi-day events
+    // because a single start–end time across different dates is meaningless.
     formatTimeDisplay(event) {
+        if (event.end_date && event.end_date !== event.date) {
+            return ''; // multi-day: hide time, the date range tells the story
+        }
         let timeStr = '';
         if (event.time) {
             timeStr = event.time;
@@ -164,7 +177,7 @@ const UserTickets = {
                             <div class="flex flex-wrap mt-3 text-sm gap-x-4 gap-y-1">
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    ${event.date_formatted || self.formatDateShort(event.date)}
+                                    ${self.formatDateDisplay(event)}
                                 </span>
                                 ${timeDisplay ? `
                                 <span class="flex items-center gap-1.5 text-secondary">
@@ -287,7 +300,7 @@ const UserTickets = {
                             ${hasCheckedIn ? '<span class="px-2 py-0.5 bg-success/10 text-success text-xs font-bold rounded">CHECK-IN OK</span>' : ''}
                         </div>
                         <h3 class="font-semibold text-secondary">${event.name || 'Eveniment'}</h3>
-                        <p class="text-sm text-muted">${event.date_formatted || this.formatDateShort(event.date)}${event.venue ? ' - ' + event.venue : ''}</p>
+                        <p class="text-sm text-muted">${this.formatDateDisplay(event)}${event.venue ? ' - ' + event.venue : ''}</p>
                         <p class="mt-1 text-xs text-muted">${tickets.length}x ${tickets[0]?.type || 'Bilet'}</p>
                     </div>
                 </div>
@@ -631,7 +644,7 @@ ${tickets.map((t, i) => {
         <div class="ticket-header">
             <div class="event-name">${event.name || 'Eveniment'}</div>
             <div class="event-details">
-                <span>📅 ${event.date_formatted || this.formatDateShort(event.date)}</span>
+                <span>📅 ${this.formatDateDisplay(event)}</span>
                 ${timeDisplay ? `<span>🕐 ${timeDisplay}</span>` : ''}
                 ${event.venue ? `<span>📍 ${event.venue}${event.city ? ', ' + event.city : ''}</span>` : ''}
             </div>
