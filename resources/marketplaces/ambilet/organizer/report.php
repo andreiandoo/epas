@@ -67,7 +67,7 @@ $eventId = $_GET['event'] ?? null;
 
     <main class="flex-1 p-4 lg:p-6">
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
                 <div id="summary-revenue" class="text-2xl font-bold text-gray-900">0 lei</div>
                 <div class="text-xs text-gray-500">Venituri totale</div>
@@ -75,10 +75,6 @@ $eventId = $_GET['event'] ?? null;
             <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
                 <div id="summary-tickets" class="text-2xl font-bold text-gray-900">0</div>
                 <div class="text-xs text-gray-500">Bilete vândute</div>
-            </div>
-            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
-                <div id="summary-commission" class="text-2xl font-bold text-gray-900">0%</div>
-                <div id="summary-commission-label" class="text-xs text-gray-500">Comision</div>
             </div>
             <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
                 <div id="summary-views" class="text-2xl font-bold text-gray-900">0</div>
@@ -284,12 +280,10 @@ function updateReport(data) {
         document.getElementById('summary-views').textContent = formatNumber(o.page_views || 0);
         document.getElementById('summary-conversion').textContent = (o.conversion_rate || 0).toFixed(1) + '%';
 
-        // Commission rate display
+        // Commission rate (kept for the Financial Summary section at the bottom)
         const commissionRate = o.commission_rate || data.event?.commission_rate || 5;
         const useFixedCommission = o.use_fixed_commission || data.event?.use_fixed_commission || false;
         const commissionMode = o.commission_mode || data.event?.commission_mode || 'included';
-        document.getElementById('summary-commission').textContent = commissionRate + '%';
-        document.getElementById('summary-commission-label').textContent = useFixedCommission ? 'Comision fix' : 'Comision';
 
         // Financial summary - use values from API (calculated from actual ticket prices)
         const grossRevenue = o.gross_revenue ?? o.total_revenue ?? 0;

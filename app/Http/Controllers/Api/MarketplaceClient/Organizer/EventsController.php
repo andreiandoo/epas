@@ -1821,15 +1821,25 @@ class EventsController extends BaseController
             return max(0.0, $basePrice - $commPerTicket);
         };
 
-        // Net revenue = sum over VALID tickets of the ticket_type's net price
-        // (ignores individual ticket.price which can be 0 for invitations / free tickets).
-        $allTimeOrderIds = (clone $allTimeQuery)->pluck('id');
-        $validCountsByType = \App\Models\Ticket::whereIn('order_id', $allTimeOrderIds)
+        // Broad valid-ticket filter for this event — includes POS tickets and
+        // invitations (which may have no order) in addition to regular online
+        // sales. Excludes external imports and cancelled/refunded tickets.
+        $validEventTicketsQuery = fn () => \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
             ->whereIn('status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereDoesntHave('order')
+                  ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+            });
+
+        // Valid tickets grouped by ticket_type — used for net revenue and per-type counts
+        $validCountsByType = (clone $validEventTicketsQuery())
             ->selectRaw('ticket_type_id, COUNT(*) as cnt')
             ->groupBy('ticket_type_id')
             ->pluck('cnt', 'ticket_type_id');
 
+        // Net revenue = sum over VALID tickets of the ticket_type's net price
+        // (uses the ticket_type's configured price, ignoring individual ticket.price
+        // which can be 0 for invitations / free tickets).
         $netRevenue = 0.0;
         foreach ($event->ticketTypes as $tt) {
             $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
@@ -1846,16 +1856,15 @@ class EventsController extends BaseController
             ->sum('total');
 
         $totalRevenue = $grossRevenue; // Keep for backwards compat (chart/comparison)
-        $ticketsSold = (int) (clone $allTimeQuery)->withCount('tickets')->get()->sum('tickets_count');
+        // Bilete vândute = all valid tickets (online + POS + invitations)
+        $ticketsSold = (int) (clone $validEventTicketsQuery())->count();
         $pageViews = $event->views_count ?? 0;
         $conversionRate = $pageViews > 0 ? round(($ticketsSold / $pageViews) * 100, 2) : 0;
 
-        // Tickets sold today
-        $ticketsToday = (int) $scopedOrders()
+        // Tickets sold today (uses same broad filter as total count)
+        $ticketsToday = (int) (clone $validEventTicketsQuery())
             ->whereDate('created_at', today())
-            ->withCount('tickets')
-            ->get()
-            ->sum('tickets_count');
+            ->count();
 
         // Capacity from ticket types
         $capacity = $event->ticketTypes()->sum('quota_total') ?: ($event->capacity ?? 0);
@@ -1910,26 +1919,20 @@ class EventsController extends BaseController
             $dayStart = $currentDate->copy()->startOfDay();
             $dayEnd = $currentDate->copy()->endOfDay();
 
-            $dayOrders = $scopedOrders()
-                ->whereBetween('created_at', [$dayStart, $dayEnd]);
-            $dayOrderIds = (clone $dayOrders)->pluck('id');
+            // Daily counts use the SAME broad ticket filter as the overview
+            // (includes POS + invitations) so daily totals roll up to Bilete vândute.
+            $dayCountsByType = (clone $validEventTicketsQuery())
+                ->whereBetween('created_at', [$dayStart, $dayEnd])
+                ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+                ->groupBy('ticket_type_id')
+                ->pluck('cnt', 'ticket_type_id');
 
-            // Daily net revenue = sum over that day's VALID tickets of their
-            // ticket_type's net price (matches the overview and ticket_performance
-            // definitions). Using raw Order.total would show gross, not net.
             $dayNetRevenue = 0.0;
             $dayTickets = 0;
-            if ($dayOrderIds->isNotEmpty()) {
-                $dayCountsByType = \App\Models\Ticket::whereIn('order_id', $dayOrderIds)
-                    ->whereIn('status', ['valid', 'used'])
-                    ->selectRaw('ticket_type_id, COUNT(*) as cnt')
-                    ->groupBy('ticket_type_id')
-                    ->pluck('cnt', 'ticket_type_id');
-                foreach ($dayCountsByType as $ttId => $cnt) {
-                    $net = (float) ($ttNetById[$ttId] ?? 0);
-                    $dayNetRevenue += $net * (int) $cnt;
-                    $dayTickets += (int) $cnt;
-                }
+            foreach ($dayCountsByType as $ttId => $cnt) {
+                $net = (float) ($ttNetById[$ttId] ?? 0);
+                $dayNetRevenue += $net * (int) $cnt;
+                $dayTickets += (int) $cnt;
             }
 
             $dailyData[] = [
@@ -2000,19 +2003,20 @@ class EventsController extends BaseController
         }
 
         // Ticket performance with trend and conversion
-        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $validStatuses, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netPricePerTicket) {
+        $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netPricePerTicket) {
+            // Broad filter: valid/used tickets of this tt for this event,
+            // including POS and invitations (no order required), excluding external imports.
             $ticketQuery = fn () => \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                ->whereHas('order', fn ($q) => $q->whereIn('status', $validStatuses)
-                    ->where('marketplace_organizer_id', $organizer->id));
-
-            // Sold = valid/used tickets only (excludes cancelled/refunded)
-            $sold = (clone $ticketQuery())
                 ->whereIn('status', ['valid', 'used'])
-                ->count();
+                ->where(fn ($q) => $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
+                ->where(function ($q) {
+                    $q->whereDoesntHave('order')
+                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                });
 
-            // Revenue = valid_count × ticket_type's net price (organizer's take per
-            // ticket). Using the ticket_type's configured price avoids zero-priced
-            // invitations / free tickets distorting the revenue.
+            $sold = (clone $ticketQuery())->count();
+
+            // Revenue = valid_count × ticket_type's net price.
             $revenue = round($netPricePerTicket($tt) * $sold, 2);
 
             // Trend: compare sales in current period vs previous period
