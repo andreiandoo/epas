@@ -100,4 +100,72 @@ class EditOrganizer extends EditRecord
                 }),
         ];
     }
+
+    /**
+     * Tracking integration providers wired to the form (TrackingIntegration table).
+     * Form keys: tracking_integrations.{provider}_enabled, tracking_integrations.{provider}_id.
+     */
+    private const TRACKING_PROVIDERS = [
+        'ga4'    => ['consent_category' => 'analytics',  'id_field' => 'measurement_id'],
+        'gtm'    => ['consent_category' => 'analytics',  'id_field' => 'container_id'],
+        'meta'   => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
+        'tiktok' => ['consent_category' => 'marketing',  'id_field' => 'pixel_id'],
+    ];
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $integrations = \App\Models\TrackingIntegration::where('marketplace_organizer_id', $this->record->id)->get();
+        $tracking = [];
+        foreach (array_keys(self::TRACKING_PROVIDERS) as $provider) {
+            $row = $integrations->firstWhere('provider', $provider);
+            $tracking["{$provider}_enabled"] = $row?->enabled ?? false;
+            $tracking["{$provider}_id"] = $row?->getProviderId() ?? '';
+        }
+        $data['tracking_integrations'] = $tracking;
+
+        return $data;
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Pull tracking_integrations out of $data — they live in their own table, not the organizer row.
+        $this->trackingFormState = $data['tracking_integrations'] ?? [];
+        unset($data['tracking_integrations']);
+
+        return $data;
+    }
+
+    protected ?array $trackingFormState = null;
+
+    protected function afterSave(): void
+    {
+        if ($this->trackingFormState === null) {
+            return;
+        }
+
+        $marketplaceClientId = $this->record->marketplace_client_id;
+
+        foreach (self::TRACKING_PROVIDERS as $provider => $cfg) {
+            $enabled = (bool) ($this->trackingFormState["{$provider}_enabled"] ?? false);
+            $providerId = trim((string) ($this->trackingFormState["{$provider}_id"] ?? ''));
+
+            \App\Models\TrackingIntegration::updateOrCreate(
+                [
+                    'marketplace_organizer_id' => $this->record->id,
+                    'provider' => $provider,
+                ],
+                [
+                    'marketplace_client_id' => $marketplaceClientId,
+                    'enabled' => $enabled && $providerId !== '',
+                    'consent_category' => $cfg['consent_category'],
+                    'settings' => [
+                        $cfg['id_field'] => $providerId,
+                        'inject_at' => 'head',
+                        'page_scope' => 'public',
+                        'toggle_enabled' => $enabled,
+                    ],
+                ]
+            );
+        }
+    }
 }

@@ -595,6 +595,53 @@ class OrganizerResource extends Resource
                                         ->helperText('Permite organizatorului să comande servicii de creare campanii'),
                                 ])
                                 ->columns(2),
+
+                            Section::make('Pixeli organizator')
+                                ->icon('heroicon-o-chart-bar')
+                                ->description('Coduri de tracking proprii ale organizatorului. Sunt injectate suplimentar față de pixelii marketplace pe paginile evenimentelor sale, cart, checkout și thank-you.')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('service_settings.tracking_enabled'))
+                                ->schema([
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\Toggle::make('tracking_integrations.ga4_enabled')
+                                            ->label('Google Analytics 4')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('tracking_integrations.ga4_id')
+                                            ->label('GA4 Measurement ID')
+                                            ->placeholder('G-XXXXXXXXXX')
+                                            ->maxLength(20)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.ga4_enabled')),
+                                    ]),
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\Toggle::make('tracking_integrations.gtm_enabled')
+                                            ->label('Google Tag Manager')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('tracking_integrations.gtm_id')
+                                            ->label('GTM Container ID')
+                                            ->placeholder('GTM-XXXXXX')
+                                            ->maxLength(15)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.gtm_enabled')),
+                                    ]),
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\Toggle::make('tracking_integrations.meta_enabled')
+                                            ->label('Meta (Facebook) Pixel')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('tracking_integrations.meta_id')
+                                            ->label('Meta Pixel ID')
+                                            ->placeholder('1234567890123456')
+                                            ->maxLength(20)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.meta_enabled')),
+                                    ]),
+                                    SC\Grid::make(2)->schema([
+                                        Forms\Components\Toggle::make('tracking_integrations.tiktok_enabled')
+                                            ->label('TikTok Pixel')
+                                            ->live(),
+                                        Forms\Components\TextInput::make('tracking_integrations.tiktok_id')
+                                            ->label('TikTok Pixel ID')
+                                            ->placeholder('CXXXXXXXXXXXXXXXXX')
+                                            ->maxLength(25)
+                                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
+                                    ]),
+                                ]),
                         ]),
 
                                 ]), // end Tab 4 (Bilete & Termeni)

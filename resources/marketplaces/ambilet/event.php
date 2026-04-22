@@ -130,6 +130,17 @@ if (!empty($ev['event_date'])) {
     $eventDate = date('d.m.Y, H:i', strtotime($ev['starts_at']));
 }
 $cssBundle = 'event';
+
+// Layer organizer pixels on top of marketplace pixels when this event belongs
+// to a marketplace organizer that has its own tracking integrations configured.
+// Server-side: tracking.php picks this up via $organizerTrackingId.
+// Client-side: cookie keeps attribution alive through cart → checkout → thank-you,
+// even when this page is served from page-cache (which would skip setcookie()).
+$organizerTrackingId = !empty($ev['marketplace_organizer_id']) ? (int) $ev['marketplace_organizer_id'] : null;
+if ($organizerTrackingId) {
+    $headExtra = ($headExtra ?? '') . '<script>document.cookie="ambilet_active_organizer=' . $organizerTrackingId . ';path=/;max-age=86400;samesite=Lax";</script>';
+}
+
 require_once __DIR__ . '/includes/head.php';
 ?>
     <style>

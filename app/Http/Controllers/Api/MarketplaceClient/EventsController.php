@@ -452,6 +452,7 @@ class EventsController extends BaseController
                 'cover_image_url' => $coverImageUrl,
                 'tenant_id' => $event->tenant_id,
                 'marketplace_client_id' => $event->marketplace_client_id,
+                'marketplace_organizer_id' => $event->marketplace_organizer_id,
                 'views_count' => $event->views_count ?? 0,
                 'interested_count' => $event->interested_count ?? 0,
                 'target_price' => $event->target_price ?? $client->target_price ?? null,
