@@ -1669,8 +1669,10 @@ class EventResource extends Resource
                                                         ->hint(function ($record, SGet $get) use ($t) {
                                                             $hints = [];
                                                             if ($record) {
+                                                                // Match the same "valid/used" filter used by the Sales table and stats cards
+                                                                // so counts reconcile across the UI.
                                                                 $activeCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
-                                                                    ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                                                                    ->whereIn('status', ['valid', 'used'])
                                                                     ->count();
                                                                 $cancelledCount = \App\Models\Ticket::where('ticket_type_id', $record->id)
                                                                     ->whereIn('status', ['cancelled', 'refunded'])
@@ -2993,9 +2995,10 @@ class EventResource extends Resource
                                             ->where('source', '!=', 'external_import')
                                             ->sum('total');
 
-                                        // Count valid tickets (not cancelled/refunded) — EXCLUDE external imports
+                                        // Count valid tickets — EXCLUDE external imports
+                                        // Use the same status filter as the "Bilete" button below so both numbers match.
                                         $ticketsSold = \App\Models\Ticket::where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->whereNotIn('status', ['cancelled', 'refunded', 'void'])
+                                            ->whereIn('status', ['valid', 'used'])
                                             ->whereHas('order', fn($q) => $q->where('source', '!=', 'external_import'))
                                             ->count();
 
@@ -3040,17 +3043,19 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Net (organizer share) and commission totals across valid tickets
+                                        // Net (organizer share) and commission totals across valid tickets.
+                                        // Match the Revenue filter: only count tickets whose order is paid/confirmed/completed
+                                        // and not from external_import. Tickets without an order (e.g. invitations) don't
+                                        // generate revenue, so excluding them keeps Revenue = Net + Commission consistent.
                                         $exportSvc = app(\App\Services\Marketplace\TicketExportService::class);
                                         $totalNet = 0.0;
                                         $totalCommission = 0.0;
                                         foreach ($record->ticketTypes as $tt) {
                                             $validQty = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                                                ->where(function ($q) {
-                                                    $q->whereDoesntHave('order')
-                                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
-                                                })
                                                 ->whereIn('status', ['valid', 'used'])
+                                                ->whereHas('order', fn ($qq) => $qq
+                                                    ->where('source', '!=', 'external_import')
+                                                    ->whereIn('status', ['paid', 'confirmed', 'completed']))
                                                 ->count();
                                             if ($validQty === 0) continue;
                                             [, $netPer, $commPer] = $exportSvc->computeTicketAmounts($tt);
