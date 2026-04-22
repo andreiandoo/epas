@@ -37,7 +37,10 @@
                     $commPerTicket = (float) ($item['commission_per_ticket'] ?? $item['commission'] ?? 0);
                     $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
                     $gross = (float) ($item['gross'] ?? $item['total'] ?? ($price * $qty + ($item['commission_mode'] === 'added_on_top' ? $commission : 0)));
-                    $netTickets = $price * $qty;
+                    // Net bilete = ce primeste organizatorul din vanzarea biletelor, inainte de discount.
+                    // included: gross = price*qty (comision in pret) -> net = gross - commission
+                    // added_on_top: gross = price*qty + commission -> net = gross - commission = price*qty
+                    $netTickets = $gross - $commission;
                     $discounts = (float) ($discountsByType[$ticketTypeId] ?? 0);
                     $netFinal = $netTickets - $discounts;
                     $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
