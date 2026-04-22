@@ -26,7 +26,9 @@ use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Models\Event;
 use App\Models\MarketplaceClient;
+use App\Models\Order;
 
 class OrganizerResource extends Resource
 {
@@ -622,6 +624,16 @@ class OrganizerResource extends Resource
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsStats($record)),
                                         ]),
 
+                                    Section::make('Listă evenimente')
+                                        ->icon('heroicon-o-list-bullet')
+                                        ->description('Toate evenimentele organizatorului cu vânzări, încasări nete și comisioane')
+                                        ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->schema([
+                                            Forms\Components\Placeholder::make('events_list')
+                                                ->hiddenLabel()
+                                                ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsList($record)),
+                                        ]),
+
                                 ]), // end Tab 5 (Stats)
 
                             // ── TAB 6: Mesaje ──
@@ -1114,6 +1126,134 @@ class OrganizerResource extends Resource
                 </div>
             </div>
         ");
+    }
+
+    protected static function renderEventsList(?MarketplaceOrganizer $record): HtmlString
+    {
+        if (!$record) return new HtmlString('');
+
+        $events = Event::where('marketplace_organizer_id', $record->id)
+            ->with('venue:id,name,city')
+            ->orderByRaw('COALESCE(event_date, DATE(starts_at), range_start_date) DESC NULLS LAST')
+            ->get();
+
+        if ($events->isEmpty()) {
+            return new HtmlString(
+                '<div style="padding:24px;text-align:center;color:#64748B;">'
+                . '<p style="font-size:14px;margin:0;">Acest organizator nu are evenimente.</p>'
+                . '</div>'
+            );
+        }
+
+        $eventIds = $events->pluck('id')->toArray();
+        $validStatuses = ['paid', 'confirmed', 'completed', 'refunded'];
+
+        // Aggregate orders per event (by marketplace_event_id OR event_id)
+        $orderAgg = Order::where(function ($q) use ($eventIds) {
+                $q->whereIn('marketplace_event_id', $eventIds)
+                  ->orWhereIn('event_id', $eventIds);
+            })
+            ->whereIn('status', $validStatuses)
+            ->where('source', '!=', 'test_order')->where('source', '!=', 'external_import')
+            ->selectRaw('COALESCE(marketplace_event_id, event_id) as eid')
+            ->selectRaw("SUM(CASE WHEN status = 'refunded' THEN 0 ELSE total END) as net_revenue")
+            ->selectRaw('SUM(total) as gross_revenue_all')
+            ->selectRaw('SUM(CASE WHEN commission_amount > 0 THEN commission_amount ELSE total * COALESCE(commission_rate, 0) / 100 END) as total_commission')
+            ->groupBy('eid')
+            ->get()
+            ->keyBy('eid');
+
+        // Aggregate sold tickets per event
+        $ticketAgg = DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->whereIn('tickets.status', ['valid', 'used'])
+            ->selectRaw('ticket_types.event_id as eid, COUNT(tickets.id) as cnt')
+            ->groupBy('eid')
+            ->pluck('cnt', 'eid')
+            ->toArray();
+
+        $now = now();
+        $rows = '';
+        $totalNet = 0;
+        $totalCommission = 0;
+        $totalTickets = 0;
+
+        foreach ($events as $event) {
+            $name = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: '(fără titlu)';
+            $venueName = null;
+            if ($event->venue) {
+                $venueRaw = $event->venue->name;
+                $venueName = is_array($venueRaw) ? ($venueRaw['ro'] ?? $venueRaw['en'] ?? array_values($venueRaw)[0] ?? null) : $venueRaw;
+            }
+            $venueCity = $event->venue?->city;
+
+            // Resolve display date
+            $eventDate = $event->event_date ?? $event->range_start_date ?? ($event->starts_at?->toDate());
+            $eventDateStr = $eventDate ? \Carbon\Carbon::parse($eventDate)->format('d.m.Y') : '-';
+
+            // Live vs ended
+            $endDate = $event->range_end_date ?? $event->event_date ?? ($event->starts_at?->toDate());
+            $endCarbon = $endDate ? \Carbon\Carbon::parse($endDate)->endOfDay() : null;
+            $isCancelled = (bool) ($event->is_cancelled ?? false);
+            if ($isCancelled) {
+                $statusBadge = '<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:#fee2e2;color:#b91c1c;">Anulat</span>';
+            } elseif ($endCarbon && $endCarbon->lt($now)) {
+                $statusBadge = '<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:#e5e7eb;color:#4b5563;">Încheiat</span>';
+            } else {
+                $statusBadge = '<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:600;border-radius:9999px;background:#dcfce7;color:#15803d;">Live</span>';
+            }
+
+            $agg = $orderAgg->get($event->id);
+            $netRevenue = (float) ($agg->net_revenue ?? 0);
+            $commission = (float) ($agg->total_commission ?? 0);
+            // Net to organizer = revenue (excluding refunds) - commission
+            $netToOrganizer = max(0, $netRevenue - $commission);
+            $tickets = (int) ($ticketAgg[$event->id] ?? 0);
+
+            $totalNet += $netToOrganizer;
+            $totalCommission += $commission;
+            $totalTickets += $tickets;
+
+            $eventName = e($name);
+            $venueDisplay = e(trim(implode(' · ', array_filter([$venueName, $venueCity]))) ?: '-');
+
+            $rows .= '<tr style="border-bottom:1px solid #e5e7eb;">'
+                . '<td style="padding:8px 10px;font-size:13px;color:#111827;font-weight:500;">' . $eventName . '</td>'
+                . '<td style="padding:8px 10px;font-size:12px;color:#374151;white-space:nowrap;">' . $eventDateStr . '</td>'
+                . '<td style="padding:8px 10px;font-size:12px;color:#4b5563;">' . $venueDisplay . '</td>'
+                . '<td style="padding:8px 10px;text-align:center;">' . $statusBadge . '</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#111827;font-weight:600;white-space:nowrap;">' . number_format($tickets, 0, ',', '.') . '</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#059669;font-weight:600;white-space:nowrap;">' . number_format($netToOrganizer, 2, ',', '.') . ' RON</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#dc2626;font-weight:600;white-space:nowrap;">' . number_format($commission, 2, ',', '.') . ' RON</td>'
+                . '</tr>';
+        }
+
+        $footer = '<tr style="background:#f9fafb;font-weight:700;">'
+            . '<td colspan="4" style="padding:10px;font-size:12px;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Total ' . count($events) . ' evenimente</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#111827;">' . number_format($totalTickets, 0, ',', '.') . '</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#059669;">' . number_format($totalNet, 2, ',', '.') . ' RON</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#dc2626;">' . number_format($totalCommission, 2, ',', '.') . ' RON</td>'
+            . '</tr>';
+
+        $html = '<div style="overflow-x:auto;">'
+            . '<table style="width:100%;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
+            . '<thead>'
+            . '<tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Eveniment</th>'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Data</th>'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Venue / Oraș</th>'
+            . '<th style="padding:10px;text-align:center;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Status</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Bilete vândute</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Încasări nete</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Comisioane</th>'
+            . '</tr>'
+            . '</thead>'
+            . '<tbody>' . $rows . $footer . '</tbody>'
+            . '</table>'
+            . '</div>';
+
+        return new HtmlString($html);
     }
 
     protected static function renderMetaInfo(?MarketplaceOrganizer $record): HtmlString
