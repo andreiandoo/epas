@@ -267,7 +267,7 @@ class ArtistsController extends BaseController
             ->where('is_cancelled', false)
             ->when($tourIdFilter, fn ($q) => $q->where('tour_id', $tourIdFilter))
             ->orderBy('event_date')
-            ->when(!$tourIdFilter, fn ($q) => $q->limit(10))
+            ->when(!$tourIdFilter, fn ($q) => $q->limit(50))
             ->get()
             ->map(function ($event) use ($language, $client) {
                 // For child events (multi-day), inherit ticket types from parent
