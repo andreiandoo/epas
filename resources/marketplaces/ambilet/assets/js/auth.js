@@ -609,8 +609,37 @@ const AmbiletAuth = {
 
         // Check if token is still valid on page load
         if (this.isLoggedIn()) {
-            // Optionally verify token validity
-            // this.refreshCurrentUser().catch(() => {});
+            // Self-heal: if we have a token but no cached profile (e.g. fresh admin
+            // impersonation where head.php already cleaned the URL before this ran),
+            // fetch the profile so the page renders with the real user instead of
+            // demo / stale data.
+            const userType = this.getUserType();
+            if (userType === 'customer' && !this.getCustomerData()) {
+                if (typeof AmbiletAPI !== 'undefined' && AmbiletAPI.customer && AmbiletAPI.customer.getProfile) {
+                    AmbiletAPI.customer.getProfile().then(response => {
+                        if (response && response.success && response.data) {
+                            const customerData = response.data.customer || response.data;
+                            this.setCustomerSession(this.getToken(), customerData);
+                            window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
+                                detail: { type: 'customer', user: customerData }
+                            }));
+                            window.dispatchEvent(new CustomEvent('ambilet:customer:loaded', { detail: customerData }));
+                        }
+                    }).catch(() => {});
+                }
+            } else if (userType === 'organizer' && !this.getOrganizerData()) {
+                if (typeof AmbiletAPI !== 'undefined') {
+                    AmbiletAPI.get('/organizer/me').then(response => {
+                        if (response && response.success && response.data) {
+                            const orgData = response.data.organizer || response.data;
+                            localStorage.setItem(this.KEYS.ORGANIZER_DATA, JSON.stringify(orgData));
+                            window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
+                                detail: { type: 'organizer', user: orgData }
+                            }));
+                        }
+                    }).catch(() => {});
+                }
+            }
         } else {
             // Check for referral code in URL
             this.checkReferralCode();
@@ -644,10 +673,33 @@ const AmbiletAuth = {
         localStorage.setItem('ambilet_user_type', 'customer');
         localStorage.removeItem('ambilet_organizer_token');
         localStorage.removeItem('ambilet_organizer_data');
+        // Stale customer_data from a previous session would cause the page to render the
+        // OLD customer's profile while the impersonated token loads — wipe it so /customer/me
+        // is the only source of truth for the impersonated session.
+        localStorage.removeItem('ambilet_customer_data');
 
         urlParams.delete('_admin_customer_token');
         const cleanUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '') + window.location.hash;
         history.replaceState(null, '', cleanUrl);
+
+        // Fetch customer profile so the page can render with real data
+        // (mirrors the organizer impersonation flow above).
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof AmbiletAPI !== 'undefined') {
+                AmbiletAPI.get('/customer/me').then(response => {
+                    if (response && response.success && response.data) {
+                        const customerData = response.data.customer || response.data;
+                        localStorage.setItem('ambilet_customer_data', JSON.stringify(customerData));
+                        window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
+                            detail: { type: 'customer', user: customerData }
+                        }));
+                        // Re-render any page that listens for customer data — most user pages
+                        // gate their fetch on ambilet:auth:login or DOMContentLoaded with token.
+                        window.dispatchEvent(new CustomEvent('ambilet:customer:loaded', { detail: customerData }));
+                    }
+                }).catch(() => {});
+            }
+        });
         return;
     }
 
