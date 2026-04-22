@@ -6,6 +6,9 @@ use App\Filament\Marketplace\Resources\OrganizerInvoiceResource\Pages;
 use App\Models\Invoice;
 use App\Models\MarketplaceOrganizer;
 use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -34,7 +37,8 @@ class OrganizerInvoiceResource extends Resource
 
         return parent::getEloquentQuery()
             ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id)
-            ->whereNotNull('marketplace_organizer_id');
+            ->whereNotNull('marketplace_organizer_id')
+            ->with(['payout:id,reference,event_id', 'payout.event:id,title']);
     }
 
     public static function form(Schema $form): Schema
@@ -314,6 +318,45 @@ class OrganizerInvoiceResource extends Resource
                         return $state;
                     }),
 
+                Tables\Columns\TextColumn::make('event_decont')
+                    ->label('Eveniment / Decont')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $like = '%' . $search . '%';
+                        return $query
+                            ->orWhereHas('payout', fn ($q) => $q->where('reference', 'ilike', $like))
+                            ->orWhereHas('payout.event', function ($q) use ($like) {
+                                $driver = $q->getQuery()->getConnection()->getDriverName();
+                                if ($driver === 'pgsql') {
+                                    $q->whereRaw("title::text ilike ?", [$like]);
+                                } else {
+                                    $q->where('title', 'like', $like);
+                                }
+                            });
+                    })
+                    ->getStateUsing(function (Invoice $record) {
+                        $payout = $record->payout;
+                        $eventTitle = null;
+                        $reference = $payout?->reference;
+
+                        if ($payout?->event) {
+                            $raw = $payout->event->title;
+                            if (is_array($raw)) {
+                                $eventTitle = $raw['ro'] ?? $raw['en'] ?? array_values($raw)[0] ?? null;
+                            } else {
+                                $eventTitle = $raw;
+                            }
+                        }
+
+                        if ($eventTitle && $reference) {
+                            return $eventTitle . ' · ' . $reference;
+                        }
+                        if ($eventTitle) return $eventTitle;
+                        if ($reference) return $reference;
+                        return '—';
+                    })
+                    ->wrap()
+                    ->tooltip(fn (Invoice $record) => $record->payout?->reference ? 'Decont: ' . $record->payout->reference : null),
+
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tip')
                     ->badge()
@@ -422,8 +465,18 @@ class OrganizerInvoiceResource extends Resource
                     })
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Închide'),
+                DeleteAction::make(),
             ])
-            ->toolbarActions([]);
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
+                        ->label('Șterge selectate')
+                        ->requiresConfirmation()
+                        ->modalHeading('Șterge facturile selectate')
+                        ->modalDescription('Ești sigur că vrei să ștergi facturile selectate? Acțiunea nu poate fi anulată.')
+                        ->modalSubmitActionLabel('Șterge'),
+                ]),
+            ]);
     }
 
     /**
