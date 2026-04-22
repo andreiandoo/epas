@@ -128,13 +128,7 @@ class ViewPayout extends ViewRecord
                 ->modalDescription('Se va genera documentul de decont pentru acest payout.')
                 ->visible(fn () => $this->record->decontDocument === null && in_array($this->record->status, ['approved', 'processing', 'completed']) && !in_array($this->record->status, ['rejected', 'cancelled']))
                 ->action(function () {
-                    $observer = new \App\Observers\MarketplacePayoutObserver();
-                    $method = new \ReflectionMethod($observer, 'generateDecont');
-                    $method->setAccessible(true);
-                    $method->invoke($observer, $this->record);
-
-                    Notification::make()->title('Decont generat')->success()->send();
-                    $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                    $this->runDecontGeneration(isRegeneration: false);
                 }),
 
             // ========== DECONT ACTIONS (when decont exists) ==========
@@ -178,14 +172,9 @@ class ViewPayout extends ViewRecord
                                 Storage::disk('public')->delete($existingDecont->file_path);
                             }
                             $existingDecont->delete();
+                            $this->record->unsetRelation('decontDocument');
                         }
-                        $observer = new \App\Observers\MarketplacePayoutObserver();
-                        $method = new \ReflectionMethod($observer, 'generateDecont');
-                        $method->setAccessible(true);
-                        $method->invoke($observer, $this->record);
-
-                        Notification::make()->title('Decont regenerat')->success()->send();
-                        $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+                        $this->runDecontGeneration(isRegeneration: true);
                     }),
             ])
                 ->label('Decont')
@@ -346,6 +335,88 @@ class ViewPayout extends ViewRecord
                 ->button()
                 ->visible(fn () => $this->record->invoice !== null),
         ];
+    }
+
+    /**
+     * Run decont generation via the observer and surface a truthful notification
+     * based on whether a decont document was actually created.
+     */
+    protected function runDecontGeneration(bool $isRegeneration): void
+    {
+        $observer = new \App\Observers\MarketplacePayoutObserver();
+        $method = new \ReflectionMethod($observer, 'generateDecont');
+        $method->setAccessible(true);
+
+        try {
+            $method->invoke($observer, $this->record);
+        } catch (\Throwable $e) {
+            \Log::error('ViewPayout: Decont generation threw', [
+                'payout_id' => $this->record->id,
+                'error' => $e->getMessage(),
+            ]);
+            Notification::make()
+                ->title('Eroare la generarea decontului')
+                ->body($e->getMessage())
+                ->danger()
+                ->persistent()
+                ->send();
+            return;
+        }
+
+        // Reload the relationship to see if a decont was actually created.
+        $this->record->unsetRelation('decontDocument');
+        $decont = $this->record->decontDocument;
+
+        if ($decont) {
+            Notification::make()
+                ->title($isRegeneration ? 'Decont regenerat' : 'Decont generat')
+                ->success()
+                ->send();
+            $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
+            return;
+        }
+
+        // Decont generation silently failed — diagnose why so the admin knows.
+        $reason = $this->diagnoseDecontFailure();
+        Notification::make()
+            ->title('Decontul NU a fost generat')
+            ->body($reason)
+            ->danger()
+            ->persistent()
+            ->send();
+    }
+
+    /**
+     * Replicate the precondition checks in MarketplacePayoutObserver::generateDecont()
+     * to explain why it silently returned.
+     */
+    protected function diagnoseDecontFailure(): string
+    {
+        $payout = $this->record;
+        $marketplace = $payout->marketplaceClient;
+        $organizer = $payout->organizer;
+
+        if (!$marketplace) {
+            return 'Payout-ul nu are marketplace asociat.';
+        }
+        if (!$organizer) {
+            return 'Payout-ul nu are organizator asociat.';
+        }
+
+        $template = \App\Models\MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
+            ->where('type', 'decont')
+            ->where('is_active', true)
+            ->first();
+
+        if (!$template) {
+            return 'Nu există un template activ de tip "decont" pentru acest marketplace. Mergi la Tax Templates și creează/activează unul.';
+        }
+
+        if ($template->by_proxy && !$organizer->proxy_admin_id) {
+            return 'Template-ul de decont necesită un admin proxy (by_proxy=true), dar organizatorul nu are unul asignat. Setează proxy_admin_id pe organizator.';
+        }
+
+        return 'Generarea a eșuat fără un motiv cunoscut. Verifică storage/logs/laravel.log pentru detalii.';
     }
 
     /**
