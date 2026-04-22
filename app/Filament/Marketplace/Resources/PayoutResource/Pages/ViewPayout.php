@@ -403,13 +403,37 @@ class ViewPayout extends ViewRecord
             return 'Payout-ul nu are organizator asociat.';
         }
 
+        // Resolve commission mode the same way the observer does
+        $commissionMode = $payout->commission_mode;
+        if (!$commissionMode) {
+            $modesFromTickets = collect($payout->ticket_breakdown ?? [])
+                ->pluck('commission_mode')
+                ->filter()
+                ->unique()
+                ->values();
+            if ($modesFromTickets->count() === 1) {
+                $commissionMode = $modesFromTickets->first();
+            } elseif ($modesFromTickets->contains('added_on_top')) {
+                $commissionMode = 'added_on_top';
+            }
+        }
+
+        $templateType = $commissionMode === 'added_on_top' ? 'decont_ontop' : 'decont_inclus';
+
         $template = \App\Models\MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
-            ->where('type', 'decont')
+            ->where('type', $templateType)
             ->where('is_active', true)
             ->first();
 
         if (!$template) {
-            return 'Nu există un template activ de tip "decont" pentru acest marketplace. Mergi la Tax Templates și creează/activează unul.';
+            $template = \App\Models\MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
+                ->where('type', 'decont')
+                ->where('is_active', true)
+                ->first();
+        }
+
+        if (!$template) {
+            return "Nu există template activ de tip \"{$templateType}\" sau \"decont\" pentru acest marketplace (commission_mode=" . ($commissionMode ?: 'necunoscut') . '). Mergi la Tax Templates și creează/activează unul.';
         }
 
         if ($template->by_proxy && !$organizer->proxy_admin_id) {

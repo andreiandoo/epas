@@ -51,16 +51,44 @@ class MarketplacePayoutObserver
                 return;
             }
 
-            // Get active decont template
+            // Resolve commission_mode: prefer payout value, else derive from ticket_breakdown.
+            // When mixed, 'added_on_top' wins — this is how online-sold (non app-only) tickets
+            // dictate the decont type, since app-only tickets are always 'included'.
+            $commissionMode = $payout->commission_mode;
+            if (!$commissionMode) {
+                $modesFromTickets = collect($payout->ticket_breakdown ?? [])
+                    ->pluck('commission_mode')
+                    ->filter()
+                    ->unique()
+                    ->values();
+
+                if ($modesFromTickets->count() === 1) {
+                    $commissionMode = $modesFromTickets->first();
+                } elseif ($modesFromTickets->contains('added_on_top')) {
+                    $commissionMode = 'added_on_top';
+                }
+            }
+
+            $templateType = $commissionMode === 'added_on_top' ? 'decont_ontop' : 'decont_inclus';
+
             $template = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
-                ->where('type', 'decont')
+                ->where('type', $templateType)
                 ->where('is_active', true)
                 ->first();
+
+            if (!$template) {
+                // Fall back to generic 'decont' type
+                $template = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace->id)
+                    ->where('type', 'decont')
+                    ->where('is_active', true)
+                    ->first();
+            }
 
             if (!$template) {
                 Log::warning('MarketplacePayoutObserver: No active decont template found', [
                     'payout_id' => $payout->id,
                     'marketplace_id' => $marketplace->id,
+                    'expected_type' => $templateType,
                 ]);
                 return;
             }

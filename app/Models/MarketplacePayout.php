@@ -306,6 +306,59 @@ class MarketplacePayout extends Model
     // Helpers
     // =========================================
 
+    /**
+     * Compute discount amount attributable to each ticket type in this payout.
+     * For each paid order in the payout's event + period that carries a discount,
+     * the discount is distributed across ticket types proportionally to each
+     * type's value contribution in that order.
+     *
+     * @return array<int, float>  [ticket_type_id => discount_amount]
+     */
+    public function getDiscountsPerTicketType(): array
+    {
+        if (!$this->event_id) {
+            return [];
+        }
+
+        $query = Order::where('event_id', $this->event_id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('discount_amount', '>', 0);
+
+        if ($this->period_start) {
+            $query->where('created_at', '>=', $this->period_start->copy()->startOfDay());
+        }
+        if ($this->period_end) {
+            $query->where('created_at', '<=', $this->period_end->copy()->endOfDay());
+        }
+
+        $orders = $query->with(['tickets:id,order_id,ticket_type_id,price'])->get();
+
+        $discountsByType = [];
+        foreach ($orders as $order) {
+            $tickets = $order->tickets;
+            $totalsByType = [];
+            foreach ($tickets as $ticket) {
+                if (!$ticket->ticket_type_id) {
+                    continue;
+                }
+                $totalsByType[$ticket->ticket_type_id] = ($totalsByType[$ticket->ticket_type_id] ?? 0) + (float) $ticket->price;
+            }
+
+            $orderValue = array_sum($totalsByType);
+            if ($orderValue <= 0) {
+                continue;
+            }
+
+            foreach ($totalsByType as $typeId => $typeTotal) {
+                $proportion = $typeTotal / $orderValue;
+                $share = (float) $order->discount_amount * $proportion;
+                $discountsByType[$typeId] = ($discountsByType[$typeId] ?? 0) + $share;
+            }
+        }
+
+        return array_map(fn ($v) => round($v, 2), $discountsByType);
+    }
+
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
