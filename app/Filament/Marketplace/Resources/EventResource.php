@@ -3043,48 +3043,75 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Net (organizer share) and commission, computed per-order from the actual
-                                        // money flow. This handles:
-                                        //   - discounts / promo codes (Order.discount_amount reduces Order.total)
-                                        //   - historical orders where Order.commission_amount was never populated
-                                        //   - both 'added_on_top' and 'included' commission modes
-                                        //   - insurance & cultural-card surcharge (part of Total but not commission/net)
+                                        // Net (organizer share) and commission, computed per ticket-type for maximum
+                                        // precision. For each paid order we walk its order_items, count the valid
+                                        // tickets in each item, and apply the ticket_type's own commission settings
+                                        // (type/rate/fixed/mode) against the actual unit_price paid. Commission is
+                                        // then subtracted from Order.total (which already reflects discounts,
+                                        // insurance and surcharges in the opposite direction) to get Net.
                                         //
-                                        // on_top:   Net = Subtotal - Discount;  Commission = Total - Net - Insurance - Surcharge
-                                        // included: Commission = stored commission_amount (fallback to rate-based);
-                                        //           Net = Total - Commission - Insurance - Surcharge
+                                        //   Commission_item = per_ticket_commission(tt, unit_price) × valid_count
+                                        //   Commission_order = sum of item commissions
+                                        //   Net_order = Order.total - Commission_order - Insurance - Surcharge
+                                        //
+                                        // This formula holds for both 'on_top' and 'included' modes because
+                                        // Order.total already accounts for the discount in each case.
                                         $paidOrders = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereIn('status', ['paid', 'confirmed', 'completed'])
                                             ->where('source', '!=', 'external_import')
-                                            ->get(['subtotal', 'discount_amount', 'commission_amount', 'commission_rate', 'total', 'meta']);
+                                            ->with(['items.ticketType', 'items.tickets' => fn ($q) => $q->whereIn('status', ['valid', 'used'])])
+                                            ->get(['id', 'total', 'meta', 'commission_amount', 'commission_rate', 'subtotal', 'discount_amount']);
+
+                                        $computeItemCommission = function ($tt, float $unitPrice): array {
+                                            // Returns [commission_per_ticket, mode]
+                                            if (!$tt) return [0.0, 'included'];
+                                            $type = $tt->commission_type ?? 'percentage';
+                                            $rate = (float) ($tt->commission_rate ?? 0);
+                                            $fixed = (float) ($tt->commission_fixed ?? 0);
+                                            $mode = $tt->commission_mode ?? 'included';
+                                            $comm = match ($type) {
+                                                'fixed' => $fixed,
+                                                'both' => ($unitPrice * $rate / 100) + $fixed,
+                                                default => ($unitPrice * $rate / 100), // percentage
+                                            };
+                                            return [round($comm, 2), $mode];
+                                        };
 
                                         $totalNet = 0.0;
                                         $totalCommission = 0.0;
+
                                         foreach ($paidOrders as $ord) {
-                                            $subtotal = (float) $ord->subtotal;
-                                            $discount = (float) $ord->discount_amount;
-                                            $total = (float) $ord->total;
-                                            $storedComm = (float) $ord->commission_amount;
-                                            $rate = (float) ($ord->commission_rate ?? 0);
                                             $meta = is_array($ord->meta) ? $ord->meta : [];
-                                            $mode = $meta['commission_mode'] ?? 'added_on_top';
                                             $insurance = (float) ($meta['insurance_amount'] ?? 0);
                                             $surcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
+                                            $total = (float) $ord->total;
 
-                                            $netOrd = 0.0;
                                             $commOrd = 0.0;
+                                            $items = $ord->items;
 
-                                            if (in_array($mode, ['on_top', 'added_on_top'], true)) {
-                                                $netOrd = max(0.0, $subtotal - $discount);
-                                                $commOrd = max(0.0, $total - $netOrd - $insurance - $surcharge);
-                                            } else { // included / other
+                                            if ($items->isEmpty()) {
+                                                // Fallback for orders without order_items: use stored commission_amount,
+                                                // else rate × (subtotal - discount).
+                                                $storedComm = (float) $ord->commission_amount;
                                                 if ($storedComm > 0) {
                                                     $commOrd = $storedComm;
-                                                } elseif ($rate > 0) {
-                                                    $commOrd = round(max(0.0, $subtotal - $discount) * ($rate / 100), 2);
+                                                } else {
+                                                    $rate = (float) ($ord->commission_rate ?? 0);
+                                                    $net = max(0.0, (float) $ord->subtotal - (float) $ord->discount_amount);
+                                                    $commOrd = $rate > 0 ? round($net * ($rate / 100), 2) : 0.0;
                                                 }
-                                                $netOrd = max(0.0, $total - $commOrd - $insurance - $surcharge);
+                                            } else {
+                                                foreach ($items as $item) {
+                                                    $validCount = $item->tickets->count();
+                                                    if ($validCount === 0) continue;
+
+                                                    [$commPerTicket, ] = $computeItemCommission($item->ticketType, (float) $item->unit_price);
+                                                    $commOrd += $commPerTicket * $validCount;
+                                                }
+                                                $commOrd = round($commOrd, 2);
                                             }
+
+                                            $netOrd = max(0.0, $total - $commOrd - $insurance - $surcharge);
 
                                             $totalNet += $netOrd;
                                             $totalCommission += $commOrd;
