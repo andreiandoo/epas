@@ -815,7 +815,30 @@ class MarketplaceTaxTemplate extends Model
 
             $variables['payout_fees_amount'] = number_format($payout->fees_amount ?? 0, 2);
             $variables['payout_adjustments_amount'] = number_format($payout->adjustments_amount ?? 0, 2);
-            $variables['payout_net_amount'] = number_format($payout->amount ?? 0, 2);
+            // payout_net_amount must exclude POS/app tickets — marketplace never collects
+            // that money (organizer sells directly via app). Compute from breakdown so
+            // the decont reflects only what marketplace actually pays out.
+            $posTypeIds = method_exists($payout, 'getPosTicketTypeIds') ? $payout->getPosTicketTypeIds() : [];
+            $posTypeIdsSet = array_flip($posTypeIds);
+            $netAmountExclPos = 0.0;
+            foreach ($payout->ticket_breakdown ?? [] as $item) {
+                $ttId = $item['ticket_type_id'] ?? null;
+                if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                    continue;
+                }
+                $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
+                $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+                $commPer = (float) ($item['commission_per_ticket'] ?? 0);
+                $commission = $commPer * $qty;
+                $itemMode = $item['commission_mode'] ?? null;
+                $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
+                $netAmountExclPos += ($gross - $commission);
+            }
+            // Fall back to stored amount if breakdown is empty
+            $variables['payout_net_amount'] = number_format(
+                !empty($payout->ticket_breakdown) ? $netAmountExclPos : (float) ($payout->amount ?? 0),
+                2
+            );
             $variables['payout_commission_mode'] = $payout->commission_mode ?? 'included';
 
             // VAT calculations
@@ -854,12 +877,16 @@ class MarketplaceTaxTemplate extends Model
             }
             $variables['payout_sequence_number'] = $sequenceNumber;
 
-            // Tickets breakdown label: (50lei*2+60lei*16) format
+            // Tickets breakdown label: (50lei*2+60lei*16) format — exclude POS/app rows
             $breakdownParts = [];
             $ticketBreakdown = $payout->ticket_breakdown ?? [];
             $totalTicketsSold = 0;
             $totalTicketsRefunded = 0;
             foreach ($ticketBreakdown as $item) {
+                $ttId = $item['ticket_type_id'] ?? null;
+                if ($ttId && isset($posTypeIdsSet[$ttId])) {
+                    continue;
+                }
                 $price = (float) ($item['price'] ?? $item['unit_price'] ?? 0);
                 $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                 $totalTicketsSold += $qty;

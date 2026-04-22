@@ -14,7 +14,7 @@
 @endphp
 
 @if(!empty($breakdown))
-<div class="overflow-x-auto -mx-6 -my-6">
+<div class="overflow-x-auto">
     <table class="w-full text-sm">
         <thead>
             <tr class="border-b border-gray-200 dark:border-gray-700">

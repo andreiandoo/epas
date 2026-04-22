@@ -334,7 +334,180 @@ class ViewPayout extends ViewRecord
                 ->color('success')
                 ->button()
                 ->visible(fn () => $this->record->invoice !== null),
+
+            // ========== GENERATE POS INVOICE (when POS tickets exist, no POS invoice yet) ==========
+            // POS/app sales don't flow through marketplace. Commission for those is charged
+            // to the organizer via a separate invoice.
+            Actions\Action::make('generate_invoice_pos')
+                ->label('Generează factură POS')
+                ->icon('heroicon-o-device-phone-mobile')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalDescription(function () {
+                    $posComm = $this->record->getPosCommissionTotal();
+                    return 'Se va genera o factură către organizator cu valoarea comisioanelor biletelor vândute prin aplicație: ' . number_format($posComm, 2) . ' RON.';
+                })
+                ->visible(fn () => $this->record->posInvoice === null
+                    && $this->record->getPosCommissionTotal() > 0
+                    && !in_array($this->record->status, ['rejected', 'cancelled']))
+                ->action(function () {
+                    $this->generatePosInvoice();
+                }),
+
+            Actions\ActionGroup::make([
+                Actions\Action::make('view_invoice_pos')
+                    ->label('Vezi factura')
+                    ->icon('heroicon-o-eye')
+                    ->visible(fn () => $this->record->posInvoice !== null)
+                    ->url(fn () => OrganizerInvoiceResource::getUrl('edit', ['record' => $this->record->posInvoice]))
+                    ->openUrlInNewTab(),
+
+                Actions\Action::make('download_invoice_pos')
+                    ->label('Descarcă factura')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->visible(function () {
+                        $inv = $this->record->posInvoice;
+                        if (!$inv) return false;
+                        $meta = $inv->meta ?? [];
+                        return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                    })
+                    ->url(function () {
+                        $meta = $this->record->posInvoice?->meta ?? [];
+                        return $meta['accounting']['pdf_url'] ?? $meta['accounting_proforma']['pdf_url'] ?? null;
+                    }, shouldOpenInNewTab: true),
+
+                Actions\Action::make('send_to_accounting_pos')
+                    ->label(function () {
+                        $providerLabel = $this->getAccountingProviderLabel();
+                        return $providerLabel
+                            ? "Trimite la {$providerLabel}"
+                            : 'Trimite la contabilitate';
+                    })
+                    ->icon('heroicon-o-calculator')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalDescription(function () {
+                        $providerLabel = $this->getAccountingProviderLabel() ?? 'software-ul de contabilitate';
+                        $docLabel = $this->isAccountingDraftMode() ? 'DRAFT' : 'FACTURĂ FISCALĂ';
+                        return "Factura POS va fi trimisa ca {$docLabel} in {$providerLabel}.";
+                    })
+                    ->visible(function () {
+                        $invoice = $this->record->posInvoice;
+                        if (!$invoice) return false;
+                        $meta = $invoice->meta ?? [];
+                        if (!empty($meta['accounting']['external_ref'])) return false;
+                        $marketplace = $this->record->marketplaceClient;
+                        if (!$marketplace) return false;
+                        return app(AccountingService::class)->hasMarketplaceConnector($marketplace->id);
+                    })
+                    ->action(function () {
+                        $this->sendInvoiceToAccounting($this->record->posInvoice);
+                    }),
+
+                Actions\Action::make('send_invoice_pos')
+                    ->label('Trimite factura')
+                    ->icon('heroicon-o-envelope')
+                    ->visible(function () {
+                        $inv = $this->record->posInvoice;
+                        if (!$inv) return false;
+                        $meta = $inv->meta ?? [];
+                        return !empty($meta['accounting']['pdf_url']) || !empty($meta['accounting_proforma']['pdf_url']);
+                    })
+                    ->form([
+                        Forms\Components\TextInput::make('email')
+                            ->label('Adresa email')
+                            ->email()
+                            ->required()
+                            ->default(fn () => $this->record->organizer?->billing_email ?? $this->record->organizer?->email),
+                    ])
+                    ->action(function (array $data) {
+                        $this->sendInvoiceByEmail($this->record->posInvoice, $data['email']);
+                    }),
+            ])
+                ->label('Factură POS')
+                ->icon('heroicon-o-device-phone-mobile')
+                ->color('warning')
+                ->button()
+                ->visible(fn () => $this->record->posInvoice !== null),
         ];
+    }
+
+    /**
+     * Create an invoice billing the organizer for commission on POS/app ticket sales.
+     */
+    protected function generatePosInvoice(): void
+    {
+        $payout = $this->record;
+        $organizer = $payout->organizer;
+        $marketplace = $payout->marketplaceClient;
+
+        if (!$organizer || !$marketplace) {
+            Notification::make()->title('Lipsesc datele organizatorului/marketplace')->danger()->send();
+            return;
+        }
+
+        $posCommission = $payout->getPosCommissionTotal();
+        if ($posCommission <= 0) {
+            Notification::make()->title('Nu există comisioane POS de facturat')->warning()->send();
+            return;
+        }
+
+        // POS commission is always charged to the organizer (the one that collected cash via app)
+        $client = [
+            'name' => $organizer->company_name ?? $organizer->name,
+            'cui' => $organizer->cui ?? '',
+            'address' => $organizer->address ?? '',
+        ];
+
+        $lastInvoice = Invoice::where('marketplace_client_id', $marketplace->id)
+            ->orderByDesc('id')
+            ->first();
+        $nextNumber = $lastInvoice ? ((int) preg_replace('/\D/', '', $lastInvoice->number) + 1) : 1;
+        $invoiceNumber = 'F-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+
+        $vatRate = $marketplace->vat_payer ? 19 : 0;
+        $subtotal = $posCommission;
+        $vatAmount = $vatRate > 0 ? round($subtotal * $vatRate / 100, 2) : 0;
+        $total = $subtotal + $vatAmount;
+
+        $invoice = Invoice::create([
+            'marketplace_client_id' => $marketplace->id,
+            'marketplace_organizer_id' => $organizer->id,
+            'marketplace_payout_id' => $payout->id,
+            'number' => $invoiceNumber,
+            'type' => 'fiscal',
+            'description' => 'Factură POS pentru decont ' . $payout->reference,
+            'issue_date' => now(),
+            'period_start' => $payout->period_start,
+            'period_end' => $payout->period_end,
+            'due_date' => now()->addDays(30),
+            'subtotal' => $subtotal,
+            'vat_rate' => $vatRate,
+            'vat_amount' => $vatAmount,
+            'amount' => $total,
+            'currency' => $payout->currency ?? 'RON',
+            'status' => 'outstanding',
+            'meta' => [
+                'is_pos_commission' => true,
+                'payout_reference' => $payout->reference,
+                'issuer' => [
+                    'name' => $marketplace->company_name ?? $marketplace->name,
+                    'cui' => $marketplace->cui ?? '',
+                    'address' => $marketplace->address ?? '',
+                ],
+                'client' => $client,
+                'recipient_type' => 'organizer',
+                'items' => [[
+                    'description' => 'Comision servicii ticketing vândute prin aplicație - ' . $payout->reference,
+                    'quantity' => 1,
+                    'unit_price' => $subtotal,
+                    'amount' => $subtotal,
+                ]],
+            ],
+        ]);
+
+        Notification::make()->title('Factură POS generată: ' . $invoiceNumber)->success()->send();
+        $this->redirect(PayoutResource::getUrl('view', ['record' => $this->record]));
     }
 
     /**

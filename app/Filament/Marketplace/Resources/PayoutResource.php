@@ -213,14 +213,18 @@ class PayoutResource extends Resource
                             ])
                             ->columns(3),
 
-                        // Ticket breakdown table
+                        // Ticket breakdown table — Section padding neutralized so the table
+                        // extends edge-to-edge inside the card
                         Section::make('Detalii bilete')
                             ->icon('heroicon-o-ticket')
                             ->schema([
                                 Infolists\Components\ViewEntry::make('ticket_breakdown_view')
-                                    ->label('')
+                                    ->hiddenLabel()
                                     ->view('filament.infolists.payout-ticket-breakdown')
                                     ->columnSpanFull(),
+                            ])
+                            ->extraAttributes([
+                                'class' => '[&_.fi-section-content-ctn]:!p-0 [&_.fi-section-content]:!p-0 [&_.fi-in-component-ctn]:!p-0 [&_.fi-in-entry-wrp]:!p-0',
                             ])
                             ->visible(fn ($record) => !empty($record->ticket_breakdown)),
 

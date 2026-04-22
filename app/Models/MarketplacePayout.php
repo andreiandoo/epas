@@ -137,7 +137,45 @@ class MarketplacePayout extends Model
 
     public function invoice(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(\App\Models\Invoice::class, 'marketplace_payout_id');
+        // Regular invoice (commission billed for online ticket sales) — excludes POS-commission invoices
+        return $this->hasOne(\App\Models\Invoice::class, 'marketplace_payout_id')
+            ->where(function ($q) {
+                $q->whereNull('meta->is_pos_commission')
+                    ->orWhere('meta->is_pos_commission', false);
+            });
+    }
+
+    public function posInvoice(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        // Separate invoice that charges the organizer for commissions on POS/app sales,
+        // since that money never flowed through the marketplace.
+        return $this->hasOne(\App\Models\Invoice::class, 'marketplace_payout_id')
+            ->where('meta->is_pos_commission', true);
+    }
+
+    /**
+     * Total commission value attributable to POS/app-only tickets in this payout.
+     * Used to generate a separate invoice billed to the organizer.
+     */
+    public function getPosCommissionTotal(): float
+    {
+        $posTypeIds = $this->getPosTicketTypeIds();
+        if (empty($posTypeIds)) {
+            return 0.0;
+        }
+        $posSet = array_flip($posTypeIds);
+
+        $total = 0.0;
+        foreach ($this->ticket_breakdown ?? [] as $item) {
+            $ttId = $item['ticket_type_id'] ?? null;
+            if (!$ttId || !isset($posSet[$ttId])) {
+                continue;
+            }
+            $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
+            $commPer = (float) ($item['commission_per_ticket'] ?? 0);
+            $total += $qty * $commPer;
+        }
+        return round($total, 2);
     }
 
     // =========================================
