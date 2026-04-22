@@ -269,14 +269,29 @@ class TicketResource extends Resource
                         ->color('danger')
                         ->requiresConfirmation()
                         ->modalHeading('Șterge biletele selectate')
-                        ->modalDescription('Biletele valide sau utilizate nu pot fi șterse. Doar biletele anulate sau rambursate vor fi șterse.')
+                        ->modalDescription('Biletele valide/utilizate care aparțin unei comenzi active nu pot fi șterse. Biletele orfane (comanda a fost ștearsă) se pot șterge indiferent de status.')
                         ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            // Pre-load which order_ids still exist so we can detect orphans
+                            // (tickets whose order was deleted leaving order_id NULL, or
+                            // whose order_id no longer resolves to a row).
+                            $orderIds = $records->pluck('order_id')->filter()->unique()->values();
+                            $existingOrderIds = $orderIds->isEmpty()
+                                ? collect()
+                                : \App\Models\Order::whereIn('id', $orderIds)->pluck('id')->flip();
+
                             $protected = ['valid', 'used'];
-                            $deletable = $records->filter(fn ($r) => !in_array($r->status, $protected));
+                            $deletable = $records->filter(function ($r) use ($protected, $existingOrderIds) {
+                                $hasActiveOrder = $r->order_id && $existingOrderIds->has($r->order_id);
+                                // Orphan tickets (no active order) are always deletable
+                                if (!$hasActiveOrder) return true;
+                                return !in_array($r->status, $protected, true);
+                            });
+
                             $skipped = $records->count() - $deletable->count();
                             $deletable->each(fn ($r) => $r->delete());
+
                             $msg = $deletable->count() . ' bilete șterse.';
-                            if ($skipped > 0) $msg .= " {$skipped} bilete protejate (valide/utilizate) au fost ignorate.";
+                            if ($skipped > 0) $msg .= " {$skipped} bilete protejate (valide/utilizate din comenzi active) au fost ignorate.";
                             \Filament\Notifications\Notification::make()->title($msg)->success()->send();
                         })
                         ->deselectRecordsAfterCompletion(),
