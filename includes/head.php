@@ -384,6 +384,10 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
             localStorage.setItem('ambilet_user_type','customer');
             localStorage.removeItem('ambilet_organizer_token');
             localStorage.removeItem('ambilet_organizer_data');
+            // Stale customer_data from a previous customer (or demo) would render
+            // first and confuse the admin doing impersonation. auth.js init()
+            // self-heals by fetching /customer/me when data is missing.
+            localStorage.removeItem('ambilet_customer_data');
         }catch(e){}
         p.delete('_admin_customer_token');
         history.replaceState(null,'',location.pathname+(p.toString()?'?'+p.toString():'')+location.hash);
