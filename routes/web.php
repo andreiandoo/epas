@@ -330,6 +330,14 @@ Route::middleware(['web', 'auth'])->prefix('tenant')->group(function () {
 
 // Marketplace Ticket Customizer (Visual Editor) Routes
 Route::middleware(['web', 'auth:marketplace_admin'])->prefix('marketplace')->group(function () {
+    // Real-time presence on event edit page (concurrent-editor warning)
+    Route::post('/events/{eventId}/edit-presence', [\App\Http\Controllers\Marketplace\EditPresenceController::class, 'heartbeat'])
+        ->where('eventId', '[0-9]+')
+        ->name('marketplace.events.edit-presence');
+    Route::post('/events/{eventId}/edit-presence/leave', [\App\Http\Controllers\Marketplace\EditPresenceController::class, 'leave'])
+        ->where('eventId', '[0-9]+')
+        ->name('marketplace.events.edit-presence.leave');
+
     Route::get('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'edit'])
         ->name('marketplace.ticket-customizer.edit');
     Route::put('/ticket-customizer/{template}/editor', [MarketplaceTicketCustomizerController::class, 'update'])

@@ -3043,25 +3043,19 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Net (organizer share) and commission totals across valid tickets.
-                                        // Match the Revenue filter: only count tickets whose order is paid/confirmed/completed
-                                        // and not from external_import. Tickets without an order (e.g. invitations) don't
-                                        // generate revenue, so excluding them keeps Revenue = Net + Commission consistent.
-                                        $exportSvc = app(\App\Services\Marketplace\TicketExportService::class);
-                                        $totalNet = 0.0;
-                                        $totalCommission = 0.0;
-                                        foreach ($record->ticketTypes as $tt) {
-                                            $validQty = \App\Models\Ticket::where('ticket_type_id', $tt->id)
-                                                ->whereIn('status', ['valid', 'used'])
-                                                ->whereHas('order', fn ($qq) => $qq
-                                                    ->where('source', '!=', 'external_import')
-                                                    ->whereIn('status', ['paid', 'confirmed', 'completed']))
-                                                ->count();
-                                            if ($validQty === 0) continue;
-                                            [, $netPer, $commPer] = $exportSvc->computeTicketAmounts($tt);
-                                            $totalNet += ($netPer ?? 0) * $validQty;
-                                            $totalCommission += ($commPer ?? 0) * $validQty;
-                                        }
+                                        // Net (organizer share) and commission totals, computed from ACTUAL order data
+                                        // so discounts/promo codes are reflected. Using ticket-type catalog prices would
+                                        // ignore order-level discounts (Order.discount_amount reduces Order.total but not
+                                        // Order.commission_amount, which is pre-discount).
+                                        //
+                                        // Revenue (Order.total) = subtotal + optional on-top commission - discount
+                                        // Commission (Order.commission_amount) = platform's fee (pre-discount)
+                                        // Net = Revenue - Commission = what the organizer actually receives
+                                        $paidOrdersQuery = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                            ->where('source', '!=', 'external_import');
+                                        $totalCommission = (float) (clone $paidOrdersQuery)->sum('commission_amount');
+                                        $totalNet = max(0.0, $totalRevenue - $totalCommission);
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');

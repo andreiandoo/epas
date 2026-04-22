@@ -826,6 +826,104 @@ class MarketplacePanelProvider extends PanelProvider
                 document.addEventListener('livewire:navigated', run);
             })();
             </script>
+            HTML)
+
+            // Concurrent-editor warning on event edit pages: heartbeats every 15s and
+            // shows a banner when another admin is also viewing/editing the same event.
+            ->renderHook('panels::body.end', fn () => <<<'HTML'
+            <script>
+            (function () {
+                const EVENT_EDIT_RE = /^\/marketplace\/events\/(\d+)\/edit/;
+                const HEARTBEAT_MS = 15000;
+                const BANNER_ID = 'ep-edit-presence-banner';
+                let intervalId = null;
+                let currentEventId = null;
+                let csrfToken = null;
+
+                function getCsrf() {
+                    if (csrfToken) return csrfToken;
+                    const m = document.querySelector('meta[name="csrf-token"]');
+                    csrfToken = m ? m.getAttribute('content') : '';
+                    return csrfToken;
+                }
+
+                function ensureBanner() {
+                    let el = document.getElementById(BANNER_ID);
+                    if (el) return el;
+                    el = document.createElement('div');
+                    el.id = BANNER_ID;
+                    el.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;max-width:560px;width:calc(100% - 32px);padding:12px 16px;border-radius:10px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;box-shadow:0 8px 24px rgba(0,0,0,0.12);font-size:14px;line-height:1.4;display:none;align-items:center;gap:10px;';
+                    el.innerHTML = '<svg style="flex-shrink:0;width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M5.07 19h13.86c1.54 0 2.5-1.67 1.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16c-.77 1.33.19 3 1.73 3z"/></svg><div style="flex:1;"><strong>Atenție:</strong> <span data-ep-presence-text></span></div>';
+                    document.body.appendChild(el);
+                    return el;
+                }
+
+                function showBanner(editors) {
+                    const el = ensureBanner();
+                    const names = editors.map(e => e.name || ('Admin #' + e.id));
+                    let msg;
+                    if (names.length === 1) {
+                        msg = names[0] + ' este momentan pe această pagină și poate face modificări simultan.';
+                    } else {
+                        msg = names.join(', ') + ' sunt momentan pe această pagină.';
+                    }
+                    el.querySelector('[data-ep-presence-text]').textContent = msg;
+                    el.style.display = 'flex';
+                }
+
+                function hideBanner() {
+                    const el = document.getElementById(BANNER_ID);
+                    if (el) el.style.display = 'none';
+                }
+
+                async function heartbeat() {
+                    if (!currentEventId) return;
+                    try {
+                        const r = await fetch('/marketplace/events/' + currentEventId + '/edit-presence', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-TOKEN': getCsrf(), 'Accept': 'application/json' },
+                            credentials: 'same-origin',
+                        });
+                        if (!r.ok) return;
+                        const data = await r.json();
+                        const editors = data.editors || [];
+                        if (editors.length > 0) showBanner(editors); else hideBanner();
+                    } catch (e) { /* ignore network blips */ }
+                }
+
+                function leave(eventId) {
+                    if (!eventId) return;
+                    try {
+                        const url = '/marketplace/events/' + eventId + '/edit-presence/leave';
+                        const data = new FormData();
+                        data.append('_token', getCsrf());
+                        // sendBeacon survives page unload; keepalive fetch is the fallback
+                        if (!navigator.sendBeacon || !navigator.sendBeacon(url, data)) {
+                            fetch(url, { method: 'POST', headers: { 'X-CSRF-TOKEN': getCsrf() }, credentials: 'same-origin', keepalive: true });
+                        }
+                    } catch (e) {}
+                }
+
+                function start() {
+                    const m = window.location.pathname.match(EVENT_EDIT_RE);
+                    const newEventId = m ? m[1] : null;
+                    if (newEventId === currentEventId) return;
+
+                    if (currentEventId) leave(currentEventId);
+                    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+                    hideBanner();
+
+                    currentEventId = newEventId;
+                    if (!currentEventId) return;
+                    heartbeat();
+                    intervalId = setInterval(heartbeat, HEARTBEAT_MS);
+                }
+
+                window.addEventListener('beforeunload', () => { if (currentEventId) leave(currentEventId); });
+                document.addEventListener('DOMContentLoaded', start);
+                document.addEventListener('livewire:navigated', start);
+            })();
+            </script>
             HTML);
     }
 }
