@@ -295,7 +295,7 @@ function updateReport(data) {
         if (commissionMode === 'added_on_top') {
             commissionLabel = `Comision platformă (${commissionRate}%${useFixedCommission ? ' fix' : ''} +preț)`;
         } else {
-            commissionLabel = `Comision platformă (inclus în preț)`;
+            commissionLabel = `Comision platformă`;
         }
 
         document.getElementById('financial-gross').textContent = formatCurrency(grossRevenue);
@@ -432,12 +432,21 @@ function renderTicketTypes(tickets) {
     const html = tickets.map((t, i) => {
         const revenue = t.revenue || t.price * (t.sold || 0);
         const percent = totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 100) : 0;
+        // Annotate ticket type name based on its kind:
+        //   invitation  → "(titlu gratuit)"
+        //   entry (POS) → "(încasat de organizator)"
+        let nameSuffix = '';
+        if (t.is_invitation) {
+            nameSuffix = ' <span class="text-xs text-gray-500 font-normal">(titlu gratuit)</span>';
+        } else if (t.is_entry_ticket) {
+            nameSuffix = ' <span class="text-xs text-gray-500 font-normal">(încasat de organizator)</span>';
+        }
         return `
             <tr class="border-b border-gray-50">
                 <td class="py-3">
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-6 rounded-full" style="background: ${colors[i % colors.length]}"></div>
-                        <span class="text-sm font-medium text-gray-800">${t.name}</span>
+                        <span class="text-sm font-medium text-gray-800">${t.name}${nameSuffix}</span>
                     </div>
                 </td>
                 <td class="py-3 text-sm text-right text-gray-600">${formatCurrency(t.price)}</td>
