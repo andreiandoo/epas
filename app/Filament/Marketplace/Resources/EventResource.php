@@ -3043,19 +3043,52 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Net (organizer share) and commission totals, computed from ACTUAL order data
-                                        // so discounts/promo codes are reflected. Using ticket-type catalog prices would
-                                        // ignore order-level discounts (Order.discount_amount reduces Order.total but not
-                                        // Order.commission_amount, which is pre-discount).
+                                        // Net (organizer share) and commission, computed per-order from the actual
+                                        // money flow. This handles:
+                                        //   - discounts / promo codes (Order.discount_amount reduces Order.total)
+                                        //   - historical orders where Order.commission_amount was never populated
+                                        //   - both 'added_on_top' and 'included' commission modes
+                                        //   - insurance & cultural-card surcharge (part of Total but not commission/net)
                                         //
-                                        // Revenue (Order.total) = subtotal + optional on-top commission - discount
-                                        // Commission (Order.commission_amount) = platform's fee (pre-discount)
-                                        // Net = Revenue - Commission = what the organizer actually receives
-                                        $paidOrdersQuery = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
+                                        // on_top:   Net = Subtotal - Discount;  Commission = Total - Net - Insurance - Surcharge
+                                        // included: Commission = stored commission_amount (fallback to rate-based);
+                                        //           Net = Total - Commission - Insurance - Surcharge
+                                        $paidOrders = \App\Models\Order::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
                                             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                                            ->where('source', '!=', 'external_import');
-                                        $totalCommission = (float) (clone $paidOrdersQuery)->sum('commission_amount');
-                                        $totalNet = max(0.0, $totalRevenue - $totalCommission);
+                                            ->where('source', '!=', 'external_import')
+                                            ->get(['subtotal', 'discount_amount', 'commission_amount', 'commission_rate', 'total', 'meta']);
+
+                                        $totalNet = 0.0;
+                                        $totalCommission = 0.0;
+                                        foreach ($paidOrders as $ord) {
+                                            $subtotal = (float) $ord->subtotal;
+                                            $discount = (float) $ord->discount_amount;
+                                            $total = (float) $ord->total;
+                                            $storedComm = (float) $ord->commission_amount;
+                                            $rate = (float) ($ord->commission_rate ?? 0);
+                                            $meta = is_array($ord->meta) ? $ord->meta : [];
+                                            $mode = $meta['commission_mode'] ?? 'added_on_top';
+                                            $insurance = (float) ($meta['insurance_amount'] ?? 0);
+                                            $surcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
+
+                                            $netOrd = 0.0;
+                                            $commOrd = 0.0;
+
+                                            if (in_array($mode, ['on_top', 'added_on_top'], true)) {
+                                                $netOrd = max(0.0, $subtotal - $discount);
+                                                $commOrd = max(0.0, $total - $netOrd - $insurance - $surcharge);
+                                            } else { // included / other
+                                                if ($storedComm > 0) {
+                                                    $commOrd = $storedComm;
+                                                } elseif ($rate > 0) {
+                                                    $commOrd = round(max(0.0, $subtotal - $discount) * ($rate / 100), 2);
+                                                }
+                                                $netOrd = max(0.0, $total - $commOrd - $insurance - $surcharge);
+                                            }
+
+                                            $totalNet += $netOrd;
+                                            $totalCommission += $commOrd;
+                                        }
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');
