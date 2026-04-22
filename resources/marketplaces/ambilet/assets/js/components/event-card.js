@@ -78,7 +78,34 @@ const AmbiletEventCard = {
         const posterSrc = getStorageUrl(event.posterImage || event.image);
         const heroSrc = getStorageUrl(event.heroImage || event.image);
 
-        return '<a href="' + eventUrl + '"' + targetAttr + ' class="overflow-hidden transition-all bg-white border group rounded-lg border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
+        // Cancelled cards are dimmed + desaturated and lose hover lift so they
+        // read as "inactive" at a glance. The price line is replaced with a
+        // bold ANULAT label.
+        const cardMutedClass = event.isCancelled ? ' opacity-60 grayscale hover:opacity-70' : ' hover:-translate-y-1 hover:shadow-xl hover:border-primary';
+
+        let priceRowHtml = '';
+        if (showPrice) {
+            if (event.isCancelled) {
+                priceRowHtml = '<div class="px-3 flex items-center justify-between pt-1 border-t border-border">' +
+                    '<span class="font-bold uppercase tracking-wide text-red-600">Anulat</span>' +
+                    (showCategory && event.categoryName ?
+                        '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                        '') +
+                '</div>';
+            } else {
+                priceRowHtml = '<div class="px-3 flex items-center justify-between pt-1 border-t border-border">' +
+                    '<span class="font-bold ' + (event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
+                    '<span class="text-xs ' + (event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
+                        (event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
+                    '</span>' +
+                    (showCategory && event.categoryName ?
+                        '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
+                        '') +
+                '</div>';
+            }
+        }
+
+        return '<a href="' + eventUrl + '"' + targetAttr + ' class="overflow-hidden transition-all bg-white border group rounded-lg border-border ' + cardMutedClass + ' ' + linkClass + '">' +
             '<div class="relative h-40 mobile:h-64 overflow-hidden">' +
                 '<picture>' +
                     '<source media="(min-width: 768px)" srcset="' + heroSrc + '">' +
@@ -95,16 +122,7 @@ const AmbiletEventCard = {
                         '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                         '<span class="truncate text-xs">' + this.escapeHtml(event.venueName) + '</span>' +
                     '</p>' : '') +
-                (showPrice ?
-                    '<div class="px-3 flex items-center justify-between pt-1 border-t border-border">' +
-                        '<span class="font-bold ' + (event.isCancelled || event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
-                        '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
-                            (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
-                        '</span>' +
-                        (showCategory && event.categoryName ?
-                            '<span class="mobile:hidden cat-pill font-semibold text-white uppercase rounded-lg bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>' :
-                            '') +
-                    '</div>' : '') +
+                priceRowHtml +
             '</div>' +
         '</a>';
     },

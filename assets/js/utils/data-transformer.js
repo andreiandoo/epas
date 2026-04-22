@@ -100,6 +100,9 @@ const AmbiletDataTransformer = {
         const isSoldOut = apiEvent.is_sold_out || false;
         const isLowStock = apiEvent.is_low_stock || false;
         const isFeatured = apiEvent.is_featured || apiEvent.is_homepage_featured || apiEvent.is_general_featured || false;
+        const isCancelled = apiEvent.is_cancelled || false;
+        const isPostponed = apiEvent.is_postponed || false;
+        const postponedDate = apiEvent.postponed_date || null;
 
         return {
             id: apiEvent.id,
@@ -147,7 +150,10 @@ const AmbiletDataTransformer = {
             isSoldOut: isSoldOut,
             isLowStock: isLowStock,
             isFeatured: isFeatured,
-            hasAvailability: apiEvent.has_availability !== false && !isSoldOut,
+            isCancelled: isCancelled,
+            isPostponed: isPostponed,
+            postponedDate: postponedDate,
+            hasAvailability: apiEvent.has_availability !== false && !isSoldOut && !isCancelled,
 
             // Artists
             artists: apiEvent.artists || [],
