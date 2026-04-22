@@ -6,11 +6,13 @@ const DEFAULT_API_KEY = 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9B
 
 let _token = null;
 let _apiKey = DEFAULT_API_KEY;
+let _userType = null; // 'organizer' | 'venue_owner'
 
 export async function initApiClient() {
   _token = await SecureStore.getItemAsync('auth_token');
   const storedKey = await SecureStore.getItemAsync('api_key');
   _apiKey = storedKey || DEFAULT_API_KEY;
+  _userType = await SecureStore.getItemAsync('user_type');
 }
 
 export function setToken(token) {
@@ -20,6 +22,19 @@ export function setToken(token) {
   } else {
     SecureStore.deleteItemAsync('auth_token');
   }
+}
+
+export function setUserType(userType) {
+  _userType = userType;
+  if (userType) {
+    SecureStore.setItemAsync('user_type', userType);
+  } else {
+    SecureStore.deleteItemAsync('user_type');
+  }
+}
+
+export function getUserType() {
+  return _userType;
 }
 
 export function setApiKey(apiKey) {

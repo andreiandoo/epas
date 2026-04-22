@@ -228,6 +228,7 @@ function MainTabs() {
           {(props) => (
             <SettingsScreen
               {...props}
+              appVersion={APP_VERSION}
               onShowGateManager={() => setShowGateManager(true)}
               onShowStaffAssignment={isAdmin ? () => setShowStaffAssignment(true) : null}
             />
@@ -369,7 +370,7 @@ function VenueOwnerTabs() {
           options={{ tabBarLabel: 'Scanare info' }}
         />
         <Tab.Screen name="Settings" options={{ tabBarLabel: 'Setări' }}>
-          {(props) => <SettingsScreen {...props} />}
+          {(props) => <SettingsScreen {...props} appVersion={APP_VERSION} />}
         </Tab.Screen>
       </Tab.Navigator>
 

@@ -1,9 +1,10 @@
-import { apiPost, apiGet, setToken, setApiKey } from './client';
+import { apiPost, apiGet, setToken, setUserType, getUserType } from './client';
 import * as venueOwnerApi from './venueOwner';
 
 /**
  * Unified login: try organizer (owner + team member) first, then fall back
- * to venue-owner. Response includes user_type so callers know the shape.
+ * to venue-owner. Persists user_type so subsequent /me calls route to the
+ * right endpoint without a probe that would clear the token on 401.
  */
 export async function login(email, password) {
   // Try organizer login first (covers owner + team member flows)
@@ -11,18 +12,14 @@ export async function login(email, password) {
     const data = await apiPost('/organizer/login', { email, password });
     if (data.success && data.data?.token) {
       setToken(data.data.token);
+      setUserType('organizer');
       return {
         ...data,
-        data: {
-          ...data.data,
-          user_type: data.data.user_type || 'organizer',
-        },
+        data: { ...data.data, user_type: 'organizer' },
       };
     }
-    // Non-successful but non-401: surface it
     return data;
   } catch (err) {
-    // 401 → fall through to venue-owner attempt
     const isAuthError = err?.message?.toLowerCase().includes('invalid') ||
       err?.status === 401 ||
       err?.data?.message?.toLowerCase().includes('invalid credentials');
@@ -32,54 +29,53 @@ export async function login(email, password) {
   }
 
   // Fall back to venue-owner login
-  try {
-    const data = await venueOwnerApi.login(email, password);
-    return {
-      ...data,
-      data: {
-        ...data.data,
-        user_type: 'venue_owner',
-      },
-    };
-  } catch (err) {
-    // Surface venue-owner failure if we fell through
-    throw err;
+  const data = await venueOwnerApi.login(email, password);
+  if (data.success && data.data?.token) {
+    setUserType('venue_owner');
   }
+  return {
+    ...data,
+    data: { ...(data.data || {}), user_type: 'venue_owner' },
+  };
 }
 
 export async function logout() {
+  const userType = getUserType();
   try {
-    await apiPost('/organizer/logout');
-  } catch (e) {}
-  try {
-    await apiPost('/venue-owner/logout');
+    if (userType === 'venue_owner') {
+      await apiPost('/venue-owner/logout');
+    } else {
+      await apiPost('/organizer/logout');
+    }
   } catch (e) {}
   setToken(null);
+  setUserType(null);
 }
 
 /**
- * Session restore: try organizer/me first, then venue-owner/me.
+ * Session restore — calls only the endpoint matching the persisted user_type.
+ * Avoids probing /organizer/me for a venue_owner session, which would
+ * return 401 and cause the client to wipe the token.
  */
 export async function getMe() {
-  try {
-    const data = await apiGet('/organizer/me');
-    if (data?.success) {
-      return {
-        ...data,
-        data: {
-          ...data.data,
-          user_type: data.data.user_type || 'organizer',
-        },
-      };
-    }
-  } catch (e) {}
+  const userType = getUserType();
 
-  const data = await apiGet('/venue-owner/me');
+  if (userType === 'venue_owner') {
+    const data = await apiGet('/venue-owner/me');
+    return {
+      ...data,
+      data: { ...(data.data || {}), user_type: 'venue_owner' },
+    };
+  }
+
+  // Default / legacy: organizer. If user_type wasn't persisted (upgraded app
+  // with an existing session), this still works for organizers.
+  const data = await apiGet('/organizer/me');
   return {
     ...data,
     data: {
       ...(data.data || {}),
-      user_type: 'venue_owner',
+      user_type: data.data?.user_type || 'organizer',
     },
   };
 }

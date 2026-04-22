@@ -128,8 +128,8 @@ function AdminRow({ label, badgeCount, onPress }) {
   );
 }
 
-export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment }) {
-  const { user, userRole, isTeamMember, logout } = useAuth();
+export default function SettingsScreen({ onShowGateManager, onShowStaffAssignment, appVersion }) {
+  const { user, userRole, isTeamMember, isVenueOwner, venueOwner, logout } = useAuth();
   const { selectedEvent } = useEvent();
   const {
     vibrationFeedback,
@@ -152,10 +152,15 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
     }
   }, [selectedEvent?.id, offlineMode]);
 
-  const staffName = isTeamMember ? (user?.team_member?.name || 'Membru Echipă') : (user?.name || user?.public_name || 'Organizator');
-  const staffRole = isTeamMember ? (user?.team_member?.role || 'staff') : 'owner';
-  const isAdmin = userRole === 'admin' || userRole === 'owner';
+  const staffName = isVenueOwner
+    ? (venueOwner?.name || venueOwner?.tenant?.public_name || 'Venue owner')
+    : (isTeamMember ? (user?.team_member?.name || 'Membru Echipă') : (user?.name || user?.public_name || 'Organizator'));
+  const staffRole = isVenueOwner
+    ? 'venue owner'
+    : (isTeamMember ? (user?.team_member?.role || 'staff') : 'owner');
+  const isAdmin = !isVenueOwner && (userRole === 'admin' || userRole === 'owner');
   const assignedGate = user?.assigned_gate || '--';
+  const venueName = venueOwner?.venues?.[0]?.name || venueOwner?.tenant?.public_name || '—';
 
   const handleEndShift = async () => {
     await logout();
@@ -179,7 +184,11 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         <View style={styles.divider} />
         <InfoRow label="Rol" value={staffRole.charAt(0).toUpperCase() + staffRole.slice(1)} />
         <View style={styles.divider} />
-        <InfoRow label="Poartă Asignată" value={assignedGate} />
+        {isVenueOwner ? (
+          <InfoRow label="Nume Venue" value={venueName} />
+        ) : (
+          <InfoRow label="Poartă Asignată" value={assignedGate} />
+        )}
       </View>
 
       {/* Scanner Section */}
@@ -194,46 +203,58 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
           label="Efecte Sonore"
           right={<Toggle value={soundEffects} onPress={toggleSound} />}
         />
-        <View style={styles.divider} />
-        <SettingRow
-          label="Auto-confirmare Valide"
-          right={<Toggle value={autoConfirmValid} onPress={toggleAutoConfirm} />}
-        />
-      </View>
-
-      {/* Offline Mode Section */}
-      <SectionHeader title="Mod Offline" />
-      <View style={styles.sectionCard}>
-        <SettingRow
-          label="Activează Modul Offline"
-          right={<Toggle value={offlineMode} onPress={() => toggleOfflineMode(selectedEvent?.id)} />}
-        />
-        <View style={styles.divider} />
-        <View style={styles.offlineInfoBox}>
-          <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <Path
-              d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
-              stroke={colors.cyan}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {!isVenueOwner && (
+          <>
+            <View style={styles.divider} />
+            <SettingRow
+              label="Auto-confirmare Valide"
+              right={<Toggle value={autoConfirmValid} onPress={toggleAutoConfirm} />}
             />
-          </Svg>
-          <Text style={styles.offlineInfoText}>
-            {isDownloadingOffline ? 'Se descarcă biletele...' : `${cachedTickets} bilete salvate pentru scanare offline`}
-          </Text>
-        </View>
+          </>
+        )}
       </View>
 
-      {/* Hardware Section */}
-      <SectionHeader title="Hardware" />
-      <View style={styles.sectionCard}>
-        <StatusBadge label="Cititor Card" connected={false} />
-        <View style={styles.divider} />
-        <StatusBadge label="Imprimantă Bon" connected={false} />
-      </View>
+      {/* Offline Mode Section (not relevant for venue owners — no check-in flow) */}
+      {!isVenueOwner && (
+        <>
+          <SectionHeader title="Mod Offline" />
+          <View style={styles.sectionCard}>
+            <SettingRow
+              label="Activează Modul Offline"
+              right={<Toggle value={offlineMode} onPress={() => toggleOfflineMode(selectedEvent?.id)} />}
+            />
+            <View style={styles.divider} />
+            <View style={styles.offlineInfoBox}>
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                <Path
+                  d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01"
+                  stroke={colors.cyan}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={styles.offlineInfoText}>
+                {isDownloadingOffline ? 'Se descarcă biletele...' : `${cachedTickets} bilete salvate pentru scanare offline`}
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
 
-      {/* Admin Controls (only for admin/owner role) */}
+      {/* Hardware Section (scanner-only personnel) */}
+      {!isVenueOwner && (
+        <>
+          <SectionHeader title="Hardware" />
+          <View style={styles.sectionCard}>
+            <StatusBadge label="Cititor Card" connected={false} />
+            <View style={styles.divider} />
+            <StatusBadge label="Imprimantă Bon" connected={false} />
+          </View>
+        </>
+      )}
+
+      {/* Admin Controls (only for admin/owner organizer role — never venue owner) */}
       {isAdmin && (
         <>
           <SectionHeader title="Comenzi Admin" />
@@ -267,7 +288,7 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
         </>
       )}
 
-      {/* End Shift & Logout */}
+      {/* Logout */}
       <TouchableOpacity
         style={styles.logoutButton}
         activeOpacity={0.7}
@@ -282,11 +303,13 @@ export default function SettingsScreen({ onShowGateManager, onShowStaffAssignmen
             strokeLinejoin="round"
           />
         </Svg>
-        <Text style={styles.logoutButtonText}>Încheie Tura & Deconectare</Text>
+        <Text style={styles.logoutButtonText}>
+          {isVenueOwner ? 'Deconectare' : 'Încheie Tura & Deconectare'}
+        </Text>
       </TouchableOpacity>
 
       {/* App Version */}
-      <Text style={styles.versionText}>Tixello Staff v1.4.1</Text>
+      <Text style={styles.versionText}>Tixello Staff v{appVersion || '1.4.6'}</Text>
 
       <View style={styles.bottomSpacer} />
     </ScrollView>
