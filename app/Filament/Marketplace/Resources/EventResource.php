@@ -2988,12 +2988,8 @@ class EventResource extends Resource
                                             return new HtmlString('<div class="text-sm text-gray-500">' . $t('Salvează evenimentul pentru a vedea statisticile.', 'Save the event to see statistics.') . '</div>');
                                         }
 
-                                        // Calculate real revenue from actual orders — EXCLUDE external imports
+                                        // Revenue now comes from the "valid tickets only" breakdown below.
                                         $eventId = $record->id;
-                                        $totalRevenue = (float) \App\Models\Order::whereIn('status', ['paid', 'confirmed', 'completed'])
-                                            ->where(fn($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-                                            ->where('source', '!=', 'external_import')
-                                            ->sum('total');
 
                                         // Count valid tickets — EXCLUDE external imports
                                         // Use the same status filter as the "Bilete" button below so both numbers match.
@@ -3007,8 +3003,6 @@ class EventResource extends Resource
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
                                         $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
-
-                                        $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
 
                                         $ticketsLabel = $t('Bilete', 'Tickets');
                                         $revenueLabel = $t('Venituri (RON)', 'Revenue (RON)');
@@ -3043,19 +3037,24 @@ class EventResource extends Resource
                                         $cancelledLabel = $t('Anulate', 'Cancelled');
                                         $refundedLabel = $t('Rambursate', 'Refunded');
 
-                                        // Shared helper: Net derived from money flow (Revenue - Commission - Extras)
-                                        // so totals always reconcile. Commission is precise per ticket_type.
-                                        // See self::getSalesBreakdown() for the full formula.
+                                        // Shared helper: Revenue/Net/Commission/Extras/Discount all derived from
+                                        // the same breakdown. Revenue reflects money customers paid for CURRENTLY
+                                        // VALID tickets (excludes later-cancelled portion). See getSalesBreakdown.
                                         $breakdown = self::getSalesBreakdown($record);
+                                        $totalRevenue = $breakdown['total_revenue'];
                                         $totalNet = $breakdown['total_net'];
                                         $totalCommission = $breakdown['total_commission'];
                                         $totalExtras = $breakdown['total_extras'];
+                                        $totalDiscount = $breakdown['total_discount'];
+                                        $revenueFormatted = number_format($totalRevenue, 2, ',', '.');
                                         $netLabel = $t('Net (RON)', 'Net (RON)');
                                         $commissionLabel = $t('Comisioane (RON)', 'Commissions (RON)');
                                         $extrasLabel = $t('Taxe / Asigurări (RON)', 'Fees / Insurance (RON)');
+                                        $discountLabel = $t('Discounturi (RON)', 'Discounts (RON)');
                                         $netFormatted = number_format($totalNet, 2, ',', '.');
                                         $commissionFormatted = number_format($totalCommission, 2, ',', '.');
                                         $extrasFormatted = number_format($totalExtras, 2, ',', '.');
+                                        $discountFormatted = number_format($totalDiscount, 2, ',', '.');
 
                                         return new HtmlString("
                                             <div class='grid grid-cols-2 gap-3'>
@@ -3084,10 +3083,14 @@ class EventResource extends Resource
                                                     <div class='text-xs text-gray-400'>{$commissionLabel}</div>
                                                 </div>
                                             </div>
-                                            <div class='mt-3'>
+                                            <div class='grid grid-cols-2 gap-3 mt-3'>
                                                 <div class='p-3 text-center bg-gray-800 rounded-lg'>
                                                     <div class='text-2xl font-bold text-purple-400'>{$extrasFormatted}</div>
                                                     <div class='text-xs text-gray-400'>{$extrasLabel}</div>
+                                                </div>
+                                                <div class='p-3 text-center bg-gray-800 rounded-lg'>
+                                                    <div class='text-2xl font-bold text-orange-400'>{$discountFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>{$discountLabel}</div>
                                                 </div>
                                             </div>
                                             <div class='mt-3'>
@@ -4482,20 +4485,27 @@ class EventResource extends Resource
     /**
      * Per-request memoized sales breakdown for an event.
      *
-     * Money-flow approach so the top metric math always reconciles:
+     * "Valid tickets only" view: revenue reflects what customers paid for
+     * tickets that are still valid (excludes the portion tied to later-
+     * cancelled or refunded tickets). Totals always reconcile:
      *
-     *   Revenue (Order.total) = Net + Commission + Extras
+     *   Revenue = Net + Commission + Extras
      *
-     *   Revenue    = sum(Order.total) for paid, non-external orders
-     *   Commission = sum over valid tickets of per-ticket commission computed
-     *                from the ticket_type's own settings (with event/organizer/
-     *                marketplace default inheritance) and actual unit_price paid
-     *   Extras     = sum(insurance_amount + cultural_card_surcharge from meta)
-     *   Net        = Revenue - Commission - Extras  (money the organizer keeps)
+     * Per-order allocation rules:
+     *   ratio       = orderValidGross / Order.subtotal   (valid share of original order)
+     *   discount    = Order.discount_amount × ratio      (valid portion of discount)
+     *   extras      = (insurance + surcharge) × ratio    (valid portion of extras)
+     *   net         = orderValidGross - discount - includedCommission
+     *                 (on-top commission is paid by customer on top, doesn't reduce net)
+     *   revenue     = orderValidGross + onTopCommission - discount + extras
      *
-     * Per-ticket-type Net is then allocated proportionally to each type's gross
-     * share (unit_price × valid_count), so summing the table equals the headline Net.
-     * Per-ticket-type Commission uses the exact per-tt computation (precision).
+     * Commission is computed per-ticket using the ticket_type's own settings
+     * (with event/organizer/marketplace default inheritance) against the actual
+     * unit_price paid. Per-type Net is allocated proportionally to each type's
+     * gross share so the table rows sum to the headline Net.
+     *
+     * Discount returns the FULL sum of Order.discount_amount (not proportional),
+     * so the Discount card shows total discount granted to customers.
      */
     protected static array $salesBreakdownCache = [];
 
@@ -4516,11 +4526,15 @@ class EventResource extends Resource
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price']);
 
-        // Load the orders + their items in bulk (for price fallback, total, meta)
+        // Load the orders + items in bulk (for price fallback, subtotal/discount, meta)
         $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
         $ordersById = $orderIds->isEmpty()
             ? collect()
             : \App\Models\Order::with('items')->whereIn('id', $orderIds)->get()->keyBy('id');
+
+        // Full discount granted to customers across all paid orders.
+        // Reported as informational (independent of later cancellations).
+        $totalDiscount = (float) $ordersById->sum(fn ($o) => (float) $o->discount_amount);
 
         // Resolve default commission settings from the event / organizer / marketplace
         $defaultRate = (float) (
@@ -4535,22 +4549,28 @@ class EventResource extends Resource
             ?? $event->marketplaceClient?->commission_mode
             ?? 'included';
 
-        // Per-type aggregates (gross for allocation; commission computed precisely)
         $perType = []; // keyed by ticket_type_id
         $totalGross = 0.0;
         $totalCommission = 0.0;
         $totalRevenue = 0.0;
         $totalExtras = 0.0;
+        $totalNet = 0.0;
 
         foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
             $order = $ordersById->get($orderId);
             if (!$order) continue;
 
-            $totalRevenue += (float) $order->total;
-
+            $orderSubtotal = (float) $order->subtotal;
+            $orderDiscount = (float) $order->discount_amount;
             $meta = is_array($order->meta) ? $order->meta : [];
-            $totalExtras += (float) ($meta['insurance_amount'] ?? 0);
-            $totalExtras += (float) ($meta['cultural_card_surcharge'] ?? 0);
+            $orderInsurance = (float) ($meta['insurance_amount'] ?? 0);
+            $orderSurcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
+
+            // Per valid ticket_type in this order: gross / commission / mode
+            $orderData = [];
+            $orderValidGross = 0.0;
+            $orderIncludedCommission = 0.0;
+            $orderOnTopCommission = 0.0;
 
             foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
                 $tt = $group->first()->ticketType;
@@ -4574,30 +4594,70 @@ class EventResource extends Resource
                 }
 
                 $gross = $unitPrice * $validCount;
-
-                // Precise commission from ticket_type settings (with default inheritance)
                 $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
-                $commission = $commPerTicket * $validCount;
+                $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+                $itemCommission = $commPerTicket * $validCount;
+                $mode = $effective['mode'];
 
+                $orderValidGross += $gross;
+                if (in_array($mode, ['on_top', 'added_on_top'], true)) {
+                    $orderOnTopCommission += $itemCommission;
+                } else {
+                    $orderIncludedCommission += $itemCommission;
+                }
+
+                $orderData[] = [
+                    'tt_id' => $ttId,
+                    'tt' => $tt,
+                    'valid_count' => $validCount,
+                    'gross' => $gross,
+                    'commission' => $itemCommission,
+                    'mode' => $mode,
+                ];
+            }
+
+            // Proportional allocation: valid tickets' share of the original order
+            // (the original order may include tickets that were later cancelled).
+            $validRatio = $orderSubtotal > 0
+                ? min(1.0, $orderValidGross / $orderSubtotal)
+                : 1.0;
+
+            $validDiscount = $orderDiscount * $validRatio;
+            $validExtras = ($orderInsurance + $orderSurcharge) * $validRatio;
+
+            // Per-order Net: base gross minus allocated discount minus included commission.
+            // On-top commission is paid ON TOP by the customer and does NOT reduce net.
+            $orderNet = max(0.0, $orderValidGross - $validDiscount - $orderIncludedCommission);
+
+            // Per-order Revenue: customer's actual payment for the valid portion.
+            //   On-top contribution: base + on-top commission (customer paid both parts)
+            //   Included contribution: base only (commission is embedded in base)
+            //   minus allocated discount, plus allocated extras
+            $orderRevenue = max(0.0, $orderValidGross + $orderOnTopCommission - $validDiscount + $validExtras);
+
+            $orderCommission = $orderIncludedCommission + $orderOnTopCommission;
+
+            $totalRevenue += $orderRevenue;
+            $totalCommission += $orderCommission;
+            $totalExtras += $validExtras;
+            $totalNet += $orderNet;
+            $totalGross += $orderValidGross;
+
+            foreach ($orderData as $d) {
+                $ttId = $d['tt_id'];
                 if (!isset($perType[$ttId])) {
                     $perType[$ttId] = [
-                        'tt' => $tt,
+                        'tt' => $d['tt'],
                         'valid_count' => 0,
                         'gross' => 0.0,
                         'commission' => 0.0,
                     ];
                 }
-                $perType[$ttId]['valid_count'] += $validCount;
-                $perType[$ttId]['gross'] += $gross;
-                $perType[$ttId]['commission'] += $commission;
-
-                $totalGross += $gross;
-                $totalCommission += $commission;
+                $perType[$ttId]['valid_count'] += $d['valid_count'];
+                $perType[$ttId]['gross'] += $d['gross'];
+                $perType[$ttId]['commission'] += $d['commission'];
             }
         }
-
-        // Net from actual money flow so Revenue = Net + Commission + Extras always holds
-        $totalNet = max(0.0, $totalRevenue - $totalCommission - $totalExtras);
 
         // Allocate per-type Net proportionally to each type's gross share
         $finalPerType = array_map(function ($d) use ($totalNet, $totalGross) {
@@ -4615,6 +4675,7 @@ class EventResource extends Resource
             'total_net' => round($totalNet, 2),
             'total_commission' => round($totalCommission, 2),
             'total_extras' => round($totalExtras, 2),
+            'total_discount' => round($totalDiscount, 2),
             'per_type' => $finalPerType,
         ];
     }
