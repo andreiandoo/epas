@@ -1822,9 +1822,17 @@ class EventsController extends BaseController
         };
 
         // Broad valid-ticket filter for this event — includes POS tickets and
-        // invitations (which may have no order) in addition to regular online
-        // sales. Excludes external imports and cancelled/refunded tickets.
-        $validEventTicketsQuery = fn () => \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
+        // invitations (which may have no order, and sometimes no event_id
+        // either — they're linked only via ticket_type_id). Excludes external
+        // imports and cancelled/refunded tickets.
+        $eventTicketTypeIds = $event->ticketTypes->pluck('id')->toArray();
+        $validEventTicketsQuery = fn () => \App\Models\Ticket::where(function ($q) use ($event, $eventTicketTypeIds) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+                if (!empty($eventTicketTypeIds)) {
+                    $q->orWhereIn('ticket_type_id', $eventTicketTypeIds);
+                }
+            })
             ->whereIn('status', ['valid', 'used'])
             ->where(function ($q) {
                 $q->whereDoesntHave('order')
@@ -2004,11 +2012,11 @@ class EventsController extends BaseController
 
         // Ticket performance with trend and conversion
         $ticketPerformance = $event->ticketTypes->map(function ($tt) use ($event, $organizer, $rangeStart, $rangeEnd, $periodDays, $pageViews, $netPricePerTicket) {
-            // Broad filter: valid/used tickets of this tt for this event,
-            // including POS and invitations (no order required), excluding external imports.
+            // Broad filter: all valid/used tickets of this tt. Scoping by
+            // ticket_type_id is already event-scoped (tt belongs to the event).
+            // No event_id check — invitations sometimes have NULL event_id.
             $ticketQuery = fn () => \App\Models\Ticket::where('ticket_type_id', $tt->id)
                 ->whereIn('status', ['valid', 'used'])
-                ->where(fn ($q) => $q->where('event_id', $event->id)->orWhere('marketplace_event_id', $event->id))
                 ->where(function ($q) {
                     $q->whereDoesntHave('order')
                       ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
@@ -2018,6 +2026,11 @@ class EventsController extends BaseController
 
             // Revenue = valid_count × ticket_type's net price.
             $revenue = round($netPricePerTicket($tt) * $sold, 2);
+
+            // Classification flags consumed by the UI to annotate the ticket-type name
+            $ttMeta = is_array($tt->meta) ? $tt->meta : [];
+            $isInvitation = ($tt->name === 'Invitatie') || (bool) ($ttMeta['is_invitation'] ?? false);
+            $isEntryTicket = (bool) $tt->is_entry_ticket;
 
             // Trend: compare sales in current period vs previous period
             $currentPeriodSold = $ticketQuery()
@@ -2050,6 +2063,8 @@ class EventsController extends BaseController
                 'capacity' => $tt->quota_total,
                 'trend' => $trend,
                 'conversion_rate' => $convRate,
+                'is_entry_ticket' => $isEntryTicket,
+                'is_invitation' => $isInvitation,
             ];
         });
 
