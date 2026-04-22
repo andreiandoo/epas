@@ -702,15 +702,11 @@ class AccountController extends BaseController
         $orders = Order::where('marketplace_customer_id', $customer->id)
             ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
-                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
-                'event' => function ($q) {
-                    $q->select(['id', 'title', 'slug', 'event_date', 'start_time', 'end_time', 'door_time',
-                        'featured_image', 'poster_url', 'venue_id',
-                        'duration_mode', 'multi_slots',
-                        'range_start_date', 'range_end_date', 'range_start_time', 'range_end_time',
-                        'starts_at', 'ends_at', 'doors_open_at',
-                        'is_cancelled', 'is_postponed']);
-                },
+                'marketplaceEvent:id,name,slug,starts_at,ends_at,doors_open_at,venue_name,venue_city,image',
+                // Load full event row — Event::isPast()/start_date use a wide set of
+                // columns (range_*, multi_slots, recurring_*, starts_at, etc.) and a
+                // narrow select can silently break the date logic if any field is missing.
+                'event',
                 'event.venue:id,name,city',
                 'tickets.marketplaceTicketType:id,name',
                 'tickets.ticketType:id,name,is_refundable',
