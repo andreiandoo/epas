@@ -200,9 +200,15 @@ class AuthController extends BaseController
             'password' => 'required|string',
         ]);
 
+        // Normalize email: trim whitespace and lowercase. Mobile keyboards
+        // (iOS Safari in particular) auto-capitalize the first letter and
+        // sometimes add a trailing space, which otherwise makes a valid
+        // login fail with "Invalid credentials".
+        $email = mb_strtolower(trim($validated['email']));
+
         // First try organizer login
         $organizer = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
-            ->where('email', $validated['email'])
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
         if ($organizer && Hash::check($validated['password'], $organizer->password)) {
@@ -224,7 +230,7 @@ class AuthController extends BaseController
             ->whereHas('organizer', function ($q) use ($client) {
                 $q->where('marketplace_client_id', $client->id);
             })
-            ->where('email', $validated['email'])
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->where('status', 'active')
             ->whereNotNull('password')
             ->get();

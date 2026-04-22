@@ -200,8 +200,14 @@ class AuthController extends BaseController
             'password' => 'required|string',
         ]);
 
+        // Normalize email: trim whitespace and lowercase. Mobile keyboards
+        // (especially iOS Safari) auto-capitalize the first letter and can
+        // tack on an autocorrected trailing space, which otherwise causes a
+        // legit login to fail with "Invalid credentials".
+        $email = mb_strtolower(trim($validated['email']));
+
         $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
-            ->where('email', $validated['email'])
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
         if (!$customer) {

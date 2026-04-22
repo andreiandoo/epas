@@ -53,7 +53,12 @@ require_once __DIR__ . '/includes/auth-branding.php';
                         <label for="email" class="block mb-2 text-sm font-medium text-secondary">Email</label>
                         <input type="email" id="email" name="email" required
                                class="w-full input"
-                               placeholder="email@exemplu.ro">
+                               placeholder="email@exemplu.ro"
+                               autocomplete="email"
+                               autocapitalize="none"
+                               autocorrect="off"
+                               spellcheck="false"
+                               inputmode="email">
                     </div>
 
                     <div>
@@ -63,7 +68,11 @@ require_once __DIR__ . '/includes/auth-branding.php';
                         </div>
                         <input type="password" id="password" name="password" required
                                class="w-full input"
-                               placeholder="••••••••">
+                               placeholder="••••••••"
+                               autocomplete="current-password"
+                               autocapitalize="none"
+                               autocorrect="off"
+                               spellcheck="false">
                     </div>
 
                     <div class="flex items-center">
