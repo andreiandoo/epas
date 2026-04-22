@@ -461,26 +461,66 @@ class CheckoutController extends BaseController
                         ->first();
 
                     if ($coupon && $coupon->isValid()) {
-                        // Calculate discount base filtered by applicable ticket types
-                        $discountBase = $subtotal;
-                        $applicableTicketTypes = $coupon->applicable_ticket_types ?? [];
-                        if (!empty($applicableTicketTypes)) {
-                            $discountBase = 0;
-                            foreach ($promoCartData['items'] as $item) {
-                                $ttId = (int) ($item['ticket_type_id'] ?? 0);
-                                if (in_array($ttId, array_map('intval', $applicableTicketTypes))) {
-                                    $discountBase += (float) ($item['total'] ?? 0);
-                                }
-                            }
+                        // Build the set of event IDs the coupon applies to, combining
+                        // applicable_events (explicit list) with marketplace_organizer_id
+                        // (all events of that organizer). Either restriction narrows the
+                        // discount base; together they intersect.
+                        $applicableEventIdsExplicit = !empty($coupon->applicable_events)
+                            ? array_map('intval', $coupon->applicable_events)
+                            : null;
+                        $organizerEventIds = null;
+                        if ($coupon->marketplace_organizer_id) {
+                            $organizerEventIds = \App\Models\Event::where('marketplace_organizer_id', $coupon->marketplace_organizer_id)
+                                ->pluck('id')
+                                ->map(fn ($id) => (int) $id)
+                                ->all();
                         }
-                        $discount = $coupon->calculateDiscount($discountBase);
-                        $promoCode = [
-                            'code' => $coupon->code,
-                            'type' => $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed',
-                            'value' => (float) $coupon->discount_value,
-                            'source' => 'coupon',
-                            'id' => $coupon->id,
-                        ];
+
+                        $eventMatches = function ($evId) use ($applicableEventIdsExplicit, $organizerEventIds) {
+                            $evId = (int) $evId;
+                            if ($applicableEventIdsExplicit !== null && !in_array($evId, $applicableEventIdsExplicit, true)) {
+                                return false;
+                            }
+                            if ($organizerEventIds !== null && !in_array($evId, $organizerEventIds, true)) {
+                                return false;
+                            }
+                            return true;
+                        };
+
+                        $applicableTicketTypes = $coupon->applicable_ticket_types ?? [];
+                        $hasTicketTypeFilter = !empty($applicableTicketTypes);
+                        $hasEventFilter = $applicableEventIdsExplicit !== null || $organizerEventIds !== null;
+
+                        // Compute the discount base over items that pass every configured filter.
+                        $discountBase = 0.0;
+                        if ($hasTicketTypeFilter || $hasEventFilter) {
+                            foreach ($promoCartData['items'] as $item) {
+                                $itemEventId = (int) ($item['event_id'] ?? 0);
+                                if ($hasEventFilter && !$eventMatches($itemEventId)) {
+                                    continue;
+                                }
+                                if ($hasTicketTypeFilter) {
+                                    $ttId = (int) ($item['ticket_type_id'] ?? 0);
+                                    if (!in_array($ttId, array_map('intval', $applicableTicketTypes), true)) {
+                                        continue;
+                                    }
+                                }
+                                $discountBase += (float) ($item['total'] ?? 0);
+                            }
+                        } else {
+                            $discountBase = $subtotal;
+                        }
+
+                        if ($discountBase > 0) {
+                            $discount = $coupon->calculateDiscount($discountBase);
+                            $promoCode = [
+                                'code' => $coupon->code,
+                                'type' => $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed',
+                                'value' => (float) $coupon->discount_value,
+                                'source' => 'coupon',
+                                'id' => $coupon->id,
+                            ];
+                        }
                     }
                 }
             } elseif (isset($cart) && $cart->promo_code) {

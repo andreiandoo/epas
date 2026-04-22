@@ -150,6 +150,17 @@ class PromoCodeController extends BaseController
             }
         }
 
+        // Check organizer targeting (marketplace_organizer_id)
+        // When a coupon is scoped to an organizer but has no per-event list,
+        // it must still only apply to events of that organizer.
+        if ($couponCode->marketplace_organizer_id) {
+            $eventOrganizerId = \App\Models\Event::where('id', $eventId)
+                ->value('marketplace_organizer_id');
+            if (!$eventOrganizerId || (int) $eventOrganizerId !== (int) $couponCode->marketplace_organizer_id) {
+                return $this->error('Codul promoțional nu este valid pentru acest eveniment', 400);
+            }
+        }
+
         // Check event targeting (applicable_events)
         $applicableEvents = $couponCode->applicable_events;
         if (!empty($applicableEvents) && !in_array($eventId, array_map('intval', $applicableEvents))) {

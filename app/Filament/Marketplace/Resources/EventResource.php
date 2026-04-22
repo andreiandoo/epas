@@ -4489,22 +4489,24 @@ class EventResource extends Resource
     /**
      * Per-request memoized sales breakdown for an event.
      *
-     * Simple aggregate view — all metrics reconcile by addition:
+     * Organizer-facing formulas (valid tickets only for deductions):
      *
-     *   Revenue (Venituri) = Net + Commission + Discount + Extras
+     *   valid_gross        = sum over valid tickets of ticket.price
+     *   on_top_commission  = commission for valid tickets whose tt mode is on_top
+     *   included_commission = commission for valid tickets whose tt mode is included
+     *   discount_valid     = per-order discount attributable to valid tickets:
+     *                         percentage → valid_gross × (discount / subtotal)   [exact]
+     *                         fixed      → (valid_count / total_order_tickets) × discount
+     *   extras_valid       = (insurance + cultural_surcharge) × valid_gross / subtotal
      *
-     *   Net        = sum over valid tickets of (ticket.price × valid_count)
-     *                i.e. the raw gross the organizer's tickets represent.
-     *                Per-ticket-type Net = price × valid_count for that type.
-     *   Commission = sum over valid tickets of per-ticket commission computed
-     *                from the ticket_type's settings (with event/organizer/
-     *                marketplace default inheritance) against unit_price paid.
-     *   Discount   = sum of Order.discount_amount across paid orders (full).
-     *   Extras     = sum(insurance + cultural_card_surcharge) from Order.meta.
-     *   Revenue    = Net + Commission + Discount + Extras  (identity by construction)
+     *   Venituri (card)    = valid_gross + on_top_commission + extras_valid
+     *   Net (card)         = valid_gross - discount_valid - included_commission - extras_valid
+     *   Commission (card)  = on_top_commission + included_commission
+     *   Discount (card)    = sum Order.discount_amount  (FULL, informational)
+     *   Extras (card)      = sum (insurance + surcharge) (FULL, informational)
      *
-     * Discounts are not subtracted from Net — they appear as their own bucket.
-     * Ticket count includes only valid/used tickets from paid, non-external orders.
+     *   Per-type Net in the breakdown table = ticket.price × valid_count (raw gross).
+     *   Sum of per-type Net = valid_gross (not the Net card, which subtracts deductions).
      */
     protected static array $salesBreakdownCache = [];
 
@@ -4525,21 +4527,30 @@ class EventResource extends Resource
             ->with(['ticketType'])
             ->get(['id', 'order_id', 'ticket_type_id', 'price']);
 
-        // Load the orders + items in bulk for price fallback and Order.meta
+        // Load the orders + items in bulk for price fallback and meta
         $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
         $ordersById = $orderIds->isEmpty()
             ? collect()
             : \App\Models\Order::with('items')->whereIn('id', $orderIds)->get()->keyBy('id');
 
-        // Full discount + extras across all paid orders (independent of cancellations)
-        $totalDiscount = 0.0;
-        $totalExtras = 0.0;
+        // Total discount / extras cards (FULL sums, informational)
+        $totalDiscountCard = 0.0;
+        $totalExtrasCard = 0.0;
         foreach ($ordersById as $o) {
-            $totalDiscount += (float) $o->discount_amount;
-            $meta = is_array($o->meta) ? $o->meta : [];
-            $totalExtras += (float) ($meta['insurance_amount'] ?? 0);
-            $totalExtras += (float) ($meta['cultural_card_surcharge'] ?? 0);
+            $totalDiscountCard += (float) $o->discount_amount;
+            $m = is_array($o->meta) ? $o->meta : [];
+            $totalExtrasCard += (float) ($m['insurance_amount'] ?? 0);
+            $totalExtrasCard += (float) ($m['cultural_card_surcharge'] ?? 0);
         }
+
+        // Count ALL tickets per order (any status) — used as the denominator
+        // for fixed-discount allocation (per-ticket share of a fixed discount).
+        $totalTicketsPerOrder = $orderIds->isEmpty()
+            ? collect()
+            : \App\Models\Ticket::whereIn('order_id', $orderIds)
+                ->selectRaw('order_id, COUNT(*) as cnt')
+                ->groupBy('order_id')
+                ->pluck('cnt', 'order_id');
 
         // Default commission settings from event / organizer / marketplace
         $defaultRate = (float) (
@@ -4555,12 +4566,20 @@ class EventResource extends Resource
             ?? 'included';
 
         $perType = []; // keyed by ticket_type_id
-        $totalNet = 0.0;
-        $totalCommission = 0.0;
+        $sumValidGross = 0.0;
+        $sumOnTop = 0.0;
+        $sumIncluded = 0.0;
+        $sumDiscountValid = 0.0;
+        $sumExtrasValid = 0.0;
 
         foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
             $order = $ordersById->get($orderId);
             if (!$order) continue;
+
+            $orderValidGross = 0.0;
+            $orderOnTop = 0.0;
+            $orderIncluded = 0.0;
+            $orderValidCount = 0;
 
             foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
                 $tt = $group->first()->ticketType;
@@ -4585,7 +4604,17 @@ class EventResource extends Resource
 
                 $gross = $unitPrice * $validCount;
                 $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
+                $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
                 $commission = $commPerTicket * $validCount;
+                $mode = $effective['mode'];
+
+                $orderValidGross += $gross;
+                $orderValidCount += $validCount;
+                if (in_array($mode, ['on_top', 'added_on_top'], true)) {
+                    $orderOnTop += $commission;
+                } else {
+                    $orderIncluded += $commission;
+                }
 
                 if (!isset($perType[$ttId])) {
                     $perType[$ttId] = [
@@ -4598,14 +4627,54 @@ class EventResource extends Resource
                 $perType[$ttId]['valid_count'] += $validCount;
                 $perType[$ttId]['net'] += $gross;            // per-type Net = raw gross
                 $perType[$ttId]['commission'] += $commission;
-
-                $totalNet += $gross;
-                $totalCommission += $commission;
             }
+
+            // ── Discount_valid per order (exact based on discount type) ──
+            $orderDiscount = (float) $order->discount_amount;
+            $orderSubtotal = (float) $order->subtotal;
+            $meta = is_array($order->meta) ? $order->meta : [];
+            $promoInfo = is_array($meta['promo_code'] ?? null) ? $meta['promo_code'] : null;
+            $promoType = $promoInfo['type'] ?? null;  // 'percentage' or 'fixed' (or null)
+
+            $discountValid = 0.0;
+            if ($orderDiscount > 0) {
+                if ($promoType === 'percentage' && $orderSubtotal > 0) {
+                    // Percentage: rate is uniform → exact via gross ratio.
+                    $rate = $orderDiscount / $orderSubtotal;
+                    $discountValid = $orderValidGross * $rate;
+                } else {
+                    // Fixed amount (or unknown): rule of 3 on ticket count.
+                    $totalCount = (int) ($totalTicketsPerOrder[$orderId] ?? $orderValidCount);
+                    if ($totalCount > 0) {
+                        $discountValid = $orderDiscount * ($orderValidCount / $totalCount);
+                    }
+                }
+                if ($discountValid > $orderDiscount) {
+                    $discountValid = $orderDiscount; // defensive cap
+                }
+            }
+
+            // ── Extras_valid per order (proportional by valid-gross share) ──
+            $insurance = (float) ($meta['insurance_amount'] ?? 0);
+            $surcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
+            $extrasValid = 0.0;
+            if (($insurance + $surcharge) > 0) {
+                $ratio = $orderSubtotal > 0
+                    ? min(1.0, $orderValidGross / $orderSubtotal)
+                    : 1.0;
+                $extrasValid = ($insurance + $surcharge) * $ratio;
+            }
+
+            $sumValidGross += $orderValidGross;
+            $sumOnTop += $orderOnTop;
+            $sumIncluded += $orderIncluded;
+            $sumDiscountValid += $discountValid;
+            $sumExtrasValid += $extrasValid;
         }
 
-        // Revenue is the identity sum — always reconciles
-        $totalRevenue = $totalNet + $totalCommission + $totalDiscount + $totalExtras;
+        $totalCommission = $sumOnTop + $sumIncluded;
+        $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded - $sumExtrasValid);
+        $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
 
         $finalPerType = array_map(fn ($d) => [
             'tt' => $d['tt'],
@@ -4618,8 +4687,8 @@ class EventResource extends Resource
             'total_revenue' => round($totalRevenue, 2),
             'total_net' => round($totalNet, 2),
             'total_commission' => round($totalCommission, 2),
-            'total_extras' => round($totalExtras, 2),
-            'total_discount' => round($totalDiscount, 2),
+            'total_extras' => round($totalExtrasCard, 2),
+            'total_discount' => round($totalDiscountCard, 2),
             'per_type' => $finalPerType,
         ];
     }
