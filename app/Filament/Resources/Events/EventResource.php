@@ -70,8 +70,17 @@ class EventResource extends Resource
                                             if ($val) $component->state($val);
                                         }
                                     })
-                                    ->afterStateUpdated(function (string $state, SSet $set) {
-                                        if ($state) $set('slug.en', Str::slug($state));
+                                    ->afterStateUpdated(function (string $state, SSet $set, SGet $get, ?Event $record) {
+                                        // Slug is auto-generated ONLY on initial create.
+                                        // On edit, never overwrite an existing slug when the title changes.
+                                        if (!$state) return;
+                                        if ($record && $record->exists) {
+                                            if (!$get('slug.en')) {
+                                                $set('slug.en', Str::slug($state));
+                                            }
+                                            return;
+                                        }
+                                        $set('slug.en', Str::slug($state));
                                     }),
                                 SC\Grid::make(2)->schema([
                                     Forms\Components\TextInput::make('slug.en')

@@ -125,23 +125,27 @@ class EventResource extends Resource
                                             ->live(onBlur: true)
                                             ->skipRenderAfterStateUpdated()
                                             ->afterStateUpdated(function ($state, SSet $set, SGet $get, ?Event $record) {
-                                                // Slug is NOT translatable - it's a plain string field
-                                                // Format: event-name-[id] (ID is appended after save if record exists)
-                                                if ($state) {
-                                                    $baseSlug = Str::slug($state);
-                                                    if ($record && $record->exists && $record->id) {
+                                                // Slug is auto-generated ONLY on initial create.
+                                                // On edit, never auto-overwrite an existing slug from title changes;
+                                                // the admin can edit the slug manually if desired.
+                                                if (!$state) {
+                                                    return;
+                                                }
+                                                $baseSlug = Str::slug($state);
+                                                if ($record && $record->exists && $record->id) {
+                                                    // EDIT: only fill slug if it's currently empty; never overwrite.
+                                                    if (!$get('slug')) {
                                                         $set('slug', $baseSlug . '-' . $record->id);
-                                                        // Set event_series if not already set
-                                                        if (!$get('event_series')) {
-                                                            $set('event_series', 'AMB-' . $record->id);
-                                                        }
-                                                    } else {
-                                                        // On CREATE: get next expected ID from database
-                                                        $nextId = (Event::max('id') ?? 0) + 1;
-                                                        $set('slug', $baseSlug . '-' . $nextId);
-                                                        if (!$get('event_series')) {
-                                                            $set('event_series', 'AMB-' . $nextId);
-                                                        }
+                                                    }
+                                                    if (!$get('event_series')) {
+                                                        $set('event_series', 'AMB-' . $record->id);
+                                                    }
+                                                } else {
+                                                    // CREATE: auto-generate from title using next expected ID.
+                                                    $nextId = (Event::max('id') ?? 0) + 1;
+                                                    $set('slug', $baseSlug . '-' . $nextId);
+                                                    if (!$get('event_series')) {
+                                                        $set('event_series', 'AMB-' . $nextId);
                                                     }
                                                 }
                                             }),
