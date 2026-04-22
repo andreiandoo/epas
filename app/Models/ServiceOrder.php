@@ -181,7 +181,7 @@ class ServiceOrder extends Model
     /**
      * Mark order as paid
      */
-    public function markAsPaid(string $paymentReference = null): self
+    public function markAsPaid(?string $paymentReference = null): self
     {
         $this->update([
             'payment_status' => self::PAYMENT_PAID,
@@ -211,7 +211,25 @@ class ServiceOrder extends Model
             if (in_array('category', $locations))             $updates['is_category_featured'] = true;
             if (in_array('city', $locations))                 $updates['is_city_featured']     = true;
             if (! empty($updates)) {
-                Event::where('id', $this->marketplace_event_id)->update($updates);
+                // Mirror EditEvent's backfill: featured listings (general/category/city) and the
+                // homepage hero require an image, otherwise the public featured endpoint filters
+                // them out (`require_image=true`). Copy from hero/poster so a paid promotion
+                // never silently fails to surface.
+                $event = Event::find($this->marketplace_event_id);
+                if ($event) {
+                    $heroSrc = $event->hero_image_url ?: $event->poster_url ?: $event->image_url;
+                    if ($heroSrc) {
+                        if (!empty($updates['is_homepage_featured']) && empty($event->homepage_featured_image)) {
+                            $updates['homepage_featured_image'] = $heroSrc;
+                        }
+                        if ((!empty($updates['is_general_featured']) || !empty($updates['is_category_featured']) || !empty($updates['is_city_featured'])) && empty($event->featured_image)) {
+                            $updates['featured_image'] = $heroSrc;
+                        }
+                    }
+                    $event->update($updates);
+                } else {
+                    Event::where('id', $this->marketplace_event_id)->update($updates);
+                }
             }
         }
 
