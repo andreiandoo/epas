@@ -675,9 +675,11 @@ class OrganizerResource extends Resource
                                         ->icon('heroicon-o-list-bullet')
                                         ->description('Toate evenimentele organizatorului cu vânzări, încasări nete și comisioane')
                                         ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null)
+                                        ->extraAttributes(['class' => 'ep-events-list-section'])
                                         ->schema([
                                             Forms\Components\Placeholder::make('events_list')
                                                 ->hiddenLabel()
+                                                ->extraAttributes(['class' => 'ep-events-list-placeholder'])
                                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderEventsList($record)),
                                         ]),
 
@@ -1265,35 +1267,44 @@ class OrganizerResource extends Resource
             $eventName = e($name);
             $venueDisplay = e(trim(implode(' · ', array_filter([$venueName, $venueCity]))) ?: '-');
 
-            $rows .= '<tr style="border-bottom:1px solid #e5e7eb;">'
-                . '<td style="padding:8px 10px;font-size:13px;color:#111827;font-weight:500;">' . $eventName . '</td>'
-                . '<td style="padding:8px 10px;font-size:12px;color:#374151;white-space:nowrap;">' . $eventDateStr . '</td>'
-                . '<td style="padding:8px 10px;font-size:12px;color:#4b5563;">' . $venueDisplay . '</td>'
+            $rows .= '<tr style="border-bottom:1px solid rgba(148,163,184,0.18);">'
+                . '<td style="padding:8px 10px;font-size:13px;color:#ffffff;font-weight:500;">' . $eventName . '</td>'
+                . '<td style="padding:8px 10px;font-size:12px;color:#cbd5e1;white-space:nowrap;">' . $eventDateStr . '</td>'
+                . '<td style="padding:8px 10px;font-size:12px;color:#cbd5e1;">' . $venueDisplay . '</td>'
                 . '<td style="padding:8px 10px;text-align:center;">' . $statusBadge . '</td>'
-                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#111827;font-weight:600;white-space:nowrap;">' . number_format($tickets, 0, ',', '.') . '</td>'
-                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#059669;font-weight:600;white-space:nowrap;">' . number_format($netToOrganizer, 2, ',', '.') . ' RON</td>'
-                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#dc2626;font-weight:600;white-space:nowrap;">' . number_format($commission, 2, ',', '.') . ' RON</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#ffffff;font-weight:600;white-space:nowrap;">' . number_format($tickets, 0, ',', '.') . '</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#34d399;font-weight:600;white-space:nowrap;">' . number_format($netToOrganizer, 2, ',', '.') . ' RON</td>'
+                . '<td style="padding:8px 10px;text-align:right;font-size:13px;color:#f87171;font-weight:600;white-space:nowrap;">' . number_format($commission, 2, ',', '.') . ' RON</td>'
                 . '</tr>';
         }
 
-        $footer = '<tr style="background:#f9fafb;font-weight:700;">'
-            . '<td colspan="4" style="padding:10px;font-size:12px;color:#374151;text-transform:uppercase;letter-spacing:0.05em;">Total ' . count($events) . ' evenimente</td>'
-            . '<td style="padding:10px;text-align:right;font-size:13px;color:#111827;">' . number_format($totalTickets, 0, ',', '.') . '</td>'
-            . '<td style="padding:10px;text-align:right;font-size:13px;color:#059669;">' . number_format($totalNet, 2, ',', '.') . ' RON</td>'
-            . '<td style="padding:10px;text-align:right;font-size:13px;color:#dc2626;">' . number_format($totalCommission, 2, ',', '.') . ' RON</td>'
+        $footer = '<tr style="background:rgba(148,163,184,0.08);font-weight:700;">'
+            . '<td colspan="4" style="padding:10px;font-size:12px;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.05em;">Total ' . count($events) . ' evenimente</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#ffffff;">' . number_format($totalTickets, 0, ',', '.') . '</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#34d399;">' . number_format($totalNet, 2, ',', '.') . ' RON</td>'
+            . '<td style="padding:10px;text-align:right;font-size:13px;color:#f87171;">' . number_format($totalCommission, 2, ',', '.') . ' RON</td>'
             . '</tr>';
 
-        $html = '<div style="overflow-x:auto;">'
+        // Reset section + placeholder padding so the table fills the full section width.
+        $resetCss = '<style>'
+            . '.ep-events-list-section .fi-section-content,'
+            . '.ep-events-list-section .fi-section-content-ctn{padding:0!important;}'
+            . '.ep-events-list-section .fi-fo-placeholder{padding:0!important;}'
+            . '.ep-events-list-placeholder{padding:0!important;margin:0!important;}'
+            . '</style>';
+
+        $html = $resetCss
+            . '<div style="overflow-x:auto;width:100%;">'
             . '<table style="width:100%;border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,sans-serif;">'
             . '<thead>'
-            . '<tr style="background:#f3f4f6;border-bottom:2px solid #e5e7eb;">'
-            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Eveniment</th>'
-            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Data</th>'
-            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Venue / Oraș</th>'
-            . '<th style="padding:10px;text-align:center;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Status</th>'
-            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Bilete vândute</th>'
-            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Încasări nete</th>'
-            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em;">Comisioane</th>'
+            . '<tr style="background:rgba(148,163,184,0.12);border-bottom:1px solid rgba(148,163,184,0.25);">'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Eveniment</th>'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Data</th>'
+            . '<th style="padding:10px;text-align:left;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Venue / Oraș</th>'
+            . '<th style="padding:10px;text-align:center;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Status</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Bilete vândute</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Încasări nete</th>'
+            . '<th style="padding:10px;text-align:right;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">Comisioane</th>'
             . '</tr>'
             . '</thead>'
             . '<tbody>' . $rows . $footer . '</tbody>'
