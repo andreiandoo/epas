@@ -817,10 +817,10 @@ function renderEvents(events) {
             : '';
 
         // Documents button (indigo — paperwork)
-        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
+        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="text-indigo-700 border border-indigo-200 btn btn-sm bg-indigo-50 hover:bg-indigo-100 hover:border-indigo-300 hover:text-indigo-800" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
 
         // Finance button (emerald — money/sales)
-        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
+        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="border btn btn-sm bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 hover:text-emerald-800" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
 
         // View/Preview button - use /bilete/{slug} for published, add ?preview=1 for drafts
         const isPublishedEvent = event.status === 'published' || event.is_public;
@@ -830,8 +830,8 @@ function renderEvents(events) {
         return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col md:items-center md:flex-row">
-                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 md:w-28 rounded-xl" loading="lazy">
-                <div class="flex-1 py-2">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 max-h-[130px] md:w-28 rounded-xl" loading="lazy">
+                <div class="flex-1">
                     <div class="flex items-center justify-between gap-4 pr-4">
                         <div class="flex items-center gap-4 pl-6">
                             <div class="flex flex-col items-start">
@@ -843,12 +843,12 @@ function renderEvents(events) {
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
-                            <div class="pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
-                            <div class="text-right"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
+                            <div class="py-2 text-right"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center justify-end gap-2 px-4 pt-4 mt-4 border-t border-border">
+                    <div class="flex flex-wrap items-center justify-end gap-2 px-4 py-2 border-t border-border">
                         <div class="flex items-center ml-0 mr-auto gap-x-4 ">
                             <div class="flex flex-col items-center justify-center"><p class="text-2xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs text-muted">${isEnded ? '' : 'zile rămase'}</p></div>
                             
@@ -857,7 +857,7 @@ function renderEvents(events) {
                             ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
                         </div>
                         </div>
-                        ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
+                        ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="text-blue-700 border border-blue-200 btn btn-sm bg-blue-50 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
                         ${documentsButton}
                         ${financeButton}
                         ${analyticsButton}
