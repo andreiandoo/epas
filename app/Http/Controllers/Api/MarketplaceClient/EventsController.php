@@ -34,29 +34,30 @@ class EventsController extends BaseController
                 $q->where('is_public', true)->orWhereNull('is_public');
             })
             // Filter by time scope: upcoming (default) or past
-            // Priority: use event_date if set, otherwise use starts_at
+            // Range-aware: festivals have event_date NULL but range_start_date / range_end_date set,
+            // so we also check range_end_date so festivals don't disappear from listings.
+            // Cancelled events are intentionally NOT excluded — they should keep showing in
+            // category listings with an "Anulat" badge until they're actually past
+            // (matches getStatusLabelAttribute()'s "Încheiat" rule on the admin side).
             ->when($request->get('time_scope') === 'past', function ($q) {
                 $q->where(function ($sq) {
-                    // Past: event_date < today (if set), or starts_at < now (if event_date not set)
+                    // Past: every relevant date is in the past (or absent).
                     $sq->where(function ($inner) {
                         $inner->whereNotNull('event_date')->where('event_date', '<', now()->toDateString());
                     })->orWhere(function ($inner) {
-                        $inner->whereNull('event_date')->whereNotNull('starts_at')->where('starts_at', '<', now());
+                        $inner->whereNull('event_date')->whereNotNull('range_end_date')->where('range_end_date', '<', now()->toDateString());
+                    })->orWhere(function ($inner) {
+                        $inner->whereNull('event_date')->whereNull('range_end_date')->whereNotNull('starts_at')->where('starts_at', '<', now());
                     });
                 });
             }, function ($q) {
-                // Upcoming: event_date >= today (if set), or starts_at >= now (if event_date not set)
+                // Upcoming: any relevant date is in the future.
                 $q->where(function ($sq) {
-                    $sq->where(function ($inner) {
-                        $inner->whereNotNull('event_date')->where('event_date', '>=', now()->toDateString());
-                    })->orWhere(function ($inner) {
-                        $inner->whereNull('event_date')->where('starts_at', '>=', now());
-                    });
+                    $sq->where('event_date', '>=', now()->toDateString())
+                        ->orWhere('range_end_date', '>=', now()->toDateString())
+                        ->orWhere('range_start_date', '>=', now()->toDateString())
+                        ->orWhere('starts_at', '>=', now());
                 });
-            })
-            // Exclude cancelled events
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             });
 
         // Include both marketplace events AND tenant events (if allowed)
@@ -314,6 +315,15 @@ class EventsController extends BaseController
                 'price_from' => $minPrice,
                 'has_availability' => $totalAvailable > 0,
                 'ticket_types' => $ticketTypePrices,
+                // Status flags — used by the public event card to render the "Anulat" /
+                // "Amânat" / "Sold Out" badge. Cancelled events still appear in listings
+                // until their date passes (then admin-side status flips to "Încheiat").
+                'is_cancelled' => (bool) ($event->is_cancelled ?? false),
+                'is_postponed' => (bool) ($event->is_postponed ?? false),
+                'is_sold_out'  => (bool) ($event->is_sold_out ?? false),
+                'duration_mode' => $event->duration_mode,
+                'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+                'range_end_date'   => $event->range_end_date?->format('Y-m-d'),
             ];
         });
 
