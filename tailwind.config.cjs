@@ -56,7 +56,7 @@ module.exports = {
     'mb-2', 'mb-3', 'mb-4', 'mb-6', 'mb-8',
     'mt-2', 'mt-4', 'mt-6', 'mt-8', 'mt-18', 'mt-17',
     // Height values
-    'h-32', 'h-40', 'h-52', 'h-64', 'h-72', 'h-96',
+    'h-32', 'h-34', 'h-40', 'h-52', 'h-64', 'h-72', 'h-96',
     // Text sizes used in JS
     'text-xs', 'text-sm', 'text-base', 'text-lg', 'text-xl', 'text-2xl', 'text-3xl', 'text-4xl',
     // Font weights
