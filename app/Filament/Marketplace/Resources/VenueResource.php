@@ -400,7 +400,7 @@ class VenueResource extends Resource
                                         );
                                     })
                                     ->columnSpanFull(),
-                                Forms\Components\Actions::make([
+                                SC\Actions::make([
                                     Action::make('sync_google_reviews')
                                         ->label('Sincronizare recenzii Google')
                                         ->icon('heroicon-o-arrow-path')
