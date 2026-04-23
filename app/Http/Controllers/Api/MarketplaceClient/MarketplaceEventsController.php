@@ -1631,7 +1631,21 @@ class MarketplaceEventsController extends BaseController
             return null;
         }
 
-        $layout = $venue->seatingLayouts->first();
+        // Prefer the event's explicit seating_layout_id (admin selection). A venue
+        // may have multiple published layouts, so picking the first one by default
+        // serves the wrong map whenever the admin chose a non-first layout.
+        $layout = null;
+        if ($event && $event->seating_layout_id) {
+            $layout = $venue->seatingLayouts->firstWhere('id', $event->seating_layout_id);
+            if (!$layout) {
+                // Selected layout isn't in the loaded venue collection — load it directly
+                $layout = \App\Models\Seating\SeatingLayout::withoutGlobalScopes()
+                    ->with(['sections.rows.seats'])
+                    ->find($event->seating_layout_id);
+            }
+        }
+        // Legacy fallback: first published layout on the venue
+        $layout = $layout ?? $venue->seatingLayouts->first();
         if (!$layout) {
             return null;
         }
