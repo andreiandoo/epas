@@ -14,74 +14,69 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Page Content -->
         <main class="flex-1 p-4 lg:p-8">
             <!-- Page Header -->
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+            <div class="flex flex-col justify-between gap-4 mb-6 lg:flex-row lg:items-center">
                 <div>
-                    <h1 class="text-2xl font-bold text-secondary">Vanzari</h1>
-                    <p class="text-sm text-muted">Toate comenzile tale intr-un singur loc</p>
+                    <h1 class="text-2xl font-bold text-secondary">Vânzări</h1>
+                    <p class="text-sm text-muted">Toate comenzile tale într-un singur loc</p>
                 </div>
-                <button onclick="exportSales()" class="btn btn-secondary w-auto">
+                <button onclick="exportSales()" class="w-auto btn btn-secondary">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Export
                 </button>
             </div>
 
             <!-- Filters -->
-            <div class="bg-white border border-border rounded-2xl p-4 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="p-4 mb-6 bg-white border border-border rounded-2xl">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <div>
                         <label class="label">Eveniment</label>
-                        <select id="filter-event" class="input w-full" onchange="loadOrders()">
+                        <select id="filter-event" class="w-full input" onchange="loadOrders()">
                             <option value="">Toate evenimentele</option>
                         </select>
                     </div>
                     <div>
                         <label class="label">Status</label>
-                        <select id="filter-status" class="input w-full" onchange="loadOrders()">
+                        <select id="filter-status" class="w-full input" onchange="loadOrders()">
                             <option value="">Toate statusurile</option>
-                            <option value="completed">Finalizata</option>
-                            <option value="pending">In asteptare</option>
-                            <option value="cancelled">Anulata</option>
-                            <option value="refunded">Rambursata</option>
+                            <option value="completed">Finalizate</option>
+                            <option value="pending">În așteptare</option>
+                            <option value="cancelled">Anulate</option>
+                            <option value="refunded">Rambursate</option>
                         </select>
                     </div>
                     <div>
                         <label class="label">De la data</label>
-                        <input type="date" id="filter-from" class="input w-full" onchange="loadOrders()">
+                        <input type="date" id="filter-from" class="w-full input" onchange="loadOrders()">
                     </div>
                     <div>
-                        <label class="label">Pana la data</label>
-                        <input type="date" id="filter-to" class="input w-full" onchange="loadOrders()">
+                        <label class="label">Până la data</label>
+                        <input type="date" id="filter-to" class="w-full input" onchange="loadOrders()">
                     </div>
                     <div>
-                        <label class="label">Cauta</label>
-                        <input type="text" id="filter-search" class="input w-full" placeholder="Nume, email, comanda..." oninput="debounceSearch()">
+                        <label class="label">Caută</label>
+                        <input type="text" id="filter-search" class="w-full input" placeholder="Nume, email, comanda..." oninput="debounceSearch()">
                     </div>
                 </div>
             </div>
 
             <!-- Stats -->
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Total comenzi</p>
-                    <p class="text-2xl font-bold text-secondary" id="stat-total-orders">-</p>
-                    <p class="text-xs text-muted mt-1" id="stat-orders-breakdown"></p>
+            <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-3">
+                <div class="p-4 bg-white border border-border rounded-2xl">
+                    <p class="mb-1 text-sm text-muted">Comenzi finalizate</p>
+                    <p class="text-2xl font-bold text-success" id="stat-completed">-</p>
                 </div>
-                <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Venituri nete</p>
-                    <p class="text-2xl font-bold text-primary" id="stat-total-value">-</p>
-                </div>
-                <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Bilete vandute</p>
+                <div class="p-4 bg-white border border-border rounded-2xl">
+                    <p class="mb-1 text-sm text-muted">Bilete vândute</p>
                     <p class="text-2xl font-bold text-secondary" id="stat-total-tickets">-</p>
                 </div>
-                <div class="bg-white border border-border rounded-2xl p-4">
-                    <p class="text-sm text-muted mb-1">Finalizate</p>
-                    <p class="text-2xl font-bold text-success" id="stat-completed">-</p>
+                <div class="p-4 bg-white border border-border rounded-2xl">
+                    <p class="mb-1 text-sm text-muted">Venituri nete</p>
+                    <p class="text-2xl font-bold text-primary" id="stat-total-value">-</p>
                 </div>
             </div>
 
             <!-- Orders Table -->
-            <div class="bg-white border border-border rounded-2xl overflow-hidden">
+            <div class="overflow-hidden bg-white border border-border rounded-2xl">
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-surface">
@@ -99,18 +94,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <tbody id="orders-list" class="divide-y divide-border">
                             <tr id="select-event-prompt"><td colspan="8" class="px-4 py-16 text-center">
                                 <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                <p class="text-base font-medium text-secondary mb-1">Selecteaza un eveniment</p>
+                                <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
                                 <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
                             </td></tr>
                         </tbody>
                     </table>
                 </div>
                 <!-- Pagination -->
-                <div id="pagination" class="px-4 py-3 border-t border-border flex items-center justify-between hidden">
+                <div id="pagination" class="flex items-center justify-between hidden px-4 py-3 border-t border-border">
                     <p class="text-sm text-muted"><span id="page-info">Pagina 1 din 1</span></p>
                     <div class="flex gap-2">
                         <button onclick="goToPage(currentPage - 1)" id="prev-btn" class="btn btn-secondary btn-sm" disabled>Anterior</button>
-                        <button onclick="goToPage(currentPage + 1)" id="next-btn" class="btn btn-secondary btn-sm" disabled>Urmator</button>
+                        <button onclick="goToPage(currentPage + 1)" id="next-btn" class="btn btn-secondary btn-sm" disabled>Următoarea</button>
                     </div>
                 </div>
             </div>
@@ -219,7 +214,7 @@ async function loadOrders() {
         // No event selected — show prompt
         document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-16 text-center">
             <svg class="w-12 h-12 mx-auto mb-3 text-muted/50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            <p class="text-base font-medium text-secondary mb-1">Selecteaza un eveniment</p>
+            <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
             <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
         </td></tr>`;
         document.getElementById('stat-total-orders').textContent = '-';
@@ -251,7 +246,7 @@ async function loadOrders() {
         }
     } catch (error) {
         console.error('Failed to load orders:', error);
-        document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-error">Eroare la incarcarea comenzilor</td></tr>`;
+        document.getElementById('orders-list').innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-error">Eroare la încărcarea comenzilor</td></tr>`;
     }
 }
 
@@ -259,7 +254,7 @@ function renderOrders() {
     const tbody = document.getElementById('orders-list');
 
     if (!ordersData.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-muted">Nu exista comenzi pentru filtrele selectate</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-12 text-center text-muted">Nu există comenzi pentru filtrele selectate</td></tr>`;
         return;
     }
 
@@ -274,14 +269,14 @@ function renderOrders() {
             <tr class="hover:bg-surface/50">
                 <td class="px-4 py-3">
                     <div class="flex flex-col">
-                        <span class="font-semibold text-secondary text-sm">${escHtml(order.order_number)}</span>
+                        <span class="text-sm font-semibold text-secondary">${escHtml(order.order_number)}</span>
                         <span class="text-xs text-muted">#${order.id}</span>
                     </div>
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex flex-col max-w-[200px]">
-                        <span class="font-medium text-secondary text-sm truncate">${escHtml(order.customer || '-')}</span>
-                        <span class="text-xs text-muted truncate">${escHtml(maskEmail(order.customer_email))}</span>
+                        <span class="text-sm font-medium truncate text-secondary">${escHtml(order.customer || '-')}</span>
+                        <span class="text-xs truncate text-muted">${escHtml(maskEmail(order.customer_email))}</span>
                         ${order.customer_phone ? `<span class="text-xs text-muted">${escHtml(order.customer_phone)}</span>` : ''}
                         ${order.customer_city ? `<span class="text-xs text-muted">${escHtml(order.customer_city)}</span>` : ''}
                     </div>
@@ -316,10 +311,10 @@ function getStatusBadge(status) {
         'completed': '<span class="px-2 py-1 text-xs font-medium rounded-full bg-success/10 text-success">Finalizata</span>',
         'pending': '<span class="px-2 py-1 text-xs font-medium rounded-full bg-warning/10 text-warning">In asteptare</span>',
         'cancelled': '<span class="px-2 py-1 text-xs font-medium rounded-full bg-error/10 text-error">Anulata</span>',
-        'refunded': '<span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-600">Rambursata</span>',
-        'partially_refunded': '<span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-600">Partial rambursata</span>',
+        'refunded': '<span class="px-2 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-full">Rambursata</span>',
+        'partially_refunded': '<span class="px-2 py-1 text-xs font-medium text-orange-600 bg-orange-100 rounded-full">Partial rambursata</span>',
     };
-    return badges[status] || `<span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600">${escHtml(status)}</span>`;
+    return badges[status] || `<span class="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">${escHtml(status)}</span>`;
 }
 
 function getSourceLabel(source) {
@@ -343,8 +338,8 @@ function updateStats(meta) {
     const bd = meta.order_breakdown;
     if (bd) {
         const parts = [];
-        if (bd.failed > 0 || bd.cancelled > 0 || bd.expired > 0) parts.push(`${(bd.failed||0)+(bd.cancelled||0)+(bd.expired||0)} esuate`);
-        if (bd.pending > 0) parts.push(`${bd.pending} in asteptare`);
+        if (bd.failed > 0 || bd.cancelled > 0 || bd.expired > 0) parts.push(`${(bd.failed||0)+(bd.cancelled||0)+(bd.expired||0)} eșuate`);
+        if (bd.pending > 0) parts.push(`${bd.pending} în așteptare`);
         if (bd.refunded > 0) parts.push(`${bd.refunded} rambursate`);
         document.getElementById('stat-orders-breakdown').textContent = parts.join(' · ');
     }
@@ -376,16 +371,16 @@ function goToPage(page) {
 async function exportSales() {
     const eventId = document.getElementById('filter-event').value;
     if (!eventId) {
-        AmbiletNotifications.error('Selecteaza un eveniment');
+        AmbiletNotifications.error('Selectează un eveniment');
         return;
     }
 
     try {
-        AmbiletNotifications.info('Se genereaza exportul...');
+        AmbiletNotifications.info('Se generează exportul...');
 
         const authToken = (typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null);
         if (!authToken) {
-            AmbiletNotifications.error('Sesiune expirata. Te rugam sa te autentifici din nou.');
+            AmbiletNotifications.error('Sesiune expirată. Te rugăm să te autentifici din nou.');
             return;
         }
 
@@ -430,7 +425,7 @@ async function exportSales() {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
 
-        AmbiletNotifications.success('Exportul a fost descarcat');
+        AmbiletNotifications.success('Exportul a fost descărcat');
     } catch (error) {
         console.error('Export error:', error);
         AmbiletNotifications.error(error.message || 'Eroare la export');

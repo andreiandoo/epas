@@ -8,14 +8,14 @@ $skipJsComponents = true;
 ?>
 
 <?php if (defined('USE_STAGE_API') && USE_STAGE_API): ?>
-<div class="bg-amber-500 text-black text-center text-xs font-bold py-1 tracking-wide">
+<div class="py-1 text-xs font-bold tracking-wide text-center text-black bg-amber-500">
     STAGE API — Datele sunt de test
     <a href="?use_stage=0" class="ml-3 underline hover:no-underline">Dezactiveaza</a>
 </div>
 <?php endif; ?>
 
 <!-- Top Header -->
-<header class="sticky top-0 z-30 bg-white border-b border-border">
+<header class="sticky top-0 z-50 border-b border-slate-700 bg-slate-900">
     <div class="flex items-center justify-between h-16 px-4 lg:px-8">
         <!-- Mobile menu button -->
         <button onclick="toggleSidebar()" class="p-2 -ml-2 transition-colors rounded-lg lg:hidden hover:bg-surface">
@@ -47,7 +47,7 @@ $skipJsComponents = true;
                     <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                     <span id="notification-badge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full badge-pulse"></span>
                 </button>
-                <div class="absolute right-0 mt-2 overflow-hidden bg-white border shadow-xl dropdown-menu top-full w-80 rounded-2xl border-border">
+                <div class="absolute right-0 z-50 mt-2 overflow-hidden bg-white border shadow-xl dropdown-menu top-full w-80 rounded-2xl border-border">
                     <div class="flex items-center justify-between p-4 border-b border-border">
                         <h3 class="font-semibold text-secondary">Notificari</h3>
                         <span id="notification-count" class="text-xs font-medium text-primary">0 noi</span>
@@ -65,13 +65,13 @@ $skipJsComponents = true;
 
             <!-- User Menu -->
             <div class="relative dropdown">
-                <button onclick="this.parentElement.classList.toggle('active')" class="flex items-center gap-2 p-1.5 rounded-xl hover:bg-surface transition-colors">
-                    <div class="flex items-center justify-center rounded-full w-9 h-9 bg-primary/10">
+                <button onclick="this.parentElement.classList.toggle('active')" class="flex items-center gap-2 p-1.5 transition-colors">
+                    <div class="flex items-center justify-center bg-white rounded-full w-9 h-9">
                         <span id="topbar-org-initials" class="text-sm font-bold text-primary">--</span>
                     </div>
                     <svg class="hidden w-4 h-4 text-muted sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-                <div class="absolute right-0 w-56 py-2 mt-2 overflow-hidden bg-white border shadow-lg dropdown-menu top-full rounded-xl border-border">
+                <div class="absolute right-0 z-50 w-56 py-2 mt-2 overflow-hidden bg-white border shadow-lg dropdown-menu top-full rounded-xl border-border">
                     <div class="px-4 py-3 border-b border-border">
                         <p id="topbar-org-name" class="font-semibold text-secondary">Organizator</p>
                         <p id="topbar-org-email" class="text-xs text-muted">email@example.com</p>

@@ -259,7 +259,7 @@ const CartPage = {
                             '</svg>' +
                         '</button>' +
                     '</div>' +
-                    '<div class="flex items-center justify-between mt-3 mobile:hidden">' +
+                    '<div class="flex items-center justify-between mt-1 mobile:hidden">' +
                         '<div class="relative inline-block tooltip-trigger">' +
                             '<div class="flex items-center gap-2">' +
                                 '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold text-secondary">' + ticketTypeName +

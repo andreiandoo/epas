@@ -398,12 +398,12 @@ select.pr-10 {
 }
 
 .sidebar-link:hover {
-    background: rgba(165, 28, 48, 0.1);
+    background: rgba(165, 28, 48);
 }
 
 .sidebar-link.active {
-    background: rgba(165, 28, 48, 0.1);
-    color: var(--primary);
+    background: rgba(165, 28, 48);
+    color: #fff;
 }
 
 .sidebar-overlay {

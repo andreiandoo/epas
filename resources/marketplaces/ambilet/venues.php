@@ -414,8 +414,8 @@ const VenuesPage = {
                     <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 hover:scale-105" loading="lazy">
                     <span class="absolute top-3 left-3 px-3 py-1.5 bg-white/95 rounded-md text-xs font-semibold text-gray-600 uppercase tracking-wide">${v.type}</span>
                     <span class="absolute top-3 right-3 px-3 py-1.5 bg-primary rounded-md text-xs font-semibold text-white">${v.eventsCount} evenimente</span>
-                    <div class="absolute top-0 left-0 z-0 w-full h-full bg-gradient-to-b from-transparent to-black/10"></div>
-                    <div class="absolute z-10 text-white left-4 bottom-2">
+                    <div class="absolute top-0 left-0 z-0 hidden w-full h-full bg-gradient-to-b from-transparent to-black/70 mobile:block"></div>
+                    <div class="absolute z-10 hidden text-white mobile:block left-4 bottom-2">
                         <h3 class="mb-2 text-lg font-bold leading-tight text-white">${v.name}</h3>
                         <div class="flex items-center gap-1.5 text-sm text-gray-100">
                             <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -426,7 +426,7 @@ const VenuesPage = {
                         </div>
                     </div>
                 </div>
-                <div class="p-5 mobile:hidden">
+                <div class="p-4 mobile:hidden">
                     <h3 class="mb-2 text-lg font-bold leading-tight text-secondary">${v.name}</h3>
                     <div class="flex items-center gap-1.5 text-sm text-muted mb-3">
                         <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -434,22 +434,6 @@ const VenuesPage = {
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
                         ${v.location}
-                    </div>
-                    <div class="flex gap-4 pt-3 border-t border-gray-100 mobile:hidden">
-                        <span class="flex items-center gap-1.5 text-sm text-muted">
-                            <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                            </svg>
-                            ${v.capacity} locuri
-                        </span>
-                        <span class="flex items-center gap-1.5 text-sm text-muted">
-                            <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 18V5l12-2v13"/>
-                                <circle cx="6" cy="18" r="3"/>
-                            </svg>
-                            ${v.eventTypes}
-                        </span>
                     </div>
                 </div>
             </a>
