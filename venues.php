@@ -54,7 +54,7 @@ include __DIR__ . '/includes/header.php';
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" id="searchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+            <input type="text" id="venuesSearchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
         <!-- Selects row: scrollable on mobile, flex-wrap on desktop -->
         <div class="flex items-center gap-3 pb-1 overflow-x-auto lg:flex-wrap scrollbar-hide mobile:-mx-6 mobile:px-6">
@@ -175,13 +175,31 @@ const VenuesPage = {
         await Promise.all([this.loadVenues(), this.loadCategories()]);
         this.buildCityDropdown();
         this.bindEvents();
+        this.applyUrlFilters();
         this.filterVenues();
+    },
+
+    // Activate the matching category tab when the user lands here with
+    // ?category=<slug> (used by the mega-menu dropdown so clicking a
+    // category actually narrows the list instead of just opening /locatii).
+    applyUrlFilters() {
+        const params = new URLSearchParams(window.location.search);
+        const categorySlug = params.get('category');
+        if (!categorySlug) return;
+        const tab = document.querySelector('.category-tab[data-category="' + CSS.escape(categorySlug) + '"]');
+        if (!tab) return;
+        document.querySelectorAll('.category-tab').forEach(t => {
+            t.classList.remove('active', 'bg-primary', 'text-white');
+            t.classList.add('bg-gray-100', 'text-gray-700');
+        });
+        tab.classList.add('active', 'bg-primary', 'text-white');
+        tab.classList.remove('bg-gray-100', 'text-gray-700');
     },
 
     bindEvents() {
         const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-        document.getElementById('searchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
+        document.getElementById('venuesSearchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
         document.getElementById('cityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('capacityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('sortFilter')?.addEventListener('change', () => this.filterVenues());
@@ -334,7 +352,7 @@ const VenuesPage = {
     },
 
     filterVenues() {
-        const searchRaw = document.getElementById('searchInput')?.value || '';
+        const searchRaw = document.getElementById('venuesSearchInput')?.value || '';
         const search = this.normalize(searchRaw);
         const city = document.getElementById('cityFilter')?.value || '';
         const capacityRange = document.getElementById('capacityFilter')?.value || '';
@@ -396,8 +414,8 @@ const VenuesPage = {
                     <img src="${v.image}" alt="${v.name}" class="object-cover w-full h-full transition-transform duration-500 hover:scale-105" loading="lazy">
                     <span class="absolute top-3 left-3 px-3 py-1.5 bg-white/95 rounded-md text-xs font-semibold text-gray-600 uppercase tracking-wide">${v.type}</span>
                     <span class="absolute top-3 right-3 px-3 py-1.5 bg-primary rounded-md text-xs font-semibold text-white">${v.eventsCount} evenimente</span>
-                    <div class="absolute top-0 left-0 z-0 w-full h-full bg-gradient-to-b from-transparent to-black/10"></div>
-                    <div class="absolute z-10 text-white left-4 bottom-2">
+                    <div class="absolute top-0 left-0 z-0 hidden w-full h-full bg-gradient-to-b from-transparent to-black/70 mobile:block"></div>
+                    <div class="absolute z-10 hidden text-white mobile:block left-4 bottom-2">
                         <h3 class="mb-2 text-lg font-bold leading-tight text-white">${v.name}</h3>
                         <div class="flex items-center gap-1.5 text-sm text-gray-100">
                             <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -408,7 +426,7 @@ const VenuesPage = {
                         </div>
                     </div>
                 </div>
-                <div class="p-5 mobile:hidden">
+                <div class="p-4 mobile:hidden">
                     <h3 class="mb-2 text-lg font-bold leading-tight text-secondary">${v.name}</h3>
                     <div class="flex items-center gap-1.5 text-sm text-muted mb-3">
                         <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -416,22 +434,6 @@ const VenuesPage = {
                             <circle cx="12" cy="10" r="3"/>
                         </svg>
                         ${v.location}
-                    </div>
-                    <div class="flex gap-4 pt-3 border-t border-gray-100 mobile:hidden">
-                        <span class="flex items-center gap-1.5 text-sm text-muted">
-                            <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                            </svg>
-                            ${v.capacity} locuri
-                        </span>
-                        <span class="flex items-center gap-1.5 text-sm text-muted">
-                            <svg class="w-4 h-4 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 18V5l12-2v13"/>
-                                <circle cx="6" cy="18" r="3"/>
-                            </svg>
-                            ${v.eventTypes}
-                        </span>
                     </div>
                 </div>
             </a>

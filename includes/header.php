@@ -446,7 +446,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <?php if (!empty($navVenueTypes)): ?>
                             <div class="flex gap-2.5 mt-5 pt-5 border-t border-gray-200">
                                 <?php foreach ($navVenueTypes as $type): ?>
-                                <a href="/locatii/<?= $type['slug'] ?>" class="flex-1 flex items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-lg text-gray-600 hover:bg-primary hover:text-white transition-all group/type">
+                                <a href="/locatii?category=<?= urlencode($type['slug']) ?>" class="flex-1 flex items-center gap-2.5 px-4 py-3 bg-gray-50 rounded-lg text-gray-600 hover:bg-primary hover:text-white transition-all group/type">
                                     <div class="flex items-center justify-center transition-all bg-white rounded-lg w-9 h-9 group-hover/type:bg-white/20 group-hover/type:text-white">
                                         <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $type['icon'] ?></svg>
                                     </div>
@@ -668,7 +668,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         </div>
         <div class="hidden pb-4 mobile-dropdown">
             <?php foreach ($navVenueTypes as $type): ?>
-            <a href="/locatii/<?= $type['slug'] ?>" class="flex items-center gap-3 p-3 mb-2 text-gray-900 rounded-lg bg-gray-50">
+            <a href="/locatii?category=<?= urlencode($type['slug']) ?>" class="flex items-center gap-3 p-3 mb-2 text-gray-900 rounded-lg bg-gray-50">
                 <div class="flex items-center justify-center text-gray-500 bg-white rounded-lg shadow-sm w-9 h-9">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $type['icon'] ?></svg>
                 </div>

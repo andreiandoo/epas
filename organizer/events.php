@@ -285,7 +285,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                         </div>
                                     </div>
                                     <p class="mt-1 text-xs text-muted">Cauta in biblioteca de locatii sau scrie manual</p>
-                                    <div id="venue-suggestion-notice" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <div id="venue-suggestion-notice" class="hidden p-3 mt-2 border rounded-lg bg-amber-50 border-amber-200">
                                         <div class="flex items-start gap-2">
                                             <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                             <p class="text-sm text-amber-800">Aceasta locatie nu exista in biblioteca noastra. Numele introdus va fi trimis ca sugestie catre administratorul platformei.</p>
@@ -807,8 +807,8 @@ function renderEvents(events) {
 
         // Generate Analytics/Report button
         const analyticsButton = isEnded
-            ? `<a href="/organizator/report/${event.id}" class="btn btn-sm btn-secondary" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`
-            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analytics"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></a>`;
+            ? `<a href="/organizator/report/${event.id}" class="btn btn-sm btn-secondary" title="Raport"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Raport</a>`
+            : `<a href="/organizator/analytics/${event.id}" class="btn btn-sm btn-secondary" title="Analiză"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> Analiză</a>`;
 
         // Promote button (only for ongoing events)
         const promoteButton = isOngoing
@@ -816,10 +816,10 @@ function renderEvents(events) {
             : '';
 
         // Documents button
-        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></a>`;
+        const documentsButton = `<a href="/organizator/documente?event=${event.id}" class="btn btn-sm btn-secondary" title="Documente"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> Documente</a>`;
 
         // Finance button
-        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm btn-secondary" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></a>`;
+        const financeButton = `<a href="/organizator/sold?event=${event.id}" class="btn btn-sm btn-secondary" title="Finanțe"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Vânzări</a>`;
 
         // View/Preview button - use /bilete/{slug} for published, add ?preview=1 for drafts
         const isPublishedEvent = event.status === 'published' || event.is_public;
@@ -829,7 +829,7 @@ function renderEvents(events) {
         return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col md:items-center md:flex-row">
-                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full h-40 rounded-tr-none rounded-br-none md:w-28 rounded-xl" loading="lazy">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 md:w-28 rounded-xl" loading="lazy">
                 <div class="flex-1 py-2">
                     <div class="flex items-center justify-between gap-4 pr-4">
                         <div class="flex items-center gap-4 pl-6">
@@ -845,21 +845,21 @@ function renderEvents(events) {
                                 ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
                             </div>
                         </div>
-                        <div class="flex flex-wrap items-center justify-end gap-2 pr-4">
-                            ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></a>` : ''}
-                            ${documentsButton}
-                            ${financeButton}
-                            ${analyticsButton}
-                            ${promoteButton}
-                            ${viewButton}
-                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+                        <div class="grid grid-cols-4 gap-4">
+                            <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                            <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
+                            <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                            <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-4 pt-4 pl-6 mt-4 border-t border-border">
-                        <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
-                        <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
+                    <div class="flex flex-wrap items-center justify-end gap-2 px-4 pt-4 mt-4 border-t border-border">
+                        ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
+                        ${documentsButton}
+                        ${financeButton}
+                        ${analyticsButton}
+                        ${promoteButton}
+                        ${viewButton}
+                        ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                     </div>
                 </div>
             </div>
@@ -868,23 +868,23 @@ function renderEvents(events) {
 }
 
 async function deleteEvent(eventId, eventName) {
-    if (!confirm(`Esti sigur ca vrei sa stergi evenimentul "${eventName}"?\n\nAceasta actiune este ireversibila.`)) {
+    if (!confirm(`Ești sigur că vrei să ștergi evenimentul "${eventName}"?\n\nAceasta acțiune este ireversibilă.`)) {
         return;
     }
 
     try {
-        AmbiletNotifications.info('Se sterge evenimentul...');
+        AmbiletNotifications.info('Se șterge evenimentul...');
         const response = await AmbiletAPI.delete(`/organizer/events/${eventId}`);
 
         if (response.success) {
-            AmbiletNotifications.success('Evenimentul a fost sters cu succes');
+            AmbiletNotifications.success('Evenimentul a fost șters cu succes');
             loadEvents(); // Reload the events list
         } else {
-            AmbiletNotifications.error(response.message || 'Eroare la stergerea evenimentului');
+            AmbiletNotifications.error(response.message || 'Eroare la ștergerea evenimentului');
         }
     } catch (error) {
         console.error('Delete event error:', error);
-        AmbiletNotifications.error(error.message || 'Eroare la stergerea evenimentului');
+        AmbiletNotifications.error(error.message || 'Eroare la ștergerea evenimentului');
     }
 }
 
@@ -947,7 +947,7 @@ async function loadEventForEdit(eventId) {
         const event = response.data?.event || response.event || response.data || response;
 
         if (!event || !event.id) {
-            AmbiletNotifications.error('Evenimentul nu a fost gasit.');
+            AmbiletNotifications.error('Evenimentul nu a fost găsit.');
             window.location.href = '/organizator/events';
             return;
         }
@@ -994,7 +994,7 @@ async function loadEventForEdit(eventId) {
         const submitReviewBtn = document.getElementById('submit-review-btn');
 
         if (isPublished) {
-            // Hide "Salveaza ciorna" buttons for published events
+            // Hide "Salvează ciorna" buttons for published events
             if (saveDraftBtn) saveDraftBtn.style.display = 'none';
             bottomDraftBtns.forEach(btn => {
                 if (btn !== saveDraftBtn) btn.style.display = 'none';
@@ -1008,7 +1008,7 @@ async function loadEventForEdit(eventId) {
             if (saveDraftBtn) saveDraftBtn.style.display = '';
             bottomDraftBtns.forEach(btn => btn.style.display = '');
             if (submitReviewBtn) {
-                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Salveaza si trimite spre aprobare';
+                submitReviewBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Salvează și trimite spre aprobare';
             }
         }
 
