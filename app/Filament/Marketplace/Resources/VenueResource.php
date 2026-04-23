@@ -324,8 +324,8 @@ class VenueResource extends Resource
                             ]),
                     ]),
 
+                    // Row 1: Location (3 cols) + Capacity (2 cols) — same row totalling 5
                     SC\Grid::make(5)->schema([
-                        // LOCATION
                         SC\Section::make('Location')
                             ->icon('heroicon-o-map-pin')
                             ->columnSpan(3)
@@ -363,76 +363,6 @@ class VenueResource extends Resource
                                     ->prefixIcon('heroicon-o-map')
                                     ->columnSpanFull(),
                             ])->columns(2),
-                        // GOOGLE REVIEWS
-                        SC\Section::make('Google Reviews')
-                            ->icon('heroicon-o-star')
-                            ->description('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.')
-                            ->columnSpan(3)
-                            ->schema([
-                                Forms\Components\TextInput::make('google_place_id')
-                                    ->label('Google Place ID')
-                                    ->maxLength(255)
-                                    ->placeholder('ChIJ...')
-                                    ->helperText(new HtmlString(
-                                        'Copiază Place ID-ul de la <a href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;">Google Place ID Finder</a>. Apoi salvează și folosește butonul de sincronizare.'
-                                    ))
-                                    ->columnSpanFull(),
-                                Forms\Components\Placeholder::make('google_reviews_preview')
-                                    ->label('Stare cache')
-                                    ->content(function (?Venue $record) {
-                                        if (!$record || empty($record->google_place_id)) {
-                                            return new HtmlString('<span style="color:#6b7280;">Setează Place ID și salvează pentru a putea sincroniza.</span>');
-                                        }
-                                        $cache = $record->google_reviews_cached ?? [];
-                                        if (empty($cache)) {
-                                            return new HtmlString('<span style="color:#b45309;">Niciun cache. Apasă butonul de sincronizare.</span>');
-                                        }
-                                        $rating = $cache['rating'] ?? null;
-                                        $count = $cache['review_count'] ?? 0;
-                                        $updated = $record->google_reviews_updated_at?->diffForHumans() ?? '—';
-                                        $ratingStr = $rating !== null ? number_format((float) $rating, 1) . ' ⭐' : '—';
-                                        return new HtmlString(
-                                            '<div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:14px;">'
-                                            . '<span><strong>Rating:</strong> ' . e($ratingStr) . '</span>'
-                                            . '<span><strong>Recenzii:</strong> ' . number_format((int) $count) . '</span>'
-                                            . '<span><strong>Ultima sincronizare:</strong> ' . e($updated) . '</span>'
-                                            . '</div>'
-                                        );
-                                    })
-                                    ->columnSpanFull(),
-                                SC\Actions::make([
-                                    Action::make('sync_google_reviews')
-                                        ->label('Sincronizare recenzii Google')
-                                        ->icon('heroicon-o-arrow-path')
-                                        ->color('primary')
-                                        ->requiresConfirmation()
-                                        ->modalDescription('Se va face un apel către Google Places API pentru a aduce ratingul, numărul de recenzii și primele recenzii disponibile. Continui?')
-                                        ->visible(fn (?Venue $record) => $record && !empty($record->google_place_id))
-                                        ->action(function (Venue $record) {
-                                            try {
-                                                $service = app(\App\Services\GooglePlacesReviewsService::class);
-                                                $data = $service->fetchReviewsForPlaceId($record->google_place_id);
-                                                $record->forceFill([
-                                                    'google_reviews_cached' => $data,
-                                                    'google_reviews_updated_at' => now(),
-                                                ])->save();
-                                                Notification::make()
-                                                    ->title('Sincronizat ' . count($data['reviews']) . ' recenzii')
-                                                    ->body('Rating: ' . ($data['rating'] ?? '—') . ' • Total recenzii Google: ' . $data['review_count'])
-                                                    ->success()
-                                                    ->send();
-                                            } catch (\Throwable $e) {
-                                                Notification::make()
-                                                    ->title('Eroare la sincronizare')
-                                                    ->body($e->getMessage())
-                                                    ->danger()
-                                                    ->persistent()
-                                                    ->send();
-                                            }
-                                        }),
-                                ])->columnSpanFull(),
-                            ])->columns(1),
-                        // CAPACITY
                         SC\Section::make('Capacity')
                             ->icon('heroicon-o-users')
                             ->columnSpan(2)
@@ -454,6 +384,76 @@ class VenueResource extends Resource
                                     ->placeholder('e.g. 4000'),
                             ]),
                     ]),
+
+                    // Row 2: Google Reviews full-width
+                    SC\Section::make('Google Reviews')
+                        ->icon('heroicon-o-star')
+                        ->description('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.')
+                        ->columnSpanFull()
+                        ->schema([
+                            Forms\Components\TextInput::make('google_place_id')
+                                ->label('Google Place ID')
+                                ->maxLength(255)
+                                ->placeholder('ChIJ...')
+                                ->helperText(new HtmlString(
+                                    'Copiază Place ID-ul de la <a href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;">Google Place ID Finder</a>. Apoi salvează și folosește butonul de sincronizare.'
+                                ))
+                                ->columnSpanFull(),
+                            Forms\Components\Placeholder::make('google_reviews_preview')
+                                ->label('Stare cache')
+                                ->content(function (?Venue $record) {
+                                    if (!$record || empty($record->google_place_id)) {
+                                        return new HtmlString('<span style="color:#6b7280;">Setează Place ID și salvează pentru a putea sincroniza.</span>');
+                                    }
+                                    $cache = $record->google_reviews_cached ?? [];
+                                    if (empty($cache)) {
+                                        return new HtmlString('<span style="color:#b45309;">Niciun cache. Apasă butonul de sincronizare.</span>');
+                                    }
+                                    $rating = $cache['rating'] ?? null;
+                                    $count = $cache['review_count'] ?? 0;
+                                    $updated = $record->google_reviews_updated_at?->diffForHumans() ?? '—';
+                                    $ratingStr = $rating !== null ? number_format((float) $rating, 1) . ' ⭐' : '—';
+                                    return new HtmlString(
+                                        '<div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:14px;">'
+                                        . '<span><strong>Rating:</strong> ' . e($ratingStr) . '</span>'
+                                        . '<span><strong>Recenzii:</strong> ' . number_format((int) $count) . '</span>'
+                                        . '<span><strong>Ultima sincronizare:</strong> ' . e($updated) . '</span>'
+                                        . '</div>'
+                                    );
+                                })
+                                ->columnSpanFull(),
+                            SC\Actions::make([
+                                Action::make('sync_google_reviews')
+                                    ->label('Sincronizare recenzii Google')
+                                    ->icon('heroicon-o-arrow-path')
+                                    ->color('primary')
+                                    ->requiresConfirmation()
+                                    ->modalDescription('Se va face un apel către Google Places API pentru a aduce ratingul, numărul de recenzii și primele recenzii disponibile. Continui?')
+                                    ->visible(fn (?Venue $record) => $record && !empty($record->google_place_id))
+                                    ->action(function (Venue $record) {
+                                        try {
+                                            $service = app(\App\Services\GooglePlacesReviewsService::class);
+                                            $data = $service->fetchReviewsForPlaceId($record->google_place_id);
+                                            $record->forceFill([
+                                                'google_reviews_cached' => $data,
+                                                'google_reviews_updated_at' => now(),
+                                            ])->save();
+                                            Notification::make()
+                                                ->title('Sincronizat ' . count($data['reviews']) . ' recenzii')
+                                                ->body('Rating: ' . ($data['rating'] ?? '—') . ' • Total recenzii Google: ' . $data['review_count'])
+                                                ->success()
+                                                ->send();
+                                        } catch (\Throwable $e) {
+                                            Notification::make()
+                                                ->title('Eroare la sincronizare')
+                                                ->body($e->getMessage())
+                                                ->danger()
+                                                ->persistent()
+                                                ->send();
+                                        }
+                                    }),
+                            ])->columnSpanFull(),
+                        ])->columns(1),
 
                     // CONTACT & LINKS
                     SC\Section::make('Contact & Links')
@@ -630,41 +630,25 @@ class VenueResource extends Resource
                                 ->columnSpanFull(),
                         ]),
 
-                    // Video field
-                    SC\Grid::make(1)->schema([
-                        Forms\Components\Select::make('video_type')
-                            ->label('Video Type')
-                            ->options([
-                                'youtube' => 'YouTube Link',
-                                'upload' => 'Upload Video',
-                            ])
-                            ->placeholder('No video')
-                            ->live()
-                            ->nullable(),
-                        // YouTube URL and upload share the same column (video_url) but
-                        // are toggled by video_type. Explicit dehydrated() on each so
-                        // only the active one writes; the hidden one stays out of the
-                        // save payload instead of blanking the value.
-                        Forms\Components\TextInput::make('video_url')
-                            ->label('YouTube URL')
-                            ->url()
-                            ->placeholder('https://www.youtube.com/watch?v=...')
-                            ->prefixIcon('heroicon-o-play')
-                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube')
-                            ->dehydrated(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
-                    ])->columnSpanFull(),
-
-                    Forms\Components\FileUpload::make('video_url')
-                        ->label('Upload Video')
-                        ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
-                        ->disk('public')
-                        ->directory('venues/videos')
-                        ->visibility('public')
-                        ->maxSize(102400) // 100MB
-                        ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
-                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
-                        ->dehydrated(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
+                    // YouTube URL
+                    Forms\Components\TextInput::make('video_url')
+                        ->label('YouTube URL')
+                        ->url()
+                        ->placeholder('https://www.youtube.com/watch?v=...')
+                        ->prefixIcon('heroicon-o-play')
+                        ->helperText('Link YouTube către un video de prezentare al locației (opțional).')
+                        ->afterStateHydrated(function (\Filament\Forms\Components\TextInput $component, $state, ?\App\Models\Venue $record) {
+                            // Ensure video_type gets marked as youtube whenever a URL exists,
+                            // so existing records created before this simplification still work.
+                            if ($record && filled($record->video_url) && empty($record->video_type)) {
+                                $record->forceFill(['video_type' => 'youtube'])->saveQuietly();
+                            }
+                        })
                         ->columnSpanFull(),
+
+                    // Keep video_type as a hidden companion so legacy rows stay consistent.
+                    Forms\Components\Hidden::make('video_type')
+                        ->dehydrateStateUsing(fn ($state, \Filament\Schemas\Components\Utilities\Get $get) => filled($get('video_url')) ? 'youtube' : null),
 
 
                     // Statistici (doar pe Edit)
