@@ -37,8 +37,20 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
 
         <!-- Main Grid -->
         <div class="grid gap-6 lg:grid-cols-3">
+            <!-- Left column: toggle between Istoric facturi / Istoric deconturi -->
+            <div class="lg:col-span-2 space-y-0">
+                <!-- Section Toggle -->
+                <div class="inline-flex p-1 mb-4 bg-white border rounded-xl border-border" role="tablist" aria-label="Istoric facturi / deconturi">
+                    <button type="button" onclick="BillingManager.setSection('invoices')" data-section-tab="invoices" class="section-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-primary text-white" role="tab" aria-selected="true">
+                        Istoric facturi
+                    </button>
+                    <button type="button" onclick="BillingManager.setSection('payouts')" data-section-tab="payouts" class="section-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-muted hover:bg-slate-50" role="tab" aria-selected="false">
+                        Istoric deconturi
+                    </button>
+                </div>
+
             <!-- Invoices Table -->
-            <div class="overflow-hidden bg-white border lg:col-span-2 rounded-xl border-border">
+            <div id="invoices-section" class="overflow-hidden bg-white border rounded-xl border-border">
                 <div class="flex flex-col gap-4 p-4 border-b sm:flex-row sm:items-center sm:justify-between border-border">
                     <h2 class="text-lg font-semibold text-secondary">Istoric facturi</h2>
                     <div class="flex gap-2">
@@ -97,7 +109,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <!-- Payouts / Deconturi Section -->
-            <div class="overflow-hidden bg-white border lg:col-span-2 rounded-xl border-border">
+            <div id="payouts-section" class="hidden overflow-hidden bg-white border rounded-xl border-border">
                 <div class="flex flex-col gap-4 p-4 border-b sm:flex-row sm:items-center sm:justify-between border-border">
                     <h2 class="text-lg font-semibold text-secondary">Istoric deconturi</h2>
                     <div class="flex gap-2">
@@ -138,6 +150,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     </div>
                 </div>
             </div>
+            </div>
+            <!-- /left column -->
 
             <!-- Right Sidebar -->
             <div class="space-y-6">
@@ -232,6 +246,30 @@ const BillingManager = {
             this.loadInvoices(),
             this.loadBillingInfo()
         ]);
+    },
+
+    // Toggle between "Istoric facturi" and "Istoric deconturi" at the top
+    // of the page. Hidden sections stay lazy — the payouts loader already
+    // runs at page init via PayoutManager, so switching just flips visibility.
+    setSection(section) {
+        const invoicesEl = document.getElementById('invoices-section');
+        const payoutsEl = document.getElementById('payouts-section');
+        if (!invoicesEl || !payoutsEl) return;
+
+        if (section === 'payouts') {
+            invoicesEl.classList.add('hidden');
+            payoutsEl.classList.remove('hidden');
+        } else {
+            payoutsEl.classList.add('hidden');
+            invoicesEl.classList.remove('hidden');
+        }
+
+        document.querySelectorAll('.section-tab').forEach(btn => {
+            const isActive = btn.dataset.sectionTab === section;
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.className = 'section-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all ' +
+                (isActive ? 'bg-primary text-white' : 'text-muted hover:bg-slate-50');
+        });
     },
 
     /**
