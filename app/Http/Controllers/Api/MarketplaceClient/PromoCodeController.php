@@ -209,8 +209,23 @@ class PromoCodeController extends BaseController
             ? "{$couponCode->discount_value}%"
             : number_format($couponCode->discount_value, 2) . ' RON';
 
-        // Build applied_to label from coupon targeting
-        $appliedToLabel = $this->buildCouponAppliedToLabel($couponCode);
+        // Build applied_to label from coupon targeting, narrowed to what's
+        // actually in the cart (so the message shows only cart events/ticket
+        // types the code applies to, not the coupon's full catalog list).
+        $cartEventIds = [];
+        $cartTicketTypeIds = [];
+        foreach ($items as $item) {
+            if (!empty($item['event_id'])) {
+                $cartEventIds[] = (int) $item['event_id'];
+            }
+            if (!empty($item['ticket_type_id'])) {
+                $cartTicketTypeIds[] = (int) $item['ticket_type_id'];
+            }
+        }
+        $cartEventIds = array_values(array_unique($cartEventIds));
+        $cartTicketTypeIds = array_values(array_unique($cartTicketTypeIds));
+
+        $appliedToLabel = $this->buildCouponAppliedToLabel($couponCode, $cartEventIds, $cartTicketTypeIds);
 
         return $this->success([
             'valid' => true,
@@ -288,22 +303,40 @@ class PromoCodeController extends BaseController
     /**
      * Build a human-readable label for what the coupon code applies to
      */
-    protected function buildCouponAppliedToLabel(CouponCode $coupon): ?string
+    protected function buildCouponAppliedToLabel(CouponCode $coupon, ?array $cartEventIds = null, ?array $cartTicketTypeIds = null): ?string
     {
         $parts = [];
 
-        // Ticket type names (CouponCode stores TicketType IDs from ticket_types table)
+        // Ticket type names (CouponCode stores TicketType IDs from ticket_types table).
+        // When cart context is supplied, narrow the list to ticket types actually in the cart.
         if (!empty($coupon->applicable_ticket_types)) {
             $ttIds = array_map('intval', $coupon->applicable_ticket_types);
-            $ttNames = \App\Models\TicketType::whereIn('id', $ttIds)->pluck('name')->toArray();
-            if ($ttNames) {
-                $parts[] = implode(', ', $ttNames);
+            if ($cartTicketTypeIds !== null) {
+                $ttIds = array_values(array_intersect($ttIds, $cartTicketTypeIds));
+            }
+            if (!empty($ttIds)) {
+                $ttNames = \App\Models\TicketType::whereIn('id', $ttIds)->pluck('name')->toArray();
+                if ($ttNames) {
+                    $parts[] = implode(', ', $ttNames);
+                }
             }
         }
 
-        // Event names (CouponCode stores Event IDs from events table)
+        // Event names (CouponCode stores Event IDs from events table).
+        // When cart context is supplied, narrow to events in the cart the code
+        // applies to; when the coupon has no restriction list, show the cart's
+        // events so the label still reflects what's in the order.
+        $eventIds = null;
         if (!empty($coupon->applicable_events)) {
             $eventIds = array_map('intval', $coupon->applicable_events);
+            if ($cartEventIds !== null) {
+                $eventIds = array_values(array_intersect($eventIds, $cartEventIds));
+            }
+        } elseif ($cartEventIds !== null && !empty($cartEventIds)) {
+            $eventIds = $cartEventIds;
+        }
+
+        if (!empty($eventIds)) {
             $events = \App\Models\Event::whereIn('id', $eventIds)->get();
             $eventNames = $events->map(function ($event) {
                 $title = $event->title;

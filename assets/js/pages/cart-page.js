@@ -597,6 +597,24 @@ const CartPage = {
         return parts.join(' | ');
     },
 
+    // Markup for the applied-promo message. Includes an "×" button so the
+    // user can actually remove the code after applying it.
+    renderAppliedPromoMessage(promo, prefix) {
+        const label = promo.type === 'percentage'
+            ? `-${promo.value}% reducere`
+            : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
+        const appliedTo = promo.appliedToLabel
+            ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
+            : '';
+        const codeSuffix = prefix.includes(':') ? '' : ` (${promo.code})`;
+        return `<span class="inline-flex items-start gap-2">
+                    <span class="flex-1">${prefix} ${label}${codeSuffix}${appliedTo}</span>
+                    <button type="button" onclick="CartPage.removePromo()" class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 text-muted hover:text-primary hover:bg-primary/10 rounded-full transition-colors" aria-label="Elimină codul promoțional" title="Elimină codul">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </span>`;
+    },
+
     async applyPromo() {
         const code = document.getElementById('promoCode').value.trim().toUpperCase();
         const messageEl = document.getElementById('promoMessage');
@@ -619,13 +637,7 @@ const CartPage = {
             this.discount = AmbiletCart.getPromoDiscount();
             this.appliedPromo = code;
 
-            const label = promo.type === 'percentage'
-                ? `-${promo.value}% reducere`
-                : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
-            const appliedTo = promo.appliedToLabel
-                ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
-                : '';
-            messageEl.innerHTML = `✓ Cod aplicat! ${label}${appliedTo}`;
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, '✓ Cod aplicat!');
             messageEl.className = 'mt-2 text-sm text-success';
             messageEl.classList.remove('hidden');
 
@@ -641,21 +653,43 @@ const CartPage = {
         }
     },
 
+    // Clear the applied promo code and reset the UI so a new code can be entered.
+    removePromo() {
+        AmbiletCart.removePromoCode();
+        this.appliedPromo = null;
+        this.discount = 0;
+
+        const messageEl = document.getElementById('promoMessage');
+        if (messageEl) {
+            messageEl.innerHTML = '';
+            messageEl.classList.add('hidden');
+        }
+        const input = document.getElementById('promoCode');
+        if (input) { input.value = ''; input.disabled = false; }
+        const btn = document.querySelector('#promo-section button');
+        if (btn) { btn.textContent = 'Aplică'; btn.disabled = false; }
+
+        this.updateSummary();
+    },
+
     loadExistingPromo() {
         const promo = AmbiletCart.getPromoCode();
         if (!promo) return;
+
+        // If the cart is empty, any promo left in storage is stale (e.g. the
+        // previous order finished but the cart was reopened before storage
+        // cleared) — wipe it so the new order starts fresh.
+        if (AmbiletCart.getItemCount() === 0) {
+            AmbiletCart.removePromoCode();
+            return;
+        }
+
         this.discount = AmbiletCart.getPromoDiscount();
         this.appliedPromo = promo.code;
 
         const messageEl = document.getElementById('promoMessage');
         if (messageEl) {
-            const label = promo.type === 'percentage'
-                ? `-${promo.value}% reducere`
-                : `-${AmbiletUtils.formatCurrency(promo.value)} reducere`;
-            const appliedTo = promo.appliedToLabel
-                ? `<br><span class="text-xs text-muted">Aplicat pe: ${promo.appliedToLabel}</span>`
-                : '';
-            messageEl.innerHTML = `✓ Cod aplicat: ${promo.code} (${label})${appliedTo}`;
+            messageEl.innerHTML = this.renderAppliedPromoMessage(promo, `✓ Cod aplicat: ${promo.code}`);
             messageEl.className = 'mt-2 text-sm text-success';
             messageEl.classList.remove('hidden');
         }
