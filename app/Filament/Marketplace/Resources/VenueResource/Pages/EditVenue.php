@@ -17,6 +17,7 @@ class EditVenue extends EditRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('index');
+        // Stay on the edit page after save instead of bouncing back to the list.
+        return $this->getResource()::getUrl('edit', ['record' => $this->record]);
     }
 }

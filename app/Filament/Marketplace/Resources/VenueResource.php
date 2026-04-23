@@ -619,17 +619,6 @@ class VenueResource extends Resource
                         ]),
 
                     // SCHEDULE
-                    SC\Section::make('Established')
-                        ->icon('heroicon-o-clock')
-                        ->compact()
-                        ->schema([
-                            Forms\Components\DatePicker::make('established_at')
-                                ->label('Established')
-                                ->native(false)
-                                ->columnSpanFull(),
-                        ]),
-
-                    // SCHEDULE
                     SC\Section::make('Program')
                         ->icon('heroicon-o-clock')
                         ->compact()
@@ -652,12 +641,17 @@ class VenueResource extends Resource
                             ->placeholder('No video')
                             ->live()
                             ->nullable(),
+                        // YouTube URL and upload share the same column (video_url) but
+                        // are toggled by video_type. Explicit dehydrated() on each so
+                        // only the active one writes; the hidden one stays out of the
+                        // save payload instead of blanking the value.
                         Forms\Components\TextInput::make('video_url')
                             ->label('YouTube URL')
                             ->url()
                             ->placeholder('https://www.youtube.com/watch?v=...')
                             ->prefixIcon('heroicon-o-play')
-                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube')
+                            ->dehydrated(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
                     ])->columnSpanFull(),
 
                     Forms\Components\FileUpload::make('video_url')
@@ -669,6 +663,7 @@ class VenueResource extends Resource
                         ->maxSize(102400) // 100MB
                         ->afterStateUpdated(fn ($livewire) => $livewire->skipRender())
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
+                        ->dehydrated(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
                         ->columnSpanFull(),
 
 
