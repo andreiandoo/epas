@@ -1,40 +1,39 @@
 /**
  * Ambilet.ro - Venue Single Page Controller
- * Handles venue detail page with events, gallery, info, and similar venues
+ * Populates the layout defined in venue-single.php. Handles events list
+ * (with category filter tabs), stats tiles, about + amenities block,
+ * Google reviews grid (gated), quick-info sidebar, map, similar venues,
+ * share dropdown, gallery lightbox and the mobile sticky CTA.
  *
- * Dependencies: AmbiletAPI, AmbiletEventCard
+ * Dependencies: AmbiletAPI, AmbiletUtils, AmbiletAuth
  */
 
 const VenuePage = {
-    // Configuration
     venueSlug: '',
     venue: null,
     isFollowing: false,
 
-    // Month names for date formatting
-    monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOI', 'DEC'],
+    // Event filter state
+    currentEventFilter: 'all',
 
-    // DOM element IDs
+    // Gallery lightbox state
+    lightboxImages: [],
+    lightboxCurrent: 0,
+
+    // Share
+    shareUrl: typeof window !== 'undefined' ? window.location.href : '',
+
+    monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOI', 'DEC'],
+    weekdayNames: ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'],
+
     elements: {
-        hero: 'venueHero',
         heroImage: 'heroImage',
-        breadcrumbName: 'breadcrumbName',
-        venueType: 'venueType',
         venueName: 'venueName',
         venueLocation: 'venueLocation',
-        venueCapacity: 'venueCapacity',
-        venueEventsCount: 'venueEventsCount',
-        venueRating: 'venueRating',
-        venueYear: 'venueYear',
-        venueAbout: 'venueAbout',
         quickInfo: 'quickInfo',
         venueAddress: 'venueAddress',
         mapsLink: 'mapsLink',
         venueMap: 'venueMap',
-        venueAmenities: 'venueAmenities',
-        amenitiesSection: 'amenitiesSection',
-        venueGallery: 'venueGallery',
-        gallerySection: 'gallerySection',
         eventsList: 'eventsList',
         similarVenues: 'similarVenues',
         similarVenuesSection: 'similarVenuesSection',
@@ -43,28 +42,49 @@ const VenuePage = {
         followText: 'follow-text'
     },
 
-    /**
-     * Initialize the page
-     */
     async init() {
-        // Get slug from window variable (set by PHP from htaccess rewrite)
         this.venueSlug = window.VENUE_SLUG || '';
-
         if (!this.venueSlug) {
             this.showError('Locația nu a fost găsită');
             return;
         }
 
+        this.shareUrl = window.location.href;
+        this.bindGlobalHandlers();
+
         await this.loadVenueData();
         this.loadFollowStatus();
     },
 
-    /**
-     * Load venue data from API
-     */
+    bindGlobalHandlers() {
+        const self = this;
+        // Close share dropdown on outside click
+        document.addEventListener('click', function (e) {
+            const dd = document.getElementById('shareDropdown');
+            const btn = document.getElementById('shareBtn');
+            if (!dd || dd.classList.contains('hidden')) return;
+            if (dd.contains(e.target) || (btn && btn.contains(e.target))) return;
+            dd.classList.add('hidden');
+        });
+        // Keyboard: Esc closes lightbox / share; arrows navigate lightbox
+        document.addEventListener('keydown', function (e) {
+            const lightbox = document.getElementById('galleryLightbox');
+            const lbOpen = lightbox && !lightbox.classList.contains('hidden');
+            if (e.key === 'Escape') {
+                if (lbOpen) self.closeLightbox();
+                const dd = document.getElementById('shareDropdown');
+                if (dd) dd.classList.add('hidden');
+            }
+            if (lbOpen) {
+                if (e.key === 'ArrowRight') self.lightboxNext();
+                if (e.key === 'ArrowLeft') self.lightboxPrev();
+            }
+        });
+    },
+
     async loadVenueData() {
         try {
-            var response = await AmbiletAPI.getVenue(this.venueSlug);
+            const response = await AmbiletAPI.getVenue(this.venueSlug);
             if (response.success && response.data) {
                 this.venue = this.transformApiData(response.data);
                 this.render();
@@ -81,399 +101,600 @@ const VenuePage = {
         }
     },
 
-    /**
-     * Transform API response to expected format
-     */
     transformApiData(apiData) {
-        if (!apiData) {
-            return null;
-        }
+        if (!apiData) return null;
 
-        var self = this;
+        const self = this;
 
-        // Transform upcoming_events to expected format
-        var events = [];
-        if (apiData.upcoming_events && apiData.upcoming_events.length > 0) {
-            events = apiData.upcoming_events.map(function(e) {
-                var date = new Date(e.event_date || e.starts_at);
-                return {
-                    slug: e.slug,
-                    day: String(date.getDate()).padStart(2, '0'),
-                    month: self.monthNames[date.getMonth()],
-                    category: e.category || 'Eveniment',
-                    title: e.title || e.name,
-                    time: e.start_time ? e.start_time.substring(0, 5) : '20:00',
-                    price: e.min_price || e.price_from || 0,
-                    currency: e.currency || 'RON',
-                    is_sold_out: e.is_sold_out || false
-                };
-            });
-        }
+        // Upcoming events (raw + formatted shape)
+        const events = (apiData.upcoming_events || []).map(function (e) {
+            const date = new Date(e.event_date || e.starts_at);
+            const categoryName = (e.category && e.category.name) || e.category || '';
+            const categorySlug = (e.category && e.category.slug) || self.slugify(categoryName);
+            return {
+                id: e.id,
+                slug: e.slug,
+                title: e.title || e.name,
+                date: date,
+                day: String(date.getDate()).padStart(2, '0'),
+                monthShort: self.monthNames[date.getMonth()],
+                weekday: self.weekdayNames[date.getDay()],
+                time: e.start_time ? e.start_time.substring(0, 5) : null,
+                categoryName: categoryName,
+                categorySlug: categorySlug,
+                priceFrom: e.price_from || e.min_price || 0,
+                currency: e.currency || 'RON',
+                image: e.hero_image_url || e.poster_url || e.image || null,
+                isSoldOut: e.is_sold_out || false,
+                isCancelled: e.is_cancelled || false
+            };
+        });
 
-        // Get primary category as type
-        var venueType = 'Locație';
-        if (apiData.categories && apiData.categories.length > 0) {
-            venueType = apiData.categories[0].name;
-        } else if (apiData.type) {
-            venueType = apiData.type;
-        }
+        // Category filter options derived from events
+        const categoryCounts = {};
+        events.forEach(function (ev) {
+            if (!ev.categorySlug) return;
+            if (!categoryCounts[ev.categorySlug]) {
+                categoryCounts[ev.categorySlug] = { slug: ev.categorySlug, name: ev.categoryName, count: 0 };
+            }
+            categoryCounts[ev.categorySlug].count++;
+        });
+        const eventCategories = Object.values(categoryCounts);
 
-        // Build full address
-        var addressParts = [apiData.address];
+        // Primary venue category (first one) — used as hero badge
+        const primaryCategory = (apiData.categories && apiData.categories[0]) || null;
+
+        // Address
+        const addressParts = [apiData.address];
         if (apiData.city) addressParts.push(apiData.city);
         if (apiData.postal_code) addressParts.push(apiData.postal_code);
-        var fullAddress = addressParts.filter(Boolean).join(', ');
+        const fullAddress = addressParts.filter(Boolean).join(', ');
 
-        // Format capacity with thousands separator
-        var capacityStr = apiData.capacity ? apiData.capacity.toLocaleString('ro-RO') : '-';
+        // Gallery — accept both facilities-style objects and plain strings
+        const galleryUrls = (apiData.gallery || apiData.images || []).map(function (g) {
+            if (!g) return null;
+            if (typeof g === 'string') return g;
+            return g.url || g.src || null;
+        }).filter(Boolean);
+        // Fall back to the cover image so the lightbox still shows something
+        // when the venue didn't upload an explicit gallery.
+        if (galleryUrls.length === 0 && apiData.cover_image) galleryUrls.push(apiData.cover_image);
+        if (galleryUrls.length === 0 && apiData.image) galleryUrls.push(apiData.image);
 
-        // Similar venues from API or empty
-        var similarVenues = [];
-        if (apiData.similar_venues && apiData.similar_venues.length > 0) {
-            similarVenues = apiData.similar_venues.map(function(v) {
-                return {
-                    slug: v.slug,
-                    name: v.name,
-                    location: v.city + (v.capacity ? ' · ' + v.capacity.toLocaleString('ro-RO') + ' locuri' : ''),
-                    events: v.events_count || 0,
-                    image: v.image || '/assets/images/default_venue.jpg'
-                };
+        // Facilities (backend returns `facilities`); fall back to `amenities`.
+        let amenities = [];
+        if (Array.isArray(apiData.facilities) && apiData.facilities.length > 0) {
+            amenities = apiData.facilities.map(function (f) {
+                if (typeof f === 'string') return { label: f, icon: '' };
+                return { label: f.label || f.name || '', icon: f.icon || '' };
+            }).filter(function (f) { return !!f.label; });
+        } else if (Array.isArray(apiData.amenities) && apiData.amenities.length > 0) {
+            amenities = apiData.amenities.map(function (a) {
+                return typeof a === 'string' ? { label: a, icon: '' } : { label: a.label || '', icon: a.icon || '' };
             });
         }
 
+        // Similar venues
+        const similarVenues = (apiData.similar_venues || []).map(function (v) {
+            return {
+                slug: v.slug,
+                name: v.name,
+                city: v.city || '',
+                eventsCount: v.events_count || 0,
+                image: v.image || null,
+                categoryName: (v.categories && v.categories[0] && v.categories[0].name) || ''
+            };
+        });
+
         return {
-            name: apiData.name || 'Locație necunoscută',
+            name: apiData.name || 'Locație',
             slug: apiData.slug,
-            type: venueType,
-            location: apiData.city || '',
+            primaryCategory: primaryCategory,
+            city: apiData.city || '',
             address: fullAddress,
             latitude: apiData.latitude || apiData.lat,
             longitude: apiData.longitude || apiData.lng,
-            capacity: capacityStr,
-            rating: (apiData.google_reviews && apiData.google_reviews.rating != null)
-                ? Number(apiData.google_reviews.rating).toFixed(1)
-                : (apiData.rating || '-'),
-            reviewsCount: (apiData.google_reviews && apiData.google_reviews.review_count != null)
-                ? Number(apiData.google_reviews.review_count)
-                : (apiData.reviews_count || 0),
-            googleReviews: apiData.google_reviews || null,
-            yearBuilt: apiData.year_built || '-',
+            googleMapsUrl: apiData.google_maps_url || null,
+            capacity: apiData.capacity ? Number(apiData.capacity).toLocaleString('ro-RO') : null,
             eventsCount: apiData.events_count || events.length,
+            yearBuilt: apiData.established_at || apiData.year_built || null,
             image: apiData.cover_image || apiData.image || '/assets/images/default_venue.jpg',
+            portrait: apiData.portrait || null,
             description: apiData.description || '',
-            phone: apiData.phone || (apiData.contact ? apiData.contact.phone : null) || '',
-            email: apiData.email || (apiData.contact ? apiData.contact.email : null) || '',
-            website: apiData.website || (apiData.contact ? apiData.contact.website : null) || '',
-            facebook: apiData.social ? apiData.social.facebook : (apiData.facebook_url || ''),
-            instagram: apiData.social ? apiData.social.instagram : (apiData.instagram_url || ''),
-            tiktok: apiData.social ? apiData.social.tiktok : (apiData.tiktok_url || ''),
-            schedule: apiData.schedule || 'În funcție de evenimente',
-            amenities: apiData.amenities || [],
-            gallery: apiData.gallery || apiData.images || [],
+            phone: apiData.phone || (apiData.contact && apiData.contact.phone) || '',
+            email: apiData.email || (apiData.contact && apiData.contact.email) || '',
+            website: apiData.website || (apiData.contact && apiData.contact.website) || '',
+            facebook: (apiData.social && apiData.social.facebook) || apiData.facebook_url || '',
+            instagram: (apiData.social && apiData.social.instagram) || apiData.instagram_url || '',
+            tiktok: (apiData.social && apiData.social.tiktok) || apiData.tiktok_url || '',
+            schedule: apiData.schedule || '',
+            amenities: amenities,
+            gallery: galleryUrls,
             events: events,
-            // Store raw events for AmbiletEventCard which handles commission
-            rawEvents: apiData.upcoming_events || [],
+            eventCategories: eventCategories,
+            googleReviews: apiData.google_reviews || null,
             similarVenues: similarVenues
         };
     },
 
-    /**
-     * Show error message
-     */
     showError(message) {
-        var skeleton = document.querySelector('.skeleton-hero');
+        const skeleton = document.querySelector('.skeleton-hero');
         if (skeleton) skeleton.remove();
-
-        var heroSection = document.getElementById(this.elements.hero);
-        if (heroSection) {
-            heroSection.innerHTML =
-                '<div class="flex items-center justify-center h-full bg-gray-100">' +
-                    '<div class="text-center">' +
-                        '<svg class="w-16 h-16 mx-auto mb-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
-                            '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
-                            '<circle cx="12" cy="10" r="3"/>' +
-                        '</svg>' +
-                        '<h2 class="text-xl font-bold text-gray-700">' + this.escapeHtml(message) + '</h2>' +
+        const hero = document.getElementById('venueHero');
+        if (hero) {
+            hero.innerHTML =
+                '<div class="flex items-center justify-center h-full bg-slate-100">' +
+                    '<div class="text-center p-6">' +
+                        '<svg class="w-16 h-16 mx-auto mb-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+                        '<h2 class="text-xl font-bold text-slate-700">' + this.escapeHtml(message) + '</h2>' +
                         '<a href="/locatii" class="inline-block px-6 py-3 mt-4 text-white rounded-lg bg-primary hover:bg-primary-dark">Vezi toate locațiile</a>' +
                     '</div>' +
                 '</div>';
         }
     },
 
-    /**
-     * Render all venue content
-     */
+    /** Top-level render pipeline */
     render() {
-        var venue = this.venue;
+        const venue = this.venue;
+        if (!venue) return;
 
-        // Hero image — use portrait on mobile if available
-        var heroImg = document.getElementById(this.elements.heroImage);
+        this.renderHero(venue);
+        this.renderStats(venue);
+        this.renderAboutAndAmenities(venue);
+        this.renderReviewsSection(venue.googleReviews);
+        this.renderEventFilterTabs(venue.eventCategories, venue.events.length);
+        this.renderEvents(venue.events, 'all');
+        this.renderEventsSubheader(venue.events);
+        this.renderQuickInfo(venue);
+        this.renderAddress(venue);
+        this.renderMap(venue);
+        this.renderGalleryButton(venue.gallery);
+        this.renderMobileStickyCta(venue.events);
+        this.renderSimilarVenues(venue.similarVenues);
+        this.setupShareLinks();
+        this.setupAllEventsLink(venue.slug);
+
+        // Page title
+        document.title = venue.name + ' - ' + ((window.AMBILET_CONFIG && window.AMBILET_CONFIG.SITE_NAME) || 'AmBilet.ro');
+    },
+
+    /* ═════════════ HERO ═════════════ */
+    renderHero(venue) {
+        // Hero image — prefer portrait on narrow screens when provided
+        const heroImg = document.getElementById(this.elements.heroImage);
         if (heroImg) {
-            var isMobile = window.innerWidth < 768;
+            const isMobile = window.innerWidth < 768;
             heroImg.src = (isMobile && venue.portrait) ? venue.portrait : venue.image;
             heroImg.alt = venue.name;
             heroImg.classList.remove('hidden');
         }
-
-        var skeleton = document.querySelector('.skeleton-hero');
+        const skeleton = document.querySelector('.skeleton-hero');
         if (skeleton) skeleton.remove();
 
-        // Basic info
-        this.setTextContent(this.elements.breadcrumbName, venue.name);
-        this.setTextContent(this.elements.venueType, venue.type);
-        this.setTextContent(this.elements.venueName, venue.name);
-        this.setTextContent(this.elements.venueLocation, venue.location);
+        this.setText(this.elements.venueName, venue.name);
+        this.setText(this.elements.venueLocation, [venue.address || '', venue.city].filter(Boolean).join(' · ') || venue.city || '');
 
-        // Update page title
-        document.title = venue.name + ' - ' + (window.AMBILET_CONFIG?.SITE_NAME || 'Bilete.online');
-
-        // Info cards
-        this.setTextContent(this.elements.venueCapacity, venue.capacity);
-        this.setTextContent(this.elements.venueEventsCount, venue.eventsCount);
-        this.setTextContent(this.elements.venueRating, venue.rating);
-        this.setTextContent(this.elements.venueYear, venue.yearBuilt);
-
-        // Rating count under the rating card, when Google data is available
-        var ratingCountEl = document.getElementById('venueRatingCount');
-        if (ratingCountEl) {
-            if (venue.reviewsCount > 0) {
-                ratingCountEl.textContent = venue.reviewsCount + ' recenzii';
-                ratingCountEl.classList.remove('hidden');
+        // Category badge
+        const catBadge = document.getElementById('venueCategoryBadge');
+        const catLabel = document.getElementById('venueCategoryBadgeLabel');
+        if (catBadge && catLabel) {
+            if (venue.primaryCategory && venue.primaryCategory.name) {
+                catLabel.textContent = venue.primaryCategory.name;
+                catBadge.classList.remove('hidden');
             } else {
-                ratingCountEl.classList.add('hidden');
+                catBadge.classList.add('hidden');
             }
         }
 
-        // Google Reviews section (3 cards + "see all on Google" link)
-        this.renderGoogleReviews(venue.googleReviews);
-
-        // About section
-        this.renderAbout(venue.description);
-
-        // Quick Info sidebar
-        this.renderQuickInfo(venue);
-
-        // Address & Map
-        var addressEl = document.getElementById(this.elements.venueAddress);
-        if (addressEl) {
-            addressEl.innerHTML = this.escapeHtml(venue.address).replace(/, /g, '<br>');
+        // Open-status pill — hide entirely when we have no schedule data to
+        // avoid showing "În funcție de evenimente" without any basis for it.
+        const openStatus = document.getElementById('venueOpenStatus');
+        const openStatusText = document.getElementById('venueOpenStatusText');
+        if (openStatus) {
+            if (venue.schedule) {
+                if (openStatusText) openStatusText.textContent = venue.schedule;
+                openStatus.classList.remove('hidden');
+                openStatus.classList.add('flex');
+            } else {
+                openStatus.classList.add('hidden');
+                openStatus.classList.remove('flex');
+            }
         }
 
-        // Render interactive Google Map
-        this.renderMap(venue);
+        // Rating pill in hero (gated on Google data)
+        const ratingEl = document.getElementById('venueRatingHero');
+        if (ratingEl) {
+            const gr = venue.googleReviews;
+            if (gr && gr.rating != null && gr.review_count != null && Number(gr.review_count) > 0) {
+                this.setText('venueRatingHeroValue', Number(gr.rating).toFixed(1));
+                this.setText('venueRatingHeroCount', this.formatNumber(Number(gr.review_count)));
+                ratingEl.classList.remove('hidden');
+                ratingEl.classList.add('flex');
+            } else {
+                ratingEl.classList.add('hidden');
+                ratingEl.classList.remove('flex');
+            }
+        }
+    },
 
-        // Update Google Maps link
-        var mapsLink = document.getElementById(this.elements.mapsLink);
+    /* ═════════════ STATS TILES ═════════════ */
+    renderStats(venue) {
+        // Capacity + Events count are always shown (even with -)
+        this.setText('statCapacity', venue.capacity || '-');
+        this.setText('statEvents', venue.eventsCount ? this.formatNumber(venue.eventsCount) : '0');
+
+        // Rating tile — gated on Google data
+        const ratingTile = document.getElementById('statRatingTile');
+        if (ratingTile) {
+            const gr = venue.googleReviews;
+            if (gr && gr.rating != null && gr.review_count != null && Number(gr.review_count) > 0) {
+                this.setText('statRatingValue', Number(gr.rating).toFixed(1));
+                this.setText('statRatingCount', this.formatNumber(Number(gr.review_count)) + ' recenzii');
+                ratingTile.classList.remove('hidden');
+                ratingTile.classList.add('flex');
+            } else {
+                ratingTile.classList.add('hidden');
+                ratingTile.classList.remove('flex');
+            }
+        }
+
+        // Year-built tile — only when we know the year
+        const yearTile = document.getElementById('statYearTile');
+        if (yearTile) {
+            if (venue.yearBuilt) {
+                this.setText('statYear', venue.yearBuilt);
+                yearTile.classList.remove('hidden');
+                yearTile.classList.add('flex');
+            } else {
+                yearTile.classList.add('hidden');
+                yearTile.classList.remove('flex');
+            }
+        }
+    },
+
+    /* ═════════════ ABOUT + AMENITIES ═════════════ */
+    renderAboutAndAmenities(venue) {
+        const section = document.getElementById('aboutSection');
+        const about = document.getElementById('venueAbout');
+        const amenitiesBlock = document.getElementById('amenitiesBlock');
+        const amenitiesGrid = document.getElementById('venueAmenities');
+        if (!section) return;
+
+        const hasDescription = !!venue.description;
+        const hasAmenities = Array.isArray(venue.amenities) && venue.amenities.length > 0;
+
+        if (!hasDescription && !hasAmenities) {
+            section.classList.add('hidden');
+            return;
+        }
+        section.classList.remove('hidden');
+
+        if (about) {
+            if (hasDescription) {
+                const hasHtml = /<[a-z][\s\S]*>/i.test(venue.description);
+                about.innerHTML = hasHtml
+                    ? '<div class="prose prose-sm max-w-none text-slate-700">' + venue.description + '</div>'
+                    : '<p class="whitespace-pre-line">' + this.escapeHtml(venue.description) + '</p>';
+            } else {
+                about.innerHTML = '';
+            }
+        }
+
+        if (amenitiesBlock && amenitiesGrid) {
+            if (hasAmenities) {
+                const self = this;
+                amenitiesGrid.innerHTML = venue.amenities.map(function (a) {
+                    const iconPrefix = a.icon ? self.escapeHtml(a.icon) + ' ' : '';
+                    return '<div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">' +
+                        '<svg class="w-3.5 h-3.5 text-emerald-600 flex-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
+                        '<span>' + iconPrefix + self.escapeHtml(a.label) + '</span>' +
+                    '</div>';
+                }).join('');
+                amenitiesBlock.classList.remove('hidden');
+            } else {
+                amenitiesBlock.classList.add('hidden');
+            }
+        }
+    },
+
+    /* ═════════════ REVIEWS ═════════════ */
+    renderReviewsSection(gr) {
+        const section = document.getElementById('reviewsSection');
+        const grid = document.getElementById('reviewsGrid');
+        const subheader = document.getElementById('reviewsSubheader');
+        const seeAll = document.getElementById('reviewsSeeAllLink');
+        if (!section || !grid) return;
+
+        const reviews = (gr && Array.isArray(gr.reviews)) ? gr.reviews : [];
+        const rating = gr && gr.rating != null ? Number(gr.rating) : null;
+        const reviewCount = gr && gr.review_count != null ? Number(gr.review_count) : 0;
+
+        if (!rating || reviews.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+        section.classList.remove('hidden');
+
+        if (subheader) {
+            subheader.textContent = rating.toFixed(1) + ' din 5 · ' + this.formatNumber(reviewCount) + ' recenzii';
+        }
+        if (seeAll) {
+            const seeUrl = (gr && (gr.reviews_url || gr.url)) || null;
+            if (seeUrl) {
+                seeAll.href = seeUrl;
+                seeAll.classList.remove('hidden');
+            } else {
+                seeAll.classList.add('hidden');
+            }
+        }
+
+        const self = this;
+        const palette = [
+            'from-pink-400 to-rose-500',
+            'from-blue-400 to-indigo-500',
+            'from-emerald-400 to-teal-500',
+            'from-amber-400 to-orange-500',
+            'from-violet-400 to-purple-500'
+        ];
+        grid.innerHTML = reviews.slice(0, 3).map(function (r, i) {
+            const name = r.author_name || r.author || 'Vizitator';
+            const initials = self.buildInitials(name);
+            const stars = self.buildStars(r.rating || 0);
+            const dateStr = self.formatReviewDate(r.relative_time_description || r.time || r.created_at);
+            const text = r.text || r.comment || '';
+            const gradient = palette[i % palette.length];
+            return '<div class="border border-slate-200 rounded-xl p-4">' +
+                '<div class="flex items-center justify-between mb-2">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<div class="w-8 h-8 rounded-full bg-gradient-to-br ' + gradient + ' flex items-center justify-center text-white text-xs font-semibold">' + self.escapeHtml(initials) + '</div>' +
+                        '<div>' +
+                            '<div class="text-sm font-semibold text-slate-900">' + self.escapeHtml(name) + '</div>' +
+                            (dateStr ? '<div class="text-xs text-slate-500">' + self.escapeHtml(dateStr) + '</div>' : '') +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-amber-500 text-xs">' + stars + '</div>' +
+                '</div>' +
+                (text ? '<p class="text-sm text-slate-700 leading-relaxed">„' + self.escapeHtml(text) + '"</p>' : '') +
+            '</div>';
+        }).join('');
+    },
+
+    /* ═════════════ EVENTS ═════════════ */
+    renderEventFilterTabs(categories, totalEvents) {
+        const container = document.getElementById('eventFilterTabs');
+        if (!container) return;
+        if (!categories || categories.length <= 1) {
+            container.classList.add('hidden');
+            container.classList.remove('flex');
+            return;
+        }
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+
+        const self = this;
+        let html = '<button type="button" onclick="VenuePage.setEventFilter(\'all\')" data-event-filter="all" class="event-tab is-active relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition">Toate (' + totalEvents + ')</button>';
+        html += categories.map(function (c) {
+            return '<button type="button" onclick="VenuePage.setEventFilter(\'' + self.escapeAttr(c.slug) + '\')" data-event-filter="' + self.escapeAttr(c.slug) + '" class="event-tab text-slate-600 hover:text-slate-900 relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition">' + self.escapeHtml(c.name) + ' (' + c.count + ')</button>';
+        }).join('');
+        container.innerHTML = html;
+    },
+
+    setEventFilter(slug) {
+        this.currentEventFilter = slug;
+        // Toggle active class on tabs
+        document.querySelectorAll('.event-tab').forEach(function (btn) {
+            if (btn.dataset.eventFilter === slug) {
+                btn.classList.add('is-active');
+                btn.classList.remove('text-slate-600', 'hover:text-slate-900');
+            } else {
+                btn.classList.remove('is-active');
+                btn.classList.add('text-slate-600', 'hover:text-slate-900');
+            }
+        });
+        this.renderEvents(this.venue.events, slug);
+    },
+
+    renderEvents(events, filterSlug) {
+        const container = document.getElementById(this.elements.eventsList);
+        const footer = document.getElementById('eventsFooter');
+        const footerCount = document.getElementById('eventsFooterCount');
+        if (!container) return;
+
+        const filter = filterSlug || 'all';
+        const filtered = (events || []).filter(function (e) {
+            return filter === 'all' || e.categorySlug === filter;
+        });
+
+        if (filtered.length === 0) {
+            container.innerHTML =
+                '<div class="p-12 text-center">' +
+                    '<div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">' +
+                        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>' +
+                    '</div>' +
+                    '<h3 class="font-semibold text-slate-900 mb-1">' + (events && events.length ? 'Niciun eveniment în această categorie' : 'Nu există evenimente viitoare') + '</h3>' +
+                    (events && events.length
+                        ? '<p class="text-sm text-slate-500 mb-4">Încearcă o altă categorie.</p><button type="button" onclick="VenuePage.setEventFilter(\'all\')" class="text-sm font-semibold text-primary hover:text-primary-dark">← Vezi toate evenimentele</button>'
+                        : '<p class="text-sm text-slate-500">Revino mai târziu pentru evenimente noi.</p>') +
+                '</div>';
+            if (footer) footer.classList.add('hidden');
+            return;
+        }
+
+        const self = this;
+        container.innerHTML = filtered.map(function (e, i) {
+            return self.renderEventRow(e, i);
+        }).join('');
+
+        if (footer && footerCount) {
+            const totalText = (events || []).length === filtered.length
+                ? 'Afișate ' + filtered.length + ' din ' + (events || []).length + ' evenimente'
+                : 'Afișate ' + filtered.length + ' din ' + (events || []).length;
+            footerCount.textContent = totalText;
+            footer.classList.remove('hidden');
+        }
+    },
+
+    renderEventRow(e, idx) {
+        const thumbClass = 'venue-thumb-' + ((idx % 6) + 1);
+        const image = e.image
+            ? '<img src="' + this.escapeAttr(e.image) + '" alt="" class="w-full h-full object-cover" loading="lazy">'
+            : '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><rect x="3" y="5" width="18" height="14" rx="2"/></svg>';
+        const categoryBadge = e.categoryName
+            ? '<span class="text-xs font-semibold text-primary uppercase tracking-wider">' + this.escapeHtml(e.categoryName) + '</span>'
+            : '';
+        const timeBadge = e.time
+            ? '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + this.escapeHtml(e.time) + '</span>'
+            : '';
+        const priceBlock = e.isSoldOut
+            ? '<div class="text-sm font-bold text-slate-400 line-through">SOLD OUT</div>'
+            : (e.priceFrom > 0
+                ? '<div class="text-[11px] text-slate-500 mb-0.5">de la</div>' +
+                  '<div class="text-lg font-bold text-slate-900 mb-2">' + this.formatNumber(e.priceFrom) + ' ' + this.escapeHtml(e.currency || 'lei') + '</div>'
+                : '<div class="text-lg font-bold text-emerald-600 mb-2">Gratuit</div>');
+        const buyLabel = e.isSoldOut ? 'Detalii' : 'Cumpără';
+
+        return '<a href="/bilete/' + this.escapeAttr(e.slug) + '" class="event-row flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent ' + (e.isCancelled ? 'opacity-60' : '') + '">' +
+            '<div class="flex-none w-16 text-center bg-primary text-white rounded-lg overflow-hidden">' +
+                '<div class="text-[10px] font-bold uppercase tracking-wider bg-primary-dark/90 py-1">' + this.escapeHtml(e.monthShort) + '</div>' +
+                '<div class="text-2xl font-bold py-1.5">' + this.escapeHtml(e.day) + '</div>' +
+                '<div class="text-[10px] font-medium pb-1.5 opacity-80">' + this.escapeHtml(e.weekday) + '</div>' +
+            '</div>' +
+            '<div class="' + thumbClass + ' flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white overflow-hidden">' + image + '</div>' +
+            '<div class="flex-1 min-w-0">' +
+                (categoryBadge ? '<div class="flex items-center gap-2 mb-1">' + categoryBadge + '</div>' : '') +
+                '<h3 class="font-semibold text-slate-900 mb-1 truncate">' + this.escapeHtml(e.title) + '</h3>' +
+                '<div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">' + timeBadge + '</div>' +
+            '</div>' +
+            '<div class="flex-none text-right">' +
+                priceBlock +
+                '<div class="event-buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">' + buyLabel + '</div>' +
+            '</div>' +
+        '</a>';
+    },
+
+    renderEventsSubheader(events) {
+        const el = document.getElementById('eventsSubheader');
+        if (!el) return;
+        if (!events || events.length === 0) {
+            el.textContent = 'Niciun eveniment programat';
+            return;
+        }
+        const lastEvent = events[events.length - 1];
+        const last = lastEvent && lastEvent.date instanceof Date && !isNaN(lastEvent.date)
+            ? lastEvent.date.toLocaleDateString('ro-RO', { month: 'long', year: 'numeric' })
+            : null;
+        el.textContent = events.length + (events.length === 1 ? ' eveniment' : ' evenimente') + (last ? ' · până în ' + last : '');
+    },
+
+    setupAllEventsLink(venueSlug) {
+        const link = document.getElementById('allEventsLink');
+        if (link && venueSlug) {
+            link.href = '/evenimente?locatie=' + encodeURIComponent(venueSlug);
+        }
+    },
+
+    /* ═════════════ QUICK INFO (sidebar) ═════════════ */
+    renderQuickInfo(venue) {
+        const container = document.getElementById(this.elements.quickInfo);
+        if (!container) return;
+
+        const rows = [];
+
+        if (venue.schedule) {
+            rows.push(this.renderQuickInfoRow(
+                '<svg class="mt-0.5 text-slate-400 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+                'Program',
+                this.escapeHtml(venue.schedule),
+                null
+            ));
+        }
+        if (venue.phone) {
+            rows.push(this.renderQuickInfoRow(
+                '<svg class="mt-0.5 text-slate-400 flex-none group-hover:text-primary transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+                'Telefon',
+                '<span class="text-sm text-primary font-semibold">' + this.escapeHtml(venue.phone) + '</span>',
+                'tel:' + venue.phone.replace(/\s/g, '')
+            ));
+        }
+        if (venue.email) {
+            rows.push(this.renderQuickInfoRow(
+                '<svg class="mt-0.5 text-slate-400 flex-none group-hover:text-primary transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>',
+                'Email',
+                '<span class="text-sm text-primary font-semibold truncate">' + this.escapeHtml(venue.email) + '</span>',
+                'mailto:' + venue.email
+            ));
+        }
+        if (venue.website) {
+            const websiteUrl = venue.website.startsWith('http') ? venue.website : 'https://' + venue.website;
+            const websiteDisplay = venue.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+            rows.push(this.renderQuickInfoRow(
+                '<svg class="mt-0.5 text-slate-400 flex-none group-hover:text-primary transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+                'Website',
+                '<span class="text-sm text-primary font-semibold">' + this.escapeHtml(websiteDisplay) + '</span>',
+                websiteUrl,
+                '_blank'
+            ));
+        }
+
+        // Social icons row
+        const socialLinks = [];
+        if (venue.facebook) {
+            socialLinks.push('<a href="' + this.escapeAttr(venue.facebook) + '" target="_blank" rel="noopener" class="w-9 h-9 bg-slate-100 hover:bg-primary hover:text-white text-slate-600 rounded-lg flex items-center justify-center transition" title="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>');
+        }
+        if (venue.instagram) {
+            socialLinks.push('<a href="' + this.escapeAttr(venue.instagram) + '" target="_blank" rel="noopener" class="w-9 h-9 bg-slate-100 hover:bg-primary hover:text-white text-slate-600 rounded-lg flex items-center justify-center transition" title="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>');
+        }
+        if (venue.tiktok) {
+            socialLinks.push('<a href="' + this.escapeAttr(venue.tiktok) + '" target="_blank" rel="noopener" class="w-9 h-9 bg-slate-100 hover:bg-primary hover:text-white text-slate-600 rounded-lg flex items-center justify-center transition" title="TikTok"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.43v-7.15a8.16 8.16 0 005.58 2.19V11.2a4.85 4.85 0 01-3.77-1.74V6.69h3.77z"/></svg></a>');
+        }
+        if (socialLinks.length > 0) {
+            rows.push('<div class="px-5 py-3.5 flex items-center gap-2">' + socialLinks.join('') + '</div>');
+        }
+
+        if (rows.length === 0) {
+            container.innerHTML = '<div class="p-5 text-sm italic text-slate-500">Informații de contact indisponibile</div>';
+            return;
+        }
+        container.innerHTML = rows.join('');
+    },
+
+    renderQuickInfoRow(icon, label, valueHtml, href, target) {
+        const tag = href ? 'a' : 'div';
+        const hrefAttr = href ? ' href="' + this.escapeAttr(href) + '"' : '';
+        const targetAttr = target ? ' target="' + this.escapeAttr(target) + '" rel="noopener"' : '';
+        const hoverClass = href ? 'hover:bg-slate-50 transition group' : '';
+        return '<' + tag + hrefAttr + targetAttr + ' class="px-5 py-3.5 flex items-start gap-3 ' + hoverClass + '">' +
+            icon +
+            '<div class="min-w-0 flex-1">' +
+                '<div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-0.5">' + label + '</div>' +
+                '<div class="text-sm text-slate-900">' + valueHtml + '</div>' +
+            '</div>' +
+        '</' + tag + '>';
+    },
+
+    /* ═════════════ ADDRESS + MAP ═════════════ */
+    renderAddress(venue) {
+        const el = document.getElementById(this.elements.venueAddress);
+        if (!el) return;
+        el.innerHTML = this.escapeHtml(venue.address || venue.city || '').replace(/, /g, '<br>');
+
+        const mapsLink = document.getElementById(this.elements.mapsLink);
         if (mapsLink) {
-            if (venue.latitude && venue.longitude) {
+            if (venue.googleMapsUrl) {
+                mapsLink.href = venue.googleMapsUrl;
+            } else if (venue.latitude && venue.longitude) {
                 mapsLink.href = 'https://www.google.com/maps/search/?api=1&query=' + venue.latitude + ',' + venue.longitude;
             } else if (venue.address) {
                 mapsLink.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue.address);
             }
         }
-
-        // Amenities
-        this.renderAmenities(venue.amenities);
-
-        // Gallery
-        this.renderGallery(venue.gallery);
-
-        // Events - use rawEvents for AmbiletEventCard which handles commission
-        this.renderEvents(venue.rawEvents && venue.rawEvents.length > 0 ? venue.rawEvents : venue.events);
-
-        // Similar venues
-        this.renderSimilarVenues(venue.similarVenues);
     },
 
-    /**
-     * Helper to set text content safely
-     */
-    setTextContent(elementId, text) {
-        var el = document.getElementById(elementId);
-        if (el) el.textContent = text || '';
-    },
-
-    /**
-     * Render about section
-     */
-    renderAbout(description) {
-        var container = document.getElementById(this.elements.venueAbout);
-        if (!container) return;
-
-        if (description) {
-            // Check if description contains HTML tags
-            var hasHtml = /<[a-z][\s\S]*>/i.test(description);
-            if (hasHtml) {
-                // Render HTML content directly (trusted from API)
-                container.innerHTML = '<div class="prose prose-sm max-w-none text-gray-600">' + description + '</div>';
-            } else {
-                // Plain text with whitespace preserved
-                container.innerHTML = '<p class="text-base leading-relaxed text-gray-600 whitespace-pre-line">' +
-                    this.escapeHtml(description) + '</p>';
-            }
-        } else {
-            container.innerHTML = '<p class="italic text-gray-500">Informații despre această locație vor fi disponibile în curând.</p>';
-        }
-    },
-
-    /**
-     * Render Google Reviews section (rating summary + 3 reviews + "see all" link).
-     * Section stays hidden when no Google data is available.
-     */
-    renderGoogleReviews(googleReviews) {
-        var section = document.getElementById('googleReviewsSection');
-        if (!section) return;
-
-        if (!googleReviews || !googleReviews.reviews || googleReviews.reviews.length === 0) {
-            section.classList.add('hidden');
-            return;
-        }
-
-        var summaryEl = document.getElementById('googleReviewsSummary');
-        if (summaryEl) {
-            var ratingStr = googleReviews.rating != null ? Number(googleReviews.rating).toFixed(1) + ' ⭐' : '—';
-            var countStr = googleReviews.review_count != null ? Number(googleReviews.review_count) + ' recenzii' : '';
-            summaryEl.textContent = ratingStr + (countStr ? ' · ' + countStr : '');
-        }
-
-        var grid = document.getElementById('googleReviewsGrid');
-        if (grid) {
-            var self = this;
-            var cards = googleReviews.reviews.slice(0, 3).map(function (r) {
-                var stars = '';
-                var rating = Number(r.rating || 0);
-                for (var i = 1; i <= 5; i++) {
-                    stars += '<span style="color:' + (i <= rating ? '#f59e0b' : '#e5e7eb') + ';">★</span>';
-                }
-                var name = self.escapeHtml(r.author_name || 'Utilizator Google');
-                var when = self.escapeHtml(r.relative_time_description || '');
-                var fullText = r.text || '';
-                var text = self.escapeHtml(fullText.length > 220 ? fullText.slice(0, 220).trim() + '…' : fullText);
-                var avatar = r.profile_photo_url
-                    ? '<img src="' + self.escapeHtml(r.profile_photo_url) + '" alt="" class="w-10 h-10 rounded-full object-cover" loading="lazy" referrerpolicy="no-referrer">'
-                    : '<div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">' + name.charAt(0).toUpperCase() + '</div>';
-                return ''
-                    + '<article class="flex flex-col h-full p-5 bg-white border rounded-2xl border-border">'
-                    +   '<header class="flex items-center gap-3 mb-3">'
-                    +     avatar
-                    +     '<div class="min-w-0">'
-                    +       '<div class="text-sm font-semibold text-secondary truncate">' + name + '</div>'
-                    +       '<div class="text-xs text-muted">' + when + '</div>'
-                    +     '</div>'
-                    +   '</header>'
-                    +   '<div class="mb-2 text-sm">' + stars + '</div>'
-                    +   '<p class="flex-1 text-sm text-gray-600 whitespace-pre-line">' + text + '</p>'
-                    + '</article>';
-            });
-            grid.innerHTML = cards.join('');
-        }
-
-        var allLink = document.getElementById('googleReviewsAllLink');
-        if (allLink && googleReviews.place_url) {
-            allLink.href = googleReviews.place_url;
-        }
-
-        section.classList.remove('hidden');
-    },
-
-    /**
-     * Render quick info sidebar
-     */
-    renderQuickInfo(venue) {
-        var container = document.getElementById(this.elements.quickInfo);
-        if (!container) return;
-
-        var html = '';
-
-        // Schedule
-        if (venue.schedule && venue.schedule !== '-') {
-            html += this.renderInfoRow(
-                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-                'Program',
-                venue.schedule
-            );
-        }
-
-        // Phone
-        if (venue.phone && venue.phone !== '-') {
-            html += this.renderInfoRow(
-                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>',
-                'Telefon',
-                '<a href="tel:' + this.escapeHtml(venue.phone) + '" class="text-primary">' + this.escapeHtml(venue.phone) + '</a>',
-                true
-            );
-        }
-
-        // Email
-        if (venue.email && venue.email !== '-') {
-            html += this.renderInfoRow(
-                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
-                'Email',
-                '<a href="mailto:' + this.escapeHtml(venue.email) + '" class="text-primary">' + this.escapeHtml(venue.email) + '</a>',
-                true
-            );
-        }
-
-        // Website
-        if (venue.website && venue.website !== '-' && venue.website !== '') {
-            var websiteUrl = venue.website.startsWith('http') ? venue.website : 'https://' + venue.website;
-            var websiteDisplay = venue.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
-            html += this.renderInfoRow(
-                '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
-                'Website',
-                '<a href="' + this.escapeHtml(websiteUrl) + '" target="_blank" class="text-primary">' + this.escapeHtml(websiteDisplay) + '</a>',
-                true
-            );
-        }
-
-        // Social links
-        var socialLinks = [];
-        if (venue.facebook) {
-            socialLinks.push('<a href="' + this.escapeHtml(venue.facebook) + '" target="_blank" class="flex items-center justify-center w-10 h-10 transition-all rounded-xl bg-surface text-muted hover:text-primary hover:bg-red-50" title="Facebook"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>');
-        }
-        if (venue.instagram) {
-            socialLinks.push('<a href="' + this.escapeHtml(venue.instagram) + '" target="_blank" class="flex items-center justify-center w-10 h-10 transition-all rounded-xl bg-surface text-muted hover:text-primary hover:bg-red-50" title="Instagram"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>');
-        }
-        if (venue.tiktok) {
-            socialLinks.push('<a href="' + this.escapeHtml(venue.tiktok) + '" target="_blank" class="flex items-center justify-center w-10 h-10 transition-all rounded-xl bg-surface text-muted hover:text-primary hover:bg-red-50" title="TikTok"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1v-3.5a6.37 6.37 0 00-.79-.05A6.34 6.34 0 003.15 15.2a6.34 6.34 0 0010.86 4.43v-7.15a8.16 8.16 0 005.58 2.19V11.2a4.85 4.85 0 01-3.77-1.74V6.69h3.77z"/></svg></a>');
-        }
-        if (socialLinks.length > 0) {
-            html += '<div class="flex gap-2 pt-3">' + socialLinks.join('') + '</div>';
-        }
-
-        if (!html) {
-            html = '<p class="py-3 text-sm italic text-gray-500">Informații de contact indisponibile</p>';
-        }
-
-        container.innerHTML = html;
-    },
-
-    /**
-     * Render info row helper
-     */
-    renderInfoRow(icon, label, value, isHtml, hasBorder) {
-        if (hasBorder === undefined) hasBorder = true;
-        var borderClass = hasBorder ? 'border-b border-gray-100' : '';
-        var valueHtml = isHtml ? value : this.escapeHtml(value);
-
-        return '<div class="flex items-start gap-3.5 py-3.5 ' + borderClass + '">' +
-            '<div class="flex items-center justify-center flex-shrink-0 w-10 h-10 bg-surface rounded-xl text-muted">' + icon + '</div>' +
-            '<div>' +
-                '<div class="mb-1 text-xs tracking-wide uppercase text-muted">' + label + '</div>' +
-                '<div class="text-sm font-semibold text-secondary">' + valueHtml + '</div>' +
-            '</div>' +
-        '</div>';
-    },
-
-    /**
-     * Render interactive Google Map
-     */
     renderMap(venue) {
-        var mapContainer = document.getElementById(this.elements.venueMap);
+        const mapContainer = document.getElementById(this.elements.venueMap);
         if (!mapContainer) return;
 
-        // Build map query - prefer coordinates, fall back to address
-        var mapQuery = '';
+        let mapQuery = '';
         if (venue.latitude && venue.longitude) {
             mapQuery = venue.latitude + ',' + venue.longitude;
         } else if (venue.address) {
@@ -481,271 +702,295 @@ const VenuePage = {
         }
 
         if (mapQuery) {
-            // Render Google Maps embed iframe
-            mapContainer.innerHTML = '<iframe ' +
-                'src="https://www.google.com/maps?q=' + mapQuery + '&output=embed" ' +
-                'width="100%" height="100%" ' +
-                'style="border:0; min-height:192px;" ' +
-                'allowfullscreen="" ' +
-                'loading="lazy" ' +
-                'referrerpolicy="no-referrer-when-downgrade">' +
-            '</iframe>';
+            mapContainer.innerHTML = '<iframe src="https://www.google.com/maps?q=' + mapQuery + '&output=embed" width="100%" height="100%" style="border:0;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>';
+            mapContainer.classList.remove('flex', 'flex-col', 'items-center', 'justify-center');
         } else {
-            // No location data - show placeholder
-            mapContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-3 text-muted">' +
-                '<svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
-                    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
-                    '<circle cx="12" cy="10" r="3"/>' +
-                '</svg>' +
-                '<p class="text-sm">Locație indisponibilă</p>' +
-            '</div>';
+            mapContainer.innerHTML =
+                '<svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+                '<p class="text-sm mt-2">Locație indisponibilă</p>';
         }
     },
 
-    /**
-     * Render amenities
-     */
-    renderAmenities(amenities) {
-        var container = document.getElementById(this.elements.venueAmenities);
-        var section = document.getElementById(this.elements.amenitiesSection);
-        if (!container) return;
-
-        // Hide entire section if no amenities
-        if (!amenities || amenities.length === 0) {
-            if (section) section.style.display = 'none';
-            return;
-        }
-
-        // Show section if it was hidden
-        if (section) section.style.display = '';
-
-        var self = this;
-        var html = amenities.map(function(a) {
-            return '<div class="flex items-center gap-2.5 p-3 bg-surface rounded-xl">' +
-                '<svg class="w-4 h-4 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/></svg>' +
-                '<span class="text-sm font-medium text-gray-600">' + self.escapeHtml(a) + '</span>' +
-            '</div>';
-        }).join('');
-
-        container.innerHTML = html;
-    },
-
-    /**
-     * Render gallery
-     */
-    renderGallery(gallery) {
-        var container = document.getElementById(this.elements.venueGallery);
-        var section = document.getElementById(this.elements.gallerySection);
-        if (!container) return;
-
-        // Hide entire section if no gallery images
+    /* ═════════════ GALLERY ═════════════ */
+    renderGalleryButton(gallery) {
+        const btn = document.getElementById('galleryBtn');
+        const countEl = document.getElementById('galleryCount');
+        if (!btn || !countEl) return;
         if (!gallery || gallery.length === 0) {
-            if (section) section.style.display = 'none';
+            btn.classList.add('hidden');
+            btn.classList.remove('flex');
             return;
         }
+        this.lightboxImages = gallery.slice();
+        countEl.textContent = gallery.length;
+        btn.classList.remove('hidden');
+        btn.classList.add('flex');
+    },
 
-        // Show section if it was hidden
-        if (section) section.style.display = '';
+    openLightbox(index) {
+        const lb = document.getElementById('galleryLightbox');
+        if (!lb || !this.lightboxImages.length) return;
+        this.lightboxCurrent = index || 0;
+        lb.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        this.renderLightboxImage();
+        this.renderLightboxThumbs();
+    },
 
-        var self = this;
-        var html = gallery.slice(0, 5).map(function(img, idx) {
-            var extraClass = idx === 0 ? 'col-span-2 row-span-2' : '';
-            var aspectClass = idx === 0 ? 'aspect-auto' : 'aspect-[4/3]';
-            var moreOverlay = (idx === 4 && gallery.length > 5)
-                ? '<div class="absolute inset-0 flex items-center justify-center text-lg font-bold text-white bg-black/60">+' + (gallery.length - 5) + '</div>'
-                : '';
+    closeLightbox() {
+        const lb = document.getElementById('galleryLightbox');
+        if (!lb) return;
+        lb.classList.add('hidden');
+        document.body.style.overflow = '';
+    },
 
-            return '<div class="' + extraClass + ' relative rounded-xl overflow-hidden ' + aspectClass + ' cursor-pointer group">' +
-                '<img src="' + self.escapeHtml(img) + '" alt="Galerie" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">' +
-                '<div class="absolute inset-0 transition-all bg-black/0 group-hover:bg-black/30"></div>' +
-                moreOverlay +
-            '</div>';
+    lightboxNext() {
+        if (!this.lightboxImages.length) return;
+        this.lightboxCurrent = (this.lightboxCurrent + 1) % this.lightboxImages.length;
+        this.renderLightboxImage();
+        this.renderLightboxThumbs();
+    },
+
+    lightboxPrev() {
+        if (!this.lightboxImages.length) return;
+        this.lightboxCurrent = (this.lightboxCurrent - 1 + this.lightboxImages.length) % this.lightboxImages.length;
+        this.renderLightboxImage();
+        this.renderLightboxThumbs();
+    },
+
+    renderLightboxImage() {
+        const img = document.getElementById('lightboxImage');
+        const idxEl = document.getElementById('lightboxIndex');
+        const totalEl = document.getElementById('lightboxTotal');
+        if (img) img.src = this.lightboxImages[this.lightboxCurrent] || '';
+        if (idxEl) idxEl.textContent = this.lightboxCurrent + 1;
+        if (totalEl) totalEl.textContent = this.lightboxImages.length;
+    },
+
+    renderLightboxThumbs() {
+        const wrap = document.getElementById('lightboxThumbs');
+        if (!wrap) return;
+        const self = this;
+        wrap.innerHTML = this.lightboxImages.map(function (src, i) {
+            return '<button type="button" onclick="VenuePage.gotoLightbox(' + i + ')" class="lightbox-thumb flex-none w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden transition-all ' + (i === self.lightboxCurrent ? 'is-active' : 'opacity-50 hover:opacity-100') + '">' +
+                '<img src="' + self.escapeAttr(src) + '" alt="" class="w-full h-full object-cover">' +
+            '</button>';
         }).join('');
-
-        container.innerHTML = html;
     },
 
-    /**
-     * Render events list using AmbiletEventCard for commission support
-     */
-    renderEvents(events) {
-        var container = document.getElementById(this.elements.eventsList);
-        if (!container) return;
+    gotoLightbox(i) {
+        this.lightboxCurrent = i;
+        this.renderLightboxImage();
+        this.renderLightboxThumbs();
+    },
 
+    /* ═════════════ MOBILE STICKY CTA ═════════════ */
+    renderMobileStickyCta(events) {
+        const bar = document.getElementById('mobileStickyCta');
+        const label = document.getElementById('mobileCtaEventLabel');
+        const link = document.getElementById('mobileCtaLink');
+        if (!bar || !label || !link) return;
         if (!events || events.length === 0) {
-            container.innerHTML =
-                '<div class="p-8 text-center bg-white border rounded-2xl border-border">' +
-                    '<svg class="w-12 h-12 mx-auto mb-3 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
-                        '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>' +
-                        '<line x1="16" y1="2" x2="16" y2="6"/>' +
-                        '<line x1="8" y1="2" x2="8" y2="6"/>' +
-                        '<line x1="3" y1="10" x2="21" y2="10"/>' +
-                    '</svg>' +
-                    '<p class="text-gray-500">Nu există evenimente programate la această locație</p>' +
-                '</div>';
+            bar.classList.add('hidden');
             return;
         }
-
-        // Use AmbiletEventCard for consistent rendering with commission support
-        container.innerHTML = AmbiletEventCard.renderManyHorizontal(events, {
-            urlPrefix: '/bilete/',
-            showBuyButton: true,
-            showArtists: true
-        });
+        const first = events[0];
+        const when = first.day && first.monthShort ? first.day + ' ' + first.monthShort : '';
+        const time = first.time ? ', ' + first.time : '';
+        label.textContent = first.title + (when ? ' · ' + when + time : '');
+        link.href = '/bilete/' + first.slug;
+        bar.classList.remove('hidden');
     },
 
-    /**
-     * Render similar venues
-     */
+    /* ═════════════ SIMILAR VENUES ═════════════ */
     renderSimilarVenues(venues) {
-        var container = document.getElementById(this.elements.similarVenues);
-        var section = document.getElementById(this.elements.similarVenuesSection);
-        if (!container) return;
-
-        // Hide entire section if no similar venues
+        const container = document.getElementById(this.elements.similarVenues);
+        const section = document.getElementById(this.elements.similarVenuesSection);
+        if (!container || !section) return;
         if (!venues || venues.length === 0) {
-            if (section) section.style.display = 'none';
+            section.classList.add('hidden');
             return;
         }
+        section.classList.remove('hidden');
 
-        // Show section if it was hidden
-        if (section) section.style.display = '';
-
-        var self = this;
-        var html = venues.map(function(v) {
-            return '<a href="/locatie/' + self.escapeHtml(v.slug) + '" class="overflow-hidden transition-all bg-white border rounded-2xl border-border hover:-translate-y-1 hover:shadow-lg hover:border-primary">' +
-                '<div class="aspect-[16/10] overflow-hidden">' +
-                    '<img src="' + self.escapeHtml(v.image) + '" alt="' + self.escapeHtml(v.name) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
-                '</div>' +
-                '<div class="p-4">' +
-                    '<h3 class="mb-1 text-base font-bold text-secondary">' + self.escapeHtml(v.name) + '</h3>' +
-                    '<p class="mb-2 text-sm text-muted">' + self.escapeHtml(v.location) + '</p>' +
-                    '<span class="text-xs font-semibold text-primary">' + v.events + ' evenimente</span>' +
+        const self = this;
+        container.innerHTML = venues.slice(0, 4).map(function (v, i) {
+            const thumbClass = 'venue-thumb-' + ((i % 6) + 1);
+            const imgHtml = v.image
+                ? '<img src="' + self.escapeAttr(v.image) + '" alt="" class="absolute inset-0 w-full h-full object-cover">'
+                : '';
+            const badge = v.categoryName
+                ? '<div class="absolute top-2 left-2 bg-white/95 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold text-slate-800">' + self.escapeHtml(v.categoryName) + '</div>'
+                : '';
+            return '<a href="/locatie/' + self.escapeAttr(v.slug) + '" class="bg-white rounded-2xl venue-card-shadow venue-card-shadow-hover overflow-hidden group transition">' +
+                '<div class="aspect-[4/3] ' + thumbClass + ' relative">' + imgHtml + badge + '</div>' +
+                '<div class="p-3">' +
+                    '<h3 class="font-semibold text-sm text-slate-900 group-hover:text-primary transition">' + self.escapeHtml(v.name) + '</h3>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">' + self.escapeHtml(v.city) + (v.eventsCount ? ' · ' + v.eventsCount + ' evenimente' : '') + '</div>' +
                 '</div>' +
             '</a>';
         }).join('');
-
-        container.innerHTML = html;
     },
 
-    /**
-     * Escape HTML to prevent XSS
-     */
-    escapeHtml(text) {
-        if (!text) return '';
-        var div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    /* ═════════════ SHARE DROPDOWN ═════════════ */
+    setupShareLinks() {
+        const url = this.shareUrl;
+        const urlEl = document.getElementById('shareUrl');
+        if (urlEl) urlEl.textContent = url;
+
+        const title = this.venue ? (this.venue.name + ' - AmBilet.ro') : 'AmBilet.ro';
+        const text = this.venue ? ('Descoperă evenimentele de la ' + this.venue.name + ' pe AmBilet.ro') : '';
+
+        const fb = document.getElementById('shareFacebook');
+        const wa = document.getElementById('shareWhatsapp');
+        const tw = document.getElementById('shareTwitter');
+        const em = document.getElementById('shareEmail');
+        if (fb) fb.href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+        if (wa) wa.href = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(text + ' ' + url);
+        if (tw) tw.href = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text);
+        if (em) em.href = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(text + ' ' + url);
     },
 
-    /**
-     * Load follow status for venue
-     */
+    toggleShareDropdown(event) {
+        if (event) event.stopPropagation();
+        const dd = document.getElementById('shareDropdown');
+        if (!dd) return;
+        dd.classList.toggle('hidden');
+    },
+
+    copyShareLink() {
+        const url = this.shareUrl;
+        const self = this;
+        const done = function () {
+            const label = document.getElementById('shareCopyLabel');
+            const hint = document.getElementById('shareCopyHint');
+            const iconWrap = document.getElementById('shareCopyIconWrap');
+            const icon = document.getElementById('shareCopyIcon');
+            if (label) label.textContent = 'Link copiat!';
+            if (hint) hint.textContent = 'Gata de distribuit';
+            if (iconWrap) iconWrap.classList.add('bg-emerald-100');
+            if (icon) icon.innerHTML = '<polyline points="20 6 9 17 4 12" stroke="#059669" stroke-width="3"/>';
+            setTimeout(function () {
+                if (label) label.textContent = 'Copiază link';
+                if (hint) hint.textContent = 'Copiază URL-ul paginii';
+                if (iconWrap) iconWrap.classList.remove('bg-emerald-100');
+                if (icon) icon.innerHTML = '<rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>';
+            }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done).catch(function () { self.fallbackCopy(url, done); });
+        } else {
+            self.fallbackCopy(url, done);
+        }
+    },
+
+    fallbackCopy(text, done) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+    },
+
+    /* ═════════════ FOLLOW ═════════════ */
     async loadFollowStatus() {
         if (!this.venueSlug) return;
-
         try {
-            var response = await AmbiletAPI.checkVenueFavorite(this.venueSlug);
+            const response = await AmbiletAPI.checkVenueFavorite(this.venueSlug);
             if (response.success && response.data) {
                 this.isFollowing = response.data.is_favorite;
                 this.updateFollowButton();
             }
         } catch (e) {
-            // Silently ignore - user not logged in or error
-            console.log('[VenuePage] Follow status check skipped');
+            // Silently ignore - user not logged in
         }
     },
 
-    /**
-     * Toggle follow status for venue
-     */
     async toggleFollow() {
         if (!this.venueSlug) return;
-
-        // Check if user is logged in
         if (!AmbiletAuth.isLoggedIn()) {
-            window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            window.location.href = '/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
             return;
         }
-
         try {
-            var response = await AmbiletAPI.toggleVenueFavorite(this.venueSlug);
-            console.log('[VenuePage] Toggle follow response:', response);
+            const response = await AmbiletAPI.toggleVenueFavorite(this.venueSlug);
             if (response.success && response.data) {
                 this.isFollowing = response.data.is_favorite;
                 this.updateFollowButton();
             }
         } catch (e) {
-            console.error('[VenuePage] Toggle follow failed:', e);
-            if (e.status === 401) {
-                window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            if (e && e.status === 401) {
+                window.location.href = '/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
             }
         }
     },
 
-    /**
-     * Open contact venue modal
-     */
+    updateFollowButton() {
+        const btn = document.getElementById(this.elements.followBtn);
+        const text = document.getElementById(this.elements.followText);
+        if (!btn || !text) return;
+        if (this.isFollowing) {
+            btn.classList.remove('bg-white', 'hover:bg-slate-100', 'text-slate-900');
+            btn.classList.add('bg-primary', 'text-white', 'hover:bg-primary-dark');
+            text.textContent = 'Urmărești';
+        } else {
+            btn.classList.remove('bg-primary', 'text-white', 'hover:bg-primary-dark');
+            btn.classList.add('bg-white', 'hover:bg-slate-100', 'text-slate-900');
+            text.textContent = 'Urmărește locația';
+        }
+    },
+
+    /* ═════════════ CONTACT MODAL ═════════════ */
     openContactModal() {
-        var modal = document.getElementById('contactVenueModal');
+        const modal = document.getElementById('contactVenueModal');
         if (!modal) return;
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
-        // Set venue name in modal
-        var nameEl = document.getElementById('contactVenueName');
-        if (nameEl && this.venue) {
-            nameEl.textContent = this.venue.name;
-        }
+        const nameEl = document.getElementById('contactVenueName');
+        if (nameEl && this.venue) nameEl.textContent = this.venue.name;
 
-        // Pre-fill email if logged in
         if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isLoggedIn()) {
-            var user = AmbiletAuth.getUser();
-            var form = document.getElementById('contactVenueForm');
+            const user = AmbiletAuth.getUser();
+            const form = document.getElementById('contactVenueForm');
             if (user && form) {
                 if (user.name) form.querySelector('[name="name"]').value = user.name;
                 if (user.email) form.querySelector('[name="email"]').value = user.email;
             }
         }
-
-        // Reset messages
-        document.getElementById('contactFormError').classList.add('hidden');
-        document.getElementById('contactFormSuccess').classList.add('hidden');
+        const err = document.getElementById('contactFormError');
+        const ok = document.getElementById('contactFormSuccess');
+        if (err) err.classList.add('hidden');
+        if (ok) ok.classList.add('hidden');
     },
 
-    /**
-     * Close contact venue modal
-     */
     closeContactModal(event) {
         if (event && event.target !== event.currentTarget) return;
-        var modal = document.getElementById('contactVenueModal');
+        const modal = document.getElementById('contactVenueModal');
         if (!modal) return;
         modal.classList.add('hidden');
         modal.style.display = '';
         document.body.style.overflow = '';
     },
 
-    /**
-     * Submit contact form
-     */
     async submitContactForm(event) {
         event.preventDefault();
-        var form = document.getElementById('contactVenueForm');
-        var submitBtn = document.getElementById('contactSubmitBtn');
-        var errorEl = document.getElementById('contactFormError');
-        var successEl = document.getElementById('contactFormSuccess');
-
+        const form = document.getElementById('contactVenueForm');
+        const submitBtn = document.getElementById('contactSubmitBtn');
+        const errorEl = document.getElementById('contactFormError');
+        const successEl = document.getElementById('contactFormSuccess');
         if (!form || !this.venueSlug) return;
 
-        // Disable button
         submitBtn.disabled = true;
         submitBtn.querySelector('span').textContent = 'Se trimite...';
+        if (errorEl) errorEl.classList.add('hidden');
+        if (successEl) successEl.classList.add('hidden');
 
-        errorEl.classList.add('hidden');
-        successEl.classList.add('hidden');
-
-        var data = {
+        const data = {
             name: form.querySelector('[name="name"]').value.trim(),
             email: form.querySelector('[name="email"]').value.trim(),
             subject: form.querySelector('[name="subject"]').value.trim(),
@@ -753,48 +998,82 @@ const VenuePage = {
         };
 
         try {
-            var response = await AmbiletAPI.post('/venues/' + this.venueSlug + '/contact', data);
+            const response = await AmbiletAPI.post('/venues/' + this.venueSlug + '/contact', data);
             if (response.success) {
-                successEl.textContent = 'Mesajul tău a fost trimis cu succes! Locația va reveni cu un răspuns.';
-                successEl.classList.remove('hidden');
+                if (successEl) {
+                    successEl.textContent = 'Mesajul tău a fost trimis cu succes! Locația va reveni cu un răspuns.';
+                    successEl.classList.remove('hidden');
+                }
                 form.reset();
-                // Close modal after 3 seconds
-                setTimeout(function() { VenuePage.closeContactModal(); }, 3000);
-            } else {
+                setTimeout(function () { VenuePage.closeContactModal(); }, 3000);
+            } else if (errorEl) {
                 errorEl.textContent = response.message || 'Eroare la trimiterea mesajului. Încearcă din nou.';
                 errorEl.classList.remove('hidden');
             }
         } catch (e) {
-            var msg = 'Eroare la trimiterea mesajului. Încearcă din nou.';
-            if (e.data && e.data.message) msg = e.data.message;
-            else if (e.message) msg = e.message;
-            errorEl.textContent = msg;
-            errorEl.classList.remove('hidden');
+            if (errorEl) {
+                let msg = 'Eroare la trimiterea mesajului. Încearcă din nou.';
+                if (e && e.data && e.data.message) msg = e.data.message;
+                else if (e && e.message) msg = e.message;
+                errorEl.textContent = msg;
+                errorEl.classList.remove('hidden');
+            }
         } finally {
             submitBtn.disabled = false;
             submitBtn.querySelector('span').textContent = 'Trimite mesajul';
         }
     },
 
-    /**
-     * Update follow button visual state
-     */
-    updateFollowButton() {
-        var btn = document.getElementById(this.elements.followBtn);
-        var text = document.getElementById(this.elements.followText);
-        if (!btn || !text) return;
-
-        if (this.isFollowing) {
-            btn.classList.remove('bg-white/20', 'hover:bg-white/30');
-            btn.classList.add('bg-primary', 'hover:bg-primary-dark');
-            text.textContent = 'Urmărești locația';
+    /* ═════════════ HELPERS ═════════════ */
+    setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value == null ? '' : value;
+    },
+    escapeHtml(text) {
+        if (text == null) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    },
+    escapeAttr(text) {
+        return this.escapeHtml(text).replace(/"/g, '&quot;');
+    },
+    slugify(text) {
+        return String(text || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    },
+    formatNumber(n) {
+        const num = Number(n);
+        if (!isFinite(num)) return '0';
+        return num.toLocaleString('ro-RO');
+    },
+    buildInitials(name) {
+        const parts = String(name || '').trim().split(/\s+/);
+        if (parts.length === 0) return '?';
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    },
+    buildStars(rating) {
+        const r = Math.round(Number(rating) || 0);
+        let out = '';
+        for (let i = 1; i <= 5; i++) out += i <= r ? '★' : '☆';
+        return out;
+    },
+    formatReviewDate(value) {
+        if (!value) return '';
+        // If already a human-readable string (e.g. "o săptămână în urmă"), return as-is
+        if (typeof value === 'string' && !/^\d+$/.test(value) && !/^\d{4}-\d{2}-\d{2}/.test(value)) return value;
+        // Unix timestamp (seconds) — Google Places returns integer
+        let d;
+        if (typeof value === 'number' || /^\d+$/.test(String(value))) {
+            const n = Number(value);
+            d = new Date(n > 9999999999 ? n : n * 1000);
         } else {
-            btn.classList.remove('bg-primary', 'hover:bg-primary-dark');
-            btn.classList.add('bg-white/20', 'hover:bg-white/30');
-            text.textContent = 'Urmărește locația';
+            d = new Date(value);
         }
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleDateString('ro-RO', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 };
 
-// Make available globally
 window.VenuePage = VenuePage;

@@ -19,6 +19,7 @@ const EventsPage = {
         region: '',
         genre: '',
         artist: '',
+        venue: '',
         price: '',
         date: '',
         sort: 'date',
@@ -335,6 +336,7 @@ const EventsPage = {
             region: '',
             genre: '',
             artist: '',
+            venue: '',
             price: '',
             date: '',
             sort: 'date',
@@ -397,6 +399,7 @@ const EventsPage = {
         if (this.filters.city) params.set('oras', this.filters.city);
         if (this.filters.genre) params.set('gen', this.filters.genre);
         if (this.filters.artist) params.set('artist', this.filters.artist);
+        if (this.filters.venue) params.set('locatie', this.filters.venue);
         if (this.filters.date) params.set('data', this.filters.date);
         if (this.filters.price) params.set('pret', this.filters.price);
         if (this.filters.sort && this.filters.sort !== 'date') params.set('sortare', this.filters.sort);
@@ -425,6 +428,7 @@ const EventsPage = {
         if (this.filters.city) activeFilters.push({ key: 'city', label: 'Oras: ' + this.filters.city });
         if (this.filters.genre) activeFilters.push({ key: 'genre', label: 'Gen: ' + this.filters.genre });
         if (this.filters.artist) activeFilters.push({ key: 'artist', label: 'Artist: ' + this.filters.artist });
+        if (this.filters.venue) activeFilters.push({ key: 'venue', label: 'Locație: ' + this.filters.venue });
         if (this.filters.date) activeFilters.push({ key: 'date', label: 'Data: ' + this.filters.date });
         if (this.filters.price) activeFilters.push({ key: 'price', label: 'Pret: ' + this.filters.price });
         if (this.filters.search) activeFilters.push({ key: 'search', label: 'Cautare: ' + this.filters.search });

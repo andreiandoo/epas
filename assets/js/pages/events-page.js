@@ -19,6 +19,7 @@ const EventsPage = {
         region: '',
         genre: '',
         artist: '',
+        venue: '',
         price: '',
         date: '',
         sort: 'date',
@@ -216,7 +217,7 @@ const EventsPage = {
         }
 
         const gridClass = this.view === 'grid'
-            ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            ? 'grid grid-cols-2 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
             : 'flex flex-col gap-4';
 
         return '<div class="month-group">' +
@@ -335,6 +336,7 @@ const EventsPage = {
             region: '',
             genre: '',
             artist: '',
+            venue: '',
             price: '',
             date: '',
             sort: 'date',
@@ -397,6 +399,7 @@ const EventsPage = {
         if (this.filters.city) params.set('oras', this.filters.city);
         if (this.filters.genre) params.set('gen', this.filters.genre);
         if (this.filters.artist) params.set('artist', this.filters.artist);
+        if (this.filters.venue) params.set('locatie', this.filters.venue);
         if (this.filters.date) params.set('data', this.filters.date);
         if (this.filters.price) params.set('pret', this.filters.price);
         if (this.filters.sort && this.filters.sort !== 'date') params.set('sortare', this.filters.sort);
@@ -425,6 +428,7 @@ const EventsPage = {
         if (this.filters.city) activeFilters.push({ key: 'city', label: 'Oras: ' + this.filters.city });
         if (this.filters.genre) activeFilters.push({ key: 'genre', label: 'Gen: ' + this.filters.genre });
         if (this.filters.artist) activeFilters.push({ key: 'artist', label: 'Artist: ' + this.filters.artist });
+        if (this.filters.venue) activeFilters.push({ key: 'venue', label: 'Locație: ' + this.filters.venue });
         if (this.filters.date) activeFilters.push({ key: 'date', label: 'Data: ' + this.filters.date });
         if (this.filters.price) activeFilters.push({ key: 'price', label: 'Pret: ' + this.filters.price });
         if (this.filters.search) activeFilters.push({ key: 'search', label: 'Cautare: ' + this.filters.search });
@@ -438,7 +442,7 @@ const EventsPage = {
         tagsContainer.innerHTML = activeFilters.map(f =>
             '<span class="inline-flex items-center gap-1 px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded-full">' +
                 AmbiletEventCard.escapeHtml(f.label) +
-                '<button onclick="EventsPage.removeFilter(\'' + f.key + '\')" aria-label="Șterge filtrul" class="ml-1 text-gray-400 hover:text-gray-600">' +
+                '<button onclick="EventsPage.removeFilter(\'' + f.key + '\')" aria-label="Șterge filtrul" class="ml-1 text-gray-400 hover:text-gray-600" aria-label="Șterge filtrul">' +
                     '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                         '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
                     '</svg>' +

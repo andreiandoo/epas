@@ -157,6 +157,16 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        // Filter by venue (slug). Used by /evenimente?venue=<slug> so the
+        // "Vezi toate evenimentele" link on the venue page lands on the
+        // events listing pre-filtered to that venue.
+        if ($request->has('venue')) {
+            $venueSlug = $request->venue;
+            $query->whereHas('venue', function ($q) use ($venueSlug) {
+                $q->where('slug', $venueSlug);
+            });
+        }
+
         // Filter by event genre (slug)
         if ($request->has('genre')) {
             $genreSlug = $request->genre;
