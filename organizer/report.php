@@ -32,9 +32,11 @@ $eventId = $_GET['event'] ?? null;
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-center gap-4">
                     <!-- Back Button -->
-                    <a href="/organizator/events" class="flex items-center gap-2 text-sm text-muted hover:text-secondary">
+                    <a href="/organizator/events" class="flex flex-col items-start gap-2 text-sm text-muted hover:text-secondary">
+                        <span class="text-2xl font-bold text-secondary">Raport eveniment</span>
+                        <span class="flex items-center gap-x-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                        Înapoi la evenimente
+                        Înapoi la evenimente</span>
                     </a>
 
                     <div class="flex items-center gap-3">
@@ -67,20 +69,20 @@ $eventId = $_GET['event'] ?? null;
 
     <main class="flex-1 p-4 lg:p-6">
         <!-- Summary Cards -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+        <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+            <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-revenue" class="text-2xl font-bold text-gray-900">0 lei</div>
                 <div class="text-xs text-gray-500">Venituri totale</div>
             </div>
-            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+            <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-tickets" class="text-2xl font-bold text-gray-900">0</div>
                 <div class="text-xs text-gray-500">Bilete vândute</div>
             </div>
-            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+            <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-views" class="text-2xl font-bold text-gray-900">0</div>
                 <div class="text-xs text-gray-500">Vizualizări</div>
             </div>
-            <div class="p-4 bg-white border border-gray-100 shadow-sm rounded-2xl text-center">
+            <div class="p-4 text-center bg-white border border-gray-100 shadow-sm rounded-2xl">
                 <div id="summary-conversion" class="text-2xl font-bold text-gray-900">0%</div>
                 <div class="text-xs text-gray-500">Rată conversie</div>
             </div>
@@ -171,23 +173,23 @@ $eventId = $_GET['event'] ?? null;
         </div>
 
         <!-- Financial Summary -->
-        <div class="p-6 bg-gradient-to-br from-slate-800 to-slate-900 text-white rounded-2xl report-section">
+        <div class="p-6 text-white bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl report-section">
             <h2 class="mb-6 text-lg font-semibold">Sumar financiar</h2>
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-2 gap-6 lg:grid-cols-4">
                 <div>
-                    <div class="text-sm text-white/90 mb-1">Venituri brute</div>
+                    <div class="mb-1 text-sm text-white/90">Venituri brute</div>
                     <div id="financial-gross" class="text-2xl font-bold">0 lei</div>
                 </div>
                 <div>
-                    <div class="text-sm text-white/90 mb-1">Rambursări</div>
+                    <div class="mb-1 text-sm text-white/90">Rambursări</div>
                     <div id="financial-refunds" class="text-2xl font-bold text-red-400">-0 lei</div>
                 </div>
                 <div>
-                    <div id="financial-commission-label" class="text-sm text-white/90 mb-1">Comision platformă (5%)</div>
+                    <div id="financial-commission-label" class="mb-1 text-sm text-white/90">Comision platformă (5%)</div>
                     <div id="financial-commission" class="text-2xl font-bold text-amber-400">-0 lei</div>
                 </div>
                 <div>
-                    <div class="text-sm text-white/90 mb-1">Venituri nete</div>
+                    <div class="mb-1 text-sm text-white/90">Venituri nete</div>
                     <div id="financial-net" class="text-2xl font-bold text-emerald-400">0 lei</div>
                 </div>
             </div>
@@ -437,9 +439,9 @@ function renderTicketTypes(tickets) {
         //   entry (POS) → "(încasat de organizator)"
         let nameSuffix = '';
         if (t.is_invitation) {
-            nameSuffix = ' <span class="text-xs text-gray-500 font-normal">(titlu gratuit)</span>';
+            nameSuffix = ' <span class="text-xs font-normal text-gray-500">(titlu gratuit)</span>';
         } else if (t.is_entry_ticket) {
-            nameSuffix = ' <span class="text-xs text-gray-500 font-normal">(încasat de organizator)</span>';
+            nameSuffix = ' <span class="text-xs font-normal text-gray-500">(încasat de organizator)</span>';
         }
         return `
             <tr class="border-b border-gray-50">
@@ -457,7 +459,7 @@ function renderTicketTypes(tickets) {
                         <div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div class="h-full rounded-full" style="width: ${percent}%; background: ${colors[i % colors.length]}"></div>
                         </div>
-                        <span class="text-xs text-gray-500 w-8">${percent}%</span>
+                        <span class="w-8 text-xs text-gray-500">${percent}%</span>
                     </div>
                 </td>
             </tr>
@@ -569,8 +571,8 @@ function renderTrafficSources(sources) {
                     <div class="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div class="h-full rounded-full bg-primary" style="width: ${percent}%"></div>
                     </div>
-                    <span class="text-sm font-semibold text-gray-900 w-12 text-right">${formatNumber(s.visitors)}</span>
-                    <span class="text-xs text-gray-400 w-10">${percent}%</span>
+                    <span class="w-12 text-sm font-semibold text-right text-gray-900">${formatNumber(s.visitors)}</span>
+                    <span class="w-10 text-xs text-gray-400">${percent}%</span>
                 </div>
             </div>
         `;
@@ -588,7 +590,7 @@ function renderLocations(locations) {
     const html = locations.slice(0, 8).map((l, i) => `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
-                <span class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-gray-600 rounded-lg bg-gray-100">${i + 1}</span>
+                <span class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg">${i + 1}</span>
                 <span class="text-sm font-medium text-gray-800">${l.city || l.country || 'Necunoscut'}</span>
             </div>
             <span class="text-sm font-semibold text-gray-900">${formatNumber(l.visitors || l.count || 0)}</span>
@@ -605,7 +607,7 @@ function renderRefunds(refunds) {
     }
 
     const html = refunds.map(r => `
-        <div class="flex items-center justify-between py-2 px-3 bg-red-50 rounded-lg">
+        <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-red-50">
             <div>
                 <div class="text-sm font-medium text-gray-800">${r.buyer_name || 'Client'}</div>
                 <div class="text-xs text-gray-500">${r.date || r.created_at || ''}</div>
