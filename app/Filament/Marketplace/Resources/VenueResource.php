@@ -362,7 +362,7 @@ class VenueResource extends Resource
                                     ->placeholder('https://maps.google.com/...')
                                     ->prefixIcon('heroicon-o-map')
                                     ->suffixAction(
-                                        \Filament\Forms\Components\Actions\Action::make('open_google_maps')
+                                        Action::make('open_google_maps')
                                             ->icon('heroicon-o-arrow-top-right-on-square')
                                             ->tooltip('Deschide link-ul într-o filă nouă')
                                             ->url(fn ($state) => $state ?: null, shouldOpenInNewTab: true)
