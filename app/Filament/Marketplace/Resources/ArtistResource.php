@@ -125,6 +125,26 @@ class ArtistResource extends Resource
                                         return new \Illuminate\Support\HtmlString($html);
                                     })
                                     ->visible(fn ($context) => $context === 'create'),
+
+                                // Band / artist details
+                                SC\Grid::make(3)->schema([
+                                    Forms\Components\TextInput::make('founded_year')
+                                        ->label('Anul înființării')
+                                        ->numeric()
+                                        ->minValue(1800)
+                                        ->maxValue((int) date('Y'))
+                                        ->placeholder('ex: 1997'),
+                                    Forms\Components\TextInput::make('members_count')
+                                        ->label('Număr membri')
+                                        ->numeric()
+                                        ->minValue(1)
+                                        ->maxValue(500)
+                                        ->placeholder('ex: 4'),
+                                    Forms\Components\TextInput::make('record_label')
+                                        ->label('Casă de discuri')
+                                        ->maxLength(255)
+                                        ->placeholder('ex: Universal Music'),
+                                ]),
                             ])->columns(1),
 
                         // IMAGES
@@ -180,6 +200,35 @@ class ArtistResource extends Resource
                                                 ->columnSpanFull(),
                                         ]),
                                 ])->columnSpanFull(),
+                        ]),
+
+                    // ACHIEVEMENTS
+                    SC\Section::make('Achievements')
+                        ->icon('heroicon-o-trophy')
+                        ->description('Realizări cheie ale artistului (ex: premii, număr piese, recorduri). Apar pe pagina publică a artistului.')
+                        ->collapsible()->collapsed()->persistCollapsed()
+                        ->schema([
+                            Forms\Components\Repeater::make('achievements')
+                                ->hiddenLabel()
+                                ->schema([
+                                    Forms\Components\TextInput::make('title')
+                                        ->label('Titlu')
+                                        ->required()
+                                        ->maxLength(14)
+                                        ->placeholder('ex: 5× Platinum'),
+                                    Forms\Components\TextInput::make('subtitle')
+                                        ->label('Subtitlu')
+                                        ->required()
+                                        ->maxLength(24)
+                                        ->placeholder('ex: Discuri vândute în RO'),
+                                ])
+                                ->columns(2)
+                                ->reorderable()
+                                ->defaultItems(0)
+                                ->addActionLabel('Adaugă achievement')
+                                ->itemLabel(fn (array $state): ?string => $state['title'] ?? null)
+                                ->collapsible()
+                                ->columnSpanFull(),
                         ]),
                     SC\Grid::make(2)->schema([
                         // LOCATION
@@ -398,6 +447,15 @@ class ArtistResource extends Resource
                                     ->label('Website')
                                     ->url()
                                     ->placeholder('https://...'),
+                                Forms\Components\CheckboxList::make('booking_agency.services')
+                                    ->label('Servicii oferite de agenție')
+                                    ->options([
+                                        'booking' => 'Booking',
+                                        'management' => 'Management',
+                                        'pr' => 'PR',
+                                    ])
+                                    ->columns(3)
+                                    ->columnSpanFull(),
                             ])->columns(2),
                     ]),
 
