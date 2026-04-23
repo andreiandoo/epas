@@ -42,10 +42,15 @@ class GooglePlacesReviewsService
             throw new RuntimeException('Empty place_id.');
         }
 
+        // reviews_sort=most_relevant returns Google's helpfulness-ranked
+        // set of reviews, which tends to surface higher-rated ones. With
+        // 'newest' we got the 5 latest regardless of rating, which on many
+        // venues left only ~3 entries clearing the 4.5★ bar used on the
+        // public venue page (so the shuffle always picked the same 3).
         $response = Http::timeout(10)->get(self::ENDPOINT, [
             'place_id' => $placeId,
             'fields' => self::FIELDS,
-            'reviews_sort' => 'newest',
+            'reviews_sort' => 'most_relevant',
             'language' => 'ro',
             'key' => $key,
         ]);
