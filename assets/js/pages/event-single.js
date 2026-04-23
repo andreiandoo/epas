@@ -4532,15 +4532,47 @@ const EventPage = {
                             addedAt: new Date().toISOString()
                         });
                     } else {
-                        // Handle API error
+                        // Handle API error — surface the server's message so
+                        // "some seats no longer available" isn't hidden behind
+                        // a generic banner.
                         var errorMsg = response.message || 'Locurile selectate nu mai sunt disponibile';
-                        console.error('[EventPage] Failed to hold seats:', errorMsg);
+                        console.error('[EventPage] Failed to hold seats:', errorMsg, response.data);
                         alert(errorMsg);
+                        // Refresh the map so the offending seats switch to the
+                        // correct (held/sold) colour and the user can pick
+                        // other ones immediately.
+                        self.refreshSeatStatuses().then(function () {
+                            if (self.seatSelectionModal) {
+                                self.renderSeatingMapAllSections(Object.keys(self.sectionToTicketTypeMap || {}).map(function (id) { return parseInt(id); }));
+                            }
+                        });
                         return; // Stop processing
                     }
                 } catch (error) {
-                    console.error('[EventPage] API error holding seats:', error);
-                    alert('A apărut o eroare la rezervarea locurilor. Vă rugăm încercați din nou.');
+                    // AmbiletAPI throws APIError for non-2xx responses — its
+                    // .message comes from the server body, so prefer it over
+                    // the opaque generic string.
+                    console.error('[EventPage] API error holding seats:', error, error && error.data);
+                    var serverMsg = (error && typeof error.message === 'string' && error.message.length > 0 && error.message !== 'An error occurred')
+                        ? error.message
+                        : 'A apărut o eroare la rezervarea locurilor. Vă rugăm încercați din nou.';
+                    // Append the specific seats that couldn't be held when the
+                    // server provided them, so the user sees which ones to swap.
+                    var unavailable = error && error.data && error.data.unavailable_seats;
+                    if (Array.isArray(unavailable) && unavailable.length > 0) {
+                        var labels = unavailable.map(function (uid) {
+                            var match = seats.find(function (s) { return s.seat_uid === uid; });
+                            return match ? (match.section + ' · Rând ' + match.row + ' · Loc ' + match.seat) : uid;
+                        });
+                        serverMsg += '\n\nLocuri indisponibile: ' + labels.join(', ');
+                    }
+                    alert(serverMsg);
+                    // Refresh map so already-held seats show as unavailable.
+                    self.refreshSeatStatuses().then(function () {
+                        if (self.seatSelectionModal) {
+                            self.renderSeatingMapAllSections(Object.keys(self.sectionToTicketTypeMap || {}).map(function (id) { return parseInt(id); }));
+                        }
+                    });
                     return; // Stop processing
                 }
             } else {
