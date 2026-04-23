@@ -15,7 +15,7 @@ $skipJsComponents = true;
 <?php endif; ?>
 
 <!-- Top Header -->
-<header class="sticky top-0 z-50 border-b border-muted bg-slate-900">
+<header class="sticky top-0 z-50 border-b border-slate-700 bg-slate-900">
     <div class="flex items-center justify-between h-16 px-4 lg:px-8">
         <!-- Mobile menu button -->
         <button onclick="toggleSidebar()" class="p-2 -ml-2 transition-colors rounded-lg lg:hidden hover:bg-surface">

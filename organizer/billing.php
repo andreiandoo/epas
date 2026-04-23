@@ -24,8 +24,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Page Header -->
         <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-secondary">Facturi și Facturare</h1>
-                <p class="mt-1 text-sm text-muted">Gestionează facturile, plățile și detaliile de facturare</p>
+                <h1 class="text-2xl font-bold text-secondary">Facturi și Deconturi</h1>
+                <p class="mt-1 text-sm text-muted">Gestionează facturile, deconturile și detaliile de facturare</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="BillingManager.exportInvoices()" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all border rounded-lg border-border text-muted hover:bg-slate-50 hover:text-secondary">
@@ -38,13 +38,13 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
         <!-- Main Grid -->
         <div class="grid gap-6 lg:grid-cols-3">
             <!-- Left column: toggle between Istoric facturi / Istoric deconturi -->
-            <div class="lg:col-span-2 space-y-0">
+            <div class="space-y-0 lg:col-span-2">
                 <!-- Section Toggle -->
                 <div class="inline-flex p-1 mb-4 bg-white border rounded-xl border-border" role="tablist" aria-label="Istoric facturi / deconturi">
-                    <button type="button" onclick="BillingManager.setSection('invoices')" data-section-tab="invoices" class="section-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all bg-primary text-white" role="tab" aria-selected="true">
+                    <button type="button" onclick="BillingManager.setSection('invoices')" data-section-tab="invoices" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg section-tab bg-primary" role="tab" aria-selected="true">
                         Istoric facturi
                     </button>
-                    <button type="button" onclick="BillingManager.setSection('payouts')" data-section-tab="payouts" class="section-tab px-4 py-2 text-sm font-semibold rounded-lg transition-all text-muted hover:bg-slate-50" role="tab" aria-selected="false">
+                    <button type="button" onclick="BillingManager.setSection('payouts')" data-section-tab="payouts" class="px-4 py-2 text-sm font-semibold transition-all rounded-lg section-tab text-muted hover:bg-slate-50" role="tab" aria-selected="false">
                         Istoric deconturi
                     </button>
                 </div>
@@ -200,7 +200,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-center justify-between p-6 border-b border-border">
                 <div>
                     <h3 class="text-lg font-semibold text-secondary">Detalii factură</h3>
-                    <p id="modal-invoice-number" class="text-sm font-mono text-muted">-</p>
+                    <p id="modal-invoice-number" class="font-mono text-sm text-muted">-</p>
                 </div>
                 <button onclick="BillingManager.hideInvoiceModal()" class="p-2 transition-colors rounded-lg text-muted hover:bg-slate-100">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -907,8 +907,8 @@ const PayoutManager = {
                         <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Status</span><span class="text-sm font-semibold">${status}</span></div>
                         <div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Cont bancar</span><span class="text-sm font-semibold text-secondary">${account}</span></div>
                         ${p.period_start ? `<div class="flex justify-between py-3 border-b border-slate-100"><span class="text-sm text-muted">Perioada</span><span class="text-sm text-secondary">${p.period_start} — ${p.period_end || '-'}</span></div>` : ''}
-                        ${p.rejection_reason ? `<div class="p-3 mt-2 text-sm text-red-700 bg-red-50 rounded-lg"><strong>Motiv respingere:</strong> ${this.escapeHtml(p.rejection_reason)}</div>` : ''}
-                        ${p.notes ? `<div class="p-3 mt-2 text-sm text-slate-600 bg-slate-50 rounded-lg"><strong>Note:</strong> ${this.escapeHtml(p.notes)}</div>` : ''}
+                        ${p.rejection_reason ? `<div class="p-3 mt-2 text-sm text-red-700 rounded-lg bg-red-50"><strong>Motiv respingere:</strong> ${this.escapeHtml(p.rejection_reason)}</div>` : ''}
+                        ${p.notes ? `<div class="p-3 mt-2 text-sm rounded-lg text-slate-600 bg-slate-50"><strong>Note:</strong> ${this.escapeHtml(p.notes)}</div>` : ''}
                     </div>
                 `;
                 document.getElementById('invoice-modal').classList.remove('hidden');

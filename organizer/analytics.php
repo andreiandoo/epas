@@ -37,20 +37,23 @@ $eventId = $_GET['event'] ?? null;
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
     <!-- Top Bar -->
-    <div class="sticky top-0 z-30 bg-white border-b border-gray-200">
+    <div class="sticky z-30 bg-white border-b border-gray-200 top-16">
         <div class="px-4 py-3 lg:px-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-center gap-4">
                     <!-- Back Button -->
-                    <a href="/organizator/events" class="flex items-center gap-2 text-sm text-muted hover:text-secondary">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                        Înapoi
+                    <a href="/organizator/events" class="flex flex-col items-start gap-2 text-sm text-muted hover:text-secondary">
+                        <span class="text-xl font-bold text-secondary">Analiză eveniment</span>
+                        <span class="flex items-center gap-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                            Înapoi
+                        </span>
                     </a>
 
                     <!-- Event Dropdown -->
                     <div class="relative" id="event-dropdown-container">
                         <button id="event-selector" onclick="toggleEventDropdown()" class="flex items-center gap-3 px-4 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-all min-w-[280px]">
-                            <div id="event-selector-image" class="flex-shrink-0 w-10 h-10 overflow-hidden rounded-lg shadow-sm bg-gray-200"></div>
+                            <div id="event-selector-image" class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg shadow-sm"></div>
                             <div class="flex-1 text-left">
                                 <div id="event-selector-name" class="text-sm font-semibold text-gray-800">Se încarcă...</div>
                                 <div id="event-selector-info" class="text-[11px] text-gray-500"></div>
@@ -58,9 +61,9 @@ $eventId = $_GET['event'] ?? null;
                             <svg id="event-dropdown-arrow" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         <!-- Dropdown Menu -->
-                        <div id="event-dropdown-menu" class="absolute left-0 z-50 hidden w-full mt-2 overflow-hidden bg-white border border-gray-200 shadow-lg rounded-xl top-full max-h-80 overflow-y-auto">
+                        <div id="event-dropdown-menu" class="absolute left-0 z-50 hidden w-full mt-2 overflow-hidden overflow-y-auto bg-white border border-gray-200 shadow-lg rounded-xl top-full max-h-80">
                             <div id="event-dropdown-loading" class="py-4 text-sm text-center text-gray-400">
-                                <svg class="w-5 h-5 mx-auto mb-2 animate-spin text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                <svg class="w-5 h-5 mx-auto mb-2 text-gray-300 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 Se încarcă...
                             </div>
                             <div id="event-dropdown-list" class="hidden"></div>
@@ -87,7 +90,7 @@ $eventId = $_GET['event'] ?? null;
                     </div>
 
                     <!-- Globe Button (always visible) -->
-                    <button onclick="openGlobeModal()" class="flex items-center gap-2 px-3 py-2 text-sm font-medium border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors" title="Vezi trafic live pe hartă">
+                    <button onclick="openGlobeModal()" class="flex items-center gap-2 px-3 py-2 text-sm font-medium transition-colors border border-gray-200 rounded-xl hover:bg-gray-50" title="Vezi trafic live pe hartă">
                         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span class="hidden sm:inline">Hartă</span>
                     </button>
@@ -106,7 +109,7 @@ $eventId = $_GET['event'] ?? null;
         <!-- Stats Cards - 5 columns -->
         <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-5">
             <!-- Revenue -->
-            <div class="p-5 stat-card rounded-2xl border border-white/50 shadow-sm">
+            <div class="p-5 border shadow-sm stat-card rounded-2xl border-white/50">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -127,12 +130,12 @@ $eventId = $_GET['event'] ?? null;
             </div>
 
             <!-- Tickets Sold -->
-            <div class="p-5 stat-card rounded-2xl border border-white/50 shadow-sm">
+            <div class="p-5 border shadow-sm stat-card rounded-2xl border-white/50">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <span id="stat-tickets-today" class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">+0 azi</span>
+                    <span id="stat-tickets-today" class="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">+0 azi</span>
                 </div>
                 <div id="stat-tickets" class="text-2xl font-bold text-gray-900">0</div>
                 <div class="mt-1 text-xs text-gray-500">Bilete vândute</div>
@@ -145,7 +148,7 @@ $eventId = $_GET['event'] ?? null;
             </div>
 
             <!-- Total Visits -->
-            <div class="p-5 stat-card rounded-2xl border border-white/50 shadow-sm">
+            <div class="p-5 border shadow-sm stat-card rounded-2xl border-white/50">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -157,7 +160,7 @@ $eventId = $_GET['event'] ?? null;
             </div>
 
             <!-- Conversion Rate -->
-            <div class="p-5 stat-card rounded-2xl border border-white/50 shadow-sm">
+            <div class="p-5 border shadow-sm stat-card rounded-2xl border-white/50">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -169,7 +172,7 @@ $eventId = $_GET['event'] ?? null;
             </div>
 
             <!-- Days Until Event -->
-            <div class="p-5 stat-card rounded-2xl border border-white/50 shadow-sm">
+            <div class="p-5 border shadow-sm stat-card rounded-2xl border-white/50">
                 <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-pink-600">
                         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -210,16 +213,16 @@ $eventId = $_GET['event'] ?? null;
                 <!-- Milestone Tooltip -->
                 <div id="milestone-tooltip" class="fixed z-50 hidden max-w-xs p-4 bg-white border border-gray-200 shadow-xl rounded-xl">
                     <div class="flex items-start gap-3">
-                        <div id="milestone-tooltip-icon" class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-lg"></div>
+                        <div id="milestone-tooltip-icon" class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg"></div>
                         <div class="flex-1 min-w-0">
-                            <div id="milestone-tooltip-type" class="text-xs font-medium text-gray-500 uppercase tracking-wide"></div>
+                            <div id="milestone-tooltip-type" class="text-xs font-medium tracking-wide text-gray-500 uppercase"></div>
                             <div id="milestone-tooltip-title" class="text-sm font-semibold text-gray-900 truncate"></div>
                         </div>
                     </div>
                     <div id="milestone-tooltip-details" class="mt-3 space-y-2 text-sm">
                         <!-- Dynamic content -->
                     </div>
-                    <div class="mt-3 pt-3 border-t border-gray-100">
+                    <div class="pt-3 mt-3 border-t border-gray-100">
                         <div id="milestone-tooltip-dates" class="text-xs text-gray-500"></div>
                     </div>
                 </div>
@@ -400,7 +403,7 @@ $eventId = $_GET['event'] ?? null;
 <div id="milestone-modal" class="fixed inset-0 z-50 hidden">
     <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="closeMilestoneModal()"></div>
     <div class="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
-        <div class="w-full max-w-lg bg-white shadow-2xl rounded-2xl my-8" onclick="event.stopPropagation()">
+        <div class="w-full max-w-lg my-8 bg-white shadow-2xl rounded-2xl" onclick="event.stopPropagation()">
             <div class="p-6 border-b border-border">
                 <div class="flex items-center justify-between">
                     <h2 class="text-lg font-bold text-secondary">Adaugă campanie</h2>
@@ -515,15 +518,15 @@ $eventId = $_GET['event'] ?? null;
 <!-- Globe/Map Modal - Full screen like core.tixello.com -->
 <div id="globe-modal" class="fixed inset-0 hidden" style="z-index: 99999;">
     <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" onclick="closeGlobeModal()"></div>
-    <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000;">
+    <div class="fixed overflow-hidden shadow-2xl top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl" style="z-index: 100000;">
         <!-- Full-screen Map Container -->
         <div id="globeMapContainer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px; background: #f8fafc;"></div>
 
         <!-- Header Overlay -->
-        <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none" style="z-index: 1000;">
+        <div class="absolute top-0 left-0 right-0 p-6 pointer-events-none bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent" style="z-index: 1000;">
             <div class="flex items-center justify-between pointer-events-auto">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center">
+                    <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-slate-800">
                         <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418"></path>
                         </svg>
@@ -534,15 +537,15 @@ $eventId = $_GET['event'] ?? null;
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-3 px-4 py-2 bg-white rounded-xl shadow-sm border border-slate-200">
-                        <span class="relative flex h-3 w-3">
-                            <span class="pulse-ring absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    <div class="flex items-center gap-3 px-4 py-2 bg-white border shadow-sm rounded-xl border-slate-200">
+                        <span class="relative flex w-3 h-3">
+                            <span class="absolute inline-flex w-full h-full rounded-full opacity-75 pulse-ring bg-emerald-400"></span>
+                            <span class="relative inline-flex w-3 h-3 rounded-full bg-emerald-500"></span>
                         </span>
                         <span id="globe-live-count" class="text-lg font-bold text-slate-800">0</span>
                         <span class="text-sm text-slate-500">online now</span>
                     </div>
-                    <button onclick="closeGlobeModal()" aria-label="Închide" class="p-3 bg-white hover:bg-slate-100 rounded-xl shadow-sm border border-slate-200 transition-colors">
+                    <button onclick="closeGlobeModal()" aria-label="Închide" class="p-3 transition-colors bg-white border shadow-sm hover:bg-slate-100 rounded-xl border-slate-200">
                         <svg class="w-5 h-5 text-slate-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"></path>
                         </svg>
@@ -552,18 +555,18 @@ $eventId = $_GET['event'] ?? null;
         </div>
 
         <!-- Live Activity Panel (Bottom Left) -->
-        <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden" style="z-index: 1000;">
+        <div class="absolute overflow-hidden border shadow-lg bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl border-slate-200" style="z-index: 1000;">
             <div class="p-4 border-b border-slate-200">
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-semibold text-slate-800">Live Activity</span>
                     <span class="text-xs text-slate-400">Last 5 minutes</span>
                 </div>
             </div>
-            <div id="globe-live-activity" class="p-2 max-h-64 overflow-y-auto">
+            <div id="globe-live-activity" class="p-2 overflow-y-auto max-h-64">
                 <div class="flex items-center gap-3 p-2 rounded-lg">
-                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">🇷🇴</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🇷🇴</div>
                     <div class="flex-1 min-w-0">
-                        <div class="text-sm text-slate-800 truncate">No live visitors</div>
+                        <div class="text-sm truncate text-slate-800">No live visitors</div>
                         <div class="text-xs text-slate-400">-</div>
                     </div>
                 </div>
@@ -571,8 +574,8 @@ $eventId = $_GET['event'] ?? null;
         </div>
 
         <!-- Top Locations Panel (Bottom Right) -->
-        <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4" style="z-index: 1000;">
-            <div class="text-sm font-semibold text-slate-800 mb-3">Top Locations</div>
+        <div class="absolute w-64 p-4 border shadow-lg bottom-6 right-6 bg-white/95 backdrop-blur-xl rounded-2xl border-slate-200" style="z-index: 1000;">
+            <div class="mb-3 text-sm font-semibold text-slate-800">Top Locations</div>
             <div id="globe-top-locations" class="space-y-2">
                 <!-- Will be populated by JS -->
             </div>
@@ -1066,7 +1069,7 @@ function showMilestoneTooltip(event, labelText, sticky = false) {
     if (milestone.description) {
         detailsHtml += `<div class="mt-2 text-xs text-gray-600">${milestone.description}</div>`;
     }
-    document.getElementById('milestone-tooltip-details').innerHTML = detailsHtml || '<div class="text-gray-400 text-xs">Fără detalii suplimentare</div>';
+    document.getElementById('milestone-tooltip-details').innerHTML = detailsHtml || '<div class="text-xs text-gray-400">Fără detalii suplimentare</div>';
 
     // Dates
     let datesText = '';
@@ -1267,7 +1270,7 @@ function updateTrafficSources(sources) {
                     <div class="flex-1 h-1.5 overflow-hidden bg-gray-100 rounded-full">
                         <div class="h-full rounded-full" style="width: ${percent}%; background: ${color}"></div>
                     </div>
-                    <span class="text-xs text-gray-400 w-10">${percent}%</span>
+                    <span class="w-10 text-xs text-gray-400">${percent}%</span>
                 </div>
             </div>
             <div class="text-right">
@@ -1290,12 +1293,12 @@ function updateLocations(locations) {
     const html = locations.slice(0, 6).map((l, i) => `
         <div class="flex items-center justify-between py-2">
             <div class="flex items-center gap-3">
-                <span class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-gray-600 rounded-lg bg-gray-100">${i + 1}</span>
+                <span class="flex items-center justify-center w-6 h-6 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg">${i + 1}</span>
                 <span class="text-sm font-medium text-gray-800">${l.city || l.country || 'Necunoscut'}</span>
             </div>
             <div class="text-right">
                 <span class="text-sm font-semibold text-gray-900">${formatNumber(l.visitors || l.count || 0)}</span>
-                <span class="text-xs text-gray-400 ml-1">vizite</span>
+                <span class="ml-1 text-xs text-gray-400">vizite</span>
             </div>
         </div>
     `).join('');
@@ -1346,7 +1349,7 @@ function updateRecentSales(sales) {
     const html = sales.slice(0, 8).map(s => `
         <div class="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
             <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center w-10 h-10 font-semibold text-white rounded-full bg-gradient-to-br from-violet-400 to-purple-600 text-sm">
+                <div class="flex items-center justify-center w-10 h-10 text-sm font-semibold text-white rounded-full bg-gradient-to-br from-violet-400 to-purple-600">
                     ${(s.buyer_name || 'C').charAt(0).toUpperCase()}
                 </div>
                 <div>
@@ -1382,7 +1385,7 @@ function updateGoals(data) {
         const progress = Math.min(g.progress_percent || 0, 100);
         const progressColor = progress >= 100 ? 'bg-emerald-500' : progress >= 75 ? 'bg-blue-500' : progress >= 50 ? 'bg-amber-500' : 'bg-red-400';
         return `
-        <div class="p-4 border rounded-xl border-gray-100">
+        <div class="p-4 border border-gray-100 rounded-xl">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-sm font-medium text-gray-800">${g.name || typeLabels[g.type] || g.type}</span>
             </div>
@@ -1515,7 +1518,7 @@ function renderEventsList(events) {
         return `
             <a href="/organizator/analytics/${e.id}" class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gray-50 ${isActive ? 'bg-primary/5 border-l-2 border-primary' : ''}">
                 <div class="flex-shrink-0 w-10 h-10 overflow-hidden bg-gray-200 rounded-lg">
-                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : '<div class="w-full h-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs">📅</div>'}
+                    ${e.image ? `<img src="${fixImageUrl(e.image)}" class="object-cover w-full h-full">` : '<div class="flex items-center justify-center w-full h-full text-xs text-gray-500 bg-gray-300">📅</div>'}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="text-sm font-medium text-gray-800 truncate">${eventName}</div>
@@ -1636,14 +1639,14 @@ function renderGlobeData(locations) {
         liveCountEl.textContent = '0';
         activityEl.innerHTML = `
             <div class="flex items-center gap-3 p-2 rounded-lg">
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">🌍</div>
+                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">🌍</div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm text-slate-800 truncate">No live visitors</div>
+                    <div class="text-sm truncate text-slate-800">No live visitors</div>
                     <div class="text-xs text-slate-400">-</div>
                 </div>
             </div>
         `;
-        topLocationsEl.innerHTML = '<div class="text-sm text-slate-400 text-center py-2">No data</div>';
+        topLocationsEl.innerHTML = '<div class="py-2 text-sm text-center text-slate-400">No data</div>';
         initLeafletMap([]);
         return;
     }
@@ -1662,17 +1665,17 @@ function renderGlobeData(locations) {
         const city = l.city || 'Unknown';
         const country = l.country || 'RO';
         return `
-            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg">${flag}</div>
+            <div class="flex items-center gap-3 p-2 transition-colors rounded-lg hover:bg-slate-50">
+                <div class="flex items-center justify-center w-8 h-8 text-lg rounded-full bg-slate-100">${flag}</div>
                 <div class="flex-1 min-w-0">
-                    <div class="text-sm text-slate-800 truncate">${action}</div>
+                    <div class="text-sm truncate text-slate-800">${action}</div>
                     <div class="text-xs text-slate-400">${city}, ${country}</div>
                 </div>
                 <div class="text-xs text-slate-300">now</div>
             </div>
         `;
     }).join('');
-    activityEl.innerHTML = activityHtml || '<div class="text-sm text-slate-400 text-center py-2">No activity</div>';
+    activityEl.innerHTML = activityHtml || '<div class="py-2 text-sm text-center text-slate-400">No activity</div>';
 
     // Render top locations
     const maxCount = Math.max(...locations.map(l => l.visitors || l.count || 0));
@@ -1688,14 +1691,14 @@ function renderGlobeData(locations) {
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div class="h-full bg-emerald-500 rounded-full" style="width: ${percent}%"></div>
+                        <div class="h-full rounded-full bg-emerald-500" style="width: ${percent}%"></div>
                     </div>
-                    <span class="text-xs text-slate-400 w-8 text-right">${count}</span>
+                    <span class="w-8 text-xs text-right text-slate-400">${count}</span>
                 </div>
             </div>
         `;
     }).join('');
-    topLocationsEl.innerHTML = topHtml || '<div class="text-sm text-slate-400 text-center py-2">No data</div>';
+    topLocationsEl.innerHTML = topHtml || '<div class="py-2 text-sm text-center text-slate-400">No data</div>';
 }
 
 function initLeafletMap(locations) {

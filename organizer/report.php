@@ -27,16 +27,16 @@ $eventId = $_GET['event'] ?? null;
     <?php require_once dirname(__DIR__) . '/includes/organizer-topbar.php'; ?>
 
     <!-- Top Bar -->
-    <div class="sticky top-0 z-30 bg-white border-b border-gray-200 no-print">
+    <div class="sticky z-30 bg-white border-b border-gray-200 top-16 no-print">
         <div class="px-4 py-3 lg:px-6">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-center gap-4">
                     <!-- Back Button -->
-                    <a href="/organizator/events" class="flex flex-col items-start gap-2 text-sm text-muted hover:text-secondary">
-                        <span class="text-2xl font-bold text-secondary">Raport eveniment</span>
+                    <a href="/organizator/events" class="flex flex-col items-start text-sm text-muted hover:text-secondary">
+                        <span class="text-xl font-bold text-secondary">Raport eveniment</span>
                         <span class="flex items-center gap-x-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                        Înapoi la evenimente</span>
+                        Înapoi</span>
                     </a>
 
                     <div class="flex items-center gap-3">
