@@ -234,7 +234,7 @@ class VenuesController extends BaseController
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             })
-            ->with(['ticketTypes', 'artists:id,name'])
+            ->with(['ticketTypes', 'artists:id,name', 'marketplaceEventCategory'])
             ->orderBy('starts_at')
             ->limit($upcomingEventsLimit)
             ->get()
@@ -253,6 +253,26 @@ class VenuesController extends BaseController
                 $imageUrl = $heroUrl ?? $posterUrl ?? $this->formatImageUrl($event->image_url);
                 $startsAt = $event->starts_at ?? $event->event_date;
 
+                // Event category — emit {name, slug} so the venue page's
+                // "Evenimente viitoare" filter tabs can group events by
+                // category. Mirror the shape used by the MarketplaceEvent
+                // branch above.
+                $category = null;
+                $categoryModel = $event->marketplaceEventCategory;
+                if ($categoryModel) {
+                    $categoryName = $categoryModel->getTranslation('name', $language);
+                    if (!$categoryName) {
+                        $raw = $categoryModel->name;
+                        $categoryName = is_array($raw) ? ($raw['ro'] ?? $raw['en'] ?? array_values($raw)[0] ?? null) : $raw;
+                    }
+                    if ($categoryName) {
+                        $category = [
+                            'name' => $categoryName,
+                            'slug' => $categoryModel->slug,
+                        ];
+                    }
+                }
+
                 return [
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $language) ?: $event->title,
@@ -265,7 +285,7 @@ class VenuesController extends BaseController
                     'poster_url' => $posterUrl,
                     'hero_image_url' => $heroUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
-                    'category' => null,
+                    'category' => $category,
                     'commission_mode' => $client?->commission_mode ?? 'included',
                     'commission_rate' => (float) ($client?->commission_rate ?? 5.0),
                     'artists' => $event->artists->pluck('name')->toArray(),
@@ -342,9 +362,66 @@ class VenuesController extends BaseController
             ]),
             'upcoming_events' => $allUpcomingEvents,
             'events_count' => $this->countVenueEvents($venue, $client->id),
+            // Similar venues — same city first; if there aren't enough, pad
+            // with venues that share at least one category. Excludes self.
+            'similar_venues' => $this->buildSimilarVenues($venue, $client, $language, 4),
         ];
 
         return $this->success($data);
+    }
+
+    /**
+     * Find up to $limit venues similar to the given one within the same
+     * marketplace: prefer same-city matches, then fall back to venues
+     * sharing at least one category. Never returns the venue itself.
+     */
+    protected function buildSimilarVenues(Venue $venue, $client, string $language, int $limit = 4): array
+    {
+        $baseQuery = Venue::query()
+            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
+            ->where('id', '!=', $venue->id);
+
+        $sameCity = collect();
+        if (!empty($venue->city)) {
+            $sameCity = (clone $baseQuery)
+                ->whereRaw('LOWER(city) = LOWER(?)', [$venue->city])
+                ->with('venueCategories')
+                ->limit($limit)
+                ->get();
+        }
+
+        $results = $sameCity;
+
+        // Pad with category-matched venues if we have room left.
+        if ($results->count() < $limit) {
+            $categoryIds = $venue->venueCategories->pluck('id')->all();
+            if (!empty($categoryIds)) {
+                $missing = $limit - $results->count();
+                $alreadyIncluded = $results->pluck('id')->all();
+                $categoryMatches = (clone $baseQuery)
+                    ->whereNotIn('id', $alreadyIncluded)
+                    ->whereHas('venueCategories', fn ($q) => $q->whereIn('venue_categories.id', $categoryIds))
+                    ->with('venueCategories')
+                    ->limit($missing)
+                    ->get();
+                $results = $results->concat($categoryMatches);
+            }
+        }
+
+        return $results->map(function ($v) use ($language, $client) {
+            return [
+                'id' => $v->id,
+                'name' => $v->getTranslation('name', $language) ?: $v->name,
+                'slug' => $v->slug,
+                'city' => $v->city,
+                'image' => $this->formatImageUrl($v->image_url) ?? $this->formatImageUrl($v->cover_image_url),
+                'events_count' => $this->countVenueEvents($v, $client->id),
+                'categories' => $v->venueCategories->map(fn ($cat) => [
+                    'name' => $cat->getTranslation('name', $language),
+                    'slug' => $cat->slug,
+                ])->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**
