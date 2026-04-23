@@ -43,7 +43,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <p class="text-sm text-muted mb-4">Introdu numărul de invitații pe care vrei să le generezi. Maxim 1000 pe o serie.</p>
             <div class="flex items-center gap-3">
                 <input type="number" id="qty-input" min="1" max="1000" value="1" class="input w-32" />
-                <button id="qty-continue" class="btn btn-primary">Continuă</button>
+                <button id="qty-continue" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">Continuă</button>
             </div>
         </div>
 
@@ -83,8 +83,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <input type="file" id="csv-file" accept=".csv,text/csv" class="hidden" />
                     <p class="text-sm text-muted mb-3">Încarcă un fișier CSV cu coloanele: <code class="px-1 rounded bg-slate-100">first_name, last_name, email, phone, company, notes</code></p>
                     <div class="flex items-center justify-center gap-3 flex-wrap">
-                        <button type="button" id="csv-pick-btn" class="btn btn-primary">Alege fișier CSV</button>
-                        <a id="csv-template-link" href="#" class="btn btn-ghost">Descarcă template CSV</a>
+                        <button type="button" id="csv-pick-btn" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">Alege fișier CSV</button>
+                        <a id="csv-template-link" href="#" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Descarcă template CSV</a>
                     </div>
                     <p id="csv-filename" class="mt-3 text-sm font-semibold text-secondary"></p>
                     <p id="csv-error" class="mt-2 text-sm text-red-600"></p>
@@ -92,8 +92,8 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
 
             <div class="mt-6 flex items-center justify-between gap-3 flex-wrap">
-                <button id="back-to-qty" type="button" class="btn btn-ghost">&larr; Înapoi</button>
-                <button id="generate-btn" type="button" class="btn btn-primary">
+                <button id="back-to-qty" type="button" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100">&larr; Înapoi</button>
+                <button id="generate-btn" type="button" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Generează PDF-uri
                 </button>
@@ -111,11 +111,11 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
             <div class="flex items-center gap-3 flex-wrap">
-                <a id="download-link" href="#" class="btn btn-primary">
+                <a id="download-link" href="#" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4 4m0 0l-4-4m4 4V4"/></svg>
                     Descarcă invitațiile
                 </a>
-                <button id="new-batch-btn" type="button" class="btn btn-ghost">Generează altă serie</button>
+                <button id="new-batch-btn" type="button" class="px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100">Generează altă serie</button>
             </div>
         </div>
 
@@ -443,8 +443,8 @@ $scriptsExtra = <<<'JS'
                 '</div>' +
                 '<div class="flex items-center gap-2">' +
                     '<span class="badge ' + status + '">' + esc(b.status || '') + '</span>' +
-                    '<button class="btn btn-sm btn-ghost" data-view-invites="' + b.id + '">Vezi invitați</button>' +
-                    '<button class="btn btn-sm btn-primary" data-dl="' + b.id + '">Descarcă ZIP</button>' +
+                    '<button class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 text-sm" data-view-invites="' + b.id + '">Vezi invitați</button>' +
+                    '<button class="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 text-sm" data-dl="' + b.id + '">Descarcă ZIP</button>' +
                 '</div>' +
                 '<div class="hidden w-full" id="invites-panel-' + b.id + '"></div>';
             host.appendChild(row);

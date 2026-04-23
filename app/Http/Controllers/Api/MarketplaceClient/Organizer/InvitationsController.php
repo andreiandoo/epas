@@ -7,6 +7,9 @@ use App\Models\Event;
 use App\Models\Invite;
 use App\Models\InviteBatch;
 use App\Models\MarketplaceOrganizer;
+use App\Models\Ticket;
+use App\Models\TicketTemplate;
+use App\Models\TicketType;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -90,6 +93,11 @@ class InvitationsController extends BaseController
         $watermark = $validated['watermark'] ?? 'INVITATIE';
         $batchName = $validated['name'] ?? $this->defaultBatchName($event, $quantity);
 
+        // Resolve the ticket template for this batch: prefer event.ticket_template_id
+        // (the design the organizer chose for real tickets), fall back to the marketplace
+        // default. Stored on the batch so admin-side tools see the same template.
+        $templateId = $this->resolveTemplateId($event, $organizer);
+
         $batch = InviteBatch::create([
             'marketplace_client_id' => $organizer->marketplace_client_id,
             'marketplace_organizer_id' => $organizer->id,
@@ -97,6 +105,7 @@ class InvitationsController extends BaseController
             'event_ref' => (string) $event->id,
             'name' => $batchName,
             'qty_planned' => $quantity,
+            'template_id' => $templateId,
             'options' => [
                 'watermark' => $watermark,
                 'expires_after_event' => true,
@@ -383,6 +392,11 @@ class InvitationsController extends BaseController
 
     /**
      * Render a PDF for every Invite in the batch. Returns the count of successfully rendered invites.
+     *
+     * Tries the custom TicketTemplate (the design attached to the event or the marketplace
+     * default) first so the invitation PDF looks like the real event ticket; falls back to
+     * the hardcoded pdf.invitation blade. Also creates a Ticket record per invite so the
+     * invitations show up in /marketplace/events/{id} sales and organizer analytics.
      */
     protected function renderBatchPdfs(InviteBatch $batch, Event $event, string $watermark): int
     {
@@ -390,6 +404,27 @@ class InvitationsController extends BaseController
         Storage::disk('local')->makeDirectory($storagePath);
 
         [$eventTitle, $eventSubtitle, $eventDate, $eventTime, $venueName] = $this->buildEventContext($event);
+
+        $template = $batch->template
+            ?? ($batch->template_id ? TicketTemplate::find($batch->template_id) : null);
+
+        // Find-or-create the event's "Invitatie" ticket type so Ticket records can be attached.
+        // quota_total = -1 means unlimited, and price_cents = 0 marks it as complimentary.
+        $invitationTicketType = TicketType::firstOrCreate(
+            [
+                'event_id' => $event->id,
+                'name' => 'Invitatie',
+            ],
+            [
+                'price_cents' => 0,
+                'currency' => 'RON',
+                'quota_total' => -1,
+                'quota_sold' => 0,
+                'status' => 'active',
+                'meta' => ['is_invitation' => true],
+            ]
+        );
+
         $rendered = 0;
 
         foreach ($batch->invites()->get() as $invite) {
@@ -397,18 +432,20 @@ class InvitationsController extends BaseController
                 $qrData = url('/verify/' . $invite->invite_code);
                 $qrCode = $this->generateQrCode($qrData);
 
-                $pdf = Pdf::loadView('pdf.invitation', [
-                    'invite' => $invite,
-                    'eventTitle' => $eventTitle,
-                    'eventSubtitle' => $eventSubtitle,
-                    'eventDate' => $eventDate,
-                    'eventTime' => $eventTime,
-                    'venueName' => $venueName,
-                    'watermark' => $watermark,
-                    'qrCode' => $qrCode,
-                ]);
-                $pdf->setPaper('a4', 'portrait');
-                $pdfOutput = $pdf->output();
+                $pdfOutput = $this->renderInvitationPdf(
+                    $invite,
+                    $template,
+                    [
+                        'eventTitle' => $eventTitle,
+                        'eventSubtitle' => $eventSubtitle,
+                        'eventDate' => $eventDate,
+                        'eventTime' => $eventTime,
+                        'venueName' => $venueName,
+                        'watermark' => $watermark,
+                        'qrCode' => $qrCode,
+                        'qrData' => $qrData,
+                    ]
+                );
 
                 $pdfPath = $storagePath . '/' . $invite->invite_code . '.pdf';
                 Storage::disk('local')->put($pdfPath, $pdfOutput);
@@ -419,6 +456,29 @@ class InvitationsController extends BaseController
                 ]);
                 $invite->update(['qr_data' => $qrData]);
                 $invite->markAsRendered();
+
+                // Create a Ticket row so analytics/sales pages count this invitation.
+                if (!Ticket::where('code', $invite->invite_code)->exists()) {
+                    Ticket::create([
+                        'order_id' => null,
+                        'ticket_type_id' => $invitationTicketType->id,
+                        'performance_id' => null,
+                        'code' => $invite->invite_code,
+                        'status' => 'valid',
+                        'seat_label' => $invite->seat_ref,
+                        'meta' => [
+                            'is_invitation' => true,
+                            'invite_batch_id' => $batch->id,
+                            'beneficiary' => [
+                                'name' => $invite->getRecipientName(),
+                                'email' => $invite->getRecipientEmail(),
+                                'phone' => $invite->getRecipientPhone(),
+                                'company' => $invite->getRecipientCompany(),
+                            ],
+                        ],
+                    ]);
+                }
+
                 $rendered++;
             } catch (\Throwable $e) {
                 Log::error('Organizer invitation PDF render failed', [
@@ -430,6 +490,106 @@ class InvitationsController extends BaseController
         }
 
         return $rendered;
+    }
+
+    /**
+     * Resolve the TicketTemplate id to use for a batch. Prefers the event's own
+     * ticket_template_id, falls back to the marketplace's default active template.
+     */
+    protected function resolveTemplateId(Event $event, MarketplaceOrganizer $organizer): ?int
+    {
+        if (!empty($event->ticket_template_id)) {
+            return (int) $event->ticket_template_id;
+        }
+        $default = TicketTemplate::where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('status', 'active')
+            ->where('is_default', true)
+            ->first();
+        return $default?->id;
+    }
+
+    /**
+     * Render a single invitation PDF.
+     *
+     * When a TicketTemplate with layers is available, render through the
+     * TicketPreviewGenerator (same path the admin flow uses, so the visual
+     * matches the event's real ticket). Fall back to the pdf.invitation blade.
+     *
+     * @param array<string,mixed> $ctx
+     */
+    protected function renderInvitationPdf(Invite $invite, ?TicketTemplate $template, array $ctx): string
+    {
+        if ($template && !empty($template->template_data['layers'] ?? null)) {
+            try {
+                $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
+                $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
+
+                $recipientName = $invite->getRecipientName() ?: 'Invitat';
+                $recipientEmail = $invite->getRecipientEmail() ?: '';
+
+                $data = $variableService->getSampleData();
+                $data['event'] = array_merge($data['event'] ?? [], [
+                    'name' => $ctx['eventTitle'],
+                    'date' => $ctx['eventDate'],
+                    'time' => $ctx['eventTime'] ?? '',
+                    'venue' => $ctx['venueName'] ?? '',
+                ]);
+                $data['ticket'] = array_merge($data['ticket'] ?? [], [
+                    'type' => 'INVITAȚIE',
+                    'price' => 'GRATUIT',
+                    'price_detail' => 'Invitație',
+                    'code_short' => $invite->invite_code,
+                    'code_long' => $invite->invite_code,
+                    'serial' => $invite->invite_code,
+                    'seat' => $invite->seat_ref ?? '',
+                ]);
+                $data['buyer'] = array_merge($data['buyer'] ?? [], [
+                    'name' => $recipientName,
+                    'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
+                    'last_name' => explode(' ', $recipientName, 2)[1] ?? '',
+                    'email' => $recipientEmail,
+                ]);
+                $data['barcode'] = $invite->invite_code;
+                $data['qrcode'] = $ctx['qrData'];
+
+                $content = $generator->renderToHtml($template->template_data, $data);
+
+                if (!empty(trim($content))) {
+                    $size = $template->getSize();
+                    $widthPt = round(($size['width'] ?? 210) * 2.8346, 2);
+                    $heightPt = round(($size['height'] ?? 297) * 2.8346, 2);
+                    $bgColor = $template->template_data['meta']['background']['color'] ?? '#ffffff';
+                    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+                        . "<style>@page { margin: 0; size: {$widthPt}pt {$heightPt}pt; } * { margin: 0; padding: 0; } body { margin: 0; padding: 0; width: {$widthPt}pt; height: {$heightPt}pt; background-color: {$bgColor}; font-family: 'DejaVu Sans', sans-serif; overflow: hidden; }</style>"
+                        . "</head><body>{$content}</body></html>";
+
+                    $customPdf = Pdf::loadHTML($html)
+                        ->setPaper([0, 0, $widthPt, $heightPt])
+                        ->setOption('isRemoteEnabled', true)
+                        ->setOption('isHtml5ParserEnabled', true);
+
+                    return $customPdf->output();
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Organizer invitation custom PDF failed, falling back to blade', [
+                    'invite_id' => $invite->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $pdf = Pdf::loadView('pdf.invitation', [
+            'invite' => $invite,
+            'eventTitle' => $ctx['eventTitle'],
+            'eventSubtitle' => $ctx['eventSubtitle'] ?? null,
+            'eventDate' => $ctx['eventDate'],
+            'eventTime' => $ctx['eventTime'] ?? null,
+            'venueName' => $ctx['venueName'] ?? null,
+            'watermark' => $ctx['watermark'],
+            'qrCode' => $ctx['qrCode'],
+        ]);
+        $pdf->setPaper('a4', 'portrait');
+        return $pdf->output();
     }
 
     /**
