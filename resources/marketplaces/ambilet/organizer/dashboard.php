@@ -78,16 +78,29 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="space-y-8 lg:col-span-2">
                         <!-- Sales Chart -->
                         <div class="p-6 bg-white border rounded-2xl border-border">
-                            <div class="flex items-center justify-between mb-6">
+                            <div class="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
                                 <div>
                                     <h2 class="text-lg font-bold text-secondary">Vanzari bilete</h2>
-                                    <p class="text-sm text-muted">Ultimele 7 zile</p>
+                                    <p id="chartPeriodLabel" class="text-sm text-muted">Ultimele 7 zile</p>
                                 </div>
-                                <div class="flex items-center gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
                                     <button class="chart-period px-3 py-1.5 text-xs font-medium bg-primary/10 text-primary rounded-lg" data-days="7">7 zile</button>
                                     <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="30">30 zile</button>
                                     <button class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="90">90 zile</button>
+                                    <button id="chartPeriodCustomBtn" class="chart-period px-3 py-1.5 text-xs font-medium text-muted hover:bg-surface rounded-lg transition-colors" data-days="custom">Personalizat</button>
                                 </div>
+                            </div>
+                            <!-- Custom date range (hidden by default) -->
+                            <div id="chartCustomRange" class="flex flex-wrap items-center gap-2 p-3 mb-4 border rounded-xl bg-surface border-border" style="display:none;">
+                                <label class="flex items-center gap-2 text-xs text-muted">
+                                    De la
+                                    <input type="date" id="chartCustomFrom" class="px-2 py-1 text-xs bg-white border rounded-lg border-border">
+                                </label>
+                                <label class="flex items-center gap-2 text-xs text-muted">
+                                    Până la
+                                    <input type="date" id="chartCustomTo" class="px-2 py-1 text-xs bg-white border rounded-lg border-border">
+                                </label>
+                                <button id="chartCustomApply" class="px-3 py-1 text-xs font-semibold text-white rounded-lg bg-primary hover:bg-primary/90">Aplică</button>
                             </div>
                             <div class="h-64">
                                 <canvas id="salesChart"></canvas>
@@ -557,27 +570,109 @@ const OrgDashboard = {
     },
 
     setupChartPeriod() {
-        document.querySelectorAll('.chart-period').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                // Update button styles
-                document.querySelectorAll('.chart-period').forEach(b => {
-                    b.classList.remove('bg-primary/10', 'text-primary');
-                    b.classList.add('text-muted');
-                });
+        const self = this;
+        const customRangeEl = document.getElementById('chartCustomRange');
+
+        // Highlight the active period button and clear the others.
+        const activate = (btn) => {
+            document.querySelectorAll('.chart-period').forEach(b => {
+                b.classList.remove('bg-primary/10', 'text-primary');
+                b.classList.add('text-muted');
+            });
+            if (btn) {
                 btn.classList.add('bg-primary/10', 'text-primary');
                 btn.classList.remove('text-muted');
+            }
+        };
 
-                // Load chart data for selected period
-                const days = parseInt(btn.dataset.days) || 7;
-                await this.loadChartData(days);
+        document.querySelectorAll('.chart-period').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const mode = btn.dataset.days;
+
+                activate(btn);
+
+                if (mode === 'custom') {
+                    // Open the custom range panel and default inputs to the
+                    // last-used range or the last 7 days as a starting point.
+                    if (customRangeEl) {
+                        customRangeEl.style.display = '';
+                        const fromEl = document.getElementById('chartCustomFrom');
+                        const toEl = document.getElementById('chartCustomTo');
+                        const today = new Date();
+                        if (toEl && !toEl.value) toEl.value = today.toISOString().split('T')[0];
+                        if (fromEl && !fromEl.value) {
+                            const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                            fromEl.value = d.toISOString().split('T')[0];
+                        }
+                    }
+                    return;
+                }
+
+                // Preset ranges hide the custom picker
+                if (customRangeEl) customRangeEl.style.display = 'none';
+
+                const days = parseInt(mode) || 7;
+                await self.loadChartData(days);
             });
         });
+
+        // Apply button for the custom date range
+        const applyBtn = document.getElementById('chartCustomApply');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', async () => {
+                const fromEl = document.getElementById('chartCustomFrom');
+                const toEl = document.getElementById('chartCustomTo');
+                const from = fromEl?.value;
+                const to = toEl?.value;
+                if (!from || !to) {
+                    if (typeof AmbiletNotifications !== 'undefined') {
+                        AmbiletNotifications.warning('Alege ambele date pentru a aplica perioada.');
+                    }
+                    return;
+                }
+                if (from > to) {
+                    if (typeof AmbiletNotifications !== 'undefined') {
+                        AmbiletNotifications.warning('Data de început trebuie să fie înainte de data de sfârșit.');
+                    }
+                    return;
+                }
+                await self.loadChartData({ from, to });
+            });
+        }
     },
 
-    async loadChartData(days = 7) {
+    // Updates the "Ultimele N zile" / "DD/MM – DD/MM" subtitle under the chart
+    // so users can see what range they actually chose.
+    updateChartPeriodLabel(range) {
+        const el = document.getElementById('chartPeriodLabel');
+        if (!el) return;
+        if (range && range.from && range.to) {
+            const fmt = (iso) => {
+                const d = new Date(iso);
+                return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            };
+            el.textContent = `${fmt(range.from)} – ${fmt(range.to)}`;
+        } else {
+            const days = typeof range === 'number' ? range : 7;
+            el.textContent = `Ultimele ${days} zile`;
+        }
+    },
+
+    // loadChartData accepts either a number of days (preset) or an
+    // { from, to } object for a custom date range.
+    async loadChartData(range = 7) {
         try {
-            const toDate = new Date().toISOString().split('T')[0];
-            const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            let fromDate, toDate;
+            if (typeof range === 'object' && range.from && range.to) {
+                fromDate = range.from;
+                toDate = range.to;
+                this.updateChartPeriodLabel({ from: fromDate, to: toDate });
+            } else {
+                const days = typeof range === 'number' ? range : 7;
+                toDate = new Date().toISOString().split('T')[0];
+                fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                this.updateChartPeriodLabel(days);
+            }
 
             const response = await AmbiletAPI.get(`/organizer/dashboard/sales-timeline?from_date=${fromDate}&to_date=${toDate}&group_by=day`);
             if (response.success && response.data?.timeline) {

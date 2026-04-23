@@ -217,11 +217,14 @@ async function loadOrders() {
             <p class="mb-1 text-base font-medium text-secondary">Selectează un eveniment</p>
             <p class="text-sm text-muted">Alege un eveniment din filtrul de mai sus pentru a vedea comenzile</p>
         </td></tr>`;
-        document.getElementById('stat-total-orders').textContent = '-';
-        document.getElementById('stat-total-value').textContent = '-';
-        document.getElementById('stat-total-tickets').textContent = '-';
-        document.getElementById('stat-completed').textContent = '-';
-        document.getElementById('pagination').classList.add('hidden');
+        // Guard each setter: some of these IDs only exist on certain
+        // layouts, so null-check before touching textContent to avoid
+        // aborting the whole flow with "Cannot set properties of null".
+        ['stat-total-orders', 'stat-total-value', 'stat-total-tickets', 'stat-completed', 'stat-orders-breakdown'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '-';
+        });
+        document.getElementById('pagination')?.classList.add('hidden');
         return;
     }
 
@@ -329,10 +332,19 @@ function getSourceLabel(source) {
 }
 
 function updateStats(meta) {
-    document.getElementById('stat-total-orders').textContent = (meta.total || 0).toLocaleString('ro-RO');
-    document.getElementById('stat-total-value').textContent = AmbiletUtils.formatCurrency(meta.total_revenue || 0);
-    document.getElementById('stat-total-tickets').textContent = (meta.total_tickets || 0).toLocaleString('ro-RO');
-    document.getElementById('stat-completed').textContent = (meta.completed_orders || 0).toLocaleString('ro-RO');
+    // Null-guard each stat element: the dashboard layout has been slimmed
+    // down (stat-total-orders / stat-orders-breakdown aren't rendered
+    // anymore on this page), so unconditional getElementById(...).textContent
+    // threw "Cannot set properties of null" and aborted loadOrders().
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    };
+
+    setText('stat-total-orders', (meta.total || 0).toLocaleString('ro-RO'));
+    setText('stat-total-value', AmbiletUtils.formatCurrency(meta.total_revenue || 0));
+    setText('stat-total-tickets', (meta.total_tickets || 0).toLocaleString('ro-RO'));
+    setText('stat-completed', (meta.completed_orders || 0).toLocaleString('ro-RO'));
 
     // Order breakdown
     const bd = meta.order_breakdown;
@@ -341,7 +353,7 @@ function updateStats(meta) {
         if (bd.failed > 0 || bd.cancelled > 0 || bd.expired > 0) parts.push(`${(bd.failed||0)+(bd.cancelled||0)+(bd.expired||0)} eșuate`);
         if (bd.pending > 0) parts.push(`${bd.pending} în așteptare`);
         if (bd.refunded > 0) parts.push(`${bd.refunded} rambursate`);
-        document.getElementById('stat-orders-breakdown').textContent = parts.join(' · ');
+        setText('stat-orders-breakdown', parts.join(' · '));
     }
 }
 

@@ -243,9 +243,16 @@ class DashboardController extends BaseController
                 'tickets.ticketType:id,name',
             ]);
 
-        // Filters
+        // Filters — "completed" is a user-facing bucket covering paid/confirmed/
+        // completed so app-channel orders (status="confirmed") also show up
+        // under Finalizate. Other statuses use exact match.
         if ($request->has('status')) {
-            $query->where('status', $request->status);
+            $statusFilter = $request->status;
+            if ($statusFilter === 'completed') {
+                $query->whereIn('status', ['paid', 'confirmed', 'completed']);
+            } else {
+                $query->where('status', $statusFilter);
+            }
         }
 
         if ($request->has('event_id')) {
