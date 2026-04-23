@@ -186,25 +186,8 @@ class MarketplaceEventSeatingService
      */
     public function getOrCreateEventSeatingByEventId(int $eventId): ?EventSeatingLayout
     {
-        // Check if event seating already exists using event_id
-        $existing = EventSeatingLayout::where('event_id', $eventId)
-            ->published()
-            ->first();
-
-        if ($existing) {
-            if ($existing->seats()->count() === 0) {
-                Log::warning('MarketplaceEventSeatingService: EventSeatingLayout (by event_id) has 0 seats, deleting to recreate', [
-                    'event_id' => $eventId,
-                    'event_seating_id' => $existing->id,
-                ]);
-                $existing->seats()->delete();
-                $existing->delete();
-            } else {
-                return $existing;
-            }
-        }
-
-        // Get Event with venue
+        // Load Event first so we can see which seating_layout_id it has selected.
+        // The venue may have multiple published layouts; the event's own selection is authoritative.
         $event = Event::with(['venue'])->find($eventId);
 
         if (!$event || !$event->venue) {
@@ -215,16 +198,52 @@ class MarketplaceEventSeatingService
             return null;
         }
 
-        // Load seating layout (bypass TenantScope)
-        $layout = SeatingLayout::withoutGlobalScopes()
-            ->where('venue_id', $event->venue_id)
-            ->where('status', 'published')
+        // Check if a published EventSeatingLayout already exists for this event
+        $existing = EventSeatingLayout::where('event_id', $eventId)
+            ->published()
             ->first();
 
+        if ($existing) {
+            $seatCount = $existing->seats()->count();
+            // Stale if either: has no seats (incomplete build) OR its source layout_id
+            // no longer matches the event's currently selected seating_layout_id.
+            $isStale = $seatCount === 0
+                || ($event->seating_layout_id && $existing->layout_id !== $event->seating_layout_id);
+
+            if ($isStale) {
+                Log::warning('MarketplaceEventSeatingService: EventSeatingLayout (by event_id) is stale, deleting to recreate', [
+                    'event_id' => $eventId,
+                    'event_seating_id' => $existing->id,
+                    'snapshot_layout_id' => $existing->layout_id,
+                    'event_selected_layout_id' => $event->seating_layout_id,
+                    'seat_count' => $seatCount,
+                ]);
+                $existing->seats()->delete();
+                $existing->delete();
+            } else {
+                return $existing;
+            }
+        }
+
+        // Pick the layout: prefer the event's explicit selection, fall back to the
+        // first published layout for the venue (legacy behavior for events that
+        // never got a seating_layout_id assigned).
+        $layoutQuery = SeatingLayout::withoutGlobalScopes()
+            ->where('status', 'published');
+
+        if ($event->seating_layout_id) {
+            $layoutQuery->where('id', $event->seating_layout_id);
+        } else {
+            $layoutQuery->where('venue_id', $event->venue_id);
+        }
+
+        $layout = $layoutQuery->first();
+
         if (!$layout) {
-            Log::warning('MarketplaceEventSeatingService: No published SeatingLayout for venue (event_id lookup)', [
+            Log::warning('MarketplaceEventSeatingService: No published SeatingLayout found (event_id lookup)', [
                 'event_id' => $eventId,
                 'venue_id' => $event->venue_id,
+                'event_seating_layout_id' => $event->seating_layout_id,
             ]);
             return null;
         }
