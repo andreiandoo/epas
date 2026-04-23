@@ -312,7 +312,7 @@ class VenueResource extends Resource
                                     ->label('Gallery')
                                     ->image()
                                     ->multiple()
-                                    ->maxFiles(3)
+                                    ->maxFiles(5)
                                     ->disk('public')
                                     ->directory('venues/gallery')
                                     ->visibility('public')
