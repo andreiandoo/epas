@@ -2315,7 +2315,11 @@ class EventsController extends BaseController
             ->where('is_active', true);
 
         if (strlen($search) >= 2) {
-            $query->where('name', 'like', "%{$search}%");
+            // PostgreSQL LIKE is case-sensitive and accent-sensitive; use the
+            // unaccent() extension + LOWER() so "ana", "ANA", and "Ană" all
+            // match the same artist.
+            $term = '%' . mb_strtolower($search) . '%';
+            $query->whereRaw('unaccent(LOWER(name)) LIKE unaccent(?)', [$term]);
         }
 
         $artists = $query->orderBy('name')

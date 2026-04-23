@@ -96,6 +96,7 @@ class PayoutController extends BaseController
         // Get events with their balances
         $events = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->with('ticketTypes')
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($event) use ($organizer) {
@@ -113,17 +114,56 @@ class PayoutController extends BaseController
                 $commissionMode = $event->getEffectiveCommissionMode();
                 $commissionRate = $event->getEffectiveCommissionRate();
 
-                // Calculate revenue: gross from orders, net from ticket base prices
-                $grossRevenue = (float) $completedOrders->sum('total');
+                // Per-ticket-type net/commission, matching EventsController::analytics()
+                // so the Sold page columns (Venituri nete / Comision) track the
+                // Report page cards exactly. Using Ticket.price straight blows up
+                // when invitations / free tickets sit at 0, and commission = gross
+                // minus that gives inflated commission.
+                $defaultRate = (float) ($commissionRate ?? 5);
+                $defaultMode = $commissionMode ?? 'included';
+                $ttIds = $event->ticketTypes->pluck('id')->all();
+                $validCountsByType = [];
+                if (!empty($ttIds)) {
+                    $validCountsByType = \App\Models\Ticket::whereIn('ticket_type_id', $ttIds)
+                        ->whereIn('status', ['valid', 'used'])
+                        ->where(function ($q) {
+                            $q->whereDoesntHave('order')
+                              ->orWhereHas('order', fn ($qq) => $qq->whereIn('status', ['paid', 'confirmed', 'completed'])
+                                  ->where('source', '!=', 'external_import'));
+                        })
+                        ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+                        ->groupBy('ticket_type_id')
+                        ->pluck('cnt', 'ticket_type_id')
+                        ->all();
+                }
 
-                // Net revenue = sum of base ticket prices (what organizer actually earns)
-                // This handles per-ticket-type commission rates correctly
-                $orderIds = $completedOrders->pluck('id');
-                $netRevenue = (float) \App\Models\Ticket::whereIn('order_id', $orderIds)
-                    ->whereIn('status', ['valid', 'used'])
-                    ->sum('price');
+                $netRevenue = 0.0;
+                $commissionAmount = 0.0;
+                foreach ($event->ticketTypes as $tt) {
+                    $validCount = (int) ($validCountsByType[$tt->id] ?? 0);
+                    if ($validCount === 0) continue;
 
-                $commissionAmount = round($grossRevenue - $netRevenue, 2);
+                    $basePriceCents = ((int) ($tt->sale_price_cents ?? 0)) > 0
+                        ? (int) $tt->sale_price_cents
+                        : (int) ($tt->price_cents ?? 0);
+                    $basePrice = $basePriceCents / 100;
+
+                    $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+                    $mode = $effective['mode'];
+                    $commPerTicket = (float) $tt->calculateCommission($basePrice, $defaultRate, $defaultMode);
+                    $netPerTicket = in_array($mode, ['on_top', 'added_on_top'], true)
+                        ? $basePrice
+                        : max(0.0, $basePrice - $commPerTicket);
+
+                    $netRevenue += $netPerTicket * $validCount;
+                    $commissionAmount += $commPerTicket * $validCount;
+                }
+                $netRevenue = round($netRevenue, 2);
+                $commissionAmount = round($commissionAmount, 2);
+                // Gross from the organizer's perspective = net + commission (what
+                // the ticket costs the buyer, excluding platform extras like
+                // insurance / cultural card surcharge which the organizer never sees).
+                $grossRevenue = round($netRevenue + $commissionAmount, 2);
 
                 // Get payouts for this event (if tracked per event)
                 $eventPayouts = MarketplacePayout::where('marketplace_organizer_id', $organizer->id)

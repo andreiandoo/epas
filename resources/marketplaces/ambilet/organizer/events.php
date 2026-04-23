@@ -618,6 +618,12 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
 let ticketTypeCount = 1;
 let descriptionEditor = null;
 let ticketTermsEditor = null;
+// Content queued to be applied as soon as the TinyMCE editors finish
+// initialising — the editors load async from a CDN and the setTimeout
+// race used previously sometimes fired before init(), leaving the
+// editor empty even though the event had description/ticket_terms.
+let pendingDescription = null;
+let pendingTicketTerms = null;
 let categoriesData = [];
 let venueSearchTimeout = null;
 let artistSearchTimeout = null;
@@ -830,12 +836,12 @@ function renderEvents(events) {
         return `
         <div class="transition-colors bg-white border rounded-2xl border-border hover:border-primary/30">
             <div class="flex flex-col md:items-center md:flex-row">
-                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 max-h-[130px] md:w-28 rounded-xl" loading="lazy">
+                <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 max-h-[115px] md:w-28 rounded-xl" loading="lazy">
                 <div class="flex-1">
                     <div class="flex items-center justify-between gap-4 pr-4">
                         <div class="flex items-center gap-4 pl-6">
                             <div class="flex flex-col items-start">
-                                <h3 class="mb-1 text-lg font-bold text-secondary">${event.name || event.title}</h3>
+                                <h3 class="text-lg font-bold text-secondary">${event.name || event.title}</h3>
                                 <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
                                     <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>${event.starts_at ? AmbiletUtils.formatDate(event.starts_at) : (event.start_date ? AmbiletUtils.formatDate(event.start_date) : '')}</span>
                                     <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${[event.venue_name, event.venue_city].filter(Boolean).join(', ') || ''}</span>
@@ -843,14 +849,14 @@ function renderEvents(events) {
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
-                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
                             <div class="py-2 text-right"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                            <div class="py-2 text-right"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări nete</p></div>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center justify-end gap-2 px-4 py-2 border-t border-border">
+                    <div class="flex flex-wrap items-center justify-end gap-2 py-2 pl-6 pr-4 border-t border-border">
                         <div class="flex items-center ml-0 mr-auto gap-x-4 ">
-                            <div class="flex flex-col items-center justify-center"><p class="text-2xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs text-muted">${isEnded ? '' : 'zile rămase'}</p></div>
+                            <div class="flex items-center justify-center gap-x-2"><p class="text-3xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs leading-5 text-muted">${isEnded ? '' : 'zile<br/>rămase'}</p></div>
                             
                             <div class="flex items-center gap-2">
                             <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
@@ -1032,16 +1038,18 @@ async function loadEventForEdit(eventId) {
             form.querySelector('[name="tags"]').value = tagsStr;
         }
 
-        // Category
+        // Category — wait for categories API to actually finish before
+        // setting the select value. The previous setTimeout(500ms) raced
+        // against loadCategories() and often fired before the <option>
+        // existed, leaving the select on the placeholder and losing the
+        // saved category on next submit.
         if (event.marketplace_event_category_id) {
-            // Wait for categories to load then set value
-            setTimeout(() => {
-                const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
-                if (catSelect) {
-                    catSelect.value = event.marketplace_event_category_id;
-                    onCategoryChange(event.marketplace_event_category_id);
-                }
-            }, 500);
+            await loadCategories();
+            const catSelect = form.querySelector('[name="marketplace_event_category_id"]');
+            if (catSelect) {
+                catSelect.value = event.marketplace_event_category_id;
+                onCategoryChange(event.marketplace_event_category_id);
+            }
         }
 
         // Step 2: Schedule - parse starts_at/ends_at/doors_open_at
@@ -1100,17 +1108,24 @@ async function loadEventForEdit(eventId) {
         if (event.website_url) form.querySelector('[name="website_url"]').value = event.website_url;
         if (event.facebook_url) form.querySelector('[name="facebook_url"]').value = event.facebook_url;
 
-        // Step 4: Content - set editors content after they initialize
-        setTimeout(() => {
-            if (event.description && descriptionEditor) {
+        // Step 4: Content — if the editors are already up, set directly;
+        // otherwise queue the content so the 'init' callback in
+        // initEditors() can apply it as soon as TinyMCE finishes loading.
+        if (event.description) {
+            if (descriptionEditor) {
                 descriptionEditor.setContent(event.description);
+            } else {
+                pendingDescription = event.description;
             }
-            if (event.ticket_terms && ticketTermsEditor) {
+        }
+        if (event.ticket_terms) {
+            if (ticketTermsEditor) {
                 ticketTermsEditor.setContent(event.ticket_terms);
+            } else {
+                pendingTicketTerms = event.ticket_terms;
             }
-            // Update summaries after setting editor content
-            updateSummaries();
-        }, 1000);
+        }
+        updateSummaries();
 
         // Step 6: Ticket types
         if (event.ticket_types && event.ticket_types.length > 0) {
@@ -1305,15 +1320,20 @@ async function onCategoryChange(categoryId) {
 
 // ==================== GENRE MULTISELECT ====================
 
+// Strip diacritics + lowercase, so "Muzica" matches "Muzică" etc.
+function normalizeSearchTerm(str) {
+    return (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
 function initGenreSearch() {
     const input = document.getElementById('genres-search-input');
     const dropdown = document.getElementById('genres-dropdown');
 
     input.addEventListener('input', function() {
-        const query = this.value.trim().toLowerCase();
+        const query = normalizeSearchTerm(this.value.trim());
         const filtered = availableGenres.filter(g =>
             !selectedGenres.some(sg => sg.id === g.id) &&
-            (query === '' || g.name.toLowerCase().includes(query))
+            (query === '' || normalizeSearchTerm(g.name).includes(query))
         );
         if (filtered.length === 0) {
             dropdown.classList.add('hidden');
@@ -1575,7 +1595,16 @@ function initEditors() {
         placeholder: 'Scrie descrierea evenimentului aici...',
         setup: function(editor) {
             editor.on('Change KeyUp', function() { updateSummaries(); });
-            editor.on('init', function() { descriptionEditor = editor; });
+            editor.on('init', function() {
+                descriptionEditor = editor;
+                // Flush any queued content (e.g. from loadEventForEdit
+                // which may have run before TinyMCE finished loading).
+                if (pendingDescription !== null) {
+                    editor.setContent(pendingDescription);
+                    pendingDescription = null;
+                    if (typeof updateSummaries === 'function') updateSummaries();
+                }
+            });
         }
     });
 
@@ -1585,7 +1614,13 @@ function initEditors() {
         height: 200,
         placeholder: 'Conditii de participare, restrictii, politica de retur...',
         setup: function(editor) {
-            editor.on('init', function() { ticketTermsEditor = editor; });
+            editor.on('init', function() {
+                ticketTermsEditor = editor;
+                if (pendingTicketTerms !== null) {
+                    editor.setContent(pendingTicketTerms);
+                    pendingTicketTerms = null;
+                }
+            });
         }
     });
 }
@@ -1671,12 +1706,15 @@ function updateSummaries() {
         document.getElementById('summary-4').textContent = plainText.substring(0, 60) + (plainText.length > 60 ? '...' : '');
     }
 
-    // Step 5 summary
+    // Step 5 summary — count either a freshly picked file or a preview
+    // rendered from previously-saved data.
     const posterInput = form.querySelector('[name="poster"]');
     const coverInput = form.querySelector('[name="cover_image"]');
+    const posterPreviewEl = document.getElementById('poster-preview');
+    const coverPreviewEl = document.getElementById('cover-preview');
     const mediaItems = [];
-    if (posterInput && posterInput.files.length > 0) mediaItems.push('Poster');
-    if (coverInput && coverInput.files.length > 0) mediaItems.push('Cover');
+    if ((posterInput && posterInput.files.length > 0) || (posterPreviewEl && !posterPreviewEl.classList.contains('hidden'))) mediaItems.push('Poster');
+    if ((coverInput && coverInput.files.length > 0) || (coverPreviewEl && !coverPreviewEl.classList.contains('hidden'))) mediaItems.push('Cover');
     document.getElementById('summary-5').textContent = mediaItems.length > 0 ? mediaItems.join(', ') + ' adăugate' : '';
 
     // Step 6 summary
@@ -1716,9 +1754,16 @@ function updateStepIndicators() {
     const step4Done = !!descriptionContent && descriptionContent.trim().length > 0;
     setStepComplete(4, step4Done);
 
+    // Step 5 is complete only when BOTH images are in place — either a
+    // freshly picked file in the input OR a preview already rendered from
+    // data loaded in edit mode.
     const posterInput = form.querySelector('[name="poster"]');
     const coverInput = form.querySelector('[name="cover_image"]');
-    const step5Done = (posterInput?.files?.length > 0) || (coverInput?.files?.length > 0);
+    const posterPreview = document.getElementById('poster-preview');
+    const coverPreview = document.getElementById('cover-preview');
+    const hasPoster = (posterInput?.files?.length > 0) || (posterPreview && !posterPreview.classList.contains('hidden'));
+    const hasCover = (coverInput?.files?.length > 0) || (coverPreview && !coverPreview.classList.contains('hidden'));
+    const step5Done = hasPoster && hasCover;
     setStepComplete(5, step5Done);
 
     const firstTicketName = form.querySelector('[name="ticket_name_0"]')?.value;
