@@ -1786,6 +1786,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         // Invitations
         Route::get('/invitations', [OrganizerInvitationsController::class, 'index'])
             ->name('api.marketplace-client.organizer.invitations');
+        Route::get('/invitations/csv-template', [OrganizerInvitationsController::class, 'csvTemplate'])
+            ->name('api.marketplace-client.organizer.invitations.csv-template');
         Route::post('/invitations', [OrganizerInvitationsController::class, 'store'])
             ->name('api.marketplace-client.organizer.invitations.store');
         Route::get('/invitations/{batch}', [OrganizerInvitationsController::class, 'show'])

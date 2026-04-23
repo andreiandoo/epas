@@ -296,7 +296,7 @@ RewriteRule ^organizator/report/([0-9]+)/?$ organizer/report.php?event=$1 [L,QSA
 # Handle organizer dashboard routes - /organizator/dashboard, /organizator/events, etc.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications|widgets)/?$ organizer/$1.php [L]
+RewriteRule ^organizator/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications|widgets|invitatii)/?$ organizer/$1.php [L]
 
 # Legacy: redirect /organizer/* dashboard routes to /organizator/*
 RewriteRule ^organizer/(dashboard|events|settings|analytics|tickets|orders|payouts|team|support|finance|help|participants|promo|sales|reports|email|documents|notifications)/?$ /organizator/$1 [R=301,L]

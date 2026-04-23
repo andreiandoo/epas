@@ -2679,6 +2679,62 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ============================================
+    // Organizer invitations (self-service PDF invite generation)
+    // GET    /organizer/invitations               list batches (filter by event_id)
+    // POST   /organizer/invitations               create batch with recipients + render PDFs
+    // GET    /organizer/invitations/{batch}       show batch + invite list
+    // POST   /organizer/invitations/{batch}/generate  re-render PDFs
+    // DELETE /organizer/invitations/{batch}       delete empty draft batch
+    // Note: /download (ZIP) and /csv-template (CSV) are served via direct fetch
+    // from the frontend so the binary body isn't re-encoded by the proxy layer.
+    // ============================================
+
+    case 'organizer.invitations':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+            $endpoint = '/organizer/invitations';
+        } else {
+            $qs = http_build_query(array_intersect_key($_GET, array_flip(['event_id', 'status', 'per_page', 'page'])));
+            $endpoint = '/organizer/invitations' . ($qs ? '?' . $qs : '');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.show':
+        $method = $_SERVER['REQUEST_METHOD'];
+        $batchId = $_GET['batch_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId;
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        }
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.generate':
+        $method = 'POST';
+        $batchId = $_GET['batch_id'] ?? '';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/' . $batchId . '/generate';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.invitations.download':
+        $method = 'GET';
+        $batchId = $_GET['batch_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId . '/download';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
+    case 'organizer.invitations.csv-template':
+        $method = 'GET';
+        $endpoint = '/organizer/invitations/csv-template';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'organizer.documents.view':
         $method = 'GET';
         $documentId = $_GET['document_id'] ?? '';
@@ -3174,7 +3230,7 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
     header('Cache-Control: no-store');
 }
 
-// For raw responses (PDF, CSV, exports), forward headers from upstream via curl
+// For raw responses (PDF, CSV, ZIP, exports), forward headers from upstream via curl
 if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
     if (str_starts_with($response, '%PDF')) {
         header('Content-Type: application/pdf');
@@ -3184,7 +3240,16 @@ if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $status
             header('Content-Disposition: attachment; filename="bilete.pdf"');
         }
         header('Content-Length: ' . strlen($response));
-    } elseif (!empty($upstreamContentDisposition) || str_starts_with($response, "\xEF\xBB\xBF") || str_starts_with($response, 'Ticket ID,') || str_starts_with($response, 'Comanda,')) {
+    } elseif (str_starts_with($response, "PK\x03\x04") || str_starts_with($response, "PK\x05\x06")) {
+        // ZIP archive (local file header or empty-archive end-of-central-dir signature)
+        header('Content-Type: application/zip');
+        if (!empty($upstreamContentDisposition)) {
+            header($upstreamContentDisposition);
+        } else {
+            header('Content-Disposition: attachment; filename="archive.zip"');
+        }
+        header('Content-Length: ' . strlen($response));
+    } elseif (!empty($upstreamContentDisposition) || str_starts_with($response, "\xEF\xBB\xBF") || str_starts_with($response, 'Ticket ID,') || str_starts_with($response, 'Comanda,') || str_starts_with($response, 'first_name,')) {
         header('Content-Type: text/csv; charset=UTF-8');
         if (!empty($upstreamContentDisposition)) {
             header($upstreamContentDisposition);

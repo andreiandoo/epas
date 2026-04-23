@@ -417,6 +417,16 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
         if (endpoint === '/organizer/documents' || endpoint.includes('/organizer/documents?')) return 'organizer.documents';
 
+        // Organizer invitations (PDF invite generation)
+        if (endpoint === '/organizer/invitations/csv-template') return 'organizer.invitations.csv-template';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/download$/)) return 'organizer.invitations.download';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/generate$/)) return 'organizer.invitations.generate';
+        if (endpoint.match(/\/organizer\/invitations\/\d+$/)) {
+            // Distinguish GET (show) from DELETE via action name — proxy maps both via batch_id
+            return 'organizer.invitations.show';
+        }
+        if (endpoint === '/organizer/invitations' || endpoint.startsWith('/organizer/invitations?')) return 'organizer.invitations';
+
         // Organizer services (Extra Services / Promovare)
         if (endpoint === '/organizer/services/pricing') return 'organizer.services.pricing';
         if (endpoint === '/organizer/services/stats') return 'organizer.services.stats';
@@ -691,6 +701,12 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Organizer invitations - extract batch id (for /{id}, /{id}/generate, /{id}/download)
+        const invBatchMatch = endpoint.match(/\/organizer\/invitations\/(\d+)(?:\/(?:generate|download))?$/);
+        if (invBatchMatch) {
+            return `batch_id=${encodeURIComponent(invBatchMatch[1])}`;
         }
 
         // Organizer services - extract UUID from /organizer/services/orders/{uuid}[/action]

@@ -3,434 +3,334 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
-use App\Models\InviteBatch;
+use App\Models\Event;
 use App\Models\Invite;
+use App\Models\InviteBatch;
 use App\Models\MarketplaceOrganizer;
-use App\Models\MarketplaceEvent;
-use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use ZipArchive;
 
+/**
+ * Organizer-facing invitations API.
+ *
+ * The invite system is shared with the admin panel (App\Filament\Marketplace\Pages\Invitations).
+ * This controller lets an organizer bulk-create a batch of zero-value invitations for one of
+ * their own events, render PDFs and download them as a ZIP. The organizer-side events come
+ * from the events table (Event model), so batches store the event id in InviteBatch.event_ref
+ * and leave marketplace_event_id null.
+ */
 class InvitationsController extends BaseController
 {
     /**
-     * List invitation batches for organizer
+     * List invitation batches for the organizer (optionally scoped to one event).
+     * GET /api/marketplace-client/organizer/invitations?event_id=...
      */
     public function index(Request $request): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
 
-        // Check if invitations are enabled
-        if (!$organizer->invitations_enabled) {
-            return $this->error('Invitations are not enabled for your account', 403);
-        }
-
         $query = InviteBatch::where('marketplace_organizer_id', $organizer->id)
-            ->with(['marketplaceEvent:id,name,slug,starts_at'])
             ->orderBy('created_at', 'desc');
 
-        // Filters
-        if ($request->has('event_id')) {
-            $query->where('marketplace_event_id', $request->event_id);
+        if ($request->filled('event_id')) {
+            $query->where('event_ref', (string) $request->integer('event_id'));
         }
-
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('status')) {
+            $query->where('status', $request->string('status'));
         }
 
         $perPage = min((int) $request->get('per_page', 20), 100);
         $batches = $query->paginate($perPage);
 
-        return $this->paginated($batches, function ($batch) {
-            return $this->formatBatch($batch);
-        });
+        return $this->paginated($batches, fn (InviteBatch $b) => $this->formatBatch($b));
     }
 
     /**
-     * Create a new invitation batch
+     * Create a batch + recipients + generate PDFs in one call.
+     *
+     * Request body:
+     *   - event_id   (int,    required) Event owned by the authed organizer
+     *   - name       (string, optional) Batch label; defaults to event title + date
+     *   - recipients (array,  required) [{first_name, last_name, email, phone?, company?, notes?}, ...]
+     *                                   Length must be between 1 and 1000.
+     *   - watermark  (string, optional) Printed at the top of each invitation; default "INVITATIE"
      */
     public function store(Request $request): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
 
-        if (!$organizer->invitations_enabled) {
-            return $this->error('Invitations are not enabled for your account', 403);
-        }
-
         $validated = $request->validate([
-            'event_id' => 'required|integer|exists:marketplace_events,id',
-            'name' => 'required|string|max:255',
-            'quantity' => 'required|integer|min:1|max:1000',
-            'options' => 'nullable|array',
-            'options.watermark' => 'nullable|string|max:50',
-            'options.guest_names' => 'nullable|array',
-            'options.guest_names.*' => 'string|max:100',
-            'options.message' => 'nullable|string|max:500',
-            'options.expires_after_event' => 'nullable|boolean',
+            'event_id' => 'required|integer',
+            'name' => 'nullable|string|max:255',
+            'watermark' => 'nullable|string|max:50',
+            'recipients' => 'required|array|min:1|max:1000',
+            'recipients.*.first_name' => 'required|string|max:100',
+            'recipients.*.last_name' => 'required|string|max:100',
+            'recipients.*.email' => 'required|email|max:180',
+            'recipients.*.phone' => 'nullable|string|max:50',
+            'recipients.*.company' => 'nullable|string|max:150',
+            'recipients.*.notes' => 'nullable|string|max:500',
         ]);
 
-        // Verify event belongs to organizer
-        $event = MarketplaceEvent::where('id', $validated['event_id'])
+        $event = Event::where('id', $validated['event_id'])
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
 
         if (!$event) {
-            return $this->error('Event not found', 404);
+            return $this->error('Event not found or not owned by you', 404);
         }
 
-        // Check event is published
-        if (!$event->isPublished()) {
-            return $this->error('Cannot create invitations for unpublished events', 400);
-        }
+        $recipients = $validated['recipients'];
+        $quantity = count($recipients);
+        $watermark = $validated['watermark'] ?? 'INVITATIE';
+        $batchName = $validated['name'] ?? $this->defaultBatchName($event, $quantity);
 
-        // Create the batch
         $batch = InviteBatch::create([
             'marketplace_client_id' => $organizer->marketplace_client_id,
             'marketplace_organizer_id' => $organizer->id,
-            'marketplace_event_id' => $event->id,
-            'event_ref' => $event->slug,
-            'name' => $validated['name'],
-            'qty_planned' => $validated['quantity'],
-            'options' => array_merge([
-                'watermark' => 'INVITATION',
+            'tenant_id' => $event->tenant_id,
+            'event_ref' => (string) $event->id,
+            'name' => $batchName,
+            'qty_planned' => $quantity,
+            'options' => [
+                'watermark' => $watermark,
                 'expires_after_event' => true,
-            ], $validated['options'] ?? []),
+            ],
             'status' => 'draft',
         ]);
 
+        // Create one Invite per recipient
+        foreach ($recipients as $rec) {
+            $fullName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? ''));
+            $invite = Invite::create([
+                'marketplace_client_id' => $organizer->marketplace_client_id,
+                'batch_id' => $batch->id,
+                'tenant_id' => $event->tenant_id,
+                'status' => 'created',
+                'recipient' => [
+                    'first_name' => $rec['first_name'],
+                    'last_name' => $rec['last_name'],
+                    'name' => $fullName,
+                    'email' => $rec['email'],
+                    'phone' => $rec['phone'] ?? null,
+                    'company' => $rec['company'] ?? null,
+                    'notes' => $rec['notes'] ?? null,
+                ],
+            ]);
+            $batch->increment('qty_generated');
+        }
+
+        // Synchronously render all PDFs — user is waiting on the UI
+        $rendered = $this->renderBatchPdfs($batch, $event, $watermark);
+
+        $batch->update(['status' => 'ready']);
+
         return $this->success([
-            'batch' => $this->formatBatch($batch->load('marketplaceEvent:id,name,slug,starts_at')),
-        ], 'Invitation batch created', 201);
+            'batch' => $this->formatBatch($batch->fresh()),
+            'rendered' => $rendered,
+            'download_url' => route('api.marketplace-client.organizer.invitations.download', ['batch' => $batch->id]),
+        ], "{$rendered} invitations generated", 201);
     }
 
     /**
-     * Get a single batch
+     * Get a single batch with its invites.
+     * GET /api/marketplace-client/organizer/invitations/{batch}
      */
     public function show(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
 
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->with(['marketplaceEvent:id,name,slug,starts_at'])
-            ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
+        $invites = $batch->invites()->orderBy('id')->get()
+            ->map(fn (Invite $i) => $this->formatInvite($i));
 
         return $this->success([
-            'batch' => $this->formatBatchDetailed($batch),
+            'batch' => $this->formatBatch($batch),
+            'invites' => $invites,
         ]);
     }
 
     /**
-     * Generate invitations for a batch
+     * Re-render PDFs for a batch (e.g. after a template change).
+     * POST /api/marketplace-client/organizer/invitations/{batch}/generate
      */
     public function generate(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
 
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
+        $event = Event::find((int) $batch->event_ref);
+        if (!$event) return $this->error('Event linked to this batch no longer exists', 404);
 
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
+        // Wipe previous PDFs and re-render
+        Storage::disk('local')->deleteDirectory($this->batchStoragePath($batch));
+        $watermark = data_get($batch->options, 'watermark', 'INVITATIE');
+        $rendered = $this->renderBatchPdfs($batch, $event, $watermark);
 
-        if (!in_array($batch->status, ['draft', 'ready'])) {
-            return $this->error('Batch cannot be generated in current status', 400);
-        }
-
-        $guestNames = $batch->getOption('guest_names', []);
-        $invitesCreated = 0;
-
-        // Generate invitations
-        for ($i = 0; $i < $batch->qty_planned; $i++) {
-            $guestName = $guestNames[$i] ?? null;
-
-            Invite::create([
-                'batch_id' => $batch->id,
-                'marketplace_client_id' => $organizer->marketplace_client_id,
-                'marketplace_organizer_id' => $organizer->id,
-                'code' => $this->generateInviteCode(),
-                'guest_name' => $guestName,
-                'status' => 'active',
-                'event_ref' => $batch->event_ref,
-            ]);
-
-            $invitesCreated++;
-            $batch->incrementGenerated();
-        }
-
-        $batch->updateStatus('ready');
+        $batch->update(['status' => 'ready']);
 
         return $this->success([
-            'batch' => $this->formatBatch($batch->fresh(['marketplaceEvent:id,name,slug,starts_at'])),
-            'invites_created' => $invitesCreated,
-        ], "{$invitesCreated} invitations generated");
+            'batch' => $this->formatBatch($batch->fresh()),
+            'rendered' => $rendered,
+        ], "{$rendered} invitations re-rendered");
     }
 
     /**
-     * List invitations in a batch
+     * List invitations for a batch.
+     * GET /api/marketplace-client/organizer/invitations/{batch}/invites
      */
     public function invitations(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
 
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
+        $perPage = min((int) $request->get('per_page', 100), 500);
+        $invites = $batch->invites()->orderBy('id')->paginate($perPage);
 
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
-
-        $query = Invite::where('batch_id', $batch->id)
-            ->orderBy('created_at', 'desc');
-
-        // Filters
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('code', 'like', "%{$search}%")
-                  ->orWhere('guest_name', 'like', "%{$search}%")
-                  ->orWhere('guest_email', 'like', "%{$search}%");
-            });
-        }
-
-        $perPage = min((int) $request->get('per_page', 50), 200);
-        $invites = $query->paginate($perPage);
-
-        return $this->paginated($invites, function ($invite) {
-            return $this->formatInvite($invite);
-        });
+        return $this->paginated($invites, fn (Invite $i) => $this->formatInvite($i));
     }
 
     /**
-     * Send invitations by email
+     * Stream a ZIP of all rendered PDFs in the batch.
+     * GET /api/marketplace-client/organizer/invitations/{batch}/download
+     */
+    public function download(Request $request, int $batchId)
+    {
+        $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
+
+        $invites = $batch->invites()->get()->filter(fn (Invite $i) => $i->getPdfUrl());
+        if ($invites->isEmpty()) {
+            return $this->error('No PDFs available. Generate them first.', 400);
+        }
+
+        $tempDir = storage_path('app/temp');
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0755, true);
+        }
+        $zipFilename = Str::slug($batch->name ?: 'invitations') . '-' . now()->format('Ymd-His') . '.zip';
+        $zipPath = $tempDir . DIRECTORY_SEPARATOR . $zipFilename;
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return $this->error('Could not create ZIP archive', 500);
+        }
+
+        foreach ($invites as $invite) {
+            $pdfPath = $invite->getPdfUrl();
+            if ($pdfPath && Storage::disk('local')->exists($pdfPath)) {
+                $content = Storage::disk('local')->get($pdfPath);
+                $recipientSlug = Str::slug($invite->getRecipientName() ?: 'guest');
+                $entry = "{$recipientSlug}-{$invite->invite_code}.pdf";
+                $zip->addFromString($entry, $content);
+
+                if (!$invite->downloaded_at) {
+                    $invite->markAsDownloaded();
+                }
+            }
+        }
+        $zip->close();
+
+        return response()->download($zipPath, $zipFilename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Serve a CSV template the organizer can fill and re-upload.
+     * GET /api/marketplace-client/organizer/invitations/csv-template
+     */
+    public function csvTemplate(Request $request)
+    {
+        $this->requireOrganizer($request);
+
+        $rows = [
+            ['first_name', 'last_name', 'email', 'phone', 'company', 'notes'],
+            ['Ion', 'Popescu', 'ion.popescu@example.com', '0712345678', 'Acme SRL', 'VIP'],
+            ['Maria', 'Ionescu', 'maria.ionescu@example.com', '', '', ''],
+        ];
+
+        $fh = fopen('php://temp', 'w+');
+        fputs($fh, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel opens diacritics correctly
+        foreach ($rows as $row) {
+            fputcsv($fh, $row);
+        }
+        rewind($fh);
+        $csv = stream_get_contents($fh);
+        fclose($fh);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="invitatii-template.csv"',
+        ]);
+    }
+
+    /**
+     * Delete a batch (only while it's still in draft and has no rendered PDFs).
+     * DELETE /api/marketplace-client/organizer/invitations/{batch}
+     */
+    public function destroy(Request $request, int $batchId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
+
+        if ((int) $batch->qty_rendered > 0 || $batch->status !== 'draft') {
+            return $this->error('Only empty draft batches can be deleted', 400);
+        }
+
+        Storage::disk('local')->deleteDirectory($this->batchStoragePath($batch));
+        $batch->invites()->delete();
+        $batch->delete();
+
+        return $this->success(null, 'Batch deleted');
+    }
+
+    /**
+     * Stub to stay compatible with existing route registration.
+     * The organizer flow generates PDFs synchronously in store(); sending by email is not wired yet.
      */
     public function send(Request $request, int $batchId): JsonResponse
     {
-        $organizer = $this->requireOrganizer($request);
-
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
-
-        if (!$batch->canSendEmails()) {
-            return $this->error('Batch is not ready for sending', 400);
-        }
-
-        $validated = $request->validate([
-            'invite_ids' => 'nullable|array',
-            'invite_ids.*' => 'integer|exists:invites,id',
-            'emails' => 'nullable|array',
-            'emails.*.invite_id' => 'required|integer',
-            'emails.*.email' => 'required|email',
-            'emails.*.name' => 'nullable|string|max:100',
-        ]);
-
-        $sentCount = 0;
-        $errors = [];
-
-        // If specific invite/email pairs provided
-        if (!empty($validated['emails'])) {
-            foreach ($validated['emails'] as $emailData) {
-                $invite = Invite::where('id', $emailData['invite_id'])
-                    ->where('batch_id', $batch->id)
-                    ->first();
-
-                if (!$invite) {
-                    $errors[] = "Invite {$emailData['invite_id']} not found";
-                    continue;
-                }
-
-                if ($invite->status === 'voided') {
-                    $errors[] = "Invite {$invite->code} is voided";
-                    continue;
-                }
-
-                // Update invite with guest info
-                $invite->update([
-                    'guest_email' => $emailData['email'],
-                    'guest_name' => $emailData['name'] ?? $invite->guest_name,
-                    'emailed_at' => now(),
-                ]);
-
-                // TODO: Queue email sending job
-                // SendInvitationEmail::dispatch($invite);
-
-                $batch->incrementEmailed();
-                $sentCount++;
-            }
-        }
-        // If just invite IDs, send to existing emails
-        elseif (!empty($validated['invite_ids'])) {
-            $invites = Invite::whereIn('id', $validated['invite_ids'])
-                ->where('batch_id', $batch->id)
-                ->whereNotNull('guest_email')
-                ->where('status', 'active')
-                ->get();
-
-            foreach ($invites as $invite) {
-                $invite->update(['emailed_at' => now()]);
-                // TODO: Queue email sending job
-                $batch->incrementEmailed();
-                $sentCount++;
-            }
-        }
-
-        $batch->updateStatus('sending');
-
-        return $this->success([
-            'sent_count' => $sentCount,
-            'errors' => $errors,
-            'batch' => $this->formatBatch($batch->fresh(['marketplaceEvent:id,name,slug,starts_at'])),
-        ], "{$sentCount} invitations queued for sending");
+        return $this->error('Email sending is not available yet for organizer self-service invitations', 501);
     }
 
-    /**
-     * Download invitations as PDF
-     */
-    public function download(Request $request, int $batchId): JsonResponse
-    {
-        $organizer = $this->requireOrganizer($request);
-
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
-
-        if ($batch->qty_generated === 0) {
-            return $this->error('No invitations generated yet', 400);
-        }
-
-        $validated = $request->validate([
-            'invite_ids' => 'nullable|array',
-            'invite_ids.*' => 'integer',
-            'format' => 'nullable|in:pdf,png,zip',
-        ]);
-
-        $format = $validated['format'] ?? 'pdf';
-
-        // Get invites to download
-        $query = Invite::where('batch_id', $batch->id)
-            ->where('status', 'active');
-
-        if (!empty($validated['invite_ids'])) {
-            $query->whereIn('id', $validated['invite_ids']);
-        }
-
-        $invites = $query->get();
-
-        if ($invites->isEmpty()) {
-            return $this->error('No invitations to download', 400);
-        }
-
-        // Mark as downloaded
-        foreach ($invites as $invite) {
-            if (!$invite->downloaded_at) {
-                $invite->update(['downloaded_at' => now()]);
-                $batch->incrementDownloaded();
-            }
-        }
-
-        // Generate download URL (would be handled by a job/service)
-        // For now, return the data that would be used for PDF generation
-        return $this->success([
-            'download' => [
-                'format' => $format,
-                'count' => $invites->count(),
-                'batch_name' => $batch->name,
-                'event_name' => $batch->marketplaceEvent?->name,
-                // In production, this would be a signed URL to download the generated file
-                'download_url' => route('api.marketplace-client.organizer.invitations.download-file', [
-                    'batch' => $batch->id,
-                    'token' => encrypt([
-                        'batch_id' => $batch->id,
-                        'organizer_id' => $organizer->id,
-                        'invite_ids' => $invites->pluck('id')->toArray(),
-                        'expires_at' => now()->addHour()->timestamp,
-                    ]),
-                ]),
-            ],
-            'invites' => $invites->map(fn($invite) => $this->formatInvite($invite)),
-        ]);
-    }
-
-    /**
-     * Void specific invitations
-     */
     public function void(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
 
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
-
-        $validated = $request->validate([
+        $data = $request->validate([
             'invite_ids' => 'required|array|min:1',
-            'invite_ids.*' => 'integer|exists:invites,id',
-            'reason' => 'nullable|string|max:255',
+            'invite_ids.*' => 'integer',
         ]);
 
-        $voidedCount = 0;
-
-        foreach ($validated['invite_ids'] as $inviteId) {
-            $invite = Invite::where('id', $inviteId)
-                ->where('batch_id', $batch->id)
-                ->where('status', 'active')
-                ->first();
-
-            if ($invite) {
-                $invite->update([
-                    'status' => 'voided',
-                    'voided_at' => now(),
-                    'void_reason' => $validated['reason'] ?? null,
-                ]);
-                $batch->incrementVoided();
-                $voidedCount++;
+        $voided = 0;
+        foreach ($batch->invites()->whereIn('id', $data['invite_ids'])->get() as $invite) {
+            if ($invite->canBeVoided()) {
+                $invite->markAsVoid();
+                $voided++;
             }
         }
 
-        return $this->success([
-            'voided_count' => $voidedCount,
-            'batch' => $this->formatBatch($batch->fresh(['marketplaceEvent:id,name,slug,starts_at'])),
-        ], "{$voidedCount} invitations voided");
+        return $this->success(['voided' => $voided], "{$voided} invitations voided");
     }
 
-    /**
-     * Get batch statistics
-     */
     public function stats(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
-
-        $batch = InviteBatch::where('id', $batchId)
-            ->where('marketplace_organizer_id', $organizer->id)
-            ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
 
         return $this->success([
             'batch_id' => $batch->id,
@@ -438,127 +338,224 @@ class InvitationsController extends BaseController
             'stats' => [
                 'planned' => $batch->qty_planned,
                 'generated' => $batch->qty_generated,
-                'emailed' => $batch->qty_emailed,
+                'rendered' => $batch->qty_rendered,
                 'downloaded' => $batch->qty_downloaded,
-                'opened' => $batch->qty_opened,
-                'checked_in' => $batch->qty_checked_in,
                 'voided' => $batch->qty_voided,
-            ],
-            'percentages' => [
-                'emailed' => $batch->getEmailedPercentage(),
-                'downloaded' => $batch->getDownloadedPercentage(),
-                'completion' => $batch->getCompletionPercentage(),
             ],
         ]);
     }
 
-    /**
-     * Delete a batch (only if draft)
-     */
-    public function destroy(Request $request, int $batchId): JsonResponse
-    {
-        $organizer = $this->requireOrganizer($request);
+    // ---------------------------------------------------------------------
+    // Internal helpers
+    // ---------------------------------------------------------------------
 
-        $batch = InviteBatch::where('id', $batchId)
+    protected function requireOrganizer(Request $request): MarketplaceOrganizer
+    {
+        $user = $request->user();
+        if (!$user instanceof MarketplaceOrganizer) {
+            abort(401, 'Unauthorized');
+        }
+        return $user;
+    }
+
+    protected function findBatch(MarketplaceOrganizer $organizer, int $batchId): ?InviteBatch
+    {
+        return InviteBatch::where('id', $batchId)
             ->where('marketplace_organizer_id', $organizer->id)
             ->first();
-
-        if (!$batch) {
-            return $this->error('Batch not found', 404);
-        }
-
-        if ($batch->status !== 'draft') {
-            return $this->error('Only draft batches can be deleted', 400);
-        }
-
-        $batch->delete();
-
-        return $this->success(null, 'Batch deleted');
     }
 
-    /**
-     * Generate unique invite code
-     */
-    protected function generateInviteCode(): string
+    protected function batchStoragePath(InviteBatch $batch): string
     {
-        do {
-            $code = strtoupper(Str::random(10));
-        } while (Invite::where('code', $code)->exists());
+        return 'invitations/' . $batch->id;
+    }
 
-        return $code;
+    protected function defaultBatchName(Event $event, int $quantity): string
+    {
+        $title = is_array($event->title)
+            ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: 'Eveniment')
+            : ($event->title ?? 'Eveniment');
+        $date = $event->event_date?->format('d.m.Y')
+            ?? $event->range_start_date?->format('d.m.Y')
+            ?? now()->format('d.m.Y');
+        return "{$quantity} invitatii — {$title} ({$date})";
     }
 
     /**
-     * Format batch for response
+     * Render a PDF for every Invite in the batch. Returns the count of successfully rendered invites.
      */
+    protected function renderBatchPdfs(InviteBatch $batch, Event $event, string $watermark): int
+    {
+        $storagePath = $this->batchStoragePath($batch);
+        Storage::disk('local')->makeDirectory($storagePath);
+
+        [$eventTitle, $eventSubtitle, $eventDate, $eventTime, $venueName] = $this->buildEventContext($event);
+        $rendered = 0;
+
+        foreach ($batch->invites()->get() as $invite) {
+            try {
+                $qrData = url('/verify/' . $invite->invite_code);
+                $qrCode = $this->generateQrCode($qrData);
+
+                $pdf = Pdf::loadView('pdf.invitation', [
+                    'invite' => $invite,
+                    'eventTitle' => $eventTitle,
+                    'eventSubtitle' => $eventSubtitle,
+                    'eventDate' => $eventDate,
+                    'eventTime' => $eventTime,
+                    'venueName' => $venueName,
+                    'watermark' => $watermark,
+                    'qrCode' => $qrCode,
+                ]);
+                $pdf->setPaper('a4', 'portrait');
+                $pdfOutput = $pdf->output();
+
+                $pdfPath = $storagePath . '/' . $invite->invite_code . '.pdf';
+                Storage::disk('local')->put($pdfPath, $pdfOutput);
+
+                $invite->setUrls([
+                    'pdf' => $pdfPath,
+                    'generated_at' => now()->toIso8601String(),
+                ]);
+                $invite->update(['qr_data' => $qrData]);
+                $invite->markAsRendered();
+                $rendered++;
+            } catch (\Throwable $e) {
+                Log::error('Organizer invitation PDF render failed', [
+                    'invite_id' => $invite->id,
+                    'batch_id' => $batch->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $rendered;
+    }
+
+    /**
+     * Pull title/subtitle/date/time/venue strings for the PDF blade from an Event.
+     *
+     * @return array{0:string,1:?string,2:string,3:?string,4:?string}
+     */
+    protected function buildEventContext(Event $event): array
+    {
+        $title = is_array($event->title)
+            ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?: 'Eveniment')
+            : ($event->title ?? 'Eveniment');
+
+        $subtitle = null;
+        if (isset($event->subtitle)) {
+            $subtitle = is_array($event->subtitle)
+                ? ($event->subtitle['ro'] ?? $event->subtitle['en'] ?? reset($event->subtitle) ?: null)
+                : ($event->subtitle ?: null);
+        }
+
+        $date = 'TBA';
+        if ($event->event_date) {
+            $date = $event->event_date->format('d.m.Y');
+        } elseif ($event->range_start_date) {
+            $date = $event->range_start_date->format('d.m.Y')
+                . ($event->range_end_date ? ' - ' . $event->range_end_date->format('d.m.Y') : '');
+        }
+
+        $time = null;
+        if (!empty($event->start_time)) {
+            $time = $event->start_time;
+            if (!empty($event->door_time)) {
+                $time = "Doors: {$event->door_time} | Start: {$event->start_time}";
+            }
+        }
+
+        $venueName = null;
+        if ($event->relationLoaded('venue') || $event->venue()->exists()) {
+            $venue = $event->venue ?? $event->venue()->first();
+            if ($venue) {
+                $name = $venue->name;
+                $venueName = is_array($name)
+                    ? ($name['ro'] ?? $name['en'] ?? reset($name) ?: null)
+                    : ($name ?: null);
+                if ($venueName && !empty($venue->city)) {
+                    $venueName .= ', ' . $venue->city;
+                }
+            }
+        }
+
+        return [$title, $subtitle, $date, $time, $venueName];
+    }
+
+    /**
+     * Fetch a QR code PNG via a public QR service and return it base64-encoded
+     * (matches the admin implementation to keep the PDF output consistent).
+     */
+    protected function generateQrCode(string $data): string
+    {
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' . urlencode($data) . '&format=png&margin=5';
+        try {
+            $context = stream_context_create([
+                'http' => ['timeout' => 10, 'user_agent' => 'Tixello/1.0'],
+                'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+            ]);
+            $imageData = @file_get_contents($url, false, $context);
+            if ($imageData !== false && strlen($imageData) > 100) {
+                return base64_encode($imageData);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('QR fetch failed for organizer invitation', ['error' => $e->getMessage()]);
+        }
+        return '';
+    }
+
     protected function formatBatch(InviteBatch $batch): array
     {
+        $event = null;
+        if ($batch->event_ref && is_numeric($batch->event_ref)) {
+            $ev = Event::find((int) $batch->event_ref);
+            if ($ev) {
+                $title = is_array($ev->title)
+                    ? ($ev->title['ro'] ?? $ev->title['en'] ?? reset($ev->title) ?: 'Eveniment')
+                    : $ev->title;
+                $event = [
+                    'id' => $ev->id,
+                    'name' => $title,
+                    'slug' => $ev->slug ?? null,
+                    'date' => $ev->event_date?->toIso8601String() ?? $ev->range_start_date?->toIso8601String(),
+                ];
+            }
+        }
+
         return [
             'id' => $batch->id,
             'name' => $batch->name,
-            'event' => $batch->marketplaceEvent ? [
-                'id' => $batch->marketplaceEvent->id,
-                'name' => $batch->marketplaceEvent->name,
-                'slug' => $batch->marketplaceEvent->slug,
-                'date' => $batch->marketplaceEvent->starts_at?->toIso8601String(),
-            ] : null,
+            'event' => $event,
             'status' => $batch->status,
-            'qty_planned' => $batch->qty_planned,
-            'qty_generated' => $batch->qty_generated,
-            'qty_emailed' => $batch->qty_emailed,
-            'qty_downloaded' => $batch->qty_downloaded,
-            'qty_checked_in' => $batch->qty_checked_in,
-            'qty_voided' => $batch->qty_voided,
-            'created_at' => $batch->created_at->toIso8601String(),
+            'qty_planned' => (int) $batch->qty_planned,
+            'qty_generated' => (int) $batch->qty_generated,
+            'qty_rendered' => (int) $batch->qty_rendered,
+            'qty_downloaded' => (int) $batch->qty_downloaded,
+            'qty_voided' => (int) $batch->qty_voided,
+            'created_at' => $batch->created_at?->toIso8601String(),
         ];
     }
 
-    /**
-     * Format batch with full details
-     */
-    protected function formatBatchDetailed(InviteBatch $batch): array
-    {
-        return array_merge($this->formatBatch($batch), [
-            'options' => $batch->options,
-            'percentages' => [
-                'emailed' => $batch->getEmailedPercentage(),
-                'downloaded' => $batch->getDownloadedPercentage(),
-                'completion' => $batch->getCompletionPercentage(),
-            ],
-        ]);
-    }
-
-    /**
-     * Format invite for response
-     */
     protected function formatInvite(Invite $invite): array
     {
+        $r = $invite->recipient ?? [];
         return [
             'id' => $invite->id,
-            'code' => $invite->code,
-            'guest_name' => $invite->guest_name,
-            'guest_email' => $invite->guest_email,
+            'code' => $invite->invite_code,
             'status' => $invite->status,
-            'emailed_at' => $invite->emailed_at?->toIso8601String(),
+            'recipient' => [
+                'first_name' => $r['first_name'] ?? null,
+                'last_name' => $r['last_name'] ?? null,
+                'name' => $r['name'] ?? $invite->getRecipientName(),
+                'email' => $r['email'] ?? null,
+                'phone' => $r['phone'] ?? null,
+                'company' => $r['company'] ?? null,
+                'notes' => $r['notes'] ?? null,
+            ],
+            'has_pdf' => !empty($invite->getPdfUrl()),
+            'rendered_at' => $invite->rendered_at?->toIso8601String(),
             'downloaded_at' => $invite->downloaded_at?->toIso8601String(),
-            'opened_at' => $invite->opened_at?->toIso8601String(),
-            'checked_in_at' => $invite->checked_in_at?->toIso8601String(),
-            'voided_at' => $invite->voided_at?->toIso8601String(),
-            'created_at' => $invite->created_at->toIso8601String(),
         ];
-    }
-
-    /**
-     * Require authenticated organizer
-     */
-    protected function requireOrganizer(Request $request): MarketplaceOrganizer
-    {
-        $organizer = $request->user();
-
-        if (!$organizer instanceof MarketplaceOrganizer) {
-            abort(401, 'Unauthorized');
-        }
-
-        return $organizer;
     }
 }

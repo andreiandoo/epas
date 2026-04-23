@@ -864,6 +864,7 @@ function renderEvents(events) {
                         </div>
                         </div>
                         ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="text-blue-700 border border-blue-200 btn btn-sm bg-blue-50 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
+                        <a href="/organizator/invitatii?event=${event.id}" class="text-rose-700 border border-rose-200 btn btn-sm bg-rose-50 hover:bg-rose-100 hover:border-rose-300 hover:text-rose-800" title="Generează invitații"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Invitații</a>
                         ${documentsButton}
                         ${financeButton}
                         ${analyticsButton}
