@@ -2896,11 +2896,57 @@ const EventPage = {
     },
 
     /**
+     * Re-fetch fresh seat statuses before opening the modal so seats
+     * another tab/session held in the meantime show up as unavailable.
+     * The page-load snapshot becomes stale very quickly on a contested
+     * event; without this, a second browser could pick a seat that's
+     * already held and would then fail at the hold API with an opaque
+     * "add to cart" error.
+     */
+    async refreshSeatStatuses() {
+        if (!this.seatingLayout || !this.slug) return;
+        try {
+            const response = await AmbiletAPI.request('/marketplace-events/' + this.slug, { method: 'GET', noCache: true });
+            const freshLayout = response && response.data && response.data.seating_layout;
+            if (!freshLayout || !Array.isArray(freshLayout.sections)) return;
+
+            // Build a seat_uid → status map from the fresh payload
+            const freshStatus = {};
+            freshLayout.sections.forEach(function (section) {
+                (section.rows || []).forEach(function (row) {
+                    (row.seats || []).forEach(function (seat) {
+                        if (seat.seat_uid) {
+                            freshStatus[seat.seat_uid] = seat.status;
+                        }
+                    });
+                });
+            });
+
+            // Patch statuses into the in-memory layout so the renderer sees them.
+            (this.seatingLayout.sections || []).forEach(function (section) {
+                (section.rows || []).forEach(function (row) {
+                    (row.seats || []).forEach(function (seat) {
+                        if (seat.seat_uid && freshStatus[seat.seat_uid] !== undefined) {
+                            seat.status = freshStatus[seat.seat_uid];
+                        }
+                    });
+                });
+            });
+        } catch (e) {
+            console.warn('[EventPage] Failed to refresh seat statuses:', e);
+        }
+    },
+
+    /**
      * Open seat selection modal - shows ALL available seats
      */
-    openSeatSelection(ticketTypeId) {
+    async openSeatSelection(ticketTypeId) {
         var self = this;
         if (!this.seatingLayout) return;
+
+        // Pull fresh seat statuses before rendering so holds made by
+        // other tabs/sessions after the page loaded are reflected.
+        await this.refreshSeatStatuses();
 
         console.log('[EventPage] Opening seat selection modal');
         console.log('[EventPage] Seating layout sections:', (this.seatingLayout?.sections || []).length);
