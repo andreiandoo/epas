@@ -59,7 +59,7 @@ include __DIR__ . '/includes/header.php';
 </style>
 
 <!-- ═══════════════ HERO (compressed) ═══════════════ -->
-<section class="px-4 pt-4 mx-auto max-w-7xl lg:px-6 mt-17 mobile:mt-0">
+<section class="px-4 pt-4 mx-auto max-w-7xl lg:px-6 mt-17 mobile:mt-16">
     <div id="venueHero" class="relative h-[280px] md:h-[340px] rounded-2xl overflow-hidden venue-card-shadow bg-slate-200">
         <!-- Skeleton / fallback colour before image loads -->
         <div class="absolute inset-0 skeleton-hero animate-pulse bg-slate-300"></div>
@@ -341,7 +341,7 @@ include __DIR__ . '/includes/header.php';
                 <h2 id="similarVenuesTitle" class="text-xl font-bold text-secondary">Locații similare</h2>
                 <p id="similarVenuesSubtitle" class="text-sm text-muted mt-0.5">Alte locații pe care le poți descoperi</p>
             </div>
-            <a href="/locatii" class="text-sm font-semibold text-primary hover:text-primary-dark">Vezi toate →</a>
+            <a id="similarVenuesSeeAllLink" href="/locatii" class="text-sm font-semibold text-primary hover:text-primary-dark">Vezi toate →</a>
         </div>
         <div id="similarVenues" class="grid grid-cols-2 gap-4 md:grid-cols-4"></div>
     </section>
