@@ -179,21 +179,37 @@ const VenuesPage = {
         this.filterVenues();
     },
 
-    // Activate the matching category tab when the user lands here with
-    // ?category=<slug> (used by the mega-menu dropdown so clicking a
-    // category actually narrows the list instead of just opening /locatii).
+    // Pre-apply filters from the URL so deep-linked queries (e.g. clicking
+    // "Vezi toate" from a venue page's "Locații similare în București")
+    // land pre-filtered instead of showing every venue.
+    //   ?category=<slug> → highlight the matching category tab
+    //   ?city=<name>     → select the matching option in #cityFilter
     applyUrlFilters() {
         const params = new URLSearchParams(window.location.search);
+
         const categorySlug = params.get('category');
-        if (!categorySlug) return;
-        const tab = document.querySelector('.category-tab[data-category="' + CSS.escape(categorySlug) + '"]');
-        if (!tab) return;
-        document.querySelectorAll('.category-tab').forEach(t => {
-            t.classList.remove('active', 'bg-primary', 'text-white');
-            t.classList.add('bg-gray-100', 'text-gray-700');
-        });
-        tab.classList.add('active', 'bg-primary', 'text-white');
-        tab.classList.remove('bg-gray-100', 'text-gray-700');
+        if (categorySlug) {
+            const tab = document.querySelector('.category-tab[data-category="' + CSS.escape(categorySlug) + '"]');
+            if (tab) {
+                document.querySelectorAll('.category-tab').forEach(t => {
+                    t.classList.remove('active', 'bg-primary', 'text-white');
+                    t.classList.add('bg-gray-100', 'text-gray-700');
+                });
+                tab.classList.add('active', 'bg-primary', 'text-white');
+                tab.classList.remove('bg-gray-100', 'text-gray-700');
+            }
+        }
+
+        const cityName = params.get('city') || params.get('oras');
+        if (cityName) {
+            const sel = document.getElementById('cityFilter');
+            if (sel) {
+                // Try exact match first, then case-insensitive
+                const target = this.normalize(cityName);
+                const match = Array.from(sel.options).find(o => this.normalize(o.value) === target);
+                if (match) sel.value = match.value;
+            }
+        }
     },
 
     bindEvents() {

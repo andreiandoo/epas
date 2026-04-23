@@ -455,14 +455,24 @@ const VenuePage = {
         ];
 
         // Pick 3 reviews at random from those scoring ≥ 4.5 — done client-side
-        // so the Google Places cache doesn't need invalidation. If the
-        // high-rated pool has fewer than 3 entries we pad with the next-best
-        // ones by rating (still avoiding anything obviously negative).
-        const highRated = reviews.filter(function (r) { return (Number(r.rating) || 0) >= 4.5; });
-        let pool = self.shuffle(highRated.slice());
+        // so the Google Places cache doesn't need invalidation. To ensure the
+        // user actually sees variation between page loads, the pool needs
+        // more than 3 candidates; otherwise the same 3 reviews keep coming
+        // back in different orders. Expansion ladder:
+        //   • ≥ 4.5 stars → preferred pool
+        //   • if that pool has < 5 candidates, include 4+ to widen it
+        //   • if we still have < 3, pad with remaining reviews by rating desc
+        const veryHigh = reviews.filter(function (r) { return (Number(r.rating) || 0) >= 4.5; });
+        const high = reviews.filter(function (r) {
+            const n = Number(r.rating) || 0;
+            return n >= 4 && n < 4.5;
+        });
+        let pool = veryHigh.length >= 5
+            ? self.shuffle(veryHigh.slice())
+            : self.shuffle(veryHigh.concat(high));
         if (pool.length < 3) {
             const padding = reviews
-                .filter(function (r) { return (Number(r.rating) || 0) < 4.5; })
+                .filter(function (r) { return (Number(r.rating) || 0) < 4; })
                 .slice()
                 .sort(function (a, b) { return (Number(b.rating) || 0) - (Number(a.rating) || 0); });
             pool = pool.concat(padding);
@@ -875,6 +885,13 @@ const VenuePage = {
         // — falls back to generic copy otherwise.
         const titleEl = document.getElementById('similarVenuesTitle');
         const subtitleEl = document.getElementById('similarVenuesSubtitle');
+        // "Vezi toate →" also carries the city filter so it lands on the
+        // venues index pre-filtered to the same city.
+        const seeAllEl = document.getElementById('similarVenuesSeeAllLink');
+        if (seeAllEl) {
+            const city = this.venue && this.venue.city;
+            seeAllEl.href = city ? '/locatii?city=' + encodeURIComponent(city) : '/locatii';
+        }
         if (titleEl) {
             const city = this.venue && this.venue.city;
             titleEl.textContent = city ? 'Locații similare în ' + city : 'Locații similare';

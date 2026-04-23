@@ -645,6 +645,7 @@ switch ($action) {
         if (isset($_GET['region'])) $params['region'] = $_GET['region'];
         if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
         if (isset($_GET['artist'])) $params['artist'] = $_GET['artist'];
+        if (isset($_GET['venue'])) $params['venue'] = $_GET['venue'];
         if (isset($_GET['search'])) $params['search'] = $_GET['search'];
         if (isset($_GET['date'])) $params['date_filter'] = $_GET['date'];
         if (isset($_GET['date_filter'])) $params['date_filter'] = $_GET['date_filter'];
