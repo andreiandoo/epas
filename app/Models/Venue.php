@@ -283,7 +283,8 @@ class Venue extends Model
         'facebook_url','instagram_url','tiktok_url',
         'image_url','video_type','video_url','gallery',
         'capacity','capacity_total','capacity_standing','capacity_seated',
-        'lat','lng','google_maps_url','established_at','description','schedule','meta',
+        'lat','lng','google_maps_url','google_place_id','google_reviews_cached','google_reviews_updated_at',
+        'established_at','description','schedule','meta',
         'is_partner','partner_notes','is_featured','has_historical_monument_tax',
         'timezone','open_hours','general_rules','child_rules','accepted_payment','venue_conditions',
     ];
@@ -300,7 +301,33 @@ class Venue extends Model
         'is_partner' => 'boolean',
         'is_featured' => 'boolean',
         'has_historical_monument_tax' => 'boolean',
+        'google_reviews_cached' => 'array',
+        'google_reviews_updated_at' => 'datetime',
     ];
+
+    /**
+     * Public shape of Google Reviews data for API responses / frontends.
+     * Returns null when no place_id is configured.
+     * Reviews are capped at 3 (the amount shown on the public venue page).
+     */
+    public function getGoogleReviewsPayloadAttribute(): ?array
+    {
+        if (empty($this->google_place_id)) {
+            return null;
+        }
+
+        $cache = is_array($this->google_reviews_cached) ? $this->google_reviews_cached : [];
+        $allReviews = $cache['reviews'] ?? [];
+
+        return [
+            'rating' => $cache['rating'] ?? null,
+            'review_count' => $cache['review_count'] ?? null,
+            'reviews' => array_slice($allReviews, 0, 3),
+            'place_url' => $cache['place_url']
+                ?? ('https://www.google.com/maps/place/?q=place_id:' . $this->google_place_id),
+            'updated_at' => $this->google_reviews_updated_at?->toIso8601String(),
+        ];
+    }
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
 

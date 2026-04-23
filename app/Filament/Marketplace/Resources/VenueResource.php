@@ -363,6 +363,75 @@ class VenueResource extends Resource
                                     ->prefixIcon('heroicon-o-map')
                                     ->columnSpanFull(),
                             ])->columns(2),
+                        // GOOGLE REVIEWS
+                        SC\Section::make('Google Reviews')
+                            ->icon('heroicon-o-star')
+                            ->description('Rating mediu, număr total de recenzii și 3 recenzii de pe Google. Cachate local — nu se apelează API la fiecare vizualizare. Folosește butonul "Sincronizare recenzii" pentru a re-citi datele din Google.')
+                            ->columnSpan(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('google_place_id')
+                                    ->label('Google Place ID')
+                                    ->maxLength(255)
+                                    ->placeholder('ChIJ...')
+                                    ->helperText(new HtmlString(
+                                        'Copiază Place ID-ul de la <a href="https://developers.google.com/maps/documentation/places/web-service/place-id#find-id" target="_blank" rel="noopener" style="color:#2563eb;text-decoration:underline;">Google Place ID Finder</a>. Apoi salvează și folosește butonul de sincronizare.'
+                                    ))
+                                    ->columnSpanFull(),
+                                Forms\Components\Placeholder::make('google_reviews_preview')
+                                    ->label('Stare cache')
+                                    ->content(function (?Venue $record) {
+                                        if (!$record || empty($record->google_place_id)) {
+                                            return new HtmlString('<span style="color:#6b7280;">Setează Place ID și salvează pentru a putea sincroniza.</span>');
+                                        }
+                                        $cache = $record->google_reviews_cached ?? [];
+                                        if (empty($cache)) {
+                                            return new HtmlString('<span style="color:#b45309;">Niciun cache. Apasă butonul de sincronizare.</span>');
+                                        }
+                                        $rating = $cache['rating'] ?? null;
+                                        $count = $cache['review_count'] ?? 0;
+                                        $updated = $record->google_reviews_updated_at?->diffForHumans() ?? '—';
+                                        $ratingStr = $rating !== null ? number_format((float) $rating, 1) . ' ⭐' : '—';
+                                        return new HtmlString(
+                                            '<div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:14px;">'
+                                            . '<span><strong>Rating:</strong> ' . e($ratingStr) . '</span>'
+                                            . '<span><strong>Recenzii:</strong> ' . number_format((int) $count) . '</span>'
+                                            . '<span><strong>Ultima sincronizare:</strong> ' . e($updated) . '</span>'
+                                            . '</div>'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
+                                Forms\Components\Actions::make([
+                                    Action::make('sync_google_reviews')
+                                        ->label('Sincronizare recenzii Google')
+                                        ->icon('heroicon-o-arrow-path')
+                                        ->color('primary')
+                                        ->requiresConfirmation()
+                                        ->modalDescription('Se va face un apel către Google Places API pentru a aduce ratingul, numărul de recenzii și primele recenzii disponibile. Continui?')
+                                        ->visible(fn (?Venue $record) => $record && !empty($record->google_place_id))
+                                        ->action(function (Venue $record) {
+                                            try {
+                                                $service = app(\App\Services\GooglePlacesReviewsService::class);
+                                                $data = $service->fetchReviewsForPlaceId($record->google_place_id);
+                                                $record->forceFill([
+                                                    'google_reviews_cached' => $data,
+                                                    'google_reviews_updated_at' => now(),
+                                                ])->save();
+                                                Notification::make()
+                                                    ->title('Sincronizat ' . count($data['reviews']) . ' recenzii')
+                                                    ->body('Rating: ' . ($data['rating'] ?? '—') . ' • Total recenzii Google: ' . $data['review_count'])
+                                                    ->success()
+                                                    ->send();
+                                            } catch (\Throwable $e) {
+                                                Notification::make()
+                                                    ->title('Eroare la sincronizare')
+                                                    ->body($e->getMessage())
+                                                    ->danger()
+                                                    ->persistent()
+                                                    ->send();
+                                            }
+                                        }),
+                                ])->columnSpanFull(),
+                            ])->columns(1),
                         // CAPACITY
                         SC\Section::make('Capacity')
                             ->icon('heroicon-o-users')

@@ -150,8 +150,13 @@ const VenuePage = {
             latitude: apiData.latitude || apiData.lat,
             longitude: apiData.longitude || apiData.lng,
             capacity: capacityStr,
-            rating: apiData.rating || '-',
-            reviewsCount: apiData.reviews_count || 0,
+            rating: (apiData.google_reviews && apiData.google_reviews.rating != null)
+                ? Number(apiData.google_reviews.rating).toFixed(1)
+                : (apiData.rating || '-'),
+            reviewsCount: (apiData.google_reviews && apiData.google_reviews.review_count != null)
+                ? Number(apiData.google_reviews.review_count)
+                : (apiData.reviews_count || 0),
+            googleReviews: apiData.google_reviews || null,
             yearBuilt: apiData.year_built || '-',
             eventsCount: apiData.events_count || events.length,
             image: apiData.cover_image || apiData.image || '/assets/images/default_venue.jpg',
@@ -228,6 +233,20 @@ const VenuePage = {
         this.setTextContent(this.elements.venueRating, venue.rating);
         this.setTextContent(this.elements.venueYear, venue.yearBuilt);
 
+        // Rating count under the rating card, when Google data is available
+        var ratingCountEl = document.getElementById('venueRatingCount');
+        if (ratingCountEl) {
+            if (venue.reviewsCount > 0) {
+                ratingCountEl.textContent = venue.reviewsCount + ' recenzii';
+                ratingCountEl.classList.remove('hidden');
+            } else {
+                ratingCountEl.classList.add('hidden');
+            }
+        }
+
+        // Google Reviews section (3 cards + "see all on Google" link)
+        this.renderGoogleReviews(venue.googleReviews);
+
         // About section
         this.renderAbout(venue.description);
 
@@ -295,6 +314,66 @@ const VenuePage = {
         } else {
             container.innerHTML = '<p class="italic text-gray-500">Informații despre această locație vor fi disponibile în curând.</p>';
         }
+    },
+
+    /**
+     * Render Google Reviews section (rating summary + 3 reviews + "see all" link).
+     * Section stays hidden when no Google data is available.
+     */
+    renderGoogleReviews(googleReviews) {
+        var section = document.getElementById('googleReviewsSection');
+        if (!section) return;
+
+        if (!googleReviews || !googleReviews.reviews || googleReviews.reviews.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        var summaryEl = document.getElementById('googleReviewsSummary');
+        if (summaryEl) {
+            var ratingStr = googleReviews.rating != null ? Number(googleReviews.rating).toFixed(1) + ' ⭐' : '—';
+            var countStr = googleReviews.review_count != null ? Number(googleReviews.review_count) + ' recenzii' : '';
+            summaryEl.textContent = ratingStr + (countStr ? ' · ' + countStr : '');
+        }
+
+        var grid = document.getElementById('googleReviewsGrid');
+        if (grid) {
+            var self = this;
+            var cards = googleReviews.reviews.slice(0, 3).map(function (r) {
+                var stars = '';
+                var rating = Number(r.rating || 0);
+                for (var i = 1; i <= 5; i++) {
+                    stars += '<span style="color:' + (i <= rating ? '#f59e0b' : '#e5e7eb') + ';">★</span>';
+                }
+                var name = self.escapeHtml(r.author_name || 'Utilizator Google');
+                var when = self.escapeHtml(r.relative_time_description || '');
+                var fullText = r.text || '';
+                var text = self.escapeHtml(fullText.length > 220 ? fullText.slice(0, 220).trim() + '…' : fullText);
+                var avatar = r.profile_photo_url
+                    ? '<img src="' + self.escapeHtml(r.profile_photo_url) + '" alt="" class="w-10 h-10 rounded-full object-cover" loading="lazy" referrerpolicy="no-referrer">'
+                    : '<div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary font-bold">' + name.charAt(0).toUpperCase() + '</div>';
+                return ''
+                    + '<article class="flex flex-col h-full p-5 bg-white border rounded-2xl border-border">'
+                    +   '<header class="flex items-center gap-3 mb-3">'
+                    +     avatar
+                    +     '<div class="min-w-0">'
+                    +       '<div class="text-sm font-semibold text-secondary truncate">' + name + '</div>'
+                    +       '<div class="text-xs text-muted">' + when + '</div>'
+                    +     '</div>'
+                    +   '</header>'
+                    +   '<div class="mb-2 text-sm">' + stars + '</div>'
+                    +   '<p class="flex-1 text-sm text-gray-600 whitespace-pre-line">' + text + '</p>'
+                    + '</article>';
+            });
+            grid.innerHTML = cards.join('');
+        }
+
+        var allLink = document.getElementById('googleReviewsAllLink');
+        if (allLink && googleReviews.place_url) {
+            allLink.href = googleReviews.place_url;
+        }
+
+        section.classList.remove('hidden');
     },
 
     /**

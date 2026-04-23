@@ -96,7 +96,8 @@ include __DIR__ . '/includes/header.php';
                 </svg>
             </div>
             <div id="venueRating" class="mb-1 text-2xl font-extrabold text-secondary">-</div>
-            <div class="text-sm text-muted">Rating</div>
+            <div class="text-sm text-muted">Rating Google</div>
+            <div id="venueRatingCount" class="mt-1 text-xs text-muted hidden"></div>
         </div>
         <div class="p-6 text-center bg-white shadow-lg rounded-2xl">
             <div class="flex items-center justify-center w-12 h-12 mx-auto mb-3 bg-red-50 rounded-xl text-primary">
@@ -188,6 +189,32 @@ include __DIR__ . '/includes/header.php';
                         <div class="w-full h-4 mb-3 bg-gray-200 rounded"></div>
                         <div class="w-3/4 h-4 bg-gray-200 rounded"></div>
                     </div>
+                </div>
+            </section>
+
+            <!-- Google Reviews (shown only when populated by JS) -->
+            <section id="googleReviewsSection" class="mb-10 hidden">
+                <div class="flex items-center justify-between mb-5">
+                    <h2 class="text-xl font-bold text-secondary flex items-center gap-2.5">
+                        <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                        </svg>
+                        Recenzii Google
+                    </h2>
+                    <div class="flex items-center gap-3 text-sm">
+                        <span id="googleReviewsSummary" class="text-muted"></span>
+                    </div>
+                </div>
+                <div id="googleReviewsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+                <div class="mt-5 text-center">
+                    <a id="googleReviewsAllLink" href="#" target="_blank" rel="noopener"
+                       class="inline-flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white transition-all rounded-xl bg-primary hover:bg-primary-dark">
+                        Vezi toate recenziile pe Google
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="7" y1="17" x2="17" y2="7"/>
+                            <polyline points="7 7 17 7 17 17"/>
+                        </svg>
+                    </a>
                 </div>
             </section>
 

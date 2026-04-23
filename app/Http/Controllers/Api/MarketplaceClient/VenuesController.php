@@ -309,6 +309,7 @@ class VenuesController extends BaseController
             'latitude' => $venue->lat,
             'longitude' => $venue->lng,
             'google_maps_url' => $venue->google_maps_url,
+            'google_reviews' => $venue->google_reviews_payload,
             'capacity' => $venue->capacity_total ?? $venue->capacity,
             'image' => $this->formatImageUrl($venue->image_url),
             'portrait' => $this->formatImageUrl($venue->meta['portrait'] ?? null),
