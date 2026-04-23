@@ -76,11 +76,18 @@ class BackfillInvitationTickets extends Command
                         'currency' => 'RON',
                         'quota_total' => -1,
                         'quota_sold' => 0,
-                        'status' => 'active',
                         'meta' => ['is_invitation' => true],
                     ]);
                 }
                 $createdTicketTypes++;
+            } elseif (!$dryRun) {
+                // Heal meta.is_invitation so public ticket picker hides this row
+                $meta = $ticketType->meta ?? [];
+                if (empty($meta['is_invitation'])) {
+                    $meta['is_invitation'] = true;
+                    $ticketType->update(['meta' => $meta]);
+                    $this->line("  healed meta.is_invitation on existing TicketType #{$ticketType->id}");
+                }
             }
 
             $invites = $batch->invites()->get();

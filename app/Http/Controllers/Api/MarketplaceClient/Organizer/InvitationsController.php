@@ -410,20 +410,9 @@ class InvitationsController extends BaseController
 
         // Find-or-create the event's "Invitatie" ticket type so Ticket records can be attached.
         // quota_total = -1 means unlimited, and price_cents = 0 marks it as complimentary.
-        $invitationTicketType = TicketType::firstOrCreate(
-            [
-                'event_id' => $event->id,
-                'name' => 'Invitatie',
-            ],
-            [
-                'price_cents' => 0,
-                'currency' => 'RON',
-                'quota_total' => -1,
-                'quota_sold' => 0,
-                'status' => 'active',
-                'meta' => ['is_invitation' => true],
-            ]
-        );
+        // meta.is_invitation = true is the flag every public endpoint (MarketplaceEventsController,
+        // TenantClientController, ...) uses to hide it from the buyer-facing ticket picker.
+        $invitationTicketType = $this->ensureInvitationTicketType($event);
 
         $rendered = 0;
 
@@ -490,6 +479,48 @@ class InvitationsController extends BaseController
         }
 
         return $rendered;
+    }
+
+    /**
+     * Find-or-create the event's "Invitatie" ticket type and guarantee that
+     * meta.is_invitation = true (heals records that existed before we started
+     * tagging, so the public ticket picker keeps them hidden). Returns the row.
+     */
+    protected function ensureInvitationTicketType(Event $event): TicketType
+    {
+        $tt = TicketType::where('event_id', $event->id)
+            ->where('name', 'Invitatie')
+            ->first();
+
+        if (!$tt) {
+            $tt = TicketType::create([
+                'event_id' => $event->id,
+                'name' => 'Invitatie',
+                'price_cents' => 0,
+                'currency' => 'RON',
+                'quota_total' => -1,
+                'quota_sold' => 0,
+                'meta' => ['is_invitation' => true],
+            ]);
+        }
+
+        // Heal: ensure meta.is_invitation is present + status is 'active'
+        $meta = $tt->meta ?? [];
+        $needsSave = false;
+        if (empty($meta['is_invitation'])) {
+            $meta['is_invitation'] = true;
+            $tt->meta = $meta;
+            $needsSave = true;
+        }
+        if (($tt->status ?? 'active') !== 'active') {
+            $tt->status = 'active';
+            $needsSave = true;
+        }
+        if ($needsSave) {
+            $tt->save();
+        }
+
+        return $tt;
     }
 
     /**
