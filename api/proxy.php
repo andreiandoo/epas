@@ -78,8 +78,11 @@ class ApiCache {
         'organizers' => 300,
         'organizer' => 300,
 
-        // Very short cache (30 seconds) - single item views need quick updates
-        'event' => 30,
+        // Single item views need quick updates. Event detail is NOT cached
+        // because its payload bundles per-seat statuses for seated events;
+        // caching makes seats selected/held in one tab invisible to another
+        // for up to the TTL, breaking concurrent seat selection.
+        'event' => 0,
         'venue' => 60,
         'artist' => 60,
 

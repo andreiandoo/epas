@@ -840,19 +840,22 @@ function renderEvents(events) {
                                     <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>${[event.venue_name, event.venue_city].filter(Boolean).join(', ') || ''}</span>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
-                                ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
-                            </div>
                         </div>
-                        <div class="grid grid-cols-4 gap-4">
+                        <div class="grid grid-cols-3 gap-4">
                             <div><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
                             <div><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări</p></div>
                             <div><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
-                            <div><p class="text-2xl font-bold text-secondary">${daysText || '-'}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'Până la event'}</p></div>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center justify-end gap-2 px-4 pt-4 mt-4 border-t border-border">
+                        <div class="flex items-center ml-0 mr-auto gap-x-4 ">
+                            <div class="flex flex-col items-center justify-center"><p class="text-2xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs text-muted">${isEnded ? 'Încheiat' : 'zile rămase'}</p></div>
+                            
+                            <div class="flex items-center gap-2">
+                            <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
+                            ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
+                        </div>
+                        </div>
                         ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="btn btn-sm btn-secondary" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
                         ${documentsButton}
                         ${financeButton}
