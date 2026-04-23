@@ -38,7 +38,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <p class="text-sm text-amber-800">Nu am găsit evenimentul selectat. <a href="/organizator/events" class="underline font-semibold">Alege un eveniment</a> din lista ta.</p>
         </div>
 
-        <!-- STEP 1: Quantity -->
         <div id="step-quantity" class="bg-white rounded-2xl border border-border p-6 mb-6 hidden">
             <h3 class="font-semibold text-secondary mb-1">Pasul 1 — Câte invitații?</h3>
             <p class="text-sm text-muted mb-4">Introdu numărul de invitații pe care vrei să le generezi. Maxim 1000 pe o serie.</p>
@@ -48,20 +47,18 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- STEP 2: Recipients -->
         <div id="step-recipients" class="bg-white rounded-2xl border border-border p-6 mb-6 hidden">
             <div class="flex items-start justify-between mb-4 gap-4 flex-wrap">
                 <div>
                     <h3 class="font-semibold text-secondary mb-1">Pasul 2 — Datele invitaților</h3>
                     <p class="text-sm text-muted">Pentru fiecare invitație, completează <strong>prenume, nume și email</strong> (obligatorii). Telefon, companie și note sunt opționale.</p>
                 </div>
-                <div id="mode-switcher" class="hidden inline-flex rounded-lg border border-border overflow-hidden">
+                <div id="mode-switcher" class="hidden rounded-lg border border-border overflow-hidden">
                     <button id="mode-manual" type="button" class="px-3 py-1.5 text-sm bg-rose-50 text-rose-700 font-semibold">Completare manuală</button>
                     <button id="mode-csv" type="button" class="px-3 py-1.5 text-sm text-muted hover:bg-slate-50">Încarcă CSV</button>
                 </div>
             </div>
 
-            <!-- Manual entry -->
             <div id="pane-manual">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -81,7 +78,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </div>
             </div>
 
-            <!-- CSV upload -->
             <div id="pane-csv" class="hidden">
                 <div class="border-2 border-dashed border-border rounded-xl p-6 text-center">
                     <input type="file" id="csv-file" accept=".csv,text/csv" class="hidden" />
@@ -104,7 +100,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- STEP 3: Done -->
         <div id="step-done" class="bg-white rounded-2xl border border-border p-6 mb-6 hidden">
             <div class="flex items-start gap-3 mb-4">
                 <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
@@ -124,7 +119,6 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             </div>
         </div>
 
-        <!-- History -->
         <div id="history-section" class="bg-white rounded-2xl border border-border p-6 hidden">
             <h3 class="font-semibold text-secondary mb-4">Serii de invitații pentru acest eveniment</h3>
             <div id="history-empty" class="text-sm text-muted hidden">Încă nu ai generat invitații pentru acest eveniment.</div>
@@ -133,31 +127,33 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
     </main>
 </div>
 
+<?php
+$scriptsExtra = <<<'JS'
 <script>
-document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOrganizerAuth(); });
-
 (function () {
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get('event') || params.get('event_id');
     let currentEvent = null;
-    let currentMode = 'manual'; // 'manual' | 'csv'
+    let currentMode = 'manual';
     let parsedCsvRecipients = null;
 
     const $ = (id) => document.getElementById(id);
-    const esc = (s) => { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; };
+    const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
     const fmtDate = (d) => d ? new Date(d).toLocaleDateString('ro-RO', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
 
-    // Auth headers for direct fetches (CSV template + ZIP download) that bypass the
-    // AmbiletAPI proxy because they return binary/non-JSON payloads.
     function buildAuthHeaders() {
         const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
         return token ? { 'Authorization': 'Bearer ' + token, 'Accept': 'application/octet-stream, application/zip, text/csv, */*' } : {};
     }
 
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.requireOrganizerAuth) {
+            AmbiletAuth.requireOrganizerAuth();
+        }
+        init();
+    });
 
     async function init() {
-        // CSV template link — use the authed API client via blob so we keep auth headers
         $('csv-template-link').addEventListener('click', onCsvTemplateDownload);
 
         if (!eventId) {
@@ -172,7 +168,6 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
         $('history-section').classList.remove('hidden');
         await loadHistory();
 
-        // Wiring
         $('qty-continue').addEventListener('click', onQuantityContinue);
         $('back-to-qty').addEventListener('click', () => { $('step-recipients').classList.add('hidden'); $('step-quantity').classList.remove('hidden'); });
         $('mode-manual').addEventListener('click', () => setMode('manual'));
@@ -191,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
                 $('event-name').textContent = currentEvent.name || currentEvent.title || 'Eveniment';
                 const dateStr = currentEvent.starts_at || currentEvent.event_date || currentEvent.range_start_date;
                 $('event-date').textContent = dateStr ? fmtDate(dateStr) : '';
-                $('event-venue').textContent = currentEvent.venue_name || currentEvent.venue?.name || '';
+                $('event-venue').textContent = currentEvent.venue_name || (currentEvent.venue && currentEvent.venue.name) || '';
                 $('event-header').classList.remove('hidden');
             } else {
                 $('event-missing').classList.remove('hidden');
@@ -205,18 +200,16 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
     function onQuantityContinue() {
         const qty = Math.max(1, Math.min(1000, parseInt($('qty-input').value || '1', 10)));
         $('qty-input').value = qty;
-
         $('step-quantity').classList.add('hidden');
         $('step-recipients').classList.remove('hidden');
-
-        // Show CSV option only if qty > 10 (per spec)
         if (qty > 10) {
             $('mode-switcher').classList.remove('hidden');
+            $('mode-switcher').classList.add('inline-flex');
         } else {
             $('mode-switcher').classList.add('hidden');
+            $('mode-switcher').classList.remove('inline-flex');
             setMode('manual');
         }
-
         buildRecipientRows(qty);
     }
 
@@ -240,15 +233,14 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
         for (let i = 1; i <= qty; i++) {
             const tr = document.createElement('tr');
             tr.className = 'border-b border-slate-100';
-            tr.innerHTML = `
-                <td class="py-2 pr-3 text-xs text-muted align-middle">${i}</td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" data-field="first_name" placeholder="Prenume" required></td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" data-field="last_name" placeholder="Nume" required></td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" type="email" data-field="email" placeholder="email@exemplu.ro" required></td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" data-field="phone" placeholder="Telefon"></td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" data-field="company" placeholder="Companie"></td>
-                <td class="py-2 pr-3"><input class="input input-sm w-full" data-field="notes" placeholder="Note"></td>
-            `;
+            tr.innerHTML =
+                '<td class="py-2 pr-3 text-xs text-muted align-middle">' + i + '</td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="first_name" placeholder="Prenume" required></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="last_name" placeholder="Nume" required></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" type="email" data-field="email" placeholder="email@exemplu.ro" required></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="phone" placeholder="Telefon"></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="company" placeholder="Companie"></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="notes" placeholder="Note"></td>';
             tbody.appendChild(tr);
         }
     }
@@ -292,7 +284,6 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
         if (!file) return;
         $('csv-filename').textContent = file.name;
         $('csv-error').textContent = '';
-
         const reader = new FileReader();
         reader.onload = () => {
             try {
@@ -307,11 +298,9 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
     }
 
     function parseCsv(text) {
-        // Strip BOM
         if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
         const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
         if (lines.length < 2) throw new Error('CSV-ul e gol sau conține doar antetul.');
-
         const header = splitCsvLine(lines[0]).map(h => h.toLowerCase().trim());
         const idx = (name) => header.indexOf(name);
         const iFirst = idx('first_name');
@@ -321,7 +310,6 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
             throw new Error('Lipsesc coloane obligatorii. Antetul trebuie să conțină first_name, last_name, email.');
         }
         const iPhone = idx('phone'), iCompany = idx('company'), iNotes = idx('notes');
-
         const rows = [];
         for (let i = 1; i < lines.length; i++) {
             const c = splitCsvLine(lines[i]);
@@ -329,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
             const last = (c[iLast] || '').trim();
             const email = (c[iEmail] || '').trim();
             if (!first || !last || !email) continue;
-            const rec = { first_name: first, last_name: last, email };
+            const rec = { first_name: first, last_name: last, email: email };
             if (iPhone >= 0 && c[iPhone]) rec.phone = c[iPhone].trim();
             if (iCompany >= 0 && c[iCompany]) rec.company = c[iCompany].trim();
             if (iNotes >= 0 && c[iNotes]) rec.notes = c[iNotes].trim();
@@ -364,29 +352,20 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
             alert('Completează datele invitaților înainte de a genera.');
             return;
         }
-
         const btn = $('generate-btn');
         const original = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span class="animate-pulse">Se generează…</span>';
-
+        btn.innerHTML = '<span>Se generează…</span>';
         try {
             const res = await AmbiletAPI.post('/organizer/invitations', {
                 event_id: parseInt(eventId, 10),
-                recipients,
+                recipients: recipients,
             });
-            if (!res || !res.success) {
-                throw new Error(res?.message || 'Eroare la generare');
-            }
-
+            if (!res || !res.success) throw new Error((res && res.message) || 'Eroare la generare');
             const batch = res.data.batch;
             const rendered = res.data.rendered || 0;
-            const downloadUrl = res.data.download_url || ('/api/marketplace-client/organizer/invitations/' + batch.id + '/download');
-
             $('done-summary').textContent = rendered + ' invitații generate în seria "' + (batch.name || '') + '".';
-            $('download-link').href = '#';
             $('download-link').onclick = (e) => { e.preventDefault(); downloadZip(batch.id); };
-
             $('step-recipients').classList.add('hidden');
             $('step-done').classList.remove('hidden');
             await loadHistory();
@@ -428,7 +407,12 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
     async function loadHistory() {
         try {
             const res = await AmbiletAPI.get('/organizer/invitations?event_id=' + eventId + '&per_page=50');
-            const rows = (res && res.success && Array.isArray(res.data)) ? res.data : (res?.data?.data || []);
+            let rows = [];
+            if (res && res.success) {
+                if (Array.isArray(res.data)) rows = res.data;
+                else if (res.data && Array.isArray(res.data.data)) rows = res.data.data;
+                else if (res.data && Array.isArray(res.data.items)) rows = res.data.items;
+            }
             renderHistory(rows);
         } catch (e) {
             console.error('History load failed', e);
@@ -447,24 +431,22 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
         rows.forEach(b => {
             const created = fmtDate(b.created_at);
             const status = (b.status === 'ready') ? 'badge-success' : 'badge-secondary';
-            const planned = b.qty_planned ?? 0;
-            const rendered = b.qty_rendered ?? 0;
-            const downloaded = b.qty_downloaded ?? 0;
-
+            const planned = b.qty_planned || 0;
+            const rendered = b.qty_rendered || 0;
+            const downloaded = b.qty_downloaded || 0;
             const row = document.createElement('div');
             row.className = 'py-3 flex flex-wrap items-center justify-between gap-3';
-            row.innerHTML = `
-                <div class="min-w-0">
-                    <p class="font-semibold text-secondary">${esc(b.name)}</p>
-                    <p class="text-xs text-muted">${created} · ${planned} planificate · ${rendered} generate · ${downloaded} descărcate</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="badge ${status}">${esc(b.status || '')}</span>
-                    <button class="btn btn-sm btn-ghost" data-view-invites="${b.id}">Vezi invitați</button>
-                    <button class="btn btn-sm btn-primary" data-dl="${b.id}">Descarcă ZIP</button>
-                </div>
-                <div class="hidden w-full" id="invites-panel-${b.id}"></div>
-            `;
+            row.innerHTML =
+                '<div class="min-w-0">' +
+                    '<p class="font-semibold text-secondary">' + esc(b.name) + '</p>' +
+                    '<p class="text-xs text-muted">' + created + ' · ' + planned + ' planificate · ' + rendered + ' generate · ' + downloaded + ' descărcate</p>' +
+                '</div>' +
+                '<div class="flex items-center gap-2">' +
+                    '<span class="badge ' + status + '">' + esc(b.status || '') + '</span>' +
+                    '<button class="btn btn-sm btn-ghost" data-view-invites="' + b.id + '">Vezi invitați</button>' +
+                    '<button class="btn btn-sm btn-primary" data-dl="' + b.id + '">Descarcă ZIP</button>' +
+                '</div>' +
+                '<div class="hidden w-full" id="invites-panel-' + b.id + '"></div>';
             host.appendChild(row);
         });
 
@@ -484,27 +466,40 @@ document.addEventListener('DOMContentLoaded', function() { AmbiletAuth.requireOr
         panel.innerHTML = '<p class="text-sm text-muted py-2">Se încarcă…</p>';
         try {
             const res = await AmbiletAPI.get('/organizer/invitations/' + batchId);
-            const invites = res?.data?.invites || [];
+            const invites = (res && res.data && res.data.invites) ? res.data.invites : [];
             if (invites.length === 0) {
                 panel.innerHTML = '<p class="text-sm text-muted py-2">Fără invitați.</p>';
                 return;
             }
-            const rows = invites.map(i => {
+            const rowsHtml = invites.map(i => {
                 const r = i.recipient || {};
-                return `<tr class="border-b border-slate-100"><td class="py-1.5 pr-3">${esc(r.name || '')}</td><td class="py-1.5 pr-3">${esc(r.email || '')}</td><td class="py-1.5 pr-3">${esc(r.phone || '')}</td><td class="py-1.5 pr-3">${esc(r.company || '')}</td><td class="py-1.5 pr-3"><code class="text-xs">${esc(i.code)}</code></td></tr>`;
+                return '<tr class="border-b border-slate-100">' +
+                    '<td class="py-1.5 pr-3">' + esc(r.name || '') + '</td>' +
+                    '<td class="py-1.5 pr-3">' + esc(r.email || '') + '</td>' +
+                    '<td class="py-1.5 pr-3">' + esc(r.phone || '') + '</td>' +
+                    '<td class="py-1.5 pr-3">' + esc(r.company || '') + '</td>' +
+                    '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code></td>' +
+                '</tr>';
             }).join('');
-            panel.innerHTML = `
-                <div class="mt-3 bg-slate-50 rounded-lg p-3 overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead><tr class="text-left text-xs uppercase text-muted"><th class="py-1.5 pr-3">Nume</th><th class="py-1.5 pr-3">Email</th><th class="py-1.5 pr-3">Telefon</th><th class="py-1.5 pr-3">Companie</th><th class="py-1.5 pr-3">Cod</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>`;
+            panel.innerHTML =
+                '<div class="mt-3 bg-slate-50 rounded-lg p-3 overflow-x-auto">' +
+                    '<table class="w-full text-sm">' +
+                        '<thead><tr class="text-left text-xs uppercase text-muted">' +
+                            '<th class="py-1.5 pr-3">Nume</th>' +
+                            '<th class="py-1.5 pr-3">Email</th>' +
+                            '<th class="py-1.5 pr-3">Telefon</th>' +
+                            '<th class="py-1.5 pr-3">Companie</th>' +
+                            '<th class="py-1.5 pr-3">Cod</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + rowsHtml + '</tbody>' +
+                    '</table>' +
+                '</div>';
         } catch (e) {
             panel.innerHTML = '<p class="text-sm text-red-600 py-2">Nu pot încărca invitații: ' + esc(e.message) + '</p>';
         }
     }
 })();
 </script>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+JS;
+require_once dirname(__DIR__) . '/includes/scripts.php';
+?>
