@@ -53,7 +53,16 @@ const VenuePage = {
         this.bindGlobalHandlers();
 
         await this.loadVenueData();
-        this.loadFollowStatus();
+
+        // Follow is a customer-only feature. Hide the button (and skip the
+        // API round-trip) when the logged-in user is an organizer, since the
+        // backend won't let them follow anyway.
+        if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isOrganizer && AmbiletAuth.isOrganizer()) {
+            const btn = document.getElementById(this.elements.followBtn);
+            if (btn) btn.classList.add('hidden');
+        } else {
+            this.loadFollowStatus();
+        }
     },
 
     bindGlobalHandlers() {
