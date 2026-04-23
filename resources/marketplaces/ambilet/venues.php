@@ -54,7 +54,7 @@ include __DIR__ . '/includes/header.php';
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" id="searchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+            <input type="text" id="venuesSearchInput" placeholder="Caută locații..." class="w-full py-3.5 pl-12 pr-5 bg-white border border-border rounded-xl text-base focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
         <!-- Selects row: scrollable on mobile, flex-wrap on desktop -->
         <div class="flex items-center gap-3 pb-1 overflow-x-auto lg:flex-wrap scrollbar-hide mobile:-mx-6 mobile:px-6">
@@ -175,13 +175,31 @@ const VenuesPage = {
         await Promise.all([this.loadVenues(), this.loadCategories()]);
         this.buildCityDropdown();
         this.bindEvents();
+        this.applyUrlFilters();
         this.filterVenues();
+    },
+
+    // Activate the matching category tab when the user lands here with
+    // ?category=<slug> (used by the mega-menu dropdown so clicking a
+    // category actually narrows the list instead of just opening /locatii).
+    applyUrlFilters() {
+        const params = new URLSearchParams(window.location.search);
+        const categorySlug = params.get('category');
+        if (!categorySlug) return;
+        const tab = document.querySelector('.category-tab[data-category="' + CSS.escape(categorySlug) + '"]');
+        if (!tab) return;
+        document.querySelectorAll('.category-tab').forEach(t => {
+            t.classList.remove('active', 'bg-primary', 'text-white');
+            t.classList.add('bg-gray-100', 'text-gray-700');
+        });
+        tab.classList.add('active', 'bg-primary', 'text-white');
+        tab.classList.remove('bg-gray-100', 'text-gray-700');
     },
 
     bindEvents() {
         const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-        document.getElementById('searchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
+        document.getElementById('venuesSearchInput')?.addEventListener('input', debounce(() => this.filterVenues(), 300));
         document.getElementById('cityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('capacityFilter')?.addEventListener('change', () => this.filterVenues());
         document.getElementById('sortFilter')?.addEventListener('change', () => this.filterVenues());
@@ -334,7 +352,7 @@ const VenuesPage = {
     },
 
     filterVenues() {
-        const searchRaw = document.getElementById('searchInput')?.value || '';
+        const searchRaw = document.getElementById('venuesSearchInput')?.value || '';
         const search = this.normalize(searchRaw);
         const city = document.getElementById('cityFilter')?.value || '';
         const capacityRange = document.getElementById('capacityFilter')?.value || '';

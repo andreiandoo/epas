@@ -178,7 +178,10 @@ class VenuesController extends BaseController
                         return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                     })->filter()->min();
 
-                // Get image URL
+                // Get image URL — MarketplaceEvent has a single `image` column;
+                // echo it into poster_url + hero_image_url so the horizontal
+                // event card (which reads hero_image_url) actually renders,
+                // matching what the artist-single page returns.
                 $imageUrl = $this->formatImageUrl($event->image);
 
                 // Get commission settings (event > organizer > marketplace default)
@@ -206,6 +209,8 @@ class VenuesController extends BaseController
                     'price_from' => $minPrice,
                     'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
+                    'poster_url' => $imageUrl,
+                    'hero_image_url' => $imageUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
                     'category' => $categoryName ? ['name' => $categoryName] : null,
                     'commission_mode' => $commissionMode,
@@ -239,7 +244,13 @@ class VenuesController extends BaseController
                     ->map(fn ($tt) => ($tt->sale_price_cents ?? $tt->price_cents) / 100)
                     ->filter()->min();
 
-                $imageUrl = $this->formatImageUrl($event->image ?? $event->image_url);
+                // Core Event rows store images in dedicated columns. Return
+                // all three so the horizontal card (hero_image_url) and any
+                // poster fallback both have something to render, matching
+                // the artist-single response shape.
+                $posterUrl = $this->formatImageUrl($event->poster_url);
+                $heroUrl = $this->formatImageUrl($event->hero_image_url);
+                $imageUrl = $heroUrl ?? $posterUrl ?? $this->formatImageUrl($event->image_url);
                 $startsAt = $event->starts_at ?? $event->event_date;
 
                 return [
@@ -251,6 +262,8 @@ class VenuesController extends BaseController
                     'price_from' => $minPrice,
                     'currency' => $event->ticketTypes->first()?->currency ?? 'RON',
                     'image' => $imageUrl,
+                    'poster_url' => $posterUrl,
+                    'hero_image_url' => $heroUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
                     'category' => null,
                     'commission_mode' => $client?->commission_mode ?? 'included',
