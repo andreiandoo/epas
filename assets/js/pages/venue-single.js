@@ -453,7 +453,23 @@ const VenuePage = {
             'from-amber-400 to-orange-500',
             'from-violet-400 to-purple-500'
         ];
-        grid.innerHTML = reviews.slice(0, 3).map(function (r, i) {
+
+        // Pick 3 reviews at random from those scoring ≥ 4.5 — done client-side
+        // so the Google Places cache doesn't need invalidation. If the
+        // high-rated pool has fewer than 3 entries we pad with the next-best
+        // ones by rating (still avoiding anything obviously negative).
+        const highRated = reviews.filter(function (r) { return (Number(r.rating) || 0) >= 4.5; });
+        let pool = self.shuffle(highRated.slice());
+        if (pool.length < 3) {
+            const padding = reviews
+                .filter(function (r) { return (Number(r.rating) || 0) < 4.5; })
+                .slice()
+                .sort(function (a, b) { return (Number(b.rating) || 0) - (Number(a.rating) || 0); });
+            pool = pool.concat(padding);
+        }
+        const displayReviews = pool.slice(0, 3);
+
+        grid.innerHTML = displayReviews.map(function (r, i) {
             const name = r.author_name || r.author || 'Vizitator';
             const initials = self.buildInitials(name);
             const stars = self.buildStars(r.rating || 0);
@@ -1113,6 +1129,16 @@ const VenuePage = {
         let out = '';
         for (let i = 1; i <= 5; i++) out += i <= r ? '★' : '☆';
         return out;
+    },
+    shuffle(arr) {
+        // Fisher–Yates in place. Returns the same array for chaining.
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            const tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+        }
+        return arr;
     },
     formatReviewDate(value) {
         if (!value) return '';
