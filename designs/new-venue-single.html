@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sala Luceafărul — AmBilet.ro</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('venuePage', () => ({
+      // Gallery state
+      gallery: {
+        open: false,
+        current: 0,
+        images: [1, 2, 3, 4, 5, 6, 7, 8],
+        captions: ['Fațadă', 'Interior sală', 'Scena', 'Foaier', 'Balcon', 'Candelabru', 'Garderobă', 'Cortină']
+      },
+      openGallery(i = 0) {
+        this.gallery.current = i;
+        this.gallery.open = true;
+        document.body.style.overflow = 'hidden';
+      },
+      closeGallery() {
+        this.gallery.open = false;
+        document.body.style.overflow = '';
+      },
+      nextImage() {
+        this.gallery.current = (this.gallery.current + 1) % this.gallery.images.length;
+      },
+      prevImage() {
+        this.gallery.current = (this.gallery.current - 1 + this.gallery.images.length) % this.gallery.images.length;
+      },
+
+      // Share state
+      share: {
+        open: false,
+        copied: false,
+        url: window.location.href,
+        title: 'Sala Luceafărul — AmBilet.ro',
+        text: 'Descoperă evenimentele de la Sala Luceafărul pe AmBilet.ro'
+      },
+      copyLink() {
+        const url = this.share.url;
+        const done = () => {
+          this.share.copied = true;
+          setTimeout(() => { this.share.copied = false; }, 2000);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done).catch(() => {
+            // Fallback for insecure contexts (file://)
+            const ta = document.createElement('textarea');
+            ta.value = url;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); done(); } catch (e) {}
+            document.body.removeChild(ta);
+          });
+        } else {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) {}
+          document.body.removeChild(ta);
+        }
+      },
+
+      // Event filter
+      filter: 'all',
+      eventMatches(categories) {
+        if (this.filter === 'all') return true;
+        return categories.includes(this.filter);
+      },
+
+      // Keyboard handler
+      handleKey(e) {
+        if (e.key === 'Escape') {
+          this.closeGallery();
+          this.share.open = false;
+        }
+        if (this.gallery.open) {
+          if (e.key === 'ArrowRight') this.nextImage();
+          if (e.key === 'ArrowLeft') this.prevImage();
+        }
+      }
+    }));
+  });
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ambilet: {
+            DEFAULT: '#C8102E',
+            dark: '#A30B24',
+            light: '#FEF2F3',
+            navy: '#101828',
+          }
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body { font-family: 'Inter', system-ui, sans-serif; }
+  ::selection { background: #C8102E; color: #fff; }
+
+  .card-shadow { box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.04); }
+  .card-shadow-hover:hover { box-shadow: 0 4px 12px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04); }
+
+  .event-card { transition: all .2s ease; }
+  .event-card:hover { border-color: #C8102E; transform: translateY(-2px); }
+  .event-card:hover .buy-btn { background: #C8102E; color: #fff; }
+
+  /* Thumbnail gradient placeholders */
+  .thumb-1 { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); }
+  .thumb-2 { background: linear-gradient(135deg, #a855f7 0%, #6d28d9 100%); }
+  .thumb-3 { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+  .thumb-4 { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+  .thumb-5 { background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); }
+  .thumb-6 { background: linear-gradient(135deg, #ec4899 0%, #9d174d 100%); }
+
+  .hero-overlay { background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0.65) 100%); }
+
+  @keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+  .tab-active { color: #C8102E; }
+  .tab-active::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:#C8102E; }
+
+  /* Hide scrollbar for horizontal event filter */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Alpine cloak */
+  [x-cloak] { display: none !important; }
+
+  /* Modal animations */
+  .modal-enter { animation: fadeIn .2s ease; }
+  .modal-content-enter { animation: scaleIn .3s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes scaleIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+
+  /* Thumbs in gallery grid */
+  .gallery-thumb-1 { background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%); }
+  .gallery-thumb-2 { background: linear-gradient(135deg, #431407 0%, #1c1917 100%); }
+  .gallery-thumb-3 { background: linear-gradient(135deg, #18181b 0%, #0a0a0a 100%); }
+  .gallery-thumb-4 { background: linear-gradient(135deg, #422006 0%, #1c1410 100%); }
+  .gallery-thumb-5 { background: linear-gradient(135deg, #27272a 0%, #0c0a09 100%); }
+  .gallery-thumb-6 { background: linear-gradient(135deg, #3f1d18 0%, #1a0e0c 100%); }
+</style>
+</head>
+<body
+  class="bg-slate-50 text-slate-900 antialiased"
+  x-data="venuePage"
+  @keydown.window="handleKey($event)"
+>
+
+<!-- ═══════════════ HERO (compressed) ═══════════════ -->
+<section class="max-w-7xl mx-auto px-6 pt-4">
+  <div class="relative h-[280px] md:h-[340px] rounded-2xl overflow-hidden card-shadow">
+    <!-- Placeholder venue image -->
+    <div class="absolute inset-0">
+      <svg class="w-full h-full" viewBox="0 0 1400 400" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2a1818"/>
+            <stop offset="1" stop-color="#0a0405"/>
+          </linearGradient>
+        </defs>
+        <rect width="1400" height="400" fill="url(#sky)"/>
+        <g opacity=".4" stroke="#3a1f25" fill="none" stroke-width="1">
+          <line x1="0" y1="80" x2="1400" y2="80"/>
+          <line x1="0" y1="200" x2="1400" y2="200"/>
+          <line x1="0" y1="320" x2="1400" y2="320"/>
+          <line x1="200" y1="0" x2="200" y2="400"/><line x1="400" y1="0" x2="400" y2="400"/><line x1="600" y1="0" x2="600" y2="400"/><line x1="800" y1="0" x2="800" y2="400"/><line x1="1000" y1="0" x2="1000" y2="400"/><line x1="1200" y1="0" x2="1200" y2="400"/>
+        </g>
+        <rect x="400" y="50" width="600" height="70" fill="#120608"/>
+        <text x="700" y="100" text-anchor="middle" font-family="Inter" font-size="38" font-weight="700" fill="#f1f1f1" letter-spacing="6">LUCEAFĂRUL</text>
+        <g fill="#fcd34d" opacity=".8">
+          <circle cx="420" cy="65" r="2"/><circle cx="460" cy="65" r="2"/><circle cx="500" cy="65" r="2"/><circle cx="540" cy="65" r="2"/><circle cx="580" cy="65" r="2"/><circle cx="620" cy="65" r="2"/><circle cx="660" cy="65" r="2"/><circle cx="700" cy="65" r="2"/><circle cx="740" cy="65" r="2"/><circle cx="780" cy="65" r="2"/><circle cx="820" cy="65" r="2"/><circle cx="860" cy="65" r="2"/><circle cx="900" cy="65" r="2"/><circle cx="940" cy="65" r="2"/><circle cx="980" cy="65" r="2"/>
+        </g>
+        <g fill="#0a0405" stroke="#C8102E" stroke-width="2" opacity=".9">
+          <rect x="600" y="220" width="60" height="140"/>
+          <rect x="670" y="220" width="60" height="140"/>
+          <rect x="740" y="220" width="60" height="140"/>
+        </g>
+        <circle cx="200" cy="200" r="100" fill="#C8102E" opacity=".06"/>
+        <circle cx="1200" cy="200" r="100" fill="#fcd34d" opacity=".04"/>
+      </svg>
+    </div>
+    <div class="absolute inset-0 hero-overlay"></div>
+
+    <!-- Hero content overlay -->
+    <div class="relative z-10 h-full flex flex-col justify-between p-6 md:p-8">
+      <!-- Top badges -->
+      <div class="flex items-start justify-between">
+        <div class="inline-flex items-center gap-2 bg-white/95 backdrop-blur px-3 py-1.5 rounded-full text-xs font-semibold text-slate-800">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+          Teatre & Săli
+        </div>
+        <div class="flex items-center gap-2 relative">
+          <!-- SHARE button with dropdown -->
+          <div class="relative">
+            <button @click="share.open = !share.open" class="w-9 h-9 bg-white/95 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition" title="Distribuie">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" x2="12" y1="2" y2="15"/></svg>
+            </button>
+            <!-- Dropdown -->
+            <div
+              x-show="share.open"
+              x-cloak
+              @click.outside="share.open = false"
+              x-transition:enter="transition ease-out duration-200"
+              x-transition:enter-start="opacity-0 translate-y-1"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              class="absolute right-0 top-11 w-64 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-20"
+            >
+              <div class="px-4 pt-3 pb-2 border-b border-slate-100">
+                <div class="text-xs font-semibold text-slate-900">Distribuie locația</div>
+                <div class="text-xs text-slate-500 truncate" x-text="share.url"></div>
+              </div>
+              <button @click="copyLink()" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition text-left">
+                <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center" :class="share.copied && 'bg-emerald-100'">
+                  <svg x-show="!share.copied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <svg x-show="share.copied" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="text-sm font-medium text-slate-900" x-text="share.copied ? 'Link copiat!' : 'Copiază link'"></div>
+                  <div class="text-xs text-slate-500" x-text="share.copied ? 'Gata de distribuit' : 'Copiază URL-ul paginii'"></div>
+                </div>
+              </button>
+              <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(share.url)" target="_blank" rel="noopener" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </div>
+                <div class="text-sm font-medium text-slate-900">Facebook</div>
+              </a>
+              <a :href="'https://api.whatsapp.com/send?text=' + encodeURIComponent(share.text + ' ' + share.url)" target="_blank" rel="noopener" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+                <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </div>
+                <div class="text-sm font-medium text-slate-900">WhatsApp</div>
+              </a>
+              <a :href="'https://twitter.com/intent/tweet?url=' + encodeURIComponent(share.url) + '&text=' + encodeURIComponent(share.text)" target="_blank" rel="noopener" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+                <div class="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </div>
+                <div class="text-sm font-medium text-slate-900">X (Twitter)</div>
+              </a>
+              <a :href="'mailto:?subject=' + encodeURIComponent(share.title) + '&body=' + encodeURIComponent(share.text + ' ' + share.url)" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition">
+                <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </div>
+                <div class="text-sm font-medium text-slate-900">Email</div>
+              </a>
+            </div>
+          </div>
+          <!-- GALLERY button -->
+          <button @click="openGallery(0)" class="w-9 h-9 bg-white/95 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition relative" title="Galerie">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            <span class="absolute -top-1 -right-1 w-5 h-5 bg-ambilet text-white text-[10px] font-bold rounded-full flex items-center justify-center">8</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom title -->
+      <div class="flex items-end justify-between gap-4 flex-wrap">
+        <div class="text-white">
+          <h1 class="text-3xl md:text-5xl font-bold tracking-tight mb-2">Sala Luceafărul</h1>
+          <div class="flex items-center gap-4 text-white/90 text-sm flex-wrap">
+            <span class="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+              Str. Ion Ghica nr. 3, București
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 bg-green-400 rounded-full pulse-dot"></span>
+              Deschis · în funcție de evenimente
+            </span>
+            <span class="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              4.8 <span class="text-white/70">(1.284)</span>
+            </span>
+          </div>
+        </div>
+        <button class="bg-white hover:bg-slate-100 transition px-4 py-2.5 rounded-lg text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          Urmărește locația
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ MAIN GRID ═══════════════ -->
+<main class="max-w-7xl mx-auto px-6 py-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- ━━━━━━━━━━ LEFT / PRIMARY (2/3) ━━━━━━━━━━ -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- ─── EVENTS (primary CTA — moved up in hierarchy) ─── -->
+      <section class="bg-white rounded-2xl card-shadow overflow-hidden">
+        <!-- Header -->
+        <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+          <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-ambilet-light rounded-lg flex items-center justify-center">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+              </div>
+              <div>
+                <h2 class="text-xl font-bold">Evenimente viitoare</h2>
+                <p class="text-sm text-slate-500">10 evenimente · până în iunie 2026</p>
+              </div>
+            </div>
+            <a href="#" class="text-sm font-semibold text-ambilet hover:text-ambilet-dark flex items-center gap-1">
+              Calendar complet
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+          </div>
+
+          <!-- Filter tabs -->
+          <div class="flex items-center gap-1 overflow-x-auto no-scrollbar -mb-4 pb-2">
+            <button
+              @click="filter = 'all'"
+              :class="filter === 'all' ? 'tab-active' : 'text-slate-600 hover:text-slate-900'"
+              class="relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            >Toate (10)</button>
+            <button
+              @click="filter = 'copii'"
+              :class="filter === 'copii' ? 'tab-active' : 'text-slate-600 hover:text-slate-900'"
+              class="relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            >Pentru copii (10)</button>
+            <button
+              @click="filter = 'premiere'"
+              :class="filter === 'premiere' ? 'tab-active' : 'text-slate-600 hover:text-slate-900'"
+              class="relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            >Premiere (3)</button>
+            <button
+              @click="filter = 'teatru'"
+              :class="filter === 'teatru' ? 'tab-active' : 'text-slate-600 hover:text-slate-900'"
+              class="relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            >Teatru (10)</button>
+            <button
+              @click="filter = 'concerte'"
+              :class="filter === 'concerte' ? 'tab-active' : 'text-slate-600 hover:text-slate-900'"
+              class="relative px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            >Concerte (0)</button>
+          </div>
+        </div>
+
+        <!-- Events list -->
+        <div class="divide-y divide-slate-100">
+
+          <!-- Event 1 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <!-- Date block -->
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Apr</div>
+              <div class="text-2xl font-bold py-1.5">26</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <!-- Thumbnail -->
+            <div class="thumb-1 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3 1 5 0 1-1 2-1 3h12c0-1-1-2-1-3 0-2 1-3 1-5a6 6 0 0 0-6-6z"/></svg>
+            </div>
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+                <span class="inline-flex items-center gap-1 text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded font-medium">
+                  <span class="w-1 h-1 bg-red-600 rounded-full"></span> Ultimele 12 locuri
+                </span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Scufița Roșie — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10:00</span>
+                <span>75 min</span>
+                <span>3–10 ani</span>
+              </div>
+            </div>
+            <!-- Price + CTA -->
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">40 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 2 -->
+          <a href="#" x-show="eventMatches(['copii','teatru','premiere'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Apr</div>
+              <div class="text-2xl font-bold py-1.5">26</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <div class="thumb-2 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M12 2l1.5 5h5l-4 3 1.5 5-4-3-4 3 1.5-5-4-3h5z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Premieră</span>
+                <span class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium">Nou</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Sarea în Bucate — Secretul Prințesei</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12:00</span>
+                <span>90 min</span>
+                <span>5–12 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 3 -->
+          <a href="#" x-show="eventMatches(['copii','teatru','premiere'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">09</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Sâm</div>
+            </div>
+            <div class="thumb-3 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M3 3v18l18-9z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Premieră</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Peter Pan — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10:00</span>
+                <span>80 min</span>
+                <span>4–11 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 4 -->
+          <a href="#" x-show="eventMatches(['copii','teatru','premiere'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">09</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Sâm</div>
+            </div>
+            <div class="thumb-3 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white opacity-80">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M3 3v18l18-9z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Premieră</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Peter Pan — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12:00</span>
+                <span>80 min</span>
+                <span>4–11 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 5 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">17</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <div class="thumb-4 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><circle cx="12" cy="12" r="5"/><circle cx="6" cy="10" r="3"/><circle cx="18" cy="10" r="3"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Cei 3 purceluși — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10:00</span>
+                <span>65 min</span>
+                <span>3–8 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">40 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 6 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">17</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <div class="thumb-5 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M7 5a5 5 0 0 1 5 5v12M7 5a5 5 0 0 0-5 5v8M17 5a5 5 0 0 0-5 5M17 5a5 5 0 0 1 5 5v8"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Rapunzel — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12:00</span>
+                <span>70 min</span>
+                <span>4–10 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 7 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">24</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <div class="thumb-2 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M12 2l1.5 5h5l-4 3 1.5 5-4-3-4 3 1.5-5-4-3h5z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Sarea în Bucate — Secretul Prințesei</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10:00</span>
+                <span>90 min</span>
+                <span>5–12 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 8 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Mai</div>
+              <div class="text-2xl font-bold py-1.5">24</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Dum</div>
+            </div>
+            <div class="thumb-3 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M3 3v18l18-9z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Peter Pan — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12:00</span>
+                <span>80 min</span>
+                <span>4–11 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 9 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Iun</div>
+              <div class="text-2xl font-bold py-1.5">13</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Sâm</div>
+            </div>
+            <div class="thumb-1 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3 1 5 0 1-1 2-1 3h12c0-1-1-2-1-3 0-2 1-3 1-5a6 6 0 0 0-6-6z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Scufița Roșie — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 10:00</span>
+                <span>75 min</span>
+                <span>3–10 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">40 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+
+          <!-- Event 10 -->
+          <a href="#" x-show="eventMatches(['copii','teatru'])" class="event-card flex items-center gap-4 p-4 md:p-5 border-l-4 border-transparent">
+            <div class="flex-none w-16 text-center bg-ambilet text-white rounded-lg overflow-hidden">
+              <div class="text-[10px] font-bold uppercase tracking-wider bg-ambilet-dark py-1">Iun</div>
+              <div class="text-2xl font-bold py-1.5">13</div>
+              <div class="text-[10px] font-medium pb-1.5 opacity-80">Sâm</div>
+            </div>
+            <div class="thumb-3 flex-none w-20 h-20 rounded-lg hidden sm:flex items-center justify-center text-white">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" opacity=".9"><path d="M3 3v18l18-9z"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-semibold text-ambilet uppercase tracking-wider">Teatru copii</span>
+              </div>
+              <h3 class="font-semibold text-slate-900 mb-1 truncate">Peter Pan — by Qfeel</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+                <span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 12:00</span>
+                <span>80 min</span>
+                <span>4–11 ani</span>
+              </div>
+            </div>
+            <div class="flex-none text-right">
+              <div class="text-[11px] text-slate-500 mb-0.5">de la</div>
+              <div class="text-lg font-bold text-slate-900 mb-2">50 lei</div>
+              <div class="buy-btn inline-block px-4 py-2 bg-slate-100 text-slate-900 rounded-lg text-xs font-semibold transition">Cumpără</div>
+            </div>
+          </a>
+          <!-- Empty state -->
+          <div x-show="filter === 'concerte'" x-cloak class="p-12 text-center">
+            <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <h3 class="font-semibold text-slate-900 mb-1">Niciun eveniment în această categorie</h3>
+            <p class="text-sm text-slate-500 mb-4">Nu există concerte programate momentan la Sala Luceafărul.</p>
+            <button @click="filter = 'all'" class="text-sm font-semibold text-ambilet hover:text-ambilet-dark">← Vezi toate evenimentele</button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
+          <span class="text-sm text-slate-500">
+            <span x-text="filter === 'all' ? 'Afișate 10 din 10 evenimente' : (filter === 'concerte' ? 'Niciun rezultat' : 'Filtrate după categorie')"></span>
+          </span>
+          <a href="#" class="text-sm font-semibold text-slate-700 hover:text-ambilet flex items-center gap-1">Vezi și evenimente trecute →</a>
+        </div>
+      </section>
+
+      <!-- ─── STATS (secondary — compressed) ─── -->
+      <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="bg-white rounded-xl card-shadow p-4 flex items-center gap-3">
+          <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-lg font-bold text-slate-900 leading-tight">450</div>
+            <div class="text-xs text-slate-500">Capacitate locuri</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-4 flex items-center gap-3">
+          <div class="w-10 h-10 bg-ambilet-light rounded-lg flex items-center justify-center flex-none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-lg font-bold text-slate-900 leading-tight">10</div>
+            <div class="text-xs text-slate-500">Evenimente viitoare</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-4 flex items-center gap-3">
+          <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center flex-none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-lg font-bold text-slate-900 leading-tight">4.8<span class="text-xs text-slate-500 font-medium">/5</span></div>
+            <div class="text-xs text-slate-500">1.284 recenzii</div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl card-shadow p-4 flex items-center gap-3">
+          <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-lg font-bold text-slate-900 leading-tight">1957</div>
+            <div class="text-xs text-slate-500">Anul construcției</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── ABOUT + AMENITIES ─── -->
+      <section class="bg-white rounded-2xl card-shadow p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 bg-ambilet-light rounded-lg flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          </div>
+          <h2 class="text-xl font-bold">Despre locație</h2>
+        </div>
+
+        <div class="text-slate-700 leading-relaxed mb-6">
+          <p>Descoperă magia muzicii la <strong>Sala Luceafărul</strong>, un spațiu vibrant situat pe Str. Ion Ghica, în inima Bucureștiului. Perfectă pentru concerte și evenimente live, această sală îmbină atmosfera intimă cu dotări moderne, oferind o experiență memorabilă atât artiștilor, cât și publicului.</p>
+          <p class="mt-3">Renovată integral în 2019, sala păstrează elemente arhitecturale originale din 1957 — stucaturi, lambriuri din lemn masiv și celebrul candelabru central — completate de sistem de sunet Meyer Sound și iluminat scenic de ultimă generație.</p>
+        </div>
+
+        <!-- Amenities -->
+        <h3 class="text-sm font-semibold text-slate-900 mb-3">Dotări & facilități</h3>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Acces persoane cu dizabilități
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Garderobă
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Bar în foaier
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Wi-Fi gratuit
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Aer condiționat
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Toalete adaptate
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Parcare 30 locuri
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Vestiare artiști
+          </div>
+          <div class="flex items-center gap-2 text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Backstage profesional
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── REVIEWS ─── -->
+      <section class="bg-white rounded-2xl card-shadow p-6">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold">Recenzii vizitatori</h2>
+              <p class="text-sm text-slate-500">4.8 din 5 · 1.284 recenzii verificate</p>
+            </div>
+          </div>
+          <a href="#" class="text-sm font-semibold text-ambilet hover:text-ambilet-dark">Vezi toate →</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="border border-slate-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white text-xs font-semibold">MI</div>
+                <div>
+                  <div class="text-sm font-semibold">Maria I.</div>
+                  <div class="text-xs text-slate-500">12 Apr 2026</div>
+                </div>
+              </div>
+              <div class="text-amber-500 text-xs">★★★★★</div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed">„Sala arată impecabil după renovare. Acustica e extraordinară, copiii au fost captivați de la primul moment."</p>
+          </div>
+          <div class="border border-slate-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">AP</div>
+                <div>
+                  <div class="text-sm font-semibold">Andrei P.</div>
+                  <div class="text-xs text-slate-500">05 Apr 2026</div>
+                </div>
+              </div>
+              <div class="text-amber-500 text-xs">★★★★★</div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed">„Locație centrală, ușor de ajuns cu metroul. Personalul e amabil, iar scaunele sunt confortabile."</p>
+          </div>
+          <div class="border border-slate-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-semibold">IV</div>
+                <div>
+                  <div class="text-sm font-semibold">Ioana V.</div>
+                  <div class="text-xs text-slate-500">28 Mar 2026</div>
+                </div>
+              </div>
+              <div class="text-amber-500 text-xs">★★★★☆</div>
+            </div>
+            <p class="text-sm text-slate-700 leading-relaxed">„Spectacolele Qfeel sunt excelente. Ar fi fain un mic bufet în pauză — dar e o observație minoră."</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ━━━━━━━━━━ RIGHT / SIDEBAR (1/3) ━━━━━━━━━━ -->
+    <aside class="space-y-6 lg:sticky lg:top-20 lg:self-start">
+
+      <!-- ─── CONTACT (top priority in sidebar) ─── -->
+      <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8102E" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <h3 class="font-bold">Informații rapide</h3>
+        </div>
+        <div class="divide-y divide-slate-100">
+          <div class="px-5 py-3.5 flex items-start gap-3">
+            <svg class="mt-0.5 text-slate-400 flex-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-0.5">Program</div>
+              <div class="text-sm text-slate-900">În funcție de evenimente</div>
+              <div class="text-xs text-slate-500 mt-0.5">Casa de bilete · 1h înainte</div>
+            </div>
+          </div>
+          <a href="tel:0741283829" class="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 transition group">
+            <svg class="mt-0.5 text-slate-400 flex-none group-hover:text-ambilet transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-0.5">Telefon</div>
+              <div class="text-sm text-ambilet font-semibold">0741 283 829</div>
+            </div>
+          </a>
+          <a href="mailto:contact@salaluceafarul.ro" class="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 transition group">
+            <svg class="mt-0.5 text-slate-400 flex-none group-hover:text-ambilet transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-0.5">Email</div>
+              <div class="text-sm text-ambilet font-semibold truncate">contact@salaluceafarul.ro</div>
+            </div>
+          </a>
+          <a href="#" class="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 transition group">
+            <svg class="mt-0.5 text-slate-400 flex-none group-hover:text-ambilet transition" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-0.5">Website</div>
+              <div class="text-sm text-ambilet font-semibold">salaluceafarul.ro</div>
+            </div>
+          </a>
+          <div class="px-5 py-3.5 flex items-center gap-2">
+            <a href="#" class="w-9 h-9 bg-slate-100 hover:bg-ambilet hover:text-white text-slate-600 rounded-lg flex items-center justify-center transition" title="Facebook">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            </a>
+            <a href="#" class="w-9 h-9 bg-slate-100 hover:bg-ambilet hover:text-white text-slate-600 rounded-lg flex items-center justify-center transition" title="Instagram">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── MAP ─── -->
+      <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+        <div class="relative aspect-[4/3] bg-slate-100">
+          <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice">
+            <rect width="400" height="300" fill="#f1f5f9"/>
+            <g stroke="#cbd5e1" stroke-width="1" fill="none">
+              <path d="M0 80 Q 100 70 200 90 T 400 100"/>
+              <path d="M0 150 Q 120 140 240 155 T 400 170"/>
+              <path d="M0 220 Q 100 210 200 225 T 400 235"/>
+              <path d="M70 0 L 90 300"/>
+              <path d="M160 0 L 170 300"/>
+              <path d="M250 0 L 260 300"/>
+              <path d="M330 0 L 340 300"/>
+            </g>
+            <g fill="#e2e8f0">
+              <rect x="20" y="20" width="50" height="40"/>
+              <rect x="100" y="30" width="45" height="50"/>
+              <rect x="180" y="15" width="55" height="45"/>
+              <rect x="280" y="25" width="40" height="55"/>
+              <rect x="30" y="180" width="50" height="50"/>
+              <rect x="120" y="200" width="45" height="45"/>
+              <rect x="270" y="190" width="55" height="55"/>
+            </g>
+            <path d="M0 260 Q 100 250 200 265 T 400 270" stroke="#bfdbfe" stroke-width="10" fill="none"/>
+            <g transform="translate(200, 150)">
+              <circle r="35" fill="#C8102E" opacity=".15"/>
+              <circle r="20" fill="#C8102E" opacity=".3"/>
+              <path d="M0 -16 C -9 -16 -16 -9 -16 0 C -16 10 0 26 0 26 C 0 26 16 10 16 0 C 16 -9 9 -16 0 -16 Z" fill="#C8102E"/>
+              <circle cy="-2" r="5" fill="#fff"/>
+            </g>
+          </svg>
+          <div class="absolute top-3 right-3 bg-white/95 backdrop-blur px-2.5 py-1 rounded text-[11px] font-mono text-slate-600">44.430, 26.104</div>
+        </div>
+        <div class="p-4">
+          <div class="text-sm font-semibold text-slate-900">Str. Ion Ghica nr. 3</div>
+          <div class="text-xs text-slate-500 mb-3">Sector 3, București</div>
+          <a href="#" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>
+            Deschide în Google Maps
+          </a>
+          <!-- Transport -->
+          <div class="mt-4 pt-4 border-t border-slate-100 space-y-2">
+            <div class="text-xs font-semibold text-slate-900 mb-2">Cum ajungi</div>
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <span class="bg-blue-600 text-white font-bold px-1.5 py-0.5 rounded text-[10px]">M2</span>
+              <span>Piața Unirii · 4 min pe jos</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <span class="bg-amber-500 text-white font-bold px-1.5 py-0.5 rounded text-[10px]">BUS</span>
+              <span>104, 123, 385 · Sf. Vineri</span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <span class="border border-slate-300 font-bold px-1.5 py-0.5 rounded text-[10px]">P</span>
+              <span>Parcare Unirea · 350 m</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── CTA Organizers ─── -->
+      <div class="bg-ambilet rounded-2xl p-5 text-white relative overflow-hidden">
+        <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 rounded-full bg-white/5"></div>
+        <div class="relative">
+          <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-3">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 class="text-lg font-bold mb-1">Organizezi un eveniment?</h3>
+          <p class="text-sm text-white/85 mb-4">Contactează echipa Sala Luceafărul pentru disponibilitate și tarife.</p>
+          <a href="#" class="block bg-white text-ambilet text-center py-2.5 rounded-lg text-sm font-bold hover:bg-slate-100 transition">
+            Contactează locația →
+          </a>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ═══════════════ SIMILAR VENUES ═══════════════ -->
+  <section class="mt-10">
+    <div class="flex items-end justify-between mb-5 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold">Locații similare în București</h2>
+        <p class="text-sm text-slate-500 mt-0.5">Alte teatre și săli din zona ta</p>
+      </div>
+      <a href="#" class="text-sm font-semibold text-ambilet hover:text-ambilet-dark">Vezi toate →</a>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <a href="#" class="bg-white rounded-2xl card-shadow card-shadow-hover overflow-hidden group transition">
+        <div class="aspect-[4/3] thumb-2 relative">
+          <div class="absolute top-2 left-2 bg-white/95 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold">Teatru</div>
+        </div>
+        <div class="p-3">
+          <h3 class="font-semibold text-sm text-slate-900 group-hover:text-ambilet transition">Teatrul Odeon</h3>
+          <div class="text-xs text-slate-500 mt-0.5">București · 14 evenimente</div>
+        </div>
+      </a>
+      <a href="#" class="bg-white rounded-2xl card-shadow card-shadow-hover overflow-hidden group transition">
+        <div class="aspect-[4/3] thumb-5 relative">
+          <div class="absolute top-2 left-2 bg-white/95 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold">Teatru</div>
+        </div>
+        <div class="p-3">
+          <h3 class="font-semibold text-sm text-slate-900 group-hover:text-ambilet transition">Teatrul Bulandra</h3>
+          <div class="text-xs text-slate-500 mt-0.5">București · 22 evenimente</div>
+        </div>
+      </a>
+      <a href="#" class="bg-white rounded-2xl card-shadow card-shadow-hover overflow-hidden group transition">
+        <div class="aspect-[4/3] thumb-4 relative">
+          <div class="absolute top-2 left-2 bg-white/95 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold">Filarmonică</div>
+        </div>
+        <div class="p-3">
+          <h3 class="font-semibold text-sm text-slate-900 group-hover:text-ambilet transition">Ateneul Român</h3>
+          <div class="text-xs text-slate-500 mt-0.5">București · 8 evenimente</div>
+        </div>
+      </a>
+      <a href="#" class="bg-white rounded-2xl card-shadow card-shadow-hover overflow-hidden group transition">
+        <div class="aspect-[4/3] thumb-6 relative">
+          <div class="absolute top-2 left-2 bg-white/95 backdrop-blur px-2 py-0.5 rounded text-[10px] font-semibold">Sală</div>
+        </div>
+        <div class="p-3">
+          <h3 class="font-semibold text-sm text-slate-900 group-hover:text-ambilet transition">Teatrul Act</h3>
+          <div class="text-xs text-slate-500 mt-0.5">București · 11 evenimente</div>
+        </div>
+      </a>
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════════ STICKY MOBILE CTA ═══════════════ -->
+<div class="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 flex items-center gap-3 z-30 shadow-lg">
+  <div class="flex-1">
+    <div class="text-xs text-slate-500">Următorul eveniment</div>
+    <div class="text-sm font-semibold truncate">Scufița Roșie · 26 Apr, 10:00</div>
+  </div>
+  <a href="#" class="bg-ambilet text-white px-5 py-3 rounded-lg text-sm font-semibold whitespace-nowrap">Bilete →</a>
+</div>
+
+
+<!-- ═══════════════ GALLERY LIGHTBOX MODAL ═══════════════ -->
+<div
+  x-show="gallery.open"
+  x-cloak
+  @click.self="closeGallery()"
+  x-transition:enter="transition ease-out duration-200"
+  x-transition:enter-start="opacity-0"
+  x-transition:enter-end="opacity-100"
+  x-transition:leave="transition ease-in duration-150"
+  x-transition:leave-start="opacity-100"
+  x-transition:leave-end="opacity-0"
+  class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col"
+>
+  <!-- Top bar -->
+  <div class="flex items-center justify-between p-4 md:p-6 text-white">
+    <div>
+      <div class="text-lg font-bold">Galerie foto · Sala Luceafărul</div>
+      <div class="text-sm text-white/70">
+        Fotografia <span x-text="gallery.current + 1"></span> din <span x-text="gallery.images.length"></span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="#" class="hidden sm:flex items-center gap-2 px-3 h-10 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Descarcă
+      </a>
+      <button @click="closeGallery()" class="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main image viewer -->
+  <div class="flex-1 flex items-center justify-center relative px-4 md:px-20 pb-4">
+    <!-- Prev arrow -->
+    <button
+      @click="prevImage()"
+      class="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 w-11 h-11 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition z-10"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+
+    <!-- Image (SVG placeholder) -->
+    <template x-for="(img, i) in gallery.images" :key="i">
+      <div x-show="gallery.current === i" class="w-full h-full max-w-5xl max-h-[75vh] flex items-center justify-center">
+        <!-- We use a colored gradient placeholder per image -->
+        <div :class="'gallery-thumb-' + ((i % 6) + 1)" class="w-full h-full rounded-xl relative overflow-hidden shadow-2xl flex items-center justify-center">
+          <svg class="w-full h-full absolute inset-0" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice">
+            <rect width="1200" height="700" fill="none"/>
+            <g opacity=".3" stroke="#fff" stroke-width="1" fill="none">
+              <line x1="0" y1="175" x2="1200" y2="175"/>
+              <line x1="0" y1="350" x2="1200" y2="350"/>
+              <line x1="0" y1="525" x2="1200" y2="525"/>
+            </g>
+            <g opacity=".5">
+              <rect x="400" y="100" width="400" height="80" fill="#000"/>
+              <text x="600" y="150" text-anchor="middle" font-family="Inter" font-size="36" font-weight="700" fill="#fff" letter-spacing="4">LUCEAFĂRUL</text>
+              <g fill="#fcd34d">
+                <circle cx="420" cy="120" r="3"/><circle cx="480" cy="120" r="3"/><circle cx="540" cy="120" r="3"/><circle cx="600" cy="120" r="3"/><circle cx="660" cy="120" r="3"/><circle cx="720" cy="120" r="3"/><circle cx="780" cy="120" r="3"/>
+              </g>
+            </g>
+          </svg>
+          <div class="relative z-10 text-white/90 text-center">
+            <div class="text-6xl font-bold mb-2" x-text="i + 1"></div>
+            <div class="text-sm uppercase tracking-widest">Fotografie placeholder · <span x-text="gallery.captions[i]"></span></div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Next arrow -->
+    <button
+      @click="nextImage()"
+      class="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 w-11 h-11 md:w-12 md:h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition z-10"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <!-- Thumbnails strip -->
+  <div class="p-4 md:px-6 pb-6">
+    <div class="max-w-5xl mx-auto flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
+      <template x-for="(img, i) in gallery.images" :key="i">
+        <button
+          @click="gallery.current = i"
+          :class="gallery.current === i ? 'ring-2 ring-ambilet scale-105' : 'opacity-50 hover:opacity-100'"
+          class="flex-none w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden transition-all"
+        >
+          <div :class="'gallery-thumb-' + ((i % 6) + 1)" class="w-full h-full flex items-center justify-center text-white text-xs font-semibold" x-text="i + 1"></div>
+        </button>
+      </template>
+    </div>
+    <div class="text-center mt-3 text-white/50 text-xs">
+      Folosește săgețile <kbd class="bg-white/10 px-1.5 py-0.5 rounded mx-1 font-mono">←</kbd> <kbd class="bg-white/10 px-1.5 py-0.5 rounded mx-1 font-mono">→</kbd> pentru navigare · <kbd class="bg-white/10 px-1.5 py-0.5 rounded mx-1 font-mono">Esc</kbd> pentru închidere
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
