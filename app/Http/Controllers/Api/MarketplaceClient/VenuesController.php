@@ -400,7 +400,10 @@ class VenuesController extends BaseController
                 $alreadyIncluded = $results->pluck('id')->all();
                 $categoryMatches = (clone $baseQuery)
                     ->whereNotIn('id', $alreadyIncluded)
-                    ->whereHas('venueCategories', fn ($q) => $q->whereIn('venue_categories.id', $categoryIds))
+                    // Table is `marketplace_venue_categories` (see the
+                    // MarketplaceVenueCategory model). The qualifier is
+                    // required when using whereHas with multiple joins.
+                    ->whereHas('venueCategories', fn ($q) => $q->whereIn('marketplace_venue_categories.id', $categoryIds))
                     ->with('venueCategories')
                     ->limit($missing)
                     ->get();
