@@ -149,23 +149,23 @@ class TicketVariableService
                     [
                         'path' => 'ticket.section',
                         'label' => 'Section',
-                        'description' => 'Seating section',
+                        'description' => 'Seating section (prefixed with "Sectiunea ")',
                         'type' => 'string',
-                        'example' => 'Section A',
+                        'example' => 'Sectiunea A',
                     ],
                     [
                         'path' => 'ticket.row',
                         'label' => 'Row',
-                        'description' => 'Seating row',
+                        'description' => 'Seating row (prefixed with "Randul ")',
                         'type' => 'string',
-                        'example' => 'Row 5',
+                        'example' => 'Randul 5',
                     ],
                     [
                         'path' => 'ticket.seat',
                         'label' => 'Seat Number',
-                        'description' => 'Seat number',
+                        'description' => 'Seat number (prefixed with "Locul ")',
                         'type' => 'string',
-                        'example' => 'Seat 12',
+                        'example' => 'Locul 12',
                     ],
                     [
                         'path' => 'ticket.number',
@@ -479,9 +479,9 @@ class TicketVariableService
             'ticket' => [
                 'type' => 'VIP Access',
                 'price' => '299.00 RON',
-                'section' => 'Section A',
-                'row' => 'Row 5',
-                'seat' => 'Seat 12',
+                'section' => 'Sectiunea A',
+                'row' => 'Randul 5',
+                'seat' => 'Locul 12',
                 'number' => 'TKT-2025-001234',
                 'code_short' => 'WLMVWB2G',
                 'code_long' => 'b35b6fb0-52e7-43d3-88d9-3ccdc5e874a8',
@@ -708,9 +708,13 @@ class TicketVariableService
             'ticket' => [
                 'type' => $ticketType?->name ?? $ticket->marketplaceTicketType?->name ?? '',
                 'price' => number_format($ticketPrice, 2) . ' ' . $currency,
-                'section' => $seatDetails['section_name'] ?? '',
-                'row' => $seatDetails['row_label'] ?? '',
-                'seat' => $seatDetails['seat_number'] ?? '',
+                // Seat placement variables include their Romanian label in the
+                // output so ticket templates can drop them in plain text. When
+                // the underlying value is missing, we render an empty string —
+                // we don't want a dangling "Sectiunea " with no content.
+                'section' => ($seatDetails['section_name'] ?? '') !== '' ? 'Sectiunea ' . $seatDetails['section_name'] : '',
+                'row' => ($seatDetails['row_label'] ?? '') !== '' ? 'Randul ' . $seatDetails['row_label'] : '',
+                'seat' => ($seatDetails['seat_number'] ?? '') !== '' ? 'Locul ' . $seatDetails['seat_number'] : '',
                 'number' => $serial,
                 'code_short' => $ticket->code ?? '',
                 'code_long' => $ticket->barcode ?? '',
