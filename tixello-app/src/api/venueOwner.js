@@ -47,6 +47,19 @@ export async function scanLookup(code) {
   return apiPost('/venue-owner/scan', { code });
 }
 
+// ── Export ───────────────────────────────────────────────────
+
+/**
+ * Request a CSV export of valid tickets. Returns either a signed
+ * download URL (destination='download') or a success message after the
+ * email has been sent (destination='email').
+ */
+export async function exportAttendees(eventId, { destination, email }) {
+  const body = { destination };
+  if (destination === 'email') body.email = email;
+  return apiPost(`/venue-owner/events/${eventId}/export`, body);
+}
+
 // ── Notes (polymorphic) ──────────────────────────────────────
 
 export async function listNotes(targetType, targetId) {

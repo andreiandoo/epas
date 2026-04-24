@@ -8,11 +8,16 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Modal,
+  Alert,
+  Linking,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Svg, { Path, Circle, Rect } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
-import { getEvent, listAttendees } from '../api/venueOwner';
+import { getEvent, listAttendees, exportAttendees } from '../api/venueOwner';
 
 function BackIcon({ size = 22, color }) {
   return (
@@ -126,6 +131,12 @@ export default function VenueEventDetailScreen({ route, navigation }) {
   const [total, setTotal] = useState(0);
   const [error, setError] = useState('');
 
+  const [showExport, setShowExport] = useState(false);
+  const [exportMode, setExportMode] = useState(null); // 'download' | 'email' | null (chooser)
+  const [exportEmail, setExportEmail] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
+
   const searchDebounce = useRef(null);
 
   const fetchEvent = useCallback(async () => {
@@ -178,6 +189,70 @@ export default function VenueEventDetailScreen({ route, navigation }) {
     fetchAttendees({ query: search, nextPage: page + 1, append: true });
   };
 
+  const openExport = () => {
+    setExportMode(null);
+    setExportEmail('');
+    setExportMessage('');
+    setShowExport(true);
+  };
+
+  const closeExport = () => {
+    if (isExporting) return;
+    setShowExport(false);
+    setExportMode(null);
+    setExportEmail('');
+    setExportMessage('');
+  };
+
+  const handleExportDownload = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportMessage('');
+    try {
+      const data = await exportAttendees(eventId, { destination: 'download' });
+      if (data?.success && data.data?.download_url) {
+        const url = data.data.download_url;
+        setShowExport(false);
+        // Open the signed URL in the system browser — browser downloads the file.
+        try {
+          await Linking.openURL(url);
+        } catch (e) {
+          Alert.alert('Eroare', 'Nu am putut deschide linkul de descărcare.');
+        }
+      } else {
+        setExportMessage(data?.message || 'Nu am putut genera exportul');
+      }
+    } catch (err) {
+      setExportMessage(err?.message || 'Eroare de conexiune');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportEmail = async () => {
+    const email = exportEmail.trim();
+    if (!email) {
+      setExportMessage('Introdu o adresă de email.');
+      return;
+    }
+    if (isExporting) return;
+    setIsExporting(true);
+    setExportMessage('');
+    try {
+      const data = await exportAttendees(eventId, { destination: 'email', email });
+      if (data?.success) {
+        setExportMessage(data.message || `Exportul a fost trimis la ${email}`);
+        setTimeout(() => { closeExport(); }, 1800);
+      } else {
+        setExportMessage(data?.message || 'Nu am putut trimite exportul');
+      }
+    } catch (err) {
+      setExportMessage(err?.message || 'Eroare de conexiune');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const stats = event?.stats || {};
 
   return (
@@ -209,10 +284,12 @@ export default function VenueEventDetailScreen({ route, navigation }) {
               <Text style={styles.statValue}>{stats.checked_in_count || 0}</Text>
               <Text style={styles.statLabel}>Check-in</Text>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{total || 0}</Text>
-              <Text style={styles.statLabel}>Bilete în listă</Text>
-            </View>
+            <TouchableOpacity style={styles.exportBox} onPress={openExport} activeOpacity={0.7}>
+              <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}>
+                <Path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16" strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+              <Text style={styles.exportLabel}>Export CSV</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -276,6 +353,127 @@ export default function VenueEventDetailScreen({ route, navigation }) {
           }
         />
       )}
+
+      {/* Export modal — chooser + email input */}
+      <Modal visible={showExport} transparent animationType="fade" statusBarTranslucent onRequestClose={closeExport}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Export bilete</Text>
+              <TouchableOpacity onPress={closeExport} style={styles.modalClose} disabled={isExporting}>
+                <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={colors.textPrimary} strokeWidth={2.5}>
+                  <Path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                </Svg>
+              </TouchableOpacity>
+            </View>
+
+            {exportMode === null && (
+              <>
+                <Text style={styles.modalHint}>
+                  CSV cu biletele valide: id comandă, id bilet, tip bilet, nume + telefon client, data comenzii, mențiuni.
+                </Text>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => setExportMode('download')}
+                  disabled={isExporting}
+                  activeOpacity={0.7}
+                >
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.purple} strokeWidth={2}>
+                    <Path d="M12 3v13m0 0l-4-4m4 4l4-4M4 21h16" strokeLinecap="round" strokeLinejoin="round" />
+                  </Svg>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalOptionTitle}>Descarcă în telefon</Text>
+                    <Text style={styles.modalOptionHint}>Se deschide în browser și se descarcă fișierul</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => setExportMode('email')}
+                  disabled={isExporting}
+                  activeOpacity={0.7}
+                >
+                  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={colors.purple} strokeWidth={2}>
+                    <Path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <Path d="M22 6l-10 7L2 6" />
+                  </Svg>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalOptionTitle}>Trimite pe email</Text>
+                    <Text style={styles.modalOptionHint}>Primești CSV ca atașament</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {exportMode === 'download' && (
+              <>
+                <Text style={styles.modalHint}>
+                  Se generează un link de descărcare valid 30 de minute. După ce apeși Descarcă, se deschide în browser.
+                </Text>
+                {exportMessage !== '' && (
+                  <Text style={styles.errorLine}>{exportMessage}</Text>
+                )}
+                <View style={styles.modalRow}>
+                  <TouchableOpacity onPress={() => setExportMode(null)} style={styles.cancelBtn} disabled={isExporting}>
+                    <Text style={styles.cancelBtnText}>Înapoi</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveBtn, isExporting && styles.saveBtnDisabled]}
+                    onPress={handleExportDownload}
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.saveBtnText}>Descarcă</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {exportMode === 'email' && (
+              <>
+                <Text style={styles.modalHint}>
+                  Introdu adresa la care vrei să primești exportul. Fișierul ajunge ca atașament .csv.
+                </Text>
+                <TextInput
+                  style={styles.emailInput}
+                  placeholder="exemplu@domeniu.ro"
+                  placeholderTextColor={colors.textTertiary}
+                  value={exportEmail}
+                  onChangeText={setExportEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!isExporting}
+                />
+                {exportMessage !== '' && (
+                  <Text style={styles.errorLine}>{exportMessage}</Text>
+                )}
+                <View style={styles.modalRow}>
+                  <TouchableOpacity onPress={() => setExportMode(null)} style={styles.cancelBtn} disabled={isExporting}>
+                    <Text style={styles.cancelBtnText}>Înapoi</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.saveBtn, (isExporting || !exportEmail.trim()) && styles.saveBtnDisabled]}
+                    onPress={handleExportEmail}
+                    disabled={isExporting || !exportEmail.trim()}
+                  >
+                    {isExporting ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.saveBtnText}>Trimite</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -343,4 +541,69 @@ const styles = StyleSheet.create({
     borderColor: colors.redBorder,
   },
   errorText: { color: colors.red, fontSize: 13 },
+
+  // Export
+  exportBox: {
+    flex: 1,
+    backgroundColor: colors.purple,
+    padding: 12,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  exportLabel: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: colors.background,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  modalTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: '700' },
+  modalClose: { padding: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.05)' },
+  modalHint: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginBottom: 14 },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+  },
+  modalOptionTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: '600' },
+  modalOptionHint: { color: colors.textTertiary, fontSize: 12, marginTop: 2 },
+  emailInput: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 10,
+    padding: 12,
+    color: colors.textPrimary,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 10,
+  },
+  errorLine: { color: colors.red, fontSize: 13, marginBottom: 8 },
+  modalRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 6 },
+  cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  cancelBtnText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
+  saveBtn: { backgroundColor: colors.purple, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, alignItems: 'center', minWidth: 110 },
+  saveBtnDisabled: { opacity: 0.5 },
+  saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });
