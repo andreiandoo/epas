@@ -776,7 +776,8 @@ class OrderResource extends Resource
             $typeName = is_array($typeNameRaw) ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: 'Bilet') : ($typeNameRaw ?? 'Bilet');
             $code = $ticket->code ?? $ticket->unique_code ?? 'N/A';
             $barcode = $ticket->barcode ?? $code;
-            $price = number_format($ticket->price ?? 0, 2);
+            $priceValue = $ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100);
+            $price = number_format($priceValue, 2);
             $currency = $ticket->marketplaceTicketType?->currency ?? $ticket->ticketType?->currency ?? 'RON';
 
             // Get beneficiary from meta or order
