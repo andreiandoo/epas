@@ -2048,6 +2048,18 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.event.seating-map':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/organizer/events/' . urlencode($eventId) . '/seating-map';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.event-categories':
         $method = 'GET';
         $endpoint = '/organizer/event-categories';
@@ -2733,6 +2745,17 @@ switch ($action) {
         $endpoint = '/organizer/invitations/csv-template';
         $requiresAuth = true;
         $rawResponse = true;
+        break;
+
+    case 'organizer.invitations.hold-seats':
+        // POST pre-holds seats for the organizer's seat picker (10-min TTL).
+        // DELETE releases a pre-hold (modal closed / seat deselected).
+        // The final store() call re-confirms every seat atomically, so
+        // pre-holds are only a UX hint — not a correctness requirement.
+        $method = $_SERVER['REQUEST_METHOD'];
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/hold-seats';
+        $requiresAuth = true;
         break;
 
     case 'organizer.documents.view':
