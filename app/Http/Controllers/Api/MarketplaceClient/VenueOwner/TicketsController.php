@@ -30,9 +30,9 @@ class TicketsController extends BaseController
         }
 
         $ticketModel->load([
-            'order:id,order_number,customer_name,customer_id,marketplace_customer_id,paid_at,created_at,status,total,currency',
-            'order.customer:id,first_name,last_name',
-            'order.marketplaceCustomer:id,first_name,last_name',
+            'order:id,order_number,customer_name,customer_phone,customer_id,marketplace_customer_id,paid_at,created_at,status,total,currency',
+            'order.customer:id,first_name,last_name,phone',
+            'order.marketplaceCustomer:id,first_name,last_name,phone',
             'ticketType:id,name',
         ]);
 

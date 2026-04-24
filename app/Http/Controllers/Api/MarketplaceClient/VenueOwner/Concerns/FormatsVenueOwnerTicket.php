@@ -87,7 +87,13 @@ trait FormatsVenueOwnerTicket
     }
 
     /**
-     * Extract customer identity (names only) from ticket → order → (marketplace|core) customer.
+     * Extract customer identity from ticket → order → (marketplace|core) customer.
+     * Includes phone (venue owners may contact guests) but never email — email is
+     * considered private to the marketplace relationship.
+     *
+     * `id` + `type` identify the customer for note-grouping ("adaugă mențiune pe
+     * toate biletele clientului"): mobile sends them back as target_id on a
+     * customer-level note.
      */
     protected function resolveTicketCustomer(Ticket $ticket): ?array
     {
@@ -99,8 +105,11 @@ trait FormatsVenueOwnerTicket
         if ($order->relationLoaded('marketplaceCustomer') && $order->marketplaceCustomer) {
             $c = $order->marketplaceCustomer;
             return [
+                'id' => (string) $c->id,
+                'type' => 'marketplace_customer',
                 'first_name' => $c->first_name,
                 'last_name' => $c->last_name,
+                'phone' => $c->phone ?? $order->customer_phone,
                 'full_name' => trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) ?: null,
             ];
         }
@@ -108,22 +117,28 @@ trait FormatsVenueOwnerTicket
         if ($order->relationLoaded('customer') && $order->customer) {
             $c = $order->customer;
             return [
+                'id' => (string) $c->id,
+                'type' => 'customer',
                 'first_name' => $c->first_name,
                 'last_name' => $c->last_name,
+                'phone' => $c->phone ?? $order->customer_phone,
                 'full_name' => trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) ?: null,
             ];
         }
 
         $name = trim((string) $order->customer_name);
-        if ($name === '') {
+        if ($name === '' && empty($order->customer_phone)) {
             return null;
         }
 
         $parts = preg_split('/\s+/', $name, 2);
         return [
+            'id' => null,
+            'type' => null,
             'first_name' => $parts[0] ?? null,
             'last_name' => $parts[1] ?? null,
-            'full_name' => $name,
+            'phone' => $order->customer_phone,
+            'full_name' => $name ?: null,
         ];
     }
 }
