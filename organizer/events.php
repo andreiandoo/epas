@@ -840,7 +840,7 @@ function renderEvents(events) {
         const isPublishedEvent = event.status === 'published' || event.is_public;
         const viewUrl = isPublishedEvent ? `/bilete/${event.slug}` : `/bilete/${event.slug}?preview=1`;
         const viewButton = !isEnded
-            ? `<a href="${viewUrl}" target="_blank" class="btn btn-sm btn-secondary" title="${isPublishedEvent ? 'Vizualizează' : 'Previzualizare'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>Pagină event</a>`
+            ? `<a href="${viewUrl}" target="_blank" class="btn btn-sm btn-secondary" title="${isPublishedEvent ? 'Vizualizează' : 'Previzualizare'}"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>Pagină <span class="mobile:hidden">event</span></a>`
             : '';
 
         return `
@@ -864,8 +864,8 @@ function renderEvents(events) {
                             <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări nete</p></div>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center justify-end gap-2 py-2 pl-6 pr-2 border-t border-border">
-                        <div class="flex items-center ml-0 mr-auto gap-x-4 ">
+                    <div class="flex flex-wrap items-center justify-end gap-2 py-2 pl-6 pr-2 border-t border-border mobile:px-2">
+                        <div class="flex items-center ml-0 mr-auto gap-x-4 mobile:mx-auto">
                             <div class="flex items-center justify-center gap-x-2"><p class="text-3xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs text-muted" style="line-height:0.85rem;">${(!isEnded && daysText && daysText !== 'Azi' && daysText !== 'Mâine') ? 'zile<br/>rămase' : ''}</p></div>
                             
                             <div class="flex items-center gap-2">
@@ -873,7 +873,7 @@ function renderEvents(events) {
                                 ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
                             </div>
                         </div>
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2 mobile:grid mobile:grid-cols-3">
                             ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="text-blue-700 border border-blue-200 border-solid btn btn-sm bg-blue-50 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
                             ${invitationsButton}
                             ${documentsButton}
