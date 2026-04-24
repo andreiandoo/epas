@@ -375,23 +375,53 @@ $scriptsExtra = <<<'JS'
 
             svg += '<g' + transform + '>';
 
-            // Section label
-            if (section.name) {
-                svg += '<text x="' + cx + '" y="' + ((section.y || 0) - 6) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#374151">' + esc(section.name) + '</text>';
-            }
-
             const meta = section.metadata || {};
             const seatSize = parseInt(meta.seat_size) || 15;
             const seatRadius = seatSize / 2;
+            const seatFontSize = Math.round(seatRadius * 0.85 * 10) / 10;
+
+            // Row labels: align to section-wide leftmost/rightmost seat columns
+            // (same approach the customer map uses — placed just outside the
+            // first/last seat of each row). Skipped when section opts out.
+            const allSeatXs = [];
+            let seatGap = seatRadius * 3;
+            let gapDetected = false;
+            section.rows.forEach(function (_r) {
+                if (!_r.seats) return;
+                _r.seats.forEach(function (_s) { allSeatXs.push(_s.x || 0); });
+                if (!gapDetected && _r.seats.length >= 2) {
+                    const xs = _r.seats.map(function (s) { return s.x || 0; }).sort(function (a, b) { return a - b; });
+                    seatGap = Math.abs(xs[1] - xs[0]);
+                    gapDetected = true;
+                }
+            });
+            const secMinX = allSeatXs.length > 0 ? Math.min.apply(null, allSeatXs) : 0;
+            const secMaxX = allSeatXs.length > 0 ? Math.max.apply(null, allSeatXs) : 0;
+            const leftLabelX = (section.x || 0) + secMinX - seatGap;
+            const rightLabelX = (section.x || 0) + secMaxX + seatGap;
+            const rowLabelSize = Math.max(10, Math.round(seatFontSize * 1.1 * 10) / 10);
+            const autoShowRowLabels = (meta.auto_show_row_labels !== false);
 
             section.rows.forEach(function (row) {
-                if (!row.seats) return;
+                if (!row.seats || row.seats.length === 0) return;
+
+                // Row labels at both ends (matches the customer map)
+                if (autoShowRowLabels) {
+                    const firstSeat = row.seats[0];
+                    if (firstSeat) {
+                        const rlY = (section.y || 0) + (firstSeat.y || 0) + seatRadius * 0.4;
+                        svg += '<text x="' + leftLabelX + '" y="' + rlY + '" text-anchor="end" font-size="' + rowLabelSize + '" font-weight="600" fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">' + esc(row.label || '') + '</text>';
+                        svg += '<text x="' + rightLabelX + '" y="' + rlY + '" text-anchor="start" font-size="' + rowLabelSize + '" font-weight="600" fill="rgba(0,0,0,0.7)" class="pointer-events-none select-none">' + esc(row.label || '') + '</text>';
+                    }
+                }
+
                 row.seats.forEach(function (seat) {
                     const cx2 = (section.x || 0) + (seat.x || 0);
                     const cy2 = (section.y || 0) + (seat.y || 0);
                     const uid = seat.seat_uid;
-                    // Store everything the seat needs via data-* so paintSeat()
-                    // can repaint without walking the tree.
+
+                    // Seat circle — click handler attached in renderSeatModal.
+                    // <title> gives the hover tooltip.
                     svg += '<circle data-seat-uid="' + esc(uid) + '"'
                         + ' data-section="' + esc(section.name || '') + '"'
                         + ' data-row="' + esc(row.label || '') + '"'
@@ -401,6 +431,13 @@ $scriptsExtra = <<<'JS'
                         + ' stroke-width="1" style="cursor:pointer">'
                         + '<title>' + esc(section.name || '') + ' · Rând ' + esc(row.label || '') + ' · Loc ' + esc(seat.label || '') + '</title>'
                         + '</circle>';
+
+                    // Seat number inside the circle (skip for unavailable —
+                    // they render gray without a number, same as customer view)
+                    const status = seat.status || 'available';
+                    if (status === 'available' && seat.label) {
+                        svg += '<text x="' + cx2 + '" y="' + (cy2 + seatRadius * 0.35) + '" text-anchor="middle" font-size="' + seatFontSize + '" font-weight="600" fill="white" class="pointer-events-none select-none">' + esc(seat.label) + '</text>';
+                    }
                 });
             });
 
