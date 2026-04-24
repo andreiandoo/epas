@@ -348,7 +348,12 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
                   )}
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.groupToggleLabel}>Grupează biletele</Text>
+                  <Text style={styles.groupToggleLabel}>
+                    Grupează biletele
+                    {customer.tickets_at_event_count > 0
+                      ? ` (${customer.tickets_at_event_count} ${customer.tickets_at_event_count === 1 ? 'bilet' : 'bilete'} la acest eveniment)`
+                      : ''}
+                  </Text>
                   <Text style={styles.groupToggleHint}>
                     Aplică această mențiune la toate biletele clientului
                   </Text>

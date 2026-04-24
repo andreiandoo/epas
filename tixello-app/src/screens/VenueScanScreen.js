@@ -398,7 +398,12 @@ export default function VenueScanScreen() {
                         )}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.groupToggleLabel}>Grupează biletele</Text>
+                        <Text style={styles.groupToggleLabel}>
+                          Grupează biletele
+                          {result.ticket.customer?.tickets_at_event_count > 0
+                            ? ` (${result.ticket.customer.tickets_at_event_count} ${result.ticket.customer.tickets_at_event_count === 1 ? 'bilet' : 'bilete'} la acest eveniment)`
+                            : ''}
+                        </Text>
                         <Text style={styles.groupToggleHint}>
                           Aplică la toate biletele clientului
                         </Text>
