@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\User;
 use App\Models\Venue;
 use App\Notifications\HostedEventCreatedNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class EventObserver
@@ -83,6 +84,50 @@ class EventObserver
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Handle the Event "deleting" hook.
+     *
+     * Deleting an event cascades to ticket_types, and the DB-level RESTRICT
+     * FK on tickets/order_items will then block the whole DELETE with an
+     * opaque "foreign key violation" error. Pre-check here so Filament can
+     * surface a clear, human-friendly message instead.
+     */
+    public function deleting(Event $event): void
+    {
+        $ticketTypeIds = DB::table('ticket_types')
+            ->where('event_id', $event->id)
+            ->pluck('id');
+
+        if ($ticketTypeIds->isEmpty()) {
+            return;
+        }
+
+        $orderItemsCount = DB::table('order_items')
+            ->whereIn('ticket_type_id', $ticketTypeIds)
+            ->count();
+        $ticketsCount = DB::table('tickets')
+            ->whereIn('ticket_type_id', $ticketTypeIds)
+            ->count();
+
+        if ($orderItemsCount === 0 && $ticketsCount === 0) {
+            return;
+        }
+
+        $title = is_array($event->title)
+            ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title) ?? '')
+            : ($event->title ?? '');
+
+        $comenzi = $orderItemsCount === 1 ? '1 comandă' : $orderItemsCount . ' comenzi';
+        $bilete = $ticketsCount === 1 ? '1 bilet vândut' : $ticketsCount . ' bilete vândute';
+
+        throw new \RuntimeException(sprintf(
+            'Nu poți șterge evenimentul „%s" — există %s și %s pe tipurile de bilete. Anulează sau rambursează mai întâi comenzile asociate.',
+            $title,
+            $comenzi,
+            $bilete
+        ));
     }
 
     /**

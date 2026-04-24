@@ -176,6 +176,34 @@ class TicketType extends Model
             }
         });
 
+        // Refuse deletion if any order_item or ticket still references this type.
+        // The DB also enforces this via the FK RESTRICT constraint, but raising a
+        // readable exception here surfaces a clear admin-facing message before
+        // Postgres returns a "foreign key violation" that Filament would render
+        // as a generic error.
+        static::deleting(function ($model) {
+            $orderItemsCount = \DB::table('order_items')->where('ticket_type_id', $model->id)->count();
+            $ticketsCount = \DB::table('tickets')->where('ticket_type_id', $model->id)->count();
+
+            if ($orderItemsCount === 0 && $ticketsCount === 0) {
+                return;
+            }
+
+            $name = is_array($model->name)
+                ? ($model->name['ro'] ?? $model->name['en'] ?? reset($model->name) ?? '')
+                : ($model->name ?? '');
+
+            $comenzi = $orderItemsCount === 1 ? '1 comandă' : $orderItemsCount . ' comenzi';
+            $bilete = $ticketsCount === 1 ? '1 bilet vândut' : $ticketsCount . ' bilete vândute';
+
+            throw new \RuntimeException(sprintf(
+                'Nu poți șterge tipul de bilet „%s" — există %s și %s pe acest tip. Anulează sau rambursează mai întâi comenzile asociate.',
+                $name,
+                $comenzi,
+                $bilete
+            ));
+        });
+
         // Auto-generate series_start/series_end after create (needs ID)
         static::created(function ($model) {
             $needsUpdate = false;
