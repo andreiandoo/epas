@@ -127,6 +127,7 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
   const [newNote, setNewNote] = useState('');
   const [editingNote, setEditingNote] = useState(null); // { id, note }
   const [isSaving, setIsSaving] = useState(false);
+  const [groupByCustomer, setGroupByCustomer] = useState(false);
 
   const loadTicket = useCallback(async () => {
     try {
@@ -151,6 +152,9 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
     loadTicket();
   }, [loadTicket]);
 
+  const customer = ticket?.customer || {};
+  const canGroupByCustomer = !!customer.id; // need a customer identity to group
+
   const saveNote = async () => {
     const text = newNote.trim();
     if (!text) return;
@@ -166,10 +170,14 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
           Alert.alert('Eroare', data?.message || 'Nu am putut salva');
         }
       } else {
-        const data = await createNote('ticket', ticketId, text);
+        const useGroup = groupByCustomer && canGroupByCustomer;
+        const targetType = useGroup ? 'customer' : 'ticket';
+        const targetId = useGroup ? customer.id : ticketId;
+        const data = await createNote(targetType, targetId, text);
         if (data?.success) {
           await loadTicket();
           setNewNote('');
+          setGroupByCustomer(false);
         } else {
           Alert.alert('Eroare', data?.message || 'Nu am putut salva');
         }
@@ -224,7 +232,6 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
     );
   }
 
-  const customer = ticket?.customer || {};
   const seat = ticket?.seat;
   const event = ticket?.event;
 
@@ -274,6 +281,7 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
           <Text style={styles.customerName}>{customer.full_name || '—'}</Text>
           <InfoRow label="Nume" value={customer.first_name} />
           <InfoRow label="Prenume" value={customer.last_name} />
+          <InfoRow label="Telefon" value={customer.phone} />
         </View>
 
         {/* Order */}
@@ -325,6 +333,29 @@ export default function VenueTicketDetailScreen({ route, navigation }) {
               multiline
               maxLength={4000}
             />
+
+            {!editingNote && canGroupByCustomer && (
+              <TouchableOpacity
+                style={styles.groupToggle}
+                onPress={() => setGroupByCustomer(v => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, groupByCustomer && styles.checkboxChecked]}>
+                  {groupByCustomer && (
+                    <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3}>
+                      <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                    </Svg>
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.groupToggleLabel}>Grupează biletele</Text>
+                  <Text style={styles.groupToggleHint}>
+                    Aplică această mențiune la toate biletele clientului
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
             <View style={styles.noteButtonsRow}>
               {editingNote && (
                 <TouchableOpacity style={styles.cancelBtn} onPress={cancelEdit}>
@@ -409,6 +440,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  groupToggle: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.purple,
+    borderColor: colors.purple,
+  },
+  groupToggleLabel: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+  groupToggleHint: { color: colors.textTertiary, fontSize: 11, marginTop: 2 },
   noteButtonsRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
   cancelBtnText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600' },

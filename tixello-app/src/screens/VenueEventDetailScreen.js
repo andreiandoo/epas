@@ -70,6 +70,14 @@ function statusLabel(status) {
   }
 }
 
+function NoteIcon({ size = 14, color }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || colors.amber} strokeWidth={2}>
+      <Path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 function AttendeeRow({ ticket, onPress }) {
   const customer = ticket.customer || {};
   const customerName = customer.full_name || '—';
@@ -83,7 +91,10 @@ function AttendeeRow({ ticket, onPress }) {
     <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
       <View style={{ flex: 1 }}>
         <View style={styles.rowHeader}>
-          <Text style={styles.rowName} numberOfLines={1}>{customerName}</Text>
+          <View style={styles.rowNameWrap}>
+            {ticket.has_notes && <NoteIcon />}
+            <Text style={styles.rowName} numberOfLines={1}>{customerName}</Text>
+          </View>
           <Text style={[styles.rowStatus, { color: statusColor(ticket.status) }]}>
             {statusLabel(ticket.status)}
           </Text>
@@ -210,7 +221,7 @@ export default function VenueEventDetailScreen({ route, navigation }) {
         <SearchIcon />
         <TextInput
           style={styles.searchInput}
-          placeholder="Caută după nume sau număr comandă"
+          placeholder="Caută după nume, telefon sau nr. comandă"
           placeholderTextColor={colors.textTertiary}
           value={search}
           onChangeText={setSearch}
@@ -313,7 +324,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowName: { color: colors.textPrimary, fontSize: 15, fontWeight: '600', flex: 1, marginRight: 8 },
+  rowNameWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 },
+  rowName: { color: colors.textPrimary, fontSize: 15, fontWeight: '600', flexShrink: 1 },
   rowStatus: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
   rowMeta: { color: colors.textSecondary, fontSize: 12, marginTop: 3 },
   rowSeat: { color: colors.textTertiary, fontSize: 12, marginTop: 2 },

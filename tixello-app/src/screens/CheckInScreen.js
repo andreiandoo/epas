@@ -456,6 +456,7 @@ export default function CheckInScreen({ navigation }) {
             checkedInAt: data.ticket?.checked_in_at || null,
             checkedInBy: data.ticket?.checked_in_by || null,
             orderSource: data.order?.source || null,
+            venueNotes: data.venue_notes || [],
             code: code,
           },
         };
@@ -530,6 +531,7 @@ export default function CheckInScreen({ navigation }) {
             row: error.data?.ticket?.row || null,
             seat: error.data?.ticket?.seat || null,
             orderSource: error.data?.order?.source || null,
+            venueNotes: error.data?.venue_notes || [],
           },
         };
         setScanResult(result);
@@ -771,6 +773,23 @@ export default function CheckInScreen({ navigation }) {
             )}
           </View>
         </View>
+        {/* Venue-owner notes — shown to marketplace scanners when the event's
+            venue tenant has attached a note to this ticket / order / customer */}
+        {Array.isArray(scanResult.data.venueNotes) && scanResult.data.venueNotes.length > 0 && (
+          <View style={styles.venueNotesWrap}>
+            <Text style={styles.venueNotesHeader}>
+              Mențiuni de la venue ({scanResult.data.venueNotes.length})
+            </Text>
+            {scanResult.data.venueNotes.map((n, idx) => (
+              <View key={n.id || idx} style={styles.venueNoteItem}>
+                <Text style={styles.venueNoteText}>{n.note}</Text>
+                {n.author?.name && (
+                  <Text style={styles.venueNoteAuthor}>— {n.author.name}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
         {/* Show "Afișează Scanarea" button for duplicate scans */}
         {scanResult.type === 'duplicate' && (
           <TouchableOpacity
@@ -1540,6 +1559,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.white,
+  },
+  venueNotesWrap: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.1)',
+  },
+  venueNotesHeader: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  venueNoteItem: {
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+  },
+  venueNoteText: {
+    fontSize: 13,
+    color: '#111',
+    lineHeight: 18,
+  },
+  venueNoteAuthor: {
+    fontSize: 11,
+    color: '#444',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   scanDetailsModal: {
     backgroundColor: '#16161F',

@@ -105,6 +105,7 @@ export default function VenueScanScreen() {
   const [manualCode, setManualCode] = useState('');
   const [newNote, setNewNote] = useState('');
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [groupByCustomer, setGroupByCustomer] = useState(false);
   const scanLock = useRef(false);
 
   useEffect(() => {
@@ -143,6 +144,7 @@ export default function VenueScanScreen() {
   const closeResult = () => {
     setResult(null);
     setNewNote('');
+    setGroupByCustomer(false);
     scanLock.current = false;
     setIsScanning(true);
   };
@@ -168,11 +170,16 @@ export default function VenueScanScreen() {
     if (!text || !result?.ticket?.id) return;
     setIsSavingNote(true);
     try {
-      const data = await createNote('ticket', result.ticket.id, text);
+      const customerId = result.ticket.customer?.id;
+      const useGroup = groupByCustomer && !!customerId;
+      const targetType = useGroup ? 'customer' : 'ticket';
+      const targetId = useGroup ? customerId : result.ticket.id;
+      const data = await createNote(targetType, targetId, text);
       if (data?.success) {
         const notes = [data.data?.note, ...(result.ticket.notes || [])];
         setResult({ ticket: { ...result.ticket, notes } });
         setNewNote('');
+        setGroupByCustomer(false);
       }
     } catch (err) {
     } finally {
@@ -315,6 +322,10 @@ export default function VenueScanScreen() {
                     {result.ticket.customer?.full_name || '—'}
                   </Text>
 
+                  {result.ticket.customer?.phone && (
+                    <Text style={styles.line}>📞 {result.ticket.customer.phone}</Text>
+                  )}
+
                   {result.ticket.ticket_type?.name && (
                     <Text style={styles.line}>{result.ticket.ticket_type.name}</Text>
                   )}
@@ -372,6 +383,29 @@ export default function VenueScanScreen() {
                     onChangeText={setNewNote}
                     multiline
                   />
+
+                  {result.ticket.customer?.id && (
+                    <TouchableOpacity
+                      style={styles.groupToggle}
+                      onPress={() => setGroupByCustomer(v => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.checkbox, groupByCustomer && styles.checkboxChecked]}>
+                        {groupByCustomer && (
+                          <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3}>
+                            <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                          </Svg>
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.groupToggleLabel}>Grupează biletele</Text>
+                        <Text style={styles.groupToggleHint}>
+                          Aplică la toate biletele clientului
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity
                     style={[styles.saveBtn, (!newNote.trim() || isSavingNote) && styles.saveBtnDisabled]}
                     onPress={addNoteForResult}
@@ -497,4 +531,20 @@ const styles = StyleSheet.create({
   errorText: { color: colors.red, fontSize: 14, textAlign: 'center', padding: 20 },
   nextBtn: { backgroundColor: colors.purple, padding: 14, alignItems: 'center' },
   nextBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  groupToggle: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, marginTop: 4 },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: { backgroundColor: colors.purple, borderColor: colors.purple },
+  groupToggleLabel: { color: colors.textPrimary, fontSize: 13, fontWeight: '600' },
+  groupToggleHint: { color: colors.textTertiary, fontSize: 11, marginTop: 2 },
 });
