@@ -1022,7 +1022,12 @@ class OrderResource extends Resource
         }
 
         // === TICKETS ===
-        $ticketsValue = $record->tickets->sum('price');
+        // tickets.price is NULL on imported legacy tickets, so fall back to
+        // ticketType.price_cents / 100 (same pattern used on ticket detail view).
+        $ticketsValue = $record->tickets->reduce(
+            fn ($carry, $t) => $carry + ($t->price ?? (($t->ticketType?->price_cents ?? 0) / 100)),
+            0.0
+        );
         $html .= "<div style='{$headStyle}'>Bilete</div>";
         $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Valoare bilete</span><span style='{$valueStyle}'>" . number_format($ticketsValue, 2) . " {$currency}</span></div>";
 
@@ -1083,6 +1088,15 @@ class OrderResource extends Resource
             $organizerRevenue = $ticketsValue;
             if (!$isOnTop) $organizerRevenue -= $orderCommission;
             $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Organizator primește</span><span style='font-size:12px;font-weight:600;color:#10B981;'>" . number_format($organizerRevenue, 2) . " {$currency}</span></div>";
+        } elseif (!$isPosOrder && !$isExternalImport) {
+            // Legacy orders (WP import) don't have commission_amount stored; infer it
+            // from the difference between total paid and tickets face value. Only
+            // show when it is a clearly positive number to avoid misleading rounding noise.
+            $derivedCommission = $orderTotal - $ticketsValue - $insuranceAmount + $orderDiscount;
+            if ($derivedCommission > 0.01) {
+                $html .= "<div style='{$headStyle}'>Comision</div>";
+                $html .= "<div style='{$rowStyle}'><span style='{$labelStyle}'>Comision (dedus din total)</span><span style='{$valueStyle}'>" . number_format($derivedCommission, 2) . " {$currency}</span></div>";
+            }
         }
 
         // === DISCOUNT ===
