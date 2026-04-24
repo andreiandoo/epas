@@ -9,6 +9,30 @@ use App\Models\VenueOwnerNote;
 trait FormatsVenueOwnerTicket
 {
     /**
+     * Count how many valid/used tickets a customer has at the given event.
+     * Used to show "(N bilete la acest eveniment)" next to the group toggle
+     * when adding a customer-level note.
+     */
+    protected function customerTicketsAtEventCount(?string $customerType, $customerId, int $eventId): int
+    {
+        if (!$customerId || !$customerType) {
+            return 0;
+        }
+
+        $fkColumn = $customerType === 'marketplace_customer'
+            ? 'marketplace_customer_id'
+            : 'customer_id';
+
+        return (int) Ticket::where('event_id', $eventId)
+            ->whereIn('status', ['valid', 'used'])
+            ->whereHas('order', fn ($q) => $q
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->where($fkColumn, $customerId))
+            ->count();
+    }
+
+
+    /**
      * Attach all notes visible for a ticket's context (ticket + order + customer)
      * scoped to the given tenant. Returns an array shaped for the API response.
      */

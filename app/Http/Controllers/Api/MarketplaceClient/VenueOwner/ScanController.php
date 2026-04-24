@@ -67,6 +67,14 @@ class ScanController extends BaseController
         $ticketData = $this->formatTicket($ticket, $event, includeEvent: true);
         $ticketData['notes'] = $this->notesForTicket((int) $tenant->id, $ticket);
 
+        if (!empty($ticketData['customer'])) {
+            $ticketData['customer']['tickets_at_event_count'] = $this->customerTicketsAtEventCount(
+                $ticketData['customer']['type'] ?? null,
+                $ticketData['customer']['id'] ?? null,
+                (int) $event->id
+            );
+        }
+
         return $this->success(['ticket' => $ticketData]);
     }
 }

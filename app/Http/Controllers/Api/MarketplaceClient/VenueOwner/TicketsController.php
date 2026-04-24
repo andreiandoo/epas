@@ -51,6 +51,14 @@ class TicketsController extends BaseController
             $ticketData['notes'] = $this->notesForTicket((int) $tenant->id, $ticketModel);
         }
 
+        if ($event && !empty($ticketData['customer'])) {
+            $ticketData['customer']['tickets_at_event_count'] = $this->customerTicketsAtEventCount(
+                $ticketData['customer']['type'] ?? null,
+                $ticketData['customer']['id'] ?? null,
+                (int) $event->id
+            );
+        }
+
         return $this->success(['ticket' => $ticketData]);
     }
 }

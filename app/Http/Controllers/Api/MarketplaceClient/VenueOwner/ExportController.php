@@ -116,9 +116,11 @@ class ExportController extends BaseController
     }
 
     /**
-     * Build the CSV body (UTF-8 with BOM so Excel opens it correctly). Only
-     * valid/used tickets on paid/confirmed/completed orders are included.
-     * Notes concatenate ticket + order + customer-level notes for that ticket.
+     * Build the CSV body. ASCII-folded (diacritics stripped) so the file opens
+     * cleanly on every device / reader — UTF-8 renders inconsistently on some
+     * Android CSV apps. Only valid/used tickets on paid/confirmed/completed
+     * orders are included. Notes concatenate ticket + order + customer-level
+     * notes for that ticket.
      */
     protected function generateCsv(Event $event, Tenant $tenant): string
     {
@@ -138,14 +140,14 @@ class ExportController extends BaseController
 
         $lines = [];
         $lines[] = $this->csvRow([
-            'ID Comandă',
+            'ID Comanda',
             'ID Bilet',
             'Tip Bilet',
             'Nume',
             'Prenume',
             'Telefon',
-            'Data Comandă',
-            'Mențiuni',
+            'Data Comanda',
+            'Mentiuni',
         ]);
 
         foreach ($tickets as $ticket) {
@@ -171,7 +173,20 @@ class ExportController extends BaseController
             ]);
         }
 
-        return "\xEF\xBB\xBF" . implode("\r\n", $lines) . "\r\n";
+        return implode("\r\n", $lines) . "\r\n";
+    }
+
+    /**
+     * Strip Romanian diacritics (ă â î ș ț + uppercase) to plain ASCII
+     * equivalents so the CSV renders consistently regardless of viewer.
+     */
+    protected function asciiFold(string $s): string
+    {
+        $map = [
+            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's', 'ț' => 't', 'ţ' => 't',
+            'Ă' => 'A', 'Â' => 'A', 'Î' => 'I', 'Ș' => 'S', 'Ş' => 'S', 'Ț' => 'T', 'Ţ' => 'T',
+        ];
+        return strtr($s, $map);
     }
 
     protected function resolveCustomer(Ticket $ticket): array
@@ -253,13 +268,19 @@ class ExportController extends BaseController
     protected function csvRow(array $cells): string
     {
         return implode(',', array_map(function ($v) {
-            $s = (string) ($v ?? '');
+            $s = $this->asciiFold((string) ($v ?? ''));
             $needsQuoting = str_contains($s, ',') || str_contains($s, '"') || str_contains($s, "\n") || str_contains($s, "\r");
             $s = str_replace('"', '""', $s);
             return $needsQuoting ? '"' . $s . '"' : $s;
         }, $cells));
     }
 
+    /**
+     * Send the CSV via the marketplace's configured mail transport (Brevo /
+     * Mailgun / whatever is set under /marketplace/settings → Emails) with the
+     * export attached. Falls back to Laravel's default mailer only when the
+     * marketplace has no mail configured.
+     */
     protected function sendCsvEmail(MarketplaceClient $client, string $to, Event $event, string $csv, string $filename): void
     {
         $eventTitle = (string) ($event->getTranslation('title') ?? 'Eveniment');
@@ -268,12 +289,45 @@ class ExportController extends BaseController
         $html = '<p>Salut,</p>' .
                 '<p>Găsești atașat exportul biletelor valide pentru evenimentul <strong>' . e($eventTitle) . '</strong>.</p>' .
                 '<p>Fișierul <code>' . e($filename) . '</code> e codificat UTF-8 și se deschide direct în Excel / Google Sheets.</p>' .
-                '<p>—<br>Tixello / ' . e($client->name ?? 'Venue Owner') . '</p>';
+                '<p>—<br>' . e($client->name ?? 'Tixello') . '</p>';
 
         $fromAddress = $client->getEmailFromAddress() ?: config('mail.from.address');
         $fromName = $client->getEmailFromName() ?: config('mail.from.name');
 
         try {
+            $transport = null;
+            if ($client->hasMailConfigured()) {
+                try {
+                    $transport = $client->getMailTransport();
+                } catch (\Throwable $e) {
+                    Log::channel('marketplace')->warning('Marketplace mail transport failed, falling back to default mailer', [
+                        'marketplace_client_id' => $client->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($transport) {
+                $email = (new \Symfony\Component\Mime\Email())
+                    ->from(new \Symfony\Component\Mime\Address($fromAddress, $fromName))
+                    ->to(new \Symfony\Component\Mime\Address($to))
+                    ->subject($subject)
+                    ->html($html)
+                    ->attach($csv, $filename, 'text/csv');
+
+                $transport->send($email);
+
+                Log::channel('marketplace')->info('Venue owner CSV export emailed (marketplace transport)', [
+                    'marketplace_client_id' => $client->id,
+                    'event_id' => $event->id,
+                    'to' => $to,
+                    'filename' => $filename,
+                ]);
+                return;
+            }
+
+            // Fallback: Laravel default mailer (only hits this when marketplace
+            // email isn't configured at all — unusual in production).
             Mail::html($html, function ($message) use ($to, $subject, $fromAddress, $fromName, $csv, $filename) {
                 $message->from($fromAddress, $fromName)
                     ->to($to)
@@ -281,10 +335,11 @@ class ExportController extends BaseController
                     ->attachData($csv, $filename, ['mime' => 'text/csv']);
             });
 
-            Log::channel('marketplace')->info('Venue owner CSV export emailed', [
+            Log::channel('marketplace')->info('Venue owner CSV export emailed (Laravel default mailer fallback)', [
                 'marketplace_client_id' => $client->id,
                 'event_id' => $event->id,
                 'to' => $to,
+                'filename' => $filename,
             ]);
         } catch (\Throwable $e) {
             Log::channel('marketplace')->error('Failed to email venue owner CSV export', [
@@ -292,6 +347,7 @@ class ExportController extends BaseController
                 'event_id' => $event->id,
                 'to' => $to,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
             ]);
             throw $e;
         }
