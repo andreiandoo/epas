@@ -66,7 +66,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
             <div class="flex items-start justify-between mb-4 gap-4 flex-wrap">
                 <div>
                     <h3 class="font-semibold text-secondary mb-1">Pasul 2 — Datele invitaților</h3>
-                    <p class="text-sm text-muted">Pentru fiecare invitație, completează <strong>prenume, nume și email</strong> (obligatorii). Telefon, companie și note sunt opționale.</p>
+                    <p class="text-sm text-muted">Completează datele invitaților dacă le ai. Toate câmpurile sunt opționale.</p>
                 </div>
                 <div id="mode-switcher" class="hidden rounded-lg border border-border overflow-hidden">
                     <button id="mode-manual" type="button" class="px-3 py-1.5 text-sm bg-rose-50 text-rose-700 font-semibold">Completare manuală</button>
@@ -81,9 +81,9 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                             <tr class="border-b border-border text-left text-xs uppercase text-muted">
                                 <th class="py-2 pr-3 w-10">#</th>
                                 <th id="col-seat" class="py-2 pr-3 hidden">Loc</th>
-                                <th class="py-2 pr-3">Prenume *</th>
-                                <th class="py-2 pr-3">Nume *</th>
-                                <th class="py-2 pr-3">Email *</th>
+                                <th class="py-2 pr-3">Prenume</th>
+                                <th class="py-2 pr-3">Nume</th>
+                                <th class="py-2 pr-3">Email</th>
                                 <th class="py-2 pr-3">Telefon</th>
                                 <th class="py-2 pr-3">Companie</th>
                                 <th class="py-2 pr-3">Note</th>
@@ -649,9 +649,9 @@ $scriptsExtra = <<<'JS'
             tr.innerHTML =
                 '<td class="py-2 pr-3 text-xs text-muted align-middle">' + i + '</td>' +
                 seatCell +
-                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="first_name" placeholder="Prenume" required></td>' +
-                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="last_name" placeholder="Nume" required></td>' +
-                '<td class="py-2 pr-3"><input class="input input-sm w-full" type="email" data-field="email" placeholder="email@exemplu.ro" required></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="first_name" placeholder="Prenume"></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="last_name" placeholder="Nume"></td>' +
+                '<td class="py-2 pr-3"><input class="input input-sm w-full" type="email" data-field="email" placeholder="email@exemplu.ro"></td>' +
                 '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="phone" placeholder="Telefon"></td>' +
                 '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="company" placeholder="Companie"></td>' +
                 '<td class="py-2 pr-3"><input class="input input-sm w-full" data-field="notes" placeholder="Note"></td>';
@@ -669,19 +669,18 @@ $scriptsExtra = <<<'JS'
     }
 
     function collectManualRecipients() {
+        // Emit one record per rendered row — all recipient fields are
+        // optional now, so rows with blank inputs become {} and still
+        // count toward the batch quantity.
         const rows = Array.from(document.querySelectorAll('#recipients-tbody tr'));
-        const out = [];
-        for (const row of rows) {
+        return rows.map((row) => {
             const rec = {};
             row.querySelectorAll('input[data-field]').forEach(inp => {
                 const v = (inp.value || '').trim();
                 if (v !== '') rec[inp.dataset.field] = v;
             });
-            if (rec.first_name && rec.last_name && rec.email) {
-                out.push(rec);
-            }
-        }
-        return out;
+            return rec;
+        });
     }
 
     async function onCsvTemplateDownload(e) {
@@ -931,14 +930,16 @@ $scriptsExtra = <<<'JS'
                 panel.innerHTML = '<p class="text-sm text-muted py-2">Fără invitați.</p>';
                 return;
             }
+            const hasSeats = invites.some(i => i.seat_ref || (i.recipient && i.recipient.seat));
             const rowsHtml = invites.map(i => {
                 const r = i.recipient || {};
                 const seat = r.seat || null;
-                const seatRef = seat ? seatRefFor({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '';
+                const seatRef = i.seat_ref
+                    || (seat ? seatRefFor({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '');
                 return '<tr class="border-b border-slate-100">' +
                     '<td class="py-1.5 pr-3">' + esc(r.name || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.email || '') + '</td>' +
-                    '<td class="py-1.5 pr-3">' + esc(seatRef) + '</td>' +
+                    (hasSeats ? '<td class="py-1.5 pr-3">' + esc(seatRef || '—') + '</td>' : '') +
                     '<td class="py-1.5 pr-3">' + esc(r.phone || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.company || '') + '</td>' +
                     '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code></td>' +
@@ -950,7 +951,7 @@ $scriptsExtra = <<<'JS'
                         '<thead><tr class="text-left text-xs uppercase text-muted">' +
                             '<th class="py-1.5 pr-3">Nume</th>' +
                             '<th class="py-1.5 pr-3">Email</th>' +
-                            '<th class="py-1.5 pr-3">Loc</th>' +
+                            (hasSeats ? '<th class="py-1.5 pr-3">Loc</th>' : '') +
                             '<th class="py-1.5 pr-3">Telefon</th>' +
                             '<th class="py-1.5 pr-3">Companie</th>' +
                             '<th class="py-1.5 pr-3">Cod</th>' +
