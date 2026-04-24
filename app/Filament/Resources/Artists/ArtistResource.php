@@ -433,7 +433,7 @@ class ArtistResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Name')
-                    ->searchable()
+                    ->searchable(query: fn ($query, string $search) => \App\Support\SearchHelper::search($query, 'name', $search))
                     ->sortable()
                     ->url(fn (Artist $record) => static::getUrl('edit', ['record' => $record->getKey()])),
 

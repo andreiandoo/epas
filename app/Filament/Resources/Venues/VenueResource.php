@@ -361,9 +361,7 @@ class VenueResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
                     ->getStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '-')
-                    ->searchable(query: function ($query, string $search) {
-                        return $query->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
-                    })
+                    ->searchable(query: fn ($query, string $search) => \App\Support\SearchHelper::searchTranslatable($query, 'name', $search))
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
