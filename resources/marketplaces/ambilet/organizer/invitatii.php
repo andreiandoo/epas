@@ -364,16 +364,34 @@ $scriptsExtra = <<<'JS'
         let svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" style="width:100%; max-width:' + canvasW + 'px; height:auto; display:block; margin:0 auto;" xmlns="http://www.w3.org/2000/svg">';
 
         data.sections.forEach(function (section) {
-            // Skip non-seat sections (icons, decorative text/lines)
-            if (section.section_type === 'icon' || section.section_type === 'decorative') return;
-            if (!section.rows) return;
-
             const rotation = section.rotation || 0;
             const cx = (section.x || 0) + (section.width || 0) / 2;
             const cy = (section.y || 0) + (section.height || 0) / 2;
             const transform = rotation !== 0 ? ' transform="rotate(' + rotation + ' ' + cx + ' ' + cy + ')"' : '';
 
             svg += '<g' + transform + '>';
+
+            // Icon sections (stage, exit, toilet, bar, etc.) — same rendering
+            // as the customer map so the organizer sees venue orientation cues.
+            if (section.section_type === 'icon') {
+                svg += renderIconSection(section);
+                svg += '</g>';
+                return;
+            }
+
+            // Decorative sections (text labels, lines, polygons) — shapes the
+            // designer added to outline stage/aisles/areas. Label-only so no
+            // seat click logic.
+            if (section.section_type === 'decorative') {
+                svg += renderDecorativeSection(section);
+                svg += '</g>';
+                return;
+            }
+
+            if (!section.rows) {
+                svg += '</g>';
+                return;
+            }
 
             const meta = section.metadata || {};
             const seatSize = parseInt(meta.seat_size) || 15;
@@ -452,6 +470,88 @@ $scriptsExtra = <<<'JS'
             paintSeat(el);
             el.addEventListener('click', onSeatClick);
         });
+    }
+
+    function renderIconSection(section) {
+        const metadata = section.metadata || {};
+        const iconSize = metadata.icon_size || 40;
+        const bgColor = metadata.background_color || section.color_hex || '#3B82F6';
+        const iconColor = metadata.icon_color || '#FFFFFF';
+        const iconX = section.x || 0;
+        const iconY = section.y || 0;
+        const radius = iconSize / 2;
+
+        let out = '<circle cx="' + (iconX + radius) + '" cy="' + (iconY + radius) + '" r="' + radius + '" fill="' + bgColor + '"/>';
+
+        if (section.icon_svg) {
+            const innerSize = iconSize * 0.6;
+            const iconOffset = (iconSize - innerSize) / 2;
+            const raw = section.icon_svg;
+            if (raw.indexOf('<svg') !== -1) {
+                const vbMatch = raw.match(/viewBox="([^"]+)"/);
+                const viewBox = vbMatch ? vbMatch[1] : '0 0 512 512';
+                let innerMatch = raw.match(/<g[^>]*>([\s\S]*?)<\/g>/);
+                let inner = innerMatch ? innerMatch[1] : '';
+                if (!inner) {
+                    innerMatch = raw.match(/<svg[^>]*>([\s\S]*?)<\/svg>/);
+                    inner = innerMatch ? innerMatch[1] : '';
+                }
+                out += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="' + viewBox + '">';
+                out += '<g fill="' + iconColor + '">' + inner.replace(/fill="[^"]*"/g, 'fill="' + iconColor + '"') + '</g>';
+                out += '</svg>';
+            } else {
+                out += '<svg x="' + (iconX + iconOffset) + '" y="' + (iconY + iconOffset) + '" width="' + innerSize + '" height="' + innerSize + '" viewBox="0 0 24 24">';
+                out += '<path d="' + raw + '" fill="' + iconColor + '"/>';
+                out += '</svg>';
+            }
+        }
+
+        const labelY = iconY + iconSize + 12;
+        const labelX = iconX + radius;
+        out += '<text x="' + labelX + '" y="' + labelY + '" text-anchor="middle" font-size="10" font-weight="500" fill="#1F2937" style="text-shadow: 0 0 3px white, 0 0 3px white;">' + esc(section.icon_label || section.name || '') + '</text>';
+        return out;
+    }
+
+    function renderDecorativeSection(section) {
+        const metadata = section.metadata || {};
+        const shape = metadata.shape || 'polygon';
+        const opacity = parseFloat(metadata.opacity) || 0.3;
+        const color = section.background_color || section.color_hex || '#10B981';
+        let out = '';
+
+        if (shape === 'polygon' && metadata.points) {
+            const points = metadata.points;
+            const minX = section.x || 0;
+            const minY = section.y || 0;
+            let svgPts = '';
+            for (let i = 0; i < points.length; i += 2) {
+                svgPts += (points[i] - minX) + ',' + (points[i + 1] - minY) + ' ';
+            }
+            out += '<g transform="translate(' + (section.x || 0) + ',' + (section.y || 0) + ')">';
+            out += '<polygon points="' + svgPts.trim() + '" fill="' + color + '" opacity="' + opacity + '" stroke="' + color + '" stroke-width="1"/>';
+            if (metadata.label || section.name) {
+                out += '<text x="10" y="20" font-size="12" font-family="Arial" fill="#1f2937" opacity="0.8">' + esc(metadata.label || section.name) + '</text>';
+            }
+            out += '</g>';
+        } else if (shape === 'text') {
+            const fontSize = parseInt(metadata.fontSize) || 16;
+            const fontFamily = metadata.fontFamily || 'Arial';
+            const fontWeight = metadata.fontWeight || 'normal';
+            const textContent = metadata.text || section.name || 'Text';
+            const textY = (section.height > 0) ? (section.y || 0) + section.height / 2 : (section.y || 0) + fontSize;
+            out += '<text x="' + (section.x || 0) + '" y="' + textY + '" dominant-baseline="central" font-size="' + fontSize + '" font-family="' + fontFamily + '" font-weight="' + fontWeight + '" fill="' + color + '">' + esc(textContent) + '</text>';
+        } else if (shape === 'line') {
+            const linePoints = metadata.points || [0, 0, 100, 0];
+            const strokeWidth = parseInt(metadata.strokeWidth) || 2;
+            const strokeColor = metadata.strokeColor || color;
+            const x1 = (section.x || 0) + (linePoints[0] || 0);
+            const y1 = (section.y || 0) + (linePoints[1] || 0);
+            const x2 = (section.x || 0) + (linePoints[2] || 100);
+            const y2 = (section.y || 0) + (linePoints[3] || 0);
+            out += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '" stroke-linecap="round"/>';
+        }
+
+        return out;
     }
 
     function paintSeat(el) {
