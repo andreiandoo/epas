@@ -114,6 +114,14 @@ if (!empty($eventPreload['data'])) {
     $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($eventPreload['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
 }
 
+// If the event couldn't be loaded (e.g. still a draft at the time of this
+// request), skip writing the HTML to the page cache. Otherwise the shell
+// for a "not found" state would stick around for the full 5-min TTL and
+// keep showing a blank screen even after the event goes live.
+if (empty($ev) || (isset($ev['is_published']) && $ev['is_published'] === false)) {
+    $GLOBALS['skipPageCache'] = true;
+}
+
 // Check if event is password protected
 $isPasswordProtected = !empty($ev['is_password_protected']);
 

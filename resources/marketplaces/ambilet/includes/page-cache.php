@@ -52,6 +52,13 @@ if (!is_dir($pageCacheDir)) {
 }
 
 ob_start(function ($html) use ($pageCacheFile) {
+    // Callers can opt out by setting $skipPageCache = true at any point
+    // before the buffer flushes (e.g. event.php flags the shell when the
+    // event isn't published yet, so the blank "not found" HTML doesn't
+    // get written to disk and served to the next visitor).
+    if (!empty($GLOBALS['skipPageCache'])) {
+        return $html;
+    }
     // Only cache successful responses with actual content
     if (strlen($html) > 500 && http_response_code() === 200) {
         @file_put_contents($pageCacheFile, $html);
