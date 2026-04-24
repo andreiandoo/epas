@@ -167,12 +167,23 @@ function api_cached(string $key, callable $callback, int $ttl = 300)
     // No cache or stale limit exceeded — fetch fresh (blocking)
     $data = $callback();
 
-    // Save to cache
-    $cacheData = [
-        'expires' => time() + $ttl,
-        'data' => $data,
-    ];
-    @file_put_contents($cacheFile, json_encode($cacheData));
+    // Skip caching failed API responses. Otherwise a transient upstream
+    // error — or, more importantly, fetching an event while it's still a
+    // draft — plants a "not found" payload in the cache for the full TTL,
+    // leaving the public URL blank until the cache expires or is manually
+    // invalidated (e.g. via ?preview=1).
+    $shouldCache = true;
+    if (is_array($data) && array_key_exists('success', $data) && $data['success'] === false) {
+        $shouldCache = false;
+    }
+
+    if ($shouldCache) {
+        $cacheData = [
+            'expires' => time() + $ttl,
+            'data' => $data,
+        ];
+        @file_put_contents($cacheFile, json_encode($cacheData));
+    }
 
     return $data;
 }

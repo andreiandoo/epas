@@ -8,8 +8,8 @@
 
 // Social media links (can be overridden before including)
 $socialLinks = $socialLinks ?? [
-    'facebook' => 'https://facebook.com/ambilet',
-    'instagram' => 'https://instagram.com/ambilet',
+    'facebook' => 'https://facebook.com/AmBilet',
+    'instagram' => 'https://instagram.com/ambilet.ro',
     'youtube' => 'https://youtube.com/ambilet',
     'tiktok' => 'https://tiktok.com/@ambilet'
 ];
