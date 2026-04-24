@@ -26,7 +26,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <h1 class="text-2xl font-bold text-secondary">Evenimentele mele</h1>
                         <p class="text-sm text-muted">Gestioneaza si monitorizeaza evenimentele tale</p>
                     </div>
-                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
+                    <button onclick="showCreateForm()" class="btn btn-primary bg-primary mobile:hidden"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>Eveniment nou</button>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 mb-6">
@@ -35,7 +35,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                         <button type="button" class="status-pill active" data-status="ongoing">În derulare</button>
                         <button type="button" class="status-pill" data-status="draft">Ciorne</button>
                         <button type="button" class="status-pill" data-status="ended">Încheiate</button>
-                        <button type="button" class="status-pill" data-status="">Toate</button>
+                        <button type="button" class="status-pill mobile:hidden" data-status="">Toate</button>
                     </div>
                 </div>
                 <style>
@@ -859,9 +859,9 @@ function renderEvents(events) {
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-4">
-                            <div class="py-2 text-right"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
-                            <div class="py-2 pr-4 text-right border-r border-border"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
-                            <div class="py-2 text-right"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări nete</p></div>
+                            <div class="py-2 pr-4 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${event.views || 0}</p><p class="text-xs text-muted">Vizualizări</p></div>
+                            <div class="py-2 pr-4 text-right border-r border-border mobile:text-center mobile:border-l mobile:px-4"><p class="text-2xl font-bold text-secondary">${event.tickets_sold || 0}</p><p class="text-xs text-muted">Bilete vândute</p></div>
+                            <div class="py-2 text-right mobile:text-center"><p class="text-2xl font-bold text-secondary">${AmbiletUtils.formatCurrency(event.revenue || 0)}</p><p class="text-xs text-muted">Încasări nete</p></div>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center justify-end gap-2 py-2 pl-6 pr-2 border-t border-border">
