@@ -78,6 +78,15 @@ class InvitationsController extends BaseController
             'recipients.*.phone' => 'nullable|string|max:50',
             'recipients.*.company' => 'nullable|string|max:150',
             'recipients.*.notes' => 'nullable|string|max:500',
+            // Seated events: each recipient is paired with an already-picked
+            // seat. The organizer's seat picker UI ensures seats[] and
+            // recipients[] are the same length and in the same order.
+            'event_seating_id' => 'nullable|integer',
+            'seats' => 'nullable|array',
+            'seats.*.seat_uid' => 'required_with:seats|string|max:100',
+            'seats.*.section_name' => 'nullable|string|max:100',
+            'seats.*.row_label' => 'nullable|string|max:20',
+            'seats.*.seat_label' => 'nullable|string|max:20',
         ]);
 
         $event = Event::where('id', $validated['event_id'])
@@ -92,6 +101,33 @@ class InvitationsController extends BaseController
         $quantity = count($recipients);
         $watermark = $validated['watermark'] ?? 'INVITATIE';
         $batchName = $validated['name'] ?? $this->defaultBatchName($event, $quantity);
+
+        // If the organizer selected seats on the map, pair them 1:1 with
+        // recipients and atomically reserve them on the event_seating.
+        // SeatHoldService::confirmPurchase flips each event_seats row from
+        // available/held → sold in a single transaction — any seat someone
+        // else grabbed in the meantime causes the whole thing to roll back
+        // so we never double-allocate.
+        $seats = $validated['seats'] ?? [];
+        $eventSeatingId = $validated['event_seating_id'] ?? null;
+        if (!empty($seats)) {
+            if (!$eventSeatingId) {
+                return $this->error('event_seating_id este obligatoriu când furnizezi locuri.', 422);
+            }
+            if (count($seats) !== $quantity) {
+                return $this->error('Numărul de locuri selectate trebuie să fie egal cu numărul de invitați.', 422);
+            }
+
+            $holdService = app(\App\Services\Seating\SeatHoldService::class);
+            $seatUids = array_map(fn ($s) => $s['seat_uid'], $seats);
+            $sessionUid = $this->buildOrganizerSeatSessionUid($organizer->id, $event->id);
+            $result = $holdService->confirmPurchase($eventSeatingId, $seatUids, $sessionUid, 0);
+            if (!empty($result['failed'])) {
+                return $this->error('Unele locuri nu mai sunt disponibile — reîmprospătează harta și alege altele.', 409, [
+                    'unavailable_seats' => array_map(fn ($f) => $f['seat_uid'], $result['failed']),
+                ]);
+            }
+        }
 
         // Resolve the ticket template for this batch: prefer event.ticket_template_id
         // (the design the organizer chose for real tickets), fall back to the marketplace
@@ -109,27 +145,45 @@ class InvitationsController extends BaseController
             'options' => [
                 'watermark' => $watermark,
                 'expires_after_event' => true,
+                'event_seating_id' => $eventSeatingId,
             ],
             'status' => 'draft',
         ]);
 
-        // Create one Invite per recipient
-        foreach ($recipients as $rec) {
+        // Create one Invite per recipient, carrying the seat reference when
+        // the batch is seat-based. seat_ref is the human-readable string used
+        // by the PDF template ("Sector A · Rând 3 · Loc 12") plus we stash
+        // seat_uid / event_seating_id in meta for later audit.
+        foreach ($recipients as $i => $rec) {
             $fullName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? ''));
+            $seatForRecipient = $seats[$i] ?? null;
+            $seatRef = $this->formatSeatRef($seatForRecipient);
+            $recipientPayload = [
+                'first_name' => $rec['first_name'],
+                'last_name' => $rec['last_name'],
+                'name' => $fullName,
+                'email' => $rec['email'],
+                'phone' => $rec['phone'] ?? null,
+                'company' => $rec['company'] ?? null,
+                'notes' => $rec['notes'] ?? null,
+            ];
+            if ($seatForRecipient) {
+                $recipientPayload['seat'] = [
+                    'uid' => $seatForRecipient['seat_uid'],
+                    'section' => $seatForRecipient['section_name'] ?? null,
+                    'row' => $seatForRecipient['row_label'] ?? null,
+                    'label' => $seatForRecipient['seat_label'] ?? null,
+                    'event_seating_id' => $eventSeatingId,
+                ];
+            }
+
             $invite = Invite::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
                 'batch_id' => $batch->id,
                 'tenant_id' => $event->tenant_id,
                 'status' => 'created',
-                'recipient' => [
-                    'first_name' => $rec['first_name'],
-                    'last_name' => $rec['last_name'],
-                    'name' => $fullName,
-                    'email' => $rec['email'],
-                    'phone' => $rec['phone'] ?? null,
-                    'company' => $rec['company'] ?? null,
-                    'notes' => $rec['notes'] ?? null,
-                ],
+                'seat_ref' => $seatRef,
+                'recipient' => $recipientPayload,
             ]);
             $batch->increment('qty_generated');
         }
@@ -354,9 +408,106 @@ class InvitationsController extends BaseController
         ]);
     }
 
+    /**
+     * Pre-hold seats while the organizer fills the recipients form.
+     * POST /api/marketplace-client/organizer/invitations/hold-seats
+     *
+     * The actual batch creation re-confirms each seat atomically, so
+     * pre-holding is just a UX niceness — it flashes "held" to other
+     * visitors the moment the organizer picks seats in the modal.
+     */
+    public function holdSeats(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $data = $request->validate([
+            'event_id' => 'required|integer',
+            'event_seating_id' => 'required|integer',
+            'seat_uids' => 'required|array|min:1|max:1000',
+            'seat_uids.*' => 'required|string|max:100',
+        ]);
+
+        $event = Event::where('id', $data['event_id'])
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+        if (!$event) return $this->error('Event not found or not owned by you', 404);
+
+        $sessionUid = $this->buildOrganizerSeatSessionUid($organizer->id, $event->id);
+        $result = app(\App\Services\Seating\SeatHoldService::class)
+            ->holdSeats((int) $data['event_seating_id'], $data['seat_uids'], $sessionUid);
+
+        return $this->success($result);
+    }
+
+    /**
+     * Release the organizer's pre-hold (e.g. user closed the modal or
+     * removed a seat from the picker).
+     * DELETE /api/marketplace-client/organizer/invitations/hold-seats
+     */
+    public function releaseSeats(Request $request): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $data = $request->validate([
+            'event_id' => 'required|integer',
+            'event_seating_id' => 'required|integer',
+            'seat_uids' => 'required|array|min:1',
+            'seat_uids.*' => 'required|string|max:100',
+        ]);
+
+        $event = Event::where('id', $data['event_id'])
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+        if (!$event) return $this->error('Event not found or not owned by you', 404);
+
+        $sessionUid = $this->buildOrganizerSeatSessionUid($organizer->id, $event->id);
+        $result = app(\App\Services\Seating\SeatHoldService::class)
+            ->releaseSeats((int) $data['event_seating_id'], $data['seat_uids'], $sessionUid);
+
+        return $this->success($result);
+    }
+
     // ---------------------------------------------------------------------
     // Internal helpers
     // ---------------------------------------------------------------------
+
+    /**
+     * Stable per-(organizer,event) session UID used when holding or
+     * confirming seats for invitations. SeatHolds rows are keyed on
+     * session_uid, so reusing the same string lets a later release/
+     * confirm from the same organizer find its own holds.
+     */
+    protected function buildOrganizerSeatSessionUid(int $organizerId, int $eventId): string
+    {
+        return 'org-inv-' . hash('sha256', $organizerId . '-' . $eventId);
+    }
+
+    /**
+     * Human-readable seat reference stored on Invite.seat_ref and printed
+     * on the PDF (via $data['ticket']['seat']). Falls back to the seat_uid
+     * when section/row/label are missing.
+     */
+    protected function formatSeatRef(?array $seat): ?string
+    {
+        if (!$seat) return null;
+
+        $parts = [];
+        if (!empty($seat['section_name'])) {
+            $parts[] = $seat['section_name'];
+        }
+        if (!empty($seat['row_label'])) {
+            $parts[] = 'Rând ' . $seat['row_label'];
+        }
+        if (!empty($seat['seat_label'])) {
+            $parts[] = 'Loc ' . $seat['seat_label'];
+        }
+
+        if (empty($parts)) {
+            return $seat['seat_uid'] ?? null;
+        }
+
+        return implode(' · ', $parts);
+    }
 
     protected function requireOrganizer(Request $request): MarketplaceOrganizer
     {

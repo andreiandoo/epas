@@ -361,6 +361,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
         if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
         if (endpoint.match(/\/organizer\/events\/\d+\/status$/)) return 'organizer.event.status';
+        if (endpoint.match(/\/organizer\/events\/\d+\/seating-map$/)) return 'organizer.event.seating-map';
         if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
         if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
 
@@ -419,6 +420,7 @@ const AmbiletAPI = {
 
         // Organizer invitations (PDF invite generation)
         if (endpoint === '/organizer/invitations/csv-template') return 'organizer.invitations.csv-template';
+        if (endpoint === '/organizer/invitations/hold-seats') return 'organizer.invitations.hold-seats';
         if (endpoint.match(/\/organizer\/invitations\/\d+\/download$/)) return 'organizer.invitations.download';
         if (endpoint.match(/\/organizer\/invitations\/\d+\/generate$/)) return 'organizer.invitations.generate';
         if (endpoint.match(/\/organizer\/invitations\/\d+$/)) {
@@ -636,6 +638,11 @@ const AmbiletAPI = {
         const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel|status)$/);
         if (organizerEventActionMatch) {
             return `event_id=${encodeURIComponent(organizerEventActionMatch[1])}`;
+        }
+
+        const organizerEventSeatingMapMatch = endpoint.match(/\/organizer\/events\/(\d+)\/seating-map$/);
+        if (organizerEventSeatingMapMatch) {
+            return `event_id=${encodeURIComponent(organizerEventSeatingMapMatch[1])}`;
         }
 
         const organizerEventMatch = endpoint.match(/\/organizer\/events\/(\d+)$/);
