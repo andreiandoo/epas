@@ -913,6 +913,25 @@ $scriptsExtra = <<<'JS'
         host.querySelectorAll('[data-view-invites]').forEach(btn => btn.addEventListener('click', () => toggleInvites(btn.dataset.viewInvites)));
     }
 
+    async function onDeleteInvite(batchId, inviteId) {
+        if (!confirm('Sigur vrei să ștergi această invitație? Locul rezervat va fi eliberat pe hartă și biletul va fi invalidat.')) return;
+        try {
+            const res = await AmbiletAPI.delete('/organizer/invitations/' + batchId + '/invites', {
+                invite_ids: [parseInt(inviteId, 10)],
+            });
+            if (!res || !res.success) throw new Error((res && res.message) || 'Eroare la ștergere');
+            // Drop the row from the DOM; if the batch is gone, reload history
+            const row = document.querySelector('[data-invite-row="' + inviteId + '"]');
+            if (row) row.remove();
+            if (res.data && res.data.batch_remaining === 0) {
+                // Batch was deleted server-side — refresh the history list
+                await loadHistory();
+            }
+        } catch (e) {
+            alert('Ștergerea a eșuat: ' + (e.message || e));
+        }
+    }
+
     async function toggleInvites(batchId) {
         const panel = $('invites-panel-' + batchId);
         if (!panel) return;
@@ -936,13 +955,16 @@ $scriptsExtra = <<<'JS'
                 const seat = r.seat || null;
                 const seatRef = i.seat_ref
                     || (seat ? seatRefFor({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '');
-                return '<tr class="border-b border-slate-100">' +
+                return '<tr class="border-b border-slate-100" data-invite-row="' + i.id + '">' +
                     '<td class="py-1.5 pr-3">' + esc(r.name || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.email || '') + '</td>' +
                     (hasSeats ? '<td class="py-1.5 pr-3">' + esc(seatRef || '—') + '</td>' : '') +
                     '<td class="py-1.5 pr-3">' + esc(r.phone || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.company || '') + '</td>' +
                     '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code></td>' +
+                    '<td class="py-1.5 pr-3 text-right">' +
+                        '<button class="text-red-600 hover:text-red-800 text-xs font-semibold" data-del-invite="' + i.id + '" data-batch-id="' + batchId + '" title="Șterge invitația și eliberează locul">Șterge</button>' +
+                    '</td>' +
                 '</tr>';
             }).join('');
             panel.innerHTML =
@@ -955,10 +977,14 @@ $scriptsExtra = <<<'JS'
                             '<th class="py-1.5 pr-3">Telefon</th>' +
                             '<th class="py-1.5 pr-3">Companie</th>' +
                             '<th class="py-1.5 pr-3">Cod</th>' +
+                            '<th class="py-1.5 pr-3 text-right">Acțiuni</th>' +
                         '</tr></thead>' +
                         '<tbody>' + rowsHtml + '</tbody>' +
                     '</table>' +
                 '</div>';
+            panel.querySelectorAll('[data-del-invite]').forEach(btn => {
+                btn.addEventListener('click', () => onDeleteInvite(btn.dataset.batchId, btn.dataset.delInvite));
+            });
         } catch (e) {
             panel.innerHTML = '<p class="text-sm text-red-600 py-2">Nu pot încărca invitații: ' + esc(e.message) + '</p>';
         }

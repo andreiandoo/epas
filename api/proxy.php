@@ -2732,6 +2732,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'organizer.invitations.delete-invites':
+        $method = 'DELETE';
+        $batchId = $_GET['batch_id'] ?? '';
+        $body = file_get_contents('php://input');
+        $endpoint = '/organizer/invitations/' . $batchId . '/invites';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.invitations.download':
         $method = 'GET';
         $batchId = $_GET['batch_id'] ?? '';
