@@ -148,21 +148,38 @@ class FixAmbiletOrphanTicketTypesCommand extends Command
             $byGroup[$key][] = $row['ticket_id'];
         }
 
-        $updated = 0;
+        // Two-phase UPDATE, each guarded by whereNull on the column being written.
+        // This makes the command fully idempotent: a ticket that already has a
+        // non-null value for a column is never overwritten, regardless of what
+        // the CSV says. The only columns we ever touch are ticket_type_id,
+        // event_id and updated_at.
+        $ttUpdated    = 0;
+        $evUpdated    = 0;
         foreach ($byGroup as $key => $ticketIds) {
             [$ttId, $evId] = explode('|', $key);
             $ttId = $ttId === 'null' ? null : (int) $ttId;
             $evId = $evId === 'null' ? null : (int) $evId;
+
             foreach (array_chunk($ticketIds, 500) as $chunk) {
-                $payload = ['ticket_type_id' => $ttId, 'updated_at' => now()];
+                // Phase 1 — set ticket_type_id only where it is still NULL.
+                $ttUpdated += DB::table('tickets')
+                    ->whereIn('id', $chunk)
+                    ->whereNull('ticket_type_id')
+                    ->update(['ticket_type_id' => $ttId, 'updated_at' => now()]);
+
+                // Phase 2 — set event_id only where it is still NULL.
                 if ($evId !== null) {
-                    $payload['event_id'] = $evId;
+                    $evUpdated += DB::table('tickets')
+                        ->whereIn('id', $chunk)
+                        ->whereNull('event_id')
+                        ->update(['event_id' => $evId, 'updated_at' => now()]);
                 }
-                DB::table('tickets')->whereIn('id', $chunk)->update($payload);
-                $updated += count($chunk);
             }
         }
-        $this->info("Updated ticket_type_id on {$updated} tickets.");
+        $this->info("Set ticket_type_id on {$ttUpdated} tickets.");
+        if ($evUpdated) {
+            $this->info("Set event_id (was NULL) on {$evUpdated} tickets.");
+        }
 
         $eventOnlyUpdated = 0;
         foreach ($toSetEventOnly as $eventId => $ticketIds) {
