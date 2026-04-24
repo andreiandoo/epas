@@ -174,9 +174,12 @@ async function loadEvents() {
                 return { id: event.id, label: dot + (event.name || event.title) + (meta ? ' — ' + meta : ''), live };
             });
 
-            // Pre-select first event (most recent live)
+            // Preselect from ?event=ID when present; otherwise fall back to the
+            // most-recent live event at the top of the sorted list.
             if (eventsList.length > 0) {
-                selectEvent(eventsList[0].id);
+                const urlEventId = new URLSearchParams(window.location.search).get('event');
+                const matched = urlEventId ? eventsList.find(e => String(e.id) === String(urlEventId)) : null;
+                selectEvent(matched ? matched.id : eventsList[0].id);
             }
         } else {
             document.getElementById('event-search-input').placeholder = 'Nu ai evenimente';
