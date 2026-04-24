@@ -33,9 +33,17 @@ class TicketResource extends Resource
     {
         $marketplace = static::getMarketplaceClient();
 
+        // Match via order.marketplace_client_id (covers orphan tickets that
+        // have no ticket_type linked — e.g. imported legacy_import rows) and
+        // fall back to ticketType.event for tickets created before orders had
+        // marketplace_client_id denormalised.
         $query = parent::getEloquentQuery()
-            ->whereHas('ticketType.event', function ($q) use ($marketplace) {
-                $q->where('marketplace_client_id', $marketplace?->id);
+            ->where(function ($q) use ($marketplace) {
+                $q->whereHas('order', function ($q2) use ($marketplace) {
+                    $q2->where('marketplace_client_id', $marketplace?->id);
+                })->orWhereHas('ticketType.event', function ($q2) use ($marketplace) {
+                    $q2->where('marketplace_client_id', $marketplace?->id);
+                });
             });
 
         // Filter by customer from URL query param
@@ -113,9 +121,16 @@ class TicketResource extends Resource
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
                             $q->where('attendee_name', 'like', "%{$search}%")
+                              ->orWhere('meta->beneficiary->name', 'like', "%{$search}%")
+                              ->orWhere('meta->beneficiary->email', 'like', "%{$search}%")
                               ->orWhereHas('order', function ($q2) use ($search) {
                                   $q2->where('customer_name', 'like', "%{$search}%")
                                     ->orWhere('customer_email', 'like', "%{$search}%");
+                              })
+                              ->orWhereHas('order.marketplaceCustomer', function ($q2) use ($search) {
+                                  $q2->where('email', 'like', "%{$search}%")
+                                    ->orWhere('first_name', 'like', "%{$search}%")
+                                    ->orWhere('last_name', 'like', "%{$search}%");
                               });
                         });
                     })
@@ -134,6 +149,12 @@ class TicketResource extends Resource
                     ->searchable(query: function ($query, $search) {
                         $query->where(function ($q) use ($search) {
                             $q->where('meta->beneficiary->email', 'like', "%{$search}%")
+                              ->orWhereHas('order', function ($q2) use ($search) {
+                                  $q2->where('customer_email', 'like', "%{$search}%");
+                              })
+                              ->orWhereHas('order.marketplaceCustomer', function ($q2) use ($search) {
+                                  $q2->where('email', 'like', "%{$search}%");
+                              })
                               ->orWhereHas('order.customer', function ($q2) use ($search) {
                                   $q2->where('email', 'like', "%{$search}%");
                               });
