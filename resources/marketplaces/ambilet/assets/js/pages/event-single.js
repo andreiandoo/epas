@@ -3034,13 +3034,13 @@ const EventPage = {
             // Full-screen on mobile (inset-0), padded on larger screens
             '<div class="absolute inset-0 md:inset-4 lg:inset-8 bg-white md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
                 // Header
-                '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border">' +
+                '<div class="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border mobile:bg-primary">' +
                     '<div class="flex-1 min-w-0">' +
-                        '<h2 id="seat-selection-title" class="text-base md:text-xl font-bold text-secondary truncate">Alege locurile</h2>' +
-                        '<p class="text-xs md:text-sm text-muted" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
+                        '<h2 id="seat-selection-title" class="text-base md:text-xl font-bold text-secondary truncate mobile:text-white">Alege locurile</h2>' +
+                        '<p class="text-xs md:text-sm text-muted mobile:text-white" id="seat-selection-subtitle">Selectează locurile dorite pe hartă</p>' +
                     '</div>' +
                     '<button onclick="EventPage.closeSeatSelection()" aria-label="Închide" class="p-2 transition-colors rounded-lg hover:bg-surface flex-shrink-0" aria-label="Închide">' +
-                        '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                        '<svg class="w-6 h-6 text-muted mobile:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
                 // Mobile-only toggle that exposes the ticket-types legend (desktop has it in the left sidebar)
@@ -3054,8 +3054,8 @@ const EventPage = {
                 // Content area with sidebar and map (relative so the mobile overlays position correctly)
                 '<div class="flex-1 flex overflow-hidden relative">' +
                     // Left sidebar - ticket types (hidden on mobile)
-                    '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
-                        '<div class="p-4 border-b border-border">' +
+                    '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block mobile:w-64" id="seat-modal-sidebar">' +
+                        '<div class="p-4 border-b border-border mobile:py-0 mobile:px-4 mobile:flex mobile:items-center mobile:h-[49px]">' +
                             '<h3 class="font-bold text-secondary text-sm">Tipuri de bilete</h3>' +
                         '</div>' +
                         '<div id="seat-modal-ticket-types" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
@@ -3098,8 +3098,8 @@ const EventPage = {
                         '</div>' +
                     '</div>' +
                     // Right sidebar - selected tickets (hidden on mobile, uses mobile bottom bar)
-                    '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col" id="seat-selected-sidebar">' +
-                        '<div class="py-4 px-3 border-b border-border flex items-center justify-between">' +
+                    '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col mobile:border-l-0 mobile:border-r" id="seat-selected-sidebar">' +
+                        '<div class="py-4 px-3 border-b border-border flex items-center justify-between mobile:h-[49px] mobile:py-0 mobile:px-4">' +
                             '<h3 class="font-bold text-secondary text-sm" id="selected-tickets-count-header">0 bilete</h3>' +
                             // Close button visible only on mobile/tablet (under lg) when sidebar is shown as overlay
                             '<button type="button" id="seat-selected-close" class="lg:hidden p-1 rounded hover:bg-surface" aria-label="Închide">' +
@@ -3107,7 +3107,7 @@ const EventPage = {
                             '</button>' +
                         '</div>' +
                         '<div id="seat-selected-tickets" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
-                        '<div class="p-3 border-t border-border bg-surface/30">' +
+                        '<div class="p-3 border-t border-border bg-surface/30 mobile:hidden">' +
                             '<div class="mb-3 text-center">' +
                                 '<span class="text-sm text-muted">Locuri selectate: </span>' +
                                 '<span id="selected-seats-count" class="font-bold text-secondary">0</span>' +
@@ -3126,10 +3126,20 @@ const EventPage = {
                 '</div>' +
                 // Mobile bottom bar - shows selected seats count and buy button (visible on < lg)
                 '<div class="lg:hidden border-t border-border bg-white px-4 py-3 flex items-center justify-between gap-3" id="seat-mobile-bottom-bar">' +
-                    // Click on the summary opens the selected-tickets overlay
-                    '<button type="button" id="seat-mobile-selected-toggle" class="flex-1 min-w-0 mobile:flex mobile:flex-col text-left" aria-expanded="false" aria-controls="seat-selected-sidebar">' +
-                        '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
-                        '<span class="text-sm text-muted ml-2 mobile:ml-0" id="mobile-seats-total">0 lei</span>' +
+                    // Click on the summary opens the selected-tickets overlay.
+                    // The chevron + "Vezi bilete" hint appear only after at least
+                    // one seat is picked, so the user gets a visual cue that the
+                    // summary is tap-able.
+                    '<button type="button" id="seat-mobile-selected-toggle" class="flex-1 min-w-0 flex items-center justify-between gap-2 text-left" aria-expanded="false" aria-controls="seat-selected-sidebar">' +
+                        '<span class="min-w-0 mobile:flex mobile:flex-col">' +
+                            '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
+                            '<span class="text-sm text-muted ml-2 mobile:ml-0" id="mobile-seats-total">0 lei</span>' +
+                        '</span>' +
+                        // JS toggles between "hidden" and "inline-flex" on this hint
+                        '<span id="seat-mobile-selected-hint" class="hidden items-center gap-1 text-xs font-semibold text-primary uppercase tracking-wide flex-shrink-0">' +
+                            'Vezi bilete' +
+                            '<svg class="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>' +
+                        '</span>' +
                     '</button>' +
                     '<div class="flex gap-2 flex-shrink-0">' +
                         '<button onclick="EventPage.clearAllSelections()" aria-label="Golește" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește" aria-label="Golește">' +
@@ -4331,6 +4341,13 @@ const EventPage = {
             mobileBuyBtn.textContent = totalSeats > 0 ? 'Cumpără bilete' : 'Selectează locuri';
             mobileBuyBtn.disabled = totalSeats === 0;
             mobileBuyBtn.style.opacity = totalSeats > 0 ? '1' : '0.5';
+        }
+        // Show "Vezi bilete ↑" hint on the bottom-bar summary only after at least
+        // one seat is picked, so the user knows that summary is tap-able.
+        var mobileHint = document.getElementById('seat-mobile-selected-hint');
+        if (mobileHint) {
+            mobileHint.classList.toggle('hidden', totalSeats === 0);
+            mobileHint.classList.toggle('inline-flex', totalSeats > 0);
         }
 
         // Update header count for desktop sidebar
