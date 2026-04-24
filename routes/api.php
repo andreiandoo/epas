@@ -2299,6 +2299,14 @@ use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\AttendeesController as
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\TicketsController as VenueOwnerTicketsController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ScanController as VenueOwnerScanController;
 use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\NotesController as VenueOwnerNotesController;
+use App\Http\Controllers\Api\MarketplaceClient\VenueOwner\ExportController as VenueOwnerExportController;
+
+// Public signed-URL download (no auth header — signature is the auth).
+// Kept outside the marketplace.auth group so the browser can follow it.
+Route::get('/marketplace-client/venue-owner/events/{event}/export/download', [VenueOwnerExportController::class, 'download'])
+    ->middleware('signed')
+    ->whereNumber('event')
+    ->name('api.marketplace-client.venue-owner.events.export.download');
 
 Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     Route::post('/login', [VenueOwnerAuthController::class, 'login'])
@@ -2318,6 +2326,9 @@ Route::prefix('marketplace-client/venue-owner')->middleware(['throttle:120,1', '
         Route::get('/events/{event}/attendees', [VenueOwnerAttendeesController::class, 'index'])
             ->whereNumber('event')
             ->name('api.marketplace-client.venue-owner.events.attendees');
+        Route::post('/events/{event}/export', [VenueOwnerExportController::class, 'request'])
+            ->whereNumber('event')
+            ->name('api.marketplace-client.venue-owner.events.export');
 
         Route::get('/tickets/{ticket}', [VenueOwnerTicketsController::class, 'show'])
             ->whereNumber('ticket')
