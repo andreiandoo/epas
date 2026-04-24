@@ -3019,6 +3019,17 @@ const EventPage = {
         modal.className = 'fixed inset-0 hidden';
         modal.style.zIndex = '9999'; // Above navigation
         modal.innerHTML =
+            // Scoped styles: on mobile, the two sidebars overlay the map when toggled.
+            // Media query thresholds match the sidebar visibility breakpoints below
+            // (#seat-modal-sidebar is md:block, #seat-selected-sidebar is lg:flex).
+            '<style>' +
+                '@media (max-width: 767px) {' +
+                    '#seat-modal-sidebar.ticket-types-mobile-open { position: absolute !important; inset: 0; z-index: 10; display: block !important; }' +
+                '}' +
+                '@media (max-width: 1023px) {' +
+                    '#seat-selected-sidebar.selected-tickets-mobile-open { position: absolute !important; inset: 0; z-index: 10; display: flex !important; flex-direction: column; }' +
+                '}' +
+            '</style>' +
             '<div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="EventPage.closeSeatSelection()"></div>' +
             // Full-screen on mobile (inset-0), padded on larger screens
             '<div class="absolute inset-0 md:inset-4 lg:inset-8 bg-white md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">' +
@@ -3032,8 +3043,16 @@ const EventPage = {
                         '<svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
                     '</button>' +
                 '</div>' +
-                // Content area with sidebar and map
-                '<div class="flex-1 flex overflow-hidden">' +
+                // Mobile-only toggle that exposes the ticket-types legend (desktop has it in the left sidebar)
+                '<button type="button" id="seat-mobile-legend-toggle" aria-expanded="false" aria-controls="seat-modal-sidebar" class="md:hidden w-full flex items-center justify-between px-4 py-2.5 border-b border-border bg-white text-left">' +
+                    '<span class="flex items-center gap-2 text-sm font-semibold text-secondary">' +
+                        '<svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>' +
+                        'Legendă locuri' +
+                    '</span>' +
+                    '<svg id="seat-mobile-legend-chevron" class="w-4 h-4 text-muted transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>' +
+                '</button>' +
+                // Content area with sidebar and map (relative so the mobile overlays position correctly)
+                '<div class="flex-1 flex overflow-hidden relative">' +
                     // Left sidebar - ticket types (hidden on mobile)
                     '<div class="w-48 lg:w-64 border-r border-border bg-white overflow-y-auto hidden md:block" id="seat-modal-sidebar">' +
                         '<div class="p-4 border-b border-border">' +
@@ -3080,8 +3099,12 @@ const EventPage = {
                     '</div>' +
                     // Right sidebar - selected tickets (hidden on mobile, uses mobile bottom bar)
                     '<div class="w-64 lg:w-80 border-l border-border bg-white overflow-y-auto hidden lg:flex flex-col" id="seat-selected-sidebar">' +
-                        '<div class="py-4 px-3 border-b border-border">' +
+                        '<div class="py-4 px-3 border-b border-border flex items-center justify-between">' +
                             '<h3 class="font-bold text-secondary text-sm" id="selected-tickets-count-header">0 bilete</h3>' +
+                            // Close button visible only on mobile/tablet (under lg) when sidebar is shown as overlay
+                            '<button type="button" id="seat-selected-close" class="lg:hidden p-1 rounded hover:bg-surface" aria-label="Închide">' +
+                                '<svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                            '</button>' +
                         '</div>' +
                         '<div id="seat-selected-tickets" class="flex-1 overflow-y-auto p-3 space-y-2"></div>' +
                         '<div class="p-3 border-t border-border bg-surface/30">' +
@@ -3103,10 +3126,11 @@ const EventPage = {
                 '</div>' +
                 // Mobile bottom bar - shows selected seats count and buy button (visible on < lg)
                 '<div class="lg:hidden border-t border-border bg-white px-4 py-3 flex items-center justify-between gap-3" id="seat-mobile-bottom-bar">' +
-                    '<div class="flex-1 min-w-0 mobile:flex mobile:flex-col">' +
+                    // Click on the summary opens the selected-tickets overlay
+                    '<button type="button" id="seat-mobile-selected-toggle" class="flex-1 min-w-0 mobile:flex mobile:flex-col text-left" aria-expanded="false" aria-controls="seat-selected-sidebar">' +
                         '<span class="text-sm font-bold text-secondary" id="mobile-seats-count">0 locuri</span>' +
                         '<span class="text-sm text-muted ml-2 mobile:ml-0" id="mobile-seats-total">0 lei</span>' +
-                    '</div>' +
+                    '</button>' +
                     '<div class="flex gap-2 flex-shrink-0">' +
                         '<button onclick="EventPage.clearAllSelections()" aria-label="Golește" class="p-2.5 text-muted border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-all" title="Golește" aria-label="Golește">' +
                             '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
@@ -3118,6 +3142,38 @@ const EventPage = {
 
         document.body.appendChild(modal);
         this.seatSelectionModal = modal;
+
+        // Mobile-only toggles: show/hide the two sidebars as overlays over the map.
+        // The scoped <style> block above only applies the overlay classes inside the
+        // appropriate media queries, so desktop behavior is untouched.
+        (function wireMobileSidebarToggles() {
+            var legendBtn = document.getElementById('seat-mobile-legend-toggle');
+            var legendChev = document.getElementById('seat-mobile-legend-chevron');
+            var ticketSidebar = document.getElementById('seat-modal-sidebar');
+            if (legendBtn && ticketSidebar) {
+                legendBtn.addEventListener('click', function () {
+                    var isOpen = ticketSidebar.classList.toggle('ticket-types-mobile-open');
+                    legendBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                    if (legendChev) legendChev.classList.toggle('rotate-180', isOpen);
+                });
+            }
+
+            var selectedBtn = document.getElementById('seat-mobile-selected-toggle');
+            var selectedSidebar = document.getElementById('seat-selected-sidebar');
+            var selectedClose = document.getElementById('seat-selected-close');
+            if (selectedBtn && selectedSidebar) {
+                selectedBtn.addEventListener('click', function () {
+                    var isOpen = selectedSidebar.classList.toggle('selected-tickets-mobile-open');
+                    selectedBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                });
+            }
+            if (selectedClose && selectedSidebar) {
+                selectedClose.addEventListener('click', function () {
+                    selectedSidebar.classList.remove('selected-tickets-mobile-open');
+                    if (selectedBtn) selectedBtn.setAttribute('aria-expanded', 'false');
+                });
+            }
+        })();
 
         // Setup zoom with mouse wheel — anchored at cursor position
         var mapWrapper = document.getElementById('seat-map-wrapper');
