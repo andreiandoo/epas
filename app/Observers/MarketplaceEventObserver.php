@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Event;
 use App\Services\MarketplaceNotificationService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MarketplaceEventObserver
@@ -51,6 +52,10 @@ class MarketplaceEventObserver
      */
     public function updated(Event $event): void
     {
+        if ($event->wasChanged('marketplace_organizer_id')) {
+            $this->propagateOrganizerChange($event);
+        }
+
         // Only for marketplace events
         if (!$event->marketplace_client_id || !$event->marketplace_organizer_id) {
             return;
@@ -95,6 +100,47 @@ class MarketplaceEventObserver
                 'event_id' => $event->id,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Propagate a change of marketplace_organizer_id from the event to all
+     * denormalized copies on related tables (currently only `orders`).
+     *
+     * Without this, the organizer dashboard, payouts, refunds etc. keep
+     * pointing to the previous organizer because they filter by
+     * `orders.marketplace_organizer_id`, not by `events.marketplace_organizer_id`.
+     */
+    protected function propagateOrganizerChange(Event $event): void
+    {
+        $newOrganizerId = $event->marketplace_organizer_id;
+        $oldOrganizerId = $event->getOriginal('marketplace_organizer_id');
+
+        try {
+            $ordersUpdated = DB::transaction(function () use ($event, $newOrganizerId) {
+                return DB::table('orders')
+                    ->where('event_id', $event->id)
+                    ->where(function ($q) use ($newOrganizerId) {
+                        $q->where('marketplace_organizer_id', '!=', $newOrganizerId)
+                            ->orWhereNull('marketplace_organizer_id');
+                    })
+                    ->update(['marketplace_organizer_id' => $newOrganizerId]);
+            });
+
+            Log::info('Event organizer changed — propagated to related records', [
+                'event_id' => $event->id,
+                'old_organizer_id' => $oldOrganizerId,
+                'new_organizer_id' => $newOrganizerId,
+                'orders_updated' => $ordersUpdated,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to propagate event organizer change', [
+                'event_id' => $event->id,
+                'old_organizer_id' => $oldOrganizerId,
+                'new_organizer_id' => $newOrganizerId,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
         }
     }
 }
