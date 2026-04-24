@@ -158,9 +158,23 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                 </button>
             </div>
         </div>
-        <div id="seat-modal-body" class="flex-1 overflow-auto bg-slate-50 p-4">
-            <div id="seat-modal-loading" class="text-center text-muted py-12">Se încarcă harta…</div>
-            <div id="seat-modal-map" class="hidden"></div>
+        <div id="seat-modal-body" class="flex-1 relative overflow-hidden bg-slate-50" style="touch-action:none;">
+            <div id="seat-modal-loading" class="absolute inset-0 flex items-center justify-center text-muted">Se încarcă harta…</div>
+            <!-- seat-modal-map gets transform: translate + scale for pan/zoom -->
+            <div id="seat-modal-map" class="hidden absolute top-0 left-0 origin-top-left" style="transform-origin:0 0; will-change:transform; cursor:grab;"></div>
+            <!-- zoom controls overlay (desktop + mobile) -->
+            <div class="absolute bottom-3 right-3 flex flex-col gap-1 bg-white rounded-lg shadow-lg border border-border p-1">
+                <button id="seat-zoom-in" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 rounded" title="Mărește" aria-label="Mărește">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                </button>
+                <button id="seat-zoom-out" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 rounded" title="Micșorează" aria-label="Micșorează">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                </button>
+                <button id="seat-zoom-reset" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 rounded" title="Potrivește pe ecran" aria-label="Potrivește pe ecran">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-5v4m0-4h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                </button>
+            </div>
+            <div id="seat-zoom-level" class="absolute bottom-3 left-3 bg-white rounded-lg shadow-lg border border-border px-2 py-1 text-xs font-semibold text-secondary">100%</div>
         </div>
         <div class="flex items-center justify-between gap-3 px-6 py-3 border-t border-border flex-shrink-0 flex-wrap">
             <div class="flex items-center gap-4 text-xs text-muted flex-wrap">
@@ -194,6 +208,16 @@ $scriptsExtra = <<<'JS'
     let isSeated = false;
     let seatingData = null;
     let selectedSeats = [];
+
+    // Pan/zoom state for the seat modal. The transform is applied to
+    // #seat-modal-map (transform-origin:0 0), so changing mapPan/mapZoom
+    // and calling applyMapTransform() updates the view.
+    const mapView = {
+        zoom: 1,
+        pan: { x: 0, y: 0 },
+        min: 0.4,
+        max: 4,
+    };
 
     const $ = (id) => document.getElementById(id);
     const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
@@ -290,9 +314,12 @@ $scriptsExtra = <<<'JS'
                 if (!res || !res.success) throw new Error((res && res.message) || 'Nu pot încărca harta');
                 seatingData = res.data;
             }
-            renderSeatModal();
+            // Make the map visible before rendering so getBoundingClientRect
+            // returns real dimensions for the fit-to-screen calculation.
             $('seat-modal-loading').classList.add('hidden');
             $('seat-modal-map').classList.remove('hidden');
+            renderSeatModal();
+            bindPanZoom();
         } catch (e) {
             console.error(e);
             $('seat-modal-loading').textContent = 'Nu pot încărca harta: ' + (e.message || e);
@@ -361,7 +388,9 @@ $scriptsExtra = <<<'JS'
         const canvasW = (data.canvas && data.canvas.width) || 1000;
         const canvasH = (data.canvas && data.canvas.height) || 800;
 
-        let svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" style="width:100%; max-width:' + canvasW + 'px; height:auto; display:block; margin:0 auto;" xmlns="http://www.w3.org/2000/svg">';
+        // Render at intrinsic canvas pixel size; #seat-modal-map scales via
+        // CSS transform (applyMapTransform). This way 1:1 == 100% zoom.
+        let svg = '<svg viewBox="0 0 ' + canvasW + ' ' + canvasH + '" width="' + canvasW + '" height="' + canvasH + '" xmlns="http://www.w3.org/2000/svg" style="display:block;">';
 
         data.sections.forEach(function (section) {
             const rotation = section.rotation || 0;
@@ -469,6 +498,180 @@ $scriptsExtra = <<<'JS'
         host.querySelectorAll('[data-seat-uid]').forEach((el) => {
             paintSeat(el);
             el.addEventListener('click', onSeatClick);
+        });
+
+        // Fit the map to the visible modal area on first open; subsequent
+        // opens preserve the previous zoom/pan so organizers don't lose
+        // their viewport when deselecting/closing.
+        fitMapToScreen();
+    }
+
+    // ====== Pan / zoom (desktop drag + wheel, mobile pinch + drag) =====
+
+    function applyMapTransform() {
+        const host = $('seat-modal-map');
+        if (!host) return;
+        host.style.transform = 'translate(' + mapView.pan.x + 'px, ' + mapView.pan.y + 'px) scale(' + mapView.zoom + ')';
+        const zl = $('seat-zoom-level');
+        if (zl) zl.textContent = Math.round(mapView.zoom * 100) + '%';
+    }
+
+    function fitMapToScreen() {
+        const body = $('seat-modal-body');
+        const data = seatingData;
+        if (!body || !data) return;
+        const rect = body.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
+        const canvasW = (data.canvas && data.canvas.width) || 1000;
+        const canvasH = (data.canvas && data.canvas.height) || 800;
+        const pad = 24;
+        const fitZoom = Math.min((rect.width - pad) / canvasW, (rect.height - pad) / canvasH);
+        mapView.zoom = Math.max(mapView.min, Math.min(mapView.max, fitZoom));
+        mapView.pan.x = (rect.width - canvasW * mapView.zoom) / 2;
+        mapView.pan.y = (rect.height - canvasH * mapView.zoom) / 2;
+        applyMapTransform();
+    }
+
+    function zoomAt(delta, focalX, focalY) {
+        const body = $('seat-modal-body');
+        if (!body) return;
+        if (typeof focalX !== 'number' || typeof focalY !== 'number') {
+            const r = body.getBoundingClientRect();
+            focalX = r.width / 2;
+            focalY = r.height / 2;
+        }
+        const oldZoom = mapView.zoom;
+        const newZoom = Math.max(mapView.min, Math.min(mapView.max, oldZoom + delta));
+        if (newZoom === oldZoom) return;
+        // Keep focal point stationary: newPan = focal − (focal − oldPan) * (newZoom / oldZoom)
+        const ratio = newZoom / oldZoom;
+        mapView.pan.x = focalX - (focalX - mapView.pan.x) * ratio;
+        mapView.pan.y = focalY - (focalY - mapView.pan.y) * ratio;
+        mapView.zoom = newZoom;
+        applyMapTransform();
+    }
+
+    function setZoomAbsolute(newZoom, focalX, focalY) {
+        const delta = Math.max(mapView.min, Math.min(mapView.max, newZoom)) - mapView.zoom;
+        if (delta !== 0) zoomAt(delta, focalX, focalY);
+    }
+
+    let panZoomBound = false;
+    function bindPanZoom() {
+        if (panZoomBound) return;
+        panZoomBound = true;
+
+        const body = $('seat-modal-body');
+        const host = $('seat-modal-map');
+        if (!body || !host) return;
+
+        // Zoom buttons
+        $('seat-zoom-in').addEventListener('click', () => zoomAt(0.2));
+        $('seat-zoom-out').addEventListener('click', () => zoomAt(-0.2));
+        $('seat-zoom-reset').addEventListener('click', () => fitMapToScreen());
+
+        // Mouse wheel — anchor at cursor
+        body.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const r = body.getBoundingClientRect();
+            const step = e.deltaY > 0 ? -0.15 : 0.15;
+            zoomAt(step, e.clientX - r.left, e.clientY - r.top);
+        }, { passive: false });
+
+        // Mouse drag pan — skip when the user actually clicked a seat.
+        // Clicks on circles are filtered via a "did the mouse move?" check:
+        // tiny movements count as clicks and leave the seat toggle intact.
+        let dragging = false;
+        let startX, startY, startPanX, startPanY, movedEnough;
+        body.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            dragging = true;
+            movedEnough = false;
+            startX = e.clientX; startY = e.clientY;
+            startPanX = mapView.pan.x; startPanY = mapView.pan.y;
+            host.style.cursor = 'grabbing';
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            if (!movedEnough && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) movedEnough = true;
+            mapView.pan.x = startPanX + dx;
+            mapView.pan.y = startPanY + dy;
+            applyMapTransform();
+        });
+        window.addEventListener('mouseup', () => {
+            if (!dragging) return;
+            dragging = false;
+            host.style.cursor = 'grab';
+        });
+        // If a drag actually happened, swallow the next click so it doesn't
+        // toggle a seat the user was only panning past.
+        body.addEventListener('click', (e) => {
+            if (movedEnough) { e.stopPropagation(); e.preventDefault(); movedEnough = false; }
+        }, true);
+
+        // Touch: single-finger pan, two-finger pinch-zoom
+        let pinchStartDist = 0;
+        let pinchStartZoom = 1;
+        let touchDragging = false;
+        let tStartX, tStartY, tStartPanX, tStartPanY, tMoved;
+
+        body.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                pinchStartDist = Math.hypot(dx, dy);
+                pinchStartZoom = mapView.zoom;
+                touchDragging = false;
+                e.preventDefault();
+            } else if (e.touches.length === 1) {
+                touchDragging = true;
+                tMoved = false;
+                tStartX = e.touches[0].clientX;
+                tStartY = e.touches[0].clientY;
+                tStartPanX = mapView.pan.x;
+                tStartPanY = mapView.pan.y;
+            }
+        }, { passive: false });
+
+        body.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2 && pinchStartDist > 0) {
+                e.preventDefault();
+                const dx = e.touches[0].clientX - e.touches[1].clientX;
+                const dy = e.touches[0].clientY - e.touches[1].clientY;
+                const dist = Math.hypot(dx, dy);
+                const scale = dist / pinchStartDist;
+                const newZoom = Math.max(mapView.min, Math.min(mapView.max, pinchStartZoom * scale));
+                const r = body.getBoundingClientRect();
+                const focalX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - r.left;
+                const focalY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - r.top;
+                setZoomAbsolute(newZoom, focalX, focalY);
+            } else if (e.touches.length === 1 && touchDragging) {
+                const dx = e.touches[0].clientX - tStartX;
+                const dy = e.touches[0].clientY - tStartY;
+                if (!tMoved && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) tMoved = true;
+                if (tMoved) {
+                    e.preventDefault();
+                    mapView.pan.x = tStartPanX + dx;
+                    mapView.pan.y = tStartPanY + dy;
+                    applyMapTransform();
+                }
+            }
+        }, { passive: false });
+
+        body.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) pinchStartDist = 0;
+            if (e.touches.length === 0) {
+                touchDragging = false;
+                // Swallow the ghost click after a pan
+                if (tMoved) {
+                    const swallow = (ev) => { ev.stopPropagation(); ev.preventDefault(); body.removeEventListener('click', swallow, true); };
+                    body.addEventListener('click', swallow, true);
+                    setTimeout(() => body.removeEventListener('click', swallow, true), 400);
+                    tMoved = false;
+                }
+            }
         });
     }
 

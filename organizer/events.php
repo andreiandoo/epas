@@ -848,8 +848,8 @@ function renderEvents(events) {
             <div class="flex flex-col md:items-center md:flex-row">
                 <img src="${getStorageUrl(event.image)}" alt="${event.name || event.title}" class="object-cover w-full rounded-tr-none rounded-br-none h-34 max-h-[115px] md:w-28 rounded-xl" loading="lazy">
                 <div class="flex-1">
-                    <div class="flex items-center justify-between gap-4 pr-4">
-                        <div class="flex items-center gap-4 pl-6">
+                    <div class="flex items-center justify-between gap-4 pr-4 mobile:flex-col mobile:px-4 mobile:py-2">
+                        <div class="flex items-center gap-4 pl-6 mobile:pl-0">
                             <div class="flex flex-col items-start">
                                 <h3 class="text-lg font-bold text-secondary">${event.name || event.title}</h3>
                                 <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
@@ -869,19 +869,21 @@ function renderEvents(events) {
                             <div class="flex items-center justify-center gap-x-2"><p class="text-3xl font-bold text-secondary">${daysText || ''}</p><p class="text-xs text-muted" style="line-height:0.85rem;">${(!isEnded && daysText && daysText !== 'Azi' && daysText !== 'Mâine') ? 'zile<br/>rămase' : ''}</p></div>
                             
                             <div class="flex items-center gap-2">
-                            <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
-                            ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
+                                <span class="badge badge-${statusColors[displayStatus] || 'secondary'}">${statusLabels[displayStatus] || displayStatus}</span>
+                                ${saleStatus ? `<span class="badge ${saleStatus === 'În vânzare' ? 'badge-success' : (saleStatus === 'Sold Out' ? 'badge-info' : 'badge-warning')}">${saleStatus}</span>` : ''}
+                            </div>
                         </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="text-blue-700 border border-blue-200 border-solid btn btn-sm bg-blue-50 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
+                            ${invitationsButton}
+                            ${documentsButton}
+                            ${financeButton}
+                            ${participantsButton}
+                            ${analyticsButton}
+                            ${promoteButton}
+                            ${viewButton}
+                            ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                         </div>
-                        ${event.is_editable !== false ? `<a href="/organizator/event/${event.id}?action=edit" class="text-blue-700 border border-blue-200 border-solid btn btn-sm bg-blue-50 hover:bg-blue-100 hover:border-blue-300 hover:text-blue-800" title="Editează"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Editează</a>` : ''}
-                        ${invitationsButton}
-                        ${documentsButton}
-                        ${financeButton}
-                        ${participantsButton}
-                        ${analyticsButton}
-                        ${promoteButton}
-                        ${viewButton}
-                        ${['draft', 'rejected'].includes(event.status) ? `<button onclick="deleteEvent(${event.id}, '${(event.name || event.title).replace(/'/g, "\\'")}');" class="btn btn-sm btn-error" title="Șterge evenimentul"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
                     </div>
                 </div>
             </div>
