@@ -1806,6 +1806,8 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.invitations.download');
         Route::post('/invitations/{batch}/void', [OrganizerInvitationsController::class, 'void'])
             ->name('api.marketplace-client.organizer.invitations.void');
+        Route::delete('/invitations/{batch}/invites', [OrganizerInvitationsController::class, 'deleteInvites'])
+            ->name('api.marketplace-client.organizer.invitations.delete-invites');
         Route::get('/invitations/{batch}/stats', [OrganizerInvitationsController::class, 'stats'])
             ->name('api.marketplace-client.organizer.invitations.stats');
         Route::delete('/invitations/{batch}', [OrganizerInvitationsController::class, 'destroy'])

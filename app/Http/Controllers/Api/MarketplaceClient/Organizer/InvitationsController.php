@@ -389,6 +389,93 @@ class InvitationsController extends BaseController
         return $this->success(['voided' => $voided], "{$voided} invitations voided");
     }
 
+    /**
+     * Hard-delete specific invites from a batch.
+     *
+     * For seated invitations this also releases the locked seat back to
+     * available on the map, deletes the paired Ticket record, and removes
+     * the stored PDF — undoing the full side-effect chain from store().
+     * Empties are caught so one bad invite can't block the rest.
+     *
+     * DELETE /api/marketplace-client/organizer/invitations/{batch}/invites
+     */
+    public function deleteInvites(Request $request, int $batchId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
+
+        $data = $request->validate([
+            'invite_ids' => 'required|array|min:1',
+            'invite_ids.*' => 'integer',
+        ]);
+
+        $deleted = 0;
+        $seatsReleased = 0;
+        $batchSeatingId = data_get($batch->options, 'event_seating_id');
+
+        foreach ($batch->invites()->whereIn('id', $data['invite_ids'])->get() as $invite) {
+            try {
+                $seat = $invite->recipient['seat'] ?? null;
+                $seatUid = $seat['uid'] ?? null;
+                $esid = $seat['event_seating_id'] ?? $batchSeatingId;
+
+                if ($seatUid && $esid) {
+                    // Only flip rows we ourselves flipped to sold. whereIn on
+                    // status avoids blowing away a seat that, for some
+                    // reason, was already re-used by a real purchase.
+                    $released = \App\Models\Seating\EventSeat::where('event_seating_id', $esid)
+                        ->where('seat_uid', $seatUid)
+                        ->whereIn('status', ['sold', 'held'])
+                        ->update([
+                            'status' => 'available',
+                            'version' => \DB::raw('version + 1'),
+                            'last_change_at' => now(),
+                        ]);
+                    if ($released > 0) $seatsReleased++;
+                }
+
+                // Drop the paired Ticket (carries the same invite_code)
+                Ticket::where('code', $invite->invite_code)->delete();
+
+                // Remove the PDF on disk if rendered
+                $pdfPath = $invite->getPdfUrl();
+                if ($pdfPath && Storage::disk('local')->exists($pdfPath)) {
+                    Storage::disk('local')->delete($pdfPath);
+                }
+
+                $invite->delete();
+                $deleted++;
+            } catch (\Throwable $e) {
+                Log::warning('Invite delete failed', [
+                    'invite_id' => $invite->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Keep counters roughly in sync so the UI doesn't lie about how many
+        // invites are in the batch; floor to 0 to be safe.
+        $remaining = $batch->invites()->count();
+        $batch->update([
+            'qty_generated' => max(0, (int) $batch->qty_generated - $deleted),
+            'qty_rendered' => $remaining === 0 ? 0 : $batch->qty_rendered,
+        ]);
+
+        // If nothing left in the batch, drop it — otherwise leftover empty
+        // batches clutter the "Serii de invitații" list forever.
+        if ($remaining === 0) {
+            Storage::disk('local')->deleteDirectory($this->batchStoragePath($batch));
+            $batch->delete();
+        }
+
+        return $this->success([
+            'deleted' => $deleted,
+            'seats_released' => $seatsReleased,
+            'batch_remaining' => $remaining,
+        ], "{$deleted} invitații șterse" . ($seatsReleased > 0 ? " · {$seatsReleased} locuri eliberate" : ''));
+    }
+
     public function stats(Request $request, int $batchId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
@@ -575,6 +662,7 @@ class InvitationsController extends BaseController
                 $pdfOutput = $this->renderInvitationPdf(
                     $invite,
                     $template,
+                    $event,
                     [
                         'eventTitle' => $eventTitle,
                         'eventSubtitle' => $eventSubtitle,
@@ -699,7 +787,7 @@ class InvitationsController extends BaseController
      *
      * @param array<string,mixed> $ctx
      */
-    protected function renderInvitationPdf(Invite $invite, ?TicketTemplate $template, array $ctx): string
+    protected function renderInvitationPdf(Invite $invite, ?TicketTemplate $template, Event $event, array $ctx): string
     {
         if ($template && !empty($template->template_data['layers'] ?? null)) {
             try {
@@ -715,6 +803,10 @@ class InvitationsController extends BaseController
                     'date' => $ctx['eventDate'],
                     'time' => $ctx['eventTime'] ?? '',
                     'venue' => $ctx['venueName'] ?? '',
+                    // Populate event.image from real Event so {{event.image}}
+                    // in the template renders the poster instead of the
+                    // "Event Image" placeholder from sample data.
+                    'image' => $variableService->resolveEventImageUrl($event),
                 ]);
                 $data['ticket'] = array_merge($data['ticket'] ?? [], [
                     'type' => 'INVITAȚIE',

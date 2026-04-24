@@ -821,9 +821,11 @@ class TicketVariableService
     }
 
     /**
-     * Build serial number from ticket type series configuration
+     * Resolve event image URL (marketplace image → hero → poster).
+     * Public so controllers that render tickets without a Ticket record
+     * (e.g. organizer invitations) can populate `event.image` too.
      */
-    private function resolveEventImageUrl($event, $marketplaceEvent): string
+    public function resolveEventImageUrl($event, $marketplaceEvent = null): string
     {
         // Try marketplace event image first
         if ($marketplaceEvent?->image_url) {

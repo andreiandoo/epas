@@ -423,6 +423,7 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/invitations/hold-seats') return 'organizer.invitations.hold-seats';
         if (endpoint.match(/\/organizer\/invitations\/\d+\/download$/)) return 'organizer.invitations.download';
         if (endpoint.match(/\/organizer\/invitations\/\d+\/generate$/)) return 'organizer.invitations.generate';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/invites$/)) return 'organizer.invitations.delete-invites';
         if (endpoint.match(/\/organizer\/invitations\/\d+$/)) {
             // Distinguish GET (show) from DELETE via action name — proxy maps both via batch_id
             return 'organizer.invitations.show';
@@ -710,8 +711,8 @@ const AmbiletAPI = {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
         }
 
-        // Organizer invitations - extract batch id (for /{id}, /{id}/generate, /{id}/download)
-        const invBatchMatch = endpoint.match(/\/organizer\/invitations\/(\d+)(?:\/(?:generate|download))?$/);
+        // Organizer invitations - extract batch id (for /{id}, /{id}/generate, /{id}/download, /{id}/invites)
+        const invBatchMatch = endpoint.match(/\/organizer\/invitations\/(\d+)(?:\/(?:generate|download|invites))?$/);
         if (invBatchMatch) {
             return `batch_id=${encodeURIComponent(invBatchMatch[1])}`;
         }
