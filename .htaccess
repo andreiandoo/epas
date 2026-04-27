@@ -99,6 +99,11 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/([a-z0-9-]+)/?$ artist-single.php?slug=$1 [L,QSA]
 
+# Handle tours - /turnee/{slug}
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^turnee/([a-z0-9-]+)/?$ tour-single.php?slug=$1 [L,QSA]
+
 # Handle organizer auth pages - must come BEFORE the public profile rule
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

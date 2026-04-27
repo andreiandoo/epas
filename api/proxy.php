@@ -675,6 +675,18 @@ switch ($action) {
         $endpoint = '/events/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    case 'tour.show':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing tour slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['locale'])) $params['locale'] = $_GET['locale'];
+        $endpoint = '/tours/' . urlencode($slug) . ($params ? '?' . http_build_query($params) : '');
+        break;
+
     case 'event.dateAvailability':
         $slug = $_GET['slug'] ?? '';
         if (!$slug) {
