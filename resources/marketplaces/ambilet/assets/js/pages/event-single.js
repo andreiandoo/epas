@@ -976,6 +976,7 @@ const EventPage = {
                 const currentId = this.event.id;
                 const currentSlug = this.event.slug;
                 const filtered = response.data.filter(function(e) {
+                    if (e.is_cancelled) return false;
                     return e.id !== currentId && e.slug !== currentSlug;
                 }).slice(0, 4);
 
@@ -2506,6 +2507,9 @@ const EventPage = {
                 // Also exclude custom related events from regular related
                 const customIds = (this.event.custom_related_event_ids || []).map(id => parseInt(id));
                 const filtered = response.data.filter(function(e) {
+                    // Cancelled events stay in category listings (with an Anulat
+                    // badge) but should never surface as a "Sugestie" / suggestion.
+                    if (e.is_cancelled) return false;
                     return e.id !== currentId && e.slug !== currentSlug && !customIds.includes(e.id);
                 }).slice(0, 4);
 
