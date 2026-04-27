@@ -687,11 +687,11 @@ class MarketplaceEventsController extends BaseController
                 'venue_address' => $venue?->address ?? $event->address,
                 'venue_city' => $venue?->city,
                 'capacity' => $venue?->capacity,
+                // Frontend only consumes the derived `is_featured`; the
+                // individual placement flags (homepage/general/category/city) are
+                // admin-curation knobs — keep them server-side, don't leak to
+                // every public page payload.
                 'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
-                'is_homepage_featured'  => (bool) $event->is_homepage_featured,
-                'is_general_featured'   => (bool) $event->is_general_featured,
-                'is_category_featured'  => (bool) $event->is_category_featured,
-                'is_city_featured'      => (bool) ($event->is_city_featured ?? false),
                 // Flat organizer id so the public PHP page can layer per-organizer
                 // tracking pixels on top of the marketplace ones (event.php reads
                 // this directly to set $organizerTrackingId before head.php).
