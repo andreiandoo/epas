@@ -149,114 +149,48 @@ if ($organizerTrackingId) {
     $headExtra = ($headExtra ?? '') . '<script>document.cookie="ambilet_active_organizer=' . $organizerTrackingId . ';path=/;max-age=86400;samesite=Lax";</script>';
 }
 
+// Feed head.php with event-specific data so it can emit Event JSON-LD,
+// OpenGraph event:* tags, and the right og:type. Without this the page
+// inherits the generic "WebSite" schema and Google never indexes it as
+// an event (no rich snippet, no event list).
+if (!empty($ev)) {
+    $organizerData = $eventPreload['data']['organizer'] ?? null;
+    $artistsData = $eventPreload['data']['artists'] ?? [];
+    $ticketTypesData = $eventPreload['data']['ticket_types'] ?? [];
+
+    $ticketPrices = array_values(array_filter(array_map(
+        fn ($tt) => isset($tt['price']) && is_numeric($tt['price']) ? (float) $tt['price'] : null,
+        $ticketTypesData
+    )));
+
+    $pageType = 'event';
+    $pageImage = $ev['hero_image_url'] ?? $ev['image_url'] ?? $ev['image'] ?? $pageImage;
+    $pageData = [
+        'name' => $ev['name'] ?? $pageTitle,
+        'description' => $pageDescription,
+        'image' => $pageImage,
+        'startDate' => $ev['starts_at'] ?? null,
+        'endDate' => $ev['ends_at'] ?? null,
+        'venue' => [
+            'name' => $venueName,
+            'address' => $venue['address'] ?? '',
+            'city' => $venue['city'] ?? $venueCity,
+        ],
+        'artists' => array_map(fn ($a) => ['name' => $a['name'] ?? ''], is_array($artistsData) ? $artistsData : []),
+        'organizer' => $organizerData['name'] ?? null,
+        'minPrice' => $ticketPrices ? min($ticketPrices) : null,
+        'maxPrice' => $ticketPrices ? max($ticketPrices) : null,
+        'saleStart' => null, // not used for event_status; keeps current behaviour
+    ];
+}
+
+// Page-specific CSS lives in /assets/css/event.css now (was inline). Inject
+// it as a stylesheet link via $headExtra so it goes inside <head>, after
+// the global stylesheet, so its .btn-primary override still wins.
+$headExtra = ($headExtra ?? '') . '<link rel="stylesheet" href="' . asset('assets/css/event.css') . '">';
+
 require_once __DIR__ . '/includes/head.php';
 ?>
-    <style>
-        .date-badge { background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%); }
-        .btn-primary { background: linear-gradient(135deg, #A51C30 0%, #8B1728 100%); transition: all 0.3s ease; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(165, 28, 48, 0.3); }
-
-        .ticket-card { transition: all 0.3s ease; }
-        .ticket-card:hover { border-color: #A51C30; }
-        .cursor-default.ticket-card:hover { border-color: #e5e7eb; }
-        .ticket-card.selected { border-color: #A51C30; background-color: rgba(165, 28, 48, 0.05); }
-
-        .tooltip {
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s ease;
-            transform: translateY(5px);
-        }
-        .tooltip-trigger:hover .tooltip {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .event-card { transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); }
-        .event-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -12px rgba(165, 28, 48, 0.2); }
-        .event-card:hover .event-image { transform: scale(1.08); }
-        .event-image { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-        /* Prevent event description from overflowing on mobile */
-        #event-description { overflow-x: hidden; overflow-wrap: break-word; word-break: break-word; }
-        #event-description img, #event-description iframe, #event-description video, #event-description table, #event-description pre {
-            max-width: 100%; height: auto;
-        }
-        #event-description table { display: block; overflow-x: auto; }
-
-        /* Collapsible description */
-        #event-description.is-collapsed { max-height: 300px; overflow: hidden; position: relative; }
-        #event-description.is-collapsed::after {
-            content: '';
-            position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
-            background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
-            pointer-events: none;
-        }
-        #event-description.is-expanded { max-height: none; }
-        #desc-toggle { transition: opacity 0.3s ease; }
-        #desc-toggle svg { transition: transform 0.3s ease; }
-        #desc-toggle.is-expanded svg { transform: rotate(180deg); }
-
-        .points-counter { animation: pointsPulse 0.3s ease; }
-        @keyframes pointsPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .discount-badge { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
-
-        .sticky-cart { position: sticky; top: 88px; }
-
-        /* Mobile ticket drawer */
-        @media (max-width: 1023px) {
-            .sticky-cart-wrapper { display: none; }
-        }
-        #ticketDrawerBackdrop {
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #ticketDrawerBackdrop.open {
-            opacity: 1;
-            visibility: visible;
-        }
-        #ticketDrawer {
-            transform: translateY(100%);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #ticketDrawer.open {
-            transform: translateY(0);
-        }
-
-        /* Related events horizontal scroll on mobile */
-        @media (max-width: 1023px) {
-            .related-events-scroll {
-                padding-left: 1rem;
-                padding-right: 1rem;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            .related-events-scroll::-webkit-scrollbar {
-                display: none;
-            }
-            .related-events-scroll > * {
-                flex: 0 0 70%;
-                min-width: 260px;
-                max-width: 300px;
-                scroll-snap-align: start;
-            }
-            .related-events-scroll > *:first-child {
-                margin-left: 0;
-            }
-            .related-events-scroll > *:last-child {
-                margin-right: 1rem;
-            }
-        }
-    </style>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
