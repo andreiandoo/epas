@@ -32,6 +32,39 @@ class EditEvent extends EditRecord
         return Event::findOrFail($key);
     }
 
+    /**
+     * Strip case, Romanian diacritics, and separators (`- _ . space`) so a
+     * search like "concerte vara" matches a slugified filename like
+     * "concerte-vara-2024.jpg" or an original "Concerte Vară 2024.jpg".
+     */
+    private static function normaliseForFilenameSearch(string $value): string
+    {
+        $diacritics = [
+            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ş' => 's',
+            'ț' => 't', 'ţ' => 't',
+            'Ă' => 'A', 'Â' => 'A', 'Î' => 'I', 'Ș' => 'S', 'Ş' => 'S',
+            'Ț' => 'T', 'Ţ' => 'T',
+        ];
+        $value = strtr($value, $diacritics);
+        $value = mb_strtolower($value, 'UTF-8');
+        return preg_replace('/[\s\-_.]+/u', '', $value) ?? '';
+    }
+
+    /**
+     * Build a Postgres-safe SQL expression that mirrors the PHP normalisation
+     * above: lowercase, strip Romanian diacritics, then strip separators.
+     * Returns a parameterised LIKE clause and the bound value.
+     *
+     * @return array{0: string, 1: string} [whereRaw expression, like value]
+     */
+    private static function searchableLikeFor(string $column, string $needle): array
+    {
+        // translate() is case-sensitive; we lower() first so the diacritic
+        // map only needs lowercase entries.
+        $expr = "regexp_replace(translate(lower(coalesce(\"{$column}\", '')), 'ăâîșşțţ', 'aaisstt'), '[\\s\\-_.]+', '', 'g')";
+        return [$expr, '%' . static::normaliseForFilenameSearch($needle) . '%'];
+    }
+
     public function mount(int|string $record): void
     {
         parent::mount($record);
@@ -296,13 +329,17 @@ class EditEvent extends EditRecord
                             ->placeholder($t('Caută după numele original...', 'Search by original name...'))
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
+                                [$origExpr, $origLike] = static::searchableLikeFor('original_filename', $search);
+                                [$fileExpr, $fileLike] = static::searchableLikeFor('filename', $search);
+                                [$titleExpr, $titleLike] = static::searchableLikeFor('title', $search);
+
                                 return \App\Models\MediaLibrary::query()
                                     ->where('marketplace_client_id', $marketplace?->id)
                                     ->where('mime_type', 'LIKE', 'image/%')
-                                    ->where(function ($q) use ($search) {
-                                        $q->where('original_filename', 'LIKE', "%{$search}%")
-                                          ->orWhere('filename', 'LIKE', "%{$search}%")
-                                          ->orWhere('title', 'LIKE', "%{$search}%");
+                                    ->where(function ($q) use ($origExpr, $origLike, $fileExpr, $fileLike, $titleExpr, $titleLike) {
+                                        $q->whereRaw("{$origExpr} LIKE ?", [$origLike])
+                                          ->orWhereRaw("{$fileExpr} LIKE ?", [$fileLike])
+                                          ->orWhereRaw("{$titleExpr} LIKE ?", [$titleLike]);
                                     })
                                     ->orderBy('created_at', 'desc')
                                     ->limit(20)
@@ -389,13 +426,17 @@ class EditEvent extends EditRecord
                             ->placeholder($t('Caută după numele original...', 'Search by original name...'))
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
+                                [$origExpr, $origLike] = static::searchableLikeFor('original_filename', $search);
+                                [$fileExpr, $fileLike] = static::searchableLikeFor('filename', $search);
+                                [$titleExpr, $titleLike] = static::searchableLikeFor('title', $search);
+
                                 return \App\Models\MediaLibrary::query()
                                     ->where('marketplace_client_id', $marketplace?->id)
                                     ->where('mime_type', 'LIKE', 'image/%')
-                                    ->where(function ($q) use ($search) {
-                                        $q->where('original_filename', 'LIKE', "%{$search}%")
-                                          ->orWhere('filename', 'LIKE', "%{$search}%")
-                                          ->orWhere('title', 'LIKE', "%{$search}%");
+                                    ->where(function ($q) use ($origExpr, $origLike, $fileExpr, $fileLike, $titleExpr, $titleLike) {
+                                        $q->whereRaw("{$origExpr} LIKE ?", [$origLike])
+                                          ->orWhereRaw("{$fileExpr} LIKE ?", [$fileLike])
+                                          ->orWhereRaw("{$titleExpr} LIKE ?", [$titleLike]);
                                     })
                                     ->orderBy('created_at', 'desc')
                                     ->limit(20)
