@@ -265,8 +265,15 @@ const VenuesPage = {
             const raw = listResp.data || listResp || [];
             this.venues = (Array.isArray(raw) ? raw : []).map(mapVenue);
 
-            const featuredRaw = featuredResp.data || featuredResp || [];
-            this.featuredVenues = (Array.isArray(featuredRaw) ? featuredRaw : []).map(mapVenue);
+            // /venues/featured wraps the list as { data: { venues: [...] } } (unlike
+            // /venues which returns { data: [...] } directly), so unwrap explicitly
+            // before mapping — otherwise Array.isArray() rejects the object payload
+            // and we'd silently fall back to filtering the per_page-capped main list.
+            const featuredPayload = featuredResp.data ?? featuredResp;
+            const featuredRaw = Array.isArray(featuredPayload)
+                ? featuredPayload
+                : (featuredPayload?.venues || []);
+            this.featuredVenues = featuredRaw.map(mapVenue);
 
             // Shuffle the main list for random default order on filter views.
             this.shuffle(this.venues);
