@@ -128,7 +128,7 @@ require_once __DIR__ . '/includes/header.php';
         Perioadă
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaPeriod">—</div>
-      <div class="text-xs text-slate-500 mt-0.5" id="metaPeriodDays"></div>
+      <div class="text-xs text-slate-500 mt-0.5 hidden" id="metaPeriodDays"></div>
     </div>
     <div class="md:px-5">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
         Orașe
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaCities">—</div>
-      <div class="text-xs text-slate-500 mt-0.5" id="metaCitiesList"></div>
+      <div class="text-xs text-slate-500 mt-0.5 hidden" id="metaCitiesList"></div>
     </div>
     <div class="md:px-5">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
@@ -144,7 +144,7 @@ require_once __DIR__ . '/includes/header.php';
         Preț
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaPrice">—</div>
-      <div class="text-xs text-slate-500 mt-0.5" id="metaPriceNote"></div>
+      <div class="text-xs text-slate-500 mt-0.5 hidden" id="metaPriceNote"></div>
     </div>
     <div class="md:px-5 last:pr-0">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
@@ -152,7 +152,7 @@ require_once __DIR__ . '/includes/header.php';
         Durată concert
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaDuration">—</div>
-      <div class="text-xs text-slate-500 mt-0.5">Setlist principal</div>
+      <div class="text-xs text-slate-500 mt-0.5 hidden">Setlist principal</div>
     </div>
   </div>
 </section>
@@ -594,7 +594,7 @@ $scriptsExtra = <<<'JS'
 
             const togglePastHtml = pastEvents.length > 0
                 ? `
-                    <button id="togglePastEvents" type="button" class="w-full flex items-center justify-between gap-3 px-6 py-3 text-sm font-semibold transition border-t bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-100">
+                    <button id="togglePastEvents" type="button" class="flex items-center justify-between w-full gap-3 px-6 py-3 text-sm font-semibold transition border-t bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-100">
                         <span class="flex items-center gap-2">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             Evenimente încheiate · ${pastEvents.length}
