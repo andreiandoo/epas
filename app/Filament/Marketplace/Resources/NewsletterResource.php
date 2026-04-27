@@ -383,12 +383,38 @@ class NewsletterResource extends Resource
                             if (!$hasTargeting) {
                                 return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / tag-uri</span>');
                             }
+
                             try {
-                                $count = $instance->getRecipientCount();
+                                $b = $instance->getRecipientBreakdown();
                             } catch (\Throwable $e) {
-                                $count = '?';
+                                return new HtmlString('<span class="text-red-600">Eroare la calculul destinatarilor: ' . e($e->getMessage()) . '</span>');
                             }
-                            return new HtmlString('<span class="text-2xl font-bold text-primary-600">' . $count . '</span>');
+
+                            $html = '<div class="space-y-1.5">';
+                            $html .= '<div class="text-2xl font-bold text-primary-600">' . number_format($b['total']) . '</div>';
+                            $html .= '<div class="text-xs text-gray-500 dark:text-gray-400">Email-uri unice (după dedup)</div>';
+
+                            // Per-source breakdown helps explain why the
+                            // total may differ from the user's intuition —
+                            // e.g. a contact list may contain more customer
+                            // accounts than the "type" suggests, or sources
+                            // may overlap.
+                            $rows = [];
+                            if (!empty($instance->target_lists)) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din liste</span><span class="font-semibold">' . number_format($b['lists']) . '</span></div>';
+                            }
+                            if (!empty($instance->target_tags)) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din tag-uri</span><span class="font-semibold">' . number_format($b['tags']) . '</span></div>';
+                            }
+                            if (!empty($instance->target_event_ids)) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Cumpărători evenimente</span><span class="font-semibold">' . number_format($b['events']) . '</span></div>';
+                            }
+                            if (!empty($rows)) {
+                                $html .= '<div class="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5 space-y-1 text-xs">' . implode('', $rows) . '</div>';
+                            }
+                            $html .= '</div>';
+
+                            return new HtmlString($html);
                         }),
                     Forms\Components\Placeholder::make('targeted_events_summary')
                         ->label('Evenimente țintă')

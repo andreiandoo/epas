@@ -176,6 +176,55 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
+     * Per-source recipient counts so the UI can explain where the total
+     * comes from. Overlap between sources (a customer in both a list AND
+     * an event) is counted in each source's bucket; the `total` field is
+     * the deduped union.
+     *
+     * @return array{lists:int, tags:int, events:int, total:int}
+     */
+    public function getRecipientBreakdown(): array
+    {
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+        if (!$clientId) {
+            return ['lists' => 0, 'tags' => 0, 'events' => 0, 'total' => 0];
+        }
+
+        $listsCount = 0;
+        if (!empty($this->target_lists)) {
+            $listsCount = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->where('accepts_marketing', true)
+                ->whereHas('contactLists', function ($qq) {
+                    $qq->whereIn('marketplace_contact_lists.id', $this->target_lists)
+                        ->where('marketplace_contact_list_members.status', 'subscribed');
+                })
+                ->count();
+        }
+
+        $tagsCount = 0;
+        if (!empty($this->target_tags)) {
+            $tagsCount = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->where('accepts_marketing', true)
+                ->whereHas('tags', function ($qq) {
+                    $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
+                })
+                ->count();
+        }
+
+        $eventsCount = 0;
+        if (!empty($this->target_event_ids)) {
+            $eventsCount = $this->getEventBuyerCustomerIds($this->target_event_ids)->count();
+        }
+
+        return [
+            'lists' => $listsCount,
+            'tags' => $tagsCount,
+            'events' => $eventsCount,
+            'total' => $this->getRecipientCount(),
+        ];
+    }
+
+    /**
      * Create recipients from list
      */
     public function createRecipients(): int
