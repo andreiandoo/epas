@@ -76,6 +76,23 @@ $pageSchema = null;
 
 if ($pageType === 'event' && isset($pageData)) {
     // Event schema (for event detail pages)
+    $organizerNode = [
+        '@type' => 'Organization',
+        'name' => $pageData['organizer'] ?? SITE_NAME,
+        // Prefer the organizer's public profile URL when available so Event.organizer
+        // points at the actual organizer page instead of the marketplace homepage.
+        'url' => !empty($pageData['organizer_slug'])
+            ? SITE_URL . '/organizator/' . $pageData['organizer_slug']
+            : SITE_URL,
+    ];
+
+    $performers = isset($pageData['artists']) && is_array($pageData['artists'])
+        ? array_values(array_filter(array_map(function ($artist) {
+            $name = trim((string) ($artist['name'] ?? ''));
+            return $name === '' ? null : ['@type' => 'PerformingGroup', 'name' => $name];
+        }, $pageData['artists'])))
+        : [];
+
     $pageSchema = [
         '@context' => 'https://schema.org',
         '@type' => 'Event',
@@ -97,17 +114,10 @@ if ($pageType === 'event' && isset($pageData)) {
                 'addressCountry' => 'RO'
             ]
         ],
-        'performer' => isset($pageData['artists']) ? array_map(function($artist) {
-            return [
-                '@type' => 'PerformingGroup',
-                'name' => $artist['name']
-            ];
-        }, $pageData['artists']) : null,
-        'organizer' => [
-            '@type' => 'Organization',
-            'name' => $pageData['organizer'] ?? SITE_NAME,
-            'url' => SITE_URL
-        ],
+        // Omit performer entirely when there are no artists — Google flags
+        // an empty performer array as a structured-data warning.
+        'performer' => $performers ?: null,
+        'organizer' => $organizerNode,
         'offers' => [
             '@type' => 'AggregateOffer',
             'url' => $canonicalUrl,
@@ -261,14 +271,22 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="twitter:site" content="@ambilet">
     <meta name="twitter:creator" content="@ambilet">
 
-    <!-- Schema.org Structured Data -->
-    <script type="application/ld+json"><?= json_encode($siteAndOrgSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
-    <?php if ($pageSchema): ?>
-    <script type="application/ld+json"><?= json_encode($pageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
-    <?php endif; ?>
-    <?php if ($breadcrumbSchema): ?>
-    <script type="application/ld+json"><?= json_encode($breadcrumbSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
-    <?php endif; ?>
+    <!-- Schema.org Structured Data: single @graph block with site, page and breadcrumb nodes. -->
+    <?php
+        $schemaGraph = $siteAndOrgSchema['@graph'];
+        if ($pageSchema) {
+            $node = $pageSchema;
+            unset($node['@context']);
+            $schemaGraph[] = $node;
+        }
+        if ($breadcrumbSchema) {
+            $node = $breadcrumbSchema;
+            unset($node['@context']);
+            $schemaGraph[] = $node;
+        }
+        $schemaPayload = ['@context' => 'https://schema.org', '@graph' => $schemaGraph];
+    ?>
+    <script type="application/ld+json"><?= json_encode($schemaPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
 
     <!-- Critical CSS (inline above-the-fold styles) -->
     <style>
