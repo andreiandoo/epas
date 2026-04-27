@@ -10,6 +10,7 @@
     $period = $tour->period;
     $totalCapacity = $tour->total_capacity;
     $totalSold = $tour->total_sold;
+    $totalNet = $tour->total_net;
     $cities = $tour->cities;
     $artists = $tour->distinct_artists;
 
@@ -45,7 +46,7 @@
     </div>
 @else
     {{-- Summary cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
             <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Evenimente</div>
             <div class="text-2xl font-bold text-gray-900 dark:text-white">{{ $events->count() }}</div>
@@ -61,6 +62,10 @@
         <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
             <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Bilete vândute</div>
             <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalSold) }}</div>
+        </div>
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+            <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">Încasări nete</div>
+            <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalNet, 2, ',', '.') }} <span class="text-xs font-normal text-gray-500">RON</span></div>
         </div>
     </div>
 

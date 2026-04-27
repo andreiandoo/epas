@@ -155,6 +155,23 @@ class Tour extends Model
     }
 
     /**
+     * Total net revenue (RON) across all linked events. Uses the same
+     * formula as EventResource Vânzări tab — Net (RON) card —
+     * via EventResource::getSalesBreakdown(), so the tour-level number
+     * is just the sum of every event's published net.
+     */
+    public function getTotalNetAttribute(): float
+    {
+        $events = $this->events()->get();
+        $total = 0.0;
+        foreach ($events as $event) {
+            $breakdown = \App\Filament\Marketplace\Resources\EventResource::getSalesBreakdown($event);
+            $total += (float) ($breakdown['total_net'] ?? 0);
+        }
+        return round($total, 2);
+    }
+
+    /**
      * Distinct cities across linked events' venues.
      *
      * @return Collection<int, string>
