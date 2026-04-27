@@ -43,6 +43,7 @@ class MarketplaceContactList extends Model
         'purchased_category' => 'Purchased from category',
         'purchased_genre' => 'Purchased from genre',
         'has_refund_request' => 'Has requested refund',
+        'is_organizer' => 'Is an event organizer (email matches marketplace_organizers)',
         'city' => 'Lives in city',
         'state' => 'Lives in state/region',
         'age_less_than' => 'Age less than',
@@ -166,6 +167,22 @@ class MarketplaceContactList extends Model
 
             case 'has_refund_request':
                 $query->whereHas('refundRequests');
+                break;
+
+            case 'is_organizer':
+                // Match customers whose email exists in the same marketplace's
+                // marketplace_organizers table. Without this case the rule
+                // silently fell through and the list collected every active
+                // customer (was the source of the 17K-row Organizatori list
+                // when only ~512 organizers actually existed).
+                $query->whereIn(
+                    DB::raw('lower(trim(' . $query->getModel()->getTable() . '.email))'),
+                    MarketplaceOrganizer::query()
+                        ->where('marketplace_client_id', $this->marketplace_client_id)
+                        ->whereNotNull('email')
+                        ->where('email', '!=', '')
+                        ->select(DB::raw('lower(trim(email))'))
+                );
                 break;
 
             case 'city':
