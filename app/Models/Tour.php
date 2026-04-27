@@ -135,17 +135,21 @@ class Tour extends Model
 
     /**
      * Total tickets sold across linked events.
-     * Mirrors Event::getTotalTicketsSoldAttribute (which queries the tickets
-     * table directly by event_id with status valid/used and a paid/confirmed/
-     * completed order) so the Tour aggregate matches what each linked event
-     * shows on /marketplace/events/{id}/edit when summed up.
+     * Mirrors the per-type "Valide" count from EventResource Vânzări tab
+     * (line ~3157) so the Tour aggregate matches the per-type breakdown
+     * shown on /marketplace/events/{id}/edit. Includes invitations
+     * (no order) and excludes externally-imported orders.
      */
     public function getTotalSoldAttribute(): int
     {
-        return (int) Ticket::whereIn('event_id', $this->events()->pluck('id'))
+        $eventIds = $this->events()->pluck('id');
+        if ($eventIds->isEmpty()) return 0;
+
+        return (int) Ticket::whereIn('event_id', $eventIds)
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed']);
+            ->where(function ($q) {
+                $q->whereDoesntHave('order')
+                    ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
             })
             ->count();
     }

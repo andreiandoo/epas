@@ -117,11 +117,23 @@
                 @foreach($events as $event)
                     @php
                         $eventCap = $event->total_capacity;
-                        // Use the canonical Event::total_tickets_sold accessor — same source
-                        // of truth /marketplace/events/{id}/edit shows, queries Tickets
-                        // directly by event_id (not through order.event_id) so it picks up
-                        // tickets that have a different event_id linkage path.
-                        $eventSold = (int) $event->total_tickets_sold;
+                        // Mirror the per-type "Valide" count from EventResource Vânzări tab
+                        // (line ~3157): tickets with status valid|used, excluding orders
+                        // imported externally. One grouped query per event so the per-type
+                        // pills below reuse the same numbers as the row total.
+                        $ticketTypeIds = $event->ticketTypes->pluck('id');
+                        $soldByTypeId = $ticketTypeIds->isEmpty()
+                            ? collect()
+                            : \App\Models\Ticket::whereIn('ticket_type_id', $ticketTypeIds)
+                                ->whereIn('status', ['valid', 'used'])
+                                ->where(function ($q) {
+                                    $q->whereDoesntHave('order')
+                                      ->orWhereHas('order', fn ($qq) => $qq->where('source', '!=', 'external_import'));
+                                })
+                                ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
+                                ->groupBy('ticket_type_id')
+                                ->pluck('cnt', 'ticket_type_id');
+                        $eventSold = (int) $soldByTypeId->sum();
                         [$statusLabel, $statusClasses] = $statusBadge($event);
                         $editUrl = '/marketplace/events/' . $event->id . '/edit';
                     @endphp
@@ -162,7 +174,9 @@
                                     @foreach($event->ticketTypes as $tt)
                                         @php
                                             $price = $tt->price_cents ? number_format($tt->price_cents / 100, 2) . ' lei' : 'Gratis';
-                                            $sold = (int) ($tt->quota_sold ?? 0);
+                                            // Use the same per-type valid count as the row total above (and as
+                                            // EventResource Vânzări tab) — quota_sold drifts on legacy events.
+                                            $sold = (int) ($soldByTypeId[$tt->id] ?? 0);
                                             $quota = (int) ($tt->quota_total ?? 0);
                                             $isInvitation = (bool) ($tt->meta['is_invitation'] ?? false);
                                         @endphp
