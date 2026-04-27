@@ -34,12 +34,27 @@ class MarketplaceCustomerObserver
         }
 
         try {
+            // Build the link via the resource so the slug is always correct,
+            // and tolerate the resource being unregistered (the route helper
+            // would otherwise throw and abort the customer create).
+            $editUrl = null;
+            if (class_exists(\App\Filament\Marketplace\Resources\MarketplaceCustomerResource::class)) {
+                try {
+                    $editUrl = \App\Filament\Marketplace\Resources\MarketplaceCustomerResource::getUrl(
+                        'edit',
+                        ['record' => $customer->id]
+                    );
+                } catch (\Throwable $urlEx) {
+                    $editUrl = null;
+                }
+            }
+
             $this->notificationService->notifyCustomerRegistration(
                 $customer->marketplace_client_id,
                 $customer->name ?? ($customer->first_name . ' ' . $customer->last_name) ?? 'Client nou',
                 $customer->email ?? '',
                 $customer,
-                route('filament.marketplace.resources.customers.edit', ['record' => $customer->id])
+                $editUrl
             );
         } catch (\Exception $e) {
             Log::warning('Failed to create customer registration notification', [
