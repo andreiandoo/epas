@@ -26,15 +26,16 @@ class ToursController extends Controller
 
         $locale = $request->query('locale', 'ro');
 
+        // Match tours by either:
+        //   - tour.tenant_id = current tenant (direct ownership)
+        //   - any event in this tour belongs to the current tenant
+        // The second branch covers legacy tours created via EventResource
+        // before tenant_id was being set on the tour itself.
         $tour = Tour::query()
             ->where('slug', $slug)
             ->where(function ($q) use ($tenant) {
-                // Tours are scoped per marketplace_client; the public tenant
-                // resolution gives us tenant_id, so accept either
-                $q->where('tenant_id', $tenant->id);
-                if (!empty($tenant->marketplace_client_id)) {
-                    $q->orWhere('marketplace_client_id', $tenant->marketplace_client_id);
-                }
+                $q->where('tenant_id', $tenant->id)
+                    ->orWhereHas('events', fn ($eq) => $eq->where('tenant_id', $tenant->id));
             })
             ->with([
                 'artist:id,name,slug,main_image_url',

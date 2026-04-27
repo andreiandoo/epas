@@ -115,6 +115,7 @@
                     <th class="py-2 px-3">Status</th>
                     <th class="py-2 px-3 text-right">Capacitate</th>
                     <th class="py-2 px-3 text-right">Vândute</th>
+                    <th class="py-2 px-3 text-right">Net (RON)</th>
                     <th class="py-2 px-3">Tipuri bilete</th>
                 </tr>
             </thead>
@@ -139,6 +140,9 @@
                                 ->groupBy('ticket_type_id')
                                 ->pluck('cnt', 'ticket_type_id');
                         $eventSold = (int) $soldByTypeId->sum();
+                        // Net (RON) per event — same source admin Vânzări card uses.
+                        $eventBreakdown = \App\Filament\Marketplace\Resources\EventResource::getSalesBreakdown($event);
+                        $eventNet = (float) ($eventBreakdown['total_net'] ?? 0);
                         [$statusLabel, $statusClasses] = $statusBadge($event);
                         $editUrl = '/marketplace/events/' . $event->id . '/edit';
                     @endphp
@@ -170,6 +174,9 @@
                                     <span class="ml-1 text-[10px] text-gray-400">/ {{ number_format($eventCap) }}</span>
                                 @endif
                             </span>
+                        </td>
+                        <td class="py-2 px-3 text-right font-mono {{ $eventNet > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-500' }}">
+                            {{ number_format($eventNet, 2, ',', '.') }}
                         </td>
                         <td class="py-2 px-3">
                             @if($event->ticketTypes->isEmpty())

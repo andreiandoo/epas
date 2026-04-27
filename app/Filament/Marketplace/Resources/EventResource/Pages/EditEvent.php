@@ -1314,9 +1314,13 @@ class EditEvent extends EditRecord
                     Tour::where('id', $this->record->tour_id)->update($updateData);
                     \Log::info('[TourDebug] UPDATED existing tour', ['tour_id' => $this->record->tour_id, 'data' => $updateData]);
                 } else {
-                    // Create a brand-new tour and assign only this event
+                    // Create a brand-new tour and assign only this event.
+                    // Pass tenant_id through so the public ambilet.ro/turnee/{slug}
+                    // page (TenantClient\ToursController) can match the tour
+                    // directly without falling back to the events whereHas check.
                     $tour = Tour::create([
                         'marketplace_client_id' => $this->record->marketplace_client_id,
+                        'tenant_id' => $this->record->tenant_id,
                         'name' => $tourName,
                         'slug' => $tourSlug,
                         'type' => $groupingType,
