@@ -333,6 +333,10 @@ $scriptsExtra = <<<'JS'
     if (!slug) return;
 
     const $ = (id) => document.getElementById(id);
+    // Null-safe textContent setter — when the page template trims an element
+    // (e.g. user removed a meta card from the HTML), the JS shouldn't crash.
+    const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    const setHTML = (id, value) => { const el = document.getElementById(id); if (el) el.innerHTML = value; };
     const esc = (s) => { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; };
     const show = (el, isVisible) => { if (!el) return; if (isVisible) el.removeAttribute('data-hidden'); else el.setAttribute('data-hidden',''); };
     const initials = (name) => (name || '?').split(/\s+/).filter(Boolean).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?';
@@ -503,22 +507,25 @@ $scriptsExtra = <<<'JS'
             document.body.removeChild(ta);
         }
 
-        // META STRIP
-        $('metaPeriod').textContent = shortPeriod(periodStart, periodEnd);
+        // META STRIP — setText is null-safe so any card the template trims
+        // away (e.g. metaCapacity / metaCapacityNote when those rows were
+        // removed from the HTML) silently no-ops.
+        setText('metaPeriod', shortPeriod(periodStart, periodEnd));
         if (periodStart && periodEnd) {
             const days = daysBetween(periodStart, periodEnd);
-            if (days != null) $('metaPeriodDays').textContent = days === 0 ? '1 zi' : (days + 1) + ' zile';
+            if (days != null) setText('metaPeriodDays', days === 0 ? '1 zi' : (days + 1) + ' zile');
         }
 
         const cities = aggregates.cities || [];
-        $('metaCities').textContent = cities.length === 0 ? '—' : (cities.length + (cities.length === 1 ? ' oraș' : ' orașe'));
-        $('metaCitiesList').textContent = cities.slice(0, 4).join(' · ');
+        setText('metaCities', cities.length === 0 ? '—' : (cities.length + (cities.length === 1 ? ' oraș' : ' orașe')));
+        setText('metaCitiesList', cities.slice(0, 4).join(' · '));
 
-        $('metaCapacity').textContent = (aggregates.total_capacity ?? 0) > 0 || aggregates.total_capacity === -1
+        const capText = (aggregates.total_capacity ?? 0) > 0 || aggregates.total_capacity === -1
             ? fmtCapacity(aggregates.total_capacity)
             : '—';
+        setText('metaCapacity', capText);
         if ((aggregates.total_sold ?? 0) > 0) {
-            $('metaCapacityNote').textContent = fmtNumber(aggregates.total_sold) + ' vândute';
+            setText('metaCapacityNote', fmtNumber(aggregates.total_sold) + ' vândute');
         }
 
         // Min price across events
@@ -530,40 +537,36 @@ $scriptsExtra = <<<'JS'
             });
         });
         if (isFinite(minPrice)) {
-            $('metaPrice').innerHTML = 'de la <span class="text-primary">' + minPrice.toFixed(0) + ' lei</span>';
+            setHTML('metaPrice', 'de la <span class="text-primary">' + minPrice.toFixed(0) + ' lei</span>');
         } else {
-            $('metaPrice').textContent = '—';
+            setText('metaPrice', '—');
         }
 
         // Setlist duration in meta
-        if (tour.setlist_duration_minutes) {
-            $('metaDuration').textContent = '~' + tour.setlist_duration_minutes + ' min';
-        } else {
-            $('metaDuration').textContent = '—';
-        }
+        setText('metaDuration', tour.setlist_duration_minutes ? '~' + tour.setlist_duration_minutes + ' min' : '—');
 
         // PROGRESS
         const totalEvents = events.length;
         const now = Date.now();
         const completedEvents = events.filter(e => e.starts_at && new Date(e.starts_at).getTime() < now).length;
         const upcomingEvents = events.filter(e => !e.starts_at || new Date(e.starts_at).getTime() >= now);
-        $('progressLabel').textContent = '· ' + completedEvents + ' din ' + totalEvents + (totalEvents === 1 ? ' concert realizat' : ' concerte realizate');
+        setText('progressLabel', '· ' + completedEvents + ' din ' + totalEvents + (totalEvents === 1 ? ' concert realizat' : ' concerte realizate'));
 
         const nextEvent = upcomingEvents[0] || null;
         const tourHasStarted = completedEvents > 0;
         if (nextEvent) {
             const days = Math.ceil((new Date(nextEvent.starts_at).getTime() - now) / (1000 * 60 * 60 * 24));
             if (tourHasStarted) {
-                $('progressTimeline').textContent = days <= 0
+                setText('progressTimeline', days <= 0
                     ? 'Următorul concert: astăzi'
-                    : 'Următorul concert în ' + days + (days === 1 ? ' zi' : ' zile');
+                    : 'Următorul concert în ' + days + (days === 1 ? ' zi' : ' zile'));
             } else {
-                $('progressTimeline').textContent = days <= 0
+                setText('progressTimeline', days <= 0
                     ? 'Începe astăzi'
-                    : 'Începe în ' + days + (days === 1 ? ' zi' : ' zile');
+                    : 'Începe în ' + days + (days === 1 ? ' zi' : ' zile'));
             }
         } else if (completedEvents === totalEvents && totalEvents > 0) {
-            $('progressTimeline').textContent = 'Turneu finalizat';
+            setText('progressTimeline', 'Turneu finalizat');
         }
 
         let progressPct = 0;
