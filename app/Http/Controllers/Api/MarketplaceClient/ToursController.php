@@ -34,7 +34,7 @@ class ToursController extends BaseController
         $events = $tour->events()
             ->where('is_published', true)
             ->where('marketplace_client_id', $client->id)
-            ->with(['venue:id,name,city,slug', 'ticketTypes:id,event_id,name,price_cents,quota_total,quota_sold,meta'])
+            ->with(['venue:id,name,city,slug,lat,lng,address', 'ticketTypes:id,event_id,name,price_cents,quota_total,quota_sold,meta'])
             ->orderBy('event_date')
             ->get();
 
@@ -110,6 +110,9 @@ class ToursController extends BaseController
                     'name' => $venueName($e->venue),
                     'city' => $e->venue->city,
                     'slug' => $e->venue->slug,
+                    'address' => $e->venue->address,
+                    'lat' => $e->venue->lat !== null ? (float) $e->venue->lat : null,
+                    'lng' => $e->venue->lng !== null ? (float) $e->venue->lng : null,
                 ] : null,
                 'ticket_types' => $ticketTypes,
             ];
