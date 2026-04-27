@@ -401,7 +401,7 @@ class NewsletterResource extends Resource
                             // may overlap.
                             $rows = [];
                             if (($b['lists'] ?? 0) > 0) {
-                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din liste (clienți opt-in)</span><span class="font-semibold">' . number_format($b['lists']) . '</span></div>';
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din liste</span><span class="font-semibold">' . number_format($b['lists']) . '</span></div>';
                             }
                             if (($b['organizers'] ?? 0) > 0) {
                                 $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Organizatori</span><span class="font-semibold">' . number_format($b['organizers']) . '</span></div>';

@@ -116,10 +116,14 @@ class MarketplaceNewsletter extends Model
 
         $customerIds = collect();
 
-        // ---- Regular lists / tags (marketing; respects opt-in) ----
+        // ---- Regular lists / tags ----
+        // The organizer's list pick IS the consent — every email carries an
+        // unsubscribe link, and Filament's "Abonați" list is already the
+        // pre-segmented opt-in cohort. Filtering by accepts_marketing here
+        // double-filters: a "Clienți" list (designed to be the non-marketing
+        // segment) would always come back empty, defeating the segmentation.
         if (!empty($regularListIds) || !empty($this->target_tags)) {
-            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-                ->where('accepts_marketing', true);
+            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId);
 
             if (!empty($regularListIds)) {
                 $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
@@ -272,7 +276,6 @@ class MarketplaceNewsletter extends Model
         $listsCount = 0;
         if (!empty($regularListIds)) {
             $listsCount = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-                ->where('accepts_marketing', true)
                 ->whereHas('contactLists', function ($qq) use ($regularListIds) {
                     $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
                         ->where('marketplace_contact_list_members.status', 'subscribed');
@@ -283,7 +286,6 @@ class MarketplaceNewsletter extends Model
         $tagsCount = 0;
         if (!empty($this->target_tags)) {
             $tagsCount = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-                ->where('accepts_marketing', true)
                 ->whereHas('tags', function ($qq) {
                     $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
                 })
@@ -322,10 +324,9 @@ class MarketplaceNewsletter extends Model
 
         $emails = collect();
 
-        // Regular lists / tags branch (opt-in)
+        // Regular lists / tags branch
         if (!empty($regularListIds) || !empty($this->target_tags)) {
-            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId)
-                ->where('accepts_marketing', true);
+            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId);
             if (!empty($regularListIds)) {
                 $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
                     $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
