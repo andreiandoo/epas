@@ -76,6 +76,14 @@ class ToursController extends BaseController
                 ])
                 ->values();
 
+            // Available capacity = the same number admin sees in the event form's
+            // "Capacitate generală" badge: general_quota - non-independent quota_sold.
+            // Falls back to total_capacity when general_quota isn't set; -1 means unlimited.
+            $availableCapacity = $e->shared_pool_remaining;
+            if ($availableCapacity === null) {
+                $availableCapacity = $e->total_capacity;
+            }
+
             return [
                 'id' => $e->id,
                 'name' => $eventTitle($e),
@@ -83,6 +91,8 @@ class ToursController extends BaseController
                 'event_date' => $e->event_date?->toIso8601String(),
                 'starts_at' => $e->starts_at?->toIso8601String() ?? $e->event_date?->toIso8601String(),
                 'image' => $storageUrl($e->hero_image_url),
+                'general_quota' => $e->general_quota,
+                'available_capacity' => $availableCapacity,
                 'venue' => $e->venue ? [
                     'id' => $e->venue->id,
                     'name' => $venueName($e->venue),

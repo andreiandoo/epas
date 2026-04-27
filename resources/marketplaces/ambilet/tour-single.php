@@ -41,7 +41,7 @@ require_once __DIR__ . '/includes/header.php';
 </style>
 
 <!-- HERO with poster -->
-<section class="px-4 pt-4 mx-auto max-w-7xl md:px-6">
+<section class="px-4 pt-4 mx-auto max-w-7xl md:px-6 mt-17 mobile:mt-16">
   <div class="overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950 rounded-2xl card-shadow">
     <div class="grid items-stretch grid-cols-1 md:grid-cols-12">
       <!-- POSTER (left) -->
@@ -93,7 +93,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="flex flex-col justify-center flex-1">
           <div class="flex flex-wrap items-center gap-2 mb-3" id="tourBadges"></div>
           <h1 id="tourName" class="mb-3 text-3xl font-black tracking-tight md:text-5xl">
-            <span class="inline-block rounded h-12 w-80 bg-white/20 animate-pulse"></span>
+            <span class="inline-block h-12 rounded w-80 bg-white/20 animate-pulse"></span>
           </h1>
           <div class="flex items-center gap-2 mb-4" id="tourArtistChip" data-hidden>
             <a id="tourArtistChipLink" href="#" class="flex items-center gap-2 group">
@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- META STRIP -->
 <section class="px-4 mx-auto mt-4 max-w-7xl md:px-6">
-  <div class="grid grid-cols-2 gap-4 p-4 bg-white rounded-2xl card-shadow md:p-5 md:grid-cols-5 md:gap-0 md:divide-x divide-slate-200">
+  <div class="grid grid-cols-2 gap-4 p-4 bg-white rounded-2xl card-shadow md:p-5 md:grid-cols-4 md:gap-0 md:divide-x divide-slate-200">
     <div class="md:px-5 first:pl-0">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
@@ -137,14 +137,6 @@ require_once __DIR__ . '/includes/header.php';
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaCities">—</div>
       <div class="text-xs text-slate-500 mt-0.5" id="metaCitiesList"></div>
-    </div>
-    <div class="md:px-5">
-      <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>
-        Capacitate totală
-      </div>
-      <div class="text-sm font-bold text-slate-900" id="metaCapacity">—</div>
-      <div class="text-xs text-slate-500 mt-0.5" id="metaCapacityNote"></div>
     </div>
     <div class="md:px-5">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
@@ -206,7 +198,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- LIST -->
         <div id="datesList" class="border-t divide-y divide-slate-100 border-slate-100">
           <div class="p-6 animate-pulse">
-            <div class="h-16 bg-slate-100 rounded-xl mb-3"></div>
+            <div class="h-16 mb-3 bg-slate-100 rounded-xl"></div>
             <div class="h-16 bg-slate-100 rounded-xl"></div>
           </div>
         </div>
@@ -223,7 +215,7 @@ require_once __DIR__ . '/includes/header.php';
           </div>
           <h2 class="text-xl font-bold">Despre turneu</h2>
         </div>
-        <div id="tourDescription" class="prose prose-slate max-w-none mb-6 text-slate-700"></div>
+        <div id="tourDescription" class="mb-6 prose prose-slate max-w-none text-slate-700"></div>
 
         <!-- Setlist -->
         <div id="setlistCard" class="p-5 text-white bg-slate-900 rounded-xl" data-hidden>
@@ -396,7 +388,7 @@ $scriptsExtra = <<<'JS'
     }
 
     function showNotFound() {
-        document.body.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-slate-50"><div class="text-center"><h1 class="text-2xl font-bold text-slate-900 mb-2">Turneu negăsit</h1><p class="text-slate-500 mb-6">Linkul accesat nu mai e valabil.</p><a href="/" class="px-4 py-2 rounded-lg bg-primary text-white font-semibold">Înapoi la pagina principală</a></div></div>';
+        document.body.innerHTML = '<div class="flex items-center justify-center min-h-screen bg-slate-50"><div class="text-center"><h1 class="mb-2 text-2xl font-bold text-slate-900">Turneu negăsit</h1><p class="mb-6 text-slate-500">Linkul accesat nu mai e valabil.</p><a href="/" class="px-4 py-2 font-semibold text-white rounded-lg bg-primary">Înapoi la pagina principală</a></div></div>';
     }
 
     function render(data) {
@@ -554,12 +546,22 @@ $scriptsExtra = <<<'JS'
         const totalEvents = events.length;
         const now = Date.now();
         const completedEvents = events.filter(e => e.starts_at && new Date(e.starts_at).getTime() < now).length;
+        const upcomingEvents = events.filter(e => !e.starts_at || new Date(e.starts_at).getTime() >= now);
         $('progressLabel').textContent = '· ' + completedEvents + ' din ' + totalEvents + (totalEvents === 1 ? ' concert realizat' : ' concerte realizate');
 
-        const nextEvent = events.find(e => e.starts_at && new Date(e.starts_at).getTime() >= now);
+        const nextEvent = upcomingEvents[0] || null;
+        const tourHasStarted = completedEvents > 0;
         if (nextEvent) {
             const days = Math.ceil((new Date(nextEvent.starts_at).getTime() - now) / (1000 * 60 * 60 * 24));
-            $('progressTimeline').textContent = days <= 0 ? 'Începe astăzi' : 'Începe în ' + days + (days === 1 ? ' zi' : ' zile');
+            if (tourHasStarted) {
+                $('progressTimeline').textContent = days <= 0
+                    ? 'Următorul concert: astăzi'
+                    : 'Următorul concert în ' + days + (days === 1 ? ' zi' : ' zile');
+            } else {
+                $('progressTimeline').textContent = days <= 0
+                    ? 'Începe astăzi'
+                    : 'Începe în ' + days + (days === 1 ? ' zi' : ' zile');
+            }
         } else if (completedEvents === totalEvents && totalEvents > 0) {
             $('progressTimeline').textContent = 'Turneu finalizat';
         }
@@ -571,13 +573,47 @@ $scriptsExtra = <<<'JS'
         if (periodStart) $('progressStart').textContent = new Date(periodStart).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
         if (periodEnd) $('progressEnd').textContent = new Date(periodEnd).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' });
 
-        // DATES LIST
+        // DATES LIST — upcoming first; past events behind a collapsed toggle
         const list = $('datesList');
         if (events.length === 0) {
             list.innerHTML = '';
             show($('datesEmpty'), true);
         } else {
-            list.innerHTML = events.map((e, idx) => buildDateRow(e, idx, events.length, now)).join('');
+            const pastEvents = events.filter(e => e.starts_at && new Date(e.starts_at).getTime() < now);
+            // Stop number assigned by global event order (oldest first) so an event's
+            // "Stop N" matches its place in the original tour list, regardless of
+            // whether it's past or upcoming.
+            const stopNumberById = new Map();
+            events.forEach((e, idx) => stopNumberById.set(e.id, idx + 1));
+
+            const upcomingHtml = upcomingEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now, /*isPast*/ false)).join('');
+            const pastHtml = pastEvents.map(e => buildDateRow(e, stopNumberById.get(e.id), events.length, now, /*isPast*/ true)).join('');
+
+            const togglePastHtml = pastEvents.length > 0
+                ? `
+                    <button id="togglePastEvents" type="button" class="w-full flex items-center justify-between gap-3 px-6 py-3 text-sm font-semibold transition border-t bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-100">
+                        <span class="flex items-center gap-2">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Evenimente încheiate · ${pastEvents.length}
+                        </span>
+                        <svg id="togglePastEventsChevron" class="transition-transform" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div id="pastEventsList" data-hidden>${pastHtml}</div>
+                `
+                : '';
+
+            list.innerHTML = upcomingHtml + togglePastHtml;
+
+            const toggle = $('togglePastEvents');
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const panel = $('pastEventsList');
+                    const chev = $('togglePastEventsChevron');
+                    const opening = panel.hasAttribute('data-hidden');
+                    show(panel, opening);
+                    chev.style.transform = opening ? 'rotate(180deg)' : 'rotate(0deg)';
+                });
+            }
         }
 
         // ABOUT (description + setlist)
@@ -607,7 +643,7 @@ $scriptsExtra = <<<'JS'
         const guestsList = artistsList.filter(a => !headlinerId || a.id !== headlinerId);
 
         if (headlinerData?.name) {
-            const av = headlinerData.image ? `<div class="flex items-center justify-center flex-none w-16 h-16 rounded-full bg-cover bg-center ring-2 ring-primary" style="background-image:url(${esc(headlinerData.image)})"></div>` : `<div class="flex items-center justify-center flex-none w-16 h-16 font-bold text-white rounded-full bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-primary">${esc(initials(headlinerData.name))}</div>`;
+            const av = headlinerData.image ? `<div class="flex items-center justify-center flex-none w-16 h-16 bg-center bg-cover rounded-full ring-2 ring-primary" style="background-image:url(${esc(headlinerData.image)})"></div>` : `<div class="flex items-center justify-center flex-none w-16 h-16 font-bold text-white rounded-full bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-primary">${esc(initials(headlinerData.name))}</div>`;
             $('headlinerCard').innerHTML = `
                 <a href="/artist/${esc(headlinerData.slug || '')}" class="flex items-center gap-4 p-4 mb-3 transition border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent rounded-xl group hover:border-primary">
                     ${av}
@@ -625,7 +661,7 @@ $scriptsExtra = <<<'JS'
         if (guestsList.length > 0) {
             $('guestsGrid').innerHTML = guestsList.map(g => {
                 const av = g.image
-                    ? `<div class="mb-2 rounded-full aspect-square bg-cover bg-center ring-2 ring-transparent group-hover:ring-primary" style="background-image:url(${esc(g.image)})"></div>`
+                    ? `<div class="mb-2 bg-center bg-cover rounded-full aspect-square ring-2 ring-transparent group-hover:ring-primary" style="background-image:url(${esc(g.image)})"></div>`
                     : `<div class="flex items-center justify-center mb-2 text-xl font-bold text-white transition rounded-full aspect-square bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-transparent group-hover:ring-primary">${esc(initials(g.name))}</div>`;
                 return `
                     <a href="/artist/${esc(g.slug || '')}" class="p-3 text-center transition group rounded-xl hover:bg-slate-50">
@@ -646,7 +682,7 @@ $scriptsExtra = <<<'JS'
                         <span class="text-sm font-semibold text-slate-900">${esc(item.question || '')}</span>
                         <svg class="flex-none transition text-slate-400 group-open:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     </summary>
-                    <div class="px-4 pt-3 pb-4 text-sm leading-relaxed border-t text-slate-600 border-slate-100 whitespace-pre-line">${esc(item.answer || '')}</div>
+                    <div class="px-4 pt-3 pb-4 text-sm leading-relaxed whitespace-pre-line border-t text-slate-600 border-slate-100">${esc(item.answer || '')}</div>
                 </details>
             `).join('');
             show($('faqSection'), true);
@@ -674,12 +710,10 @@ $scriptsExtra = <<<'JS'
         if (tour.age_min) infoRows.push(['Vârstă minimă', tour.age_min]);
         if (tour.setlist_duration_minutes) infoRows.push(['Durată concert', '~' + tour.setlist_duration_minutes + ' min']);
         infoRows.push(['Evenimente', fmtNumber(aggregates.total_events ?? 0)]);
-        infoRows.push(['Capacitate totală', fmtCapacity(aggregates.total_capacity ?? 0)]);
-        if ((aggregates.total_sold ?? 0) > 0) infoRows.push(['Bilete vândute', fmtNumber(aggregates.total_sold)]);
         $('infoList').innerHTML = infoRows.map(([k, v]) => `
             <div class="flex items-center justify-between gap-3 px-5 py-3">
                 <dt class="text-xs font-medium tracking-wide uppercase text-slate-500">${esc(k)}</dt>
-                <dd class="text-sm font-medium text-slate-900 text-right">${esc(v)}</dd>
+                <dd class="text-sm font-medium text-right text-slate-900">${esc(v)}</dd>
             </div>
         `).join('');
 
@@ -709,10 +743,10 @@ $scriptsExtra = <<<'JS'
         }
     }
 
-    function buildDateRow(e, idx, total, now) {
-        const startTs = e.starts_at ? new Date(e.starts_at).getTime() : null;
-        const isPast = startTs && startTs < now;
-        const isFinal = idx === total - 1 && total > 1;
+    function buildDateRow(e, stopNumber, total, now, isPast) {
+        // stopNumber = 1-based position in the original tour list (oldest first)
+        const isFirst = stopNumber === 1;
+        const isFinal = stopNumber === total && total > 1;
         const dateObj = e.starts_at ? new Date(e.starts_at) : (e.event_date ? new Date(e.event_date) : null);
         const day = dateObj ? String(dateObj.getDate()).padStart(2, '0') : '—';
         const monthShort = dateObj ? ROMONTHS[dateObj.getMonth()].slice(0, 3) : '';
@@ -721,41 +755,68 @@ $scriptsExtra = <<<'JS'
 
         const ticketTypes = (e.ticket_types || []).filter(t => Number(t.price) > 0);
         const minPrice = ticketTypes.length ? Math.min.apply(null, ticketTypes.map(t => Number(t.price))) : 0;
-        const totalQuota = (e.ticket_types || []).reduce((s, t) => s + (Number(t.quota_total) || 0), 0);
-        const totalSold = (e.ticket_types || []).reduce((s, t) => s + (Number(t.quota_sold) || 0), 0);
-        const remaining = totalQuota > 0 ? Math.max(0, totalQuota - totalSold) : 0;
+
+        // Prefer the API-supplied available_capacity (shared pool remaining or total)
+        // — same number admin's "Capacitate generală" badge shows.
+        const availableCap = (e.available_capacity != null) ? Number(e.available_capacity) : null;
+        const generalQuota = (e.general_quota != null) ? Number(e.general_quota) : null;
 
         let badge;
         if (isPast) {
             badge = '<span class="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-medium">Încheiat</span>';
-        } else if (totalQuota > 0 && remaining === 0) {
+        } else if (availableCap === 0) {
             badge = '<span class="inline-flex items-center gap-1 text-xs bg-rose-50 text-rose-700 px-2 py-0.5 rounded font-medium"><span class="w-1 h-1 rounded-full bg-rose-600"></span>Sold out</span>';
-        } else if (totalQuota > 0 && remaining < 30) {
-            badge = '<span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium"><span class="w-1 h-1 rounded-full bg-amber-600"></span>Ultimele ' + remaining + ' locuri</span>';
+        } else if (availableCap !== null && availableCap > 0 && availableCap < 30) {
+            badge = '<span class="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-medium"><span class="w-1 h-1 rounded-full bg-amber-600"></span>Ultimele ' + availableCap + ' locuri</span>';
         } else {
             badge = '<span class="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium"><span class="w-1 h-1 rounded-full bg-emerald-600"></span>Disponibil</span>';
         }
 
-        const stopLabel = idx === 0
+        const stopLabel = isFirst
             ? 'Stop 1 · Deschiderea turneului'
-            : (isFinal ? 'Stop ' + (idx + 1) + ' · Finalul turneului 🎉' : 'Stop ' + (idx + 1));
+            : (isFinal ? 'Stop ' + stopNumber + ' · Finalul turneului 🎉' : 'Stop ' + stopNumber);
         const numberCircle = isPast
-            ? '<div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-slate-400">' + (idx + 1) + '</div>'
-            : (idx === 0
-                ? '<div class="relative"><div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-primary">' + (idx + 1) + '</div><span class="absolute inset-0 rounded-full bg-primary ping-slow"></span></div>'
-                : '<div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-slate-900">' + (idx + 1) + '</div>');
-
-        const priceBlock = minPrice > 0
-            ? '<div class="text-left md:text-right"><div class="text-[11px] text-slate-500">de la</div><div class="text-lg font-bold text-slate-900">' + minPrice.toFixed(0) + ' lei</div></div>'
-            : '<div class="text-left md:text-right"><div class="text-lg font-bold text-slate-900">Gratis</div></div>';
+            ? '<div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-slate-400">' + stopNumber + '</div>'
+            : (isFirst
+                ? '<div class="relative"><div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-primary">' + stopNumber + '</div><span class="absolute inset-0 rounded-full bg-primary ping-slow"></span></div>'
+                : '<div class="flex items-center justify-center w-8 h-8 text-xs font-bold text-white rounded-full bg-slate-900">' + stopNumber + '</div>');
 
         const venueLine = e.venue ? esc(e.venue.city || '') + (e.venue.name ? ' · ' + esc(e.venue.name) : '') : esc(e.name || '');
-        const bgClass = isFinal ? ' bg-gradient-to-r from-rose-50/40 to-transparent' : '';
+        const bgClass = isFinal && !isPast ? ' bg-gradient-to-r from-rose-50/40 to-transparent' : '';
+        const finalDot = isFinal && !isPast ? '<span class="absolute w-3 h-3 border-2 border-white rounded-full -top-1 -right-1 bg-amber-400" title="Finalul turneului"></span>' : '';
 
-        const finalDot = isFinal ? '<span class="absolute w-3 h-3 border-2 border-white rounded-full -top-1 -right-1 bg-amber-400" title="Finalul turneului"></span>' : '';
+        // Capacity meta line: for active events show available, for past events show total quota
+        const capMetaLine = (() => {
+            if (isPast) {
+                if (generalQuota && generalQuota > 0) return fmtNumber(generalQuota) + ' locuri';
+                return '';
+            }
+            if (availableCap === null || availableCap < 0) return ''; // unlimited or unknown
+            return fmtNumber(availableCap) + ' locuri disponibile';
+        })();
+
+        // Past events: no price column, no clickable link to the event
+        const pastClasses = isPast ? ' opacity-70' : '';
+        const wrapperOpen = isPast
+            ? `<div class="grid items-center grid-cols-12 gap-4 p-4 border-l-4 border-transparent md:p-5${bgClass}${pastClasses}">`
+            : `<a href="/bilete/${esc(e.slug || '')}" class="grid items-center grid-cols-12 gap-4 p-4 border-l-4 border-transparent date-card md:p-5${bgClass}">`;
+        const wrapperClose = isPast ? '</div>' : '</a>';
+
+        const priceColumn = isPast
+            ? '' // past events: hide price + CTA per spec
+            : `
+                <div class="flex items-center justify-between col-span-12 gap-4 pt-3 border-t md:col-span-4 md:justify-end md:border-0 border-slate-100 md:pt-0">
+                    ${minPrice > 0
+                        ? '<div class="text-left md:text-right"><div class="text-[11px] text-slate-500">de la</div><div class="text-lg font-bold text-slate-900">' + minPrice.toFixed(0) + ' lei</div></div>'
+                        : '<div class="text-left md:text-right"><div class="text-lg font-bold text-slate-900">Gratis</div></div>'}
+                    <div class="buy-btn px-4 py-2.5 bg-slate-100 text-slate-900 rounded-lg text-sm font-semibold transition">Cumpără bilet</div>
+                </div>
+            `;
+
+        const infoColSpan = isPast ? 'col-span-10' : 'col-span-10 md:col-span-6';
 
         return `
-            <a href="/bilete/${esc(e.slug || '')}" class="grid items-center grid-cols-12 gap-4 p-4 border-l-4 border-transparent date-card md:p-5${bgClass}">
+            ${wrapperOpen}
                 <div class="flex items-center col-span-2 gap-3">
                     <div class="relative">${numberCircle}${finalDot}</div>
                     <div class="flex-none hidden overflow-hidden text-center bg-white border rounded-lg w-14 border-slate-200 md:block">
@@ -764,7 +825,7 @@ $scriptsExtra = <<<'JS'
                         <div class="text-[9px] font-medium pb-1 text-slate-500">${esc(dayShort)}</div>
                     </div>
                 </div>
-                <div class="min-w-0 col-span-10 md:col-span-6">
+                <div class="min-w-0 ${infoColSpan}">
                     <div class="flex flex-wrap items-center gap-2 mb-1">
                         <span class="text-xs font-semibold tracking-wider uppercase text-primary">${esc(stopLabel)}</span>
                         ${badge}
@@ -772,15 +833,12 @@ $scriptsExtra = <<<'JS'
                     <h3 class="mb-1 font-bold text-slate-900">${venueLine}</h3>
                     <div class="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                         ${time ? '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' + esc(time) + '</span>' : ''}
-                        ${totalQuota > 0 ? '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>' + fmtNumber(totalQuota) + ' locuri</span>' : ''}
+                        ${capMetaLine ? '<span class="flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>' + capMetaLine + '</span>' : ''}
                         ${e.name ? '<span class="flex items-center gap-1 text-slate-500"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>' + esc(e.name) + '</span>' : ''}
                     </div>
                 </div>
-                <div class="flex items-center justify-between col-span-12 gap-4 pt-3 border-t md:col-span-4 md:justify-end md:border-0 border-slate-100 md:pt-0">
-                    ${priceBlock}
-                    <div class="buy-btn px-4 py-2.5 bg-slate-100 text-slate-900 rounded-lg text-sm font-semibold transition">${isPast ? 'Vezi event' : 'Cumpără bilet'}</div>
-                </div>
-            </a>
+                ${priceColumn}
+            ${wrapperClose}
         `;
     }
 })();
