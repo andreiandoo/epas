@@ -57,7 +57,7 @@ class MarketplaceCustomerObserver
                 $editUrl
             );
         } catch (\Exception $e) {
-            Log::warning('Failed to create customer registration notification', [
+            $this->safeLog('warning', 'Failed to create customer registration notification', [
                 'customer_id' => $customer->id,
                 'error' => $e->getMessage(),
             ]);
@@ -138,7 +138,7 @@ class MarketplaceCustomerObserver
         $tenantId = $this->resolveTenantId($mc);
 
         if (!$tenantId) {
-            Log::info('Cannot sync marketplace customer to core: no tenant found', [
+            $this->safeLog('info', 'Cannot sync marketplace customer to core: no tenant found', [
                 'marketplace_customer_id' => $mc->id,
                 'marketplace_client_id' => $mc->marketplace_client_id,
             ]);
@@ -181,11 +181,29 @@ class MarketplaceCustomerObserver
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Failed to sync marketplace customer to core', [
+            $this->safeLog('warning', 'Failed to sync marketplace customer to core', [
                 'marketplace_customer_id' => $mc->id,
                 'email' => $mc->email,
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Log without aborting the observer when the log file is unwritable.
+     *
+     * Background: ploi SSH user often lacks write perms on storage/logs
+     * (web user owns the file). When the daily-log handler fails to open
+     * the file, monolog throws UnexpectedValueException — that propagates
+     * out of any artisan command that tickled the observer (e.g. customer
+     * imports), aborting the whole run mid-flight.
+     */
+    protected function safeLog(string $level, string $message, array $ctx = []): void
+    {
+        try {
+            Log::$level($message, $ctx);
+        } catch (\Throwable $e) {
+            // swallow — losing a log line is better than aborting the run
         }
     }
 
