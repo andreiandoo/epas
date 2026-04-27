@@ -120,6 +120,15 @@ class EditEvent extends EditRecord
             ->url($couponUrl)
             ->openUrlInNewTab();
 
+        // Newsletter — pre-targets ticket buyers of this event
+        $newsletterUrl = \App\Filament\Marketplace\Resources\NewsletterResource::getUrl('create')
+            . '?event=' . $this->record->id;
+        $actions[] = Actions\Action::make('newsletter')
+            ->label('Newsletter')
+            ->icon('heroicon-o-megaphone')
+            ->color('gray')
+            ->url($newsletterUrl);
+
         // Upload Images action - modal-based to avoid Livewire re-render issues
         $actions[] = $this->getUploadImagesAction();
 

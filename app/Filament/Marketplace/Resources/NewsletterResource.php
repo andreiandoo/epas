@@ -4,14 +4,18 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\NewsletterResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\Event;
 use App\Models\MarketplaceNewsletter;
 use App\Models\MarketplaceContactList;
 use App\Models\MarketplaceContactTag;
+use App\Models\MarketplaceEmailTemplate;
 use App\Models\MarketplaceEvent;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get as SGet;
+use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,75 +47,147 @@ class NewsletterResource extends Resource
 
         return $schema
             ->components([
-                SC\Section::make('Campaign Details')
+                // Top-level 4-column grid: 3 cols main content, 1 col sidebar.
+                // Stacks to a single column on mobile via Grid's responsive
+                // defaults.
+                SC\Grid::make(['default' => 1, 'lg' => 4])
                     ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Campaign Name')
-                            ->required()
-                            ->maxLength(255)
-                            ->helperText('Internal name for this campaign'),
-                        Forms\Components\Select::make('status')
-                            ->options([
-                                'draft' => 'Draft',
-                                'scheduled' => 'Scheduled',
-                                'sending' => 'Sending',
-                                'sent' => 'Sent',
-                                'cancelled' => 'Cancelled',
-                            ])
-                            ->default('draft')
-                            ->disabled(fn ($record) => in_array($record?->status, ['sending', 'sent'])),
-                    ])->columns(2),
+                        // ============ MAIN COLUMN (span 3) ============
+                        SC\Group::make(static::mainColumnSchema($marketplace))
+                            ->columnSpan(['default' => 1, 'lg' => 3]),
 
-                SC\Section::make('Recipients')
+                        // ============ SIDEBAR (span 1) ============
+                        SC\Group::make(static::sidebarSchema($marketplace))
+                            ->columnSpan(['default' => 1, 'lg' => 1]),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Main column: Campaign Details, Recipients, Email Content, Scheduling.
+     * Extracted so the layout grid stays readable.
+     */
+    protected static function mainColumnSchema($marketplace): array
+    {
+        return [
+            SC\Section::make('Campaign Details')
+                ->schema([
+                    Forms\Components\TextInput::make('name')
+                        ->label('Campaign Name')
+                        ->required()
+                        ->maxLength(255)
+                        ->helperText('Internal name for this campaign'),
+                    Forms\Components\Select::make('status')
+                        ->options([
+                            'draft' => 'Draft',
+                            'scheduled' => 'Scheduled',
+                            'sending' => 'Sending',
+                            'sent' => 'Sent',
+                            'cancelled' => 'Cancelled',
+                        ])
+                        ->default('draft')
+                        ->disabled(fn ($record) => in_array($record?->status, ['sending', 'sent'])),
+                ])->columns(2),
+
+            SC\Section::make('Recipients')
+                ->description('Send to contact lists, tag-filtered customers, or ticket buyers of specific events. Recipients are dedup-ed by email across all sources.')
+                ->schema([
+                    Forms\Components\Select::make('target_event_ids')
+                        ->label('Evenimente — către cumpărătorii biletelor')
+                        ->multiple()
+                        ->searchable()
+                        ->preload(false)
+                        ->live(onBlur: true)
+                        ->getSearchResultsUsing(function (string $search) use ($marketplace) {
+                            return Event::where('marketplace_client_id', $marketplace?->id)
+                                ->where(function ($q) use ($search) {
+                                    $q->where('title->ro', 'ilike', "%{$search}%")
+                                        ->orWhere('title->en', 'ilike', "%{$search}%")
+                                        ->orWhere('slug', 'ilike', "%{$search}%");
+                                })
+                                ->orderByDesc('event_date')
+                                ->limit(30)
+                                ->get()
+                                ->mapWithKeys(fn ($e) => [
+                                    $e->id => static::formatEventOption($e),
+                                ])
+                                ->toArray();
+                        })
+                        ->getOptionLabelsUsing(function (array $values) {
+                            return Event::whereIn('id', $values)
+                                ->get()
+                                ->mapWithKeys(fn ($e) => [
+                                    $e->id => static::formatEventOption($e),
+                                ])
+                                ->toArray();
+                        })
+                        ->helperText('Newsletter va ajunge la toți cumpărătorii cu bilete valide pe evenimentele selectate.')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Select::make('target_lists')
+                        ->label('Contact Lists')
+                        ->multiple()
+                        ->live(onBlur: true)
+                        ->options(function () use ($marketplace) {
+                            return MarketplaceContactList::where('marketplace_client_id', $marketplace?->id)
+                                ->where('is_active', true)
+                                ->pluck('name', 'id');
+                        })
+                        ->helperText('Trimite către listele de contacte selectate'),
+                    Forms\Components\Select::make('target_tags')
+                        ->label('Contact Tags')
+                        ->multiple()
+                        ->live(onBlur: true)
+                        ->options(function () use ($marketplace) {
+                            return MarketplaceContactTag::where('marketplace_client_id', $marketplace?->id)
+                                ->pluck('name', 'id');
+                        })
+                        ->helperText('Filtrează contactele după tag-uri'),
+                ])->columns(2),
+
+            SC\Section::make('Email Content')
                     ->schema([
-                        Forms\Components\Select::make('target_lists')
-                            ->label('Contact Lists')
-                            ->multiple()
+                        // Optional starting point: pick an existing email
+                        // template (Communications → Email Templates). The
+                        // afterStateUpdated hook copies its subject/body into
+                        // the form fields so the organizer can tweak before
+                        // sending. We do NOT keep a live link — once forked,
+                        // edits to the source template don't reflect here.
+                        Forms\Components\Select::make('source_email_template_id')
+                            ->label('Pornește de la un template (opțional)')
                             ->options(function () use ($marketplace) {
-                                return MarketplaceContactList::where('marketplace_client_id', $marketplace?->id)
+                                return MarketplaceEmailTemplate::where('marketplace_client_id', $marketplace?->id)
                                     ->where('is_active', true)
+                                    ->orderBy('name')
                                     ->pluck('name', 'id');
                             })
-                            ->helperText('Select contact lists to send to'),
-                        Forms\Components\Select::make('target_tags')
-                            ->label('Contact Tags')
-                            ->multiple()
-                            ->options(function () use ($marketplace) {
-                                return MarketplaceContactTag::where('marketplace_client_id', $marketplace?->id)
-                                    ->pluck('name', 'id');
-                            })
-                            ->helperText('Optionally filter by tags'),
-                        Forms\Components\Placeholder::make('recipient_preview')
-                            ->content(function ($record) {
-                                if (!$record) {
-                                    return 'Save the newsletter to preview recipients';
+                            ->searchable()
+                            ->live()
+                            ->placeholder('— niciun template —')
+                            ->helperText('Aplică conținutul unui template existent. Poți edita liber după.')
+                            ->columnSpanFull()
+                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplace) {
+                                if (!$state) return;
+                                $tpl = MarketplaceEmailTemplate::where('marketplace_client_id', $marketplace?->id)
+                                    ->where('id', $state)
+                                    ->first();
+                                if (!$tpl) return;
+                                if (empty($get('subject'))) $set('subject', $tpl->subject);
+                                // Push the template body as a single HTML
+                                // section if no sections exist yet — keeps
+                                // pre-existing drafts intact.
+                                $existing = $get('body_sections') ?? [];
+                                if (empty($existing) && !empty($tpl->body_html)) {
+                                    $set('body_sections', [[
+                                        'type' => 'html',
+                                        'html_content' => $tpl->body_html,
+                                    ]]);
                                 }
-                                $count = $record->buildRecipientList()->count();
-                                return "{$count} recipients will receive this newsletter";
+                                if (empty($get('body_text')) && !empty($tpl->body_text)) {
+                                    $set('body_text', $tpl->body_text);
+                                }
                             }),
-                    ])->columns(2),
 
-                SC\Section::make('Sender Information')
-                    ->schema([
-                        Forms\Components\TextInput::make('from_name')
-                            ->label('From Name')
-                            ->default(fn () => $marketplace?->name)
-                            ->required()
-                            ->maxLength(100),
-                        Forms\Components\TextInput::make('from_email')
-                            ->label('From Email')
-                            ->email()
-                            ->default(fn () => $marketplace?->contact_email)
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('reply_to')
-                            ->label('Reply-To Email')
-                            ->email()
-                            ->maxLength(255),
-                    ])->columns(3),
-
-                SC\Section::make('Email Content')
-                    ->schema([
                         Forms\Components\TextInput::make('subject')
                             ->required()
                             ->maxLength(255)
@@ -250,68 +326,163 @@ class NewsletterResource extends Resource
                             ->helperText('Versiune text simplu (opțional). Se generează automat dacă lipsește.'),
                     ]),
 
-                SC\Section::make('Variabile disponibile')
-                    ->schema([
-                        Forms\Components\Placeholder::make('variables_info')
-                            ->label('')
-                            ->content(new HtmlString(
-                                '<div class="text-sm space-y-3">' .
-                                '<div>' .
-                                    '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Variabile client (se completează per destinatar):</p>' .
-                                    '<div class="flex flex-wrap gap-1.5">' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{customer_name}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{customer_email}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{marketplace_name}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{unsubscribe_url}}</code>' .
-                                    '</div>' .
+            SC\Section::make('Scheduling')
+                ->schema([
+                    Forms\Components\DateTimePicker::make('scheduled_at')
+                        ->label('Send At')
+                        ->helperText('Leave empty to send immediately when you click "Send Newsletter"')
+                        ->minDate(now()),
+                ])
+                ->visible(fn ($record) => !in_array($record?->status, ['sending', 'sent'])),
+        ];
+    }
+
+    /**
+     * Sidebar column: Sender Information, Recipient stats, Variabile, post-send Statistics.
+     */
+    protected static function sidebarSchema($marketplace): array
+    {
+        return [
+            SC\Section::make('Sender Information')
+                ->schema([
+                    Forms\Components\TextInput::make('from_name')
+                        ->label('From Name')
+                        ->default(fn () => $marketplace?->name)
+                        ->required()
+                        ->maxLength(100),
+                    Forms\Components\TextInput::make('from_email')
+                        ->label('From Email')
+                        ->email()
+                        ->default(fn () => $marketplace?->contact_email)
+                        ->required()
+                        ->maxLength(255),
+                    Forms\Components\TextInput::make('reply_to')
+                        ->label('Reply-To Email')
+                        ->email()
+                        ->maxLength(255),
+                ]),
+
+            SC\Section::make('Statistici email')
+                ->schema([
+                    Forms\Components\Placeholder::make('recipient_count')
+                        ->label('Destinatari unici')
+                        ->content(function (SGet $get) use ($marketplace) {
+                            // Build a transient instance and use the same
+                            // logic the real send-time recipient build uses,
+                            // so the count here matches what'll actually be
+                            // mailed.
+                            $instance = new MarketplaceNewsletter();
+                            $instance->marketplace_client_id = $marketplace?->id;
+                            $instance->target_lists = $get('target_lists') ?? [];
+                            $instance->target_tags = $get('target_tags') ?? [];
+                            $instance->target_event_ids = $get('target_event_ids') ?? [];
+
+                            $hasTargeting = !empty($instance->target_lists)
+                                || !empty($instance->target_tags)
+                                || !empty($instance->target_event_ids);
+                            if (!$hasTargeting) {
+                                return new HtmlString('<span class="text-gray-500">Selectează evenimente / liste / tag-uri</span>');
+                            }
+                            try {
+                                $count = $instance->getRecipientCount();
+                            } catch (\Throwable $e) {
+                                $count = '?';
+                            }
+                            return new HtmlString('<span class="text-2xl font-bold text-primary-600">' . $count . '</span>');
+                        }),
+                    Forms\Components\Placeholder::make('targeted_events_summary')
+                        ->label('Evenimente țintă')
+                        ->content(function (SGet $get) {
+                            $ids = $get('target_event_ids') ?? [];
+                            if (empty($ids)) return '—';
+                            $names = Event::whereIn('id', $ids)
+                                ->limit(5)
+                                ->get()
+                                ->map(fn ($e) => static::formatEventOption($e))
+                                ->implode("\n");
+                            return new HtmlString('<div class="text-xs text-gray-700 dark:text-gray-300 space-y-1">' . nl2br(e($names)) . '</div>');
+                        })
+                        ->visible(fn (SGet $get) => !empty($get('target_event_ids'))),
+                    Forms\Components\Placeholder::make('targeted_lists_summary')
+                        ->label('Liste țintă')
+                        ->content(function (SGet $get) use ($marketplace) {
+                            $ids = $get('target_lists') ?? [];
+                            if (empty($ids)) return '—';
+                            $names = MarketplaceContactList::whereIn('id', $ids)
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->pluck('name')
+                                ->implode(', ');
+                            return $names ?: '—';
+                        })
+                        ->visible(fn (SGet $get) => !empty($get('target_lists'))),
+                ]),
+
+            SC\Section::make('Variabile disponibile')
+                ->schema([
+                    Forms\Components\Placeholder::make('variables_info')
+                        ->label('')
+                        ->content(new HtmlString(
+                            '<div class="text-xs space-y-3">' .
+                            '<div>' .
+                                '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Per destinatar:</p>' .
+                                '<div class="flex flex-wrap gap-1">' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{customer_name}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{customer_email}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{marketplace_name}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{unsubscribe_url}}</code>' .
                                 '</div>' .
-                                '<div>' .
-                                    '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Variabile eveniment (înlocuiește ID cu id-ul evenimentului):</p>' .
-                                    '<div class="flex flex-wrap gap-1.5">' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:name}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:date}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:venue}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:image}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:url}}</code>' .
-                                        '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">{{event:ID:price}}</code>' .
-                                    '</div>' .
-                                    '<p class="text-xs text-gray-500 mt-1">Exemplu: {{event:42:name}} va fi înlocuit cu numele evenimentului cu ID 42.</p>' .
+                            '</div>' .
+                            '<div>' .
+                                '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Eveniment (înlocuiește ID):</p>' .
+                                '<div class="flex flex-wrap gap-1">' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:name}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:date}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:venue}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:image}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:url}}</code>' .
+                                    '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:price}}</code>' .
                                 '</div>' .
-                                '</div>'
-                            )),
-                    ])
-                    ->collapsed(),
+                            '</div>' .
+                            '</div>'
+                        )),
+                ])
+                ->collapsed(),
 
-                SC\Section::make('Scheduling')
-                    ->schema([
-                        Forms\Components\DateTimePicker::make('scheduled_at')
-                            ->label('Send At')
-                            ->helperText('Leave empty to send immediately when you click "Send Newsletter"')
-                            ->minDate(now()),
-                    ])
-                    ->visible(fn ($record) => !in_array($record?->status, ['sending', 'sent'])),
+            SC\Section::make('Send results')
+                ->schema([
+                    Forms\Components\Placeholder::make('stats')
+                        ->content(function ($record) {
+                            if (!$record || $record->status === 'draft') {
+                                return 'După trimitere apar statisticile aici.';
+                            }
+                            $html = '<div class="space-y-2 text-sm">';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Total</span><span class="font-bold">' . number_format($record->total_recipients) . '</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Sent</span><span class="font-bold text-green-600">' . number_format($record->sent_count) . '</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Opened</span><span class="font-bold">' . number_format($record->opened_count) . ' (' . $record->open_rate . '%)</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Clicked</span><span class="font-bold">' . number_format($record->clicked_count) . ' (' . $record->click_rate . '%)</span></div>';
+                            $html .= '</div>';
+                            return new HtmlString($html);
+                        }),
+                ])
+                ->visible(fn ($record) => $record && $record->status !== 'draft'),
+        ];
+    }
 
-                SC\Section::make('Statistics')
-                    ->schema([
-                        Forms\Components\Placeholder::make('stats')
-                            ->content(function ($record) {
-                                if (!$record || $record->status === 'draft') {
-                                    return 'Statistics will be available after sending';
-                                }
-
-                                $html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
-                                $html .= '<div class="bg-gray-100 p-4 rounded"><div class="text-2xl font-bold">' . number_format($record->total_recipients) . '</div><div class="text-sm text-gray-600">Total Recipients</div></div>';
-                                $html .= '<div class="bg-green-100 p-4 rounded"><div class="text-2xl font-bold">' . number_format($record->sent_count) . '</div><div class="text-sm text-gray-600">Sent</div></div>';
-                                $html .= '<div class="bg-blue-100 p-4 rounded"><div class="text-2xl font-bold">' . number_format($record->opened_count) . ' (' . $record->open_rate . '%)</div><div class="text-sm text-gray-600">Opened</div></div>';
-                                $html .= '<div class="bg-purple-100 p-4 rounded"><div class="text-2xl font-bold">' . number_format($record->clicked_count) . ' (' . $record->click_rate . '%)</div><div class="text-sm text-gray-600">Clicked</div></div>';
-                                $html .= '</div>';
-
-                                return new \Illuminate\Support\HtmlString($html);
-                            }),
-                    ])
-                    ->visible(fn ($record) => $record && $record->status !== 'draft')
-                    ->collapsed(false),
-            ]);
+    /**
+     * Render an event option label like "Title — City, 24 Apr 2026".
+     */
+    protected static function formatEventOption(Event $event): string
+    {
+        $title = $event->getTranslation('title', 'ro')
+            ?? $event->getTranslation('title', 'en')
+            ?? (is_array($event->title) ? (reset($event->title) ?: '') : ($event->title ?? ''));
+        $parts = [];
+        $city = $event->city ?? $event->venue?->city ?? null;
+        if ($city) $parts[] = $city;
+        if ($event->event_date) $parts[] = \Carbon\Carbon::parse($event->event_date)->translatedFormat('d M Y');
+        elseif ($event->range_start_date) $parts[] = \Carbon\Carbon::parse($event->range_start_date)->translatedFormat('d M Y');
+        $suffix = !empty($parts) ? ' — ' . implode(', ', $parts) : '';
+        return ($title ?: 'Eveniment #' . $event->id) . $suffix;
     }
 
     public static function table(Table $table): Table

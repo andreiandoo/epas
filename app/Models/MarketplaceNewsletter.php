@@ -24,6 +24,8 @@ class MarketplaceNewsletter extends Model
         'body_text',
         'target_lists',
         'target_tags',
+        'target_event_ids',
+        'source_email_template_id',
         'status',
         'scheduled_at',
         'started_at',
@@ -41,6 +43,7 @@ class MarketplaceNewsletter extends Model
         'body_sections' => 'array',
         'target_lists' => 'array',
         'target_tags' => 'array',
+        'target_event_ids' => 'array',
         'scheduled_at' => 'datetime',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
@@ -86,31 +89,90 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Build recipient list
+     * Build recipient list — union of:
+     *   - customers in target contact lists
+     *   - customers tagged with target tags
+     *   - customers who bought a valid ticket for any of target_event_ids
+     *
+     * Customers with accepts_marketing = false are excluded from the list/tag
+     * branches but **kept** for the event-buyer branch: when an organizer
+     * sends a transactional update from inside an event ("important info for
+     * tonight's show"), they need to reach buyers regardless of marketing
+     * opt-in. The unsubscribe link is still rendered in every email, so a
+     * recipient can opt out of future blasts.
+     *
+     * Result is dedup'd by customer id, so a single contact in both a list
+     * and an event still receives only one email.
      */
     public function buildRecipientList(): \Illuminate\Support\Collection
     {
         $marketplace = $this->marketplaceClient;
+        $clientId = $marketplace?->id;
+        if (!$clientId) return collect();
 
-        $query = MarketplaceCustomer::where('marketplace_client_id', $marketplace->id)
-            ->where('accepts_marketing', true);
+        $customerIds = collect();
 
-        // Filter by lists
-        if (!empty($this->target_lists)) {
-            $query->whereHas('contactLists', function ($q) {
-                $q->whereIn('marketplace_contact_lists.id', $this->target_lists)
-                    ->where('marketplace_contact_list_members.status', 'subscribed');
-            });
+        // ---- Lists / tags branch (marketing-style; respects opt-in) ----
+        if (!empty($this->target_lists) || !empty($this->target_tags)) {
+            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->where('accepts_marketing', true);
+
+            if (!empty($this->target_lists)) {
+                $q->whereHas('contactLists', function ($qq) {
+                    $qq->whereIn('marketplace_contact_lists.id', $this->target_lists)
+                        ->where('marketplace_contact_list_members.status', 'subscribed');
+                });
+            }
+            if (!empty($this->target_tags)) {
+                $q->whereHas('tags', function ($qq) {
+                    $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
+                });
+            }
+
+            $customerIds = $customerIds->merge($q->pluck('id'));
         }
 
-        // Filter by tags
-        if (!empty($this->target_tags)) {
-            $query->whereHas('tags', function ($q) {
-                $q->whereIn('marketplace_contact_tags.id', $this->target_tags);
-            });
+        // ---- Event ticket-buyers branch (transactional; ignores opt-in) ----
+        if (!empty($this->target_event_ids)) {
+            $eventBuyerIds = $this->getEventBuyerCustomerIds($this->target_event_ids);
+            $customerIds = $customerIds->merge($eventBuyerIds);
         }
 
-        return $query->get();
+        $uniqueIds = $customerIds->unique()->values();
+        if ($uniqueIds->isEmpty()) return collect();
+
+        return MarketplaceCustomer::whereIn('id', $uniqueIds)->get();
+    }
+
+    /**
+     * Customer IDs who own at least one valid ticket for any of $eventIds.
+     * Tickets are linked to orders, orders to customers; we walk that chain
+     * scoped to the same marketplace_client_id to be safe.
+     */
+    public function getEventBuyerCustomerIds(array $eventIds): \Illuminate\Support\Collection
+    {
+        if (empty($eventIds)) return collect();
+
+        return \DB::table('tickets')
+            ->join('orders', 'orders.id', '=', 'tickets.order_id')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->whereIn('ticket_types.event_id', $eventIds)
+            ->where('tickets.status', 'valid')
+            ->whereNotNull('orders.marketplace_customer_id')
+            ->where('orders.marketplace_client_id', $this->marketplace_client_id)
+            ->pluck('orders.marketplace_customer_id')
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Unique recipient email count for the current targeting (lists + tags +
+     * events). Cheaper than buildRecipientList()->count() because it only
+     * does an SQL COUNT, not a hydrate.
+     */
+    public function getRecipientCount(): int
+    {
+        return $this->buildRecipientList()->pluck('email')->filter()->unique()->count();
     }
 
     /**
