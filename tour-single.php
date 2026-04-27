@@ -24,6 +24,9 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
 <style>
     body.page-tour-single { background: #f8fafc; }
     .card-shadow { box-shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.04); }
@@ -38,6 +41,30 @@ require_once __DIR__ . '/includes/header.php';
     @keyframes progress-fill { from { width: 0; } to { width: var(--progress); } }
     .progress-bar { animation: progress-fill 1.2s ease-out forwards; }
     [data-hidden] { display: none !important; }
+
+    /* Leaflet pin styling */
+    .tour-pin {
+        display: flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px;
+        background: var(--color-primary, #C8102E);
+        color: #fff; border-radius: 9999px;
+        font-weight: 800; font-size: 12px;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    }
+    .tour-pin.tour-pin-past { background: #94a3b8; }
+    .tour-pin-final::after {
+        content: '★'; position: absolute;
+        top: -4px; right: -6px;
+        width: 16px; height: 16px;
+        background: #fbbf24; color: #fff;
+        font-size: 10px; line-height: 16px;
+        border-radius: 9999px; text-align: center;
+        border: 2px solid #fff;
+    }
+    .leaflet-container { font-family: inherit; }
+    .leaflet-popup-content-wrapper { border-radius: 8px; }
+    .leaflet-popup-content { margin: 10px 12px; font-size: 13px; }
 </style>
 
 <!-- HERO with poster -->
@@ -214,35 +241,12 @@ require_once __DIR__ . '/includes/header.php';
           </div>
         </div>
 
-        <!-- MAP VIEW -->
+        <!-- MAP VIEW (Leaflet + OpenStreetMap) -->
         <div id="datesMap" class="p-6 border-t border-slate-100" data-hidden>
-          <div class="relative aspect-[16/10] bg-[#f3f1ec] rounded-xl overflow-hidden border border-slate-200">
-            <svg id="datesMapSvg" class="absolute inset-0 w-full h-full" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
-              <defs>
-                <pattern id="land-tex" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-                  <rect width="60" height="60" fill="#f3f1ec"/>
-                  <circle cx="30" cy="30" r=".5" fill="#d4cdba" opacity=".3"/>
-                </pattern>
-              </defs>
-              <rect width="800" height="500" fill="url(#land-tex)"/>
-              <!-- Romania rough outline -->
-              <path d="M 130 130 Q 180 100, 280 110 Q 380 115, 470 125 Q 560 135, 640 175 Q 690 230, 680 300 Q 660 360, 580 390 Q 500 405, 410 400 Q 320 395, 240 380 Q 160 365, 130 320 Q 110 240, 130 130 Z"
-                fill="#fefcf7" stroke="#c9c3b1" stroke-width="1.2"/>
-              <!-- Pins + route layer (populated by JS) -->
-              <g id="datesMapRoute" stroke-linecap="round"></g>
-              <g id="datesMapPins"></g>
-              <!-- Compass -->
-              <g transform="translate(750, 50)">
-                <circle r="20" fill="#fff" stroke="#cbd5e1" stroke-width="1"/>
-                <text y="-12" text-anchor="middle" font-family="Inter" font-size="9" font-weight="700" fill="#0f172a">N</text>
-                <path d="M 0 -7 L 3 5 L 0 2 L -3 5 Z" fill="var(--color-primary, #C8102E)"/>
-              </g>
-              <text x="780" y="495" text-anchor="end" font-family="Inter" font-size="8" fill="#94a3b8">© AmBilet</text>
-            </svg>
-          </div>
+          <div id="datesMapCanvas" class="aspect-[16/10] rounded-xl overflow-hidden border border-slate-200" style="min-height: 360px;"></div>
           <div id="datesMapLegend" class="grid grid-cols-1 gap-2 mt-3 sm:grid-cols-2 lg:grid-cols-3"></div>
           <p id="datesMapEmpty" class="hidden mt-3 text-sm text-center text-slate-500">
-            Niciun oraș cunoscut pentru acest turneu — putem afișa harta când evenimentele au orașul completat.
+            Niciun loc geocodat pentru acest turneu — adaugă coordonate la venue sau orașul evenimentelor pentru a afișa harta.
           </p>
         </div>
         <div id="datesEmpty" class="p-6 text-sm text-center border-t text-slate-500 border-slate-100" data-hidden>
@@ -903,42 +907,41 @@ $scriptsExtra = <<<'JS'
         `;
     }
 
-    // ── MAP view ─────────────────────────────────────────────────────────
-    // Approximate Romania city → SVG coordinate map (matched to the 800×500
-    // viewBox + the country path drawn in the SVG). Keys are diacritic-folded
-    // lowercase names so input variants ("Cluj-Napoca", "CLUJ NAPOCA",
-    // "Bistriţa", "Bistrița") all resolve.
-    const RO_CITY_COORDS = {
-        'baia mare': [230, 220],
-        'oradea': [200, 240],
-        'satu mare': [200, 200],
-        'cluj-napoca': [330, 250], 'cluj napoca': [330, 250], 'cluj': [330, 250],
-        'bistrita': [380, 230],
-        'targu mures': [400, 280], 'tirgu mures': [400, 280],
-        'sibiu': [430, 320],
-        'brasov': [510, 310],
-        'sfantu gheorghe': [530, 305],
-        'iasi': [580, 200],
-        'suceava': [530, 165],
-        'piatra neamt': [510, 220],
-        'bacau': [560, 270],
-        'galati': [620, 320],
-        'braila': [620, 340],
-        'ploiesti': [510, 360],
-        'bucuresti': [490, 380],
-        'pitesti': [450, 370],
-        'craiova': [380, 390],
-        'timisoara': [220, 320],
-        'arad': [200, 290],
-        'deva': [310, 300],
-        'alba iulia': [340, 310],
-        'resita': [240, 360],
-        'targoviste': [470, 370], 'tirgoviste': [470, 370],
-        'tulcea': [680, 340],
-        'constanta': [690, 380],
-        'buzau': [560, 340],
-        'focsani': [580, 305],
-        'slatina': [410, 380],
+    // ── MAP view (Leaflet + OpenStreetMap) ──────────────────────────────
+    // Each event needs a lat/lng. We prefer the venue's stored coordinates
+    // (Venue.lat/lng on core.tixello.com); for any missing location, we fall
+    // back to a small RO_CITY_COORDS table covering the major venues.
+    const RO_CITY_LATLNG = {
+        'baia mare': [47.6573, 23.5681],
+        'oradea': [47.0723, 21.9189],
+        'satu mare': [47.7918, 22.8590],
+        'cluj-napoca': [46.7712, 23.6236], 'cluj napoca': [46.7712, 23.6236], 'cluj': [46.7712, 23.6236],
+        'bistrita': [47.1340, 24.4923],
+        'targu mures': [46.5454, 24.5621], 'tirgu mures': [46.5454, 24.5621],
+        'sibiu': [45.7983, 24.1225],
+        'brasov': [45.6580, 25.6012],
+        'sfantu gheorghe': [45.8639, 25.7846],
+        'iasi': [47.1585, 27.6014],
+        'suceava': [47.6510, 26.2553],
+        'piatra neamt': [46.9285, 26.3700],
+        'bacau': [46.5712, 26.9136],
+        'galati': [45.4353, 28.0080],
+        'braila': [45.2692, 27.9574],
+        'ploiesti': [44.9460, 26.0353],
+        'bucuresti': [44.4268, 26.1025], 'bucharest': [44.4268, 26.1025],
+        'pitesti': [44.8565, 24.8692],
+        'craiova': [44.3302, 23.7949],
+        'timisoara': [45.7489, 21.2087],
+        'arad': [46.1866, 21.3123],
+        'deva': [45.8780, 22.9143],
+        'alba iulia': [46.0758, 23.5808],
+        'resita': [45.2974, 21.8862],
+        'targoviste': [44.9230, 25.4492], 'tirgoviste': [44.9230, 25.4492],
+        'tulcea': [45.1759, 28.7986],
+        'constanta': [44.1733, 28.6383],
+        'buzau': [45.1500, 26.8333],
+        'focsani': [45.6967, 27.1850],
+        'slatina': [44.4337, 24.3693],
     };
     function normalizeCity(s) {
         if (!s) return '';
@@ -947,92 +950,137 @@ $scriptsExtra = <<<'JS'
             .replace(/[șş]/g, 's').replace(/[țţ]/g, 't')
             .replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
     }
+    function eventLatLng(e) {
+        if (e?.venue?.lat != null && e?.venue?.lng != null) {
+            return [Number(e.venue.lat), Number(e.venue.lng)];
+        }
+        const key = normalizeCity(e?.venue?.city || '');
+        return RO_CITY_LATLNG[key] || null;
+    }
 
+    let _mapInstance = null;
     function renderDatesMap(events, stopNumberById, now) {
-        const pinsEl = $('datesMapPins');
-        const routeEl = $('datesMapRoute');
+        const canvas = $('datesMapCanvas');
         const legendEl = $('datesMapLegend');
         const emptyEl = $('datesMapEmpty');
-        if (!pinsEl || !routeEl) return;
+        if (!canvas) return;
 
-        // Resolve each event to a coordinate; events without a known city are
-        // skipped from the map but still listed under the legend with a hint.
+        // Resolve every event to a [lat, lng]; track unmapped ones for the legend.
         const points = [];
         const unmapped = [];
         events.forEach(e => {
-            const cityRaw = e.venue?.city || '';
-            const key = normalizeCity(cityRaw);
-            const coord = RO_CITY_COORDS[key];
+            const ll = eventLatLng(e);
             const stop = stopNumberById.get(e.id);
-            if (coord) {
-                points.push({ event: e, stop, x: coord[0], y: coord[1], city: cityRaw });
-            } else if (cityRaw) {
-                unmapped.push({ event: e, stop, city: cityRaw });
+            const cityRaw = e.venue?.city || '';
+            if (ll) {
+                points.push({ event: e, stop, lat: ll[0], lng: ll[1], city: cityRaw });
+            } else {
+                unmapped.push({ event: e, stop, city: cityRaw || (e.name || '') });
             }
         });
 
         if (points.length === 0) {
-            pinsEl.innerHTML = '';
-            routeEl.innerHTML = '';
-            legendEl.innerHTML = '';
+            if (legendEl) legendEl.innerHTML = '';
             if (emptyEl) emptyEl.classList.remove('hidden');
             return;
         }
         if (emptyEl) emptyEl.classList.add('hidden');
 
-        // Route line connecting stops in tour order
         const sorted = points.slice().sort((a, b) => a.stop - b.stop);
-        let routeHtml = '';
-        if (sorted.length > 1) {
-            const d = sorted.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p.x + ' ' + p.y).join(' ');
-            routeHtml = `
-                <path d="${d}" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
-                <path d="${d}" fill="none" stroke="var(--color-primary, #C8102E)" stroke-width="3" stroke-dasharray="6 4" opacity=".75" stroke-linecap="round"/>
-            `;
-        }
-        routeEl.innerHTML = routeHtml;
 
-        // Pins
-        pinsEl.innerHTML = sorted.map(p => {
-            const isPast = p.event.starts_at && new Date(p.event.starts_at).getTime() < now;
-            const isFinal = p.stop === events.length && events.length > 1;
-            const ringFill = isPast ? '#94a3b8' : 'var(--color-primary, #C8102E)';
-            const labelY = p.y - 20;
-            const dateObj = p.event.event_date ? new Date(p.event.event_date + 'T12:00:00') : null;
-            const dateLabel = dateObj ? dateObj.getDate() + ' ' + ROMONTHS[dateObj.getMonth()] : '';
-            const finaleStar = isFinal && !isPast
-                ? `<g transform="translate(${p.x + 10}, ${p.y - 10})"><circle r="6" fill="#fbbf24"/><path d="M0 -3.5 L1 -1 L3.5 -1 L1.5 .5 L2.5 3 L0 1.5 L-2.5 3 L-1.5 .5 L-3.5 -1 L-1 -1 Z" fill="#fff"/></g>`
-                : '';
-            return `
-                <g transform="translate(${p.x}, ${p.y})">
-                    <circle r="22" fill="${ringFill}" opacity=".15"/>
-                    <circle r="14" fill="#fff"/>
-                    <circle r="10" fill="${ringFill}"/>
-                    <text y="3" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="10" font-weight="800" fill="#fff">${p.stop}</text>
-                </g>
-                <g transform="translate(${p.x}, ${labelY})">
-                    <rect x="${-Math.max(p.city.length * 3.2 + 8, 28)}" y="-12" width="${Math.max(p.city.length * 6.4 + 16, 56)}" height="16" rx="3" fill="#fff" stroke="#0f172a" stroke-width="1"/>
-                    <text x="0" y="-1" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="700" fill="#0f172a">${esc(p.city)}</text>
-                </g>
-                ${dateLabel ? `<text x="${p.x}" y="${p.y + 30}" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="9" font-weight="600" fill="#475569">${dateLabel}</text>` : ''}
-                ${finaleStar}
-            `;
-        }).join('');
+        const initLeaflet = () => {
+            if (typeof L === 'undefined') {
+                // Leaflet still loading — retry shortly
+                setTimeout(initLeaflet, 80);
+                return;
+            }
+
+            // Tear down a previous instance if user switches tour pages without reload
+            if (_mapInstance) {
+                _mapInstance.remove();
+                _mapInstance = null;
+            }
+
+            const map = L.map(canvas, { scrollWheelZoom: false, zoomControl: true });
+            _mapInstance = map;
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+
+            // Markers
+            const bounds = [];
+            sorted.forEach(p => {
+                const isPast = p.event.starts_at && new Date(p.event.starts_at).getTime() < now;
+                const isFinal = p.stop === events.length && events.length > 1;
+                const classes = ['tour-pin'];
+                if (isPast) classes.push('tour-pin-past');
+                if (isFinal && !isPast) classes.push('tour-pin-final');
+                const html = '<div class="' + classes.join(' ') + '" style="position:relative;">' + p.stop + '</div>';
+                const icon = L.divIcon({
+                    html,
+                    className: 'tour-pin-wrap',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                    popupAnchor: [0, -18],
+                });
+                const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+                bounds.push([p.lat, p.lng]);
+
+                const dateObj = p.event.event_date ? new Date(p.event.event_date + 'T12:00:00') : null;
+                const dateLabel = dateObj ? dateObj.getDate() + ' ' + ROMONTHS[dateObj.getMonth()] + ' ' + dateObj.getFullYear() : '';
+                const time = eventTime(p.event);
+                const popupHtml = `
+                    <div style="min-width:180px;">
+                        <div style="font-weight:700; color:#0f172a; margin-bottom:2px;">Stop ${p.stop} · ${esc(p.city)}</div>
+                        <div style="font-size:12px; color:#475569;">${esc(p.event.venue?.name || '')}</div>
+                        <div style="font-size:12px; color:#475569; margin-top:4px;">${esc(dateLabel)}${time ? ' · ' + esc(time) : ''}</div>
+                        ${isPast ? '<div style="font-size:11px; color:#94a3b8; margin-top:6px;">Eveniment încheiat</div>'
+                                  : '<a href="/bilete/' + esc(p.event.slug || '') + '" style="display:inline-block; margin-top:8px; padding:6px 12px; background:var(--color-primary, #C8102E); color:#fff; border-radius:6px; font-size:12px; font-weight:600; text-decoration:none;">Vezi bilete →</a>'}
+                    </div>
+                `;
+                marker.bindPopup(popupHtml);
+            });
+
+            // Route line connecting stops in tour order — white halo + dashed primary
+            if (sorted.length > 1) {
+                const latlngs = sorted.map(p => [p.lat, p.lng]);
+                L.polyline(latlngs, { color: '#fff', weight: 6, opacity: 1 }).addTo(map);
+                L.polyline(latlngs, {
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() || '#C8102E',
+                    weight: 3, opacity: 0.85, dashArray: '6 4'
+                }).addTo(map);
+            }
+
+            // Fit map to all markers (with some padding); fallback to Romania center
+            if (bounds.length === 1) {
+                map.setView(bounds[0], 10);
+            } else if (bounds.length > 1) {
+                map.fitBounds(bounds, { padding: [40, 40], maxZoom: 9 });
+            } else {
+                map.setView([45.9432, 24.9668], 6); // Romania center
+            }
+
+            // Recalc map size after the toggle reveals it (Leaflet draws blank tiles
+            // if the container had display:none at init).
+            setTimeout(() => map.invalidateSize(), 100);
+        };
+        initLeaflet();
 
         // Legend below map
         const legendItems = sorted.map(p => `
             <a href="/bilete/${esc(p.event.slug || '')}" class="text-xs text-slate-600 hover:text-primary flex items-center gap-1.5 p-2 rounded hover:bg-slate-50 transition">
                 <span class="w-5 h-5 bg-primary text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${p.stop}</span>
-                <span class="truncate">${esc(p.city)} ${p.event.venue?.name ? '· ' + esc(p.event.venue.name) : ''}</span>
+                <span class="truncate">${esc(p.city)}${p.event.venue?.name ? ' · ' + esc(p.event.venue.name) : ''}</span>
             </a>
         `).join('');
         const unmappedItems = unmapped.map(u => `
             <span class="text-xs text-slate-400 italic flex items-center gap-1.5 p-2">
                 <span class="w-5 h-5 bg-slate-300 text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${u.stop}</span>
-                ${esc(u.city)} (necartografiat)
+                ${esc(u.city)} (fără coordonate)
             </span>
         `).join('');
-        legendEl.innerHTML = legendItems + unmappedItems;
+        if (legendEl) legendEl.innerHTML = legendItems + unmappedItems;
     }
 
     function wireViewToggle() {
@@ -1052,6 +1100,11 @@ $scriptsExtra = <<<'JS'
                     b.classList.toggle('text-slate-900', active);
                     b.classList.toggle('text-slate-500', !active);
                 });
+                // Leaflet draws blank tiles if the container was display:none
+                // when init ran; recalc the size each time the map becomes visible.
+                if (target === 'map' && _mapInstance) {
+                    setTimeout(() => _mapInstance.invalidateSize(), 50);
+                }
             });
         });
     }
