@@ -20,7 +20,7 @@ class MarketplaceEventReminderNotification extends Notification implements Shoul
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['marketplace-mail'];
     }
 
     public function toMail(object $notifiable): MailMessage

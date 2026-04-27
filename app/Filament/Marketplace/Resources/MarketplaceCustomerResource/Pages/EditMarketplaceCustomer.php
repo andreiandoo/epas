@@ -2,15 +2,18 @@
 
 namespace App\Filament\Marketplace\Resources\MarketplaceCustomerResource\Pages;
 
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\MarketplaceCustomerResource;
+use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 
 class EditMarketplaceCustomer extends EditRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = MarketplaceCustomerResource::class;
 
     protected function getHeaderActions(): array
@@ -39,16 +42,29 @@ class EditMarketplaceCustomer extends EditRecord
 
             if ($email) {
                 try {
-                    Mail::raw(
-                        "Bună {$name},\n\n" .
-                        "Parola contului tău a fost modificată de un administrator.\n\n" .
-                        "Dacă nu ai solicitat această modificare, te rugăm să contactezi echipa de suport.\n\n" .
-                        "Cu respect,\nEchipa de suport",
-                        function ($message) use ($email, $name) {
-                            $message->to($email, $name)
-                                ->subject('Parola contului tău a fost modificată');
-                        }
-                    );
+                    // Route via the active marketplace's transport so the
+                    // password-change notice arrives from the marketplace's
+                    // own domain — never from the system localhost mailer.
+                    $marketplace = static::getMarketplaceClient()
+                        ?? $customer->marketplaceClient;
+                    if ($marketplace) {
+                        $body = '<p>Bună ' . e($name) . ',</p>'
+                            . '<p>Parola contului tău a fost modificată de un administrator.</p>'
+                            . '<p>Dacă nu ai solicitat această modificare, te rugăm să contactezi echipa de suport.</p>'
+                            . '<p>Cu respect,<br>Echipa de suport</p>';
+                        BaseController::sendViaMarketplace(
+                            $marketplace,
+                            $email,
+                            $name,
+                            'Parola contului tău a fost modificată',
+                            $body,
+                            ['template_slug' => 'admin_customer_password_changed']
+                        );
+                    } else {
+                        \Log::warning('Skipping password-change email — no marketplace context', [
+                            'customer_id' => $customer->id,
+                        ]);
+                    }
                 } catch (\Exception $e) {
                     \Log::warning('Failed to send password change email to customer', [
                         'customer_id' => $customer->id,

@@ -30,7 +30,7 @@ class MarketplaceEmailVerificationNotification extends Notification implements S
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['marketplace-mail'];
     }
 
     /**

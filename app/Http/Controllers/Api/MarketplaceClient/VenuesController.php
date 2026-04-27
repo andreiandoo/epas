@@ -523,22 +523,32 @@ class VenuesController extends BaseController
 
         $siteName = $client->name ?? 'Bilete.online';
 
-        Mail::send([], [], function ($m) use ($validated, $venueEmail, $venue, $siteName) {
-            $body = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">';
-            $body .= '<h2 style="color:#A51C30;">Mesaj nou de pe ' . e($siteName) . '</h2>';
-            $body .= '<p><strong>De la:</strong> ' . e($validated['name']) . ' (' . e($validated['email']) . ')</p>';
-            $body .= '<p><strong>Subiect:</strong> ' . e($validated['subject']) . '</p>';
-            $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
-            $body .= '<div style="white-space:pre-line;color:#374151;">' . e($validated['message']) . '</div>';
-            $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
-            $body .= '<p style="color:#9ca3af;font-size:12px;">Acest mesaj a fost trimis prin intermediul ' . e($siteName) . ' pentru locația ' . e($venue->name) . '.</p>';
-            $body .= '</div>';
+        $body = '<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">';
+        $body .= '<h2 style="color:#A51C30;">Mesaj nou de pe ' . e($siteName) . '</h2>';
+        $body .= '<p><strong>De la:</strong> ' . e($validated['name']) . ' (' . e($validated['email']) . ')</p>';
+        $body .= '<p><strong>Subiect:</strong> ' . e($validated['subject']) . '</p>';
+        $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
+        $body .= '<div style="white-space:pre-line;color:#374151;">' . e($validated['message']) . '</div>';
+        $body .= '<hr style="border:none;border-top:1px solid #e5e7eb;margin:16px 0;">';
+        $body .= '<p style="color:#9ca3af;font-size:12px;">Acest mesaj a fost trimis prin intermediul ' . e($siteName) . ' pentru locația ' . e($venue->name) . '.</p>';
+        $body .= '</div>';
 
-            $m->to($venueEmail)
-              ->replyTo($validated['email'], $validated['name'])
-              ->subject('[' . $siteName . '] ' . $validated['subject'])
-              ->html($body);
-        });
+        // Route through the marketplace's configured SMTP transport so
+        // venue contact emails come from the marketplace's domain (and
+        // never fall back to localhost). sendViaMarketplace() handles
+        // logging + transactional vs primary routing.
+        $this->sendMarketplaceEmail(
+            $client,
+            $venueEmail,
+            $venue->name,
+            '[' . $siteName . '] ' . $validated['subject'],
+            $body,
+            [
+                'template_slug' => 'venue_contact',
+                'reply_to_email' => $validated['email'],
+                'reply_to_name' => $validated['name'],
+            ]
+        );
 
         return $this->success(['message' => 'Mesajul a fost trimis cu succes.']);
     }

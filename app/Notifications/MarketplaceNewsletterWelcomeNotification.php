@@ -22,7 +22,7 @@ class MarketplaceNewsletterWelcomeNotification extends Notification implements S
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['marketplace-mail'];
     }
 
     public function toMail(object $notifiable): MailMessage

@@ -19,7 +19,7 @@ class MarketplaceTicketTransferNotification extends Notification implements Shou
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['marketplace-mail'];
     }
 
     public function toMail(object $notifiable): MailMessage

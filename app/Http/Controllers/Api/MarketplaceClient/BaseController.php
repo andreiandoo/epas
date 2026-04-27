@@ -135,6 +135,16 @@ abstract class BaseController extends Controller
                         ->subject($subject)
                         ->html($html);
 
+                    // Optional reply-to. Used by e.g. the venue contact form
+                    // so the venue owner can hit "Reply" and reach the
+                    // visitor that actually wrote the message.
+                    if (!empty($logExtra['reply_to_email'])) {
+                        $email->replyTo(new \Symfony\Component\Mime\Address(
+                            $logExtra['reply_to_email'],
+                            $logExtra['reply_to_name'] ?? ''
+                        ));
+                    }
+
                     $sentMessage = $transport->send($email);
                     $messageId = $sentMessage?->getMessageId();
                     $log->markSent($messageId);

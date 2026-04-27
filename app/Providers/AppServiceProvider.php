@@ -39,6 +39,14 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
+        // Register the marketplace-mail notification channel. Notifications
+        // that return ['marketplace-mail'] from via() route through the
+        // active marketplace's configured SMTP transport instead of the
+        // global Laravel mailer (no localhost leakage).
+        \Illuminate\Support\Facades\Notification::extend('marketplace-mail', function ($app) {
+            return new \App\Notifications\Channels\MarketplaceMailChannel();
+        });
+
         // Ensure all upload directories exist on the public disk
         $this->ensureUploadDirectories();
 
