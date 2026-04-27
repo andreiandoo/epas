@@ -400,13 +400,16 @@ class NewsletterResource extends Resource
                             // accounts than the "type" suggests, or sources
                             // may overlap.
                             $rows = [];
-                            if (!empty($instance->target_lists)) {
-                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din liste</span><span class="font-semibold">' . number_format($b['lists']) . '</span></div>';
+                            if (($b['lists'] ?? 0) > 0) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din liste (clienți opt-in)</span><span class="font-semibold">' . number_format($b['lists']) . '</span></div>';
                             }
-                            if (!empty($instance->target_tags)) {
+                            if (($b['organizers'] ?? 0) > 0) {
+                                $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Organizatori</span><span class="font-semibold">' . number_format($b['organizers']) . '</span></div>';
+                            }
+                            if (($b['tags'] ?? 0) > 0) {
                                 $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Din tag-uri</span><span class="font-semibold">' . number_format($b['tags']) . '</span></div>';
                             }
-                            if (!empty($instance->target_event_ids)) {
+                            if (($b['events'] ?? 0) > 0) {
                                 $rows[] = '<div class="flex items-center justify-between"><span class="text-gray-600">Cumpărători evenimente</span><span class="font-semibold">' . number_format($b['events']) . '</span></div>';
                             }
                             if (!empty($rows)) {

@@ -90,16 +90,18 @@ class MarketplaceNewsletter extends Model
 
     /**
      * Build recipient list — union of:
-     *   - customers in target contact lists
-     *   - customers tagged with target tags
+     *   - customers in target "regular" contact lists (opt-in respected)
+     *   - customers tagged with target tags (opt-in respected)
+     *   - **organizer emails** when the targeted list has rule "is_organizer"
+     *     (resolved directly from marketplace_organizers, opt-in ignored —
+     *     these are operational, not marketing)
      *   - customers who bought a valid ticket for any of target_event_ids
+     *     (opt-in ignored — transactional)
      *
-     * Customers with accepts_marketing = false are excluded from the list/tag
-     * branches but **kept** for the event-buyer branch: when an organizer
-     * sends a transactional update from inside an event ("important info for
-     * tonight's show"), they need to reach buyers regardless of marketing
-     * opt-in. The unsubscribe link is still rendered in every email, so a
-     * recipient can opt out of future blasts.
+     * For organizer-typed lists, missing customer rows are created on the
+     * fly (firstOrCreate) so the recipient pivot stays FK-valid. Those
+     * customers get accepts_marketing=false so they never leak into a
+     * regular marketing blast.
      *
      * Result is dedup'd by customer id, so a single contact in both a list
      * and an event still receives only one email.
@@ -110,16 +112,18 @@ class MarketplaceNewsletter extends Model
         $clientId = $marketplace?->id;
         if (!$clientId) return collect();
 
+        [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
+
         $customerIds = collect();
 
-        // ---- Lists / tags branch (marketing-style; respects opt-in) ----
-        if (!empty($this->target_lists) || !empty($this->target_tags)) {
+        // ---- Regular lists / tags (marketing; respects opt-in) ----
+        if (!empty($regularListIds) || !empty($this->target_tags)) {
             $q = MarketplaceCustomer::where('marketplace_client_id', $clientId)
                 ->where('accepts_marketing', true);
 
-            if (!empty($this->target_lists)) {
-                $q->whereHas('contactLists', function ($qq) {
-                    $qq->whereIn('marketplace_contact_lists.id', $this->target_lists)
+            if (!empty($regularListIds)) {
+                $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
+                    $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
                         ->where('marketplace_contact_list_members.status', 'subscribed');
                 });
             }
@@ -132,7 +136,16 @@ class MarketplaceNewsletter extends Model
             $customerIds = $customerIds->merge($q->pluck('id'));
         }
 
-        // ---- Event ticket-buyers branch (transactional; ignores opt-in) ----
+        // ---- Organizer-typed lists: pull straight from marketplace_organizers
+        // and ensure a MarketplaceCustomer row exists for each so the
+        // recipient FK is satisfied. The customer rows are created with
+        // accepts_marketing=false so they never accidentally get scooped up
+        // by a future "Abonați" blast.
+        if (!empty($organizerListIds)) {
+            $customerIds = $customerIds->merge($this->materializeOrganizerCustomers($clientId));
+        }
+
+        // ---- Event ticket-buyers (transactional; ignores opt-in) ----
         if (!empty($this->target_event_ids)) {
             $eventBuyerIds = $this->getEventBuyerCustomerIds($this->target_event_ids);
             $customerIds = $customerIds->merge($eventBuyerIds);
@@ -142,6 +155,71 @@ class MarketplaceNewsletter extends Model
         if ($uniqueIds->isEmpty()) return collect();
 
         return MarketplaceCustomer::whereIn('id', $uniqueIds)->get();
+    }
+
+    /**
+     * Split target_lists into [organizer_list_ids, regular_list_ids] based
+     * on whether each list's rules include the "is_organizer" type. Used by
+     * both the recipient build and the count breakdown.
+     *
+     * @return array{0:array<int>,1:array<int>}
+     */
+    protected function splitListsByType(array $listIds): array
+    {
+        if (empty($listIds)) return [[], []];
+
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+        $lists = MarketplaceContactList::whereIn('id', $listIds)
+            ->when($clientId, fn ($q) => $q->where('marketplace_client_id', $clientId))
+            ->get(['id', 'rules']);
+
+        $organizer = [];
+        $regular = [];
+        foreach ($lists as $list) {
+            $isOrgList = collect($list->rules ?? [])
+                ->contains(fn ($r) => is_array($r) && (($r['type'] ?? null) === 'is_organizer'));
+            if ($isOrgList) {
+                $organizer[] = $list->id;
+            } else {
+                $regular[] = $list->id;
+            }
+        }
+        return [$organizer, $regular];
+    }
+
+    /**
+     * For every organizer in this marketplace with a valid email, find or
+     * create a MarketplaceCustomer with the same email and return the set
+     * of customer IDs. This makes the existing recipient pivot work for
+     * organizer-targeted blasts without changing the FK.
+     */
+    protected function materializeOrganizerCustomers(int $clientId): \Illuminate\Support\Collection
+    {
+        $organizers = MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->get(['id', 'email', 'name', 'company_name']);
+
+        $ids = collect();
+        foreach ($organizers as $o) {
+            $email = strtolower(trim($o->email));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) continue;
+
+            $customer = MarketplaceCustomer::firstOrCreate(
+                [
+                    'marketplace_client_id' => $clientId,
+                    'email' => $email,
+                ],
+                [
+                    'first_name' => $o->name ?: ($o->company_name ?: 'Organizator'),
+                    'last_name' => '',
+                    'accepts_marketing' => false,
+                    'status' => 'active',
+                ]
+            );
+            $ids->push($customer->id);
+        }
+        return $ids;
     }
 
     /**
@@ -166,39 +244,40 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
-     * Unique recipient email count for the current targeting (lists + tags +
-     * events). Cheaper than buildRecipientList()->count() because it only
-     * does an SQL COUNT, not a hydrate.
+     * Unique recipient email count for the current targeting. Read-only —
+     * does NOT firstOrCreate organizer customer rows (that only happens at
+     * actual send time).
      */
     public function getRecipientCount(): int
     {
-        return $this->buildRecipientList()->pluck('email')->filter()->unique()->count();
+        return $this->collectRecipientEmails()->count();
     }
 
     /**
      * Per-source recipient counts so the UI can explain where the total
-     * comes from. Overlap between sources (a customer in both a list AND
-     * an event) is counted in each source's bucket; the `total` field is
-     * the deduped union.
+     * comes from. Each bucket is the count of unique emails contributed
+     * by that source; `total` is the deduped union across all sources.
      *
-     * @return array{lists:int, tags:int, events:int, total:int}
+     * @return array{lists:int, tags:int, organizers:int, events:int, total:int}
      */
     public function getRecipientBreakdown(): array
     {
         $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
         if (!$clientId) {
-            return ['lists' => 0, 'tags' => 0, 'events' => 0, 'total' => 0];
+            return ['lists' => 0, 'tags' => 0, 'organizers' => 0, 'events' => 0, 'total' => 0];
         }
 
+        [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
+
         $listsCount = 0;
-        if (!empty($this->target_lists)) {
+        if (!empty($regularListIds)) {
             $listsCount = MarketplaceCustomer::where('marketplace_client_id', $clientId)
                 ->where('accepts_marketing', true)
-                ->whereHas('contactLists', function ($qq) {
-                    $qq->whereIn('marketplace_contact_lists.id', $this->target_lists)
+                ->whereHas('contactLists', function ($qq) use ($regularListIds) {
+                    $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
                         ->where('marketplace_contact_list_members.status', 'subscribed');
                 })
-                ->count();
+                ->count('id');
         }
 
         $tagsCount = 0;
@@ -208,7 +287,12 @@ class MarketplaceNewsletter extends Model
                 ->whereHas('tags', function ($qq) {
                     $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
                 })
-                ->count();
+                ->count('id');
+        }
+
+        $organizersCount = 0;
+        if (!empty($organizerListIds)) {
+            $organizersCount = $this->collectOrganizerEmails($clientId)->count();
         }
 
         $eventsCount = 0;
@@ -219,9 +303,78 @@ class MarketplaceNewsletter extends Model
         return [
             'lists' => $listsCount,
             'tags' => $tagsCount,
+            'organizers' => $organizersCount,
             'events' => $eventsCount,
             'total' => $this->getRecipientCount(),
         ];
+    }
+
+    /**
+     * Read-only union of all recipient emails (lowercased, deduped) without
+     * touching the customers table. Used for count + preview.
+     */
+    protected function collectRecipientEmails(): \Illuminate\Support\Collection
+    {
+        $clientId = $this->marketplace_client_id ?? $this->marketplaceClient?->id;
+        if (!$clientId) return collect();
+
+        [$organizerListIds, $regularListIds] = $this->splitListsByType((array) $this->target_lists);
+
+        $emails = collect();
+
+        // Regular lists / tags branch (opt-in)
+        if (!empty($regularListIds) || !empty($this->target_tags)) {
+            $q = MarketplaceCustomer::where('marketplace_client_id', $clientId)
+                ->where('accepts_marketing', true);
+            if (!empty($regularListIds)) {
+                $q->whereHas('contactLists', function ($qq) use ($regularListIds) {
+                    $qq->whereIn('marketplace_contact_lists.id', $regularListIds)
+                        ->where('marketplace_contact_list_members.status', 'subscribed');
+                });
+            }
+            if (!empty($this->target_tags)) {
+                $q->whereHas('tags', function ($qq) {
+                    $qq->whereIn('marketplace_contact_tags.id', $this->target_tags);
+                });
+            }
+            $emails = $emails->merge($q->pluck('email'));
+        }
+
+        if (!empty($organizerListIds)) {
+            $emails = $emails->merge($this->collectOrganizerEmails($clientId));
+        }
+
+        if (!empty($this->target_event_ids)) {
+            $buyerIds = $this->getEventBuyerCustomerIds($this->target_event_ids);
+            if (!$buyerIds->isEmpty()) {
+                $emails = $emails->merge(
+                    MarketplaceCustomer::whereIn('id', $buyerIds)->pluck('email')
+                );
+            }
+        }
+
+        return $emails
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Lowercased, deduped, validated emails of every organizer in the
+     * marketplace. Drives both the count and the actual send for
+     * organizer-typed lists.
+     */
+    protected function collectOrganizerEmails(int $clientId): \Illuminate\Support\Collection
+    {
+        return MarketplaceOrganizer::where('marketplace_client_id', $clientId)
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
+            ->pluck('email')
+            ->map(fn ($e) => strtolower(trim((string) $e)))
+            ->filter(fn ($e) => $e !== '' && filter_var($e, FILTER_VALIDATE_EMAIL))
+            ->unique()
+            ->values();
     }
 
     /**
