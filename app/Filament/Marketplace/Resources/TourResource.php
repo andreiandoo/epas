@@ -8,8 +8,8 @@ use App\Models\Artist;
 use App\Models\MarketplaceOrganizer;
 use App\Models\Tour;
 use App\Support\SearchHelper;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Infolists;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Set as SSet;
@@ -393,8 +393,8 @@ class TourResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                EditAction::make(),
             ]);
     }
 
