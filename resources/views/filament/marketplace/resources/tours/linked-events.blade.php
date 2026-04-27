@@ -117,12 +117,11 @@
                 @foreach($events as $event)
                     @php
                         $eventCap = $event->total_capacity;
-                        // Sold per event: sum the ticket_types.quota_sold counters that the
-                        // app keeps in sync as orders are paid + invitations are emitted.
-                        // This matches what /marketplace/events/{id}/edit displays, including
-                        // invitations (which have order_id=null and would be missed by a
-                        // whereHas('order') filter).
-                        $eventSold = (int) $event->ticketTypes->sum('quota_sold');
+                        // Use the canonical Event::total_tickets_sold accessor — same source
+                        // of truth /marketplace/events/{id}/edit shows, queries Tickets
+                        // directly by event_id (not through order.event_id) so it picks up
+                        // tickets that have a different event_id linkage path.
+                        $eventSold = (int) $event->total_tickets_sold;
                         [$statusLabel, $statusClasses] = $statusBadge($event);
                         $editUrl = '/marketplace/events/' . $event->id . '/edit';
                     @endphp
