@@ -448,23 +448,83 @@ class NewsletterResource extends Resource
                 ])
                 ->collapsed(),
 
-            SC\Section::make('Send results')
+            // Trimitere — visible on every state, including draft, so the
+            // organizer always sees the campaign's send status in the same
+            // place. For an unsent draft the placeholder explains there's
+            // nothing to show yet.
+            SC\Section::make('Statistici trimitere')
                 ->schema([
-                    Forms\Components\Placeholder::make('stats')
+                    Forms\Components\Placeholder::make('send_stats')
+                        ->label('')
                         ->content(function ($record) {
-                            if (!$record || $record->status === 'draft') {
-                                return 'După trimitere apar statisticile aici.';
+                            if (!$record) {
+                                return new HtmlString('<p class="text-xs text-gray-500">Salvează newsletter-ul ca să vezi statisticile.</p>');
                             }
-                            $html = '<div class="space-y-2 text-sm">';
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Total</span><span class="font-bold">' . number_format($record->total_recipients) . '</span></div>';
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Sent</span><span class="font-bold text-green-600">' . number_format($record->sent_count) . '</span></div>';
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Opened</span><span class="font-bold">' . number_format($record->opened_count) . ' (' . $record->open_rate . '%)</span></div>';
-                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Clicked</span><span class="font-bold">' . number_format($record->clicked_count) . ' (' . $record->click_rate . '%)</span></div>';
+                            if ($record->status === 'draft') {
+                                return new HtmlString('<p class="text-xs text-gray-500">Newsletter-ul nu a fost trimis încă. După trimitere apar aici: numărul de destinatari, câți au deschis emailul (open rate) și câți au făcut click (click rate).</p>');
+                            }
+
+                            $sent = (int) $record->sent_count;
+                            $total = (int) $record->total_recipients;
+                            $opened = (int) $record->opened_count;
+                            $clicked = (int) $record->clicked_count;
+                            $openRate = $record->open_rate;
+                            $clickRate = $record->click_rate;
+
+                            // Two prominent KPI tiles (Trimis + Open rate),
+                            // followed by a compact details list.
+                            $html = '<div class="space-y-3">';
+                            $html .= '<div class="grid grid-cols-2 gap-2">';
+                            $html .= '<div class="rounded-lg bg-green-50 dark:bg-green-900/20 p-2 text-center">'
+                                . '<div class="text-xs text-gray-600 dark:text-gray-400">Trimis</div>'
+                                . '<div class="text-xl font-bold text-green-700 dark:text-green-400">' . number_format($sent) . '</div>'
+                                . '<div class="text-[10px] text-gray-500">din ' . number_format($total) . '</div>'
+                                . '</div>';
+                            $html .= '<div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-2 text-center">'
+                                . '<div class="text-xs text-gray-600 dark:text-gray-400">Open rate</div>'
+                                . '<div class="text-xl font-bold text-blue-700 dark:text-blue-400">' . $openRate . '%</div>'
+                                . '<div class="text-[10px] text-gray-500">' . number_format($opened) . ' au deschis</div>'
+                                . '</div>';
+                            $html .= '</div>';
+
+                            $html .= '<div class="space-y-1.5 text-xs">';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Total destinatari</span><span class="font-semibold">' . number_format($total) . '</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Trimise</span><span class="font-semibold">' . number_format($sent) . '</span></div>';
+                            if ((int) $record->failed_count > 0) {
+                                $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Eșuate</span><span class="font-semibold text-red-600">' . number_format((int) $record->failed_count) . '</span></div>';
+                            }
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Deschise</span><span class="font-semibold">' . number_format($opened) . ' (' . $openRate . '%)</span></div>';
+                            $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Click-uri</span><span class="font-semibold">' . number_format($clicked) . ' (' . $clickRate . '%)</span></div>';
+                            if ((int) $record->unsubscribed_count > 0) {
+                                $html .= '<div class="flex items-center justify-between"><span class="text-gray-600">Dezabonări</span><span class="font-semibold text-amber-600">' . number_format((int) $record->unsubscribed_count) . '</span></div>';
+                            }
+                            $html .= '</div>';
+
+                            // Timeline strip: started/completed timestamps so
+                            // the organizer can correlate the rates with when
+                            // the campaign actually ran.
+                            $timeline = [];
+                            if ($record->scheduled_at) {
+                                $timeline[] = 'Programat: ' . $record->scheduled_at->translatedFormat('d M Y, H:i');
+                            }
+                            if ($record->started_at) {
+                                $timeline[] = 'Început: ' . $record->started_at->translatedFormat('d M Y, H:i');
+                            }
+                            if ($record->completed_at) {
+                                $timeline[] = 'Finalizat: ' . $record->completed_at->translatedFormat('d M Y, H:i');
+                            }
+                            if (!empty($timeline)) {
+                                $html .= '<div class="border-t border-gray-200 dark:border-gray-700 pt-2 space-y-0.5 text-[11px] text-gray-500">';
+                                foreach ($timeline as $line) {
+                                    $html .= '<div>' . e($line) . '</div>';
+                                }
+                                $html .= '</div>';
+                            }
+
                             $html .= '</div>';
                             return new HtmlString($html);
                         }),
-                ])
-                ->visible(fn ($record) => $record && $record->status !== 'draft'),
+                ]),
         ];
     }
 
