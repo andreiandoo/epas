@@ -2984,6 +2984,38 @@ class EventResource extends Resource
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->extraAttributes(['class' => 'fi-section-sales-live'])
+                            ->headerActions([
+                                Action::make('edit_views_count')
+                                    ->label($t('Vizualizări', 'Views'))
+                                    ->icon('heroicon-o-eye')
+                                    ->tooltip($t('Editează numărul de vizualizări', 'Edit view count'))
+                                    ->color('gray')
+                                    ->visible(fn (?Event $record) => $record && $record->exists)
+                                    ->fillForm(fn (?Event $record) => [
+                                        'views_count' => (int) ($record->views_count ?? 0),
+                                    ])
+                                    ->schema([
+                                        Forms\Components\TextInput::make('views_count')
+                                            ->label($t('Vizualizări', 'Views'))
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->required()
+                                            ->helperText($t(
+                                                'Modifică manual numărul afișat. Se folosește pentru a corecta date sau a echivala traficul migrat de pe alte platforme.',
+                                                'Override the displayed count. Used to correct data or match traffic migrated from other platforms.'
+                                            )),
+                                    ])
+                                    ->modalHeading($t('Editează vizualizări', 'Edit views'))
+                                    ->modalSubmitActionLabel($t('Salvează', 'Save'))
+                                    ->action(function (array $data, ?Event $record) use ($t): void {
+                                        if (!$record) return;
+                                        $record->update(['views_count' => (int) $data['views_count']]);
+                                        \Filament\Notifications\Notification::make()
+                                            ->title($t('Vizualizări actualizate', 'Views updated'))
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])
                             ->schema([
                                 Forms\Components\Placeholder::make('stats_overview')
                                     ->hiddenLabel()
