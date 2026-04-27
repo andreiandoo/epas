@@ -178,6 +178,7 @@ if (!empty($ev)) {
         ],
         'artists' => array_map(fn ($a) => ['name' => $a['name'] ?? ''], is_array($artistsData) ? $artistsData : []),
         'organizer' => $organizerData['name'] ?? null,
+        'organizer_slug' => $organizerData['slug'] ?? null,
         'minPrice' => $ticketPrices ? min($ticketPrices) : null,
         'maxPrice' => $ticketPrices ? max($ticketPrices) : null,
         'saleStart' => null, // not used for event_status; keeps current behaviour
