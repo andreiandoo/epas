@@ -1,42 +1,26 @@
 <?php
 
-namespace App\Http\Controllers\Api\TenantClient;
+namespace App\Http\Controllers\Api\MarketplaceClient;
 
-use App\Http\Controllers\Controller;
-use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Models\Tour;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Public tour pages on the marketplace storefront (e.g. ambilet.ro/turnee/{slug}).
- * Returns the tour with its rich content + a list of published linked events.
+ * Public marketplace API for tour landing pages (e.g. ambilet.ro/turnee/{slug}).
+ * Scoped by the marketplace client resolved from the API key in marketplace.auth.
  */
-class ToursController extends Controller
+class ToursController extends BaseController
 {
-    use ResolvesTenant;
-
     public function show(Request $request, string $slug): JsonResponse
     {
-        $tenant = $this->resolveRequestTenant($request);
-        if (!$tenant) {
-            return response()->json(['success' => false, 'message' => 'Tenant not found'], 404);
-        }
-
+        $client = $this->requireClient($request);
         $locale = $request->query('locale', 'ro');
 
-        // Match tours by either:
-        //   - tour.tenant_id = current tenant (direct ownership)
-        //   - any event in this tour belongs to the current tenant
-        // The second branch covers legacy tours created via EventResource
-        // before tenant_id was being set on the tour itself.
         $tour = Tour::query()
             ->where('slug', $slug)
-            ->where(function ($q) use ($tenant) {
-                $q->where('tenant_id', $tenant->id)
-                    ->orWhereHas('events', fn ($eq) => $eq->where('tenant_id', $tenant->id));
-            })
+            ->where('marketplace_client_id', $client->id)
             ->with([
                 'artist:id,name,slug,main_image_url',
                 'marketplaceOrganizer:id,name,logo,description',
@@ -49,6 +33,7 @@ class ToursController extends Controller
 
         $events = $tour->events()
             ->where('is_published', true)
+            ->where('marketplace_client_id', $client->id)
             ->with(['venue:id,name,city,slug', 'ticketTypes:id,event_id,name,price_cents,quota_total,quota_sold,meta'])
             ->orderBy('event_date')
             ->get();
@@ -62,14 +47,8 @@ class ToursController extends Controller
             return $value ?: null;
         };
 
-        $eventTitle = function ($event) use ($locale, $resolveTrans) {
-            return $resolveTrans($event->title);
-        };
-
-        $venueName = function ($venue) use ($resolveTrans) {
-            if (!$venue) return null;
-            return $resolveTrans($venue->name);
-        };
+        $eventTitle = fn ($event) => $resolveTrans($event->title);
+        $venueName = fn ($venue) => $venue ? $resolveTrans($venue->name) : null;
 
         $storageUrl = function ($path) {
             if (empty($path)) return null;
@@ -77,7 +56,6 @@ class ToursController extends Controller
             return Storage::disk('public')->url($path);
         };
 
-        // Build distinct artists/cities lists (already exposed by Tour accessors)
         $cities = $tour->cities;
         $artists = $tour->distinct_artists->map(fn ($a) => [
             'id' => $a->id,
@@ -87,7 +65,6 @@ class ToursController extends Controller
         ])->values();
 
         $eventsPayload = $events->map(function ($e) use ($eventTitle, $venueName, $storageUrl) {
-            // Skip the "Invitatie" ticket types from the public preview
             $ticketTypes = $e->ticketTypes
                 ->reject(fn ($tt) => (bool) (data_get($tt->meta, 'is_invitation') === true))
                 ->map(fn ($tt) => [
