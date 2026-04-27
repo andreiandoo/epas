@@ -41,7 +41,7 @@ require_once __DIR__ . '/includes/header.php';
 </style>
 
 <!-- HERO with poster -->
-<section class="px-4 pt-4 mx-auto max-w-7xl md:px-6">
+<section class="px-4 pt-4 mx-auto max-w-7xl md:px-6 mt-17 mobile:mt-16">
   <div class="overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-slate-950 rounded-2xl card-shadow">
     <div class="grid items-stretch grid-cols-1 md:grid-cols-12">
       <!-- POSTER (left) -->
@@ -93,7 +93,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="flex flex-col justify-center flex-1">
           <div class="flex flex-wrap items-center gap-2 mb-3" id="tourBadges"></div>
           <h1 id="tourName" class="mb-3 text-3xl font-black tracking-tight md:text-5xl">
-            <span class="inline-block rounded h-12 w-80 bg-white/20 animate-pulse"></span>
+            <span class="inline-block h-12 rounded w-80 bg-white/20 animate-pulse"></span>
           </h1>
           <div class="flex items-center gap-2 mb-4" id="tourArtistChip" data-hidden>
             <a id="tourArtistChipLink" href="#" class="flex items-center gap-2 group">
@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- META STRIP -->
 <section class="px-4 mx-auto mt-4 max-w-7xl md:px-6">
-  <div class="grid grid-cols-2 gap-4 p-4 bg-white rounded-2xl card-shadow md:p-5 md:grid-cols-5 md:gap-0 md:divide-x divide-slate-200">
+  <div class="grid grid-cols-2 gap-4 p-4 bg-white rounded-2xl card-shadow md:p-5 md:grid-cols-4 md:gap-0 md:divide-x divide-slate-200">
     <div class="md:px-5 first:pl-0">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
@@ -137,14 +137,6 @@ require_once __DIR__ . '/includes/header.php';
       </div>
       <div class="text-sm font-bold text-slate-900" id="metaCities">—</div>
       <div class="text-xs text-slate-500 mt-0.5" id="metaCitiesList"></div>
-    </div>
-    <div class="md:px-5">
-      <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20a6 6 0 0 0-12 0"/><circle cx="12" cy="10" r="4"/><circle cx="12" cy="12" r="10"/></svg>
-        Capacitate totală
-      </div>
-      <div class="text-sm font-bold text-slate-900" id="metaCapacity">—</div>
-      <div class="text-xs text-slate-500 mt-0.5" id="metaCapacityNote"></div>
     </div>
     <div class="md:px-5">
       <div class="text-xs text-slate-500 uppercase tracking-wide font-medium mb-1 flex items-center gap-1.5">
@@ -206,7 +198,7 @@ require_once __DIR__ . '/includes/header.php';
         <!-- LIST -->
         <div id="datesList" class="border-t divide-y divide-slate-100 border-slate-100">
           <div class="p-6 animate-pulse">
-            <div class="h-16 bg-slate-100 rounded-xl mb-3"></div>
+            <div class="h-16 mb-3 bg-slate-100 rounded-xl"></div>
             <div class="h-16 bg-slate-100 rounded-xl"></div>
           </div>
         </div>
@@ -223,7 +215,7 @@ require_once __DIR__ . '/includes/header.php';
           </div>
           <h2 class="text-xl font-bold">Despre turneu</h2>
         </div>
-        <div id="tourDescription" class="prose prose-slate max-w-none mb-6 text-slate-700"></div>
+        <div id="tourDescription" class="mb-6 prose prose-slate max-w-none text-slate-700"></div>
 
         <!-- Setlist -->
         <div id="setlistCard" class="p-5 text-white bg-slate-900 rounded-xl" data-hidden>
@@ -396,7 +388,7 @@ $scriptsExtra = <<<'JS'
     }
 
     function showNotFound() {
-        document.body.innerHTML = '<div class="min-h-screen flex items-center justify-center bg-slate-50"><div class="text-center"><h1 class="text-2xl font-bold text-slate-900 mb-2">Turneu negăsit</h1><p class="text-slate-500 mb-6">Linkul accesat nu mai e valabil.</p><a href="/" class="px-4 py-2 rounded-lg bg-primary text-white font-semibold">Înapoi la pagina principală</a></div></div>';
+        document.body.innerHTML = '<div class="flex items-center justify-center min-h-screen bg-slate-50"><div class="text-center"><h1 class="mb-2 text-2xl font-bold text-slate-900">Turneu negăsit</h1><p class="mb-6 text-slate-500">Linkul accesat nu mai e valabil.</p><a href="/" class="px-4 py-2 font-semibold text-white rounded-lg bg-primary">Înapoi la pagina principală</a></div></div>';
     }
 
     function render(data) {
@@ -607,7 +599,7 @@ $scriptsExtra = <<<'JS'
         const guestsList = artistsList.filter(a => !headlinerId || a.id !== headlinerId);
 
         if (headlinerData?.name) {
-            const av = headlinerData.image ? `<div class="flex items-center justify-center flex-none w-16 h-16 rounded-full bg-cover bg-center ring-2 ring-primary" style="background-image:url(${esc(headlinerData.image)})"></div>` : `<div class="flex items-center justify-center flex-none w-16 h-16 font-bold text-white rounded-full bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-primary">${esc(initials(headlinerData.name))}</div>`;
+            const av = headlinerData.image ? `<div class="flex items-center justify-center flex-none w-16 h-16 bg-center bg-cover rounded-full ring-2 ring-primary" style="background-image:url(${esc(headlinerData.image)})"></div>` : `<div class="flex items-center justify-center flex-none w-16 h-16 font-bold text-white rounded-full bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-primary">${esc(initials(headlinerData.name))}</div>`;
             $('headlinerCard').innerHTML = `
                 <a href="/artist/${esc(headlinerData.slug || '')}" class="flex items-center gap-4 p-4 mb-3 transition border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent rounded-xl group hover:border-primary">
                     ${av}
@@ -625,7 +617,7 @@ $scriptsExtra = <<<'JS'
         if (guestsList.length > 0) {
             $('guestsGrid').innerHTML = guestsList.map(g => {
                 const av = g.image
-                    ? `<div class="mb-2 rounded-full aspect-square bg-cover bg-center ring-2 ring-transparent group-hover:ring-primary" style="background-image:url(${esc(g.image)})"></div>`
+                    ? `<div class="mb-2 bg-center bg-cover rounded-full aspect-square ring-2 ring-transparent group-hover:ring-primary" style="background-image:url(${esc(g.image)})"></div>`
                     : `<div class="flex items-center justify-center mb-2 text-xl font-bold text-white transition rounded-full aspect-square bg-gradient-to-br from-slate-700 to-slate-900 ring-2 ring-transparent group-hover:ring-primary">${esc(initials(g.name))}</div>`;
                 return `
                     <a href="/artist/${esc(g.slug || '')}" class="p-3 text-center transition group rounded-xl hover:bg-slate-50">
@@ -646,7 +638,7 @@ $scriptsExtra = <<<'JS'
                         <span class="text-sm font-semibold text-slate-900">${esc(item.question || '')}</span>
                         <svg class="flex-none transition text-slate-400 group-open:rotate-180" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                     </summary>
-                    <div class="px-4 pt-3 pb-4 text-sm leading-relaxed border-t text-slate-600 border-slate-100 whitespace-pre-line">${esc(item.answer || '')}</div>
+                    <div class="px-4 pt-3 pb-4 text-sm leading-relaxed whitespace-pre-line border-t text-slate-600 border-slate-100">${esc(item.answer || '')}</div>
                 </details>
             `).join('');
             show($('faqSection'), true);
@@ -679,7 +671,7 @@ $scriptsExtra = <<<'JS'
         $('infoList').innerHTML = infoRows.map(([k, v]) => `
             <div class="flex items-center justify-between gap-3 px-5 py-3">
                 <dt class="text-xs font-medium tracking-wide uppercase text-slate-500">${esc(k)}</dt>
-                <dd class="text-sm font-medium text-slate-900 text-right">${esc(v)}</dd>
+                <dd class="text-sm font-medium text-right text-slate-900">${esc(v)}</dd>
             </div>
         `).join('');
 
