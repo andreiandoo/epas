@@ -1067,13 +1067,27 @@ $scriptsExtra = <<<'JS'
         };
         initLeaflet();
 
-        // Legend below map
-        const legendItems = sorted.map(p => `
-            <a href="/bilete/${esc(p.event.slug || '')}" class="text-xs text-slate-600 hover:text-primary flex items-center gap-1.5 p-2 rounded hover:bg-slate-50 transition">
-                <span class="w-5 h-5 bg-primary text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${p.stop}</span>
-                <span class="truncate">${esc(p.city)}${p.event.venue?.name ? ' · ' + esc(p.event.venue.name) : ''}</span>
-            </a>
-        `).join('');
+        // Legend below map: link + red number for upcoming, plain text + gray
+        // number for past events (no buying anything for an event that already
+        // happened).
+        const legendItems = sorted.map(p => {
+            const isPast = p.event.starts_at && new Date(p.event.starts_at).getTime() < now;
+            const cityVenue = esc(p.city) + (p.event.venue?.name ? ' · ' + esc(p.event.venue.name) : '');
+            if (isPast) {
+                return `
+                    <span class="text-xs text-slate-400 flex items-center gap-1.5 p-2">
+                        <span class="w-5 h-5 bg-slate-400 text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${p.stop}</span>
+                        <span class="truncate">${cityVenue}</span>
+                    </span>
+                `;
+            }
+            return `
+                <a href="/bilete/${esc(p.event.slug || '')}" class="text-xs text-slate-600 hover:text-primary flex items-center gap-1.5 p-2 rounded hover:bg-slate-50 transition">
+                    <span class="w-5 h-5 bg-primary text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${p.stop}</span>
+                    <span class="truncate">${cityVenue}</span>
+                </a>
+            `;
+        }).join('');
         const unmappedItems = unmapped.map(u => `
             <span class="text-xs text-slate-400 italic flex items-center gap-1.5 p-2">
                 <span class="w-5 h-5 bg-slate-300 text-white rounded-full text-[9px] font-bold flex items-center justify-center flex-shrink-0">${u.stop}</span>
