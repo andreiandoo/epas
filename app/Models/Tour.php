@@ -134,19 +134,17 @@ class Tour extends Model
     }
 
     /**
-     * Total tickets sold (status valid|used) across linked events,
-     * scoped to paid/confirmed/completed orders.
-     * Mirrors the pattern from EventsController::events stats query.
+     * Total tickets sold across linked events. Sums ticket_types.quota_sold
+     * — the denormalized counter the system keeps in sync as orders are
+     * paid + invitations emitted. This matches what /marketplace/events/
+     * {id}/edit shows per event (and includes complimentary invitations,
+     * which a whereHas('order') filter would miss because invitation
+     * tickets are created with order_id=null).
      */
     public function getTotalSoldAttribute(): int
     {
-        $eventIds = $this->events()->pluck('id');
-        if ($eventIds->isEmpty()) return 0;
-
-        return Ticket::whereHas('order', function ($q) use ($eventIds) {
-            $q->whereIn('event_id', $eventIds)
-                ->whereIn('status', ['paid', 'confirmed', 'completed']);
-        })->whereIn('status', ['valid', 'used'])->count();
+        return (int) \App\Models\TicketType::whereIn('event_id', $this->events()->pluck('id'))
+            ->sum('quota_sold');
     }
 
     /**

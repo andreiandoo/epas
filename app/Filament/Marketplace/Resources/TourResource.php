@@ -271,9 +271,7 @@ class TourResource extends Resource
                                 ->label('Status')
                                 ->options([
                                     'planning' => 'În planificare',
-                                    'announced' => 'Anunțat',
                                     'on_sale' => 'În vânzare',
-                                    'in_progress' => 'În desfășurare',
                                     'completed' => 'Finalizat',
                                     'cancelled' => 'Anulat',
                                 ])
@@ -337,17 +335,14 @@ class TourResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'planning' => 'În planificare',
-                        'announced' => 'Anunțat',
                         'on_sale' => 'În vânzare',
-                        'in_progress' => 'În desfășurare',
                         'completed' => 'Finalizat',
                         'cancelled' => 'Anulat',
                         default => $state ?: '—',
                     })
                     ->color(fn ($state) => match ($state) {
                         'planning' => 'gray',
-                        'announced', 'on_sale' => 'warning',
-                        'in_progress' => 'success',
+                        'on_sale' => 'success',
                         'completed' => 'info',
                         'cancelled' => 'danger',
                         default => 'gray',
@@ -384,9 +379,7 @@ class TourResource extends Resource
                     ->label('Status')
                     ->options([
                         'planning' => 'În planificare',
-                        'announced' => 'Anunțat',
                         'on_sale' => 'În vânzare',
-                        'in_progress' => 'În desfășurare',
                         'completed' => 'Finalizat',
                         'cancelled' => 'Anulat',
                     ]),

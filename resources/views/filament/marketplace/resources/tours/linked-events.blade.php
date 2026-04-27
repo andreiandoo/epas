@@ -89,6 +89,17 @@
     @endif
 
     {{-- Per-event table --}}
+    @php
+        // Reusable status badge classes — key is one of: cancelled / postponed / past / sold_out / unpublished / live
+        $statusBadge = function ($event) {
+            if ($event->is_cancelled) return ['Anulat', 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300'];
+            if ($event->is_postponed) return ['Amânat', 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'];
+            if (method_exists($event, 'isPast') && $event->isPast()) return ['Încheiat', 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'];
+            if ($event->is_sold_out) return ['Sold out', 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'];
+            if (!$event->is_published) return ['Nepublicat', 'bg-yellow-50 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'];
+            return ['Publicat', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'];
+        };
+    @endphp
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
         <table class="w-full text-sm">
             <thead class="bg-gray-50 dark:bg-gray-800">
@@ -96,6 +107,7 @@
                     <th class="py-2 px-3">Data</th>
                     <th class="py-2 px-3">Eveniment</th>
                     <th class="py-2 px-3">Venue · Oraș</th>
+                    <th class="py-2 px-3">Status</th>
                     <th class="py-2 px-3 text-right">Capacitate</th>
                     <th class="py-2 px-3 text-right">Vândute</th>
                     <th class="py-2 px-3">Tipuri bilete</th>
@@ -105,10 +117,13 @@
                 @foreach($events as $event)
                     @php
                         $eventCap = $event->total_capacity;
-                        $eventSold = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
-                            $q->where('event_id', $event->id)
-                                ->whereIn('status', ['paid', 'confirmed', 'completed']);
-                        })->whereIn('status', ['valid', 'used'])->count();
+                        // Sold per event: sum the ticket_types.quota_sold counters that the
+                        // app keeps in sync as orders are paid + invitations are emitted.
+                        // This matches what /marketplace/events/{id}/edit displays, including
+                        // invitations (which have order_id=null and would be missed by a
+                        // whereHas('order') filter).
+                        $eventSold = (int) $event->ticketTypes->sum('quota_sold');
+                        [$statusLabel, $statusClasses] = $statusBadge($event);
                         $editUrl = '/marketplace/events/' . $event->id . '/edit';
                     @endphp
                     <tr class="bg-white dark:bg-gray-900">
@@ -125,6 +140,9 @@
                             @if($event->venue?->city)
                                 <span class="text-gray-400"> · {{ $event->venue->city }}</span>
                             @endif
+                        </td>
+                        <td class="py-2 px-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold {{ $statusClasses }}">{{ $statusLabel }}</span>
                         </td>
                         <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">
                             {{ $fmtCapacity($eventCap) }}
