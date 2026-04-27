@@ -24,56 +24,50 @@ if (!isset($pageType)) $pageType = 'website';
 // Clean canonical URL (remove query params for non-search pages)
 $canonicalUrl = strtok($canonicalUrl, '?');
 
-// Site schema (always present)
-$siteSchema = [
+// Combined site + organization schema as @graph (single JSON-LD block).
+// publisher on the WebSite node references the Organization node by @id, so
+// the organization data lives in a single place and search engines link them.
+$siteAndOrgSchema = [
     '@context' => 'https://schema.org',
-    '@type' => 'WebSite',
-    'name' => SITE_NAME,
-    'url' => SITE_URL,
-    'description' => 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele.',
-    'potentialAction' => [
-        '@type' => 'SearchAction',
-        'target' => [
-            '@type' => 'EntryPoint',
-            'urlTemplate' => SITE_URL . '/cauta?q={search_term_string}'
+    '@graph' => [
+        [
+            '@type' => 'Organization',
+            '@id' => SITE_URL . '/#organization',
+            'name' => SITE_NAME,
+            'url' => SITE_URL,
+            'logo' => [
+                '@type' => 'ImageObject',
+                'url' => SITE_URL . '/assets/images/ambilet-logo.webp'
+            ],
+            'sameAs' => [
+                'https://facebook.com/ambilet',
+                'https://instagram.com/ambilet',
+                'https://twitter.com/ambilet'
+            ],
+            'contactPoint' => [
+                '@type' => 'ContactPoint',
+                'email' => SUPPORT_EMAIL,
+                'telephone' => SUPPORT_PHONE,
+                'contactType' => 'customer service',
+                'availableLanguage' => ['Romanian', 'English']
+            ]
         ],
-        'query-input' => 'required name=search_term_string'
-    ],
-    'publisher' => [
-        '@type' => 'Organization',
-        'name' => SITE_NAME,
-        'url' => SITE_URL,
-        'logo' => [
-            '@type' => 'ImageObject',
-            'url' => SITE_URL . '/assets/images/ambilet-logo.webp'
-        ],
-        'contactPoint' => [
-            '@type' => 'ContactPoint',
-            'email' => SUPPORT_EMAIL,
-            'telephone' => SUPPORT_PHONE,
-            'contactType' => 'customer service',
-            'availableLanguage' => ['Romanian', 'English']
+        [
+            '@type' => 'WebSite',
+            '@id' => SITE_URL . '/#website',
+            'name' => SITE_NAME,
+            'url' => SITE_URL,
+            'description' => 'Cumpara bilete online pentru concerte, festivaluri, teatru, sport si multe altele.',
+            'publisher' => ['@id' => SITE_URL . '/#organization'],
+            'potentialAction' => [
+                '@type' => 'SearchAction',
+                'target' => [
+                    '@type' => 'EntryPoint',
+                    'urlTemplate' => SITE_URL . '/cauta?q={search_term_string}'
+                ],
+                'query-input' => 'required name=search_term_string'
+            ]
         ]
-    ]
-];
-
-// Organization schema
-$orgSchema = [
-    '@context' => 'https://schema.org',
-    '@type' => 'Organization',
-    'name' => SITE_NAME,
-    'url' => SITE_URL,
-    'logo' => SITE_URL . '/assets/images/ambilet-logo.webp',
-    'sameAs' => [
-        'https://facebook.com/ambilet',
-        'https://instagram.com/ambilet',
-        'https://twitter.com/ambilet'
-    ],
-    'contactPoint' => [
-        '@type' => 'ContactPoint',
-        'email' => SUPPORT_EMAIL,
-        'telephone' => SUPPORT_PHONE,
-        'contactType' => 'customer service'
     ]
 ];
 
@@ -268,8 +262,7 @@ if (isset($breadcrumbs) && is_array($breadcrumbs) && count($breadcrumbs) > 0) {
     <meta name="twitter:creator" content="@ambilet">
 
     <!-- Schema.org Structured Data -->
-    <script type="application/ld+json"><?= json_encode($siteSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
-    <script type="application/ld+json"><?= json_encode($orgSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
+    <script type="application/ld+json"><?= json_encode($siteAndOrgSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php if ($pageSchema): ?>
     <script type="application/ld+json"><?= json_encode($pageSchema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) ?></script>
     <?php endif; ?>
