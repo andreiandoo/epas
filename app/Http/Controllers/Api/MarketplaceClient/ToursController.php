@@ -84,12 +84,24 @@ class ToursController extends BaseController
                 $availableCapacity = $e->total_capacity;
             }
 
+            // Build a clean ISO timestamp from event_date + start_time (both are
+            // separate columns on events). $e->starts_at is auto-cast to UTC
+            // midnight when start_time is unset, which produces 03:00 EET on the
+            // frontend for every event — not what we want.
+            $startsAt = null;
+            if ($e->event_date) {
+                $time = $e->start_time ?: '00:00:00';
+                if (substr_count($time, ':') === 1) $time .= ':00';
+                $startsAt = $e->event_date->format('Y-m-d') . 'T' . $time;
+            }
+
             return [
                 'id' => $e->id,
                 'name' => $eventTitle($e),
                 'slug' => $e->slug,
-                'event_date' => $e->event_date?->toIso8601String(),
-                'starts_at' => $e->starts_at?->toIso8601String() ?? $e->event_date?->toIso8601String(),
+                'event_date' => $e->event_date?->format('Y-m-d'),
+                'start_time' => $e->start_time,
+                'starts_at' => $startsAt,
                 'image' => $storageUrl($e->hero_image_url),
                 'general_quota' => $e->general_quota,
                 'available_capacity' => $availableCapacity,
