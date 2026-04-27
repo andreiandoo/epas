@@ -607,14 +607,20 @@ class MarketplaceEventsController extends BaseController
         $targetPrice = $event->target_price ? (float) $event->target_price : null;
         \Log::info('[MarketplaceEventsController] Final targetPrice: ' . var_export($targetPrice, true));
 
-        // Get ALL global active taxes (tenant_id is NULL)
-        // We fetch all global taxes, not filtered by eventTypes, because:
-        // 1. Event might not have eventTypes assigned
-        // 2. Taxes like "Timbru Muzical" and "UCMR-ADA" should apply to all music events
+        // Restrict global taxes (tenant_id IS NULL) to those that actually
+        // apply to this event's types — otherwise the public payload leaks
+        // every TVA / Timbru / UCMR-ADA bracket in the system to every page.
+        // Taxes with no event_types assigned are still treated as global and
+        // come through (existing scopeForEventTypes behaviour).
+        $eventTypeIds = $event->relationLoaded('eventTypes')
+            ? $event->eventTypes->pluck('id')->all()
+            : $event->eventTypes()->pluck('event_types.id')->all();
+
         $applicableTaxes = \App\Models\Tax\GeneralTax::query()
             ->whereNull('tenant_id') // Global taxes only
             ->active()
             ->validOn()
+            ->forEventTypes($eventTypeIds)
             ->byPriority()
             ->get();
 

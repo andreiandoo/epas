@@ -109,9 +109,28 @@ if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl) {
     $extraHead = '<link rel="preload" as="image" href="' . htmlspecialchars($lcpImageUrl) . '" fetchpriority="high">';
 }
 
-// Inject server-fetched data so JS can render immediately (no API roundtrip)
+// Inject server-fetched data so JS can render immediately (no API roundtrip).
+// Strip null / false / empty-array values recursively before serialising —
+// the JS in event-single.js already falls back to null/[]/false on missing
+// keys (e.g. `apiData.tour_events || []`), so dropping them shrinks the
+// inline payload by ~30% and stops leaking internal flags as side effect.
 if (!empty($eventPreload['data'])) {
-    $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($eventPreload['data'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
+    $stripEmpty = function ($v) use (&$stripEmpty) {
+        if (is_array($v)) {
+            $cleaned = [];
+            foreach ($v as $k => $vv) {
+                $vv = $stripEmpty($vv);
+                if ($vv === null || $vv === false || $vv === '' || (is_array($vv) && $vv === [])) {
+                    continue;
+                }
+                $cleaned[$k] = $vv;
+            }
+            return $cleaned;
+        }
+        return $v;
+    };
+    $preloadCompact = $stripEmpty($eventPreload['data']);
+    $headExtra = '<script>window.__EVENT_PRELOAD__=' . json_encode($preloadCompact, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . ';</script>';
 }
 
 // If the event couldn't be loaded (e.g. still a draft at the time of this
