@@ -95,17 +95,22 @@ class VenuesController extends BaseController
 
     /**
      * Get featured venues
-     * Returns venues marked as featured, or falls back to venues with most upcoming events
+     * Returns venues marked as featured (random order so all promoted venues
+     * rotate when more than `limit` exist), or falls back to venues with most
+     * upcoming events.
      */
     public function featured(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
         $limit = $request->input('limit', 6);
 
-        // First try to get explicitly featured venues
+        // First try to get explicitly featured venues. inRandomOrder is what
+        // gives the rotation when more than `limit` venues are flagged
+        // featured — every page load shows a different subset.
         $venues = Venue::query()
             ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_client_id', $client->id))
             ->where('is_featured', true)
+            ->inRandomOrder()
             ->limit($limit)
             ->get();
 

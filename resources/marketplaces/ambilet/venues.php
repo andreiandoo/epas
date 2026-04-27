@@ -237,9 +237,13 @@ const VenuesPage = {
 
     async loadVenues() {
         try {
-            const response = await AmbiletAPI.getVenues({ per_page: 100 });
-            const raw = response.data || response || [];
-            this.venues = (Array.isArray(raw) ? raw : []).map(v => ({
+            // Featured is fetched independently from the full list because the
+            // /venues endpoint caps per_page at 50 — when a marketplace has
+            // more than 50 venues, an alphabetically-late featured venue would
+            // never appear in the "Locații populare" section. The /featured
+            // endpoint runs inRandomOrder server-side so when more than 4 are
+            // flagged we get a rotating subset on each page load.
+            const mapVenue = (v) => ({
                 id: v.id,
                 name: v.name || '',
                 slug: v.slug || '',
@@ -251,13 +255,26 @@ const VenuesPage = {
                 type: (v.categories && v.categories[0]?.name) || 'Locație',
                 categorySlugs: v.categories ? v.categories.map(c => c.slug) : [],
                 eventTypes: v.categories ? v.categories.map(c => c.name).join(', ') : ''
-            }));
-            // Shuffle for random default order
+            });
+
+            const [listResp, featuredResp] = await Promise.all([
+                AmbiletAPI.getVenues({ per_page: 100 }),
+                AmbiletAPI.getFeaturedVenues(4),
+            ]);
+
+            const raw = listResp.data || listResp || [];
+            this.venues = (Array.isArray(raw) ? raw : []).map(mapVenue);
+
+            const featuredRaw = featuredResp.data || featuredResp || [];
+            this.featuredVenues = (Array.isArray(featuredRaw) ? featuredRaw : []).map(mapVenue);
+
+            // Shuffle the main list for random default order on filter views.
             this.shuffle(this.venues);
             this.renderFeatured();
         } catch (err) {
             console.error('Failed to load venues:', err);
             this.venues = [];
+            this.featuredVenues = [];
         }
     },
 
@@ -322,7 +339,12 @@ const VenuesPage = {
     },
 
     renderFeatured() {
-        const featured = this.venues.filter(v => v.featured);
+        // Use the dedicated featured set (already random-ordered + capped at
+        // 4 server-side) instead of filtering the main list, which would miss
+        // featured venues sitting beyond the per_page cap.
+        const featured = (this.featuredVenues && this.featuredVenues.length)
+            ? this.featuredVenues
+            : this.venues.filter(v => v.featured).slice(0, 4);
         const container = document.getElementById('featuredVenues');
         const section = container?.closest('section');
         if (!featured.length) {
