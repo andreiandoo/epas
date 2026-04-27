@@ -60,7 +60,7 @@ class NewsletterResource extends Resource
                         SC\Group::make(static::sidebarSchema($marketplace))
                             ->columnSpan(['default' => 1, 'lg' => 1]),
                     ]),
-            ]);
+            ])->columns(1);
     }
 
     /**
@@ -400,7 +400,7 @@ class NewsletterResource extends Resource
                                 ->get()
                                 ->map(fn ($e) => static::formatEventOption($e))
                                 ->implode("\n");
-                            return new HtmlString('<div class="text-xs text-gray-700 dark:text-gray-300 space-y-1">' . nl2br(e($names)) . '</div>');
+                            return new HtmlString('<div class="space-y-1 text-xs text-gray-700 dark:text-gray-300">' . nl2br(e($names)) . '</div>');
                         })
                         ->visible(fn (SGet $get) => !empty($get('target_event_ids'))),
                     Forms\Components\Placeholder::make('targeted_lists_summary')
@@ -422,9 +422,9 @@ class NewsletterResource extends Resource
                     Forms\Components\Placeholder::make('variables_info')
                         ->label('')
                         ->content(new HtmlString(
-                            '<div class="text-xs space-y-3">' .
+                            '<div class="space-y-3 text-xs">' .
                             '<div>' .
-                                '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Per destinatar:</p>' .
+                                '<p class="mb-1 font-medium text-gray-700 dark:text-gray-300">Per destinatar:</p>' .
                                 '<div class="flex flex-wrap gap-1">' .
                                     '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{customer_name}}</code>' .
                                     '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{customer_email}}</code>' .
@@ -433,7 +433,7 @@ class NewsletterResource extends Resource
                                 '</div>' .
                             '</div>' .
                             '<div>' .
-                                '<p class="font-medium text-gray-700 dark:text-gray-300 mb-1">Eveniment (înlocuiește ID):</p>' .
+                                '<p class="mb-1 font-medium text-gray-700 dark:text-gray-300">Eveniment (înlocuiește ID):</p>' .
                                 '<div class="flex flex-wrap gap-1">' .
                                     '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:name}}</code>' .
                                     '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] font-mono">{{event:ID:date}}</code>' .
