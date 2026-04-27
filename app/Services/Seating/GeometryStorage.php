@@ -119,13 +119,44 @@ class GeometryStorage
                     ];
                 }
 
-                $rows[] = [
+                // Tables (drawRectTable / drawRoundTable in the designer)
+                // store their geometry in the row's metadata JSON. The
+                // customer + admin renderers read these from top-level row
+                // keys (row.is_table, row.table_type, row.center_x, ...),
+                // so we have to flatten them onto the snapshot. Without
+                // this, the table shape never paints — only the seats
+                // around it appear, and on table-only rows nothing shows
+                // at all.
+                $rowMeta = $row->metadata ?? [];
+                $rowPayload = [
+                    'id' => $row->id,
                     'label' => $row->label,
                     'y' => (float) $row->y,
                     'rotation' => (float) $row->rotation,
                     'seat_count' => $row->seat_count,
+                    'metadata' => $rowMeta,
                     'seats' => $seats,
                 ];
+                if (!empty($rowMeta['is_table'])) {
+                    $rowPayload['is_table'] = true;
+                    $rowPayload['table_type'] = $rowMeta['table_type'] ?? 'rect';
+                    if (isset($rowMeta['center_x'])) {
+                        $rowPayload['center_x'] = (float) $rowMeta['center_x'];
+                    }
+                    if (isset($rowMeta['center_y'])) {
+                        $rowPayload['center_y'] = (float) $rowMeta['center_y'];
+                    }
+                    if (isset($rowMeta['radius'])) {
+                        $rowPayload['radius'] = (float) $rowMeta['radius'];
+                    }
+                    if (isset($rowMeta['table_width'])) {
+                        $rowPayload['table_width'] = (float) $rowMeta['table_width'];
+                    }
+                    if (isset($rowMeta['table_height'])) {
+                        $rowPayload['table_height'] = (float) $rowMeta['table_height'];
+                    }
+                }
+                $rows[] = $rowPayload;
             }
 
             $sections[] = [

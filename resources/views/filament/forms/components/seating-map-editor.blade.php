@@ -559,6 +559,43 @@
 
                 <g @if($rot != 0) transform="rotate({{ $rot }} {{ $cx }} {{ $cy }})" @endif>
                     @foreach($section->rows as $row)
+                        @php
+                            // Tables (drawRectTable / drawRoundTable in the
+                            // Konva designer) are stored on the row's
+                            // metadata JSON. Without rendering them here
+                            // the admin's "harta" tab shows only the seats
+                            // around each table — the table shape itself
+                            // is missing, which is what the organizer was
+                            // seeing.
+                            $rowMeta = $row->metadata ?? [];
+                            $isTable = !empty($rowMeta['is_table']);
+                            $tableType = $rowMeta['table_type'] ?? 'rect';
+                            $tcx = $sX + (float)($rowMeta['center_x'] ?? 0);
+                            $tcy = $sY + (float)($rowMeta['center_y'] ?? 0);
+                            $tableColor = $section->background_color ?? '#6B7280';
+                        @endphp
+                        @if($isTable)
+                            @if($tableType === 'round')
+                                @php $tr = (float)($rowMeta['radius'] ?? 30); @endphp
+                                <circle cx="{{ $tcx }}" cy="{{ $tcy }}" r="{{ $tr }}"
+                                        fill="{{ $tableColor }}" fill-opacity="0.25"
+                                        stroke="{{ $tableColor }}" stroke-width="1.5" stroke-opacity="0.5"
+                                        class="pointer-events-none"/>
+                            @else
+                                @php
+                                    $tw = (float)($rowMeta['table_width'] ?? 80);
+                                    $th = (float)($rowMeta['table_height'] ?? 30);
+                                @endphp
+                                <rect x="{{ $tcx - $tw/2 }}" y="{{ $tcy - $th/2 }}"
+                                      width="{{ $tw }}" height="{{ $th }}" rx="4"
+                                      fill="{{ $tableColor }}" fill-opacity="0.25"
+                                      stroke="{{ $tableColor }}" stroke-width="1.5" stroke-opacity="0.5"
+                                      class="pointer-events-none"/>
+                            @endif
+                            <text x="{{ $tcx }}" y="{{ $tcy + 4 }}" text-anchor="middle"
+                                  font-size="10" font-weight="700" fill="rgba(0,0,0,0.4)"
+                                  class="pointer-events-none select-none">{{ $row->label }}</text>
+                        @endif
                         <g data-row-id="{{ $row->id }}" style="transition: opacity 0.15s"
                            :opacity="mode==='block' ? 1 : ro({{ $row->id }})">
                             @foreach($row->seats as $seat)
@@ -598,18 +635,20 @@
                                 $firstSeat = $row->seats->first();
                                 $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
                             @endphp
-                            {{-- Left row label --}}
-                            <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
-                                  font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
-                                  class="pointer-events-none select-none"
-                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
-                            >{{ $row->label }}</text>
-                            {{-- Right row label --}}
-                            <text x="{{ $rightLabelX }}" y="{{ $rowLabelY }}"
-                                  font-size="{{ $rowLabelSize }}" text-anchor="start" font-weight="600"
-                                  class="pointer-events-none select-none"
-                                  :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
-                            >{{ $row->label }}</text>
+                            @unless($isTable)
+                                {{-- Left row label (skipped for tables — label sits inside the table shape) --}}
+                                <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
+                                      font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
+                                      class="pointer-events-none select-none"
+                                      :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
+                                >{{ $row->label }}</text>
+                                {{-- Right row label --}}
+                                <text x="{{ $rightLabelX }}" y="{{ $rowLabelY }}"
+                                      font-size="{{ $rowLabelSize }}" text-anchor="start" font-weight="600"
+                                      class="pointer-events-none select-none"
+                                      :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
+                                >{{ $row->label }}</text>
+                            @endunless
                         </g>
                     @endforeach
                 </g>
