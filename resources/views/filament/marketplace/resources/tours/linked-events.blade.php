@@ -3,7 +3,7 @@
     use Illuminate\Support\Str;
 
     $events = $tour->events()
-        ->with(['venue:id,name,city', 'ticketTypes:id,event_id,name,price_cents,quota_total,quota_sold', 'artists:id,name,slug'])
+        ->with(['venue:id,name,city', 'ticketTypes:id,event_id,name,price_cents,quota_total,quota_sold,meta', 'artists:id,name,slug'])
         ->orderBy('event_date')
         ->get();
 

@@ -104,7 +104,8 @@ class Tour extends Model
      */
     public function getPeriodAttribute(): array
     {
-        $row = $this->events()
+        $row = \DB::table('events')
+            ->where('tour_id', $this->id)
             ->selectRaw('MIN(event_date) as min_date, MAX(event_date) as max_date')
             ->first();
 

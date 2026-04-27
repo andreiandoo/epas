@@ -33,17 +33,20 @@ class TourResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $marketplace = static::getMarketplaceClient();
-        if (!$marketplace) return null;
-
-        return (string) static::getEloquentQuery()->count();
+        try {
+            $marketplace = static::getMarketplaceClient();
+            if (!$marketplace) return null;
+            return (string) static::getEloquentQuery()->count();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public static function getEloquentQuery(): Builder
     {
-        $marketplace = static::getMarketplaceClient();
+        $marketplaceId = static::getMarketplaceClientId();
         return parent::getEloquentQuery()
-            ->when($marketplace, fn ($q) => $q->where('marketplace_client_id', $marketplace->id));
+            ->when($marketplaceId, fn ($q) => $q->where('marketplace_client_id', $marketplaceId));
     }
 
     public static function form(Schema $schema): Schema
