@@ -692,6 +692,10 @@ class MarketplaceEventsController extends BaseController
                 'is_general_featured'   => (bool) $event->is_general_featured,
                 'is_category_featured'  => (bool) $event->is_category_featured,
                 'is_city_featured'      => (bool) ($event->is_city_featured ?? false),
+                // Flat organizer id so the public PHP page can layer per-organizer
+                // tracking pixels on top of the marketplace ones (event.php reads
+                // this directly to set $organizerTrackingId before head.php).
+                'marketplace_organizer_id' => $event->marketplace_organizer_id,
                 'target_price' => $targetPrice,
                 'views_count' => (int) ($event->views_count ?? 0),
                 'interested_count' => (int) ($event->interested_count ?? 0),
