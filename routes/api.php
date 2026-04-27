@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\TenantClient\DomainVerificationController;
 use App\Http\Controllers\Api\TenantClient\PackageController;
 use App\Http\Controllers\Api\TenantClient\BootstrapController;
 use App\Http\Controllers\Api\TenantClient\EventsController;
+use App\Http\Controllers\Api\TenantClient\ToursController;
 use App\Http\Controllers\Api\TenantClient\AuthController;
 use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
@@ -1006,6 +1007,12 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.events.tickets');
         Route::get('/{slug}/seating', [EventsController::class, 'seating'])
             ->name('api.tenant-client.events.seating');
+    });
+
+    // Tours (public): tour landing pages with linked events.
+    Route::prefix('tours')->group(function () {
+        Route::get('/{slug}', [ToursController::class, 'show'])
+            ->name('api.tenant-client.tours.show');
     });
 
     // Blog (public - requires blog microservice)

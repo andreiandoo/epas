@@ -6,12 +6,13 @@ use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Tour extends Model
 {
     use Translatable;
 
-    public array $translatable = ['description'];
+    public array $translatable = ['description', 'short_description'];
 
     protected $fillable = [
         'marketplace_client_id',
@@ -26,17 +27,28 @@ class Tour extends Model
         'budget_cents',
         'currency',
         'poster_url',
+        'cover_url',
         'description',
+        'short_description',
+        'setlist',
+        'setlist_duration_minutes',
+        'faq',
+        'age_min',
+        'marketplace_organizer_id',
         'routing_notes',
         'meta',
     ];
 
     protected $casts = [
         'description' => 'array',
+        'short_description' => 'array',
+        'setlist' => 'array',
+        'faq' => 'array',
         'meta' => 'array',
         'start_date' => 'date',
         'end_date' => 'date',
         'budget_cents' => 'integer',
+        'setlist_duration_minutes' => 'integer',
     ];
 
     public function tenant(): BelongsTo
@@ -47,6 +59,11 @@ class Tour extends Model
     public function artist(): BelongsTo
     {
         return $this->belongsTo(Artist::class);
+    }
+
+    public function marketplaceOrganizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class);
     }
 
     public function events(): HasMany
@@ -63,11 +80,104 @@ class Tour extends Model
     }
 
     /**
-     * Get the number of stops on this tour.
+     * Number of events linked to this tour.
+     */
+    public function getEventCountAttribute(): int
+    {
+        return $this->events()->count();
+    }
+
+    /**
+     * Backwards-compat alias.
      */
     public function getStopCountAttribute(): int
     {
-        return $this->events()->count();
+        return $this->event_count;
+    }
+
+    /**
+     * Computed period [first event_date, last event_date] across linked events.
+     * Falls back to the manually-set start_date / end_date columns when there
+     * are no events yet.
+     *
+     * @return array{start: ?\Carbon\Carbon, end: ?\Carbon\Carbon}
+     */
+    public function getPeriodAttribute(): array
+    {
+        $row = $this->events()
+            ->selectRaw('MIN(event_date) as min_date, MAX(event_date) as max_date')
+            ->first();
+
+        $min = $row?->min_date ? \Carbon\Carbon::parse($row->min_date) : ($this->start_date ?: null);
+        $max = $row?->max_date ? \Carbon\Carbon::parse($row->max_date) : ($this->end_date ?: null);
+
+        return ['start' => $min, 'end' => $max];
+    }
+
+    /**
+     * Sum of capacities across all linked events. Returns -1 if any event
+     * has unlimited capacity (mirrors Event::getTotalCapacityAttribute).
+     */
+    public function getTotalCapacityAttribute(): int
+    {
+        $events = $this->events()->with('ticketTypes:id,event_id,quota_total')->get();
+        if ($events->isEmpty()) return 0;
+
+        $total = 0;
+        foreach ($events as $event) {
+            $cap = $event->total_capacity;
+            if ($cap === -1) return -1;
+            $total += $cap;
+        }
+        return $total;
+    }
+
+    /**
+     * Total tickets sold (status valid|used) across linked events,
+     * scoped to paid/confirmed/completed orders.
+     * Mirrors the pattern from EventsController::events stats query.
+     */
+    public function getTotalSoldAttribute(): int
+    {
+        $eventIds = $this->events()->pluck('id');
+        if ($eventIds->isEmpty()) return 0;
+
+        return Ticket::whereHas('order', function ($q) use ($eventIds) {
+            $q->whereIn('event_id', $eventIds)
+                ->whereIn('status', ['paid', 'confirmed', 'completed']);
+        })->whereIn('status', ['valid', 'used'])->count();
+    }
+
+    /**
+     * Distinct cities across linked events' venues.
+     *
+     * @return Collection<int, string>
+     */
+    public function getCitiesAttribute(): Collection
+    {
+        return $this->events()
+            ->with('venue:id,city')
+            ->get()
+            ->pluck('venue.city')
+            ->filter()
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Distinct artists across linked events (with pivot order/headliner info
+     * from the first event each appears in).
+     *
+     * @return Collection<int, Artist>
+     */
+    public function getDistinctArtistsAttribute(): Collection
+    {
+        return $this->events()
+            ->with('artists:id,name,slug,main_image_url')
+            ->get()
+            ->flatMap(fn ($e) => $e->artists)
+            ->unique('id')
+            ->values();
     }
 
     /**

@@ -8,7 +8,7 @@ const AmbiletAPI = {
     _cache: new Map(),
     _cacheTTL: {
         'config': 300000,        // 5 min
-        'events': 60000,         // 1 min
+        'events': 30000,         // 30 sec — near-instant visibility of newly published events
         'events.featured': 60000,
         'events.past': 300000,   // 5 min
         'categories': 300000,
@@ -221,6 +221,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/date-availability/i)) return 'event.dateAvailability';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+\/verify-password$/i)) return 'event.verify-password';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.includes('/marketplace-events')) return 'events';
@@ -290,6 +291,9 @@ const AmbiletAPI = {
         if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.startsWith('/events')) return 'events';
 
+        // Tour public landing page (single)
+        if (endpoint.match(/^\/tours\/[a-z0-9-]+(?:\?|$)/i)) return 'tour.show';
+
         // Event types endpoint (global taxonomy)
         if (endpoint === '/event-types') return 'event-types';
 
@@ -310,6 +314,8 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/login') return 'organizer.login';
         if (endpoint === '/organizer/logout') return 'organizer.logout';
         if (endpoint === '/organizer/me') return 'organizer.me';
+        if (endpoint === '/organizer/widget-settings') return 'organizer.settings';
+        if (endpoint === '/organizer/widget-image') return 'organizer.widget-image';
         if (endpoint === '/organizer/settings') return 'organizer.me';
         if (endpoint === '/organizer/settings/profile') return 'organizer.profile';
         if (endpoint === '/organizer/settings/company') return 'organizer.profile';
@@ -358,6 +364,7 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
         if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
         if (endpoint.match(/\/organizer\/events\/\d+\/status$/)) return 'organizer.event.status';
+        if (endpoint.match(/\/organizer\/events\/\d+\/seating-map$/)) return 'organizer.event.seating-map';
         if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
         if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
 
@@ -413,6 +420,18 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/documents\/\d+\/download$/)) return 'organizer.documents.download';
         if (endpoint.match(/\/organizer\/documents\/\d+\/view$/)) return 'organizer.documents.view';
         if (endpoint === '/organizer/documents' || endpoint.includes('/organizer/documents?')) return 'organizer.documents';
+
+        // Organizer invitations (PDF invite generation)
+        if (endpoint === '/organizer/invitations/csv-template') return 'organizer.invitations.csv-template';
+        if (endpoint === '/organizer/invitations/hold-seats') return 'organizer.invitations.hold-seats';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/download$/)) return 'organizer.invitations.download';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/generate$/)) return 'organizer.invitations.generate';
+        if (endpoint.match(/\/organizer\/invitations\/\d+\/invites$/)) return 'organizer.invitations.delete-invites';
+        if (endpoint.match(/\/organizer\/invitations\/\d+$/)) {
+            // Distinguish GET (show) from DELETE via action name — proxy maps both via batch_id
+            return 'organizer.invitations.show';
+        }
+        if (endpoint === '/organizer/invitations' || endpoint.startsWith('/organizer/invitations?')) return 'organizer.invitations';
 
         // Organizer services (Extra Services / Promovare)
         if (endpoint === '/organizer/services/pricing') return 'organizer.services.pricing';
@@ -495,6 +514,12 @@ const AmbiletAPI = {
             return `id=${encodeURIComponent(ordersPayMatch[1])}`;
         }
 
+        // Extract slug from date-availability endpoint: /marketplace-events/{slug}/date-availability?date=...
+        const dateAvailMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/date-availability/i);
+        if (dateAvailMatch) {
+            return `slug=${encodeURIComponent(dateAvailMatch[1])}`;
+        }
+
         // Extract slug from endpoints like /marketplace-events/event-slug or /marketplace-events/event-slug/verify-password
         const eventVerifyMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)\/verify-password$/i);
         if (eventVerifyMatch) {
@@ -509,6 +534,12 @@ const AmbiletAPI = {
         const eventTrackingMatch = endpoint.match(/\/events\/([a-z0-9-]+)\/(track-view|toggle-interest|check-interest)$/i);
         if (eventTrackingMatch) {
             return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
+        }
+
+        // Tour public landing page: /tours/{slug}
+        const tourMatch = endpoint.match(/^\/tours\/([a-z0-9-]+)/i);
+        if (tourMatch) {
+            return `slug=${encodeURIComponent(tourMatch[1])}`;
         }
 
         // Venue category slug extraction
@@ -619,6 +650,11 @@ const AmbiletAPI = {
             return `event_id=${encodeURIComponent(organizerEventActionMatch[1])}`;
         }
 
+        const organizerEventSeatingMapMatch = endpoint.match(/\/organizer\/events\/(\d+)\/seating-map$/);
+        if (organizerEventSeatingMapMatch) {
+            return `event_id=${encodeURIComponent(organizerEventSeatingMapMatch[1])}`;
+        }
+
         const organizerEventMatch = endpoint.match(/\/organizer\/events\/(\d+)$/);
         if (organizerEventMatch) {
             return `event_id=${encodeURIComponent(organizerEventMatch[1])}`;
@@ -682,6 +718,12 @@ const AmbiletAPI = {
         const organizerDocumentViewMatch = endpoint.match(/\/organizer\/documents\/(\d+)\/view$/);
         if (organizerDocumentViewMatch) {
             return `document_id=${encodeURIComponent(organizerDocumentViewMatch[1])}`;
+        }
+
+        // Organizer invitations - extract batch id (for /{id}, /{id}/generate, /{id}/download, /{id}/invites)
+        const invBatchMatch = endpoint.match(/\/organizer\/invitations\/(\d+)(?:\/(?:generate|download|invites))?$/);
+        if (invBatchMatch) {
+            return `batch_id=${encodeURIComponent(invBatchMatch[1])}`;
         }
 
         // Organizer services - extract UUID from /organizer/services/orders/{uuid}[/action]

@@ -291,6 +291,9 @@ const AmbiletAPI = {
         if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.startsWith('/events')) return 'events';
 
+        // Tour public landing page (single)
+        if (endpoint.match(/^\/tours\/[a-z0-9-]+(?:\?|$)/i)) return 'tour.show';
+
         // Event types endpoint (global taxonomy)
         if (endpoint === '/event-types') return 'event-types';
 
@@ -531,6 +534,12 @@ const AmbiletAPI = {
         const eventTrackingMatch = endpoint.match(/\/events\/([a-z0-9-]+)\/(track-view|toggle-interest|check-interest)$/i);
         if (eventTrackingMatch) {
             return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
+        }
+
+        // Tour public landing page: /tours/{slug}
+        const tourMatch = endpoint.match(/^\/tours\/([a-z0-9-]+)/i);
+        if (tourMatch) {
+            return `slug=${encodeURIComponent(tourMatch[1])}`;
         }
 
         // Venue category slug extraction
