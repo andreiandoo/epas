@@ -1106,6 +1106,7 @@ $scriptsExtra = <<<'JS'
                 '<div class="flex items-center gap-2">' +
                     '<span class="badge ' + status + '">' + esc(b.status || '') + '</span>' +
                     '<button class="px-3 py-1.5 rounded-lg text-slate-700 hover:bg-slate-100 text-sm" data-view-invites="' + b.id + '">Vezi invitați</button>' +
+                    '<button class="px-3 py-1.5 rounded-lg text-amber-700 border border-amber-300 hover:bg-amber-50 text-sm" data-regen="' + b.id + '" title="Re-randează PDF-urile cu template-ul / datele actuale">Regenerează</button>' +
                     '<button class="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-semibold hover:bg-rose-700 text-sm" data-dl="' + b.id + '">Descarcă ZIP</button>' +
                 '</div>' +
                 '<div class="hidden w-full" id="invites-panel-' + b.id + '"></div>';
@@ -1114,6 +1115,25 @@ $scriptsExtra = <<<'JS'
 
         host.querySelectorAll('[data-dl]').forEach(btn => btn.addEventListener('click', () => downloadZip(btn.dataset.dl)));
         host.querySelectorAll('[data-view-invites]').forEach(btn => btn.addEventListener('click', () => toggleInvites(btn.dataset.viewInvites)));
+        host.querySelectorAll('[data-regen]').forEach(btn => btn.addEventListener('click', () => regenerateBatch(btn.dataset.regen, btn)));
+    }
+
+    async function regenerateBatch(batchId, btn) {
+        if (!confirm('Se vor re-genera toate PDF-urile din această serie cu template-ul și datele actuale ale evenimentului. Vrei să continui?')) return;
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Se regenerează…';
+        try {
+            const res = await AmbiletAPI.post('/organizer/invitations/' + batchId + '/generate', {});
+            if (!res || !res.success) throw new Error((res && res.message) || 'Eroare la regenerare');
+            alert((res.data?.rendered || 0) + ' invitații re-randate. Click „Descarcă ZIP" pentru a le re-descărca.');
+            await loadHistory();
+        } catch (e) {
+            alert('Regenerarea a eșuat: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
     }
 
     async function onDeleteInvite(batchId, inviteId) {
