@@ -794,37 +794,11 @@ class InvitationsController extends BaseController
                 $generator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
                 $variableService = app(\App\Services\TicketCustomizer\TicketVariableService::class);
 
-                $recipientName = $invite->getRecipientName() ?: 'Invitat';
-                $recipientEmail = $invite->getRecipientEmail() ?: '';
-
-                $data = $variableService->getSampleData();
-                $data['event'] = array_merge($data['event'] ?? [], [
-                    'name' => $ctx['eventTitle'],
-                    'date' => $ctx['eventDate'],
-                    'time' => $ctx['eventTime'] ?? '',
-                    'venue' => $ctx['venueName'] ?? '',
-                    // Populate event.image from real Event so {{event.image}}
-                    // in the template renders the poster instead of the
-                    // "Event Image" placeholder from sample data.
-                    'image' => $variableService->resolveEventImageUrl($event),
-                ]);
-                $data['ticket'] = array_merge($data['ticket'] ?? [], [
-                    'type' => 'INVITAȚIE',
-                    'price' => 'GRATUIT',
-                    'price_detail' => 'Invitație',
-                    'code_short' => $invite->invite_code,
-                    'code_long' => $invite->invite_code,
-                    'serial' => $invite->invite_code,
-                    'seat' => $invite->seat_ref ?? '',
-                ]);
-                $data['buyer'] = array_merge($data['buyer'] ?? [], [
-                    'name' => $recipientName,
-                    'first_name' => explode(' ', $recipientName)[0] ?? $recipientName,
-                    'last_name' => explode(' ', $recipientName, 2)[1] ?? '',
-                    'email' => $recipientEmail,
-                ]);
-                $data['barcode'] = $invite->invite_code;
-                $data['qrcode'] = $ctx['qrData'];
+                // Build the full template dictionary from scratch (no
+                // getSampleData fallback) so we don't leak demo strings like
+                // "Live Nation Romania" / "Strada Victoriei 25" through any
+                // unmapped {{organizer.*}} / {{venue.*}} / {{date.*}} variable.
+                $data = $this->buildTemplateData($invite, $event, $ctx, $variableService);
 
                 $content = $generator->renderToHtml($template->template_data, $data);
 
@@ -864,6 +838,145 @@ class InvitationsController extends BaseController
         ]);
         $pdf->setPaper('a4', 'portrait');
         return $pdf->output();
+    }
+
+    /**
+     * Build the {{event.*}}, {{venue.*}}, {{date.*}}, {{ticket.*}},
+     * {{buyer.*}}, {{order.*}}, {{organizer.*}}, {{legal.*}}, {{barcode}}
+     * and {{qrcode}} dictionary that TicketPreviewGenerator expects.
+     *
+     * Mirrors the shape of TicketVariableService::getSampleData() (and the
+     * post-purchase resolveTicketData($ticket)), but populates everything
+     * from real Event / Venue / Organizer / Invite values rather than from
+     * sample stubs. Missing values are rendered as empty strings, never
+     * "Live Nation Romania" / "ion.popescu@example.com" / etc.
+     */
+    protected function buildTemplateData(
+        Invite $invite,
+        Event $event,
+        array $ctx,
+        \App\Services\TicketCustomizer\TicketVariableService $variableService
+    ): array {
+        $event->loadMissing(['venue', 'marketplaceOrganizer']);
+        $venue = $event->venue;
+        $organizer = $event->marketplaceOrganizer;
+        $recipient = $invite->recipient ?? [];
+
+        $recipientName = trim(($recipient['first_name'] ?? '') . ' ' . ($recipient['last_name'] ?? ''))
+            ?: ($recipient['name'] ?? $invite->getRecipientName() ?? 'Invitat');
+        $recipientEmail = $recipient['email'] ?? $invite->getRecipientEmail() ?? '';
+        $nameParts = explode(' ', $recipientName, 2);
+
+        // Event description (translatable JSON) → ro/en/first
+        $description = $event->description ?? null;
+        $eventDescription = is_array($description)
+            ? ($description['ro'] ?? $description['en'] ?? (reset($description) ?: ''))
+            : ($description ?? '');
+
+        // Date components
+        $dateStartRaw = $event->event_date?->format('Y-m-d') ?? '';
+        $startFormatted = $ctx['eventDate'] ?? '';
+        $startTime = $event->start_time ? substr((string) $event->start_time, 0, 5) : '';
+        $doorTime = $event->door_time ? substr((string) $event->door_time, 0, 5) : '';
+        $dayName = $event->event_date?->translatedFormat('l') ?? '';
+
+        // Venue address — translatable name handled by ctx['venueName'] already
+        $venueAddress = $venue?->address ?? '';
+        $venueCity = $venue?->city ?? '';
+
+        // Seat placement: when the invite was created with seats[] in store(),
+        // recipient.seat carries the structured fields {section_name, row_label,
+        // seat_label, ...}. Render with Romanian prefix to match resolveTicketData.
+        $seatStruct = $recipient['seat'] ?? null;
+        $sectionName = is_array($seatStruct) ? ($seatStruct['section_name'] ?? '') : '';
+        $rowLabel = is_array($seatStruct) ? ($seatStruct['row_label'] ?? '') : '';
+        $seatLabel = is_array($seatStruct) ? ($seatStruct['seat_label'] ?? '') : '';
+        $sectionStr = $sectionName !== '' ? 'Sectiunea ' . $sectionName : '';
+        $rowStr = $rowLabel !== '' ? 'Randul ' . $rowLabel : '';
+        $seatStr = $seatLabel !== '' ? 'Locul ' . $seatLabel : ($invite->seat_ref ?? '');
+
+        // Organizer column names vary across the codebase; try common variants
+        // before falling back to empty string so {{organizer.*}} can't show
+        // demo data.
+        $orgGet = function (?MarketplaceOrganizer $o, string ...$cols) {
+            if (!$o) return '';
+            foreach ($cols as $c) {
+                $v = $o->{$c} ?? null;
+                if (!empty($v)) return is_string($v) ? $v : (string) $v;
+            }
+            return '';
+        };
+
+        return [
+            'event' => [
+                'name' => $ctx['eventTitle'] ?? '',
+                'description' => $eventDescription,
+                'category' => '',
+                'image' => $variableService->resolveEventImageUrl($event),
+            ],
+            'venue' => [
+                'name' => $ctx['venueName'] ?? '',
+                'address' => $venueAddress,
+                'city' => $venueCity,
+            ],
+            'date' => [
+                'start' => $dateStartRaw,
+                'start_formatted' => $startFormatted,
+                'time' => $startTime,
+                'doors_open' => $doorTime,
+                'day_name' => $dayName,
+            ],
+            'ticket' => [
+                'type' => 'INVITAȚIE',
+                'price' => 'GRATUIT',
+                'section' => $sectionStr,
+                'row' => $rowStr,
+                'seat' => $seatStr,
+                'number' => $invite->invite_code,
+                'code_short' => $invite->invite_code,
+                'code_long' => $invite->invite_code,
+                'serial' => $invite->invite_code,
+                'is_insured' => 'false',
+                'insurance_badge' => '',
+                'insurance_label' => '',
+                'price_detail' => 'Invitație',
+                'fees_text' => '',
+                'verify_url' => url('/verify/' . $invite->invite_code),
+                'description' => '',
+                'perks' => '',
+            ],
+            'buyer' => [
+                'name' => $recipientName,
+                'first_name' => $nameParts[0] ?? '',
+                'last_name' => $nameParts[1] ?? '',
+                'email' => $recipientEmail,
+            ],
+            'order' => [
+                'code' => '',
+                'date' => '',
+                'total' => '',
+            ],
+            'barcode' => $invite->invite_code,
+            'qrcode' => $ctx['qrData'] ?? url('/verify/' . $invite->invite_code),
+            'organizer' => [
+                'name' => $organizer?->name ?? '',
+                'company_name' => $orgGet($organizer, 'company_name'),
+                'tax_id' => $orgGet($organizer, 'company_tax_id', 'tax_id', 'cui'),
+                'company_address' => $orgGet($organizer, 'company_address', 'address'),
+                'city' => $orgGet($organizer, 'company_city', 'city'),
+                'website' => $orgGet($organizer, 'website'),
+                'phone' => $orgGet($organizer, 'phone'),
+                'email' => $orgGet($organizer, 'email', 'billing_email'),
+                'ticket_terms' => $orgGet($organizer, 'ticket_terms'),
+            ],
+            'legal' => [
+                'terms' => $orgGet($organizer, 'ticket_terms')
+                    ?: (is_array($event->ticket_terms ?? null)
+                        ? ($event->ticket_terms['ro'] ?? $event->ticket_terms['en'] ?? '')
+                        : ($event->ticket_terms ?? '')),
+                'disclaimer' => '',
+            ],
+        ];
     }
 
     /**
