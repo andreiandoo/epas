@@ -76,9 +76,12 @@ class CouponCodeResource extends Resource
                             ->maxLength(50)
                             ->unique(
                                 ignoreRecord: true,
-                                modifyRuleUsing: fn (\Illuminate\Validation\Rules\Unique $rule) => $rule
-                                    ->where('marketplace_client_id', $marketplace?->id)
-                                    ->whereNull('deleted_at'),
+                                modifyRuleUsing: function (\Illuminate\Validation\Rules\Unique $rule) {
+                                    $client = static::getMarketplaceClient();
+                                    return $rule
+                                        ->where('marketplace_client_id', $client?->id)
+                                        ->withoutTrashed();
+                                },
                             )
                             ->formatStateUsing(fn ($state) => strtoupper($state))
                             ->dehydrateStateUsing(fn ($state) => strtoupper($state)),
