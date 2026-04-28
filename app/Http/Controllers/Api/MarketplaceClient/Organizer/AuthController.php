@@ -281,6 +281,25 @@ class AuthController extends BaseController
             ], 'Login successful');
         }
 
+        // Log failed login for forensic auditing. Single-line entry on the
+        // existing 'security' channel (daily rotation, 90-day retention).
+        // Captures user-agent so mobile-app failures can be told apart from
+        // ambilet.ro/web failures going forward.
+        try {
+            \Illuminate\Support\Facades\Log::channel('security')->info('organizer login failed', [
+                'client_id' => $client->id,
+                'email' => $email,
+                'ip' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'reason' => $organizer
+                    ? 'organizer_pw_mismatch'
+                    : ($teamMembers->isNotEmpty() ? 'team_member_pw_mismatch' : 'email_not_found'),
+                'team_member_candidates' => $teamMembers->count(),
+            ]);
+        } catch (\Throwable $e) {
+            // Logging must never block the auth response.
+        }
+
         return $this->error('Invalid credentials', 401);
     }
 
