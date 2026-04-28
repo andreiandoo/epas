@@ -48,45 +48,47 @@ class PromoCodeController extends BaseController
 
         $ownCodes = $query->get()->map(fn ($code) => $this->formatPromoCode($code));
 
-        // 2. Get admin-created CouponCodes that apply to this organizer's events
-        // CouponCodes store Event IDs (from events table), not MarketplaceEvent IDs
+        // 2. Get CouponCodes (admin- or organizer-mirrored) that apply to this organizer.
+        // A code is in scope when EITHER it carries marketplace_organizer_id =
+        // $organizer->id, OR its applicable_events list overlaps an event the
+        // organizer owns. Both branches must be considered — the second one
+        // handles legacy admin-created coupons targeting specific events without
+        // an organizer scope, the first one handles coupons mirrored from
+        // /organizator/promo and admin coupons explicitly scoped to this organizer.
         $organizerEventIds = \App\Models\Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id')
             ->toArray();
 
-        $adminCodes = collect();
-        if (!empty($organizerEventIds)) {
-            $couponQuery = CouponCode::where('marketplace_client_id', $organizer->marketplace_client_id)
-                ->where('status', '!=', 'deleted')
-                ->where(function ($q) use ($organizerEventIds) {
-                    // CouponCodes with applicable_events containing organizer's events
-                    foreach ($organizerEventIds as $eventId) {
-                        $q->orWhereJsonContains('applicable_events', $eventId)
-                          ->orWhereJsonContains('applicable_events', (string) $eventId);
-                    }
-                })
-                ->orderBy('created_at', 'desc');
+        $couponQuery = CouponCode::where('marketplace_client_id', $organizer->marketplace_client_id)
+            ->where('status', '!=', 'deleted')
+            ->where(function ($q) use ($organizerEventIds, $organizer) {
+                $q->where('marketplace_organizer_id', $organizer->id);
+                foreach ($organizerEventIds as $eventId) {
+                    $q->orWhereJsonContains('applicable_events', $eventId)
+                      ->orWhereJsonContains('applicable_events', (string) $eventId);
+                }
+            })
+            ->orderBy('created_at', 'desc');
 
-            if ($request->has('status')) {
-                $couponQuery->where('status', $request->status);
-            }
-
-            if ($request->has('search')) {
-                $search = $request->search;
-                $couponQuery->where(function ($q) use ($search) {
-                    $q->where('code', 'like', "%{$search}%");
-                });
-            }
-
-            // Exclude codes already in mkt_promo_codes (same code for this client)
-            $ownCodesValues = $ownCodes->pluck('code')->toArray();
-            if (!empty($ownCodesValues)) {
-                $couponQuery->whereNotIn('code', $ownCodesValues);
-            }
-
-            $adminCodes = $couponQuery->get()->map(fn ($coupon) => $this->formatCouponCode($coupon, $organizerEventIds));
+        if ($request->has('status')) {
+            $couponQuery->where('status', $request->status);
         }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $couponQuery->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%");
+            });
+        }
+
+        // Exclude codes already in mkt_promo_codes (same code for this client)
+        $ownCodesValues = $ownCodes->pluck('code')->toArray();
+        if (!empty($ownCodesValues)) {
+            $couponQuery->whereNotIn('code', $ownCodesValues);
+        }
+
+        $adminCodes = $couponQuery->get()->map(fn ($coupon) => $this->formatCouponCode($coupon, $organizerEventIds));
 
         // Merge results, own codes first
         $allCodes = $ownCodes->concat($adminCodes)->sortByDesc('created_at')->values();
