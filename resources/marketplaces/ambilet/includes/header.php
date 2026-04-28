@@ -256,7 +256,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent"></div>
                                     <div class="absolute bottom-0 left-0 right-0 p-3.5">
                                         <div class="<?= $city['featured'] ? 'text-[22px]' : 'text-[15px]' ?> font-bold text-white mb-0.5"><?= htmlspecialchars($city['name']) ?></div>
-                                        <div class="<?= $city['featured'] ? 'text-sm' : 'text-xs' ?> text-white/85 flex items-center gap-1.5">
+                                        <div class="<?= $city['featured'] ? 'text-sm' : 'text-xs' ?> text-white/85 flex items-center gap-1.5 hidden">
                                             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                                             <?= $city['count'] ?> evenimente
                                         </div>
@@ -303,7 +303,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     </div>
                                     <div class="flex-1">
                                         <div class="text-sm font-semibold"><?= htmlspecialchars($cat['name']) ?></div>
-                                        <div class="text-xs text-gray-400"><?= $cat['count'] ?? 0 ?> evenimente</div>
+                                        <div class="hidden text-xs text-gray-400"><?= $cat['count'] ?? 0 ?> evenimente</div>
                                     </div>
                                     <svg class="w-4 h-4 text-gray-300 transition-all group-hover/cat:text-primary group-hover/cat:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M9 18l6-6-6-6"/>
@@ -430,7 +430,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     <div class="flex flex-col justify-center flex-1">
                                         <div class="mb-1 text-sm font-bold text-gray-900"><?= htmlspecialchars($venue['name']) ?></div>
                                         <div class="text-xs text-gray-500 mb-1.5 leading-tight"><?= htmlspecialchars($venue['address']) ?></div>
-                                        <div class="text-[11px] font-semibold text-primary"><?= $venue['count'] ?> evenimente</div>
+                                        <div class="text-[11px] font-semibold text-primary hidden"><?= $venue['count'] ?> evenimente</div>
                                     </div>
                                 </a>
                                 <?php endforeach; ?>
@@ -598,7 +598,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <div class="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-2.5">
                         <div class="text-base font-bold text-white"><?= htmlspecialchars($city['name']) ?></div>
-                        <div class="text-sm text-white/85 flex items-center gap-1.5">
+                        <div class="text-sm text-white/85 flex items-center gap-1.5 hidden">
                             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
                             <?= $city['count'] ?> evenimente
                         </div>
