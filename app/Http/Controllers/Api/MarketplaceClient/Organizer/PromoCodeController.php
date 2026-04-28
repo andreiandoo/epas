@@ -198,10 +198,13 @@ class PromoCodeController extends BaseController
             'status' => 'active',
         ]);
 
-        // Mirror to coupon_codes table so admin sees it in Coupon Codes list
+        // Mirror to coupon_codes table so admin sees it in Coupon Codes list.
+        // Always scope to the creating organizer so the code never bleeds onto
+        // events of other organizers — even when no specific event is picked.
         try {
             $couponData = [
                 'marketplace_client_id' => $organizer->marketplace_client_id,
+                'marketplace_organizer_id' => $organizer->id,
                 'code' => $code,
                 'discount_type' => $validated['type'] === 'percentage' ? 'percentage' : 'fixed_amount',
                 'discount_value' => $validated['value'],
