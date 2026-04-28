@@ -150,20 +150,35 @@ class PromoCodeController extends BaseController
             }
         }
 
-        // Check organizer targeting (marketplace_organizer_id)
-        // When a coupon is scoped to an organizer but has no per-event list,
-        // it must still only apply to events of that organizer.
+        // Build the set of event IDs the coupon applies to, combining
+        // applicable_events (explicit list) with marketplace_organizer_id
+        // (all events of that organizer). Mirror of CheckoutController logic
+        // so that the cart preview matches what the order will actually charge.
+        $applicableEvents = $couponCode->applicable_events;
+        $applicableEventIdsExplicit = !empty($applicableEvents)
+            ? array_map('intval', $applicableEvents)
+            : null;
+        $organizerEventIds = null;
         if ($couponCode->marketplace_organizer_id) {
-            $eventOrganizerId = \App\Models\Event::where('id', $eventId)
-                ->value('marketplace_organizer_id');
-            if (!$eventOrganizerId || (int) $eventOrganizerId !== (int) $couponCode->marketplace_organizer_id) {
-                return $this->error('Codul promoțional nu este valid pentru acest eveniment', 400);
-            }
+            $organizerEventIds = \App\Models\Event::where('marketplace_organizer_id', $couponCode->marketplace_organizer_id)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
         }
 
-        // Check event targeting (applicable_events)
-        $applicableEvents = $couponCode->applicable_events;
-        if (!empty($applicableEvents) && !in_array($eventId, array_map('intval', $applicableEvents))) {
+        $eventMatches = function ($evId) use ($applicableEventIdsExplicit, $organizerEventIds) {
+            $evId = (int) $evId;
+            if ($applicableEventIdsExplicit !== null && !in_array($evId, $applicableEventIdsExplicit, true)) {
+                return false;
+            }
+            if ($organizerEventIds !== null && !in_array($evId, $organizerEventIds, true)) {
+                return false;
+            }
+            return true;
+        };
+
+        // Reject when the primary event is outside the coupon's event scope.
+        if (!$eventMatches($eventId)) {
             return $this->error('Codul promoțional nu este valid pentru acest eveniment', 400);
         }
 
@@ -190,15 +205,26 @@ class PromoCodeController extends BaseController
             }
         }
 
-        // Calculate discount - filter by applicable ticket types if set
+        // Calculate discount — filter by configured event/organizer/ticket-type
+        // scope so the preview matches what the order will charge.
+        $hasTicketTypeFilter = !empty($applicableTicketTypes);
+        $hasEventFilter = $applicableEventIdsExplicit !== null || $organizerEventIds !== null;
+
         $discountBase = $cartTotal;
-        if (!empty($applicableTicketTypes) && !empty($items)) {
+        if (($hasTicketTypeFilter || $hasEventFilter) && !empty($items)) {
             $discountBase = 0;
             foreach ($items as $item) {
-                $ticketTypeId = (int) ($item['ticket_type_id'] ?? 0);
-                if (in_array($ticketTypeId, array_map('intval', $applicableTicketTypes))) {
-                    $discountBase += (float) ($item['total'] ?? 0);
+                $itemEventId = (int) ($item['event_id'] ?? 0);
+                if ($hasEventFilter && !$eventMatches($itemEventId)) {
+                    continue;
                 }
+                if ($hasTicketTypeFilter) {
+                    $ttId = (int) ($item['ticket_type_id'] ?? 0);
+                    if (!in_array($ttId, array_map('intval', $applicableTicketTypes), true)) {
+                        continue;
+                    }
+                }
+                $discountBase += (float) ($item['total'] ?? 0);
             }
         }
 

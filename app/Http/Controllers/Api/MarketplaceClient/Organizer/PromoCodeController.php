@@ -109,7 +109,7 @@ class PromoCodeController extends BaseController
         }
 
         $validated = $request->validate([
-            'code' => 'nullable|string|max:50|alpha_num',
+            'code' => 'nullable|string|max:50',
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:1000',
             'type' => 'required|in:fixed,percentage',
@@ -478,7 +478,7 @@ class PromoCodeController extends BaseController
 
         $validated = $request->validate([
             'count' => 'required|integer|min:1|max:100',
-            'prefix' => 'nullable|string|max:10|alpha_num',
+            'prefix' => 'nullable|string|max:10',
             'type' => 'required|in:fixed,percentage',
             'value' => 'required|numeric|min:0',
             'applies_to' => 'required|in:all_events,specific_event',
