@@ -2853,7 +2853,7 @@ class EventsController extends BaseController
                 'range' => $event->range_start_time ?? $event->start_time ?? '00:00',
                 default => $event->start_time ?? '00:00',
             };
-            return Carbon::parse($date->format('Y-m-d') . ' ' . $time)->toIso8601String();
+            return $this->buildNaiveIso($date->format('Y-m-d'), $time);
         }
         return null;
     }
@@ -2870,7 +2870,7 @@ class EventsController extends BaseController
                 'range' => $event->range_end_time ?? $event->end_time ?? '23:59',
                 default => $event->end_time ?? '23:59',
             };
-            return Carbon::parse($endDate->format('Y-m-d') . ' ' . $endTime)->toIso8601String();
+            return $this->buildNaiveIso($endDate->format('Y-m-d'), $endTime);
         }
         return null;
     }
@@ -2881,10 +2881,29 @@ class EventsController extends BaseController
     protected function getDoorsAt(Event $event): ?string
     {
         if ($event->event_date && $event->door_time) {
-            $date = $event->event_date->format('Y-m-d');
-            return Carbon::parse("{$date} {$event->door_time}")->toIso8601String();
+            return $this->buildNaiveIso($event->event_date->format('Y-m-d'), $event->door_time);
         }
         return null;
+    }
+
+    /**
+     * Build a "naïve" ISO datetime string (no Z, no offset). JS Date parses
+     * this in the browser's local timezone, so the date the admin entered
+     * (e.g. May 1 22:30) is rendered exactly as entered, regardless of the
+     * server's app.timezone (UTC).
+     *
+     * Carbon::parse('2026-05-01 22:30')->toIso8601String() would produce
+     * '2026-05-01T22:30:00+00:00', and a browser in UTC+3 would shift it
+     * to May 2 01:30 → wrong day shown.
+     */
+    protected function buildNaiveIso(string $date, ?string $time): string
+    {
+        $time = $time ?: '00:00';
+        // Normalize HH:MM → HH:MM:00 so the browser parses it consistently.
+        if (substr_count($time, ':') === 1) {
+            $time .= ':00';
+        }
+        return $date . 'T' . $time;
     }
 
     /**
