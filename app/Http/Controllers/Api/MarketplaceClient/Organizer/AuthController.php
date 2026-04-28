@@ -211,20 +211,6 @@ class AuthController extends BaseController
             ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
-        // TEMP DIAG — remove after debugging login failure
-        \Illuminate\Support\Facades\Log::info('[AUTH-DIAG] organizer login attempt', [
-            'client_id' => $client->id,
-            'email_input' => $email,
-            'pw_input_length' => strlen($validated['password'] ?? ''),
-            'pw_input_preview' => substr($validated['password'] ?? '', 0, 2) . '***' . substr($validated['password'] ?? '', -2),
-            'organizer_found' => (bool) $organizer,
-            'organizer_id' => $organizer?->id,
-            'organizer_email' => $organizer?->email,
-            'organizer_pw_hash_prefix' => $organizer ? substr($organizer->password, 0, 7) : null,
-            'organizer_pw_hash_length' => $organizer ? strlen($organizer->password) : null,
-            'hash_check' => $organizer ? \Illuminate\Support\Facades\Hash::check($validated['password'], $organizer->password) : null,
-        ]);
-
         if ($organizer && Hash::check($validated['password'], $organizer->password)) {
             if ($organizer->isSuspended()) {
                 return $this->error('Your account has been suspended', 403);
