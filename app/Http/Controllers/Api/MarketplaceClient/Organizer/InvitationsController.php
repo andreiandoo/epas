@@ -177,15 +177,36 @@ class InvitationsController extends BaseController
                 ];
             }
 
-            $invite = Invite::create([
-                'marketplace_client_id' => $organizer->marketplace_client_id,
-                'batch_id' => $batch->id,
-                'tenant_id' => $event->tenant_id,
-                'status' => 'created',
-                'seat_ref' => $seatRef,
-                'recipient' => $recipientPayload,
-            ]);
-            $batch->increment('qty_generated');
+            try {
+                $invite = Invite::create([
+                    'marketplace_client_id' => $organizer->marketplace_client_id,
+                    'batch_id' => $batch->id,
+                    'tenant_id' => $event->tenant_id,
+                    'status' => 'created',
+                    'seat_ref' => $seatRef,
+                    'recipient' => $recipientPayload,
+                ]);
+                \Log::info('[InvitationsController.store] Invite created', [
+                    'batch_id' => $batch->id,
+                    'invite_id' => $invite->id,
+                    'invite_code' => $invite->invite_code,
+                    'recipient_index' => $i,
+                    'tenant_id' => $event->tenant_id,
+                ]);
+                $batch->increment('qty_generated');
+            } catch (\Throwable $e) {
+                \Log::error('[InvitationsController.store] Invite create FAILED', [
+                    'batch_id' => $batch->id,
+                    'recipient_index' => $i,
+                    'recipient' => $recipientPayload,
+                    'tenant_id' => $event->tenant_id,
+                    'mc_id' => $organizer->marketplace_client_id,
+                    'error_class' => get_class($e),
+                    'error' => $e->getMessage(),
+                    'trace' => collect(explode("\n", $e->getTraceAsString()))->take(10)->implode("\n"),
+                ]);
+                throw $e;
+            }
         }
 
         // Synchronously render all PDFs — user is waiting on the UI
