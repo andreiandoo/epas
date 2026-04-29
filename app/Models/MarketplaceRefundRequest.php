@@ -218,7 +218,7 @@ class MarketplaceRefundRequest extends Model
         $this->update(['status' => self::STATUS_UNDER_REVIEW]);
     }
 
-    public function approve(float $amount = null, string $notes = null): void
+    public function approve(?float $amount = null, ?string $notes = null): void
     {
         $this->update([
             'status' => self::STATUS_APPROVED,
