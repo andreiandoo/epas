@@ -281,7 +281,7 @@ class EventExportService
     /**
      * Export sales data to CSV
      */
-    public function exportSalesToCsv(Event $event, array $dateRange = null): string
+    public function exportSalesToCsv(Event $event, ?array $dateRange = null): string
     {
         $filename = $this->generateFilename($event, 'csv', 'sales');
         $filepath = "exports/{$filename}";

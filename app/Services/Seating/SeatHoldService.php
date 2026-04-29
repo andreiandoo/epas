@@ -97,7 +97,7 @@ class SeatHoldService
                         'reason' => 'already_held_or_sold',
                     ];
 
-                    Log::warning("SeatHold: Failed to hold seat", [
+                    Log::info("SeatHold: Failed to hold seat", [
                         'event_seating_id' => $eventSeatingId,
                         'seat_uid' => $seatUid,
                         'reason' => 'already_held_or_sold',

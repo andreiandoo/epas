@@ -1597,11 +1597,11 @@ class EventsController extends BaseController
 
             if (!empty($rows)) {
                 // Headers
-                fputcsv($handle, array_keys($rows[0]));
+                fputcsv($handle, array_keys($rows[0]), ',', '"', '');
 
                 // Data
                 foreach ($rows as $row) {
-                    fputcsv($handle, array_values($row));
+                    fputcsv($handle, array_values($row), ',', '"', '');
                 }
             }
 
