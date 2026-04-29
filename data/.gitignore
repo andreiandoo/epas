@@ -1,3 +1,5 @@
-# Ignore runtime data files - these are created and managed at runtime
-share-links.json
+# Runtime data — keep share-links.json tracked so the seed file ships with
+# deploys. The webhook now preserves data/ on the server, so the seed only
+# applies on first deploy / when restoring lost links; after that the
+# server's runtime copy is authoritative.
 rate-limits/
