@@ -1034,6 +1034,132 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
+     * Share-link statistics for an event.
+     *
+     * Returns the same sold/revenue figures the organizer dashboard sees,
+     * with no organizer auth required — the share-link code itself is the
+     * access control and is validated server-side by the marketplace proxy
+     * before this endpoint is called. Counts every ticket type (including
+     * inactive, entry, and invitation types), so the totals match
+     * /organizator/events instead of the public /events/{id} payload, which
+     * silently filters those out.
+     */
+    public function shareLinkStats(Request $request, int $eventId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
+
+        $event = Event::where('marketplace_client_id', $client->id)
+            ->where('id', $eventId)
+            ->with(['venue', 'ticketTypes' => fn ($q) => $q->orderBy('sort_order')])
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $ttIds = $event->ticketTypes->pluck('id')->toArray();
+
+        // Per-ticket-type valid-or-used count, restricted to confirmed orders
+        // (or invitation tickets with no order). Mirrors the logic used by
+        // Event::total_tickets_sold / total_revenue and the
+        // /organizer/events/{id} detail endpoint.
+        $soldByType = empty($ttIds) ? collect() : \App\Models\Ticket::query()
+            ->whereIn('ticket_type_id', $ttIds)
+            ->whereIn('status', ['valid', 'used'])
+            ->where(function ($q) {
+                $q->whereDoesntHave('order')
+                  ->orWhereHas('order', fn ($qq) => $qq
+                      ->where('source', '!=', 'external_import')
+                      ->whereIn('status', ['paid', 'confirmed', 'completed']));
+            })
+            ->selectRaw('ticket_type_id, COUNT(*) as cnt')
+            ->groupBy('ticket_type_id')
+            ->pluck('cnt', 'ticket_type_id');
+
+        $title = $event->getTranslation('title', $language)
+            ?: $event->getTranslation('title', 'ro')
+            ?: $event->getTranslation('title', 'en')
+            ?: '';
+
+        $eventDate = $event->event_date ?? $event->range_start_date;
+        $startsAt = $eventDate
+            ? $eventDate->format('Y-m-d') . 'T' . ($event->start_time ?: '00:00:00')
+            : null;
+        $endDate = $event->range_end_date ?? $eventDate;
+        $endsAt = $endDate && $event->end_time
+            ? $endDate->format('Y-m-d') . 'T' . $event->end_time
+            : null;
+        $doorsOpenAt = $event->event_date && $event->door_time
+            ? $event->event_date->format('Y-m-d') . 'T' . $event->door_time
+            : null;
+
+        $venueName = $event->venue
+            ? $event->venue->getTranslation('name', $language)
+            : null;
+        $city = $event->venue?->city ?? $event->marketplaceCity?->name;
+
+        $ticketTypes = $event->ticketTypes->map(function ($tt) use ($soldByType) {
+            $sold = (int) ($soldByType[$tt->id] ?? 0);
+            $rawTotal = (int) ($tt->quota_total ?? 0);
+            $isUnlimited = $rawTotal < 0;
+            $total = $isUnlimited ? -1 : $rawTotal;
+            $available = $isUnlimited
+                ? PHP_INT_MAX
+                : max(0, $rawTotal - $sold);
+            $price = (($tt->sale_price_cents ?? $tt->price_cents) ?? 0) / 100;
+
+            return [
+                'id' => $tt->id,
+                'name' => $tt->name,
+                'price' => (float) $price,
+                'currency' => $tt->currency ?? 'RON',
+                'total' => $total,
+                'sold' => $sold,
+                'available' => $isUnlimited ? null : $available,
+            ];
+        })->values();
+
+        $totalSold = (int) $soldByType->sum();
+        $totalCapacity = $event->ticketTypes->reduce(function ($carry, $tt) {
+            $q = (int) ($tt->quota_total ?? 0);
+            return $carry + max(0, $q);
+        }, 0);
+
+        // Reuse the model accessor so revenue logic stays in one place
+        // (commission mode, sale_price_cents, etc.).
+        $netRevenue = (float) $event->total_revenue;
+
+        $status = match (true) {
+            (bool) $event->is_cancelled => 'cancelled',
+            (bool) $event->is_postponed => 'postponed',
+            !$event->is_published => 'draft',
+            default => 'published',
+        };
+
+        return $this->success([
+            'event' => [
+                'id' => $event->id,
+                'title' => $title,
+                'venue_name' => $venueName,
+                'city' => $city,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'doors_open_at' => $doorsOpenAt,
+                'status' => $status,
+            ],
+            'stats' => [
+                'tickets_sold' => $totalSold,
+                'tickets_total' => $totalCapacity,
+                'revenue_net' => round($netRevenue, 2),
+                'currency' => 'RON',
+            ],
+            'ticket_types' => $ticketTypes,
+            'last_updated' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
      * Get available categories
      */
     public function categories(Request $request): JsonResponse

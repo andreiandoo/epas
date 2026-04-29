@@ -1411,6 +1411,8 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.verify-password');
     Route::get('/events/{event}/availability', [MarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.events.availability');
+    Route::get('/events/{event}/share-stats', [MarketplaceEventsController::class, 'shareLinkStats'])
+        ->name('api.marketplace-client.events.share-stats');
     Route::post('/events/{event}/track-view', [MarketplaceEventsController::class, 'trackView'])
         ->name('api.marketplace-client.events.track-view');
     Route::post('/events/{event}/toggle-interest', [MarketplaceEventsController::class, 'toggleInterest'])

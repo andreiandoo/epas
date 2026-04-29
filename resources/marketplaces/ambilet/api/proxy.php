@@ -370,99 +370,125 @@ function authenticateOrganizer() {
 }
 
 function fetchEventsForShareLink($eventIds, $storedTicketData = []) {
+    // The dedicated share-stats endpoint is authoritative — it counts the
+    // same valid/used tickets as the organizer dashboard, including
+    // ticket types the public /events/{id} payload filters out (inactive,
+    // entry, invitation). $storedTicketData is kept as a last-resort
+    // fallback if the upstream call ever fails.
     $results = [];
     foreach ($eventIds as $eventId) {
         $id = (int)$eventId;
         if ($id <= 0) continue;
 
-        // Fetch from core API using marketplace API key
-        $url = API_BASE_URL . '/events/' . $id;
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => implode("\r\n", [
-                    'Content-Type: application/json',
-                    'X-API-Key: ' . API_KEY,
-                    'Accept: application/json'
-                ]),
-                'timeout' => 10,
-                'ignore_errors' => true
-            ]
-        ]);
-        $response = @file_get_contents($url, false, $context);
-        if (!$response) continue;
+        $entry = fetchShareStatsForEvent($id);
 
-        $responseData = json_decode($response, true);
-        if (!$responseData || empty($responseData['data'])) continue;
-
-        $data = $responseData['data'];
-
-        // API returns: { success: true, data: { event: {...}, ticket_types: [...], venue: {...}, ... } }
-        $event = $data['event'] ?? $data;
-        $venue = $data['venue'] ?? [];
-        $ticketTypes = $data['ticket_types'] ?? $event['ticket_types'] ?? [];
-
-        if (!$event || (!isset($event['name']) && !isset($event['title']))) continue;
-
-        // Get stored ticket totals (cached at share link creation time)
-        $storedEvent = $storedTicketData[$id] ?? $storedTicketData[(string)$id] ?? [];
-        $storedTT = [];
-        foreach (($storedEvent['ticket_types'] ?? []) as $stt) {
-            $stt_id = $stt['id'] ?? null;
-            if ($stt_id) $storedTT[$stt_id] = $stt;
+        if ($entry === null) {
+            // Upstream failed — fall back to stale snapshot so the page is
+            // at least populated. Better to show old numbers than nothing.
+            $entry = buildShareLinkFallbackEntry($id, $storedTicketData);
+            if ($entry === null) continue;
         }
 
-        // Extract only safe public fields
-        $results[] = [
-            'id' => $event['id'] ?? $id,
-            'title' => $event['name'] ?? $event['title'] ?? '',
-            'venue_name' => $venue['name'] ?? $event['venue_name'] ?? '',
-            'city' => $venue['city'] ?? $event['venue_city'] ?? $event['city'] ?? '',
-            'start_date' => $event['starts_at'] ?? $event['start_date'] ?? $event['date'] ?? '',
-            'start_time' => $event['doors_open_at'] ?? $event['start_time'] ?? '',
-            'end_date' => $event['ends_at'] ?? $event['end_date'] ?? '',
-            'end_time' => $event['end_time'] ?? '',
-            'status' => $event['status'] ?? '',
-            'ticket_types' => array_map(function($tt) use ($storedTT) {
-                $ttId = $tt['id'] ?? null;
-                $stored = $storedTT[$ttId] ?? [];
-
-                $rawTotal = $stored['total'] ?? $tt['quantity'] ?? $tt['total'] ?? $tt['quota_total'] ?? 0;
-                $isUnlimited = (int)$rawTotal < 0;
-                $available = $isUnlimited ? PHP_INT_MAX : (int)($tt['available'] ?? 0);
-                $total = $isUnlimited ? -1 : (int)$rawTotal;
-                $sold = 0;
-
-                if ($total > 0) {
-                    // Calculate sold from total - available (fresh data)
-                    $sold = max(0, $total - $available);
-                } else {
-                    // Fallback: try direct sold fields
-                    $sold = (int)($tt['quantity_sold'] ?? $tt['sold'] ?? $tt['tickets_sold'] ?? 0);
-                    if ($sold > 0) {
-                        $total = $available + $sold;
-                    }
-                }
-
-                return [
-                    'id' => $ttId,
-                    'name' => $tt['name'] ?? $tt['title'] ?? '',
-                    'total' => $total,
-                    'sold' => $sold,
-                    'available' => $available,
-                    'price' => (float)($tt['price'] ?? 0),
-                ];
-            }, $ticketTypes),
-            'tickets_total' => 0,
-            'tickets_sold' => 0,
-        ];
-
-        // Calculate event totals from ticket types
-        $lastIdx = count($results) - 1;
-        $results[$lastIdx]['tickets_total'] = array_sum(array_column($results[$lastIdx]['ticket_types'], 'total'));
-        $results[$lastIdx]['tickets_sold'] = array_sum(array_column($results[$lastIdx]['ticket_types'], 'sold'));
+        $results[] = $entry;
     }
     return $results;
+}
+
+function fetchShareStatsForEvent($id) {
+    $url = API_BASE_URL . '/events/' . (int)$id . '/share-stats';
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => implode("\r\n", [
+                'Content-Type: application/json',
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json'
+            ]),
+            'timeout' => 10,
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = @file_get_contents($url, false, $context);
+    if (!$response) return null;
+
+    $responseData = json_decode($response, true);
+    if (!$responseData || empty($responseData['data'])) return null;
+
+    $data = $responseData['data'];
+    $event = $data['event'] ?? [];
+    $stats = $data['stats'] ?? [];
+    $ticketTypes = $data['ticket_types'] ?? [];
+
+    $startsAt = $event['starts_at'] ?? '';
+    $startTime = '';
+    if ($startsAt && strpos($startsAt, 'T') !== false) {
+        $startTime = substr(explode('T', $startsAt)[1] ?? '', 0, 5);
+    }
+
+    return [
+        'id' => $event['id'] ?? (int)$id,
+        'title' => $event['title'] ?? '',
+        'venue_name' => $event['venue_name'] ?? '',
+        'city' => $event['city'] ?? '',
+        'start_date' => $startsAt,
+        'start_time' => $startTime,
+        'end_date' => $event['ends_at'] ?? '',
+        'end_time' => '',
+        'status' => $event['status'] ?? '',
+        'ticket_types' => array_map(function($tt) {
+            $total = (int)($tt['total'] ?? 0);
+            $sold = (int)($tt['sold'] ?? 0);
+            $available = array_key_exists('available', $tt) && $tt['available'] !== null
+                ? (int)$tt['available']
+                : ($total < 0 ? PHP_INT_MAX : max(0, $total - $sold));
+            return [
+                'id' => $tt['id'] ?? null,
+                'name' => $tt['name'] ?? '',
+                'total' => $total,
+                'sold' => $sold,
+                'available' => $available,
+                'price' => (float)($tt['price'] ?? 0),
+            ];
+        }, $ticketTypes),
+        'tickets_total' => (int)($stats['tickets_total'] ?? 0),
+        'tickets_sold' => (int)($stats['tickets_sold'] ?? 0),
+        'revenue_net' => (float)($stats['revenue_net'] ?? 0),
+        'currency' => $stats['currency'] ?? 'RON',
+    ];
+}
+
+function buildShareLinkFallbackEntry($id, $storedTicketData) {
+    $stored = $storedTicketData[$id] ?? $storedTicketData[(string)$id] ?? null;
+    if (!$stored || empty($stored['ticket_types'])) return null;
+
+    $ticketTypes = array_map(function($stt) {
+        $total = (int)($stt['total'] ?? 0);
+        return [
+            'id' => $stt['id'] ?? null,
+            'name' => $stt['name'] ?? '',
+            'total' => $total,
+            'sold' => 0,
+            'available' => $total < 0 ? PHP_INT_MAX : max(0, $total),
+            'price' => 0.0,
+        ];
+    }, $stored['ticket_types']);
+
+    return [
+        'id' => (int)$id,
+        'title' => '',
+        'venue_name' => '',
+        'city' => '',
+        'start_date' => '',
+        'start_time' => '',
+        'end_date' => '',
+        'end_time' => '',
+        'status' => '',
+        'ticket_types' => $ticketTypes,
+        'tickets_total' => array_sum(array_column($ticketTypes, 'total')),
+        'tickets_sold' => 0,
+        'revenue_net' => 0.0,
+        'currency' => 'RON',
+    ];
 }
 
 function fetchTicketTotalsWithAuth($eventIds, $authHeader) {
