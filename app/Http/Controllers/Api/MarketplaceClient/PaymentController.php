@@ -402,7 +402,12 @@ class PaymentController extends BaseController
                     'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
 
-                Log::channel('marketplace')->warning('Payment failed/pending for marketplace order', [
+                // info, not warning — payment failures (3DS rejection,
+                // insufficient funds, declined cards) are normal business
+                // events. Customer sees the message and can retry. Keep
+                // the audit trail in marketplace.log but don't surface
+                // these in the system_errors dashboard.
+                Log::channel('marketplace')->info('Payment failed/pending for marketplace order', [
                     'order_id' => $order->id,
                     'client_slug' => $clientSlug,
                     'status' => $result['status'],
