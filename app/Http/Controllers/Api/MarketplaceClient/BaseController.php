@@ -41,7 +41,7 @@ abstract class BaseController extends Controller
     /**
      * Standard success response
      */
-    protected function success(mixed $data = null, string $message = null, int $code = 200): JsonResponse
+    protected function success(mixed $data = null, ?string $message = null, int $code = 200): JsonResponse
     {
         $response = ['success' => true];
 
