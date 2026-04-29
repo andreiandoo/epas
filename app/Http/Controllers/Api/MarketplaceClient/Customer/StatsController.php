@@ -356,7 +356,7 @@ class StatsController extends BaseController
                     'ag.id',
                     \DB::raw(
                         \DB::getDriverName() === 'pgsql'
-                            ? "COALESCE(ag.name->>'ro', ag.name->>'en', ag.name::text) as label"
+                            ? "COALESCE((ag.name::jsonb)->>'ro', (ag.name::jsonb)->>'en', ag.name::text) as label"
                             : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.ro')), JSON_UNQUOTE(JSON_EXTRACT(ag.name, '$.en')), ag.name) as label"
                     )
                 )

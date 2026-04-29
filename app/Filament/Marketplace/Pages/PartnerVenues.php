@@ -248,16 +248,16 @@ class PartnerVenues extends Page implements HasForms, HasTable
         return $query->where(function (Builder $q) use ($normalizedSearch, $search) {
             $isPgsql = DB::getDriverName() === 'pgsql';
             $q->whereRaw(
-                $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                $isPgsql ? "LOWER((name::jsonb)->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
                 ["%{$normalizedSearch}%"]
             )
               ->orWhereRaw(
-                  $isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
+                  $isPgsql ? "LOWER((name::jsonb)->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
                   ["%{$normalizedSearch}%"]
               )
               ->orWhereRaw("LOWER(city) LIKE ?", ["%{$normalizedSearch}%"])
               ->orWhereRaw(
-                  $isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
+                  $isPgsql ? "LOWER((name::jsonb)->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
                   ["%" . mb_strtolower($search) . "%"]
               )
               ->orWhereRaw("LOWER(city) LIKE ?", ["%" . mb_strtolower($search) . "%"]);

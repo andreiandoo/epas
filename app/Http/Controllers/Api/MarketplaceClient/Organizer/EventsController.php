@@ -2348,9 +2348,17 @@ class EventsController extends BaseController
             'name' => 'required|string|max:255',
         ]);
 
+        $baseSlug = \Illuminate\Support\Str::slug($validated['name']);
+        $slug = $baseSlug;
+        $i = 1;
+        while (\App\Models\Artist::where('slug', $slug)->exists()) {
+            $i++;
+            $slug = $baseSlug . '-' . $i;
+        }
+
         $artist = \App\Models\Artist::create([
             'name' => $validated['name'],
-            'slug' => \Illuminate\Support\Str::slug($validated['name']),
+            'slug' => $slug,
             'marketplace_client_id' => $organizer->marketplace_client_id,
             'is_active' => true,
         ]);

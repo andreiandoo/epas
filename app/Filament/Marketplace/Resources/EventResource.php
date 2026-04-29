@@ -4432,8 +4432,8 @@ class EventResource extends Resource
                                     $isPgsql = \DB::getDriverName() === 'pgsql';
                                     $nameTerm = '%' . mb_strtolower($agName) . '%';
                                     $match = EventGenre::where('slug', $agSlug)
-                                        ->orWhereRaw($isPgsql ? "LOWER(name->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", [$nameTerm])
-                                        ->orWhereRaw($isPgsql ? "LOWER(name->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", [$nameTerm])
+                                        ->orWhereRaw($isPgsql ? "LOWER((name::jsonb)->>'ro') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", [$nameTerm])
+                                        ->orWhereRaw($isPgsql ? "LOWER((name::jsonb)->>'en') LIKE ?" : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", [$nameTerm])
                                         ->first();
                                     if ($match) {
                                         $eventGenreIds[] = $match->id;

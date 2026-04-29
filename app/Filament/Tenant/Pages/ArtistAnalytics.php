@@ -275,7 +275,7 @@ class ArtistAnalytics extends Page
         $this->venueResults = \App\Models\Venue::where(function ($q) use ($search) {
                 $lower = mb_strtolower($search);
                 if (DB::getDriverName() === 'pgsql') {
-                    $q->whereRaw("LOWER(COALESCE(name->>'en', name->>'ro', name::text)) ILIKE ?", ["%{$lower}%"])
+                    $q->whereRaw("LOWER(COALESCE((name::jsonb)->>'en', (name::jsonb)->>'ro', name::text)) ILIKE ?", ["%{$lower}%"])
                       ->orWhereRaw("LOWER(city) ILIKE ?", ["%{$lower}%"]);
                 } else {
                     $q->where('name', 'LIKE', "%{$search}%")->orWhere('city', 'LIKE', "%{$search}%");

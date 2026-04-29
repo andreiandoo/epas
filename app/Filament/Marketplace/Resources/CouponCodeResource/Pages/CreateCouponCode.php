@@ -54,26 +54,31 @@ class CreateCouponCode extends CreateRecord
         }
 
         try {
-            // Find the organizer for these events
-            $organizerId = \App\Models\MarketplaceEvent::whereIn('id', array_map('intval', $applicableEvents))
-                ->value('marketplace_organizer_id');
+            // Only consider events that still exist; stale ids in the JSON
+            // applicable_events array would otherwise break the FK on insert.
+            $validEventIds = \App\Models\MarketplaceEvent::whereIn('id', array_map('intval', $applicableEvents))
+                ->pluck('marketplace_organizer_id', 'id');
 
-            if (!$organizerId) {
+            if ($validEventIds->isEmpty()) {
                 return;
             }
+
+            $organizerId = $validEventIds->first();
 
             // Determine applies_to
             $appliesTo = 'all_events';
             $eventId = null;
             $ticketTypeId = null;
 
+            $firstValidEventId = (int) $validEventIds->keys()->first();
+
             if (!empty($applicableTicketTypes)) {
                 $appliesTo = 'ticket_type';
                 $ticketTypeId = (int) $applicableTicketTypes[0];
-                $eventId = (int) $applicableEvents[0];
+                $eventId = $firstValidEventId;
             } elseif (!empty($applicableEvents)) {
                 $appliesTo = 'specific_event';
-                $eventId = (int) $applicableEvents[0];
+                $eventId = $firstValidEventId;
             }
 
             // Check if already mirrored

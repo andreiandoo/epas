@@ -212,7 +212,7 @@ class CartController extends BaseController
                 $failedUids = array_column($holdResult['failed'], 'seat_uid');
                 $reasons = array_column($holdResult['failed'], 'reason');
 
-                Log::warning('CartController: Some seats could not be held', [
+                Log::info('CartController: Some seats could not be held', [
                     'event_id' => $event->id,
                     'session_id' => $sessionId,
                     'failed' => $holdResult['failed'],

@@ -680,7 +680,12 @@ class PlatformTrackingService
     {
         $sessionToken = $data['session_token'] ?? null;
 
-        if ($sessionToken) {
+        // session_id is uuid; clients can send arbitrary tokens (sha256 hex,
+        // legacy strings) which Postgres rejects with 22P02 on the SELECT
+        // and the INSERT. Only trust valid UUIDs.
+        $isValidUuid = $sessionToken && Str::isUuid($sessionToken);
+
+        if ($isValidUuid) {
             $session = CoreSession::where('session_id', $sessionToken)->first();
             if ($session && $session->isActive()) {
                 // Update last activity
@@ -690,7 +695,7 @@ class PlatformTrackingService
         }
 
         // Create new session
-        $sessionId = $sessionToken ?? Str::uuid()->toString();
+        $sessionId = $isValidUuid ? $sessionToken : Str::uuid()->toString();
 
         // visitor_id has a NOT NULL constraint, but server-side tracking
         // (e.g. payment gateway callbacks for an order whose customer never

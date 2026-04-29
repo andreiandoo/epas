@@ -64,7 +64,7 @@ class MediaLibraryObserver
             $result = $service->compress($mediaLibrary);
 
             if ($result->success) {
-                Log::info("MediaLibrary: Auto-compressed {$mediaLibrary->filename} - saved {$result->savedPercentage}% ({$result->savedHuman})");
+                Log::info("MediaLibrary: Auto-compressed {$mediaLibrary->filename} - saved {$result->savedPercentage}% ({$result->getSavedHuman()})");
             } else {
                 Log::warning("MediaLibrary: Failed to auto-compress {$mediaLibrary->filename}: {$result->error}");
             }

@@ -172,7 +172,10 @@ class SendLowStockAlertsJob implements ShouldQueue
             Log::error('Failed to send low stock alert', [
                 'product_id' => $product->id,
                 'variant_id' => $variant?->id,
+                'recipients' => $emails,
+                'exception' => get_class($e),
                 'error' => $e->getMessage(),
+                'trace' => mb_substr($e->getTraceAsString(), 0, 2000),
             ]);
         }
     }

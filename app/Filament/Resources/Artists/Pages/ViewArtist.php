@@ -262,13 +262,13 @@ class ViewArtist extends Page
                 $q->where('name', 'LIKE', "%{$search}%")
                     ->orWhereRaw(
                         DB::getDriverName() === 'pgsql'
-                            ? "LOWER(name->>'en') LIKE ?"
+                            ? "LOWER((name::jsonb)->>'en') LIKE ?"
                             : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?",
                         ['%' . mb_strtolower($search) . '%']
                     )
                     ->orWhereRaw(
                         DB::getDriverName() === 'pgsql'
-                            ? "LOWER(name->>'ro') LIKE ?"
+                            ? "LOWER((name::jsonb)->>'ro') LIKE ?"
                             : "LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?",
                         ['%' . mb_strtolower($search) . '%']
                     )

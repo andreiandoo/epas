@@ -144,7 +144,7 @@ class ViewCustomerStats extends ViewRecord
             ->where('o.customer_id', $customerId)
             ->select(DB::raw(
                 DB::getDriverName() === 'pgsql'
-                    ? "COALESCE(eg.name->>'en', eg.name->>'ro') as genre_name"
+                    ? "COALESCE((eg.name::jsonb)->>'en', (eg.name::jsonb)->>'ro') as genre_name"
                     : "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"
             ), DB::raw('COUNT(*) as cnt'))
             ->groupBy('genre_name')
