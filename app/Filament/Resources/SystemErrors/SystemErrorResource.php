@@ -28,6 +28,11 @@ class SystemErrorResource extends Resource
         return SystemErrorsTable::configure($table);
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        return SystemError::query();
+    }
+
     public static function getPages(): array
     {
         return [

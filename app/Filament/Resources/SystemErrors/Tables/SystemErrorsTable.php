@@ -94,7 +94,6 @@ class SystemErrorsTable
                         '7d' => 'Last 7 days',
                         '30d' => 'Last 30 days',
                     ])
-                    ->default('24h')
                     ->query(function (Builder $query, array $data) {
                         $threshold = match ($data['value'] ?? null) {
                             '1h' => now()->subHour(),
@@ -155,7 +154,6 @@ class SystemErrorsTable
                         'only' => 'Only acknowledged',
                         'all' => 'Show all',
                     ])
-                    ->default('no')
                     ->query(function (Builder $query, array $data) {
                         match ($data['value'] ?? 'no') {
                             'no' => $query->whereNull('acknowledged_at'),
