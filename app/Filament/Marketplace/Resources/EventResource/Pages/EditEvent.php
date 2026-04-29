@@ -1118,12 +1118,6 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
-        \Log::info('[ArtistDebug] afterSave', [
-            'event_id' => $this->record->id,
-            'form_artists_state' => $this->data['artists'] ?? '<not present>',
-            'attached_artist_ids' => $this->record->artists()->pluck('artists.id')->toArray(),
-        ]);
-
         // Transform venue_config seasons schedule_list → schedule (keyed by day)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
             $config = $this->record->venue_config ?? [];
@@ -1188,22 +1182,21 @@ class EditEvent extends EditRecord
             app(PerformanceSyncService::class)->syncFromMultiSlots($this->record);
         }
 
-        // Sync artist pivot data (sort_order, is_headliner, is_co_headliner)
+        // Update artist pivot data (sort_order, is_headliner, is_co_headliner)
+        // for the artists configured in the artist_settings Repeater.
+        // Use updateExistingPivot per artist instead of sync() — sync() would
+        // detach any artist NOT in artist_settings, which silently removes
+        // newly-added artists whose Repeater row hasn't been hydrated yet.
         $artistSettings = $this->data['artist_settings'] ?? [];
         if (!empty($artistSettings)) {
-            $syncData = [];
             foreach ($artistSettings as $index => $setting) {
                 if (!empty($setting['artist_id'])) {
-                    $syncData[$setting['artist_id']] = [
+                    $this->record->artists()->updateExistingPivot($setting['artist_id'], [
                         'sort_order' => $index,
                         'is_headliner' => $setting['is_headliner'] ?? false,
                         'is_co_headliner' => $setting['is_co_headliner'] ?? false,
-                    ];
+                    ]);
                 }
-            }
-
-            if (!empty($syncData)) {
-                $this->record->artists()->sync($syncData);
             }
         }
 
