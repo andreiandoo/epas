@@ -1,5 +1,6 @@
-# Runtime data — keep share-links.json tracked so the seed file ships with
-# deploys. The webhook now preserves data/ on the server, so the seed only
-# applies on first deploy / when restoring lost links; after that the
-# server's runtime copy is authoritative.
+# Runtime data — must NEVER be tracked. The webhook deploy script preserves
+# data/ on the server (see _webhook-deploy.php PRESERVE_FILES), so the
+# server's live share-links.json is authoritative. Tracking it in source
+# would risk overwriting every organizer's links on each deploy.
+share-links.json
 rate-limits/
