@@ -63,7 +63,15 @@ class AnafQueue extends Model
      */
     public function isFinal(): bool
     {
-        return in_array($this->status, [self::STATUS_ACCEPTED, self::STATUS_REJECTED]);
+        // 'error' is also terminal — once a queue row is in the error state
+        // (manual mark-stuck, dead remote_id, etc.), polling should stop.
+        // Otherwise the cron keeps hammering ANAF for a submission that
+        // will never resolve.
+        return in_array($this->status, [
+            self::STATUS_ACCEPTED,
+            self::STATUS_REJECTED,
+            self::STATUS_ERROR,
+        ]);
     }
 
     /**
