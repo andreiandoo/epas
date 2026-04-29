@@ -20,6 +20,7 @@ class SystemErrorsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->poll(config('system_errors.polling.table', 15) . 's')
             ->defaultSort('created_at', 'desc')
             ->striped()
             ->paginated([25, 50, 100, 250])
