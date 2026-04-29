@@ -18,14 +18,11 @@ class ListSystemErrors extends ListRecords
 
             // Severity filters
             'critical' => Tab::make('Critical+')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', '>=', 500))
-                ->badgeColor('danger'),
+                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', '>=', 500)),
             'error' => Tab::make('Error')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', 400))
-                ->badgeColor('warning'),
+                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', '=', 400)),
             'warning' => Tab::make('Warning')
-                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', 300))
-                ->badgeColor('gray'),
+                ->modifyQueryUsing(fn (Builder $q) => $q->where('level', '=', 300)),
 
             // Time window
             'last_7d' => Tab::make('Last 7 days')

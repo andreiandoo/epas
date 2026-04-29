@@ -71,21 +71,14 @@ class SystemErrorsTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
-            ->filters([
-                // Filter by fingerprint via ?fp=... query param.
-                // Used by the "Open similar" row action and the View page action.
-                Filter::make('fingerprint_query')
-                    ->query(function (Builder $query) {
-                        $fp = request()->query('fp');
-                        if (filled($fp)) {
-                            $query->where('fingerprint', $fp);
-                        }
-                    })
-                    ->indicateUsing(function () {
-                        $fp = request()->query('fp');
-                        return filled($fp) ? ['fp' => 'Fingerprint: ' . substr($fp, 0, 8) . '…'] : [];
-                    }),
-            ])
+            ->modifyQueryUsing(function (Builder $query) {
+                // Allow ?fp=<fingerprint> URL param to pre-scope the list
+                // (used by "Open similar" links on the View page and per-row).
+                $fp = request()->query('fp');
+                if (is_string($fp) && $fp !== '') {
+                    $query->where('fingerprint', $fp);
+                }
+            })
             ->recordActions([
                 ViewAction::make(),
 
