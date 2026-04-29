@@ -64,7 +64,7 @@ class AccountController extends BaseController
 
         $totalSaved = (float) (clone $allOrdersQuery)->whereIn('status', $paidStatuses)->sum('discount_amount');
 
-        $perPage = min((int) $request->get('per_page', 20), 50);
+        $perPage = min((int) $request->input('per_page', 20), 50);
         $orders = $query->paginate($perPage);
 
         $paginatedResponse = $this->paginated($orders, function ($order) {
@@ -691,7 +691,7 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        $filter = $request->get('filter', 'upcoming'); // upcoming, past, all
+        $filter = $request->input('filter', 'upcoming'); // upcoming, past, all
 
         // NOTE: We deliberately don't filter by date in SQL anymore because the
         // event "Încheiat" status is derived from Event::isPast() which is

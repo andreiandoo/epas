@@ -159,7 +159,7 @@ class LocationsController extends BaseController
         $query->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('slug');
 
         // Pagination
-        $perPage = min((int) $request->get('per_page', 8), 200);
+        $perPage = min((int) $request->input('per_page', 8), 200);
         $cities = $query->paginate($perPage);
 
         // Build event counts with diacritics-aware matching
@@ -183,7 +183,7 @@ class LocationsController extends BaseController
         });
 
         // Sort by events if requested — featured cities always come first
-        $sortBy = $request->get('sort', 'events');
+        $sortBy = $request->input('sort', 'events');
         if ($sortBy === 'events') {
             $transformedData = $transformedData->sort(function ($a, $b) {
                 if ($a['is_featured'] !== $b['is_featured']) {

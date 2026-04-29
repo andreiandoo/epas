@@ -271,8 +271,8 @@ class EFacturaController extends Controller
         }
 
         // Pagination
-        $limit = min($request->get('limit', 50), 200);
-        $offset = $request->get('offset', 0);
+        $limit = min($request->input('limit', 50), 200);
+        $offset = $request->input('offset', 0);
 
         $entries = $query->orderBy('created_at', 'desc')
             ->offset($offset)

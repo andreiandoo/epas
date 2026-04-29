@@ -34,7 +34,7 @@ class ReviewsController extends BaseController
             $query->where('status', $request->status);
         }
 
-        $perPage = min((int) $request->get('per_page', 10), 50);
+        $perPage = min((int) $request->input('per_page', 10), 50);
         $reviews = $query->paginate($perPage);
 
         // Get event details for each review

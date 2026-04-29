@@ -128,7 +128,7 @@ class RewardsController extends BaseController
             $query->where('type', $request->type); // earned, spent, expired, adjusted
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 50);
+        $perPage = min((int) $request->input('per_page', 20), 50);
         $transactions = $query->paginate($perPage);
 
         $formatted = collect($transactions->items())->map(function ($tx) {
@@ -690,7 +690,7 @@ class RewardsController extends BaseController
             ->with('reward')
             ->orderByDesc('created_at');
 
-        $perPage = min((int) $request->get('per_page', 20), 50);
+        $perPage = min((int) $request->input('per_page', 20), 50);
         $redemptions = $query->paginate($perPage);
 
         $formatted = collect($redemptions->items())->map(function ($r) {

@@ -347,7 +347,7 @@ class WhatsAppController extends Controller
      */
     public function stats(string $tenantId, Request $request): JsonResponse
     {
-        $days = min($request->get('days', 30), 90);
+        $days = min($request->input('days', 30), 90);
 
         $stats = $this->whatsAppService->getStats($tenantId, $days);
 
@@ -386,8 +386,8 @@ class WhatsAppController extends Controller
             $query->byStatus($request->status);
         }
 
-        $limit = min($request->get('limit', 50), 200);
-        $offset = $request->get('offset', 0);
+        $limit = min($request->input('limit', 50), 200);
+        $offset = $request->input('offset', 0);
 
         $messages = $query->orderBy('created_at', 'desc')
             ->offset($offset)
@@ -426,7 +426,7 @@ class WhatsAppController extends Controller
             $query->where('status', $request->status);
         }
 
-        $limit = min($request->get('limit', 50), 200);
+        $limit = min($request->input('limit', 50), 200);
 
         $schedules = $query->orderBy('run_at', 'asc')
             ->limit($limit)

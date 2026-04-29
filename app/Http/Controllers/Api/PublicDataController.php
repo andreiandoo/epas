@@ -96,26 +96,26 @@ class PublicDataController extends Controller
             }
 
             if ($request->has('city')) {
-                $query->where('city', $request->get('city'));
+                $query->where('city', $request->input('city'));
             }
 
             if ($request->has('country')) {
-                $query->where('country', $request->get('country'));
+                $query->where('country', $request->input('country'));
             }
 
             if ($request->has('venue_type')) {
-                $query->whereHas('venueType', fn($q) => $q->where('slug', $request->get('venue_type')));
+                $query->whereHas('venueType', fn($q) => $q->where('slug', $request->input('venue_type')));
             }
 
             if ($request->has('venue_category')) {
-                $query->whereHas('venueType.category', fn($q) => $q->where('slug', $request->get('venue_category')));
+                $query->whereHas('venueType.category', fn($q) => $q->where('slug', $request->input('venue_category')));
             }
 
             if ($request->has('venue_tag')) {
-                $query->where('venue_tag', $request->get('venue_tag'));
+                $query->where('venue_tag', $request->input('venue_tag'));
             }
 
-            $perPage = min((int) $request->get('per_page', 50), 500);
+            $perPage = min((int) $request->input('per_page', 50), 500);
             $paginator = $query->paginate($perPage);
 
             $formattedVenues = collect($paginator->items())->map(function ($venue) {
@@ -332,31 +332,31 @@ class PublicDataController extends Controller
             $query = Artist::query();
 
             if ($request->has('active')) {
-                $query->where('is_active', (bool) $request->get('active'));
+                $query->where('is_active', (bool) $request->input('active'));
             }
 
             if ($request->has('country')) {
-                $query->where('country', $request->get('country'));
+                $query->where('country', $request->input('country'));
             }
 
             if ($request->has('city')) {
-                $query->where('city', $request->get('city'));
+                $query->where('city', $request->input('city'));
             }
 
             // Filter by first letter
             if ($request->has('letter')) {
-                $query->where('letter', mb_strtoupper($request->get('letter')));
+                $query->where('letter', mb_strtoupper($request->input('letter')));
             }
 
             // Search by name
             if ($request->has('search')) {
-                $search = $request->get('search');
+                $search = $request->input('search');
                 $query->where('name', 'LIKE', "%{$search}%");
             }
 
             // Filter by artist type (name or slug)
             if ($request->has('artist_type')) {
-                $typeValue = $request->get('artist_type');
+                $typeValue = $request->input('artist_type');
                 $query->whereHas('artistTypes', function ($q) use ($typeValue) {
                     $q->where('slug', $typeValue)
                       ->orWhere('name->en', $typeValue)
@@ -366,7 +366,7 @@ class PublicDataController extends Controller
 
             // Filter by artist genre (name or slug) - supports both ?genre= and ?artist_genre=
             if ($request->has('genre') || $request->has('artist_genre')) {
-                $genreValue = $request->get('genre') ?? $request->get('artist_genre');
+                $genreValue = $request->input('genre') ?? $request->input('artist_genre');
                 $query->whereHas('artistGenres', function ($q) use ($genreValue) {
                     $q->where('slug', $genreValue)
                       ->orWhere('name->en', $genreValue)
@@ -374,7 +374,7 @@ class PublicDataController extends Controller
                 });
             }
 
-            $perPage = min((int) $request->get('per_page', 50), 500);
+            $perPage = min((int) $request->input('per_page', 50), 500);
             $paginator = $query
                 ->with([
                     'artistTypes',
@@ -609,7 +609,7 @@ class PublicDataController extends Controller
                 $query->where('event_date', '>=', now());
             }
 
-            $perPage = min((int) $request->get('per_page', 50), 500);
+            $perPage = min((int) $request->input('per_page', 50), 500);
             $paginator = $query->with([
                 'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
                 'tenant:id,name,public_name,website',

@@ -25,7 +25,7 @@ class DashboardController extends BaseController
         $clientId = $admin->marketplace_client_id;
 
         // Date range
-        $period = $request->get('period', '30'); // days
+        $period = $request->input('period', '30'); // days
         $startDate = now()->subDays((int) $period)->startOfDay();
         $endDate = now()->endOfDay();
 
@@ -111,7 +111,7 @@ class DashboardController extends BaseController
         $admin = $this->requireAdmin($request);
         $clientId = $admin->marketplace_client_id;
 
-        $days = min((int) $request->get('days', 30), 90);
+        $days = min((int) $request->input('days', 30), 90);
         $startDate = now()->subDays($days)->startOfDay();
 
         $sales = Order::where('marketplace_client_id', $clientId)
@@ -144,7 +144,7 @@ class DashboardController extends BaseController
     {
         $admin = $this->requireAdmin($request);
         $clientId = $admin->marketplace_client_id;
-        $limit = min((int) $request->get('limit', 20), 50);
+        $limit = min((int) $request->input('limit', 20), 50);
 
         $activities = collect();
 
@@ -233,7 +233,7 @@ class DashboardController extends BaseController
     {
         $admin = $this->requireAdmin($request);
         $clientId = $admin->marketplace_client_id;
-        $limit = min((int) $request->get('limit', 10), 50);
+        $limit = min((int) $request->input('limit', 10), 50);
 
         $organizers = MarketplaceOrganizer::where('marketplace_client_id', $clientId)
             ->where('status', 'active')
@@ -260,7 +260,7 @@ class DashboardController extends BaseController
     {
         $admin = $this->requireAdmin($request);
         $clientId = $admin->marketplace_client_id;
-        $limit = min((int) $request->get('limit', 10), 50);
+        $limit = min((int) $request->input('limit', 10), 50);
 
         $events = MarketplaceEvent::where('marketplace_client_id', $clientId)
             ->where('status', 'published')

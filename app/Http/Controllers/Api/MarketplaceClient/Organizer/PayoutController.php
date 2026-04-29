@@ -255,7 +255,7 @@ class PayoutController extends BaseController
 
         $query->orderByDesc('created_at');
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $transactions = $query->paginate($perPage);
 
         return $this->paginated($transactions, function ($tx) {
@@ -290,7 +290,7 @@ class PayoutController extends BaseController
 
         $query->orderByDesc('created_at');
 
-        $perPage = min((int) $request->get('per_page', 20), 50);
+        $perPage = min((int) $request->input('per_page', 20), 50);
         $payouts = $query->paginate($perPage);
 
         return $this->paginated($payouts, function ($payout) {

@@ -27,7 +27,7 @@ class MicroserviceMarketplaceController extends Controller
     {
         // Handle locale from query parameter
         if ($request->has('locale')) {
-            app()->setLocale($request->get('locale'));
+            app()->setLocale($request->input('locale'));
         }
 
         $microservices = Microservice::active()->get();

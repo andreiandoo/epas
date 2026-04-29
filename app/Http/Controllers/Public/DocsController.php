@@ -52,7 +52,7 @@ class DocsController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->get('q', '');
+        $query = $request->input('q', '');
         $results = $query ? $this->searchService->search($query) : collect();
         $categories = $this->docService->getPublicCategories();
 

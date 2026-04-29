@@ -47,11 +47,11 @@ class PayoutsController extends BaseController
         }
 
         // Sorting
-        $sortField = $request->get('sort', 'created_at');
-        $sortDir = $request->get('order', 'desc');
+        $sortField = $request->input('sort', 'created_at');
+        $sortDir = $request->input('order', 'desc');
         $query->orderBy($sortField, $sortDir);
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $payouts = $query->paginate($perPage);
 
         return $this->paginated($payouts, function ($payout) {

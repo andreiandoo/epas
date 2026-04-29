@@ -39,7 +39,7 @@ class EventsController extends BaseController
             // Cancelled events are intentionally NOT excluded — they should keep showing in
             // category listings with an "Anulat" badge until they're actually past
             // (matches getStatusLabelAttribute()'s "Încheiat" rule on the admin side).
-            ->when($request->get('time_scope') === 'past', function ($q) {
+            ->when($request->input('time_scope') === 'past', function ($q) {
                 $q->where(function ($sq) {
                     // Past: every relevant date is in the past (or absent).
                     $sq->where(function ($inner) {
@@ -221,9 +221,9 @@ class EventsController extends BaseController
         }
 
         // Sorting - use COALESCE to handle both event_date (marketplace) and starts_at (tenant)
-        $sortField = $request->get('sort', 'date');
-        $defaultOrder = $request->get('time_scope') === 'past' ? 'desc' : 'asc';
-        $sortDir = strtoupper($request->get('order', $defaultOrder)) === 'DESC' ? 'DESC' : 'ASC';
+        $sortField = $request->input('sort', 'date');
+        $defaultOrder = $request->input('time_scope') === 'past' ? 'desc' : 'asc';
+        $sortDir = strtoupper($request->input('order', $defaultOrder)) === 'DESC' ? 'DESC' : 'ASC';
 
         if ($sortField === 'latest') {
             // Sort by creation date (newest first)
@@ -235,7 +235,7 @@ class EventsController extends BaseController
         }
 
         // Pagination
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $paginator = $query->paginate($perPage);
 
         // Format events for response (handle both marketplace and tenant events)
@@ -627,7 +627,7 @@ class EventsController extends BaseController
             }
         });
 
-        $limit = min((int) $request->get('limit', 10), 50);
+        $limit = min((int) $request->input('limit', 10), 50);
         $events = $query->orderByRaw('COALESCE(event_date, DATE(starts_at)) ASC')->limit($limit)->get();
 
         return $this->success([

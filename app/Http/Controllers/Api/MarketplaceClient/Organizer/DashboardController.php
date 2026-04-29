@@ -196,7 +196,7 @@ class DashboardController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $limit = min((int) $request->get('limit', 10), 50);
+        $limit = min((int) $request->input('limit', 10), 50);
 
         $orders = Order::where('marketplace_organizer_id', $organizer->id)
             ->with([
@@ -317,7 +317,7 @@ class DashboardController extends BaseController
             'refunded' => (int) (clone $allOrdersQuery)->whereIn('status', ['refunded', 'partially_refunded'])->count(),
         ];
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->paginate($perPage);
 
         return $this->paginated($orders, function ($order) {

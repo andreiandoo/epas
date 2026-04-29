@@ -50,7 +50,7 @@ class MarketplaceEventsController extends BaseController
             ]);
 
         // Filter by time scope: upcoming (default), past, or all
-        $timeScope = $request->get('time_scope', 'upcoming');
+        $timeScope = $request->input('time_scope', 'upcoming');
         if ($timeScope === 'past') {
             $this->applyPastFilter($query);
         } elseif ($timeScope !== 'all' && !$request->has('include_past')) {
@@ -177,7 +177,7 @@ class MarketplaceEventsController extends BaseController
 
         // Filter by named date range (accepts both 'date' and 'date_filter' params)
         // Normalizes: this_week→week, this_month→month, next_month→next-month
-        $dateParam = $request->get('date_filter') ?? $request->get('date');
+        $dateParam = $request->input('date_filter') ?? $request->input('date');
         if ($dateParam && !$request->has('from_date')) {
             // Normalize underscored variants from category/genre pages
             $dateParam = match ($dateParam) {
@@ -338,7 +338,7 @@ class MarketplaceEventsController extends BaseController
 
         // Sorting — for past events, default to newest-first (date_desc)
         $defaultSort = ($timeScope === 'past') ? 'date_desc' : 'date_asc';
-        $sort = $request->get('sort', $defaultSort);
+        $sort = $request->input('sort', $defaultSort);
         // JS sends 'date' — normalize to the appropriate date sort
         if ($sort === 'date') {
             $sort = $defaultSort;
@@ -374,7 +374,7 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Pagination
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $events = $query->paginate($perPage);
 
         return $this->paginated($events, function ($event) use ($language, $client) {
@@ -399,7 +399,7 @@ class MarketplaceEventsController extends BaseController
         $this->applyUpcomingFilter($query);
 
         // Featured type filter: homepage, general, category, city, or any
-        $featuredType = $request->get('type', 'any');
+        $featuredType = $request->input('type', 'any');
         if ($featuredType === 'homepage') {
             $query->where('is_homepage_featured', true);
         } elseif ($featuredType === 'general') {
@@ -410,7 +410,7 @@ class MarketplaceEventsController extends BaseController
             $query->where('is_city_featured', true);
             // Optionally filter by a specific city slug/name
             if ($request->has('city')) {
-                $city = $request->get('city');
+                $city = $request->input('city');
                 $query->whereHas('venue', fn ($q) => $q->where('city', 'like', "%{$city}%"));
             }
         } else {
@@ -453,7 +453,7 @@ class MarketplaceEventsController extends BaseController
             ])
             ->orderBy('event_date')
             ->orderBy('start_time')
-            ->limit(min((int) $request->get('limit', 10), 50))
+            ->limit(min((int) $request->input('limit', 10), 50))
             ->get()
             ->map(fn ($event) => $this->formatEventWithFeaturedImage($event, $language, $client));
 
@@ -1705,7 +1705,7 @@ class MarketplaceEventsController extends BaseController
         $query = \App\Models\EventGenre::query();
 
         // Filter by event type IDs if provided (uses event_type_event_genre pivot)
-        $eventTypeIds = $request->get('event_type_ids');
+        $eventTypeIds = $request->input('event_type_ids');
         if ($eventTypeIds) {
             $ids = is_array($eventTypeIds) ? $eventTypeIds : explode(',', $eventTypeIds);
             $ids = array_filter(array_map('intval', $ids));
@@ -1717,7 +1717,7 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Filter by category slug — only show genres that have events in this category
-        $categorySlug = $request->get('category');
+        $categorySlug = $request->input('category');
         $categoryId = null;
         if ($categorySlug) {
             $category = \App\Models\MarketplaceEventCategory::where('marketplace_client_id', $client->id)
@@ -2093,7 +2093,7 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Sorting
-        $sort = $request->get('sort', 'name');
+        $sort = $request->input('sort', 'name');
         switch ($sort) {
             case 'events':
                 $query->orderByDesc('events_count');
@@ -2107,7 +2107,7 @@ class MarketplaceEventsController extends BaseController
                 break;
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $organizers = $query->paginate($perPage);
 
         return $this->paginated($organizers, function ($organizer) {

@@ -33,7 +33,7 @@ class NotificationsController extends BaseController
             $query->where('type', $request->type);
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 50);
+        $perPage = min((int) $request->input('per_page', 20), 50);
         $notifications = $query->paginate($perPage);
 
         $formatted = collect($notifications->items())->map(function ($notification) {

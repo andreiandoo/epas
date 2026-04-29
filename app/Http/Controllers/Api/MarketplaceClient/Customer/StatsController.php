@@ -159,7 +159,7 @@ class StatsController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
-        $limit = min((int) $request->get('limit', 5), 20);
+        $limit = min((int) $request->input('limit', 5), 20);
 
         // Get orders with future events — either via direct relation or via tickets
         $orders = Order::where('marketplace_customer_id', $customer->id)

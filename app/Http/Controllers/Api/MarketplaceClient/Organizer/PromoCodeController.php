@@ -468,7 +468,7 @@ class PromoCodeController extends BaseController
             ->with(['order:id,order_number,total,created_at', 'customer:id,first_name,last_name,email'])
             ->orderBy('created_at', 'desc');
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $usage = $query->paginate($perPage);
 
         return $this->paginated($usage, function ($item) {

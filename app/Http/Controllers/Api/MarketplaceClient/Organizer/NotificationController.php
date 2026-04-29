@@ -34,7 +34,7 @@ class NotificationController extends BaseController
             $query->ofType($request->type);
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $notifications = $query->paginate($perPage);
 
         return $this->paginated($notifications, function ($notification) {
@@ -63,7 +63,7 @@ class NotificationController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $limit = min((int) $request->get('limit', 10), 20);
+        $limit = min((int) $request->input('limit', 10), 20);
 
         $notifications = MarketplaceNotification::forOrganizer($organizer->id)
             ->orderBy('created_at', 'desc')

@@ -27,7 +27,7 @@ class WatchlistController extends BaseController
             ->where('marketplace_client_id', $client->id)
             ->orderByDesc('created_at');
 
-        $perPage = min((int) $request->get('per_page', 12), 50);
+        $perPage = min((int) $request->input('per_page', 12), 50);
         $watchlist = $query->paginate($perPage);
 
         // Get event details from BOTH tables

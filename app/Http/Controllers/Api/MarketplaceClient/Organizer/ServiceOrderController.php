@@ -80,7 +80,7 @@ class ServiceOrderController extends BaseController
 
         $query->orderBy('created_at', 'desc');
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->paginate($perPage);
 
         return $this->paginated($orders, function ($order) {
@@ -520,15 +520,15 @@ class ServiceOrderController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $audienceType = $request->get('audience_type', 'own');
+        $audienceType = $request->input('audience_type', 'own');
 
         // Get filter parameters (support both single values and arrays)
-        $ageMin = $request->get('age_min');
-        $ageMax = $request->get('age_max');
-        $gender = $request->get('gender');
-        $cities = $request->get('cities', []);
-        $categories = $request->get('categories', []);
-        $genres = $request->get('genres', []);
+        $ageMin = $request->input('age_min');
+        $ageMax = $request->input('age_max');
+        $gender = $request->input('gender');
+        $cities = $request->input('cities', []);
+        $categories = $request->input('categories', []);
+        $genres = $request->input('genres', []);
 
         // Normalize to arrays
         if (!is_array($cities)) $cities = $cities ? [$cities] : [];

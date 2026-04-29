@@ -52,14 +52,14 @@ class EventsController extends BaseController
         }
 
         // Sorting - map starts_at to event_date
-        $sortField = $request->get('sort', 'event_date');
+        $sortField = $request->input('sort', 'event_date');
         if ($sortField === 'starts_at') {
             $sortField = 'event_date';
         }
-        $sortDir = $request->get('order', 'desc');
+        $sortDir = $request->input('order', 'desc');
         $query->orderBy($sortField, $sortDir);
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $events = $query->paginate($perPage);
 
         return $this->paginated($events, function ($event) {
@@ -841,7 +841,7 @@ class EventsController extends BaseController
 
         $query->orderBy('created_at', 'desc');
 
-        $perPage = min((int) $request->get('per_page', 50), 200);
+        $perPage = min((int) $request->input('per_page', 50), 200);
         $tickets = $query->paginate($perPage);
 
         // Get stats — count only valid/used tickets (excludes cancelled/refunded)
@@ -1522,8 +1522,8 @@ class EventsController extends BaseController
     {
         $organizer = $this->requireOrganizer($request);
 
-        $format = $request->get('format', 'csv');
-        $eventId = $request->get('event_id');
+        $format = $request->input('format', 'csv');
+        $eventId = $request->input('event_id');
 
         // Get event IDs
         $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
@@ -1753,9 +1753,9 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        $period = $request->get('period', '30d');
-        $startDate = $request->get('start_date');
-        $endDate = $request->get('end_date');
+        $period = $request->input('period', '30d');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
         // Determine date range
         $now = now();

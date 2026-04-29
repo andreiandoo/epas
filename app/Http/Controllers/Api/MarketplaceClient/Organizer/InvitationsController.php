@@ -47,7 +47,7 @@ class InvitationsController extends BaseController
             $query->where('status', $request->string('status'));
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $batches = $query->paginate($perPage);
 
         return $this->paginated($batches, fn (InviteBatch $b) => $this->formatBatch($b));
@@ -255,7 +255,7 @@ class InvitationsController extends BaseController
         $batch = $this->findBatch($organizer, $batchId);
         if (!$batch) return $this->error('Batch not found', 404);
 
-        $perPage = min((int) $request->get('per_page', 100), 500);
+        $perPage = min((int) $request->input('per_page', 100), 500);
         $invites = $batch->invites()->orderBy('id')->paginate($perPage);
 
         return $this->paginated($invites, fn (Invite $i) => $this->formatInvite($i));

@@ -243,7 +243,7 @@ class ReferralsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $limit = min((int) $request->get('limit', 10), 50);
+        $limit = min((int) $request->input('limit', 10), 50);
 
         $leaders = DB::table('marketplace_referral_codes')
             ->join('marketplace_customers', 'marketplace_referral_codes.marketplace_customer_id', '=', 'marketplace_customers.id')

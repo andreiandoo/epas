@@ -157,7 +157,7 @@ class VenuesController extends BaseController
 
         // Get upcoming marketplace events at this venue
         // Match by venue_id OR by venue_name/city for events without venue_id
-        $upcomingEventsLimit = min((int) ($request->get('events_limit', 50)), 100);
+        $upcomingEventsLimit = min((int) ($request->input('events_limit', 50)), 100);
 
         $upcomingEvents = \App\Models\MarketplaceEvent::query()
             ->where('marketplace_client_id', $client->id)

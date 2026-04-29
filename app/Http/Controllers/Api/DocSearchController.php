@@ -15,8 +15,8 @@ class DocSearchController extends Controller
 
     public function autocomplete(Request $request): JsonResponse
     {
-        $query = $request->get('q', '');
-        $limit = min((int) $request->get('limit', 10), 20);
+        $query = $request->input('q', '');
+        $limit = min((int) $request->input('limit', 10), 20);
 
         $results = $this->searchService->autocomplete($query, $limit);
 
@@ -29,8 +29,8 @@ class DocSearchController extends Controller
 
     public function search(Request $request): JsonResponse
     {
-        $query = $request->get('q', '');
-        $perPage = min((int) $request->get('per_page', 15), 50);
+        $query = $request->input('q', '');
+        $perPage = min((int) $request->input('per_page', 15), 50);
 
         $results = $this->searchService->search($query, true, $perPage);
 
@@ -49,7 +49,7 @@ class DocSearchController extends Controller
 
     public function suggestions(Request $request): JsonResponse
     {
-        $query = $request->get('q', '');
+        $query = $request->input('q', '');
         $suggestions = $this->searchService->getSuggestions($query);
 
         return response()->json([

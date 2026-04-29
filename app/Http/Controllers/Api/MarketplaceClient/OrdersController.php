@@ -611,7 +611,7 @@ class OrdersController extends BaseController
             $query->where('created_at', '<=', $request->to_date);
         }
 
-        $perPage = min((int) $request->get('per_page', 20), 100);
+        $perPage = min((int) $request->input('per_page', 20), 100);
         $orders = $query->paginate($perPage);
 
         return $this->paginated($orders);

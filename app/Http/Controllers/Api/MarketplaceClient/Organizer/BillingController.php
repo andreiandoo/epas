@@ -22,8 +22,8 @@ class BillingController extends BaseController
         // For now, return commission invoices based on completed orders
         // In a real implementation, this would be from an invoices table
         $status = $request->input('status');
-        $perPage = min((int) $request->get('per_page', 10), 50);
-        $page = (int) $request->get('page', 1);
+        $perPage = min((int) $request->input('per_page', 10), 50);
+        $page = (int) $request->input('page', 1);
 
         // Generate invoice data from organizer's order history
         $invoices = $this->getOrganizerInvoices($organizer, $status, $perPage, $page);
