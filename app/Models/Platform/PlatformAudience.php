@@ -424,7 +424,7 @@ class PlatformAudience extends Model
     /**
      * Get lookalike percentage options based on platform
      */
-    public static function getLookalikePercentageOptions(string $platform = null): array
+    public static function getLookalikePercentageOptions(?string $platform = null): array
     {
         // Facebook/Meta supports 1-10%
         // Google supports 1-10% (similar audiences)

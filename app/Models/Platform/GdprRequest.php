@@ -98,7 +98,7 @@ class GdprRequest extends Model
         ]);
     }
 
-    public function markCompleted(array $exportData = null): void
+    public function markCompleted(?array $exportData = null): void
     {
         $updates = [
             'status' => self::STATUS_COMPLETED,
