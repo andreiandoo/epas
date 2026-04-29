@@ -71,14 +71,6 @@ class SystemErrorsTable
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
-            ->modifyQueryUsing(function (Builder $query) {
-                // Allow ?fp=<fingerprint> URL param to pre-scope the list
-                // (used by "Open similar" links on the View page and per-row).
-                $fp = request()->query('fp');
-                if (is_string($fp) && $fp !== '') {
-                    $query->where('fingerprint', $fp);
-                }
-            })
             ->recordActions([
                 ViewAction::make(),
 
