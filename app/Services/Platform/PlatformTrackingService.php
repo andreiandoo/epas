@@ -40,7 +40,7 @@ class PlatformTrackingService
         $event = $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => CoreCustomerEvent::TYPE_PAGE_VIEW,
             'event_category' => CoreCustomerEvent::CATEGORY_NAVIGATION,
@@ -94,7 +94,7 @@ class PlatformTrackingService
         $event = $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => CoreCustomerEvent::TYPE_PURCHASE,
             'event_category' => CoreCustomerEvent::CATEGORY_ECOMMERCE,
@@ -156,7 +156,7 @@ class PlatformTrackingService
         $event = $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => CoreCustomerEvent::TYPE_ADD_TO_CART,
             'event_category' => CoreCustomerEvent::CATEGORY_ECOMMERCE,
@@ -197,7 +197,7 @@ class PlatformTrackingService
         $event = $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => CoreCustomerEvent::TYPE_BEGIN_CHECKOUT,
             'event_category' => CoreCustomerEvent::CATEGORY_ECOMMERCE,
@@ -230,7 +230,7 @@ class PlatformTrackingService
         $event = $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => CoreCustomerEvent::TYPE_SIGN_UP,
             'event_category' => CoreCustomerEvent::CATEGORY_USER,
@@ -262,7 +262,7 @@ class PlatformTrackingService
         return $this->createEvent([
             'core_customer_id' => $customer?->id,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'session_id' => $session->id,
+            'session_id' => $session->session_id,
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id,
             'event_type' => $eventType,
             'event_category' => $data['event_category'] ?? CoreCustomerEvent::CATEGORY_CUSTOM,
