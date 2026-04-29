@@ -124,28 +124,6 @@ class Incomes extends Page
      */
     public function getViewData(): array
     {
-        try {
-            return $this->buildViewData();
-        } catch (\Throwable $e) {
-            // Defensive: surface any exception thrown during view-data
-            // assembly into the laravel log so we can diagnose 500s on
-            // /marketplace/incomes. Without this Filament can swallow it.
-            \Illuminate\Support\Facades\Log::error('Incomes::getViewData failed', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => collect(explode("\n", $e->getTraceAsString()))->take(20)->implode("\n"),
-                'period' => $this->period,
-                'organizerId' => $this->organizerId,
-                'customFrom' => $this->customFrom,
-                'customTo' => $this->customTo,
-            ]);
-            throw $e;
-        }
-    }
-
-    protected function buildViewData(): array
-    {
         $marketplace = static::getMarketplaceClient();
 
         if (!$marketplace) {
@@ -210,7 +188,7 @@ class Incomes extends Page
             $giftCardCount = (int) $giftCardQuery->count();
 
             // ─── Extra Services Revenue ───
-            $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+            $serviceQuery = ServiceOrder::where('marketplace_client_id', $marketplaceId)
                 ->where('payment_status', 'paid')
                 ->whereBetween('paid_at', [$startDate, $endDate]);
 
@@ -222,7 +200,7 @@ class Incomes extends Page
             $serviceCount = (int) $serviceQuery->count();
 
             // Services breakdown by type
-            $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+            $servicesByType = ServiceOrder::where('marketplace_client_id', $marketplaceId)
                 ->where('payment_status', 'paid')
                 ->whereBetween('paid_at', [$startDate, $endDate])
                 ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -388,7 +366,7 @@ class Incomes extends Page
         $dailyCommissions = $dailyOrderData->pluck('total_commissions', 'date')->toArray();
 
         // Daily services
-        $dailyServices = ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+        $dailyServices = ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->where('payment_status', 'paid')
             ->whereBetween('paid_at', [$startDate, $endDate])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
@@ -498,7 +476,7 @@ class Incomes extends Page
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->sum('initial_amount');
 
-        $prevServices = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)->where('source', '!=', 'external_import')
+        $prevServices = (float) ServiceOrder::where('marketplace_client_id', $marketplaceId)
             ->where('payment_status', 'paid')
             ->whereBetween('paid_at', [$prevStart, $prevEnd])
             ->when($this->organizerId, fn ($q) => $q->where('marketplace_organizer_id', $this->organizerId))
