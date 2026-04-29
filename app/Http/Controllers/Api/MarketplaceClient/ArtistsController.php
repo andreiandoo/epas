@@ -164,14 +164,19 @@ class ArtistsController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // Postgres doesn't allow aliased subquery columns in HAVING (unlike
+        // MySQL), so we filter the genres with zero artists in PHP after
+        // fetching. The set is small (a few dozen genres at most), so the
+        // post-filter is cheap.
         $genres = ArtistGenre::query()
             ->withCount(['artists' => function ($q) use ($client) {
                 $q->whereHas('marketplaceClients', fn ($mq) => $mq->where('marketplace_artist_partners.marketplace_client_id', $client->id))
                   ->where('is_active', true);
             }])
-            ->having('artists_count', '>', 0)
             ->orderBy('name')
             ->get()
+            ->filter(fn ($genre) => ($genre->artists_count ?? 0) > 0)
+            ->values()
             ->map(function ($genre) {
                 return [
                     'id' => $genre->id,
