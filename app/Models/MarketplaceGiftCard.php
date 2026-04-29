@@ -279,7 +279,7 @@ class MarketplaceGiftCard extends Model
     /**
      * Refund amount back to gift card
      */
-    public function refund(float $amount, ?Order $order = null, ?int $adminId = null, string $reason = null): bool
+    public function refund(float $amount, ?Order $order = null, ?int $adminId = null, ?string $reason = null): bool
     {
         $balanceBefore = $this->balance;
         $balanceAfter = min($this->balance + $amount, $this->initial_amount);
@@ -307,7 +307,7 @@ class MarketplaceGiftCard extends Model
     /**
      * Cancel the gift card
      */
-    public function cancel(string $reason = null, ?int $adminId = null): void
+    public function cancel(?string $reason = null, ?int $adminId = null): void
     {
         $this->update([
             'status' => self::STATUS_CANCELLED,
@@ -393,7 +393,7 @@ class MarketplaceGiftCard extends Model
     protected function recordTransaction(
         string $type,
         float $amount,
-        string $description = null,
+        ?string $description = null,
         ?Order $order = null,
         ?int $customerId = null,
         ?int $adminId = null
