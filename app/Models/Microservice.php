@@ -29,9 +29,14 @@ class Microservice extends Model
         'billing_cycle',
         'pricing_model',
         'is_active',
+        'is_premium',
         'sort_order',
         'features',
         'category',
+        'version',
+        'config_schema',
+        'required_env_vars',
+        'dependencies',
         'documentation_url',
         'metadata',
     ];
@@ -42,7 +47,11 @@ class Microservice extends Model
         'short_description' => 'array',
         'price' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_premium' => 'boolean',
         'features' => 'array',
+        'config_schema' => 'array',
+        'required_env_vars' => 'array',
+        'dependencies' => 'array',
         'metadata' => 'array',
     ];
 
