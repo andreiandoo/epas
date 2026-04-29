@@ -27,6 +27,15 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\Tracking\ConsentServiceInterface::class,
             \App\Services\Tracking\SessionConsentService::class
         );
+
+        // System error recorder — single shared instance used by the log
+        // listener, exception reporter, observers and the backfill command.
+        $this->app->singleton(\App\Logging\SystemErrorRecorder::class, function ($app) {
+            return new \App\Logging\SystemErrorRecorder(
+                new \App\Logging\ErrorClassifier(),
+                new \App\Logging\RequestContextEnricher(),
+            );
+        });
     }
 
     /**
@@ -80,6 +89,22 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Venue::observe(\App\Observers\VenueObserver::class);
         \App\Models\FestivalEdition::observe(\App\Observers\FestivalEditionObserver::class);
         \App\Models\Coupon\CouponCode::observe(\App\Observers\CouponCodeObserver::class);
+
+        // System-error mirroring observers: capture business-domain failures
+        // (email send failure, queue job failure, payment status flips) into
+        // the system_errors dashboard alongside Log:: entries.
+        \App\Models\MarketplaceEmailLog::observe(\App\Observers\MarketplaceEmailLogObserver::class);
+        if (class_exists(\App\Models\EmailLog::class)) {
+            \App\Models\EmailLog::observe(\App\Observers\EmailLogObserver::class);
+        }
+
+        // Mirror application logs into system_errors. Keeps existing file
+        // logging untouched; this is a parallel sink for the admin error
+        // dashboard. Filtered by level (warning+) and channel allowlist.
+        $this->bootSystemErrorsLogListener();
+
+        // Mirror failed queue jobs into system_errors as a single source of truth.
+        $this->bootSystemErrorsQueueListener();
 
         // Register microservices event listeners
         \Illuminate\Support\Facades\Event::listen(
@@ -152,5 +177,93 @@ class AppServiceProvider extends ServiceProvider
 
         // Write stamp so we skip on subsequent requests
         @file_put_contents($stampFile, date('Y-m-d H:i:s'));
+    }
+
+    /**
+     * Subscribe to Laravel's MessageLogged event and mirror anything at
+     * the configured capture level (default WARNING) into system_errors.
+     *
+     * The recorder swallows all errors internally so a logging-row failure
+     * never disrupts the original log call.
+     */
+    protected function bootSystemErrorsLogListener(): void
+    {
+        $allowedChannels = (array) config('system_errors.channels', []);
+        $minLevel = (int) config('system_errors.capture_level', 300);
+
+        \Illuminate\Support\Facades\Log::listen(function (\Illuminate\Log\Events\MessageLogged $event) use ($allowedChannels, $minLevel) {
+            // Channel allow-list (empty list = capture all)
+            if (!empty($allowedChannels) && !in_array($event->level, [], true)) {
+                $channelName = property_exists($event, 'channel') ? $event->channel : null;
+                if ($channelName && !in_array($channelName, $allowedChannels, true)) {
+                    return;
+                }
+            }
+
+            // Translate textual level to Monolog numeric level
+            $numericLevel = match (strtolower((string) $event->level)) {
+                'emergency' => 600,
+                'alert' => 550,
+                'critical' => 500,
+                'error' => 400,
+                'warning' => 300,
+                'notice' => 250,
+                'info' => 200,
+                'debug' => 100,
+                default => 0,
+            };
+            if ($numericLevel < $minLevel) {
+                return;
+            }
+
+            $context = is_array($event->context) ? $event->context : [];
+            $exception = $context['exception'] ?? null;
+            unset($context['exception']);
+
+            /** @var \App\Logging\SystemErrorRecorder $recorder */
+            $recorder = app(\App\Logging\SystemErrorRecorder::class);
+            $recorder->record([
+                'level' => $numericLevel,
+                'level_name' => \App\Logging\SystemErrorRecorder::levelName($numericLevel),
+                'channel' => $event->channel ?? null,
+                'source' => 'log',
+                'message' => (string) $event->message,
+                'context' => $context,
+                'exception_class' => $exception instanceof \Throwable ? $exception::class : null,
+                'exception_file' => $exception instanceof \Throwable ? $exception->getFile() : null,
+                'exception_line' => $exception instanceof \Throwable ? $exception->getLine() : null,
+                'stack_trace' => $exception instanceof \Throwable ? $exception->getTraceAsString() : null,
+            ]);
+        });
+    }
+
+    /**
+     * Capture queue-job failures separately. Laravel writes failed_jobs
+     * rows on its own; we mirror them so the dashboard treats them the
+     * same as everything else.
+     */
+    protected function bootSystemErrorsQueueListener(): void
+    {
+        \Illuminate\Support\Facades\Queue::failing(function (\Illuminate\Queue\Events\JobFailed $event) {
+            try {
+                /** @var \App\Logging\SystemErrorRecorder $recorder */
+                $recorder = app(\App\Logging\SystemErrorRecorder::class);
+                $recorder->recordThrowable(
+                    $event->exception,
+                    level: 400,
+                    channel: 'queue',
+                    source: 'failed_job',
+                    context: [
+                        'job_id' => $event->job->getJobId(),
+                        'job_name' => $event->job->resolveName(),
+                        'connection' => $event->connectionName,
+                        'queue' => $event->job->getQueue(),
+                        'attempts' => $event->job->attempts(),
+                    ],
+                );
+            } catch (\Throwable $e) {
+                @error_log('[SystemErrors] queue listener failed: ' . $e->getMessage());
+            }
+        });
     }
 }

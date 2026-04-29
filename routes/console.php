@@ -853,3 +853,11 @@ Schedule::command('views:refresh')
     ->onFailure(function () {
         \Log::error('Failed to refresh materialized views');
     });
+
+
+// Prune system_errors per retention policy (config/system_errors.php)
+Schedule::command("system-errors:prune")
+    ->dailyAt("03:00")
+    ->withoutOverlapping()
+    ->name("system-errors-prune");
+

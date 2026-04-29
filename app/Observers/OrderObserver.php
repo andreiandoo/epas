@@ -77,6 +77,42 @@ class OrderObserver
                 DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
             }
         }
+
+        // Surface payment failures into the system_errors dashboard.
+        if ($order->isDirty('payment_status')) {
+            $newPayment = $order->payment_status;
+            $oldPayment = $order->getOriginal('payment_status');
+            if (in_array($newPayment, ['failed', 'declined', 'refused'], true)
+                && !in_array($oldPayment, ['failed', 'declined', 'refused'], true)) {
+                try {
+                    /** @var \App\Logging\SystemErrorRecorder $recorder */
+                    $recorder = app(\App\Logging\SystemErrorRecorder::class);
+                    $recorder->record([
+                        'level' => 400,
+                        'channel' => 'marketplace',
+                        'source' => 'order_status',
+                        'message' => sprintf(
+                            'Order %s payment_status: %s → %s',
+                            $order->order_number ?? ('#' . $order->id),
+                            $oldPayment ?? '(null)',
+                            $newPayment
+                        ),
+                        'context' => [
+                            'order_id' => $order->id,
+                            'order_number' => $order->order_number ?? null,
+                            'marketplace_client_id' => $order->marketplace_client_id ?? null,
+                            'marketplace_organizer_id' => $order->marketplace_organizer_id ?? null,
+                            'previous' => $oldPayment,
+                            'current' => $newPayment,
+                            'total' => $order->total ?? null,
+                            'currency' => $order->currency ?? null,
+                        ],
+                    ]);
+                } catch (\Throwable $e) {
+                    // intentionally swallowed — error mirroring must not break checkout
+                }
+            }
+        }
     }
 
     /**

@@ -261,6 +261,29 @@ class EnhancedWebhookDeliveryService
                 ->where('id', $webhookId)
                 ->update(['last_successful_delivery_at' => now()]);
         }
+
+        // Mirror failed deliveries into the system_errors dashboard.
+        if (!$success) {
+            try {
+                /** @var \App\Logging\SystemErrorRecorder $recorder */
+                $recorder = app(\App\Logging\SystemErrorRecorder::class);
+                $recorder->record([
+                    'level' => $statusCode && $statusCode >= 500 ? 400 : 300,
+                    'channel' => 'webhooks',
+                    'source' => 'webhook_log',
+                    'message' => sprintf('Webhook delivery failed (%s): %s', $statusCode ?? 'no-response', $error ?? 'no error message'),
+                    'context' => [
+                        'webhook_id' => $webhookId,
+                        'event' => $event,
+                        'status_code' => $statusCode,
+                        'duration_ms' => $duration,
+                        'attempt' => $attempt,
+                    ],
+                ]);
+            } catch (\Throwable $e) {
+                // ignore — primary record already inserted above
+            }
+        }
     }
 
     /**

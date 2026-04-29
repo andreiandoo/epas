@@ -61,5 +61,35 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Mirror unhandled exceptions into system_errors so the admin error
+        // dashboard sees them alongside Log:: entries. Returning null lets
+        // Laravel proceed with its normal report+render pipeline; we just
+        // observe.
+        $exceptions->report(function (\Throwable $e): ?bool {
+            try {
+                $app = \Illuminate\Container\Container::getInstance();
+                if (!$app || !$app->bound(\App\Logging\SystemErrorRecorder::class)) {
+                    return null;
+                }
+                /** @var \App\Logging\SystemErrorRecorder $recorder */
+                $recorder = $app->make(\App\Logging\SystemErrorRecorder::class);
+
+                // Map common Throwable classes to Monolog severity levels.
+                $level = match (true) {
+                    $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                        => $e->getStatusCode() >= 500 ? 400 : 300,
+                    $e instanceof \Illuminate\Auth\AuthenticationException,
+                    $e instanceof \Illuminate\Auth\Access\AuthorizationException,
+                    $e instanceof \Illuminate\Session\TokenMismatchException,
+                    $e instanceof \Illuminate\Validation\ValidationException
+                        => 300,
+                    default => 400,
+                };
+
+                $recorder->recordThrowable($e, level: $level, channel: 'exception_handler', source: 'exception');
+            } catch (\Throwable $inner) {
+                @error_log('[SystemErrors] exception reporter failed: ' . $inner->getMessage());
+            }
+            return null; // do not stop default reporting
+        });
     })->create();
