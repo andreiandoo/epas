@@ -24,6 +24,15 @@ class SystemErrorsTable
             ->striped()
             ->paginated([25, 50, 100, 250])
             ->defaultPaginationPageOption(50)
+            ->modifyQueryUsing(function (Builder $query) {
+                // Attach a per-row "similar count" via a correlated subquery.
+                // Postgres index on fingerprint keeps this cheap even on millions of rows.
+                $query->addSelect([
+                    'similar_count' => SystemError::query()
+                        ->selectRaw('count(*)')
+                        ->whereColumn('fingerprint', 'system_errors.fingerprint'),
+                ]);
+            })
             ->columns([
                 TextColumn::make('created_at')
                     ->label('Time')
@@ -46,6 +55,13 @@ class SystemErrorsTable
                     ->label('Source')
                     ->color('gray')
                     ->toggleable(),
+                TextColumn::make('similar_count')
+                    ->label('Similar')
+                    ->badge()
+                    ->color(fn ($state) => $state >= 1000 ? 'danger' : ($state >= 100 ? 'warning' : 'gray'))
+                    ->numeric()
+                    ->sortable()
+                    ->tooltip('How many other errors share this fingerprint (all-time).'),
                 TextColumn::make('message')
                     ->label('Message')
                     ->limit(120)
