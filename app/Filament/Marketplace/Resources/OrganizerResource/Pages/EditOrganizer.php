@@ -123,6 +123,16 @@ class EditOrganizer extends EditRecord
         }
         $data['tracking_integrations'] = $tracking;
 
+        $capi = \App\Models\Integrations\FacebookCapi\FacebookCapiConnection::where('marketplace_organizer_id', $this->record->id)
+            ->orderByDesc('id')
+            ->first();
+        $data['facebook_capi'] = [
+            'enabled' => $capi?->status === 'active',
+            'pixel_id' => $capi?->pixel_id ?? '',
+            'access_token' => $capi?->access_token ?? '',
+            'test_event_code' => $capi?->test_event_code ?? '',
+        ];
+
         return $data;
     }
 
@@ -132,12 +142,22 @@ class EditOrganizer extends EditRecord
         $this->trackingFormState = $data['tracking_integrations'] ?? [];
         unset($data['tracking_integrations']);
 
+        $this->capiFormState = $data['facebook_capi'] ?? null;
+        unset($data['facebook_capi']);
+
         return $data;
     }
 
     protected ?array $trackingFormState = null;
+    protected ?array $capiFormState = null;
 
     protected function afterSave(): void
+    {
+        $this->syncTrackingIntegrations();
+        $this->syncFacebookCapiConnection();
+    }
+
+    protected function syncTrackingIntegrations(): void
     {
         if ($this->trackingFormState === null) {
             return;
@@ -166,6 +186,50 @@ class EditOrganizer extends EditRecord
                     ],
                 ]
             );
+        }
+    }
+
+    protected function syncFacebookCapiConnection(): void
+    {
+        if ($this->capiFormState === null) {
+            return;
+        }
+
+        $organizerId = $this->record->id;
+        $marketplaceClientId = $this->record->marketplace_client_id;
+
+        $enabled = (bool) ($this->capiFormState['enabled'] ?? false);
+        $pixelId = trim((string) ($this->capiFormState['pixel_id'] ?? ''));
+        $accessToken = trim((string) ($this->capiFormState['access_token'] ?? ''));
+        $testEventCode = trim((string) ($this->capiFormState['test_event_code'] ?? ''));
+
+        $existing = \App\Models\Integrations\FacebookCapi\FacebookCapiConnection::where('marketplace_organizer_id', $organizerId)
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$enabled || $pixelId === '' || $accessToken === '') {
+            if ($existing && $existing->status === 'active') {
+                $existing->update(['status' => 'inactive']);
+            }
+            return;
+        }
+
+        $payload = [
+            'pixel_id' => $pixelId,
+            'access_token' => $accessToken,
+            'test_event_code' => $testEventCode !== '' ? $testEventCode : null,
+            'test_mode' => $testEventCode !== '',
+            'status' => 'active',
+            'marketplace_client_id' => $marketplaceClientId,
+        ];
+
+        if ($existing) {
+            $existing->update($payload);
+        } else {
+            \App\Models\Integrations\FacebookCapi\FacebookCapiConnection::create(array_merge($payload, [
+                'marketplace_organizer_id' => $organizerId,
+                'enabled_events' => ['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
+            ]));
         }
     }
 }

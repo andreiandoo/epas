@@ -59,6 +59,23 @@ class OrganizerResource extends Resource
             ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id);
     }
 
+    public static function isFacebookCapiMicroserviceActive(?int $marketplaceClientId): bool
+    {
+        if (!$marketplaceClientId) {
+            return false;
+        }
+
+        return DB::table('marketplace_client_microservices as mcm')
+            ->join('microservices as m', 'm.id', '=', 'mcm.microservice_id')
+            ->where('mcm.marketplace_client_id', $marketplaceClientId)
+            ->where('m.slug', 'facebook-capi-integration')
+            ->where('mcm.status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('mcm.expires_at')->orWhere('mcm.expires_at', '>', now());
+            })
+            ->exists();
+    }
+
     public static function form(Schema $form): Schema
     {
         return $form->schema([
@@ -641,6 +658,84 @@ class OrganizerResource extends Resource
                                             ->maxLength(25)
                                             ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('tracking_integrations.tiktok_enabled')),
                                     ]),
+                                ]),
+
+                            Section::make('Facebook Conversions API (Server-Side)')
+                                ->icon('heroicon-o-bolt')
+                                ->description('Tracking server-side direct către Meta Graph API. Trece de adblockere și restricțiile iOS 14.5+ ATT pentru capturarea aproape 100% a conversiilor. Funcționează independent de Meta Pixel browser-side. Pentru deduplicare optimă, folosește același Pixel ID ca la Meta Pixel.')
+                                ->visible(fn (?MarketplaceOrganizer $record): bool => $record !== null && self::isFacebookCapiMicroserviceActive($record->marketplace_client_id))
+                                ->schema([
+                                    Forms\Components\Toggle::make('facebook_capi.enabled')
+                                        ->label('Activează Facebook CAPI')
+                                        ->helperText('Trimite evenimentele de conversie server-side la Meta')
+                                        ->live(),
+
+                                    SC\Grid::make(2)
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
+                                        ->schema([
+                                            Forms\Components\TextInput::make('facebook_capi.pixel_id')
+                                                ->label('Meta Pixel ID')
+                                                ->placeholder('1234567890123456')
+                                                ->maxLength(50)
+                                                ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
+                                                ->helperText('ID-ul Pixel-ului Meta. De obicei același cu cel din Meta Pixel browser de mai sus.'),
+
+                                            Forms\Components\TextInput::make('facebook_capi.test_event_code')
+                                                ->label('Test Event Code (opțional)')
+                                                ->placeholder('TEST12345')
+                                                ->maxLength(50)
+                                                ->helperText('Pentru testare în Events Manager → Test Events. Lasă gol în producție.'),
+                                        ]),
+
+                                    Forms\Components\TextInput::make('facebook_capi.access_token')
+                                        ->label('System User Access Token')
+                                        ->password()
+                                        ->revealable()
+                                        ->maxLength(500)
+                                        ->required(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
+                                        ->helperText(new HtmlString('Token-ul se generează din <a href="https://business.facebook.com/settings/system-users" target="_blank" class="text-primary-600 underline">Meta Business Suite → System Users</a> cu permisiunea <code>ads_management</code>. Tokenul e criptat în baza de date.')),
+
+                                    Forms\Components\Actions::make([
+                                        Forms\Components\Actions\Action::make('test_facebook_capi_connection')
+                                            ->label('Test conexiune cu Meta')
+                                            ->icon('heroicon-o-paper-airplane')
+                                            ->color('info')
+                                            ->action(function (\Filament\Schemas\Components\Utilities\Get $get): void {
+                                                $pixelId = trim((string) $get('facebook_capi.pixel_id'));
+                                                $accessToken = trim((string) $get('facebook_capi.access_token'));
+                                                $testEventCode = trim((string) $get('facebook_capi.test_event_code'));
+
+                                                if ($pixelId === '' || $accessToken === '') {
+                                                    Notification::make()
+                                                        ->title('Date lipsă')
+                                                        ->body('Completează Pixel ID și Access Token înainte de test.')
+                                                        ->warning()
+                                                        ->send();
+                                                    return;
+                                                }
+
+                                                $service = app(\App\Services\Integrations\FacebookCapi\FacebookCapiService::class);
+                                                $result = $service->testCredentials($pixelId, $accessToken, $testEventCode ?: null);
+
+                                                if ($result['success']) {
+                                                    Notification::make()
+                                                        ->title('Conexiune reușită')
+                                                        ->body($result['message'])
+                                                        ->success()
+                                                        ->duration(8000)
+                                                        ->send();
+                                                } else {
+                                                    Notification::make()
+                                                        ->title('Conexiune eșuată')
+                                                        ->body($result['message'])
+                                                        ->danger()
+                                                        ->duration(10000)
+                                                        ->send();
+                                                }
+                                            }),
+                                    ])
+                                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled')),
                                 ]),
                         ]),
 

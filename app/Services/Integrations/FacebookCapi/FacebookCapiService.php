@@ -576,6 +576,58 @@ class FacebookCapiService
             ->first();
     }
 
+    public function testCredentials(string $pixelId, string $accessToken, ?string $testEventCode = null): array
+    {
+        $url = "{$this->baseUrl}/{$this->apiVersion}/{$pixelId}/events";
+
+        $testEvent = [
+            'event_name' => 'PageView',
+            'event_time' => time(),
+            'event_id' => 'tixello_capi_verify_' . uniqid(),
+            'action_source' => 'website',
+            'event_source_url' => 'https://tixello.com/capi-test',
+            'user_data' => [
+                'client_ip_address' => '127.0.0.1',
+                'client_user_agent' => 'Tixello-CAPI-Test/1.0',
+            ],
+        ];
+
+        $payload = [
+            'data' => [$testEvent],
+            'access_token' => $accessToken,
+            'test_event_code' => $testEventCode ?: 'TEST_TIXELLO_VERIFY',
+        ];
+
+        try {
+            $response = Http::timeout(10)->post($url, $payload);
+
+            if ($response->successful()) {
+                $data = $response->json() ?? [];
+                $eventsReceived = (int) ($data['events_received'] ?? 0);
+                return [
+                    'success' => $eventsReceived > 0,
+                    'message' => $eventsReceived > 0
+                        ? "Connection OK. Events received by Meta: {$eventsReceived}"
+                        : ($data['messages'][0] ?? 'No events received by Meta'),
+                    'response' => $data,
+                ];
+            }
+
+            $error = $response->json('error') ?? [];
+            return [
+                'success' => false,
+                'message' => $error['message'] ?? "HTTP {$response->status()}",
+                'response' => $error,
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'response' => [],
+            ];
+        }
+    }
+
     public function createConnectionForOrganizer(
         int $marketplaceOrganizerId,
         int $marketplaceClientId,
