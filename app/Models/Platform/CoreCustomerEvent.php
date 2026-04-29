@@ -20,6 +20,8 @@ class CoreCustomerEvent extends Model
         'event_action',
         'event_label',
         'event_value',
+        'conversion_value',
+        'is_converted',
         'page_url',
         'page_path',
         'page_title',
@@ -78,6 +80,8 @@ class CoreCustomerEvent extends Model
 
     protected $casts = [
         'event_value' => 'decimal:2',
+        'conversion_value' => 'decimal:2',
+        'is_converted' => 'boolean',
         'product_price' => 'decimal:2',
         'cart_value' => 'decimal:2',
         'latitude' => 'decimal:7',

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Concerns\ResolvesTenant;
 use App\Models\Event;
 use App\Models\EventType;
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
