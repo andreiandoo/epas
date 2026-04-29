@@ -32,7 +32,9 @@ class BackfillSystemErrorsCommand extends Command
     protected $signature = 'system-errors:backfill
         {--days=30 : How many days of history to import}
         {--source=all : log|failed_jobs|email|webhook|all}
-        {--batch=500 : Rows per INSERT}';
+        {--batch=500 : Rows per INSERT}
+        {--max-file-size=200 : Skip log files larger than this many MB (single un-rotated logs can be huge)}
+        {--include-large : Force-include files above max-file-size}';
 
     protected $description = 'Backfill the system_errors table from existing log files and DB tables';
 
@@ -76,12 +78,19 @@ class BackfillSystemErrorsCommand extends Command
         $logsPath = storage_path('logs');
         $files = glob($logsPath . '/{laravel,security,marketplace,security-*,marketplace-*,laravel-*}.log', GLOB_BRACE) ?: [];
 
+        $maxMb = (float) $this->option('max-file-size');
+        $force = (bool) $this->option('include-large');
+
         foreach ($files as $file) {
             if (!is_readable($file)) {
                 continue;
             }
-            $size = round(filesize($file) / 1024 / 1024, 1);
-            $this->line("  parsing " . basename($file) . " ({$size} MB)");
+            $sizeMb = round(filesize($file) / 1024 / 1024, 1);
+            if (!$force && $maxMb > 0 && $sizeMb > $maxMb) {
+                $this->warn("  SKIPPING " . basename($file) . " ({$sizeMb} MB > {$maxMb} MB cap). Use --include-large to force, or rotate the file first.");
+                continue;
+            }
+            $this->line("  parsing " . basename($file) . " ({$sizeMb} MB)");
             $count = $this->parseLogFile($file, $threshold);
             $this->info("    {$count} entries imported");
         }
