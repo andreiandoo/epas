@@ -696,8 +696,8 @@ class OrganizerResource extends Resource
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
                                         ->helperText(new HtmlString('Token-ul se generează din <a href="https://business.facebook.com/settings/system-users" target="_blank" class="text-primary-600 underline">Meta Business Suite → System Users</a> cu permisiunea <code>ads_management</code>. Tokenul e criptat în baza de date.')),
 
-                                    Forms\Components\Actions::make([
-                                        Forms\Components\Actions\Action::make('test_facebook_capi_connection')
+                                    \Filament\Schemas\Components\Actions::make([
+                                        \Filament\Actions\Action::make('test_facebook_capi_connection')
                                             ->label('Test conexiune cu Meta')
                                             ->icon('heroicon-o-paper-airplane')
                                             ->color('info')
