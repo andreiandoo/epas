@@ -103,9 +103,11 @@ class CalculateRfmScoresJob implements ShouldQueue
         // Get current percentile thresholds for relative scoring
         // This makes scoring relative to your customer base
 
-        // Recency (days since last purchase) - lower is better
+        // Recency (days since last purchase) - lower is better.
+        // Carbon 3 returns a float from diffInDays(); the days_since_last_purchase
+        // column is INTEGER, so cast to keep Postgres happy.
         $recency = $customer->last_purchase_at
-            ? $customer->last_purchase_at->diffInDays(now())
+            ? (int) $customer->last_purchase_at->diffInDays(now())
             : 365;
 
         // Score based on recency (1-5, where 5 is best)
