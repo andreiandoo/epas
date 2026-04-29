@@ -124,6 +124,28 @@ class Incomes extends Page
      */
     public function getViewData(): array
     {
+        try {
+            return $this->buildViewData();
+        } catch (\Throwable $e) {
+            // Defensive: surface any exception thrown during view-data
+            // assembly into the laravel log so we can diagnose 500s on
+            // /marketplace/incomes. Without this Filament can swallow it.
+            \Illuminate\Support\Facades\Log::error('Incomes::getViewData failed', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => collect(explode("\n", $e->getTraceAsString()))->take(20)->implode("\n"),
+                'period' => $this->period,
+                'organizerId' => $this->organizerId,
+                'customFrom' => $this->customFrom,
+                'customTo' => $this->customTo,
+            ]);
+            throw $e;
+        }
+    }
+
+    protected function buildViewData(): array
+    {
         $marketplace = static::getMarketplaceClient();
 
         if (!$marketplace) {
