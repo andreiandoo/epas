@@ -1530,6 +1530,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\TeamController as Organ
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\BillingController as OrganizerBillingController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DocumentController as OrganizerDocumentController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\NotificationController as OrganizerNotificationController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\SupportController as OrganizerSupportController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1867,6 +1868,28 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.notifications.destroy');
         Route::delete('/notifications/clear-read', [OrganizerNotificationController::class, 'clearRead'])
             ->name('api.marketplace-client.organizer.notifications.clear-read');
+
+        // Support tickets — beta-gated via config('support.allowed_opener_ids.organizer').
+        // The controller enforces the gate; routes stay registered so the
+        // 403 explains itself instead of looking like a missing endpoint.
+        Route::get('/support/departments', [OrganizerSupportController::class, 'departments'])
+            ->name('api.marketplace-client.organizer.support.departments');
+        Route::get('/support/tickets', [OrganizerSupportController::class, 'index'])
+            ->name('api.marketplace-client.organizer.support.tickets');
+        Route::post('/support/tickets', [OrganizerSupportController::class, 'store'])
+            ->name('api.marketplace-client.organizer.support.tickets.store');
+        Route::get('/support/tickets/{id}', [OrganizerSupportController::class, 'show'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.support.tickets.show');
+        Route::post('/support/tickets/{id}/messages', [OrganizerSupportController::class, 'reply'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.support.tickets.reply');
+        Route::post('/support/tickets/{id}/close', [OrganizerSupportController::class, 'close'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.support.tickets.close');
+        Route::post('/support/tickets/{id}/reopen', [OrganizerSupportController::class, 'reopen'])
+            ->whereNumber('id')
+            ->name('api.marketplace-client.organizer.support.tickets.reopen');
 
         // Billing & Invoices
         Route::get('/invoices', [OrganizerBillingController::class, 'invoices'])
