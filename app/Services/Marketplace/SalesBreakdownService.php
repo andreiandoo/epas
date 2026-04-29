@@ -58,15 +58,19 @@ class SalesBreakdownService
      *   }>
      * }
      */
-    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null): array
+    public function build(Event $event, ?Carbon $periodStart = null, ?Carbon $periodEnd = null, bool $excludePos = false): array
     {
         $eventId = $event->id;
 
         $tickets = Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
             ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) use ($periodStart, $periodEnd) {
+            ->whereHas('order', function ($q) use ($periodStart, $periodEnd, $excludePos) {
                 $q->whereIn('status', ['paid', 'confirmed', 'completed'])
                     ->where('source', '!=', 'external_import');
+                if ($excludePos) {
+                    $q->where('source', '!=', 'pos_app')
+                      ->where('source', '!=', 'test_order');
+                }
                 if ($periodStart) {
                     $q->where('created_at', '>=', $periodStart->copy()->startOfDay());
                 }

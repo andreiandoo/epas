@@ -1158,59 +1158,28 @@ class ListPayouts extends ListRecords
         $organizer = $event->marketplaceOrganizer;
         if (!$organizer) return ['gross' => 0, 'commission' => 0, 'net' => 0, 'refunds' => 0, 'paid' => 0, 'pending' => 0, 'balance' => 0];
 
-        $commissionMode = $event->getEffectiveCommissionMode();
-        $commissionRate = $event->getEffectiveCommissionRate();
-
-        // Build gross/commission from valid tickets grouped by ticket_type, using
-        // each ticket_type's base price + commission config (same logic as the
-        // Detalii bilete table in payout-ticket-breakdown.blade.php). This ensures
-        // Rezumat financiar matches the breakdown totals exactly. POS/app tickets
-        // are excluded via a whereHas on their parent order — money for pos_app
-        // never flows through marketplace, only the commission is billed separately.
-        $ticketCounts = \App\Models\Ticket::whereHas('ticketType', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', function ($q) {
-                $q->whereIn('status', ['paid', 'confirmed', 'completed'])
-                    ->where('source', '!=', 'test_order')
-                    ->where('source', '!=', 'pos_app');
-            })
-            ->select('ticket_type_id', \DB::raw('COUNT(*) as cnt'))
-            ->groupBy('ticket_type_id')
-            ->pluck('cnt', 'ticket_type_id')
-            ->toArray();
-
-        $eventTicketTypes = $event->ticketTypes()->get()->keyBy('id');
+        // Source of truth — same SalesBreakdownService used by the event-edit
+        // "Vânzări" tab and the payout-detail "Detalii Bilete" table. Reads
+        // actual paid prices per ticket and allocates discounts + extras.
+        // POS/test_order excluded — money never flowed through marketplace,
+        // commissions are invoiced separately.
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $breakdown = $service->build($event, null, null, excludePos: true);
 
         $grossRevenue = 0.0;
         $totalCommission = 0.0;
-
-        foreach ($ticketCounts as $ttId => $qty) {
-            $tt = $eventTicketTypes->get($ttId);
-            if (!$tt) continue;
-
-            $basePrice = (float) ($tt->sale_price_cents ? $tt->sale_price_cents / 100 : ($tt->price_cents ? $tt->price_cents / 100 : 0));
-
-            $ttCommType = $tt->commission_type;
-            $ttCommMode = $tt->commission_mode ?: $commissionMode;
-            $ttCommRate = (float) ($tt->commission_rate ?? 0);
-            $ttCommFixed = (float) ($tt->commission_fixed ?? 0);
-
-            if ($ttCommType && $ttCommType !== '') {
-                $commPerTicket = match ($ttCommType) {
-                    'percentage' => round($basePrice * ($ttCommRate / 100), 2),
-                    'fixed' => $ttCommFixed,
-                    'both' => round($basePrice * ($ttCommRate / 100), 2) + $ttCommFixed,
-                    default => round($basePrice * ($commissionRate / 100), 2),
-                };
-            } else {
-                $commPerTicket = round($basePrice * ($commissionRate / 100), 2);
-            }
-
-            $typeCommission = $commPerTicket * $qty;
-            $typeGross = $basePrice * $qty + ($ttCommMode === 'added_on_top' ? $typeCommission : 0);
-
-            $grossRevenue += $typeGross;
-            $totalCommission += $typeCommission;
+        $totalDiscount = 0.0;
+        $totalExtras = 0.0;
+        $netRevenueFromBreakdown = 0.0;
+        foreach ($breakdown['per_type'] as $row) {
+            $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
+            // Mirror the "Total brut" displayed in the breakdown blade: for
+            // added_on_top, the customer paid price*qty + commission.
+            $grossRevenue += (float) $row['gross'] + ($isOnTop ? (float) $row['commission_amount'] : 0);
+            $totalCommission += (float) $row['commission_amount'];
+            $totalDiscount += (float) $row['discount'];
+            $totalExtras += (float) $row['extras'];
+            $netRevenueFromBreakdown += (float) $row['net'];
         }
 
         // Refunds (also exclude pos_app for same reason as above)
@@ -1221,7 +1190,7 @@ class ListPayouts extends ListRecords
             ->where('source', '!=', 'pos_app')
             ->sum(\DB::raw('COALESCE(refund_amount, total)'));
 
-        $netRevenue = $grossRevenue - $totalCommission - $refundedAmount;
+        $netRevenue = $netRevenueFromBreakdown - $refundedAmount;
 
         // Previous payouts
         $paidPayouts = (float) MarketplacePayout::where('marketplace_organizer_id', $organizer->id)

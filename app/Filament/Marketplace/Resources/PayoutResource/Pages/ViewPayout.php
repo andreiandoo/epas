@@ -122,12 +122,15 @@ class ViewPayout extends ViewRecord
             // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
             // create inainte de refactor (snapshot pe baza prețului catalog) sau
             // dupa modificari de preturi pe bilete. Doar status-uri editabile.
+            // Recalculează și `amount` / `gross_amount` / `commission_amount`
+            // la nivel de payout + ajustează balanța rezervată a organizatorului
+            // ca să nu rămână bani blocați degeaba.
             Actions\Action::make('recalc_breakdown')
                 ->label('Recalculează snapshot bilete')
                 ->icon('heroicon-o-arrow-path-rounded-square')
                 ->color('warning')
                 ->requiresConfirmation()
-                ->modalDescription('Se va înlocui snapshot-ul actual cu valorile recalculate din vânzările reale (preț plătit per bilet, comision, discounturi, asigurări). Documentele de decont/factură generate trebuie regenerate manual după recalcul.')
+                ->modalDescription('Se va înlocui snapshot-ul actual cu valorile recalculate din vânzările reale (preț plătit per bilet, comision, discounturi, asigurări) și se vor actualiza sumele payout-ului + balanța organizatorului. Documentele de decont/factură generate trebuie regenerate manual după recalcul.')
                 ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
                     && !empty($this->record->event_id))
                 ->action(function () {
@@ -139,21 +142,72 @@ class ViewPayout extends ViewRecord
                     }
 
                     $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                    // Snapshot includes POS rows (shown for transparency, excluded
+                    // from totals). Payout-level amounts must reflect only what
+                    // flows through the marketplace → exclude POS.
                     $rows = $service->buildForPayout($event, $payout->period_start, $payout->period_end);
                     if (empty($rows)) {
                         Notification::make()->title('Nu s-au găsit vânzări')->body('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.')->warning()->send();
                         return;
                     }
-                    $summary = $service->summarizeForPayout($event, $payout->period_start, $payout->period_end);
 
-                    $payout->update([
-                        'ticket_breakdown' => $rows,
-                        'commission_mode' => $summary['commission_mode'],
-                    ]);
+                    $onlineBreakdown = $service->build($event, $payout->period_start, $payout->period_end, excludePos: true);
+                    $newCommissionMode = (function () use ($onlineBreakdown, $event) {
+                        $modes = collect($onlineBreakdown['per_type'])->pluck('commission_mode')->filter()->unique()->values();
+                        if ($modes->count() === 1) return $modes->first();
+                        if ($modes->contains('added_on_top') || $modes->contains('on_top')) return 'added_on_top';
+                        return method_exists($event, 'getEffectiveCommissionMode')
+                            ? $event->getEffectiveCommissionMode()
+                            : 'included';
+                    })();
+
+                    $newCommission = 0.0;
+                    $newNet = 0.0;
+                    $newGross = 0.0;
+                    foreach ($onlineBreakdown['per_type'] as $row) {
+                        $isOnTop = in_array($row['commission_mode'] ?? null, ['added_on_top', 'on_top'], true);
+                        $newCommission += (float) $row['commission_amount'];
+                        $newNet += (float) $row['net'];
+                        $newGross += (float) $row['gross'] + ($isOnTop ? (float) $row['commission_amount'] : 0);
+                    }
+                    $newAmount = round($newNet, 2);
+                    $newGross = round($newGross, 2);
+                    $newCommission = round($newCommission, 2);
+
+                    $oldAmount = (float) $payout->amount;
+                    $delta = round($oldAmount - $newAmount, 2);
+
+                    \Illuminate\Support\Facades\DB::transaction(function () use ($payout, $rows, $newCommissionMode, $newAmount, $newGross, $newCommission, $delta) {
+                        $payout->update([
+                            'ticket_breakdown' => $rows,
+                            'commission_mode' => $newCommissionMode,
+                            'amount' => $newAmount,
+                            'gross_amount' => $newGross,
+                            'commission_amount' => $newCommission,
+                        ]);
+
+                        // Adjust the organizer's reserved (pending) balance so
+                        // available_balance reflects the corrected request.
+                        if (abs($delta) > 0.005 && $payout->organizer) {
+                            if ($delta > 0) {
+                                // Old amount was higher → release the excess back
+                                // to the organizer's available balance.
+                                $payout->organizer->returnPendingBalance($delta);
+                            } else {
+                                // New amount is higher → reserve the additional
+                                // amount (only succeeds if balance is available).
+                                $payout->organizer->reserveBalanceForPayout(abs($delta));
+                            }
+                        }
+                    });
+
+                    $deltaLabel = $delta > 0
+                        ? '−' . number_format($delta, 2) . ' RON eliberați la disponibil'
+                        : ($delta < 0 ? '+' . number_format(abs($delta), 2) . ' RON rezervați suplimentar' : 'fără ajustare de balanță');
 
                     Notification::make()
                         ->title('Snapshot recalculat')
-                        ->body('Net final per tip de bilet: ' . number_format($summary['net_amount'], 2) . ' RON, comision: ' . number_format($summary['commission_amount'], 2) . ' RON.')
+                        ->body("Sumă netă: " . number_format($newAmount, 2) . " RON · comision: " . number_format($newCommission, 2) . " RON · {$deltaLabel}.")
                         ->success()
                         ->send();
                     $this->redirect(PayoutResource::getUrl('view', ['record' => $payout]));
