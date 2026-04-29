@@ -36,6 +36,11 @@ class MicroservicesCacheService
         $ttl = config('microservices.cache.catalog_ttl', 3600); // 1 hour default
 
         return Cache::remember(self::PREFIX_CATALOG . ':all', $ttl, function () {
+            // Schema reality on this deploy: the microservices table uses
+            // is_active (boolean), not status (enum). And there is no
+            // 'limits' column. Both columns were assumed by an earlier
+            // schema variant that never landed on prod. Adapt the select
+            // to what actually exists.
             return DB::table('microservices')
                 ->select([
                     'id',
@@ -47,12 +52,11 @@ class MicroservicesCacheService
                     'category',
                     'price_monthly',
                     'price_yearly',
-                    'status',
+                    'is_active',
                     'features',
-                    'limits',
                     'metadata',
                 ])
-                ->where('status', 'active')
+                ->where('is_active', true)
                 ->orderBy('name')
                 ->get()
                 ->toArray();
