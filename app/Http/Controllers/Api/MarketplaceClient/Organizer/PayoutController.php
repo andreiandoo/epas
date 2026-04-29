@@ -425,6 +425,21 @@ class PayoutController extends BaseController
                 'account_holder' => $bankAccount->account_holder,
             ] : $organizer->payout_details;
 
+            // Build the ticket breakdown via SalesBreakdownService (same source of
+            // truth as the event-edit "Vânzări" tab). Only when scoped to a
+            // specific event — period payouts span all events of the organizer
+            // and would need a different aggregation.
+            $ticketBreakdown = null;
+            if ($event) {
+                $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                $rows = $service->buildForPayout(
+                    $event,
+                    \Illuminate\Support\Carbon::parse($periodStart),
+                    \Illuminate\Support\Carbon::parse($periodEnd)
+                );
+                $ticketBreakdown = !empty($rows) ? $rows : null;
+            }
+
             // Create payout request
             $payout = MarketplacePayout::create([
                 'marketplace_client_id' => $organizer->marketplace_client_id,
@@ -441,6 +456,8 @@ class PayoutController extends BaseController
                 'status' => 'pending',
                 'payout_method' => $payoutMethod,
                 'organizer_notes' => $validated['notes'] ?? null,
+                'ticket_breakdown' => $ticketBreakdown,
+                'commission_mode' => $commissionMode,
             ]);
 
             // Reserve the balance

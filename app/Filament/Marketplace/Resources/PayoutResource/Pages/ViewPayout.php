@@ -119,6 +119,46 @@ class ViewPayout extends ViewRecord
                     $this->refreshFormData(['admin_notes']);
                 }),
 
+            // Recalcul snapshot din SalesBreakdownService — util pentru deconturile
+            // create inainte de refactor (snapshot pe baza prețului catalog) sau
+            // dupa modificari de preturi pe bilete. Doar status-uri editabile.
+            Actions\Action::make('recalc_breakdown')
+                ->label('Recalculează snapshot bilete')
+                ->icon('heroicon-o-arrow-path-rounded-square')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalDescription('Se va înlocui snapshot-ul actual cu valorile recalculate din vânzările reale (preț plătit per bilet, comision, discounturi, asigurări). Documentele de decont/factură generate trebuie regenerate manual după recalcul.')
+                ->visible(fn () => in_array($this->record->status, ['pending', 'approved', 'processing'])
+                    && !empty($this->record->event_id))
+                ->action(function () {
+                    $payout = $this->record;
+                    $event = $payout->event;
+                    if (!$event) {
+                        Notification::make()->title('Eroare')->body('Decontul nu este legat de un eveniment.')->danger()->send();
+                        return;
+                    }
+
+                    $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                    $rows = $service->buildForPayout($event, $payout->period_start, $payout->period_end);
+                    if (empty($rows)) {
+                        Notification::make()->title('Nu s-au găsit vânzări')->body('Nu există bilete valide în perioada decontului pentru a recalcula snapshot-ul.')->warning()->send();
+                        return;
+                    }
+                    $summary = $service->summarizeForPayout($event, $payout->period_start, $payout->period_end);
+
+                    $payout->update([
+                        'ticket_breakdown' => $rows,
+                        'commission_mode' => $summary['commission_mode'],
+                    ]);
+
+                    Notification::make()
+                        ->title('Snapshot recalculat')
+                        ->body('Net final per tip de bilet: ' . number_format($summary['net_amount'], 2) . ' RON, comision: ' . number_format($summary['commission_amount'], 2) . ' RON.')
+                        ->success()
+                        ->send();
+                    $this->redirect(PayoutResource::getUrl('view', ['record' => $payout]));
+                }),
+
             // ========== GENERATE DECONT (when none exists) ==========
             Actions\Action::make('generate_decont')
                 ->label('Generează Decont')

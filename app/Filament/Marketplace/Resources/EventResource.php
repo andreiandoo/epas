@@ -4549,225 +4549,30 @@ class EventResource extends Resource
             return self::$salesBreakdownCache[$event->id];
         }
 
-        $eventId = $event->id;
+        // Source of truth lives in SalesBreakdownService now. Strip the
+        // payout-only fields from per_type so callers that expect the legacy
+        // shape ({tt, valid_count, net, commission}) keep working.
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $breakdown = $service->build($event);
 
-        // Valid/used tickets from paid, non-external orders for this event
-        $tickets = \App\Models\Ticket::where(fn ($q) => $q->where('event_id', $eventId)->orWhere('marketplace_event_id', $eventId))
-            ->whereIn('status', ['valid', 'used'])
-            ->whereHas('order', fn ($q) => $q
-                ->whereIn('status', ['paid', 'confirmed', 'completed'])
-                ->where('source', '!=', 'external_import'))
-            ->with(['ticketType'])
-            ->get(['id', 'order_id', 'ticket_type_id', 'price']);
-
-        // Load the orders + items in bulk for price fallback and meta
-        $orderIds = $tickets->pluck('order_id')->filter()->unique()->values();
-        $ordersById = $orderIds->isEmpty()
-            ? collect()
-            : \App\Models\Order::with('items')->whereIn('id', $orderIds)->get()->keyBy('id');
-
-        // Total discount / extras cards (FULL sums, informational)
-        $totalDiscountCard = 0.0;
-        $totalExtrasCard = 0.0;
-        foreach ($ordersById as $o) {
-            $totalDiscountCard += (float) $o->discount_amount;
-            $m = is_array($o->meta) ? $o->meta : [];
-            $totalExtrasCard += (float) ($m['insurance_amount'] ?? 0);
-            $totalExtrasCard += (float) ($m['cultural_card_surcharge'] ?? 0);
+        $legacyPerType = [];
+        foreach ($breakdown['per_type'] as $ttId => $row) {
+            $legacyPerType[$ttId] = [
+                'tt' => $row['tt'],
+                'valid_count' => $row['qty'],
+                'net' => $row['net'],
+                'commission' => $row['commission_amount'],
+            ];
         }
-
-        // Count ALL tickets per order (any status) — used as the denominator
-        // for fixed-discount allocation (per-ticket share of a fixed discount).
-        $totalTicketsPerOrder = $orderIds->isEmpty()
-            ? collect()
-            : \App\Models\Ticket::whereIn('order_id', $orderIds)
-                ->selectRaw('order_id, COUNT(*) as cnt')
-                ->groupBy('order_id')
-                ->pluck('cnt', 'order_id');
-
-        // Default commission settings from event / organizer / marketplace
-        $defaultRate = (float) (
-            $event->commission_rate
-            ?? $event->marketplaceOrganizer?->commission_rate
-            ?? $event->tenant?->commission_rate
-            ?? $event->marketplaceClient?->commission_rate
-            ?? 5
-        );
-        $defaultMode = $event->commission_mode
-            ?? $event->marketplaceOrganizer?->default_commission_mode
-            ?? $event->marketplaceClient?->commission_mode
-            ?? 'included';
-
-        $perType = []; // keyed by ticket_type_id
-        $sumValidGross = 0.0;
-        $sumOnTop = 0.0;
-        $sumIncluded = 0.0;
-        $sumDiscountValid = 0.0;
-        $sumExtrasValid = 0.0;
-
-        foreach ($tickets->groupBy('order_id') as $orderId => $orderTickets) {
-            $order = $ordersById->get($orderId);
-            if (!$order) continue;
-
-            // Two-pass per order so we can allocate order-level values back to
-            // each ticket_type row in the table.
-            $orderValidGross = 0.0;
-            $orderValidCount = 0;
-            $orderOnTop = 0.0;
-            $orderIncluded = 0.0;
-            $ttSlices = []; // in-order slice data, keyed by tt_id
-
-            foreach ($orderTickets->groupBy('ticket_type_id') as $ttId => $group) {
-                $tt = $group->first()->ticketType;
-                if (!$tt) continue;
-
-                $validCount = $group->count();
-
-                // Resolve unit price: ticket.price → order_item.unit_price → tt catalog
-                $firstTicketPrice = (float) ($group->first()->price ?? 0);
-                if ($firstTicketPrice > 0) {
-                    $unitPrice = $firstTicketPrice;
-                } else {
-                    $orderItem = $order->items->first(fn ($it) => (int) $it->ticket_type_id === (int) $ttId);
-                    if ($orderItem && (float) $orderItem->unit_price > 0) {
-                        $unitPrice = (float) $orderItem->unit_price;
-                    } else {
-                        $unitPrice = ((int) ($tt->sale_price_cents ?? 0) > 0
-                            ? $tt->sale_price_cents
-                            : (int) ($tt->price_cents ?? 0)) / 100;
-                    }
-                }
-
-                $gross = $unitPrice * $validCount;
-                $commPerTicket = (float) $tt->calculateCommission($unitPrice, $defaultRate, $defaultMode);
-                $effective = $tt->getEffectiveCommission($defaultRate, $defaultMode);
-                $commission = $commPerTicket * $validCount;
-                $mode = $effective['mode'];
-
-                $ttSlices[$ttId] = [
-                    'tt' => $tt,
-                    'valid_count' => $validCount,
-                    'gross' => $gross,
-                    'commission' => $commission,
-                    'mode' => $mode,
-                ];
-
-                $orderValidGross += $gross;
-                $orderValidCount += $validCount;
-                if (in_array($mode, ['on_top', 'added_on_top'], true)) {
-                    $orderOnTop += $commission;
-                } else {
-                    $orderIncluded += $commission;
-                }
-            }
-
-            // ── Discount_valid per order (exact based on discount type) ──
-            $orderDiscount = (float) $order->discount_amount;
-            $orderSubtotal = (float) $order->subtotal;
-            $meta = is_array($order->meta) ? $order->meta : [];
-            $promoInfo = is_array($meta['promo_code'] ?? null) ? $meta['promo_code'] : null;
-            $promoType = $promoInfo['type'] ?? null;  // 'percentage' or 'fixed' (or null)
-
-            $discountValid = 0.0;
-            $discountRate = null;        // set for percentage
-            $discountPerTicket = null;   // set for fixed/unknown
-            if ($orderDiscount > 0) {
-                if ($promoType === 'percentage' && $orderSubtotal > 0) {
-                    // Percentage: rate uniform → exact via gross ratio.
-                    $discountRate = $orderDiscount / $orderSubtotal;
-                    $discountValid = $orderValidGross * $discountRate;
-                } else {
-                    // Fixed amount (or unknown): rule of 3 on ticket count.
-                    $totalCount = (int) ($totalTicketsPerOrder[$orderId] ?? $orderValidCount);
-                    if ($totalCount > 0) {
-                        $discountPerTicket = $orderDiscount / $totalCount;
-                        $discountValid = $orderValidCount * $discountPerTicket;
-                    }
-                }
-                if ($discountValid > $orderDiscount) {
-                    $discountValid = $orderDiscount; // defensive cap
-                    if ($discountRate !== null && $orderValidGross > 0) {
-                        $discountRate = $discountValid / $orderValidGross;
-                    } elseif ($discountPerTicket !== null && $orderValidCount > 0) {
-                        $discountPerTicket = $discountValid / $orderValidCount;
-                    }
-                }
-            }
-
-            // ── Extras_valid per order (proportional by valid-gross share) ──
-            $insurance = (float) ($meta['insurance_amount'] ?? 0);
-            $surcharge = (float) ($meta['cultural_card_surcharge'] ?? 0);
-            $extrasValid = 0.0;
-            if (($insurance + $surcharge) > 0) {
-                $ratio = $orderSubtotal > 0
-                    ? min(1.0, $orderValidGross / $orderSubtotal)
-                    : 1.0;
-                $extrasValid = ($insurance + $surcharge) * $ratio;
-            }
-
-            // ── Second pass: allocate discount / extras / included-commission to each tt ──
-            foreach ($ttSlices as $ttId => $slice) {
-                // Discount share for this tt within this order
-                $sliceDiscount = 0.0;
-                if ($discountRate !== null) {
-                    $sliceDiscount = $slice['gross'] * $discountRate;
-                } elseif ($discountPerTicket !== null) {
-                    $sliceDiscount = $slice['valid_count'] * $discountPerTicket;
-                }
-
-                // Extras share (by gross share within order's valid gross)
-                $sliceExtras = 0.0;
-                if ($extrasValid > 0 && $orderValidGross > 0) {
-                    $sliceExtras = $extrasValid * ($slice['gross'] / $orderValidGross);
-                }
-
-                // Net contribution of this slice for the organizer:
-                //   on_top   → gross - discount - extras  (commission is paid by customer on top)
-                //   included → gross - discount - commission - extras
-                $sliceNet = $slice['gross'] - $sliceDiscount - $sliceExtras;
-                if (!in_array($slice['mode'], ['on_top', 'added_on_top'], true)) {
-                    $sliceNet -= $slice['commission'];
-                }
-                if ($sliceNet < 0) $sliceNet = 0.0;
-
-                if (!isset($perType[$ttId])) {
-                    $perType[$ttId] = [
-                        'tt' => $slice['tt'],
-                        'valid_count' => 0,
-                        'net' => 0.0,
-                        'commission' => 0.0,
-                    ];
-                }
-                $perType[$ttId]['valid_count'] += $slice['valid_count'];
-                $perType[$ttId]['net'] += $sliceNet;
-                $perType[$ttId]['commission'] += $slice['commission'];
-            }
-
-            $sumValidGross += $orderValidGross;
-            $sumOnTop += $orderOnTop;
-            $sumIncluded += $orderIncluded;
-            $sumDiscountValid += $discountValid;
-            $sumExtrasValid += $extrasValid;
-        }
-
-        $totalCommission = $sumOnTop + $sumIncluded;
-        $totalNet = max(0.0, $sumValidGross - $sumDiscountValid - $sumIncluded - $sumExtrasValid);
-        $totalRevenue = $sumValidGross + $sumOnTop + $sumExtrasValid;
-
-        $finalPerType = array_map(fn ($d) => [
-            'tt' => $d['tt'],
-            'valid_count' => $d['valid_count'],
-            'net' => round($d['net'], 2),
-            'commission' => round($d['commission'], 2),
-        ], $perType);
 
         return self::$salesBreakdownCache[$event->id] = [
-            'total_revenue' => round($totalRevenue, 2),
-            'total_net' => round($totalNet, 2),
-            'total_commission' => round($totalCommission, 2),
-            'total_extras' => round($totalExtrasCard, 2),
-            'total_discount' => round($totalDiscountCard, 2),
-            'per_type' => $finalPerType,
+            'total_revenue' => $breakdown['total_revenue'],
+            'total_net' => $breakdown['total_net'],
+            'total_commission' => $breakdown['total_commission'],
+            'total_extras' => $breakdown['total_extras'],
+            'total_discount' => $breakdown['total_discount'],
+            'per_type' => $legacyPerType,
         ];
     }
+
 }

@@ -170,6 +170,16 @@ class GenerateAutoDeconts extends Command
 
         $periodEnd = now()->toDateString();
 
+        // Single source of truth for the per-ticket-type breakdown (same logic
+        // as the event-edit "Vânzări" tab). Reads actual paid prices (not
+        // catalog), allocates discounts/extras, derives commission_mode.
+        $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+        $ticketBreakdown = $service->buildForPayout(
+            $event,
+            \Illuminate\Support\Carbon::parse($periodStart),
+            \Illuminate\Support\Carbon::parse($periodEnd)
+        );
+
         MarketplacePayout::create([
             'marketplace_client_id' => $organizer->marketplace_client_id,
             'marketplace_organizer_id' => $organizer->id,
@@ -186,6 +196,8 @@ class GenerateAutoDeconts extends Command
             'source' => 'automated',
             'payout_method' => $payoutMethod,
             'admin_notes' => 'Decont generat automat după finalizarea evenimentului.',
+            'ticket_breakdown' => !empty($ticketBreakdown) ? $ticketBreakdown : null,
+            'commission_mode' => $commissionMode,
         ]);
     }
 }

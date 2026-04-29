@@ -2,7 +2,11 @@
     $record = $getRecord();
     $breakdown = $record->ticket_breakdown ?? [];
     $currency = $record->currency ?? 'RON';
-    $discountsByType = !empty($breakdown) ? $record->getDiscountsPerTicketType() : [];
+    // Fallback for legacy payouts whose snapshot pre-dates per-row discount.
+    // New payouts (built by SalesBreakdownService) carry `discount` and
+    // `extras` directly on each row, so this map only matters as a fallback.
+    $hasPerRowDiscount = !empty($breakdown) && array_key_exists('discount', $breakdown[0] ?? []);
+    $discountsByType = (!empty($breakdown) && !$hasPerRowDiscount) ? $record->getDiscountsPerTicketType() : [];
     $posTypeIds = !empty($breakdown) ? $record->getPosTicketTypeIds() : [];
     $posTypeIdsSet = array_flip($posTypeIds);
     $totalQty = 0;
@@ -10,7 +14,10 @@
     $totalCommission = 0;
     $totalNetTickets = 0;
     $totalDiscounts = 0;
+    $totalExtras = 0;
     $totalNetFinal = 0;
+    // Pre-pass to know whether to render the Extras column.
+    $hasExtras = collect($breakdown)->contains(fn ($i) => (float) ($i['extras'] ?? 0) > 0);
 @endphp
 
 @once
@@ -38,6 +45,9 @@
                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net bilete</th>
                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Discounts</th>
+                @if($hasExtras)
+                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase" title="Asigurare bilete + suprataxă card cultural alocate proportional">Extras</th>
+                @endif
                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net final</th>
                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Mod comision</th>
             </tr>
@@ -52,17 +62,30 @@
                     $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
                     $commPerTicket = (float) ($item['commission_per_ticket'] ?? $item['commission'] ?? 0);
                     $commission = (float) ($item['commission_amount'] ?? ($commPerTicket * $qty));
-                    $gross = (float) ($item['gross'] ?? $item['total'] ?? ($price * $qty + ($item['commission_mode'] === 'added_on_top' ? $commission : 0)));
-                    // Net bilete = ce primeste organizatorul din vanzarea biletelor, inainte de discount.
+                    $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
+                    $isOnTop = in_array($commissionMode, ['added_on_top', 'on_top'], true);
+                    // Total brut afiseaza ce a platit clientul. Calculam mereu din
+                    // price/qty/commission, ca sa fim consistenti intre snapshot-uri
+                    // noi (gross stocat = price*qty) si vechi (gross nestocat).
+                    $gross = $price * $qty + ($isOnTop ? $commission : 0);
+                    // Net bilete = ce primeste organizatorul din vanzarea biletelor, inainte de discount/extras.
                     // included: gross = price*qty (comision in pret) -> net = gross - commission
                     // added_on_top: gross = price*qty + commission -> net = gross - commission = price*qty
                     $netTickets = $gross - $commission;
-                    $discounts = (float) ($discountsByType[$ticketTypeId] ?? 0);
-                    $netFinal = $netTickets - $discounts;
-                    $commissionMode = $item['commission_mode'] ?? $item['commission_label'] ?? '';
+                    // New snapshot (SalesBreakdownService) carries `discount` per row.
+                    // Legacy snapshot: fall back to record-level allocation by ticket type.
+                    $discounts = $hasPerRowDiscount
+                        ? (float) ($item['discount'] ?? 0)
+                        : (float) ($discountsByType[$ticketTypeId] ?? 0);
+                    // Extras (insurance, cultural-card surcharge) are a deduction on the
+                    // organizer's net just like the discount; legacy snapshots don't track them.
+                    $extras = (float) ($item['extras'] ?? 0);
+                    if ($extras > 0) $hasExtras = true;
+                    $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
                     $commissionRate = isset($item['commission_rate']) ? $item['commission_rate'] . '%' : '';
                     $commissionLabel = match($commissionMode) {
                         'added_on_top' => 'Peste preț' . ($commissionRate ? " ({$commissionRate})" : ''),
+                        'on_top' => 'Peste preț' . ($commissionRate ? " ({$commissionRate})" : ''),
                         'included' => 'Inclus' . ($commissionRate ? " ({$commissionRate})" : ''),
                         default => $commissionMode,
                     };
@@ -73,6 +96,7 @@
                         $totalCommission += $commission;
                         $totalNetTickets += $netTickets;
                         $totalDiscounts += $discounts;
+                        $totalExtras += $extras;
                         $totalNetFinal += $netFinal;
                     }
                 @endphp
@@ -89,6 +113,9 @@
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">-{{ number_format($commission, 2) }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-600 dark:text-gray-300' }} font-mono">{{ number_format($netTickets, 2) }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $discounts > 0 ? '-' . number_format($discounts, 2) : '0.00' }}</td>
+                    @if($hasExtras)
+                    <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-red-500 dark:text-red-400' }} font-mono">{{ $extras > 0 ? '-' . number_format($extras, 2) : '0.00' }}</td>
+                    @endif
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-900 dark:text-gray-100' : 'text-gray-900 dark:text-white' }} font-mono font-semibold">{{ number_format($netFinal, 2) }}</td>
                     <td class="py-2 px-3 text-right {{ $isPos ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400' }} text-xs">{{ $commissionLabel }}</td>
                 </tr>
@@ -108,6 +135,9 @@
                 <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">-{{ number_format($totalCommission, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalNetTickets, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $totalDiscounts > 0 ? '-' . number_format($totalDiscounts, 2) : '0.00' }} {{ $currency }}</td>
+                @if($hasExtras)
+                <td class="py-2 px-3 text-right text-red-500 dark:text-red-400 font-mono">{{ $totalExtras > 0 ? '-' . number_format($totalExtras, 2) : '0.00' }} {{ $currency }}</td>
+                @endif
                 <td class="py-2 px-3 text-right text-gray-900 dark:text-white font-mono">{{ number_format($totalNetFinal, 2) }} {{ $currency }}</td>
                 <td class="py-2 px-3"></td>
             </tr>

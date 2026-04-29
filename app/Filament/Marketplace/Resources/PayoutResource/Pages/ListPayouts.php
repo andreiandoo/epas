@@ -577,43 +577,22 @@ class ListPayouts extends ListRecords
                 // 2. Event > Organizer > Marketplace fallback
                 $commissionMode = null;
 
-                // Build ticket breakdown from form data
-                // Build ticket breakdown with full commission details
-                $eventForBreakdown = Event::with('ticketTypes')->find($data['event_id']);
-                $ttMap = $eventForBreakdown ? $eventForBreakdown->ticketTypes->keyBy('id') : collect();
+                // Build ticket breakdown via SalesBreakdownService — same logic as the
+                // event-edit "Vânzări" tab, so Net final on the decont matches Net on
+                // the event page exactly. Reads actual paid prices per ticket and
+                // allocates discounts + extras (insurance, cultural-card surcharge).
+                $periodStart = $event?->created_at;
+                $periodEnd = $event?->event_date ?? now();
+                $service = app(\App\Services\Marketplace\SalesBreakdownService::class);
+                $ticketBreakdown = $event ? $service->buildForPayout($event, $periodStart, $periodEnd) : [];
+                $summary = $event ? $service->summarizeForPayout($event, $periodStart, $periodEnd) : [
+                    'commission_mode' => 'included',
+                    'commission_amount' => 0.0,
+                    'gross_amount' => (float) ($data['gross_amount'] ?? 0),
+                    'net_amount' => (float) ($data['net_amount'] ?? 0),
+                ];
 
-                $ticketBreakdown = collect($data['payout_tickets'] ?? [])->filter(fn ($t) => ($t['qty'] ?? 0) > 0)->map(function ($t) use ($ttMap) {
-                    $tt = $ttMap->get($t['ticket_type_id'] ?? null);
-                    return [
-                        'ticket_type_id' => $t['ticket_type_id'] ?? null,
-                        'ticket_type_name' => $t['ticket_type_name'] ?? '',
-                        'qty' => (int) $t['qty'],
-                        'unit_price' => (float) ($t['unit_price'] ?? 0),
-                        'commission_per_ticket' => (float) ($t['commission_per_ticket'] ?? 0),
-                        'commission_type' => $tt?->commission_type ?? null,
-                        'commission_rate' => $tt?->commission_rate ? (float) $tt->commission_rate : null,
-                        'commission_fixed' => $tt?->commission_fixed ? (float) $tt->commission_fixed : null,
-                        'commission_mode' => $tt?->commission_mode ?? null,
-                    ];
-                })->values()->toArray();
-
-                // Derive commission_mode from ticket breakdown (most specific level)
-                $modesFromTickets = collect($ticketBreakdown)
-                    ->pluck('commission_mode')
-                    ->filter()
-                    ->unique()
-                    ->values();
-
-                if ($modesFromTickets->count() === 1) {
-                    // All tickets in this payout share the same mode → use it
-                    $commissionMode = $modesFromTickets->first();
-                } elseif ($modesFromTickets->contains('added_on_top')) {
-                    // Mixed but at least one is added_on_top → treat whole payout as added_on_top
-                    $commissionMode = 'added_on_top';
-                } else {
-                    // No ticket-level info → fall back to Event > Organizer > Marketplace
-                    $commissionMode = $event?->getEffectiveCommissionMode() ?? 'included';
-                }
+                $commissionMode = $summary['commission_mode'];
 
                 $payout = MarketplacePayout::create([
                     'marketplace_client_id' => $marketplaceAdmin->marketplace_client_id,
