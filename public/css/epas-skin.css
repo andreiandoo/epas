@@ -6069,3 +6069,15 @@ body.ep-secondary-sidebar-ready [data-group-label="Help"] {
 	}
 }
 /* ===== END SECONDARY SIDEBAR ===== */
+/* ===== SYSTEM ERRORS — view page header layout ===== */
+/* Stack heading + breadcrumbs vertically with the row of action buttons,
+   instead of the default horizontal cramped layout. Scoped to this resource. */
+.fi-resource-system-errors.fi-resource-view-record-page .fi-header.fi-header-has-breadcrumbs {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+.fi-resource-system-errors.fi-resource-view-record-page .fi-header.fi-header-has-breadcrumbs .fi-header-actions {
+    margin-left: 0;
+}
+/* ===== END SYSTEM ERRORS HEADER ===== */
