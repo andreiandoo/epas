@@ -48,6 +48,13 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
+        // Polymorphic morph map for support tickets. Aliases keep DB rows
+        // stable across class renames and let us audit opener_type /
+        // author_type values without exposing internal namespaces.
+        \Illuminate\Database\Eloquent\Relations\Relation::enforceMorphMap(
+            (array) config('support.morph_map', [])
+        );
+
         // Register the marketplace-mail notification channel. Notifications
         // that return ['marketplace-mail'] from via() route through the
         // active marketplace's configured SMTP transport instead of the
@@ -101,10 +108,12 @@ class AppServiceProvider extends ServiceProvider
         // Mirror application logs into system_errors. Keeps existing file
         // logging untouched; this is a parallel sink for the admin error
         // dashboard. Filtered by level (warning+) and channel allowlist.
-        $this->bootSystemErrorsLogListener();
+        // TEMP DISABLED: investigating render-time 500 on /admin/system-errors
+        // $this->bootSystemErrorsLogListener();
 
         // Mirror failed queue jobs into system_errors as a single source of truth.
-        $this->bootSystemErrorsQueueListener();
+        // TEMP DISABLED: same reason as above
+        // $this->bootSystemErrorsQueueListener();
 
         // Register microservices event listeners
         \Illuminate\Support\Facades\Event::listen(
