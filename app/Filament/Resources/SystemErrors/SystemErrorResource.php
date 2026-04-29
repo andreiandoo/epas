@@ -58,8 +58,12 @@ class SystemErrorResource extends Resource
 
     public static function canDelete($record): bool
     {
-        // Soft-deleting individual rows isn't useful — pruning is automatic.
-        return false;
+        return auth()->user()?->isSuperAdmin() ?? false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()?->isSuperAdmin() ?? false;
     }
 
     /**
