@@ -48,16 +48,12 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
-        // Polymorphic morph map for support tickets. Aliases keep DB rows
-        // stable across class renames and let us audit opener_type /
-        // author_type values without exposing internal namespaces.
-        // CRITICAL: enforceMorphMap with an empty array breaks EVERY
-        // polymorphic relation in the app. Only enforce if the map
-        // has entries.
-        $supportMorphMap = (array) config('support.morph_map', []);
-        if (!empty($supportMorphMap)) {
-            \Illuminate\Database\Eloquent\Relations\Relation::enforceMorphMap($supportMorphMap);
-        }
+        // DISABLED — enforceMorphMap was breaking every polymorphic
+        // relation site-wide on this deploy. Re-enable only after the
+        // morph map is fully populated for ALL polymorphic models in use.
+        // \Illuminate\Database\Eloquent\Relations\Relation::enforceMorphMap(
+        //     (array) config('support.morph_map', [])
+        // );
 
         // Register the marketplace-mail notification channel. Notifications
         // that return ['marketplace-mail'] from via() route through the
