@@ -127,7 +127,7 @@ class TicketTemplate extends Model
     /**
      * Create a new version of this template
      */
-    public function createVersion(array $templateData, string $name = null): self
+    public function createVersion(array $templateData, ?string $name = null): self
     {
         return self::create([
             'tenant_id' => $this->tenant_id,
