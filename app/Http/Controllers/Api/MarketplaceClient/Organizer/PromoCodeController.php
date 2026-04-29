@@ -383,6 +383,26 @@ class PromoCodeController extends BaseController
         // Soft delete
         $promoCode->delete();
 
+        // Mirror deletion to coupon_codes so the row also disappears from the
+        // organizer's list (index() falls back to coupon_codes for any code not
+        // present in mkt_promo_codes — without this, the deleted code would
+        // re-surface tagged as "Admin" on refresh).
+        try {
+            CouponCode::where('marketplace_client_id', $organizer->marketplace_client_id)
+                ->where('marketplace_organizer_id', $organizer->id)
+                ->where('code', $promoCode->code)
+                ->get()
+                ->each(function ($coupon) {
+                    $coupon->update(['status' => 'deleted']);
+                    $coupon->delete();
+                });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Failed to delete mirrored coupon_codes row', [
+                'code' => $promoCode->code,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return $this->success(null, 'Promo code deleted successfully');
     }
 
