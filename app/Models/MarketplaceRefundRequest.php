@@ -241,7 +241,7 @@ class MarketplaceRefundRequest extends Model
         $this->update(['status' => self::STATUS_PROCESSING]);
     }
 
-    public function markRefunded(string $paymentRefundId = null, int $processedBy = null): void
+    public function markRefunded(?string $paymentRefundId = null, ?int $processedBy = null): void
     {
         $isPartial = $this->approved_amount < $this->requested_amount;
 
