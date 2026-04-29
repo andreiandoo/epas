@@ -692,12 +692,20 @@ class PlatformTrackingService
         // Create new session
         $sessionId = $sessionToken ?? Str::uuid()->toString();
 
+        // visitor_id has a NOT NULL constraint, but server-side tracking
+        // (e.g. payment gateway callbacks for an order whose customer never
+        // had a tracking cookie) reaches this path with a null value. Fall
+        // back to a synthetic UUID so the row inserts cleanly and the
+        // conversion-tracking pipeline keeps running. Such rows show up as
+        // 'direct' with no attribution — which is the truth.
+        $visitorId = $data['visitor_id'] ?? Str::uuid()->toString();
+
         $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
 
         return CoreSession::create([
             'session_id' => $sessionId,
             'tenant_id' => $data['tenant_id'] ?? null,
-            'visitor_id' => $data['visitor_id'] ?? null,
+            'visitor_id' => $visitorId,
             'started_at' => now(),
             'landing_page' => $t($data['page_url'] ?? null, 2048),
             'landing_page_type' => $data['page_type'] ?? null,
