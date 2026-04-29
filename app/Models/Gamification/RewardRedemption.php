@@ -142,7 +142,7 @@ class RewardRedemption extends Model
     /**
      * Mark voucher as used
      */
-    public function markAsUsed(string $referenceType = null, int $referenceId = null, float $discountApplied = null): self
+    public function markAsUsed(?string $referenceType = null, ?int $referenceId = null, ?float $discountApplied = null): self
     {
         $this->update([
             'status' => 'used',
