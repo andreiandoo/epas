@@ -166,11 +166,13 @@ class HealthCheckService
                 Redis::ping();
             }
 
-            // Check failed jobs count
+            // Check failed jobs count. Threshold is configurable via env so
+            // ops can tune it without a deploy as queue volume grows.
             $failedJobs = DB::table('failed_jobs')->count();
+            $threshold = (int) env('HEALTH_FAILED_JOBS_THRESHOLD', 1000);
 
             $status = 'healthy';
-            if ($failedJobs > 100) {
+            if ($failedJobs > $threshold) {
                 $status = 'degraded';
             }
 
