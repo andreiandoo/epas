@@ -61,8 +61,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // TEMP DISABLED — investigating render-time 500 on /admin/system-errors.
-        return;
         // Mirror unhandled exceptions into system_errors so the admin error
         // dashboard sees them alongside Log:: entries. Returning null lets
         // Laravel proceed with its normal report+render pipeline; we just

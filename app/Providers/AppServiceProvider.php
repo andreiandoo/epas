@@ -108,12 +108,10 @@ class AppServiceProvider extends ServiceProvider
         // Mirror application logs into system_errors. Keeps existing file
         // logging untouched; this is a parallel sink for the admin error
         // dashboard. Filtered by level (warning+) and channel allowlist.
-        // TEMP DISABLED: investigating render-time 500 on /admin/system-errors
-        // $this->bootSystemErrorsLogListener();
+        $this->bootSystemErrorsLogListener();
 
         // Mirror failed queue jobs into system_errors as a single source of truth.
-        // TEMP DISABLED: same reason as above
-        // $this->bootSystemErrorsQueueListener();
+        $this->bootSystemErrorsQueueListener();
 
         // Register microservices event listeners
         \Illuminate\Support\Facades\Event::listen(
