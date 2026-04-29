@@ -64,7 +64,7 @@ class RedisAnalyticsService
             $redis->expire($activityKey, self::TTL_ACTIVITY);
 
         } catch (\Exception $e) {
-            Log::warning('Redis analytics tracking failed', [
+            Log::debug('Redis analytics tracking failed', [
                 'event_id' => $eventId,
                 'error' => $e->getMessage(),
             ]);
@@ -123,7 +123,7 @@ class RedisAnalyticsService
             }
 
         } catch (\Exception $e) {
-            Log::warning('Redis analytics action tracking failed', [
+            Log::debug('Redis analytics action tracking failed', [
                 'event_id' => $eventId,
                 'action' => $action,
                 'error' => $e->getMessage(),
@@ -173,7 +173,7 @@ class RedisAnalyticsService
             ];
 
         } catch (\Exception $e) {
-            Log::warning('Redis getLiveVisitors failed', [
+            Log::debug('Redis getLiveVisitors failed', [
                 'event_id' => $eventId,
                 'error' => $e->getMessage(),
             ]);
@@ -209,7 +209,7 @@ class RedisAnalyticsService
             }, $activities);
 
         } catch (\Exception $e) {
-            Log::warning('Redis getLiveActivity failed', [
+            Log::debug('Redis getLiveActivity failed', [
                 'event_id' => $eventId,
                 'error' => $e->getMessage(),
             ]);
