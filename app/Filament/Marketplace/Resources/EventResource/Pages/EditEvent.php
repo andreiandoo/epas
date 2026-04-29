@@ -1118,6 +1118,12 @@ class EditEvent extends EditRecord
 
     protected function afterSave(): void
     {
+        \Log::info('[ArtistDebug] afterSave', [
+            'event_id' => $this->record->id,
+            'form_artists_state' => $this->data['artists'] ?? '<not present>',
+            'attached_artist_ids' => $this->record->artists()->pluck('artists.id')->toArray(),
+        ]);
+
         // Transform venue_config seasons schedule_list → schedule (keyed by day)
         if (($this->record->display_template ?? 'standard') === 'leisure_venue') {
             $config = $this->record->venue_config ?? [];
