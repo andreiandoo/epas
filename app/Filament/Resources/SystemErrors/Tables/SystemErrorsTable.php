@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\SystemErrors\Tables;
 
 use App\Models\SystemError;
-use App\Support\SearchHelper;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -57,9 +56,7 @@ class SystemErrorsTable
                     ->label('Message')
                     ->limit(120)
                     ->tooltip(fn (SystemError $r) => mb_substr($r->message ?? '', 0, 600))
-                    ->searchable(query: function (Builder $query, string $search) {
-                        return SearchHelper::search($query, 'message', $search);
-                    }),
+                    ->searchable(),
                 TextColumn::make('exception_class')
                     ->label('Exception')
                     ->limit(40)
