@@ -192,7 +192,7 @@ class Ticket extends Model
     /**
      * Cancel this ticket
      */
-    public function cancel(string $reason = null, int $refundRequestId = null): void
+    public function cancel(?string $reason = null, ?int $refundRequestId = null): void
     {
         $this->update([
             'is_cancelled' => true,
