@@ -26,7 +26,7 @@ class PromoCodeController extends BaseController
 
         // 1. Get organizer's own promo codes (mkt_promo_codes)
         $query = MarketplaceOrganizerPromoCode::forOrganizer($organizer->id)
-            ->with(['event:id,name,slug', 'ticketType:id,name'])
+            ->with(['event:id,title,slug', 'ticketType:id,name'])
             ->orderBy('created_at', 'desc');
 
         // Apply filters
@@ -118,7 +118,7 @@ class PromoCodeController extends BaseController
             'value' => 'required|numeric|min:0',
             'applies_to' => 'required|in:all_events,specific_event,ticket_type',
             'event_id' => 'nullable|integer|exists:events,id',
-            'ticket_type_id' => 'nullable|integer|exists:marketplace_ticket_types,id',
+            'ticket_type_id' => 'nullable|integer|exists:ticket_types,id',
             'min_purchase_amount' => 'nullable|numeric|min:0',
             'max_discount_amount' => 'nullable|numeric|min:0',
             'min_tickets' => 'nullable|integer|min:1',
@@ -240,7 +240,7 @@ class PromoCodeController extends BaseController
         }
 
         return $this->success([
-            'promo_code' => $this->formatPromoCode($promoCode->load(['event:id,name,slug', 'ticketType:id,name'])),
+            'promo_code' => $this->formatPromoCode($promoCode->load(['event:id,title,slug', 'ticketType:id,name'])),
         ], 'Promo code created successfully', 201);
     }
 
@@ -256,7 +256,7 @@ class PromoCodeController extends BaseController
         }
 
         $promoCode = MarketplaceOrganizerPromoCode::forOrganizer($organizer->id)
-            ->with(['event:id,name,slug', 'ticketType:id,name'])
+            ->with(['event:id,title,slug', 'ticketType:id,name'])
             ->find($id);
 
         if (!$promoCode) {
@@ -307,7 +307,7 @@ class PromoCodeController extends BaseController
         $promoCode->update($validated);
 
         return $this->success([
-            'promo_code' => $this->formatPromoCode($promoCode->fresh(['event:id,name,slug', 'ticketType:id,name'])),
+            'promo_code' => $this->formatPromoCode($promoCode->fresh(['event:id,title,slug', 'ticketType:id,name'])),
         ], 'Promo code updated successfully');
     }
 
@@ -565,7 +565,7 @@ class PromoCodeController extends BaseController
             'applies_to' => $promoCode->applies_to,
             'event' => $promoCode->event ? [
                 'id' => $promoCode->event->id,
-                'name' => $promoCode->event->name,
+                'name' => $this->resolveEventTitle($promoCode->event),
                 'slug' => $promoCode->event->slug,
             ] : null,
             'ticket_type' => $promoCode->ticketType ? [
@@ -589,6 +589,18 @@ class PromoCodeController extends BaseController
             'source' => 'organizer',
             'created_at' => $promoCode->created_at->toIso8601String(),
         ];
+    }
+
+    /**
+     * Resolve translatable Event title to a single string for API responses.
+     */
+    protected function resolveEventTitle(\App\Models\Event $event): string
+    {
+        $title = $event->title;
+        if (is_array($title)) {
+            return $title['ro'] ?? $title['en'] ?? (reset($title) ?: '');
+        }
+        return (string) ($title ?? '');
     }
 
     /**

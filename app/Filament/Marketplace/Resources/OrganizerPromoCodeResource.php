@@ -6,7 +6,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\OrganizerPromoCodeResource\Pages;
 use App\Models\MarketplaceOrganizerPromoCode;
 use App\Models\MarketplaceOrganizer;
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -180,9 +180,17 @@ class OrganizerPromoCodeResource extends Resource
                                                 if (!$organizerId) {
                                                     return [];
                                                 }
-                                                return MarketplaceEvent::where('marketplace_client_id', $marketplace?->id)
+                                                return Event::where('marketplace_client_id', $marketplace?->id)
                                                     ->where('marketplace_organizer_id', $organizerId)
-                                                    ->pluck('title', 'id');
+                                                    ->get()
+                                                    ->mapWithKeys(function ($e) {
+                                                        $title = $e->title;
+                                                        if (is_array($title)) {
+                                                            $title = $title['ro'] ?? $title['en'] ?? (reset($title) ?: '');
+                                                        }
+                                                        return [$e->id => (string) ($title ?? '')];
+                                                    })
+                                                    ->toArray();
                                             })
                                             ->searchable()
                                             ->preload()
@@ -196,7 +204,7 @@ class OrganizerPromoCodeResource extends Resource
                                                 if (!$eventId) {
                                                     return [];
                                                 }
-                                                $event = MarketplaceEvent::find($eventId);
+                                                $event = Event::find($eventId);
                                                 if (!$event) {
                                                     return [];
                                                 }

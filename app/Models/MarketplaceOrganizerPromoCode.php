@@ -78,12 +78,12 @@ class MarketplaceOrganizerPromoCode extends Model
 
     public function event(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
+        return $this->belongsTo(Event::class, 'marketplace_event_id');
     }
 
     public function ticketType(): BelongsTo
     {
-        return $this->belongsTo(MarketplaceTicketType::class, 'ticket_type_id');
+        return $this->belongsTo(TicketType::class, 'ticket_type_id');
     }
 
     public function usage(): HasMany
