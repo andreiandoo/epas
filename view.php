@@ -131,6 +131,21 @@ require_once __DIR__ . '/includes/head.php';
         return (n || 0).toLocaleString('ro-RO');
     }
 
+    function formatMoney(amount, currency) {
+        const value = Number(amount || 0);
+        const cur = currency || 'RON';
+        try {
+            return new Intl.NumberFormat('ro-RO', {
+                style: 'currency',
+                currency: cur,
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+            }).format(value);
+        } catch (e) {
+            return value.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ' + cur;
+        }
+    }
+
     function formatDate(dateStr) {
         if (!dateStr) return '-';
         try {
@@ -303,12 +318,15 @@ require_once __DIR__ . '/includes/head.php';
         participantsData = data.participants || {};
 
         // Calculate totals
-        let totalTickets = 0, totalSold = 0, totalEvents = events.length;
+        let totalTickets = 0, totalSold = 0, totalEvents = events.length, totalRevenue = 0;
+        let revenueCurrency = 'RON';
         events.forEach(ev => {
-            const evTotal = (ev.ticket_types || []).reduce((s, tt) => s + (tt.total || 0), 0) || ev.tickets_total || 0;
-            const evSold = (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0) || ev.tickets_sold || 0;
+            const evTotal = ev.tickets_total || (ev.ticket_types || []).reduce((s, tt) => s + Math.max(0, tt.total || 0), 0);
+            const evSold = ev.tickets_sold || (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0);
             totalTickets += evTotal;
             totalSold += evSold;
+            totalRevenue += Number(ev.revenue_net || 0);
+            if (ev.currency) revenueCurrency = ev.currency;
         });
 
         // Summary cards
@@ -321,11 +339,11 @@ require_once __DIR__ . '/includes/head.php';
             </div>
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <p class="mb-1 text-sm text-muted">Bilete vandute</p>
-                <p class="text-2xl font-bold text-primary">${formatNumber(totalSold)}</p>
+                <p class="text-2xl font-bold text-primary">${formatNumber(totalSold)} <span class="text-base font-normal text-muted">/ ${formatNumber(totalTickets)}</span></p>
             </div>
             <div class="p-5 bg-white border rounded-2xl border-border">
-                <p class="mb-1 text-sm text-muted">Bilete totale</p>
-                <p class="text-2xl font-bold text-secondary">${formatNumber(totalTickets)}</p>
+                <p class="mb-1 text-sm text-muted">Incasari nete</p>
+                <p class="text-2xl font-bold text-secondary">${formatMoney(totalRevenue, revenueCurrency)}</p>
             </div>
             <div class="p-5 bg-white border rounded-2xl border-border">
                 <p class="mb-1 text-sm text-muted">Grad ocupare</p>
@@ -342,8 +360,10 @@ require_once __DIR__ . '/includes/head.php';
 
         eventsEl.innerHTML = events.map(ev => {
             const evId = ev.id || 0;
-            const evTotal = (ev.ticket_types || []).reduce((s, tt) => s + (tt.total || 0), 0) || ev.tickets_total || 0;
-            const evSold = (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0) || ev.tickets_sold || 0;
+            const evTotal = ev.tickets_total || (ev.ticket_types || []).reduce((s, tt) => s + Math.max(0, tt.total || 0), 0);
+            const evSold = ev.tickets_sold || (ev.ticket_types || []).reduce((s, tt) => s + (tt.sold || 0), 0);
+            const evRevenue = Number(ev.revenue_net || 0);
+            const evCurrency = ev.currency || 'RON';
             const evPct = evTotal > 0 ? Math.round((evSold / evTotal) * 100) : 0;
             const isOpen = !!openAccordions[evId];
 
@@ -351,18 +371,21 @@ require_once __DIR__ . '/includes/head.php';
             let ticketTypesHtml = '<p class="py-4 text-sm text-muted">Nu sunt categorii de bilete.</p>';
             if (ev.ticket_types && ev.ticket_types.length > 0) {
                 ticketTypesHtml = `<div class="space-y-2">${ev.ticket_types.map(tt => {
-                    const ttPct = tt.total > 0 ? Math.round((tt.sold / tt.total) * 100) : 0;
+                    const isUnlimited = (tt.total || 0) < 0;
+                    const ttPct = !isUnlimited && tt.total > 0 ? Math.round((tt.sold / tt.total) * 100) : 0;
+                    const totalLabel = isUnlimited ? '∞' : formatNumber(tt.total);
+                    const pctLabel = isUnlimited ? '' : `${ttPct}%`;
                     return `<div class="flex items-center gap-3">
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center justify-between mb-1">
                                 <span class="text-sm font-medium truncate text-secondary">${escapeHtml(tt.name)}</span>
-                                <span class="text-sm text-muted">${formatNumber(tt.sold)} / ${formatNumber(tt.total)}</span>
+                                <span class="text-sm text-muted">${formatNumber(tt.sold)} / ${totalLabel}</span>
                             </div>
                             <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div class="h-full rounded-full transition-all duration-500 ${ttPct >= 90 ? 'bg-red-500' : ttPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${ttPct}%"></div>
+                                <div class="h-full rounded-full transition-all duration-500 ${ttPct >= 90 ? 'bg-red-500' : ttPct >= 70 ? 'bg-yellow-500' : 'bg-primary'}" style="width: ${isUnlimited ? 0 : ttPct}%"></div>
                             </div>
                         </div>
-                        <span class="text-xs font-semibold w-10 text-right ${ttPct >= 90 ? 'text-red-600' : 'text-muted'}">${ttPct}%</span>
+                        <span class="text-xs font-semibold w-10 text-right ${ttPct >= 90 ? 'text-red-600' : 'text-muted'}">${pctLabel}</span>
                     </div>`;
                 }).join('')}</div>`;
             }
@@ -431,6 +454,10 @@ require_once __DIR__ . '/includes/head.php';
                                 <div class="text-center">
                                     <p class="text-xl font-bold text-secondary">${formatNumber(evTotal)}</p>
                                     <p class="text-xs text-muted">Total</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-xl font-bold text-secondary">${formatMoney(evRevenue, evCurrency)}</p>
+                                    <p class="text-xs text-muted">Incasari</p>
                                 </div>
                                 <div class="min-w-[60px]">
                                     <div class="h-2 overflow-hidden rounded-full bg-slate-100">
