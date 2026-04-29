@@ -92,9 +92,18 @@ class SystemErrorRecorder
             ]);
         } catch (Throwable $e) {
             // Swallow — never block application flow because of a logging row.
+            // "Table doesn't exist yet" happens during the deploy window
+            // between git pull and migrate; not worth spamming error_log.
+            $msg = $e->getMessage();
+            if (stripos($msg, 'system_errors') !== false
+                && (stripos($msg, 'does not exist') !== false
+                    || stripos($msg, 'no such table') !== false
+                    || stripos($msg, 'undefined table') !== false)) {
+                return;
+            }
             // Best-effort fallback: write to PHP error_log so we know the
             // recorder itself is broken if we ever investigate.
-            @error_log('[SystemErrorRecorder] insert failed: ' . $e->getMessage());
+            @error_log('[SystemErrorRecorder] insert failed: ' . $msg);
         }
     }
 
