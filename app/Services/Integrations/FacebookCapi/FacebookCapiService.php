@@ -560,4 +560,53 @@ class FacebookCapiService
     {
         return FacebookCapiConnection::where('tenant_id', $tenantId)->get();
     }
+
+    public function getConnectionForOrganizer(int $marketplaceOrganizerId): ?FacebookCapiConnection
+    {
+        return FacebookCapiConnection::where('marketplace_organizer_id', $marketplaceOrganizerId)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    public function getConnectionForMarketplaceClient(int $marketplaceClientId): ?FacebookCapiConnection
+    {
+        return FacebookCapiConnection::where('marketplace_client_id', $marketplaceClientId)
+            ->whereNull('marketplace_organizer_id')
+            ->where('status', 'active')
+            ->first();
+    }
+
+    public function createConnectionForOrganizer(
+        int $marketplaceOrganizerId,
+        int $marketplaceClientId,
+        string $pixelId,
+        string $accessToken,
+        ?string $businessId = null,
+        ?string $adAccountId = null,
+        bool $testMode = false,
+        ?string $testEventCode = null,
+        bool $verifyConnection = true
+    ): FacebookCapiConnection {
+        $connection = FacebookCapiConnection::create([
+            'marketplace_organizer_id' => $marketplaceOrganizerId,
+            'marketplace_client_id' => $marketplaceClientId,
+            'pixel_id' => $pixelId,
+            'access_token' => $accessToken,
+            'business_id' => $businessId,
+            'ad_account_id' => $adAccountId,
+            'test_mode' => $testMode,
+            'test_event_code' => $testEventCode ?: ($testMode ? 'TEST' . random_int(10000, 99999) : null),
+            'status' => 'active',
+            'enabled_events' => ['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
+        ]);
+
+        if ($verifyConnection && !$this->testConnection($connection)) {
+            $connection->delete();
+            throw new \Exception('Invalid Pixel ID or Access Token');
+        }
+
+        $this->setupDefaultEventConfigs($connection);
+
+        return $connection->fresh();
+    }
 }
