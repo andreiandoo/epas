@@ -134,7 +134,10 @@ class CheckoutController extends BaseController
         // Validate cart items are still available
         $validationErrors = $this->validateCartItemsForCheckout($cartItems, $isTestOrder);
         if (!empty($validationErrors)) {
-            Log::channel('marketplace')->warning('Checkout validation failed', [
+            // info, not warning — this is a normal business event (sold-out
+            // race / expired hold), not an application error. Customer sees
+            // a clean message and the app handles it correctly.
+            Log::channel('marketplace')->info('Checkout validation failed', [
                 'client_id' => $client->id,
                 'cart_items' => $cartItems,
                 'errors' => $validationErrors,
