@@ -154,26 +154,41 @@ class MarketplacePayout extends Model
     }
 
     /**
-     * Split gross / commission / net for this payout across online vs POS rows
-     * of the breakdown. POS rows are those whose ticket_type sells exclusively
-     * via pos_app orders (see getPosTicketTypeIds()).
+     * Split gross / commission / discount / extras / net for this payout
+     * across online vs POS rows of the breakdown. POS rows are those whose
+     * ticket_type sells exclusively via pos_app orders (see getPosTicketTypeIds()).
      *
-     * Per-line math mirrors the Detalii bilete blade:
-     *   gross = price*qty (+ commission for added_on_top)
+     * Per-line math mirrors the "Detalii bilete" blade:
+     *   gross = price*qty (+ commission for added_on_top → what the customer paid)
      *   commission = commission_per_ticket * qty
-     *   net = gross - commission
+     *   discount = per-row when present in snapshot, else allocated from order-level
+     *              discounts via getDiscountsPerTicketType()
+     *   extras = per-row only (insurance, cultural-card surcharge); legacy
+     *            snapshots don't track this
+     *   net = gross - commission - discount - extras
      *
-     * @return array{online: array{gross: float, commission: float, net: float}, pos: array{gross: float, commission: float, net: float}}
+     * @return array{
+     *   online: array{gross: float, commission: float, discount: float, extras: float, net: float},
+     *   pos: array{gross: float, commission: float, discount: float, extras: float, net: float}
+     * }
      */
     public function getBreakdownTotals(): array
     {
+        $breakdown = $this->ticket_breakdown ?? [];
         $posSet = array_flip($this->getPosTicketTypeIds());
         $result = [
-            'online' => ['gross' => 0.0, 'commission' => 0.0, 'net' => 0.0],
-            'pos'    => ['gross' => 0.0, 'commission' => 0.0, 'net' => 0.0],
+            'online' => ['gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0, 'extras' => 0.0, 'net' => 0.0],
+            'pos'    => ['gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0,'extras' => 0.0, 'net' => 0.0],
         ];
 
-        foreach ($this->ticket_breakdown ?? [] as $item) {
+        // Legacy snapshots don't carry per-row discount; fall back to the
+        // record-level allocation by ticket type.
+        $hasPerRowDiscount = !empty($breakdown) && array_key_exists('discount', $breakdown[0] ?? []);
+        $legacyDiscountsByType = (!empty($breakdown) && !$hasPerRowDiscount)
+            ? $this->getDiscountsPerTicketType()
+            : [];
+
+        foreach ($breakdown as $item) {
             $ttId = $item['ticket_type_id'] ?? null;
             $bucket = ($ttId && isset($posSet[$ttId])) ? 'pos' : 'online';
 
@@ -181,19 +196,35 @@ class MarketplacePayout extends Model
             $qty = (int) ($item['quantity'] ?? $item['tickets'] ?? $item['qty'] ?? 0);
             $commPer = (float) ($item['commission_per_ticket'] ?? 0);
             $itemMode = $item['commission_mode'] ?? null;
+            $isOnTop = in_array($itemMode, ['added_on_top', 'on_top'], true);
 
             $commission = $commPer * $qty;
-            $gross = $price * $qty + ($itemMode === 'added_on_top' ? $commission : 0);
-            $net = $gross - $commission;
+            $gross = $price * $qty + ($isOnTop ? $commission : 0);
+
+            $discount = $hasPerRowDiscount
+                ? (float) ($item['discount'] ?? 0)
+                : (float) ($legacyDiscountsByType[$ttId] ?? 0);
+            $extras = (float) ($item['extras'] ?? 0);
+
+            // Prefer the snapshot's stored net when present (post-discount/extras);
+            // else compute uniformly. The blade uses the same precedence so
+            // "Net final" in the table matches what we add here.
+            $net = isset($item['net'])
+                ? (float) $item['net']
+                : ($gross - $commission - $discount - $extras);
 
             $result[$bucket]['gross'] += $gross;
             $result[$bucket]['commission'] += $commission;
+            $result[$bucket]['discount'] += $discount;
+            $result[$bucket]['extras'] += $extras;
             $result[$bucket]['net'] += $net;
         }
 
         foreach ($result as $k => $v) {
             $result[$k]['gross'] = round($v['gross'], 2);
             $result[$k]['commission'] = round($v['commission'], 2);
+            $result[$k]['discount'] = round($v['discount'], 2);
+            $result[$k]['extras'] = round($v['extras'], 2);
             $result[$k]['net'] = round($v['net'], 2);
         }
 

@@ -299,6 +299,20 @@ class PayoutResource extends Resource
                                     ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
                                     ->color('danger'),
 
+                                Infolists\Components\TextEntry::make('online_discount')
+                                    ->label('Discounts bilete online')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['discount'])
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['online']['discount'] > 0),
+
+                                Infolists\Components\TextEntry::make('online_extras')
+                                    ->label('Extras bilete online (asigurări, suprataxe)')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['online']['extras'])
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['online']['extras'] > 0),
+
                                 Infolists\Components\TextEntry::make('online_net')
                                     ->label('Sumă netă bilete online')
                                     ->state(fn ($record) => $record->getBreakdownTotals()['online']['net'])
@@ -319,6 +333,13 @@ class PayoutResource extends Resource
                                     ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
                                     ->color('danger')
                                     ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['commission'] > 0),
+
+                                Infolists\Components\TextEntry::make('pos_discount')
+                                    ->label('Discounts bilete aplicație')
+                                    ->state(fn ($record) => $record->getBreakdownTotals()['pos']['discount'])
+                                    ->formatStateUsing(fn ($state) => '-' . number_format((float) $state, 2) . ' RON')
+                                    ->color('danger')
+                                    ->visible(fn ($record) => $record->getBreakdownTotals()['pos']['discount'] > 0),
 
                                 Infolists\Components\TextEntry::make('pos_net')
                                     ->label('Sumă netă bilete aplicație')
