@@ -510,7 +510,12 @@ class MarketplaceEventsController extends BaseController
             'marketplaceEventCategory',
             'ticketTypes.seatingSections',
             'ticketTypes.seatingRows.section',
-            'artists',
+            // Only artists that are partners of THIS marketplace get returned to
+            // the public payload — the artist card is hidden otherwise.
+            'artists' => fn ($q) => $q->whereHas('marketplaceClients', fn ($qq) =>
+                $qq->where('marketplace_artist_partners.marketplace_client_id', $client->id)
+                   ->where('marketplace_artist_partners.is_partner', true)
+            ),
         ])->first();
 
         if (!$event) {

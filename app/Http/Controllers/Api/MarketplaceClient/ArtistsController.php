@@ -219,35 +219,51 @@ class ArtistsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        // First, try to find marketplace artist
+        // First, try to find a partner artist of THIS marketplace.
         $artist = Artist::query()
-            ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
+            ->whereHas('marketplaceClients', fn ($q) => $q
+                ->where('marketplace_artist_partners.marketplace_client_id', $client->id)
+                ->where('marketplace_artist_partners.is_partner', true))
             ->where('slug', $slug)
             ->where('is_active', true)
             ->first();
 
-        // If not found in marketplace, check Core DB (artists not partnered with any marketplace)
         if (!$artist) {
-            $coreArtist = Artist::query()
-                ->whereDoesntHave('marketplaceClients')
+            // Slug exists somewhere but not a partner here → distinguish three cases.
+            $existing = Artist::query()
                 ->where('slug', $slug)
                 ->where('is_active', true)
                 ->first();
 
-            if ($coreArtist) {
-                // Return minimal data with "coming soon" flag
+            if (!$existing) {
+                // True 404 — slug doesn't match any artist.
+                return $this->error('Artist not found', 404);
+            }
+
+            $hasAnyPartnership = $existing->marketplaceClients()->exists();
+
+            if (!$hasAnyPartnership) {
+                // Core-only artist — render the existing "coming soon" UI.
                 return $this->success([
-                    'id' => $coreArtist->id,
-                    'name' => $coreArtist->name,
-                    'slug' => $coreArtist->slug,
-                    'image' => $coreArtist->main_image_full_url,
-                    'portrait' => $coreArtist->portrait_full_url,
-                    'logo' => $coreArtist->logo_full_url,
+                    'id' => $existing->id,
+                    'name' => $existing->name,
+                    'slug' => $existing->slug,
+                    'image' => $existing->main_image_full_url,
+                    'portrait' => $existing->portrait_full_url,
+                    'logo' => $existing->logo_full_url,
                     'is_coming_soon' => true,
                 ]);
             }
 
-            return $this->error('Artist not found', 404);
+            // Artist exists and is partnered with another marketplace (or with this
+            // one but is_partner=false). Frontend treats this as "redirect to
+            // /artisti" — the artist is just not relevant on this marketplace.
+            return $this->success([
+                'id' => $existing->id,
+                'name' => $existing->name,
+                'slug' => $existing->slug,
+                'is_partner' => false,
+            ]);
         }
 
         $language = $client->language ?? 'ro';

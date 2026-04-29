@@ -76,6 +76,13 @@ const ArtistPage = {
             }
             var response = await AmbiletAPI.get(endpoint);
             if (response.success && response.data) {
+                // Artist exists but isn't a partner of this marketplace —
+                // send the visitor to the artist listing instead of rendering
+                // a half-empty profile.
+                if (response.data.is_partner === false) {
+                    window.location.href = '/artisti';
+                    return;
+                }
                 // Check if this is a Core-only artist (coming soon)
                 if (response.data.is_coming_soon) {
                     this.showComingSoon(response.data);
