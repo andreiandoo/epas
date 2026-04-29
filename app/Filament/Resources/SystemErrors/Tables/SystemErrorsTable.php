@@ -33,7 +33,7 @@ class SystemErrorsTable
                     ->label('Time')
                     ->dateTime('Y-m-d H:i:s')
                     ->sortable()
-                    ->size(TextColumn\TextColumnSize::Small),
+                    ->size(\Filament\Support\Enums\TextSize::Small),
                 TextColumn::make('level_name')
                     ->label('Level')
                     ->badge()
