@@ -25,12 +25,14 @@ class SystemErrorsTable
             ->paginated([25, 50, 100, 250])
             ->defaultPaginationPageOption(50)
             ->modifyQueryUsing(function (Builder $query) {
-                // Attach a per-row "similar count" via a correlated subquery.
-                // Postgres index on fingerprint keeps this cheap even on millions of rows.
+                // Per-row "similar count" via correlated subquery. The inner
+                // reference must be aliased — without an alias both sides of
+                // whereColumn resolve to the OUTER table, returning the total
+                // row count instead of the per-fingerprint count.
                 $query->addSelect([
-                    'similar_count' => SystemError::query()
+                    'similar_count' => DB::table('system_errors as se_inner')
                         ->selectRaw('count(*)')
-                        ->whereColumn('fingerprint', 'system_errors.fingerprint'),
+                        ->whereColumn('se_inner.fingerprint', 'system_errors.fingerprint'),
                 ]);
             })
             ->columns([

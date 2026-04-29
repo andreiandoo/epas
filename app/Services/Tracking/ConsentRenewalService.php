@@ -102,7 +102,7 @@ class ConsentRenewalService
     /**
      * Get consents that need first renewal notification
      */
-    public function getConsentsNeedingFirstNotification(int $tenantId, int $daysBeforeExpiry = null): Collection
+    public function getConsentsNeedingFirstNotification(int $tenantId, ?int $daysBeforeExpiry = null): Collection
     {
         $daysBeforeExpiry = $daysBeforeExpiry ?? self::DEFAULT_FIRST_NOTIFICATION_DAYS;
 
@@ -122,7 +122,7 @@ class ConsentRenewalService
     /**
      * Get consents that need reminder notification
      */
-    public function getConsentsNeedingReminder(int $tenantId, int $daysBeforeExpiry = null): Collection
+    public function getConsentsNeedingReminder(int $tenantId, ?int $daysBeforeExpiry = null): Collection
     {
         $daysBeforeExpiry = $daysBeforeExpiry ?? self::DEFAULT_REMINDER_DAYS;
 
