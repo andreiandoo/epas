@@ -1975,6 +1975,86 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER SUPPORT TICKETS ====================
+    // Beta-gated server-side via config('support.allowed_opener_ids.organizer').
+    // The core API returns 403 for organizers not on the allow-list.
+
+    case 'organizer.support.departments':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+        $endpoint = '/organizer/support/departments' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+        $endpoint = '/organizer/support/tickets' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets.store':
+        // Multipart so the form can ship attachments[] alongside JSON-ish fields.
+        $method = 'POST';
+        $endpoint = '/organizer/support/tickets';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'organizer.support.tickets.show':
+        $method = 'GET';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id;
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets.reply':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/messages';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'organizer.support.tickets.close':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/close';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.support.tickets.reopen':
+        $method = 'POST';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket id']);
+            exit;
+        }
+        $endpoint = '/organizer/support/tickets/' . $id . '/reopen';
+        $requiresAuth = true;
+        break;
+
     // ==================== ORGANIZER DASHBOARD ====================
 
     case 'organizer.dashboard':
@@ -3131,8 +3211,11 @@ if ($useCache) {
     }
 }
 
-// Handle file uploads via cURL (multipart/form-data)
-if ((!empty($isFileUpload) || !empty($isMultipart)) && !empty($_FILES)) {
+// Handle multipart/form-data forward via cURL.
+// Triggers for any endpoint flagged as multipart even when $_FILES is empty
+// — otherwise the raw multipart body would be sent through the JSON handler
+// below with the wrong Content-Type, and Laravel wouldn't parse the fields.
+if (!empty($isFileUpload) || !empty($isMultipart)) {
     $url = API_BASE_URL . $endpoint;
     $curlHeaders = [
         'X-API-Key: ' . API_KEY,
@@ -3152,16 +3235,41 @@ if ((!empty($isFileUpload) || !empty($isMultipart)) && !empty($_FILES)) {
     }
 
     $postFields = [];
-    // Include regular POST fields (e.g. 'type' parameter)
-    foreach ($_POST as $key => $value) {
-        $postFields[$key] = $value;
-    }
+    // Flatten nested POST fields (e.g. meta[url]) so multipart cURL
+    // forwards them with the same bracket notation Laravel parses back
+    // into the request->input('meta.url').
+    $flatten = function (array $src, string $prefix = '') use (&$flatten, &$postFields) {
+        foreach ($src as $k => $v) {
+            $key = $prefix === '' ? (string) $k : $prefix . '[' . $k . ']';
+            if (is_array($v)) {
+                $flatten($v, $key);
+            } else {
+                $postFields[$key] = $v;
+            }
+        }
+    };
+    $flatten($_POST);
     foreach ($_FILES as $key => $file) {
-        if ($file['error'] === UPLOAD_ERR_OK) {
-            $postFields[$key] = new CURLFile(
-                $file['tmp_name'],
-                $file['type'],
-                $file['name']
+        // Single-file upload: $file['error'] is an int.
+        if (!is_array($file['error'])) {
+            if ($file['error'] === UPLOAD_ERR_OK) {
+                $postFields[$key] = new CURLFile(
+                    $file['tmp_name'],
+                    $file['type'],
+                    $file['name']
+                );
+            }
+            continue;
+        }
+        // Array upload (e.g. attachments[]): $_FILES[$key]['error'] is an
+        // array. Re-emit each one as $key[index] so Laravel re-parses
+        // them as a normal array of UploadedFile.
+        foreach ($file['error'] as $i => $err) {
+            if ($err !== UPLOAD_ERR_OK) continue;
+            $postFields[$key . '[' . $i . ']'] = new CURLFile(
+                $file['tmp_name'][$i],
+                $file['type'][$i] ?? 'application/octet-stream',
+                $file['name'][$i] ?? 'file'
             );
         }
     }
