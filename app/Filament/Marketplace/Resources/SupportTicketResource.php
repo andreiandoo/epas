@@ -134,18 +134,6 @@ class SupportTicketResource extends Resource
                     ->searchable()
                     ->limit(60),
 
-                Tables\Columns\TextColumn::make('department_name')
-                    ->label('Departament')
-                    ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
-                    ->badge()
-                    ->color('gray'),
-
-                Tables\Columns\TextColumn::make('assignee_name')
-                    ->label('Asignat')
-                    ->state(fn (SupportTicket $r) => $r->assignee?->name)
-                    ->placeholder('— nealocat —')
-                    ->toggleable(),
-
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Prioritate')
                     ->badge()
