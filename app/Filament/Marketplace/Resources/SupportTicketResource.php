@@ -120,6 +120,7 @@ class SupportTicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $q) => $q->with(['department', 'problemType', 'assignee']))
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')
                     ->label('Nr.')
@@ -132,6 +133,23 @@ class SupportTicketResource extends Resource
                     ->label('Subiect')
                     ->searchable()
                     ->limit(60),
+
+                Tables\Columns\TextColumn::make('opener_summary')
+                    ->label('De la')
+                    ->state(fn (SupportTicket $r) => static::openerLabel($r))
+                    ->wrap(),
+
+                Tables\Columns\TextColumn::make('department_name')
+                    ->label('Departament')
+                    ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
+                    ->badge()
+                    ->color('gray'),
+
+                Tables\Columns\TextColumn::make('assignee_name')
+                    ->label('Asignat')
+                    ->state(fn (SupportTicket $r) => $r->assignee?->name)
+                    ->placeholder('— nealocat —')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Prioritate')
@@ -238,5 +256,21 @@ class SupportTicketResource extends Resource
             'view' => Pages\ViewSupportTicket::route('/{record}'),
             'edit' => Pages\EditSupportTicket::route('/{record}/edit'),
         ];
+    }
+
+    /**
+     * Polymorphic opener summary string for table rows.
+     * Falls back to type+id if the opener record was deleted.
+     */
+    public static function openerLabel(SupportTicket $t): string
+    {
+        $opener = $t->opener;
+        if (!$opener) {
+            return ucfirst($t->opener_type) . ' #' . $t->opener_id;
+        }
+        return $opener->name
+            ?? $opener->public_name
+            ?? $opener->email
+            ?? (ucfirst($t->opener_type) . ' #' . $t->opener_id);
     }
 }
