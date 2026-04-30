@@ -55,9 +55,17 @@ class AppServiceProvider extends ServiceProvider
         // that store full class names keep working as before. enforceMorphMap
         // turns on requireMorphMap site-wide, which broke every unmapped
         // polymorphic on this deploy.
-        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(
-            (array) config('support.morph_map', [])
-        );
+        //
+        // Hardcoded (not config()) on purpose — a stale config:cache that
+        // doesn't know about config/support.php's morph_map key would
+        // register an empty array and break MorphTo eager-loading of every
+        // existing support_tickets row, which is exactly the regression
+        // we're guarding against.
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
+            'organizer' => \App\Models\MarketplaceOrganizer::class,
+            'customer' => \App\Models\MarketplaceCustomer::class,
+            'staff' => \App\Models\MarketplaceAdmin::class,
+        ]);
 
         // Register the marketplace-mail notification channel. Notifications
         // that return ['marketplace-mail'] from via() route through the
