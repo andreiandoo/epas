@@ -120,7 +120,7 @@ class SupportTicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with(['department', 'problemType']))
+            ->modifyQueryUsing(fn (Builder $q) => $q->with(['problemType']))
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')
                     ->label('Nr.')
