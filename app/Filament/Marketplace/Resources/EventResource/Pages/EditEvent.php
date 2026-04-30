@@ -1188,14 +1188,28 @@ class EditEvent extends EditRecord
         // detach any artist NOT in artist_settings, which silently removes
         // newly-added artists whose Repeater row hasn't been hydrated yet.
         $artistSettings = $this->data['artist_settings'] ?? [];
+        \Log::info('[EditEvent afterSave] artist_settings', [
+            'event_id' => $this->record->id,
+            'has_key' => array_key_exists('artist_settings', $this->data),
+            'count' => is_array($artistSettings) ? count($artistSettings) : -1,
+            'value' => $artistSettings,
+            'data_keys' => array_keys($this->data ?? []),
+        ]);
         if (!empty($artistSettings)) {
-            foreach ($artistSettings as $index => $setting) {
+            $sortIndex = 0;
+            foreach ($artistSettings as $key => $setting) {
                 if (!empty($setting['artist_id'])) {
                     $this->record->artists()->updateExistingPivot($setting['artist_id'], [
-                        'sort_order' => $index,
+                        'sort_order' => $sortIndex,
                         'is_headliner' => $setting['is_headliner'] ?? false,
                         'is_co_headliner' => $setting['is_co_headliner'] ?? false,
                     ]);
+                    \Log::info('[EditEvent afterSave] artist pivot updated', [
+                        'artist_id' => $setting['artist_id'],
+                        'sort_order' => $sortIndex,
+                        'repeater_key' => $key,
+                    ]);
+                    $sortIndex++;
                 }
             }
         }
