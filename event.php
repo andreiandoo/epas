@@ -115,12 +115,18 @@ if ($lcpPosterUrl && $lcpHeroUrl && $lcpPosterUrl !== $lcpHeroUrl) {
 // keys (e.g. `apiData.tour_events || []`), so dropping them shrinks the
 // inline payload by ~30% and stops leaking internal flags as side effect.
 if (!empty($eventPreload['data'])) {
+    // Strip nulls, empty strings and empty arrays to shrink the inline
+    // payload. We deliberately KEEP `false` because it's a meaningful
+    // flag value — e.g. metadata.auto_show_row_labels=false controls
+    // whether the seat-map renders the row labels at all. Stripping it
+    // made the JS see `undefined` and fall back to "show", which broke
+    // the per-section opt-out toggle.
     $stripEmpty = function ($v) use (&$stripEmpty) {
         if (is_array($v)) {
             $cleaned = [];
             foreach ($v as $k => $vv) {
                 $vv = $stripEmpty($vv);
-                if ($vv === null || $vv === false || $vv === '' || (is_array($vv) && $vv === [])) {
+                if ($vv === null || $vv === '' || (is_array($vv) && $vv === [])) {
                     continue;
                 }
                 $cleaned[$k] = $vv;

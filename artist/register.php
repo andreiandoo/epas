@@ -1,23 +1,29 @@
 <?php
 /**
  * Artist Account — Register
- * Artists self-register here to claim a profile or apply for one. Account
- * starts as `pending` server-side: requires email verification AND admin
- * approval before login is allowed.
+ * Two flows handled by the same page, branched on `?claim=<slug>`:
  *
- * URL params:
- *   ?claim=<artist-slug>  — pre-fill the claim slug (set by the
- *                            "Revendică profilul" button on /artist/{slug})
+ *   1. WITH claim (deep-linked from "Revendică profilul" on /artist/{slug}):
+ *      slug is locked, applicant must explain why they're the rightful owner
+ *      (claim_message — required).
+ *
+ *   2. WITHOUT claim (direct visit to /artist/inregistrare): the applicant
+ *      picks the artist they represent from a searchable dropdown. No
+ *      explanation message — admin reviews based on the picker selection
+ *      and account email.
+ *
+ * In both flows the linked artist_id is REQUIRED — there's no "register
+ * first, link later" path.
  */
 require_once dirname(__DIR__) . '/includes/config.php';
 
-// Sanitize the optional claim slug (pre-filled into a hidden input).
 $claimSlug = isset($_GET['claim']) ? preg_replace('/[^a-z0-9-]/i', '', strtolower($_GET['claim'])) : '';
+$hasClaim = $claimSlug !== '';
 
 $pageTitle = 'Cont artist — înregistrare';
 $bodyClass = 'min-h-screen flex bg-surface';
-$authTitle = $claimSlug ? 'Revendică-ți profilul' : 'Cont artist';
-$authSubtitle = $claimSlug
+$authTitle = $hasClaim ? 'Revendică-ți profilul' : 'Cont artist';
+$authSubtitle = $hasClaim
     ? 'Completează datele pentru a revendica profilul. După verificare, vei putea edita informațiile publice.'
     : 'Creează-ți cont de artist pe ' . SITE_NAME . ' pentru a-ți gestiona profilul, evenimentele și informațiile publice.';
 $authFeatures = [
@@ -46,20 +52,54 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
 
             <div class="p-8 bg-white border rounded-2xl border-border">
                 <div class="mb-8 text-center">
-                    <h2 class="text-2xl font-bold text-secondary"><?= $claimSlug ? 'Revendică profilul' : 'Cont artist' ?></h2>
+                    <h2 class="text-2xl font-bold text-secondary"><?= $hasClaim ? 'Revendică profilul' : 'Cont artist' ?></h2>
                     <p class="mt-2 text-muted">
-                        <?= $claimSlug
+                        <?= $hasClaim
                             ? 'Profil revendicat: <span class="font-semibold text-primary">' . htmlspecialchars($claimSlug, ENT_QUOTES, 'UTF-8') . '</span>'
                             : 'Completează datele pentru a aplica' ?>
                     </p>
                 </div>
 
-                <?php if ($claimSlug): ?>
+                <?php if ($hasClaim): ?>
                 <div id="claim-status" class="hidden p-3 mb-5 text-sm text-center rounded-lg"></div>
                 <?php endif; ?>
 
                 <form id="artist-register-form" class="space-y-5">
                     <input type="hidden" id="artist_slug" name="artist_slug" value="<?= htmlspecialchars($claimSlug, ENT_QUOTES, 'UTF-8') ?>">
+                    <!-- Filled by the picker below when no slug was supplied. -->
+                    <input type="hidden" id="artist_id" name="artist_id" value="">
+
+                    <?php if (!$hasClaim): ?>
+                    <!-- ARTIST PICKER (only when no slug is pre-filled) -->
+                    <div>
+                        <label for="artist_search" class="block mb-2 text-sm font-medium text-secondary">
+                            Pe ce artist îl reprezinți?
+                        </label>
+                        <div class="relative">
+                            <input type="text" id="artist_search" autocomplete="off"
+                                placeholder="Caută artistul..."
+                                class="w-full input">
+                            <input type="hidden" id="artist_picker_value" value="">
+
+                            <!-- Selected artist preview (shown after a pick).
+                                 JS toggles `hidden` and adds `flex` when populating. -->
+                            <div id="artist_selected" class="items-center hidden gap-3 p-3 mt-2 border rounded-lg border-primary/30 bg-primary/5">
+                                <img id="artist_selected_logo" src="" class="object-cover w-10 h-10 rounded-full bg-gray-200" alt="">
+                                <div class="flex-1 min-w-0">
+                                    <p id="artist_selected_name" class="text-sm font-semibold truncate text-secondary"></p>
+                                    <p id="artist_selected_slug" class="text-xs truncate text-muted"></p>
+                                </div>
+                                <button type="button" id="artist_clear_btn" class="px-2 text-sm text-muted hover:text-red-600" aria-label="Șterge selecția">×</button>
+                            </div>
+
+                            <!-- Search results dropdown -->
+                            <div id="artist_results" class="hidden absolute left-0 right-0 z-20 mt-1 overflow-hidden bg-white border rounded-lg shadow-lg border-border max-h-72 overflow-y-auto"></div>
+                        </div>
+                        <p class="mt-1 text-xs text-muted">
+                            Nu găsești artistul? <a href="mailto:contact@ambilet.ro" class="underline">Contactează-ne</a>.
+                        </p>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -92,24 +132,16 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
                         <input type="password" id="password_confirmation" name="password_confirmation" required class="w-full input" placeholder="Repetă parola">
                     </div>
 
+                    <?php if ($hasClaim): ?>
+                    <!-- Justification — required ONLY in the claim flow. -->
                     <div>
                         <label for="claim_message" class="block mb-2 text-sm font-medium text-secondary">
-                            <?= $claimSlug ? 'De ce ești tu titularul profilului?' : 'Mesaj (opțional)' ?>
+                            De ce ești tu titularul profilului?
                         </label>
-                        <textarea id="claim_message" name="claim_message" rows="4" class="w-full input"
-                            placeholder="<?= $claimSlug
-                                ? 'Ex: Sunt managerul oficial al artistului, contractul de booking este înregistrat la...'
-                                : 'Spune-ne câteva cuvinte despre tine sau echipa ta' ?>"></textarea>
+                        <textarea id="claim_message" name="claim_message" rows="4" required class="w-full input"
+                            placeholder="Ex: Sunt managerul oficial al artistului, contractul de booking este înregistrat la..."></textarea>
                     </div>
-
-                    <div>
-                        <label class="block mb-2 text-sm font-medium text-secondary">Linkuri de dovadă (opțional, max 5)</label>
-                        <div id="proof-links" class="space-y-2">
-                            <input type="url" name="claim_proof[]" class="w-full input" placeholder="https://instagram.com/contul-tau-oficial">
-                        </div>
-                        <button type="button" id="add-proof-link" class="mt-2 text-sm font-medium text-primary hover:underline">+ Adaugă încă un link</button>
-                        <p class="mt-2 text-xs text-muted">Profil oficial pe rețele sociale, site, contracte de booking, etc.</p>
-                    </div>
+                    <?php endif; ?>
 
                     <div class="flex items-start">
                         <input type="checkbox" id="terms" name="terms" required class="w-4 h-4 mt-1 rounded text-primary border-border focus:ring-primary">
@@ -136,6 +168,8 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
     </div>
 
 <?php
+// Pass claim flag so JS knows which flow to wire.
+echo '<script>window.ARTIST_CLAIM_SLUG = ' . json_encode($claimSlug) . ';</script>';
 $scriptsExtra = '<script defer src="' . asset('assets/js/pages/artist-register.js') . '"></script>';
 require_once dirname(__DIR__) . '/includes/scripts.php';
 ?>
