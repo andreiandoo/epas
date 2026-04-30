@@ -187,22 +187,51 @@ class MarketplaceTrackingController extends Controller
 
     /**
      * Dispatch a CAPI event to the organizer's connection if configured.
+     *
+     * Verbose Log::info temporarily added at every exit branch so the
+     * laravel log shows exactly why an event was/wasn't dispatched. Once
+     * the funnel is confirmed end-to-end on production we can downgrade
+     * these to debug or remove.
      */
     protected function dispatchToFacebookCapi(CoreCustomerEvent $event, Request $request): void
     {
         $marketplaceEventId = $event->marketplace_event_id ?? $request->input('marketplace_event_id');
         if (!$marketplaceEventId) {
+            \Log::info('FB CAPI bridge: skip — no marketplace_event_id', [
+                'event_type' => $event->event_type,
+                'core_event_id' => $event->id,
+            ]);
             return;
         }
 
-        $marketplaceEvent = MarketplaceEvent::find($marketplaceEventId);
-        $organizerId = $marketplaceEvent?->marketplace_organizer_id;
+        // Resolve organizer from BOTH possible tables. The Ambilet API
+        // returns rows from the `events` table (Event model); some flows
+        // populate `marketplace_events` as well. Look in both, in order
+        // of likelihood.
+        $organizerId = \DB::table('events')
+            ->where('id', $marketplaceEventId)
+            ->value('marketplace_organizer_id');
+
         if (!$organizerId) {
+            $organizerId = \DB::table('marketplace_events')
+                ->where('id', $marketplaceEventId)
+                ->value('marketplace_organizer_id');
+        }
+
+        if (!$organizerId) {
+            \Log::info('FB CAPI bridge: skip — no organizer for event_id', [
+                'marketplace_event_id' => $marketplaceEventId,
+                'event_type' => $event->event_type,
+            ]);
             return;
         }
 
         $capiEventName = $this->mapToCapiEventName((string) $event->event_type);
         if (!$capiEventName) {
+            \Log::info('FB CAPI bridge: skip — unmapped event_type', [
+                'event_type' => $event->event_type,
+                'organizer_id' => $organizerId,
+            ]);
             return;
         }
 
@@ -213,6 +242,13 @@ class MarketplaceTrackingController extends Controller
         $finalEventId = $clientEventId
             ? (string) $clientEventId
             : 'srv_' . $event->id;
+
+        \Log::info('FB CAPI bridge: dispatching', [
+            'organizer_id' => $organizerId,
+            'capi_event_name' => $capiEventName,
+            'event_id' => $finalEventId,
+            'core_event_id' => $event->id,
+        ]);
 
         \App\Jobs\SendFacebookCapiEventJob::dispatch(
             (int) $organizerId,
