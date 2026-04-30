@@ -73,7 +73,7 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
                     <!-- ARTIST PICKER (only when no slug is pre-filled) -->
                     <div>
                         <label for="artist_search" class="block mb-2 text-sm font-medium text-secondary">
-                            Pe ce artist îl reprezinți?
+                            Ce artist reprezinți?
                         </label>
                         <div class="relative">
                             <input type="text" id="artist_search" autocomplete="off"
@@ -84,7 +84,7 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
                             <!-- Selected artist preview (shown after a pick).
                                  JS toggles `hidden` and adds `flex` when populating. -->
                             <div id="artist_selected" class="items-center hidden gap-3 p-3 mt-2 border rounded-lg border-primary/30 bg-primary/5">
-                                <img id="artist_selected_logo" src="" class="object-cover w-10 h-10 rounded-full bg-gray-200" alt="">
+                                <img id="artist_selected_logo" src="" class="object-cover w-10 h-10 bg-gray-200 rounded-full" alt="">
                                 <div class="flex-1 min-w-0">
                                     <p id="artist_selected_name" class="text-sm font-semibold truncate text-secondary"></p>
                                     <p id="artist_selected_slug" class="text-xs truncate text-muted"></p>
@@ -93,7 +93,7 @@ require_once dirname(__DIR__) . '/includes/auth-branding.php';
                             </div>
 
                             <!-- Search results dropdown -->
-                            <div id="artist_results" class="hidden absolute left-0 right-0 z-20 mt-1 overflow-hidden bg-white border rounded-lg shadow-lg border-border max-h-72 overflow-y-auto"></div>
+                            <div id="artist_results" class="absolute left-0 right-0 z-20 hidden mt-1 overflow-hidden overflow-y-auto bg-white border rounded-lg shadow-lg border-border max-h-72"></div>
                         </div>
                         <p class="mt-1 text-xs text-muted">
                             Nu găsești artistul? <a href="mailto:contact@ambilet.ro" class="underline">Contactează-ne</a>.

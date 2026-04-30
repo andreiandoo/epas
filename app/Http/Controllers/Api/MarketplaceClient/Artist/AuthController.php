@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Artist;
 use App\Models\MarketplaceArtistAccount;
 use App\Models\MarketplaceClient;
+use App\Support\SearchHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -421,10 +422,16 @@ class AuthController extends BaseController
                 $q->where('marketplace_artist_partners.marketplace_client_id', $client->id);
             })
             ->when($query !== '', function ($q) use ($query) {
-                $needle = '%' . mb_strtolower($query) . '%';
-                $q->where(function ($qq) use ($needle) {
-                    $qq->whereRaw('LOWER(name) LIKE ?', [$needle])
-                       ->orWhereRaw('LOWER(slug) LIKE ?', [$needle]);
+                // Case- AND diacritic-insensitive across name and slug.
+                // SearchHelper folds Romanian diacritics on both sides
+                // ("Iași" / "iasi" / "IAȘI" all match the same row).
+                $q->where(function ($qq) use ($query) {
+                    $qq->where(function ($name) use ($query) {
+                            SearchHelper::search($name, 'name', $query);
+                        })
+                        ->orWhere(function ($slug) use ($query) {
+                            SearchHelper::search($slug, 'slug', $query);
+                        });
                 });
             })
             ->orderBy('name')

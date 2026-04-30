@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\ArtistAccountResource\Pages;
 use App\Models\Artist;
 use App\Models\MarketplaceArtistAccount;
 use App\Services\ArtistAccount\ArtistAccountApprovalService;
+use App\Support\SearchHelper;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
@@ -414,13 +415,26 @@ class ArtistAccountResource extends Resource
                     Forms\Components\Select::make('artist_id')
                         ->label('Profil de artist')
                         ->searchable()
+                        ->options(fn () => Artist::query()
+                            ->orderBy('name')
+                            ->limit(50)
+                            ->pluck('name', 'id')
+                            ->toArray())
                         ->getSearchResultsUsing(fn (string $search) => Artist::query()
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('slug', 'like', "%{$search}%")
+                            ->where(function ($q) use ($search) {
+                                $q->where(function ($qq) use ($search) {
+                                        SearchHelper::search($qq, 'name', $search);
+                                    })
+                                    ->orWhere(function ($qq) use ($search) {
+                                        SearchHelper::search($qq, 'slug', $search);
+                                    });
+                            })
+                            ->orderBy('name')
                             ->limit(20)
                             ->pluck('name', 'id')
                             ->toArray())
                         ->getOptionLabelUsing(fn ($value) => Artist::find($value)?->name)
+                        ->helperText('Caută cu sau fără diacritice (ă/â/î/ș/ț).')
                         ->required(),
                 ])
                 ->action(function (MarketplaceArtistAccount $record, array $data) {

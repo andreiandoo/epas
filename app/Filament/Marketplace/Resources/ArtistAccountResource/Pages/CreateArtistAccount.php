@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\ArtistAccountResource;
 use App\Models\Artist;
 use App\Models\MarketplaceArtistAccount;
+use App\Support\SearchHelper;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -74,21 +75,37 @@ class CreateArtistAccount extends CreateRecord
                         ->label('Artist')
                         ->required()
                         ->searchable()
-                        ->preload()
-                        ->getSearchResultsUsing(fn (string $search) => Artist::query()
-                            ->whereHas('marketplaceClients', function ($q) {
-                                $q->where('marketplace_artist_partners.marketplace_client_id', static::getMarketplaceClient()?->id);
-                            })
-                            ->where(function ($q) use ($search) {
-                                $needle = '%' . mb_strtolower($search) . '%';
-                                $q->whereRaw('LOWER(name) LIKE ?', [$needle])
-                                  ->orWhereRaw('LOWER(slug) LIKE ?', [$needle]);
-                            })
+                        // Initial list (shown before the user types). We
+                        // need both `options()` AND `getSearchResultsUsing()`:
+                        // without options() the dropdown is empty until the
+                        // user starts typing — that's what was confusing
+                        // during testing.
+                        ->options(fn () => static::partnerArtistsQuery()
+                            ->orderBy('name')
                             ->limit(50)
                             ->pluck('name', 'id')
                             ->toArray())
+                        // Typed search: case- AND diacritic-insensitive on
+                        // both name and slug. SearchHelper folds Romanian
+                        // diacritics (ă/â/î/ș/ț → ASCII) on both sides, so
+                        // "Iasi", "IAȘI", "iași" all match the same row.
+                        ->getSearchResultsUsing(function (string $search) {
+                            return static::partnerArtistsQuery()
+                                ->where(function ($q) use ($search) {
+                                    $q->where(function ($qq) use ($search) {
+                                            SearchHelper::search($qq, 'name', $search);
+                                        })
+                                        ->orWhere(function ($qq) use ($search) {
+                                            SearchHelper::search($qq, 'slug', $search);
+                                        });
+                                })
+                                ->orderBy('name')
+                                ->limit(50)
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
                         ->getOptionLabelUsing(fn ($value) => Artist::find($value)?->name)
-                        ->helperText('Doar artiștii care sunt parteneri ai marketplace-ului tău apar aici.')
+                        ->helperText('Doar artiștii care sunt parteneri ai marketplace-ului tău apar aici. Caută cu sau fără diacritice.')
                         ->rules([
                             // Reject if the artist already has an active or
                             // pending claim on this marketplace.
@@ -173,5 +190,30 @@ class CreateArtistAccount extends CreateRecord
             ->body('Contul de artist a fost creat și marcat ca activ.')
             ->success()
             ->send();
+    }
+
+    /**
+     * Build the base Artist query scoped to the current marketplace's
+     * partners. Centralized so options() and getSearchResultsUsing()
+     * stay in sync — drift between them would make the picker show
+     * options that the search can't find (or vice versa).
+     */
+    protected static function partnerArtistsQuery()
+    {
+        $marketplaceId = static::getMarketplaceClient()?->id;
+
+        $query = Artist::query();
+
+        // Defensive: if context resolution failed (shouldn't happen on a
+        // page guarded by AuthenticateMarketplaceOrSuperAdmin, but the
+        // closure can run during form-state hydration before the trait
+        // resolves), return an empty result rather than every artist.
+        if (!$marketplaceId) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereHas('marketplaceClients', function ($q) use ($marketplaceId) {
+            $q->where('marketplace_artist_partners.marketplace_client_id', $marketplaceId);
+        });
     }
 }
