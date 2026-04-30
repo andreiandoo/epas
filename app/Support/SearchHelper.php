@@ -66,6 +66,15 @@ class SearchHelper
     /**
      * Search on a JSON translatable column (e.g. venues.name, events.title)
      * across multiple locales. Case- + accent-insensitive on both drivers.
+     *
+     * On Postgres we deliberately avoid `column->>'locale'` because some
+     * translatable columns ended up created as plain text rather than
+     * jsonb on production (the model still stores JSON, but the column
+     * type is text), and `text->>'…'` is a hard error. A fold-and-LIKE
+     * on the cast-to-text representation matches both jsonb and text
+     * storage: searching for "iasi" finds the substring inside the
+     * serialized {"en":"Iași",…} blob just as well as inside a real
+     * jsonb extracted value.
      */
     public static function searchTranslatable(Builder $query, string $column, string $search, array $locales = ['en', 'ro']): Builder
     {
@@ -75,23 +84,26 @@ class SearchHelper
         $normalized = self::normalize($search);
         $isPgsql = DB::getDriverName() === 'pgsql';
 
-        return $query->where(function ($q) use ($column, $normalized, $locales, $isPgsql) {
+        if ($isPgsql) {
+            return $query->whereRaw(
+                self::foldExpr("{$column}::text") . ' LIKE ?',
+                ['%' . $normalized . '%']
+            );
+        }
+
+        // MySQL/MariaDB: JSON_EXTRACT works regardless of underlying column
+        // type when the value is JSON, and the raw blob fold catches the
+        // edge case where it isn't.
+        return $query->where(function ($q) use ($column, $normalized, $locales) {
             foreach ($locales as $locale) {
-                // Postgres: ->>'locale' returns the JSON value as text.
-                // MySQL/MariaDB: JSON_UNQUOTE(JSON_EXTRACT(...)) does the same.
-                $expr = $isPgsql
-                    ? "{$column}->>'{$locale}'"
-                    : "JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$locale}'))";
+                $expr = "JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$locale}'))";
                 $q->orWhereRaw(
                     self::foldExpr($expr) . ' LIKE ?',
                     ['%' . $normalized . '%']
                 );
             }
-            // Safety net: also fold the raw column so values stored under a
-            // locale not in the list still match.
-            $rawExpr = $isPgsql ? "{$column}::text" : $column;
             $q->orWhereRaw(
-                self::foldExpr($rawExpr) . ' LIKE ?',
+                self::foldExpr($column) . ' LIKE ?',
                 ['%' . $normalized . '%']
             );
         });
