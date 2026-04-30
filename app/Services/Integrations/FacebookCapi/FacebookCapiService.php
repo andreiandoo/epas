@@ -580,6 +580,8 @@ class FacebookCapiService
     {
         $url = "{$this->baseUrl}/{$this->apiVersion}/{$pixelId}/events";
 
+        $effectiveTestCode = $testEventCode ?: 'TEST_TIXELLO_VERIFY';
+
         $testEvent = [
             'event_name' => 'PageView',
             'event_time' => time(),
@@ -595,7 +597,7 @@ class FacebookCapiService
         $payload = [
             'data' => [$testEvent],
             'access_token' => $accessToken,
-            'test_event_code' => $testEventCode ?: 'TEST_TIXELLO_VERIFY',
+            'test_event_code' => $effectiveTestCode,
         ];
 
         try {
@@ -604,25 +606,55 @@ class FacebookCapiService
             if ($response->successful()) {
                 $data = $response->json() ?? [];
                 $eventsReceived = (int) ($data['events_received'] ?? 0);
+                $fbtraceId = $data['fbtrace_id'] ?? null;
+                $messages = $data['messages'] ?? [];
+
+                $base = $eventsReceived > 0
+                    ? "Connection OK. Events received by Meta: {$eventsReceived}"
+                    : ($messages[0] ?? 'No events received by Meta');
+
+                $details = ["Test code used: {$effectiveTestCode}"];
+                if ($fbtraceId) {
+                    $details[] = "fbtrace_id: {$fbtraceId}";
+                }
+                if (!empty($messages) && $eventsReceived > 0) {
+                    $details[] = 'Notes: ' . implode(' | ', array_slice($messages, 0, 3));
+                }
+                $details[] = 'Verifică în Events Manager → Pixel → Test Events (tab) că apare PageView cu acest test code.';
+
                 return [
                     'success' => $eventsReceived > 0,
-                    'message' => $eventsReceived > 0
-                        ? "Connection OK. Events received by Meta: {$eventsReceived}"
-                        : ($data['messages'][0] ?? 'No events received by Meta'),
+                    'message' => $base . "\n" . implode("\n", $details),
                     'response' => $data,
                 ];
             }
 
             $error = $response->json('error') ?? [];
+            $message = $error['message'] ?? "HTTP {$response->status()}";
+            $type = $error['type'] ?? null;
+            $code = $error['code'] ?? null;
+            $fbtraceId = $error['fbtrace_id'] ?? $response->json('fbtrace_id');
+
+            $details = [];
+            if ($type) {
+                $details[] = "Type: {$type}";
+            }
+            if ($code) {
+                $details[] = "Code: {$code}";
+            }
+            if ($fbtraceId) {
+                $details[] = "fbtrace_id: {$fbtraceId}";
+            }
+
             return [
                 'success' => false,
-                'message' => $error['message'] ?? "HTTP {$response->status()}",
+                'message' => $message . (empty($details) ? '' : "\n" . implode(' | ', $details)),
                 'response' => $error,
             ];
         } catch (\Throwable $e) {
             return [
                 'success' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Eroare rețea: ' . $e->getMessage(),
                 'response' => [],
             ];
         }
