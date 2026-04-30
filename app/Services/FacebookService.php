@@ -27,7 +27,36 @@ class FacebookService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->accessToken);
+        return !empty($this->accessToken) && !Cache::has('facebook_token_expired');
+    }
+
+    /**
+     * Inspect a Facebook error response and short-circuit the service for 24h
+     * when the access token has expired. Otherwise the cron sweeps re-hit the
+     * API once per artist and flood the logs with thousands of identical
+     * 'Facebook API error' entries.
+     */
+    protected function shortCircuitOnExpiredToken(int $status, string $body): bool
+    {
+        if ($status !== 400) {
+            return false;
+        }
+
+        $payload = json_decode($body, true);
+        $code = $payload['error']['code'] ?? null;
+        $type = $payload['error']['type'] ?? null;
+
+        if ($code === 190 || $type === 'OAuthException') {
+            if (!Cache::has('facebook_token_expired')) {
+                Log::warning('Facebook access token expired — disabling Facebook lookups for 24h. Refresh the token in Admin → Settings.', [
+                    'fb_error' => $payload['error'] ?? null,
+                ]);
+            }
+            Cache::put('facebook_token_expired', true, now()->addHours(24));
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -49,11 +78,13 @@ class FacebookService
                 ]);
 
                 if (!$response->successful()) {
-                    Log::warning('Facebook API error', [
-                        'page' => $pageIdOrUsername,
-                        'status' => $response->status(),
-                        'body' => $response->body(),
-                    ]);
+                    if (!$this->shortCircuitOnExpiredToken($response->status(), $response->body())) {
+                        Log::warning('Facebook API error', [
+                            'page' => $pageIdOrUsername,
+                            'status' => $response->status(),
+                            'body' => $response->body(),
+                        ]);
+                    }
                     return null;
                 }
 
