@@ -369,6 +369,73 @@ class VenueResource extends Resource
                                             ->visible(fn ($state) => filled($state))
                                     )
                                     ->columnSpanFull(),
+                                \Filament\Schemas\Components\Actions::make([
+                                    Action::make('geocode')
+                                        ->label('Auto-detect coordinates')
+                                        ->icon('heroicon-o-map-pin')
+                                        ->color('info')
+                                        ->action(function (SGet $get, SSet $set) {
+                                            $address = $get('address');
+                                            $city = $get('city');
+                                            $country = $get('country');
+
+                                            if (empty($city)) {
+                                                Notification::make()
+                                                    ->title('City is required for geocoding')
+                                                    ->warning()
+                                                    ->send();
+                                                return;
+                                            }
+
+                                            $fullAddress = collect([$address, $city, $country])
+                                                ->filter()
+                                                ->implode(', ');
+
+                                            $apiKey = \App\Models\Setting::first()?->google_maps_api_key;
+
+                                            if (empty($apiKey)) {
+                                                Notification::make()
+                                                    ->title('Google Maps API key not configured')
+                                                    ->body('Please add your API key in Settings > Connections')
+                                                    ->danger()
+                                                    ->send();
+                                                return;
+                                            }
+
+                                            try {
+                                                $response = \Illuminate\Support\Facades\Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                                                    'address' => $fullAddress,
+                                                    'key' => $apiKey,
+                                                ]);
+
+                                                $data = $response->json();
+
+                                                if (($data['status'] ?? null) === 'OK' && !empty($data['results'])) {
+                                                    $location = $data['results'][0]['geometry']['location'];
+                                                    $set('lat', $location['lat']);
+                                                    $set('lng', $location['lng']);
+
+                                                    Notification::make()
+                                                        ->title('Coordinates detected')
+                                                        ->body("Lat: {$location['lat']}, Lng: {$location['lng']}")
+                                                        ->success()
+                                                        ->send();
+                                                } else {
+                                                    Notification::make()
+                                                        ->title('Could not find coordinates')
+                                                        ->body('Try adding more address details')
+                                                        ->warning()
+                                                        ->send();
+                                                }
+                                            } catch (\Exception $e) {
+                                                Notification::make()
+                                                    ->title('Geocoding failed')
+                                                    ->body($e->getMessage())
+                                                    ->danger()
+                                                    ->send();
+                                            }
+                                        }),
+                                ])->columnSpanFull(),
                             ])->columns(2),
                         SC\Section::make('Capacity')
                             ->icon('heroicon-o-users')
