@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\ArtistAccountResource\Pages;
 
 use App\Filament\Marketplace\Resources\ArtistAccountResource;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
@@ -29,6 +30,10 @@ class ListArtistAccounts extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Actions\CreateAction::make()
+                ->label('Cont nou')
+                ->icon('heroicon-m-plus'),
+        ];
     }
 }

@@ -25,6 +25,10 @@ class AuthController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        // The applicant MUST identify which artist they represent — either via
+        // slug (the "Revendică profilul" CTA on /artist/{slug}) or via id from
+        // the on-form picker. claim_proof was removed entirely (Etapa 4
+        // feedback): copy-pasting social links isn't real validation.
         $validated = $request->validate([
             'email' => 'required|email|max:255',
             'password' => ['required', 'confirmed', PasswordRules::min(8)],
@@ -32,10 +36,9 @@ class AuthController extends BaseController
             'last_name' => 'required|string|max:100',
             'phone' => 'nullable|string|max:50',
             'locale' => 'nullable|string|max:5',
-            'artist_slug' => 'nullable|string|max:190',
+            'artist_slug' => 'nullable|string|max:190|required_without:artist_id',
+            'artist_id' => 'nullable|integer|required_without:artist_slug',
             'claim_message' => 'nullable|string|max:2000',
-            'claim_proof' => 'nullable|array|max:5',
-            'claim_proof.*' => 'string|max:500',
         ]);
 
         $email = mb_strtolower(trim($validated['email']));
@@ -47,31 +50,31 @@ class AuthController extends BaseController
             return $this->error('Există deja un cont de artist cu această adresă de email.', 422);
         }
 
-        // Resolve and lock claimed artist (if slug supplied)
-        $artistId = null;
-        if (!empty($validated['artist_slug'])) {
+        // Resolve the claimed artist by either slug or id.
+        $artist = null;
+        if (!empty($validated['artist_id'])) {
+            $artist = Artist::find($validated['artist_id']);
+        } elseif (!empty($validated['artist_slug'])) {
             $artist = Artist::where('slug', $validated['artist_slug'])->first();
+        }
 
-            if (!$artist) {
-                return $this->error('Profilul de artist solicitat nu a fost găsit.', 404);
-            }
+        if (!$artist) {
+            return $this->error('Profilul de artist solicitat nu a fost găsit.', 404);
+        }
 
-            // Block claiming a profile that is already pending or active for this marketplace.
-            $alreadyClaimed = MarketplaceArtistAccount::where('marketplace_client_id', $client->id)
-                ->where('artist_id', $artist->id)
-                ->whereIn('status', ['pending', 'active'])
-                ->exists();
+        // Block claiming a profile that is already pending or active for this marketplace.
+        $alreadyClaimed = MarketplaceArtistAccount::where('marketplace_client_id', $client->id)
+            ->where('artist_id', $artist->id)
+            ->whereIn('status', ['pending', 'active'])
+            ->exists();
 
-            if ($alreadyClaimed) {
-                return $this->error('Acest profil de artist a fost deja revendicat.', 422);
-            }
-
-            $artistId = $artist->id;
+        if ($alreadyClaimed) {
+            return $this->error('Acest profil de artist a fost deja revendicat.', 422);
         }
 
         $account = MarketplaceArtistAccount::create([
             'marketplace_client_id' => $client->id,
-            'artist_id' => $artistId,
+            'artist_id' => $artist->id,
             'email' => $email,
             'password' => Hash::make($validated['password']),
             'first_name' => $validated['first_name'],
@@ -80,7 +83,7 @@ class AuthController extends BaseController
             'locale' => $validated['locale'] ?? 'ro',
             'status' => 'pending',
             'claim_message' => $validated['claim_message'] ?? null,
-            'claim_proof' => $validated['claim_proof'] ?? null,
+            'claim_proof' => null,
             'claim_submitted_at' => now(),
         ]);
 
@@ -397,6 +400,55 @@ class AuthController extends BaseController
         }
 
         return $this->success(null, 'Email de verificare trimis.');
+    }
+
+    /**
+     * Lightweight artist search for the register-page picker. Returns up to
+     * 20 matches scoped to artists that are partners of the calling
+     * marketplace_client (so applicants can only claim profiles that
+     * actually exist on this marketplace). Public — no user auth required.
+     */
+    public function searchArtists(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = trim((string) $request->query('q', ''));
+
+        // Empty queries return featured/popular artists so the picker has
+        // something to show before the user types.
+        $artists = Artist::query()
+            ->whereHas('marketplaceClients', function ($q) use ($client) {
+                $q->where('marketplace_artist_partners.marketplace_client_id', $client->id);
+            })
+            ->when($query !== '', function ($q) use ($query) {
+                $needle = '%' . mb_strtolower($query) . '%';
+                $q->where(function ($qq) use ($needle) {
+                    $qq->whereRaw('LOWER(name) LIKE ?', [$needle])
+                       ->orWhereRaw('LOWER(slug) LIKE ?', [$needle]);
+                });
+            })
+            ->orderBy('name')
+            ->limit(20)
+            ->get(['id', 'name', 'slug', 'logo_url', 'main_image_url']);
+
+        // Mark artists that already have an active or pending claim so the
+        // picker can grey them out — applicants can't double-claim.
+        $claimedArtistIds = MarketplaceArtistAccount::where('marketplace_client_id', $client->id)
+            ->whereIn('status', ['pending', 'active'])
+            ->whereIn('artist_id', $artists->pluck('id'))
+            ->pluck('artist_id')
+            ->all();
+
+        return $this->success([
+            'artists' => $artists->map(fn ($a) => [
+                'id' => $a->id,
+                'name' => $a->name,
+                'slug' => $a->slug,
+                'logo_url' => $a->logo_url,
+                'main_image_url' => $a->main_image_url,
+                'is_claimed' => in_array($a->id, $claimedArtistIds, true),
+            ])->values()->toArray(),
+        ]);
     }
 
     /**

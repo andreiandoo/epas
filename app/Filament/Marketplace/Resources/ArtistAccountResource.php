@@ -509,6 +509,7 @@ class ArtistAccountResource extends Resource
     {
         return [
             'index' => Pages\ListArtistAccounts::route('/'),
+            'create' => Pages\CreateArtistAccount::route('/create'),
             'view' => Pages\ViewArtistAccount::route('/{record}'),
         ];
     }

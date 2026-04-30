@@ -1861,6 +1861,15 @@ switch ($action) {
         $endpoint = '/artist/check-claim/' . urlencode($artistSlug);
         break;
 
+    case 'artist.search':
+        // Public picker for the register page — narrows to artists that are
+        // partners of THIS marketplace and flags already-claimed ones.
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['q'])) $params['q'] = $_GET['q'];
+        $endpoint = '/artist/search' . (!empty($params) ? '?' . http_build_query($params) : '');
+        break;
+
     // Artist self-service (Etapa 4) — all require auth.
 
     case 'artist.dashboard':
@@ -1897,6 +1906,12 @@ switch ($action) {
         $endpoint = '/artist/profile/image';
         $requiresAuth = true;
         $isMultipart = true;
+        break;
+
+    case 'artist.profile.taxonomies':
+        $method = 'GET';
+        $endpoint = '/artist/profile/taxonomies';
+        $requiresAuth = true;
         break;
 
     case 'artist.account':

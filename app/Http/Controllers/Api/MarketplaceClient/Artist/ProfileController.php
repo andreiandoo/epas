@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Artist;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Artist;
+use App\Models\ArtistGenre;
+use App\Models\ArtistType;
 use App\Models\MarketplaceArtistAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -198,6 +201,35 @@ class ProfileController extends BaseController
         return $this->success([
             'artist' => $this->formatArtist($artist),
         ], 'Profil actualizat.');
+    }
+
+    /**
+     * GET /artist/profile/taxonomies — flat list of artist types + genres
+     * for the editor's multi-select inputs. Cached for 1 hour because
+     * these change very rarely.
+     */
+    public function taxonomies(Request $request): JsonResponse
+    {
+        $account = $request->user();
+
+        if (!$account instanceof MarketplaceArtistAccount) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $data = Cache::remember('artist_account.taxonomies.v1', now()->addHour(), function () {
+            return [
+                'artist_types' => ArtistType::query()
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'slug'])
+                    ->toArray(),
+                'artist_genres' => ArtistGenre::query()
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'slug'])
+                    ->toArray(),
+            ];
+        });
+
+        return $this->success($data);
     }
 
     /**

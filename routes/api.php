@@ -2501,6 +2501,8 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
         ->name('api.marketplace-client.artist.resend-verification');
     Route::get('/check-claim/{artistSlug}', [ArtistAccountAuthController::class, 'checkClaim'])
         ->name('api.marketplace-client.artist.check-claim');
+    Route::get('/search', [ArtistAccountAuthController::class, 'searchArtists'])
+        ->name('api.marketplace-client.artist.search');
 
     // Protected — Sanctum bearer token resolved to MarketplaceArtistAccount
     Route::middleware('auth:sanctum')->group(function () {
@@ -2523,6 +2525,8 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             ->name('api.marketplace-client.artist.profile.update');
         Route::post('/profile/image', [ArtistProfileController::class, 'uploadImage'])
             ->name('api.marketplace-client.artist.profile.image');
+        Route::get('/profile/taxonomies', [ArtistProfileController::class, 'taxonomies'])
+            ->name('api.marketplace-client.artist.profile.taxonomies');
 
         // Account self-service (settings page)
         Route::get('/account', [ArtistAccountController::class, 'show'])

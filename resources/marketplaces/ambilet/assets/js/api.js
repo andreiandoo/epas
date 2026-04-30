@@ -343,6 +343,7 @@ const AmbiletAPI = {
         if (endpoint === '/artist/verify-email') return 'artist.verify-email';
         if (endpoint === '/artist/resend-verification') return 'artist.resend-verification';
         if (endpoint.match(/^\/artist\/check-claim\/[a-z0-9-]+$/)) return 'artist.check-claim';
+        if (endpoint === '/artist/search' || endpoint.startsWith('/artist/search?')) return 'artist.search';
         // Artist self-service (Etapa 4) — proxy.php branches GET/PUT/DELETE
         // on REQUEST_METHOD so a single action string covers all verbs on
         // the same resource.
@@ -350,6 +351,7 @@ const AmbiletAPI = {
         if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.events';
         if (endpoint === '/artist/profile') return 'artist.profile';
         if (endpoint === '/artist/profile/image') return 'artist.profile.image';
+        if (endpoint === '/artist/profile/taxonomies') return 'artist.profile.taxonomies';
         if (endpoint === '/artist/account') return 'artist.account';
         if (endpoint === '/artist/account/password') return 'artist.account.password';
 
@@ -2022,6 +2024,15 @@ const AmbiletAPI = {
             return AmbiletAPI.get(`/artist/check-claim/${artistSlug}`);
         },
 
+        /**
+         * Picker search for the register page. Returns up to 20 partner
+         * artists with `is_claimed` flagged so claimed ones can be
+         * disabled in the dropdown.
+         */
+        async searchArtists(q = '') {
+            return AmbiletAPI.get('/artist/search', q ? { q } : {});
+        },
+
         // -------- Self-service (Etapa 4) — auth required --------
 
         async getDashboard() {
@@ -2041,6 +2052,11 @@ const AmbiletAPI = {
 
         async updateProfile(data) {
             return AmbiletAPI.put('/artist/profile', data);
+        },
+
+        /** Cached server-side; returns { artist_types: [...], artist_genres: [...] } */
+        async getTaxonomies() {
+            return AmbiletAPI.get('/artist/profile/taxonomies');
         },
 
         /**

@@ -1,68 +1,203 @@
 /**
  * Artist Account — Register page handler
- * If a `?claim=<slug>` was supplied, we hit /artist/check-claim/<slug> on
- * load to show the user whether the profile is free, already pending, or
- * already verified. The form posts to /artist/register and on success
- * redirects to /artist/in-asteptare?email=... so the user knows what to
- * expect next (verify email -> wait for admin approval).
+ *
+ * Two flows, branched on `window.ARTIST_CLAIM_SLUG`:
+ *
+ *   1. Claim flow (slug pre-filled): we run check-claim on load to show
+ *      "already verified" / "review pending" banners, and require the
+ *      claim_message textarea on submit.
+ *
+ *   2. Picker flow (no slug): the user types into a search input and
+ *      picks an artist from the autocomplete dropdown. The picked
+ *      artist's id is sent as `artist_id`. Already-claimed artists are
+ *      shown as disabled in the dropdown.
+ *
+ * Either way the linked artist is REQUIRED — the form blocks submit
+ * with a clear message if neither slug nor id is present.
  */
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('artist-register-form');
     const slugInput = document.getElementById('artist_slug');
+    const idInput = document.getElementById('artist_id');
     const claimStatus = document.getElementById('claim-status');
-    const proofContainer = document.getElementById('proof-links');
-    const addProofBtn = document.getElementById('add-proof-link');
 
-    // ---- Claim status check (shows a banner if profile is taken) ----
-    const claimSlug = slugInput?.value?.trim();
-    if (claimSlug && claimStatus) {
-        AmbiletAPI.artist.checkClaim(claimSlug)
-            .then((res) => {
-                if (!res.success || !res.data) return;
+    const claimSlug = (window.ARTIST_CLAIM_SLUG || '').trim();
+    const isClaimFlow = claimSlug !== '';
 
-                if (res.data.is_verified) {
-                    claimStatus.className = 'p-3 mb-5 text-sm text-center rounded-lg bg-red-50 text-red-700 border border-red-200';
-                    claimStatus.innerHTML = '<strong>Profil deja revendicat și verificat.</strong><br>Dacă tu ești titularul, contactează echipa la <a href="mailto:contact@ambilet.ro" class="underline">contact@ambilet.ro</a>.';
-                    claimStatus.classList.remove('hidden');
-                    form.querySelectorAll('input,textarea,button[type="submit"]').forEach(el => el.disabled = true);
-                } else if (res.data.is_pending) {
-                    claimStatus.className = 'p-3 mb-5 text-sm text-center rounded-lg bg-amber-50 text-amber-700 border border-amber-200';
-                    claimStatus.innerHTML = '<strong>O cerere de revendicare este deja în review.</strong><br>Va trebui să aștepți rezultatul acelei cereri înainte de a aplica din nou.';
-                    claimStatus.classList.remove('hidden');
-                    form.querySelectorAll('input,textarea,button[type="submit"]').forEach(el => el.disabled = true);
-                }
-                // If neither verified nor pending, do nothing — the form is open.
-            })
-            .catch(() => { /* non-blocking — ignore network errors */ });
+    if (isClaimFlow) {
+        wireClaimStatusCheck(claimSlug, claimStatus, form);
+    } else {
+        wireArtistPicker(idInput);
     }
 
-    // ---- Add another proof link input (cap at 5) ----
-    if (addProofBtn) {
-        addProofBtn.addEventListener('click', () => {
-            const existing = proofContainer.querySelectorAll('input').length;
-            if (existing >= 5) {
-                AmbiletNotifications.error('Maxim 5 linkuri de dovadă');
-                return;
+    wirePhoneInput();
+    wireSubmit(form, slugInput, idInput, isClaimFlow);
+});
+
+// ============================================================================
+// Claim flow: check current status of the slug to set expectations
+// ============================================================================
+function wireClaimStatusCheck(claimSlug, claimStatusEl, form) {
+    if (!claimStatusEl) return;
+
+    AmbiletAPI.artist.checkClaim(claimSlug)
+        .then((res) => {
+            if (!res.success || !res.data) return;
+            const data = res.data;
+
+            if (data.is_verified) {
+                claimStatusEl.className = 'p-3 mb-5 text-sm text-center rounded-lg bg-red-50 text-red-700 border border-red-200';
+                claimStatusEl.innerHTML = '<strong>Profil deja revendicat și verificat.</strong><br>Dacă tu ești titularul, contactează echipa la <a href="mailto:contact@ambilet.ro" class="underline">contact@ambilet.ro</a>.';
+                claimStatusEl.classList.remove('hidden');
+                disableForm(form);
+            } else if (data.is_pending) {
+                claimStatusEl.className = 'p-3 mb-5 text-sm text-center rounded-lg bg-amber-50 text-amber-700 border border-amber-200';
+                claimStatusEl.innerHTML = '<strong>O cerere de revendicare este deja în review.</strong><br>Va trebui să aștepți rezultatul acelei cereri înainte de a aplica din nou.';
+                claimStatusEl.classList.remove('hidden');
+                disableForm(form);
             }
-            const wrap = document.createElement('div');
-            wrap.className = 'flex gap-2';
-            wrap.innerHTML = '<input type="url" name="claim_proof[]" class="flex-1 input" placeholder="https://...">'
-                + '<button type="button" class="px-3 text-sm rounded-lg text-muted hover:text-red-600" aria-label="Șterge">×</button>';
-            wrap.querySelector('button').addEventListener('click', () => wrap.remove());
-            proofContainer.appendChild(wrap);
-        });
-    }
+        })
+        .catch(() => { /* non-blocking — let the user submit anyway */ });
+}
 
-    // ---- Phone field: digits + plus + spaces only ----
+function disableForm(form) {
+    form.querySelectorAll('input,textarea,button[type="submit"]').forEach(el => el.disabled = true);
+}
+
+// ============================================================================
+// Picker flow: searchable autocomplete dropdown
+// ============================================================================
+function wireArtistPicker(hiddenIdInput) {
+    const search = document.getElementById('artist_search');
+    const results = document.getElementById('artist_results');
+    const selected = document.getElementById('artist_selected');
+    const selectedLogo = document.getElementById('artist_selected_logo');
+    const selectedName = document.getElementById('artist_selected_name');
+    const selectedSlug = document.getElementById('artist_selected_slug');
+    const clearBtn = document.getElementById('artist_clear_btn');
+
+    if (!search || !results) return;
+
+    let debounceTimer = null;
+
+    const showResults = (artists) => {
+        if (!artists || artists.length === 0) {
+            results.innerHTML = '<div class="px-4 py-3 text-sm text-muted">Nicio potrivire.</div>';
+            results.classList.remove('hidden');
+            return;
+        }
+
+        results.innerHTML = artists.map(a => {
+            const logoUrl = resolveStorageUrl(a.logo_url || a.main_image_url);
+            const claimedBadge = a.is_claimed
+                ? '<span class="ml-auto px-2 py-0.5 text-xs text-amber-700 rounded-full bg-amber-100">deja revendicat</span>'
+                : '';
+            return ''
+                + '<button type="button" data-artist-id="' + a.id + '"'
+                + ' data-artist-name="' + escapeAttr(a.name) + '"'
+                + ' data-artist-slug="' + escapeAttr(a.slug) + '"'
+                + ' data-artist-logo="' + escapeAttr(logoUrl || '') + '"'
+                + ' data-claimed="' + (a.is_claimed ? '1' : '0') + '"'
+                + ' class="flex items-center w-full gap-3 px-3 py-2 text-left transition-colors hover:bg-surface' + (a.is_claimed ? ' opacity-50 cursor-not-allowed' : '') + '">'
+                + (logoUrl
+                    ? '<img src="' + escapeAttr(logoUrl) + '" class="object-cover w-8 h-8 rounded-full bg-gray-200" alt="">'
+                    : '<div class="flex items-center justify-center w-8 h-8 text-xs font-semibold text-white rounded-full bg-primary">' + escapeHtml((a.name || '?').charAt(0).toUpperCase()) + '</div>')
+                + '<div class="min-w-0">'
+                + '<p class="text-sm font-medium truncate text-secondary">' + escapeHtml(a.name) + '</p>'
+                + '<p class="text-xs truncate text-muted">/' + escapeHtml(a.slug) + '</p>'
+                + '</div>'
+                + claimedBadge
+                + '</button>';
+        }).join('');
+
+        // Wire each result button
+        results.querySelectorAll('button[data-artist-id]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.claimed === '1') {
+                    AmbiletNotifications.error('Acest profil este deja revendicat.');
+                    return;
+                }
+                const id = btn.dataset.artistId;
+                const name = btn.dataset.artistName;
+                const slug = btn.dataset.artistSlug;
+                const logo = btn.dataset.artistLogo;
+
+                hiddenIdInput.value = id;
+                search.value = '';
+                results.classList.add('hidden');
+                results.innerHTML = '';
+
+                selected.classList.remove('hidden');
+                selected.classList.add('flex');
+                selectedName.textContent = name;
+                selectedSlug.textContent = '/' + slug;
+                if (logo) {
+                    selectedLogo.src = logo;
+                    selectedLogo.classList.remove('hidden');
+                } else {
+                    selectedLogo.classList.add('hidden');
+                }
+            });
+        });
+
+        results.classList.remove('hidden');
+    };
+
+    const runSearch = (query) => {
+        AmbiletAPI.artist.searchArtists(query)
+            .then((res) => {
+                if (!res.success) return;
+                showResults(res.data?.artists || []);
+            })
+            .catch(() => {
+                results.innerHTML = '<div class="px-4 py-3 text-sm text-red-600">Eroare la căutare.</div>';
+                results.classList.remove('hidden');
+            });
+    };
+
+    search.addEventListener('input', () => {
+        const query = search.value.trim();
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => runSearch(query), 250);
+    });
+
+    search.addEventListener('focus', () => {
+        // Show featured/all on focus when empty.
+        if (search.value.trim() === '') runSearch('');
+    });
+
+    // Close dropdown when clicking outside.
+    document.addEventListener('click', (e) => {
+        if (!results.contains(e.target) && e.target !== search) {
+            results.classList.add('hidden');
+        }
+    });
+
+    clearBtn?.addEventListener('click', () => {
+        hiddenIdInput.value = '';
+        selected.classList.add('hidden');
+        selected.classList.remove('flex');
+        search.value = '';
+        search.focus();
+    });
+}
+
+// ============================================================================
+// Phone input: digits + plus + spaces only
+// ============================================================================
+function wirePhoneInput() {
     const phoneInput = document.getElementById('phone');
-    if (phoneInput) {
-        phoneInput.setAttribute('inputmode', 'tel');
-        phoneInput.addEventListener('input', function () {
-            this.value = this.value.replace(/[^\d+\s]/g, '');
-        });
-    }
+    if (!phoneInput) return;
+    phoneInput.setAttribute('inputmode', 'tel');
+    phoneInput.addEventListener('input', function () {
+        this.value = this.value.replace(/[^\d+\s]/g, '');
+    });
+}
 
-    // ---- Form submit ----
+// ============================================================================
+// Submit handler
+// ============================================================================
+function wireSubmit(form, slugInput, idInput, isClaimFlow) {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -80,11 +215,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Collect proof URLs (skip empties).
-        const proofInputs = proofContainer.querySelectorAll('input[name="claim_proof[]"]');
-        const claimProof = Array.from(proofInputs)
-            .map(input => input.value.trim())
-            .filter(v => v.length > 0);
+        // Either slug OR id must be present — the backend enforces this too,
+        // but we want a clean inline error before the round-trip.
+        const artistSlug = slugInput.value.trim();
+        const artistId = idInput.value.trim();
+        if (!artistSlug && !artistId) {
+            AmbiletNotifications.error('Selectează artistul pe care îl reprezinți.');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
 
         const formData = {
             first_name: document.getElementById('first_name').value.trim(),
@@ -93,10 +233,13 @@ document.addEventListener('DOMContentLoaded', () => {
             phone: document.getElementById('phone').value.replace(/\s/g, '') || null,
             password: password,
             password_confirmation: passwordConfirm,
-            artist_slug: slugInput.value.trim() || null,
-            claim_message: document.getElementById('claim_message').value.trim() || null,
-            claim_proof: claimProof.length > 0 ? claimProof : null
         };
+        if (artistSlug) formData.artist_slug = artistSlug;
+        if (artistId) formData.artist_id = parseInt(artistId, 10);
+
+        if (isClaimFlow) {
+            formData.claim_message = document.getElementById('claim_message')?.value.trim() || '';
+        }
 
         // Phone format check (only when provided).
         if (formData.phone && !/^\+?\d{7,15}$/.test(formData.phone)) {
@@ -125,4 +268,24 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.textContent = originalText;
         }
     });
-});
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+function resolveStorageUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const base = (typeof window.AMBILET !== 'undefined' && window.AMBILET.storageUrl) || 'https://core.tixello.com/storage';
+    return base.replace(/\/$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function escapeAttr(s) {
+    return escapeHtml(s);
+}
