@@ -20,7 +20,13 @@ class ListSupportTickets extends ListRecords
                 ->modifyQueryUsing(fn ($q) => $q->whereNotIn('status', [
                     SupportTicket::STATUS_RESOLVED,
                     SupportTicket::STATUS_CLOSED,
-                ])),
+                ]))
+                ->badge(fn () => SupportTicketResource::getEloquentQuery()
+                    ->whereNotIn('status', [
+                        SupportTicket::STATUS_RESOLVED,
+                        SupportTicket::STATUS_CLOSED,
+                    ])
+                    ->count() ?: null),
         ];
     }
 }
