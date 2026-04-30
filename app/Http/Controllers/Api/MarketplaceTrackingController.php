@@ -53,6 +53,12 @@ class MarketplaceTrackingController extends Controller
             'fbclid' => 'nullable|string|max:255',
             'ttclid' => 'nullable|string|max:255',
             'referrer' => 'nullable|string|max:2000',
+            // Facebook CAPI extras (Etapa 4 — Layer B)
+            'fbp' => 'nullable|string|max:128',
+            'fbc' => 'nullable|string|max:512',
+            'client_event_id' => 'nullable|string|max:128',
+            'email' => 'nullable|email|max:255',
+            'customer_email' => 'nullable|email|max:255',
         ]);
 
         // Generate or use provided visitor/session IDs
@@ -140,12 +146,131 @@ class MarketplaceTrackingController extends Controller
             );
         }
 
+        // Etapa 4 — Layer B: bridge to Facebook Conversions API server-side.
+        // Wrapped to never break the original tracking response.
+        try {
+            $this->dispatchToFacebookCapi($event, $request);
+        } catch (\Throwable $e) {
+            \Log::warning('FB CAPI bridge dispatch failed', [
+                'core_event_id' => $event->id,
+                'event_type' => $event->event_type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'success' => true,
             'event_id' => $event->id,
             'visitor_id' => $visitorId,
             'session_id' => $sessionId,
         ]);
+    }
+
+    /**
+     * Map internal event_type → Meta CAPI event name.
+     * Returns null for unsupported types (silently dropped).
+     * 'purchase' is handled by Layer C (FacebookCapiOrderObserver) so we
+     * don't double-send.
+     */
+    protected function mapToCapiEventName(string $eventType): ?string
+    {
+        return match ($eventType) {
+            'page_view' => 'PageView',
+            'view_item' => 'ViewContent',
+            'add_to_cart' => 'AddToCart',
+            'begin_checkout' => 'InitiateCheckout',
+            'sign_up' => 'CompleteRegistration',
+            'lead' => 'Lead',
+            default => null,
+        };
+    }
+
+    /**
+     * Dispatch a CAPI event to the organizer's connection if configured.
+     */
+    protected function dispatchToFacebookCapi(CoreCustomerEvent $event, Request $request): void
+    {
+        $marketplaceEventId = $event->marketplace_event_id ?? $request->input('marketplace_event_id');
+        if (!$marketplaceEventId) {
+            return;
+        }
+
+        $marketplaceEvent = MarketplaceEvent::find($marketplaceEventId);
+        $organizerId = $marketplaceEvent?->marketplace_organizer_id;
+        if (!$organizerId) {
+            return;
+        }
+
+        $capiEventName = $this->mapToCapiEventName((string) $event->event_type);
+        if (!$capiEventName) {
+            return;
+        }
+
+        $userData = $this->buildCapiUserData($event, $request);
+        $customData = $this->buildCapiCustomData($event, $request);
+
+        $clientEventId = $request->input('client_event_id');
+        $finalEventId = $clientEventId
+            ? (string) $clientEventId
+            : 'srv_' . $event->id;
+
+        \App\Jobs\SendFacebookCapiEventJob::dispatch(
+            (int) $organizerId,
+            $capiEventName,
+            $userData,
+            $customData,
+            $finalEventId,
+            $event->page_url ?: null,
+            'tracking_event',
+            (string) $event->id,
+        );
+    }
+
+    protected function buildCapiUserData(CoreCustomerEvent $event, Request $request): array
+    {
+        $email = $request->input('email') ?? $request->input('customer_email');
+
+        $fbc = $request->input('fbc');
+        if (!$fbc && $event->fbclid) {
+            $fbc = sprintf('fb.1.%d.%s', (int) (microtime(true) * 1000), $event->fbclid);
+        }
+
+        return array_filter([
+            'em' => $email ?: null,
+            'client_ip_address' => $event->ip_address ?: $request->ip(),
+            'client_user_agent' => $request->userAgent(),
+            'fbp' => $request->input('fbp') ?: null,
+            'fbc' => $fbc ?: null,
+            'external_id' => $event->visitor_id ?: null,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    protected function buildCapiCustomData(CoreCustomerEvent $event, Request $request): array
+    {
+        $data = [];
+
+        if ($event->event_value !== null) {
+            $data['value'] = (float) $event->event_value;
+        }
+        if ($event->currency) {
+            $data['currency'] = $event->currency;
+        }
+        if ($event->content_type) {
+            $data['content_type'] = $event->content_type;
+        } else {
+            $data['content_type'] = 'product';
+        }
+        if ($event->content_id) {
+            $data['content_ids'] = [(string) $event->content_id];
+        }
+        if ($event->content_name) {
+            $data['content_name'] = $event->content_name;
+        }
+        if ($event->quantity) {
+            $data['num_items'] = (int) $event->quantity;
+        }
+
+        return $data;
     }
 
     /**

@@ -134,10 +134,60 @@
     }
 
     /**
+     * Read a first-party cookie by name (returns null if not set).
+     */
+    function getCookie(name) {
+        const value = '; ' + document.cookie;
+        const parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return null;
+    }
+
+    /**
+     * Set a first-party cookie. Used only as a fallback when the Meta
+     * Pixel JS isn't loaded (CAPI-only org, or pixel blocked).
+     * Never overwrites an existing _fbp/_fbc — pixel-set values take
+     * precedence so attribution stays consistent.
+     */
+    function setCookie(name, value, days) {
+        const expires = new Date(Date.now() + days * 86400 * 1000).toUTCString();
+        const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax' + secure;
+    }
+
+    /**
+     * Ensure first-party Facebook cookies exist for CAPI deduplication.
+     * Format follows Meta's official spec:
+     *   _fbc = fb.1.{timestamp_ms}.{fbclid}
+     *   _fbp = fb.1.{timestamp_ms}.{random_10digit}
+     * Both with 90-day max-age.
+     */
+    function ensureFacebookCookies() {
+        try {
+            // _fbc derived from fbclid in URL
+            if (!getCookie('_fbc')) {
+                const params = new URLSearchParams(window.location.search);
+                const fbclid = params.get('fbclid');
+                if (fbclid) {
+                    setCookie('_fbc', 'fb.1.' + Date.now() + '.' + fbclid, 90);
+                }
+            }
+            // _fbp generated if missing
+            if (!getCookie('_fbp')) {
+                const rand = Math.floor(Math.random() * 9000000000) + 1000000000;
+                setCookie('_fbp', 'fb.1.' + Date.now() + '.' + rand, 90);
+            }
+        } catch (e) {
+            // Cookie API may be blocked (private mode, strict ITP) — silent fallback
+        }
+    }
+
+    /**
      * Track a custom event
      */
     function track(eventType, data = {}) {
         updateSessionActivity();
+        ensureFacebookCookies();
 
         const event = {
             event_type: eventType,
@@ -153,6 +203,10 @@
             screen_height: window.screen.height,
             ...getUtmParams(),
             ...data,
+            // FB CAPI extras (kept last so caller's data cannot override)
+            client_event_id: data.client_event_id || generateUUID(),
+            fbp: getCookie('_fbp'),
+            fbc: getCookie('_fbc'),
             timestamp: new Date().toISOString()
         };
 

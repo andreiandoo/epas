@@ -58,15 +58,35 @@ $baseUrl = preg_replace('#/marketplace-client$#', '', $apiUrl);
 $url = $baseUrl . $coreEndpoint;
 
 $ch = curl_init($url);
+
+// Forward the real client IP + User-Agent so the backend (and any
+// downstream Facebook CAPI dispatch) sees the actual visitor, not this
+// PHP proxy host. Backend must trust this proxy's IP for these headers
+// to take effect (config/trustedproxy or similar).
+$clientIp = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+$clientUa = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$existingForwardedFor = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? '';
+
+$headers = [
+    'Content-Type: application/json',
+    'Accept: application/json',
+    'X-API-Key: ' . API_KEY,
+];
+if ($clientIp !== '') {
+    // Append, don't replace, so the chain is preserved if there are layered proxies.
+    $forwardedFor = $existingForwardedFor !== ''
+        ? $existingForwardedFor
+        : $clientIp;
+    $headers[] = 'X-Forwarded-For: ' . $forwardedFor;
+    $headers[] = 'X-Real-IP: ' . $clientIp;
+}
+
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
     CURLOPT_POSTFIELDS => $body,
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER => [
-        'Content-Type: application/json',
-        'Accept: application/json',
-        'X-API-Key: ' . API_KEY,
-    ],
+    CURLOPT_HTTPHEADER => $headers,
+    CURLOPT_USERAGENT => $clientUa !== '' ? $clientUa : 'Tixello-Tracking-Proxy/1.0',
     CURLOPT_TIMEOUT => 5,
     CURLOPT_CONNECTTIMEOUT => 3,
 ]);
