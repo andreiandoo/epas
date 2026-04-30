@@ -20,6 +20,10 @@ class ListSupportTickets extends ListRecords
             SupportTicket::STATUS_CLOSED,
         ];
 
+        // We deliberately do NOT override getDefaultActiveTab(). Returning a
+        // non-default tab key from there crashes Filament's filter pipeline
+        // in this build — the default ('all', the first key) renders fine.
+
         return [
             'all' => Tab::make('Toate'),
 
@@ -49,7 +53,15 @@ class ListSupportTickets extends ListRecords
                     ->whereNotIn('status', $closedStatuses)
                     ->count() ?: null)
                 ->badgeColor('primary'),
+
+            'awaiting_staff' => Tab::make('Așteaptă staff')
+                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', [
+                    SupportTicket::STATUS_OPEN,
+                    SupportTicket::STATUS_IN_PROGRESS,
+                ])),
+
+            'closed' => Tab::make('Închise')
+                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', $closedStatuses)),
         ];
     }
-
 }
