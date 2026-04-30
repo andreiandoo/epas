@@ -19,45 +19,45 @@ class ListSupportTickets extends ListRecords
 
         return [
             'all' => Tab::make('Toate')
-                ->badge(fn () => static::badgeCount(fn (Builder $q) => $q)),
+                ->badge(fn () => static::badgeCount(fn ($q) => $q)),
 
             'open' => Tab::make('Active')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereNotIn('status', [
+                ->modifyQueryUsing(fn ($q) => $q->whereNotIn('status', [
                     SupportTicket::STATUS_RESOLVED,
                     SupportTicket::STATUS_CLOSED,
                 ]))
-                ->badge(fn () => static::badgeCount(fn (Builder $q) => $q->whereNotIn('status', [
+                ->badge(fn () => static::badgeCount(fn ($q) => $q->whereNotIn('status', [
                     SupportTicket::STATUS_RESOLVED,
                     SupportTicket::STATUS_CLOSED,
                 ])))
                 ->badgeColor('warning'),
 
             'unassigned' => Tab::make('Nealocate')
-                ->modifyQueryUsing(fn (Builder $q) => $q
+                ->modifyQueryUsing(fn ($q) => $q
                     ->whereNull('assigned_to_marketplace_admin_id')
                     ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED]))
-                ->badge(fn () => static::badgeCount(fn (Builder $q) => $q
+                ->badge(fn () => static::badgeCount(fn ($q) => $q
                     ->whereNull('assigned_to_marketplace_admin_id')
                     ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED])))
                 ->badgeColor('danger'),
 
             'mine' => Tab::make('Asignate mie')
-                ->modifyQueryUsing(fn (Builder $q) => $q
+                ->modifyQueryUsing(fn ($q) => $q
                     ->where('assigned_to_marketplace_admin_id', $adminId)
                     ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED]))
-                ->badge(fn () => static::badgeCount(fn (Builder $q) => $q
+                ->badge(fn () => static::badgeCount(fn ($q) => $q
                     ->where('assigned_to_marketplace_admin_id', $adminId)
                     ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED])))
                 ->badgeColor('primary'),
 
             'awaiting_staff' => Tab::make('Așteaptă staff')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', [
+                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', [
                     SupportTicket::STATUS_OPEN,
                     SupportTicket::STATUS_IN_PROGRESS,
                 ])),
 
             'closed' => Tab::make('Închise')
-                ->modifyQueryUsing(fn (Builder $q) => $q->whereIn('status', [
+                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', [
                     SupportTicket::STATUS_RESOLVED,
                     SupportTicket::STATUS_CLOSED,
                 ])),
