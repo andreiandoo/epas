@@ -133,14 +133,15 @@ RewriteRule ^artist/cont/dashboard/?$ artist/cont/dashboard.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/detalii/?$ artist/cont/detalii.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/cont/setari/?$ artist/cont/setari.php [L,QSA]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/cont/evenimente/?$ artist/cont/evenimente.php [L,QSA]
-
-# Detalii (profile editor) is reserved for Etapa 5 — slug remains free
-# until then but the URL is already taken by this file once it lands.
 
 # Generic public artist profile — keep this LAST in the /artist/* block.
 RewriteCond %{REQUEST_FILENAME} !-f
