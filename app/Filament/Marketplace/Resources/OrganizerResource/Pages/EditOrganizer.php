@@ -153,8 +153,33 @@ class EditOrganizer extends EditRecord
 
     protected function afterSave(): void
     {
-        $this->syncTrackingIntegrations();
-        $this->syncFacebookCapiConnection();
+        try {
+            $this->syncTrackingIntegrations();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('OrganizerResource: tracking sync failed', [
+                'organizer_id' => $this->record->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            \Filament\Notifications\Notification::make()
+                ->title('Tracking pixels nu au fost salvate')
+                ->body($e->getMessage())
+                ->danger()->send();
+        }
+
+        try {
+            $this->syncFacebookCapiConnection();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('OrganizerResource: facebook capi sync failed', [
+                'organizer_id' => $this->record->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            \Filament\Notifications\Notification::make()
+                ->title('Facebook CAPI nu a fost salvat')
+                ->body($e->getMessage())
+                ->danger()->send();
+        }
     }
 
     protected function syncTrackingIntegrations(): void

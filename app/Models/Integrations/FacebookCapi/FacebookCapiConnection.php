@@ -15,6 +15,8 @@ class FacebookCapiConnection extends Model
 
     protected $fillable = [
         'tenant_id',
+        'marketplace_client_id',
+        'marketplace_organizer_id',
         'pixel_id',
         'access_token',
         'business_id',
@@ -38,12 +40,28 @@ class FacebookCapiConnection extends Model
 
     public function setAccessTokenAttribute($value): void
     {
-        $this->attributes['access_token'] = $value ? Crypt::encryptString($value) : null;
+        if (!$value) {
+            $this->attributes['access_token'] = null;
+            return;
+        }
+        try {
+            Crypt::decryptString($value);
+            $this->attributes['access_token'] = $value;
+        } catch (\Throwable $e) {
+            $this->attributes['access_token'] = Crypt::encryptString($value);
+        }
     }
 
     public function getAccessTokenAttribute($value): ?string
     {
-        return $value ? Crypt::decryptString($value) : null;
+        if (!$value) {
+            return null;
+        }
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Throwable $e) {
+            return $value;
+        }
     }
 
     public function eventConfigs(): HasMany
