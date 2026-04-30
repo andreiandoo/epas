@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\SupportTicketResource;
 use App\Models\SupportTicket;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Tabs\Tab;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
 class ListSupportTickets extends ListRecords
@@ -20,22 +21,23 @@ class ListSupportTickets extends ListRecords
             SupportTicket::STATUS_CLOSED,
         ];
 
-        // We deliberately do NOT override getDefaultActiveTab(). Returning a
-        // non-default tab key from there crashes Filament's filter pipeline
-        // in this build — the default ('all', the first key) renders fine.
+        // Closure parameter MUST be named `$query` (matches Filament's
+        // `evaluate(['query' => $query])`) AND type-hinted Builder, otherwise
+        // Filament's reflection-based DI may pass null and the chained
+        // ->whereNotIn(...) call crashes.
 
         return [
             'all' => Tab::make('Toate'),
 
             'open' => Tab::make('Active')
-                ->modifyQueryUsing(fn ($q) => $q->whereNotIn('status', $closedStatuses))
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotIn('status', $closedStatuses))
                 ->badge(fn () => SupportTicketResource::getEloquentQuery()
                     ->whereNotIn('status', $closedStatuses)
                     ->count() ?: null)
                 ->badgeColor('warning'),
 
             'unassigned' => Tab::make('Nealocate')
-                ->modifyQueryUsing(fn ($q) => $q
+                ->modifyQueryUsing(fn (Builder $query) => $query
                     ->whereNull('assigned_to_marketplace_admin_id')
                     ->whereNotIn('status', $closedStatuses))
                 ->badge(fn () => SupportTicketResource::getEloquentQuery()
@@ -45,7 +47,7 @@ class ListSupportTickets extends ListRecords
                 ->badgeColor('danger'),
 
             'mine' => Tab::make('Asignate mie')
-                ->modifyQueryUsing(fn ($q) => $q
+                ->modifyQueryUsing(fn (Builder $query) => $query
                     ->where('assigned_to_marketplace_admin_id', $adminId)
                     ->whereNotIn('status', $closedStatuses))
                 ->badge(fn () => SupportTicketResource::getEloquentQuery()
@@ -55,13 +57,13 @@ class ListSupportTickets extends ListRecords
                 ->badgeColor('primary'),
 
             'awaiting_staff' => Tab::make('Așteaptă staff')
-                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', [
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', [
                     SupportTicket::STATUS_OPEN,
                     SupportTicket::STATUS_IN_PROGRESS,
                 ])),
 
             'closed' => Tab::make('Închise')
-                ->modifyQueryUsing(fn ($q) => $q->whereIn('status', $closedStatuses)),
+                ->modifyQueryUsing(fn (Builder $query) => $query->whereIn('status', $closedStatuses)),
         ];
     }
 }

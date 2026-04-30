@@ -3446,7 +3446,6 @@ if (!empty($isFileUpload) || !empty($isMultipart)) {
 
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $effectiveMethod = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
     $sentBytes = curl_getinfo($ch, CURLINFO_SIZE_UPLOAD);
     curl_close($ch);
 
@@ -3456,6 +3455,12 @@ if (!empty($isFileUpload) || !empty($isMultipart)) {
             . ' upload_bytes=' . $sentBytes
             . ' postFields_keys=' . implode(',', array_keys($postFields))
             . ' resp_first_120=' . substr((string) $response, 0, 120));
+        // Also expose to browser DevTools so I can debug without server logs.
+        header('X-Proxy-Diag-Upstream-Status: ' . $statusCode);
+        header('X-Proxy-Diag-Upstream-Url: ' . $url);
+        header('X-Proxy-Diag-Upload-Bytes: ' . $sentBytes);
+        header('X-Proxy-Diag-Post-Keys: ' . implode(',', array_keys($postFields)));
+        header('X-Proxy-Diag-Files-Keys: ' . implode(',', array_keys($_FILES)));
     }
 
     http_response_code($statusCode ?: 500);
