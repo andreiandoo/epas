@@ -170,7 +170,7 @@ class ViewSupportTicket extends Page
                 ->visible(fn () => !$isClosed)
                 ->modalHeading('Răspunde la tichet')
                 ->modalSubmitActionLabel('Trimite')
-                ->schema([
+                ->form([
                     Forms\Components\Textarea::make('body')
                         ->label('Mesaj')
                         ->required()
@@ -198,7 +198,7 @@ class ViewSupportTicket extends Page
                 ->icon('heroicon-o-arrow-right-circle')
                 ->color('gray')
                 ->modalHeading('Mută tichetul')
-                ->schema([
+                ->form([
                     Forms\Components\Select::make('support_department_id')
                         ->label('Departament')
                         ->options(fn () => SupportDepartment::query()
@@ -220,7 +220,7 @@ class ViewSupportTicket extends Page
                 ->icon('heroicon-o-user-plus')
                 ->color('gray')
                 ->modalHeading('Asignează tichetul')
-                ->schema([
+                ->form([
                     Forms\Components\Select::make('assigned_to_marketplace_admin_id')
                         ->label('Asignat')
                         ->options(fn () => MarketplaceAdmin::query()
@@ -240,7 +240,7 @@ class ViewSupportTicket extends Page
                 ->icon('heroicon-o-flag')
                 ->color($this->priorityColor($this->record->priority))
                 ->modalHeading('Setează prioritate')
-                ->schema([
+                ->form([
                     Forms\Components\Select::make('priority')
                         ->options([
                             'low' => 'Scăzută',

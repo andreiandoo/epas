@@ -78,7 +78,7 @@ class SupportDepartmentResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
                     ->state(fn (SupportDepartment $r) => $r->getTranslation('name', 'ro') ?: $r->slug),
-                Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size(Tables\Columns\TextColumn\TextColumnSize::ExtraSmall),
+                Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size('xs'),
                 Tables\Columns\TextColumn::make('problem_types_count')
                     ->label('Tipuri probleme')
                     ->counts('problemTypes'),

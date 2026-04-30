@@ -109,15 +109,15 @@ class SupportProblemTypeResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
                     ->state(fn (SupportProblemType $r) => $r->getTranslation('name', 'ro') ?: $r->slug),
-                Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size(Tables\Columns\TextColumn\TextColumnSize::ExtraSmall),
+                Tables\Columns\TextColumn::make('slug')->fontFamily('mono')->size('xs'),
                 Tables\Columns\TextColumn::make('required_fields')
                     ->label('Câmpuri')
                     ->state(fn (SupportProblemType $r) => empty($r->required_fields) ? '—' : implode(', ', $r->required_fields))
-                    ->size(Tables\Columns\TextColumn\TextColumnSize::ExtraSmall),
+                    ->size('xs'),
                 Tables\Columns\TextColumn::make('allowed_opener_types')
                     ->label('Vizibil')
                     ->state(fn (SupportProblemType $r) => empty($r->allowed_opener_types) ? 'toți' : implode(', ', $r->allowed_opener_types))
-                    ->size(Tables\Columns\TextColumn\TextColumnSize::ExtraSmall),
+                    ->size('xs'),
                 Tables\Columns\IconColumn::make('is_active')->label('Activ')->boolean(),
             ])
             ->defaultSort('sort_order')

@@ -138,7 +138,7 @@ class SupportTicketResource extends Resource
                 Tables\Columns\TextColumn::make('ticket_number')
                     ->label('Nr.')
                     ->fontFamily('mono')
-                    ->size(Tables\Columns\TextColumn\TextColumnSize::ExtraSmall)
+                    ->size('xs')
                     ->copyable()
                     ->searchable(),
 
