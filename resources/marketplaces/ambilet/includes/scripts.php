@@ -53,6 +53,9 @@
         EPASTracking.init({
             apiUrl: '/api/tracking.php',
             marketplaceClientId: <?= (int) $trackingClientId ?>,
+            <?php if (!empty($trackingMarketplaceEventId)): ?>
+            marketplaceEventId: <?= (int) $trackingMarketplaceEventId ?>,
+            <?php endif; ?>
             autoTrackPageViews: true,
             autoTrackClicks: true
         });

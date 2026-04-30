@@ -599,4 +599,9 @@ $scriptsExtra = '<script defer src="' . asset('assets/js/pages/event-drawer.js')
 <script defer src="' . asset('assets/js/pages/event-single.js') . '"></script>
 <script>document.addEventListener(\'DOMContentLoaded\', () => EventPage.init());</script>';
 
+// Tracking context — pass event id so EPASTracking.init includes
+// marketplaceEventId. This lets the backend resolve the organizer
+// for per-organizer Facebook CAPI dispatch (Etapa 4).
+$trackingMarketplaceEventId = !empty($ev['id']) ? (int) $ev['id'] : null;
+
 require_once __DIR__ . '/includes/scripts.php';
