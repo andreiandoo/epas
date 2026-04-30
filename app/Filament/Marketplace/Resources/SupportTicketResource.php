@@ -248,8 +248,23 @@ class SupportTicketResource extends Resource
                         ->mapWithKeys(fn ($u) => [$u->id => $u->name])
                         ->all()),
             ])
+            ->recordUrl(fn (SupportTicket $record) => static::getUrl('view', ['record' => $record]))
             ->recordActions([
                 \Filament\Actions\ViewAction::make(),
+            ])
+            ->toolbarActions([
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\BulkAction::make('close')
+                        ->label('Închide selectate')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(fn ($records) => $records->each->update([
+                            'status' => SupportTicket::STATUS_CLOSED,
+                            'closed_at' => now(),
+                            'last_activity_at' => now(),
+                        ])),
+                ]),
             ]);
     }
 
