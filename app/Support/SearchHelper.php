@@ -44,22 +44,21 @@ class SearchHelper
 
     /**
      * Apply accent-insensitive, case-insensitive search on a plain string column.
+     *
+     * Both branches use the LOWER + REPLACE fold (not Postgres's unaccent
+     * extension), so the search works on databases that don't have the
+     * unaccent extension installed. The extension is still used by
+     * fulltext() where the indexed query needs immutable_unaccent.
      */
     public static function search(Builder $query, string $column, string $search): Builder
     {
         $search = trim($search);
         if ($search === '') return $query;
 
-        if (DB::getDriverName() === 'pgsql') {
-            return $query->whereRaw(
-                "unaccent(lower({$column}::text)) LIKE unaccent(lower(?))",
-                ['%' . $search . '%']
-            );
-        }
-
         $normalized = self::normalize($search);
+        $columnExpr = DB::getDriverName() === 'pgsql' ? "{$column}::text" : $column;
         return $query->whereRaw(
-            self::foldExpr($column) . ' LIKE ?',
+            self::foldExpr($columnExpr) . ' LIKE ?',
             ['%' . $normalized . '%']
         );
     }
@@ -73,36 +72,26 @@ class SearchHelper
         $search = trim($search);
         if ($search === '') return $query;
 
-        if (DB::getDriverName() === 'pgsql') {
-            return $query->where(function ($q) use ($column, $search, $locales) {
-                foreach ($locales as $locale) {
-                    $q->orWhereRaw(
-                        "unaccent(lower({$column}->>'$locale')) LIKE unaccent(lower(?))",
-                        ['%' . $search . '%']
-                    );
-                }
-                $q->orWhereRaw(
-                    "unaccent(lower({$column}::text)) LIKE unaccent(lower(?))",
-                    ['%' . $search . '%']
-                );
-            });
-        }
-
-        // MySQL: extract each locale from the JSON, then fold case + diacritics.
-        // Also run the fold against the raw JSON blob so keys like "ro"/"en"
-        // appearing inside serialized strings still match when the locale list
-        // misses a value.
         $normalized = self::normalize($search);
-        return $query->where(function ($q) use ($column, $normalized, $locales) {
+        $isPgsql = DB::getDriverName() === 'pgsql';
+
+        return $query->where(function ($q) use ($column, $normalized, $locales, $isPgsql) {
             foreach ($locales as $locale) {
-                $expr = "JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$locale}'))";
+                // Postgres: ->>'locale' returns the JSON value as text.
+                // MySQL/MariaDB: JSON_UNQUOTE(JSON_EXTRACT(...)) does the same.
+                $expr = $isPgsql
+                    ? "{$column}->>'{$locale}'"
+                    : "JSON_UNQUOTE(JSON_EXTRACT({$column}, '$.{$locale}'))";
                 $q->orWhereRaw(
                     self::foldExpr($expr) . ' LIKE ?',
                     ['%' . $normalized . '%']
                 );
             }
+            // Safety net: also fold the raw column so values stored under a
+            // locale not in the list still match.
+            $rawExpr = $isPgsql ? "{$column}::text" : $column;
             $q->orWhereRaw(
-                self::foldExpr($column) . ' LIKE ?',
+                self::foldExpr($rawExpr) . ' LIKE ?',
                 ['%' . $normalized . '%']
             );
         });
