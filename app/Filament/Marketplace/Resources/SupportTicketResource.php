@@ -120,7 +120,6 @@ class SupportTicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q)
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')
                     ->label('Nr.')
