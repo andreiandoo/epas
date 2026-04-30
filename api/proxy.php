@@ -1798,6 +1798,130 @@ switch ($action) {
         $endpoint = '/organizer/resend-verification';
         break;
 
+    // ==================== ARTIST ACCOUNT AUTH ====================
+
+    case 'artist.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/register';
+        break;
+
+    case 'artist.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/login';
+        break;
+
+    case 'artist.logout':
+        $method = 'POST';
+        $endpoint = '/artist/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.me':
+        $method = 'GET';
+        $endpoint = '/artist/me';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/forgot-password';
+        break;
+
+    case 'artist.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/reset-password';
+        break;
+
+    case 'artist.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/verify-email';
+        break;
+
+    case 'artist.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/resend-verification';
+        break;
+
+    case 'artist.check-claim':
+        // Public read — used by the artist-single page to decide whether to
+        // render the "Revendică profilul" button or a "Profil verificat" badge.
+        $artistSlug = $_GET['slug'] ?? '';
+        if (!$artistSlug) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Missing artist slug']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/artist/check-claim/' . urlencode($artistSlug);
+        break;
+
+    // Artist self-service (Etapa 4) — all require auth.
+
+    case 'artist.dashboard':
+        $method = 'GET';
+        $endpoint = '/artist/dashboard';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter'];
+        if (isset($_GET['per_page'])) $params['per_page'] = $_GET['per_page'];
+        if (isset($_GET['page'])) $params['page'] = $_GET['page'];
+        $endpoint = '/artist/events' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.profile':
+        // GET to fetch, PUT to update — branch on the inbound HTTP method
+        // so we don't need separate action strings for the same resource.
+        $requiresAuth = true;
+        $endpoint = '/artist/profile';
+        if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
+            $method = 'PUT';
+            $body = file_get_contents('php://input');
+        } else {
+            $method = 'GET';
+        }
+        break;
+
+    case 'artist.profile.image':
+        $method = 'POST';
+        $endpoint = '/artist/profile/image';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.account':
+        // GET / PUT / DELETE on the same resource path.
+        $requiresAuth = true;
+        $endpoint = '/artist/account';
+        $reqMethod = $_SERVER['REQUEST_METHOD'];
+        if ($reqMethod === 'PUT') {
+            $method = 'PUT';
+            $body = file_get_contents('php://input');
+        } elseif ($reqMethod === 'DELETE') {
+            $method = 'DELETE';
+            $body = file_get_contents('php://input');
+        } else {
+            $method = 'GET';
+        }
+        break;
+
+    case 'artist.account.password':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/account/password';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
