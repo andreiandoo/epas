@@ -197,10 +197,9 @@ class MarketplaceTrackingController extends Controller
     {
         $marketplaceEventId = $event->marketplace_event_id ?? $request->input('marketplace_event_id');
         if (!$marketplaceEventId) {
-            \Log::info('FB CAPI bridge: skip — no marketplace_event_id', [
-                'event_type' => $event->event_type,
-                'core_event_id' => $event->id,
-            ]);
+            // Expected on global pages (homepage, listings, search, cart,
+            // checkout) — they don't belong to a single organizer. Silent
+            // by design; would otherwise flood production logs.
             return;
         }
 

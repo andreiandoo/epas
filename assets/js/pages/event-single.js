@@ -4702,6 +4702,34 @@ const EventPage = {
             AmbiletCart.startReservationTimer();
         }
 
+        // CAPI AddToCart for seated flow (Layer B bridge — backend forwards
+        // to Meta Graph API). The seated flow bypasses AmbiletCart.addItem
+        // (which has its own trackAddToCart hook), so we fire one event per
+        // ticket type aggregating the held seats.
+        try {
+            if (window.EPASTracking && typeof EPASTracking.trackAddToCart === 'function') {
+                for (var k = 0; k < ticketTypeIds.length; k++) {
+                    var ttId = ticketTypeIds[k];
+                    var sts = self.selectedSeats[ttId];
+                    var ttRef = self.ticketTypes.find(function (t) { return String(t.id) === String(ttId); });
+                    if (!ttRef || !sts || sts.length === 0) continue;
+                    EPASTracking.trackAddToCart(
+                        self.event.id,
+                        ttRef.id,
+                        sts.length,
+                        ttRef.price || 0,
+                        'RON',
+                        {
+                            marketplace_event_id: self.event.id,
+                            content_name: ttRef.name || null,
+                        }
+                    );
+                }
+            }
+        } catch (e) {
+            // Tracking must never break the seating flow
+        }
+
         console.log('[EventPage] Cart after adding seats:', AmbiletCart.getCart());
     },
 
