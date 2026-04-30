@@ -408,6 +408,14 @@ const AmbiletAPI = {
         if (endpoint.match(/\/organizer\/share-links\/[A-Za-z0-9]+$/)) return 'organizer.share-link';
         if (endpoint === '/organizer/share-links') return 'organizer.share-links';
 
+        // Organizer support tickets
+        if (endpoint === '/organizer/support/departments' || endpoint.startsWith('/organizer/support/departments?')) return 'organizer.support.departments';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/messages$/)) return 'organizer.support.tickets.reply';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/close$/)) return 'organizer.support.tickets.close';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+\/reopen$/)) return 'organizer.support.tickets.reopen';
+        if (endpoint.match(/\/organizer\/support\/tickets\/\d+$/)) return 'organizer.support.tickets.show';
+        if (endpoint === '/organizer/support/tickets' || endpoint.startsWith('/organizer/support/tickets?')) return 'organizer.support.tickets';
+
         // Organizer API settings
         if (endpoint === '/organizer/api-key') return 'organizer.api-key';
         if (endpoint === '/organizer/api-key/regenerate') return 'organizer.api-key.regenerate';
@@ -478,6 +486,12 @@ const AmbiletAPI = {
         const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
         if (ticketMatch) {
             return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract support ticket id from /organizer/support/tickets/{id}[/messages|close|reopen]
+        const supportTicketMatch = endpoint.match(/\/organizer\/support\/tickets\/(\d+)(\/messages|\/close|\/reopen)?$/);
+        if (supportTicketMatch) {
+            return `id=${encodeURIComponent(supportTicketMatch[1])}`;
         }
 
         // Extract refund ID from /customer/refunds/{id}/cancel or /customer/refunds/{id}
@@ -1852,8 +1866,113 @@ const AmbiletAPI = {
          */
         async updatePayoutDetails(data) {
             return AmbiletAPI.put('/organizer/payout-details', data);
+        },
+
+        // ==================== SUPPORT TICKETS ====================
+
+        /**
+         * Get support taxonomy (departments + problem types + attachment rules).
+         */
+        async getSupportDepartments(params = {}) {
+            return AmbiletAPI.get('/organizer/support/departments', params);
+        },
+
+        /**
+         * List the organizer's own support tickets.
+         */
+        async getSupportTickets(params = {}) {
+            return AmbiletAPI.get('/organizer/support/tickets', params);
+        },
+
+        /**
+         * Get a single support ticket detail + thread.
+         */
+        async getSupportTicket(id) {
+            return AmbiletAPI.get(`/organizer/support/tickets/${id}`);
+        },
+
+        /**
+         * Create a support ticket. Always sent as multipart so attachments
+         * can ride along; the proxy handler doesn't care if there are no
+         * files in the request.
+         *
+         * @param {Object} data - { support_problem_type_id, subject, description, meta:{...}, context:{...} }
+         * @param {File[]} files - optional list of File objects (jpg/png/pdf, max 3MB each)
+         */
+        async createSupportTicket(data, files = []) {
+            const fd = new FormData();
+            fd.append('support_problem_type_id', String(data.support_problem_type_id));
+            fd.append('subject', data.subject || '');
+            fd.append('description', data.description || '');
+            // Flatten meta + context as bracket notation so Laravel can
+            // re-parse them with request->input('meta.url').
+            for (const [k, v] of Object.entries(data.meta || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`meta[${k}]`, String(v));
+            }
+            for (const [k, v] of Object.entries(data.context || {})) {
+                if (v !== undefined && v !== null && v !== '') fd.append(`context[${k}]`, String(v));
+            }
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+
+            return AmbiletAPI._postMultipart('/organizer/support/tickets', fd);
+        },
+
+        /**
+         * Reply on a support ticket (organizer-side).
+         */
+        async replySupportTicket(id, body, files = []) {
+            const fd = new FormData();
+            fd.append('body', body || '');
+            (files || []).forEach((f) => f && fd.append('attachments[]', f));
+            return AmbiletAPI._postMultipart(`/organizer/support/tickets/${id}/messages`, fd);
+        },
+
+        /**
+         * Mark own support ticket resolved.
+         */
+        async closeSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/close`);
+        },
+
+        /**
+         * Reopen a previously resolved/closed support ticket.
+         */
+        async reopenSupportTicket(id) {
+            return AmbiletAPI.post(`/organizer/support/tickets/${id}/reopen`);
         }
     }
+};
+
+/**
+ * Internal: POST a FormData body through the proxy with auth.
+ * Mirrors AmbiletAPI.post but doesn't JSON-encode the body so cURL on
+ * the proxy side ships a real multipart/form-data request upstream.
+ */
+AmbiletAPI._postMultipart = async function(endpointPath, formData) {
+    const action = AmbiletAPI.getProxyAction(endpointPath);
+    const params = AmbiletAPI.getProxyParams(endpointPath);
+    const baseUrl = AmbiletAPI.getApiUrl();
+    if (!action) {
+        throw new APIError(`Unknown endpoint: ${endpointPath}`, 400);
+    }
+    const url = `${baseUrl}?action=${action}${params ? '&' + params : ''}`;
+
+    const headers = {};
+    const token = (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.getToken) ? AmbiletAuth.getToken() : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Do NOT set Content-Type — the browser fills it with the boundary.
+
+    const res = await fetch(url, { method: 'POST', headers, body: formData, credentials: 'same-origin' });
+    let data = null;
+    try { data = await res.json(); } catch (_) { /* non-JSON */ }
+    if (!res.ok) {
+        throw new APIError(
+            (data && (data.message || data.error)) || `HTTP ${res.status}`,
+            res.status,
+            data && data.errors ? data.errors : null
+        );
+    }
+    return data;
 };
 
 /**
