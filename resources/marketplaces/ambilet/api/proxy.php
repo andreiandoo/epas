@@ -1798,6 +1798,69 @@ switch ($action) {
         $endpoint = '/organizer/resend-verification';
         break;
 
+    // ==================== ARTIST ACCOUNT AUTH ====================
+
+    case 'artist.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/register';
+        break;
+
+    case 'artist.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/login';
+        break;
+
+    case 'artist.logout':
+        $method = 'POST';
+        $endpoint = '/artist/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.me':
+        $method = 'GET';
+        $endpoint = '/artist/me';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/forgot-password';
+        break;
+
+    case 'artist.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/reset-password';
+        break;
+
+    case 'artist.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/verify-email';
+        break;
+
+    case 'artist.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/artist/resend-verification';
+        break;
+
+    case 'artist.check-claim':
+        // Public read — used by the artist-single page to decide whether to
+        // render the "Revendică profilul" button or a "Profil verificat" badge.
+        $artistSlug = $_GET['slug'] ?? '';
+        if (!$artistSlug) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => 'Missing artist slug']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/artist/check-claim/' . urlencode($artistSlug);
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');

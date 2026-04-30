@@ -333,6 +333,17 @@ const AmbiletAPI = {
         if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
         if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';
 
+        // Artist account auth endpoints (Etapa 3 - artist self-service)
+        if (endpoint === '/artist/register') return 'artist.register';
+        if (endpoint === '/artist/login') return 'artist.login';
+        if (endpoint === '/artist/logout') return 'artist.logout';
+        if (endpoint === '/artist/me') return 'artist.me';
+        if (endpoint === '/artist/forgot-password') return 'artist.forgot-password';
+        if (endpoint === '/artist/reset-password') return 'artist.reset-password';
+        if (endpoint === '/artist/verify-email') return 'artist.verify-email';
+        if (endpoint === '/artist/resend-verification') return 'artist.resend-verification';
+        if (endpoint.match(/^\/artist\/check-claim\/[a-z0-9-]+$/)) return 'artist.check-claim';
+
         // Organizer bank accounts
         if (endpoint === '/organizer/bank-accounts') return 'organizer.bank-accounts';
         if (endpoint.match(/\/organizer\/bank-accounts\/\d+$/)) return 'organizer.bank-account.delete';
@@ -458,6 +469,12 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract artist slug from /artist/check-claim/{slug}
+        const artistClaimMatch = endpoint.match(/^\/artist\/check-claim\/([a-z0-9-]+)$/);
+        if (artistClaimMatch) {
+            return `slug=${encodeURIComponent(artistClaimMatch[1])}`;
+        }
+
         // Extract organizer slug from /marketplace-events/organizers/{slug}/contact
         const organizerContactMatch = endpoint.match(/\/marketplace-events\/organizers\/([\w-]+)\/contact$/);
         if (organizerContactMatch) {
@@ -1939,6 +1956,61 @@ const AmbiletAPI = {
          */
         async reopenSupportTicket(id) {
             return AmbiletAPI.post(`/organizer/support/tickets/${id}/reopen`);
+        }
+    },
+
+    // ==================== ARTIST ACCOUNT ENDPOINTS ====================
+
+    artist: {
+        /**
+         * Register a new artist account (optionally claiming an existing
+         * /artist/{slug} profile via `artist_slug` in `data`).
+         */
+        async register(data) {
+            return AmbiletAPI.post('/artist/register', data);
+        },
+
+        /**
+         * Login. The Laravel controller returns structured 403 errors
+         * with `data.code` of:
+         *   email_not_verified | pending_approval | rejected | suspended
+         * and `data.reason` for the rejected case. The page-level JS
+         * inspects these to redirect appropriately.
+         */
+        async login(email, password) {
+            return AmbiletAPI.post('/artist/login', { email, password });
+        },
+
+        async logout() {
+            return AmbiletAPI.post('/artist/logout');
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/me');
+        },
+
+        async forgotPassword(email) {
+            return AmbiletAPI.post('/artist/forgot-password', { email });
+        },
+
+        async resetPassword(data) {
+            return AmbiletAPI.post('/artist/reset-password', data);
+        },
+
+        async verifyEmail(email, token) {
+            return AmbiletAPI.post('/artist/verify-email', { email, token });
+        },
+
+        async resendVerification(email) {
+            return AmbiletAPI.post('/artist/resend-verification', { email });
+        },
+
+        /**
+         * Public — used by artist-single.php to render the right CTA on
+         * the public profile page (claim vs. verified vs. edit).
+         */
+        async checkClaim(artistSlug) {
+            return AmbiletAPI.get(`/artist/check-claim/${artistSlug}`);
         }
     }
 };

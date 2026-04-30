@@ -95,6 +95,34 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artisti/?$ artists.php [L]
 
+# Artist account auth pages — MUST come before the /artist/{slug} catch-all
+# below, since slugs like "inregistrare" / "login" would otherwise match
+# the generic profile rule and 404.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/inregistrare/?$ artist/register.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/login/?$ artist/login.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/parola-uitata/?$ artist/forgot-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/resetare-parola/?$ artist/reset-password.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/verifica-email/?$ artist/verify-email.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/in-asteptare/?$ artist/pending.php [L,QSA]
+
+# Generic public artist profile — keep this LAST in the /artist/* block.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/([a-z0-9-]+)/?$ artist-single.php?slug=$1 [L,QSA]

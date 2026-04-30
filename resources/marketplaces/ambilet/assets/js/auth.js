@@ -10,6 +10,8 @@ const AmbiletAuth = {
         CUSTOMER_DATA: 'ambilet_customer_data',
         ORGANIZER_TOKEN: 'ambilet_organizer_token',
         ORGANIZER_DATA: 'ambilet_organizer_data',
+        ARTIST_TOKEN: 'ambilet_artist_token',
+        ARTIST_DATA: 'ambilet_artist_data',
         USER_TYPE: 'ambilet_user_type',
         REDIRECT_AFTER_LOGIN: 'ambilet_redirect_after_login',
         REFERRAL_CODE: 'ambilet_referral_code',
@@ -17,12 +19,15 @@ const AmbiletAuth = {
     },
 
     /**
-     * Get current auth token (customer or organizer)
+     * Get current auth token (customer, organizer, or artist)
      */
     getToken() {
         const userType = this.getUserType();
         if (userType === 'organizer') {
             return localStorage.getItem(this.KEYS.ORGANIZER_TOKEN);
+        }
+        if (userType === 'artist') {
+            return localStorage.getItem(this.KEYS.ARTIST_TOKEN);
         }
         return localStorage.getItem(this.KEYS.CUSTOMER_TOKEN);
     },
@@ -53,6 +58,13 @@ const AmbiletAuth = {
      */
     isOrganizer() {
         return this.getUserType() === 'organizer' && this.isLoggedIn();
+    },
+
+    /**
+     * Check if user is an artist
+     */
+    isArtist() {
+        return this.getUserType() === 'artist' && this.isLoggedIn();
     },
 
     // ==================== CUSTOMER AUTH ====================
@@ -297,6 +309,136 @@ const AmbiletAuth = {
         }));
     },
 
+    // ==================== ARTIST AUTH ====================
+
+    /**
+     * Login an artist account. The Laravel controller returns structured 403
+     * errors with a `code` field — pages call this and handle the codes:
+     *   email_not_verified -> redirect to /artist/verifica-email?email=...
+     *   pending_approval   -> redirect to /artist/in-asteptare
+     *   rejected           -> show inline rejection reason
+     *   suspended          -> show inline suspended notice
+     */
+    async loginArtist(email, password) {
+        try {
+            const response = await AmbiletAPI.artist.login(email, password);
+
+            if (response.success && response.data.token) {
+                this.setArtistSession(response.data.token, response.data.account);
+                return { success: true, account: response.data.account };
+            }
+
+            return { success: false, message: response.message || 'Login failed' };
+        } catch (error) {
+            // Surface the structured error code so the page can branch.
+            const code = error.data?.errors?.code || null;
+            const reason = error.data?.errors?.reason || null;
+            return {
+                success: false,
+                message: error.message,
+                errors: error.errors,
+                code,
+                reason
+            };
+        }
+    },
+
+    /**
+     * Register a new artist account. The Laravel controller starts the
+     * account in `pending` status and emails a verification link, so this
+     * does NOT auto-login. Returns `requiresVerification: true` to signal
+     * the page should redirect to the pending screen.
+     */
+    async registerArtist(data) {
+        try {
+            const response = await AmbiletAPI.artist.register(data);
+
+            if (response.success) {
+                return {
+                    success: true,
+                    account: response.data.account,
+                    requiresVerification: !!response.data.requires_verification,
+                    requiresApproval: !!response.data.requires_approval
+                };
+            }
+
+            return { success: false, message: response.message || 'Registration failed' };
+        } catch (error) {
+            return { success: false, message: error.message, errors: error.errors };
+        }
+    },
+
+    /**
+     * Persist an artist session. Clears any prior customer/organizer session
+     * so the three account types remain mutually exclusive on this device.
+     */
+    setArtistSession(token, accountData) {
+        localStorage.setItem(this.KEYS.ARTIST_TOKEN, token);
+        localStorage.setItem(this.KEYS.ARTIST_DATA, JSON.stringify(accountData));
+        localStorage.setItem(this.KEYS.USER_TYPE, 'artist');
+
+        localStorage.removeItem(this.KEYS.CUSTOMER_TOKEN);
+        localStorage.removeItem(this.KEYS.CUSTOMER_DATA);
+        localStorage.removeItem(this.KEYS.ORGANIZER_TOKEN);
+        localStorage.removeItem(this.KEYS.ORGANIZER_DATA);
+
+        window.dispatchEvent(new CustomEvent('ambilet:auth:login', {
+            detail: { type: 'artist', user: accountData }
+        }));
+    },
+
+    getArtistData() {
+        const data = localStorage.getItem(this.KEYS.ARTIST_DATA);
+        return data ? JSON.parse(data) : null;
+    },
+
+    updateArtistData(data) {
+        const current = this.getArtistData() || {};
+        const updated = { ...current, ...data };
+        localStorage.setItem(this.KEYS.ARTIST_DATA, JSON.stringify(updated));
+
+        window.dispatchEvent(new CustomEvent('ambilet:auth:update', {
+            detail: { type: 'artist', user: updated }
+        }));
+    },
+
+    async logoutArtist() {
+        try {
+            await AmbiletAPI.artist.logout();
+        } catch (e) {
+            // Ignore logout API errors — local session is cleared either way.
+        }
+
+        this.clearArtistSession();
+        window.location.href = '/';
+    },
+
+    clearArtistSession() {
+        localStorage.removeItem(this.KEYS.ARTIST_TOKEN);
+        localStorage.removeItem(this.KEYS.ARTIST_DATA);
+        if (this.getUserType() === 'artist') {
+            localStorage.removeItem(this.KEYS.USER_TYPE);
+        }
+
+        window.dispatchEvent(new CustomEvent('ambilet:auth:logout', {
+            detail: { type: 'artist' }
+        }));
+    },
+
+    /**
+     * Require artist authentication. Redirects to /artist/login if the visitor
+     * is not currently logged in as an artist.
+     */
+    requireArtistAuth(redirectUrl = null) {
+        if (!this.isArtist()) {
+            const currentUrl = redirectUrl || window.location.href;
+            this.setRedirectAfterLogin(currentUrl);
+            window.location.href = '/artist/login';
+            return false;
+        }
+        return true;
+    },
+
     // ==================== COMMON ====================
 
     /**
@@ -330,7 +472,7 @@ const AmbiletAuth = {
     },
 
     /**
-     * Get current user data (customer or organizer)
+     * Get current user data (customer, organizer, or artist)
      */
     getCurrentUser() {
         const userType = this.getUserType();
@@ -339,6 +481,9 @@ const AmbiletAuth = {
         }
         if (userType === 'organizer') {
             return this.getOrganizerData();
+        }
+        if (userType === 'artist') {
+            return this.getArtistData();
         }
         return null;
     },
@@ -354,10 +499,14 @@ const AmbiletAuth = {
         if (userType === 'organizer') {
             return this.logoutOrganizer();
         }
+        if (userType === 'artist') {
+            return this.logoutArtist();
+        }
 
         // Clear all just in case
         this.clearCustomerSession();
         this.clearOrganizerSession();
+        this.clearArtistSession();
     },
 
     /**
