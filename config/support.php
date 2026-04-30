@@ -24,7 +24,10 @@ return [
     'allowed_opener_ids' => [
         'organizer' => array_values(array_filter(array_map(
             'trim',
-            explode(',', env('SUPPORT_ALLOWED_ORGANIZER_IDS', '136'))
+            // Default beta testers (override via SUPPORT_ALLOWED_ORGANIZER_IDS in .env):
+            //   1   — nastase.ai+organizator@gmail.com (internal QA)
+            //   136 — dana@promusicevents.ro
+            explode(',', env('SUPPORT_ALLOWED_ORGANIZER_IDS', '1,136'))
         ))),
         'customer' => array_values(array_filter(array_map(
             'trim',
