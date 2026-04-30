@@ -348,7 +348,9 @@ const AmbiletAPI = {
         // on REQUEST_METHOD so a single action string covers all verbs on
         // the same resource.
         if (endpoint === '/artist/dashboard') return 'artist.dashboard';
-        if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.events';
+        // Use a distinct action name to avoid clashing with the pre-existing
+        // public `artist.events` case (slug-required) earlier in proxy.php.
+        if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.account.events';
         if (endpoint === '/artist/profile') return 'artist.profile';
         if (endpoint === '/artist/profile/image') return 'artist.profile.image';
         if (endpoint === '/artist/profile/taxonomies') return 'artist.profile.taxonomies';

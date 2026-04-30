@@ -69,7 +69,7 @@ class DashboardController extends BaseController
             $recentEvents = $artist->events()
                 ->orderByDesc('event_date')
                 ->limit(5)
-                ->get(['events.id', 'events.title', 'events.slug', 'events.event_date', 'events.starts_at', 'events.poster_image', 'events.venue_id'])
+                ->get(['events.id', 'events.title', 'events.slug', 'events.event_date', 'events.starts_at', 'events.poster_url', 'events.venue_id'])
                 ->map(fn ($event) => $this->formatEventCard($event))
                 ->toArray();
         }
@@ -226,6 +226,8 @@ class DashboardController extends BaseController
 
     /**
      * Compact event card for dashboard / events list.
+     * The events table column is `poster_url` (not poster_image) — the
+     * earlier name caused 500s on the dashboard endpoint.
      */
     protected function formatEventCard($event): array
     {
@@ -235,7 +237,7 @@ class DashboardController extends BaseController
             'slug' => $event->slug,
             'event_date' => $event->event_date?->format('Y-m-d'),
             'starts_at' => $event->starts_at?->toIso8601String(),
-            'poster_image' => $event->poster_image,
+            'poster_url' => $event->poster_url,
             'venue_id' => $event->venue_id,
             'is_upcoming' => $event->event_date && $event->event_date->isFuture(),
         ];

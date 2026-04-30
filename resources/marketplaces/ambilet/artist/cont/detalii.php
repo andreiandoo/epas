@@ -57,8 +57,10 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     </div>
                 </div>
 
-                <!-- Editor (shown after data loads) -->
-                <div id="detalii-editor" class="hidden grid lg:grid-cols-[260px_1fr] gap-6">
+                <!-- Editor (shown after data loads). JS adds `grid` when
+                     it removes `hidden` so the two `display` utilities
+                     never coexist on the element at the same time. -->
+                <div id="detalii-editor" class="hidden gap-6 lg:grid-cols-[260px_1fr]">
                     <!-- Tab nav (sidebar within page) -->
                     <aside class="lg:sticky lg:self-start lg:top-6">
                         <nav class="p-3 bg-white border rounded-2xl border-border">
@@ -123,13 +125,15 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                             <div class="space-y-4">
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-secondary">Română</label>
-                                    <textarea data-field="bio_html.ro" rows="8" class="w-full input font-mono text-sm" placeholder="Spune povestea ta…"></textarea>
+                                    <!-- data-rich-editor turns this textarea into a WYSIWYG on
+                                         load (see attachRichEditor in artist-cont-detalii.js). -->
+                                    <textarea data-field="bio_html.ro" data-rich-editor rows="8" class="w-full input" placeholder="Spune povestea ta…"></textarea>
                                 </div>
                                 <div>
                                     <label class="block mb-2 text-sm font-medium text-secondary">Engleză</label>
-                                    <textarea data-field="bio_html.en" rows="8" class="w-full input font-mono text-sm" placeholder="Tell your story…"></textarea>
+                                    <textarea data-field="bio_html.en" data-rich-editor rows="8" class="w-full input" placeholder="Tell your story…"></textarea>
                                 </div>
-                                <p class="text-xs text-muted">HTML simplu permis: &lt;b&gt;, &lt;i&gt;, &lt;p&gt;, &lt;br&gt;, &lt;a href&gt;.</p>
+                                <p class="text-xs text-muted">Folosește butoanele pentru a formata textul. HTML primit este sanitizat la salvare.</p>
                             </div>
                         </section>
 

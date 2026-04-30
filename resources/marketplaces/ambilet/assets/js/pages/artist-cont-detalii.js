@@ -76,12 +76,19 @@ window.addEventListener('ambilet:artist-cont:ready', () => {
         State.selectedTypeIds = new Set((State.artist.artist_types || []).map(t => t.id));
         State.selectedGenreIds = new Set((State.artist.artist_genres || []).map(g => g.id));
 
-        document.getElementById('detalii-editor')?.classList.remove('hidden');
+        const editor = document.getElementById('detalii-editor');
+        if (editor) {
+            editor.classList.remove('hidden');
+            // Adding `grid` here (instead of in the markup) avoids the
+            // Tailwind hidden/grid `display` conflict the IDE flags.
+            editor.classList.add('grid');
+        }
         renderTabNav();
         hydrateForm();
         wireRepeaters();
         wireMultiSelects();
         wireImageUploaders();
+        wireRichEditors();
         wireDirtyTracking();
         wireSave();
     });
@@ -283,6 +290,109 @@ function renderMultiSelect(key, options, selectedSet) {
             markDirty();
         });
     });
+}
+
+// ============================================================================
+// Rich-text editors (Biografie RO/EN)
+// Tiny contenteditable-based WYSIWYG. No external dependency. The toolbar
+// uses document.execCommand() (deprecated but still universally supported).
+// HtmlSanitizer scrubs the output server-side on PUT, so even if a power
+// user pastes ugly markup we never persist anything dangerous.
+// ============================================================================
+function wireRichEditors() {
+    document.querySelectorAll('textarea[data-rich-editor]').forEach(textarea => {
+        if (textarea._editorAttached) {
+            // Already wired — re-hydrate after Save just refreshes contents
+            // (textarea.value was updated by hydrateForm()).
+            if (textarea._editor) textarea._editor.innerHTML = textarea.value || '';
+            return;
+        }
+        attachRichEditor(textarea);
+    });
+}
+
+function attachRichEditor(textarea) {
+    const wrap = document.createElement('div');
+    wrap.className = 'overflow-hidden border rounded-lg border-border';
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'flex flex-wrap items-center gap-1 px-2 py-1 border-b bg-surface border-border';
+
+    const editor = document.createElement('div');
+    editor.contentEditable = 'true';
+    editor.className = 'rich-editor-content p-3 min-h-[200px] max-h-[500px] overflow-y-auto focus:outline-none prose prose-sm max-w-none bg-white';
+    editor.innerHTML = textarea.value || '';
+
+    const sync = () => {
+        textarea.value = editor.innerHTML;
+        // Bubble up so detalii-form's input listener picks it up for dirty tracking.
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const buttons = [
+        { cmd: 'bold', label: 'B', title: 'Bold (Ctrl+B)', style: 'font-weight:700' },
+        { cmd: 'italic', label: 'I', title: 'Italic (Ctrl+I)', style: 'font-style:italic' },
+        { cmd: 'underline', label: 'U', title: 'Underline', style: 'text-decoration:underline' },
+        { sep: true },
+        { cmd: 'formatBlock', arg: '<h3>', label: 'H', title: 'Subtitlu', style: 'font-weight:700' },
+        { cmd: 'formatBlock', arg: '<p>', label: 'P', title: 'Paragraf' },
+        { sep: true },
+        { cmd: 'insertUnorderedList', label: '•', title: 'Listă bullets' },
+        { cmd: 'insertOrderedList', label: '1.', title: 'Listă numerotată' },
+        { sep: true },
+        { cmd: 'createLink', label: '🔗', title: 'Inserează link', prompt: 'URL:' },
+        { cmd: 'unlink', label: '⛔', title: 'Șterge link' },
+        { sep: true },
+        { cmd: 'removeFormat', label: '⌫', title: 'Curăță formatare' },
+    ];
+
+    buttons.forEach(btn => {
+        if (btn.sep) {
+            const sep = document.createElement('span');
+            sep.className = 'self-stretch w-px mx-1 bg-border';
+            toolbar.appendChild(sep);
+            return;
+        }
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.title = btn.title;
+        b.className = 'px-2 py-1 text-sm rounded text-secondary hover:bg-primary/10 min-w-[28px]';
+        if (btn.style) b.setAttribute('style', btn.style);
+        b.textContent = btn.label;
+        // Prevent the toolbar button from stealing focus before execCommand runs.
+        b.addEventListener('mousedown', e => e.preventDefault());
+        b.addEventListener('click', () => {
+            let arg = btn.arg;
+            if (btn.prompt) {
+                arg = window.prompt(btn.prompt, 'https://');
+                if (!arg) return;
+            }
+            editor.focus();
+            try {
+                document.execCommand(btn.cmd, false, arg);
+            } catch (e) { /* old browsers — ignore */ }
+            sync();
+        });
+        toolbar.appendChild(b);
+    });
+
+    editor.addEventListener('input', sync);
+    editor.addEventListener('blur', sync);
+    // Strip rich formatting from pasted text — keeps storage clean.
+    editor.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, text);
+    });
+
+    wrap.appendChild(toolbar);
+    wrap.appendChild(editor);
+
+    textarea.style.display = 'none';
+    textarea.parentNode.insertBefore(wrap, textarea);
+
+    textarea._editorAttached = true;
+    textarea._editor = editor;
 }
 
 // ============================================================================

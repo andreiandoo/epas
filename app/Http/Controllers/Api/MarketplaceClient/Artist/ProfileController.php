@@ -207,6 +207,11 @@ class ProfileController extends BaseController
      * GET /artist/profile/taxonomies — flat list of artist types + genres
      * for the editor's multi-select inputs. Cached for 1 hour because
      * these change very rarely.
+     *
+     * Names on ArtistType / ArtistGenre are translatable (cast as array
+     * with locale keys), so we resolve to a plain string here. Otherwise
+     * the picker UI would render "[object Object]" — the JS doesn't need
+     * to know about the translatable shape.
      */
     public function taxonomies(Request $request): JsonResponse
     {
@@ -216,15 +221,37 @@ class ProfileController extends BaseController
             return $this->error('Unauthorized', 401);
         }
 
-        $data = Cache::remember('artist_account.taxonomies.v1', now()->addHour(), function () {
+        $locale = $account->locale ?: app()->getLocale();
+
+        $data = Cache::remember('artist_account.taxonomies.v2.' . $locale, now()->addHour(), function () use ($locale) {
+            $resolveName = function ($model) use ($locale) {
+                $name = $model->name;
+                if (is_array($name)) {
+                    return $name[$locale] ?? $name['ro'] ?? $name['en'] ?? array_values(array_filter($name))[0] ?? '';
+                }
+                return (string) $name;
+            };
+
             return [
                 'artist_types' => ArtistType::query()
-                    ->orderBy('name')
                     ->get(['id', 'name', 'slug'])
+                    ->map(fn ($t) => [
+                        'id' => $t->id,
+                        'name' => $resolveName($t),
+                        'slug' => $t->slug,
+                    ])
+                    ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values()
                     ->toArray(),
                 'artist_genres' => ArtistGenre::query()
-                    ->orderBy('name')
                     ->get(['id', 'name', 'slug'])
+                    ->map(fn ($g) => [
+                        'id' => $g->id,
+                        'name' => $resolveName($g),
+                        'slug' => $g->slug,
+                    ])
+                    ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values()
                     ->toArray(),
             ];
         });
@@ -322,8 +349,37 @@ class ProfileController extends BaseController
             'max_fee_concert' => $artist->max_fee_concert,
             'min_fee_festival' => $artist->min_fee_festival,
             'max_fee_festival' => $artist->max_fee_festival,
-            'artist_types' => $artist->artistTypes->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'slug' => $t->slug])->values()->toArray(),
-            'artist_genres' => $artist->artistGenres->map(fn ($g) => ['id' => $g->id, 'name' => $g->name, 'slug' => $g->slug])->values()->toArray(),
+            // Translatable names → flatten to a string for the JS picker.
+            // Same fallback chain as taxonomies(): current account locale,
+            // then ro, then en, then any non-empty value.
+            'artist_types' => $artist->artistTypes->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $this->translatableToString($t->name),
+                'slug' => $t->slug,
+            ])->values()->toArray(),
+            'artist_genres' => $artist->artistGenres->map(fn ($g) => [
+                'id' => $g->id,
+                'name' => $this->translatableToString($g->name),
+                'slug' => $g->slug,
+            ])->values()->toArray(),
         ];
+    }
+
+    /**
+     * Flatten a translatable value to a string for API responses.
+     * Falls back through current locale → ro → en → any non-empty entry.
+     */
+    protected function translatableToString($value, ?string $locale = null): string
+    {
+        $locale = $locale ?? app()->getLocale();
+
+        if (is_array($value)) {
+            return $value[$locale]
+                ?? $value['ro']
+                ?? $value['en']
+                ?? (array_values(array_filter($value))[0] ?? '');
+        }
+
+        return (string) ($value ?? '');
     }
 }
