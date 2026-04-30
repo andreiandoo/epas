@@ -133,7 +133,12 @@ class SupportTicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with(['department', 'problemType', 'assignee', 'opener']))
+            // Eager-load explicit relations only. The polymorphic `opener`
+            // is intentionally lazy-loaded per row in the formatters — eager-
+            // loading morphTo via `with('opener')` was triggering a Filament
+            // render-time crash deep in HasFilters where $query->model
+            // ended up null on a sub-builder.
+            ->modifyQueryUsing(fn (Builder $q) => $q->with(['department', 'problemType', 'assignee']))
             ->columns([
                 Tables\Columns\TextColumn::make('ticket_number')
                     ->label('Nr.')
@@ -148,13 +153,12 @@ class SupportTicketResource extends Resource
                     ->wrap()
                     ->limit(60),
 
-                Tables\Columns\TextColumn::make('opener_label')
+                Tables\Columns\TextColumn::make('opener_summary')
                     ->label('De la')
                     ->state(fn (SupportTicket $r) => static::openerLabel($r))
-                    ->description(fn (SupportTicket $r) => static::openerSecondary($r))
                     ->wrap(),
 
-                Tables\Columns\TextColumn::make('department.name')
+                Tables\Columns\TextColumn::make('department_name')
                     ->label('Departament')
                     ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
                     ->badge()
@@ -198,8 +202,9 @@ class SupportTicketResource extends Resource
                         default => $state,
                     }),
 
-                Tables\Columns\TextColumn::make('assignee.name')
+                Tables\Columns\TextColumn::make('assignee_name')
                     ->label('Asignat')
+                    ->state(fn (SupportTicket $r) => $r->assignee?->name)
                     ->placeholder('— nealocat —')
                     ->toggleable(),
 
@@ -258,23 +263,8 @@ class SupportTicketResource extends Resource
                         ->mapWithKeys(fn ($u) => [$u->id => $u->name])
                         ->all()),
             ])
-            ->recordUrl(fn (SupportTicket $record) => static::getUrl('view', ['record' => $record]))
             ->recordActions([
                 \Filament\Actions\ViewAction::make(),
-            ])
-            ->toolbarActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\BulkAction::make('close')
-                        ->label('Închide selectate')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->requiresConfirmation()
-                        ->action(fn ($records) => $records->each->update([
-                            'status' => SupportTicket::STATUS_CLOSED,
-                            'closed_at' => now(),
-                            'last_activity_at' => now(),
-                        ])),
-                ]),
             ]);
     }
 
