@@ -48,8 +48,13 @@ class SupportTicketResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $admin = Auth::guard('marketplace_admin')->user();
+        // Eager loads live here instead of Table::modifyQueryUsing() — using
+        // a Closure modifier on the table breaks the listing view in this
+        // Filament build (the table's query reaches Filament's filter
+        // wrapping with a model-less builder, blowing up at where(Closure)).
         return parent::getEloquentQuery()
-            ->where('marketplace_client_id', $admin?->marketplace_client_id);
+            ->where('marketplace_client_id', $admin?->marketplace_client_id)
+            ->with(['department', 'problemType', 'assignee']);
     }
 
     public static function form(Schema $form): Schema
@@ -132,6 +137,23 @@ class SupportTicketResource extends Resource
                     ->label('Subiect')
                     ->searchable()
                     ->limit(60),
+
+                Tables\Columns\TextColumn::make('opener_summary')
+                    ->label('De la')
+                    ->state(fn (SupportTicket $r) => static::openerLabel($r))
+                    ->wrap(),
+
+                Tables\Columns\TextColumn::make('department_name')
+                    ->label('Departament')
+                    ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
+                    ->badge()
+                    ->color('gray'),
+
+                Tables\Columns\TextColumn::make('assignee_name')
+                    ->label('Asignat')
+                    ->state(fn (SupportTicket $r) => $r->assignee?->name)
+                    ->placeholder('— nealocat —')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Prioritate')
