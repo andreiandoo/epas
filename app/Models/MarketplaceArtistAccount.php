@@ -1,0 +1,233 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
+use Laravel\Sanctum\HasApiTokens;
+
+class MarketplaceArtistAccount extends Authenticatable
+{
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+
+    protected $fillable = [
+        'marketplace_client_id',
+        'artist_id',
+        'email',
+        'password',
+        'first_name',
+        'last_name',
+        'phone',
+        'locale',
+        'status',
+        'approved_at',
+        'approved_by',
+        'rejected_at',
+        'rejection_reason',
+        'claim_message',
+        'claim_proof',
+        'claim_submitted_at',
+        'email_verified_at',
+        'email_verification_token',
+        'email_verification_expires_at',
+        'last_login_at',
+        'settings',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'email_verification_token',
+    ];
+
+    protected $casts = [
+        'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'claim_submitted_at' => 'datetime',
+        'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'password' => 'hashed',
+        'claim_proof' => 'array',
+        'settings' => 'array',
+    ];
+
+    // =========================================
+    // Relationships
+    // =========================================
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function artist(): BelongsTo
+    {
+        return $this->belongsTo(Artist::class);
+    }
+
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // =========================================
+    // Status Checks
+    // =========================================
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    /**
+     * Whether this account is allowed to edit the linked Artist profile.
+     * Requires an active status AND a linked artist record.
+     */
+    public function canEditArtistProfile(): bool
+    {
+        return $this->isActive() && $this->artist_id !== null;
+    }
+
+    // =========================================
+    // Approval Workflow
+    // =========================================
+
+    /**
+     * Approve the account. Sets status=active, links the approving admin,
+     * and clears any prior rejection.
+     */
+    public function markApproved(User $admin): void
+    {
+        $this->update([
+            'status' => 'active',
+            'approved_at' => now(),
+            'approved_by' => $admin->id,
+            'rejected_at' => null,
+            'rejection_reason' => null,
+        ]);
+    }
+
+    public function markRejected(string $reason): void
+    {
+        $this->update([
+            'status' => 'rejected',
+            'rejected_at' => now(),
+            'rejection_reason' => $reason,
+        ]);
+    }
+
+    public function markSuspended(): void
+    {
+        $this->update(['status' => 'suspended']);
+    }
+
+    public function markReactivated(): void
+    {
+        $this->update(['status' => 'active']);
+    }
+
+    // =========================================
+    // Email Verification
+    // =========================================
+
+    /**
+     * Generate a fresh email verification token (random 64 chars).
+     * Stored as SHA-256 in DB; the plaintext is returned and emailed to the user.
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = Str::random(64);
+
+        $this->update([
+            'email_verification_token' => hash('sha256', $token),
+            'email_verification_expires_at' => now()->addHours(24),
+        ]);
+
+        return $token;
+    }
+
+    public function verifyEmailWithToken(string $token): bool
+    {
+        if (!$this->email_verification_token) {
+            return false;
+        }
+
+        if ($this->email_verification_expires_at && $this->email_verification_expires_at->isPast()) {
+            return false;
+        }
+
+        if (!hash_equals($this->email_verification_token, hash('sha256', $token))) {
+            return false;
+        }
+
+        $this->update([
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    public function isVerificationTokenExpired(): bool
+    {
+        return $this->email_verification_expires_at
+            && $this->email_verification_expires_at->isPast();
+    }
+
+    /**
+     * Rate-limit re-sending verification emails to once per minute.
+     */
+    public function canResendVerification(): bool
+    {
+        if ($this->isEmailVerified()) {
+            return false;
+        }
+
+        if (!$this->email_verification_expires_at) {
+            return true;
+        }
+
+        $tokenCreatedAt = $this->email_verification_expires_at->subHours(24);
+        return $tokenCreatedAt->diffInMinutes(now()) >= 1;
+    }
+
+    // =========================================
+    // Helpers
+    // =========================================
+
+    public function getFullNameAttribute(): string
+    {
+        return trim("{$this->first_name} {$this->last_name}");
+    }
+
+    public function recordLogin(): void
+    {
+        $this->update(['last_login_at' => now()]);
+    }
+}

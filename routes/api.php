@@ -2478,6 +2478,36 @@ Route::prefix('marketplace-client/artists')->middleware(['throttle:120,1', 'mark
         ->name('api.marketplace-client.artists.events');
 });
 
+// Artist Accounts — self-service auth + profile claim. Distinct from
+// /marketplace-client/artists above (which is the public artist content API).
+use App\Http\Controllers\Api\MarketplaceClient\Artist\AuthController as ArtistAccountAuthController;
+
+Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Public — no artist auth required
+    Route::post('/register', [ArtistAccountAuthController::class, 'register'])
+        ->name('api.marketplace-client.artist.register');
+    Route::post('/login', [ArtistAccountAuthController::class, 'login'])
+        ->name('api.marketplace-client.artist.login');
+    Route::post('/forgot-password', [ArtistAccountAuthController::class, 'forgotPassword'])
+        ->name('api.marketplace-client.artist.forgot-password');
+    Route::post('/reset-password', [ArtistAccountAuthController::class, 'resetPassword'])
+        ->name('api.marketplace-client.artist.reset-password');
+    Route::post('/verify-email', [ArtistAccountAuthController::class, 'verifyEmail'])
+        ->name('api.marketplace-client.artist.verify-email');
+    Route::post('/resend-verification', [ArtistAccountAuthController::class, 'resendVerification'])
+        ->name('api.marketplace-client.artist.resend-verification');
+    Route::get('/check-claim/{artistSlug}', [ArtistAccountAuthController::class, 'checkClaim'])
+        ->name('api.marketplace-client.artist.check-claim');
+
+    // Protected — Sanctum bearer token resolved to MarketplaceArtistAccount
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [ArtistAccountAuthController::class, 'logout'])
+            ->name('api.marketplace-client.artist.logout');
+        Route::get('/me', [ArtistAccountAuthController::class, 'me'])
+            ->name('api.marketplace-client.artist.me');
+    });
+});
+
 // Knowledge Base
 use App\Http\Controllers\Api\MarketplaceClient\KnowledgeBaseController as MarketplaceKnowledgeBaseController;
 
