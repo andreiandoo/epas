@@ -107,6 +107,13 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\MediaLibrary::observe(\App\Observers\MediaLibraryObserver::class);
         \App\Models\MarketplacePayout::observe(\App\Observers\MarketplacePayoutObserver::class);
         \App\Models\Venue::observe(\App\Observers\VenueObserver::class);
+
+        // Seating layout / section saves bust the marketplace front-end's
+        // page-cache + api_cached event_preload entries via cross-host
+        // webhook (see App\Services\Cache\AmbiletCacheBuster). No-op when
+        // services.ambilet.cache_bust_url is unconfigured.
+        \App\Models\Seating\SeatingLayout::observe(\App\Observers\SeatingLayoutBustObserver::class);
+        \App\Models\Seating\SeatingSection::observe(\App\Observers\SeatingSectionBustObserver::class);
         \App\Models\FestivalEdition::observe(\App\Observers\FestivalEditionObserver::class);
         \App\Models\Coupon\CouponCode::observe(\App\Observers\CouponCodeObserver::class);
 

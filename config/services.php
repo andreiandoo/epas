@@ -113,4 +113,19 @@ return [
         'base_domain' => env('CLOUDFLARE_BASE_DOMAIN', 'ticks.ro'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Ambilet Front-end Cache Buster
+    |--------------------------------------------------------------------------
+    |
+    | When unset, AmbiletCacheBuster is a no-op. When set, seating-layout
+    | observers POST { token, slugs[] } to cache_bust_url so the front-end
+    | can drop page-cache + api_cached entries for the affected events.
+    |
+    */
+    'ambilet' => [
+        'cache_bust_url' => env('AMBILET_CACHE_BUST_URL'),
+        'cache_bust_token' => env('AMBILET_CACHE_BUST_TOKEN'),
+    ],
+
 ];

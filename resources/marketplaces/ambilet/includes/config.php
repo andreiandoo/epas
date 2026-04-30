@@ -33,6 +33,11 @@ if (USE_STAGE_API) {
 define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB');
 define('API_ENV', USE_STAGE_API ? 'stage' : 'production');
 
+// Shared secret for /api/cache-bust.php — verifies the POST is coming
+// from Tixello admin (which has the matching AMBILET_CACHE_BUST_TOKEN
+// in its env). Rotate by updating both sides simultaneously.
+define('CACHE_BUST_TOKEN', 'cb_a3K8Qm2vR9LpZx5TfYwH7nB4Js6DgEcUiVqOpW1XzMyN0kLrCh');
+
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');
