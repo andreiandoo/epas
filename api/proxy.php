@@ -3356,6 +3356,22 @@ if ($useCache) {
     }
 }
 
+// TEMP DIAGNOSTIC for support ticket store: write the raw incoming
+// request shape + chosen branch to the marketplace error log so we
+// can see why upstream is responding with the listing payload instead
+// of a created ticket. Remove once support.tickets.store is healthy.
+if (($_GET['action'] ?? '') === 'organizer.support.tickets.store') {
+    @error_log('[support-store-diag] action=' . ($_GET['action'] ?? '')
+        . ' incoming_method=' . ($_SERVER['REQUEST_METHOD'] ?? '')
+        . ' computed_method=' . ($method ?? '')
+        . ' endpoint=' . ($endpoint ?? '')
+        . ' isMultipart=' . (!empty($isMultipart) ? '1' : '0')
+        . ' isFileUpload=' . (!empty($isFileUpload) ? '1' : '0')
+        . ' post_keys=' . implode(',', array_keys($_POST))
+        . ' files_keys=' . implode(',', array_keys($_FILES))
+        . ' content_type=' . ($_SERVER['CONTENT_TYPE'] ?? ''));
+}
+
 // Handle multipart/form-data forward via cURL.
 // Triggers for any endpoint flagged as multipart even when $_FILES is empty
 // — otherwise the raw multipart body would be sent through the JSON handler
@@ -3430,7 +3446,17 @@ if (!empty($isFileUpload) || !empty($isMultipart)) {
 
     $response = curl_exec($ch);
     $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $effectiveMethod = curl_getinfo($ch, CURLINFO_EFFECTIVE_URL);
+    $sentBytes = curl_getinfo($ch, CURLINFO_SIZE_UPLOAD);
     curl_close($ch);
+
+    if (($_GET['action'] ?? '') === 'organizer.support.tickets.store') {
+        @error_log('[support-store-diag] AFTER curl_exec'
+            . ' status=' . $statusCode
+            . ' upload_bytes=' . $sentBytes
+            . ' postFields_keys=' . implode(',', array_keys($postFields))
+            . ' resp_first_120=' . substr((string) $response, 0, 120));
+    }
 
     http_response_code($statusCode ?: 500);
     echo $response ?: json_encode(['error' => 'Upload failed']);
