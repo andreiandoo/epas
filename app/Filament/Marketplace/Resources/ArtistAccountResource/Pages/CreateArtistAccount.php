@@ -162,6 +162,10 @@ class CreateArtistAccount extends CreateRecord
         $data['status'] = 'active';
         $data['email_verified_at'] = now();
         $data['approved_at'] = now();
+        // The marketplace panel uses the `marketplace_admin` guard, so
+        // auth()->id() here is a marketplace_admins.id (not a users.id).
+        // The FK on this column was dropped — see migration
+        // 2026_04_30_140000_drop_approved_by_fk_on_marketplace_artist_accounts.
         $data['approved_by'] = auth()->id();
         $data['claim_submitted_at'] = now();
 

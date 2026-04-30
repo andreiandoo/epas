@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\Artist;
 use App\Models\MarketplaceArtistAccount;
 use App\Models\MarketplaceClient;
-use App\Models\User;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -21,11 +21,17 @@ class ArtistAccountApprovalService
      * Approve a pending account. Sets status=active, links the approving
      * admin, clears any prior rejection, and emails the applicant.
      *
+     * `$admin` is typed as Authenticatable (not User) so both core super
+     * admins (User) and marketplace admins (MarketplaceAdmin) can approve.
+     * The marketplace panel uses the `marketplace_admin` guard whose ids
+     * live in a separate table, which is why
+     * markApproved() now stores `getAuthIdentifier()` without an FK.
+     *
      * Returns false (without throwing) if email is not yet verified — admin
      * shouldn't be able to approve unverified accounts; the Filament action
      * already gates this, but we double-check defensively.
      */
-    public function approve(MarketplaceArtistAccount $account, User $admin): bool
+    public function approve(MarketplaceArtistAccount $account, Authenticatable $admin): bool
     {
         if (!$account->isEmailVerified()) {
             return false;

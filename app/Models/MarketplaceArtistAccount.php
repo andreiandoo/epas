@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -118,15 +119,23 @@ class MarketplaceArtistAccount extends Authenticatable
     // =========================================
 
     /**
-     * Approve the account. Sets status=active, links the approving admin,
-     * and clears any prior rejection.
+     * Approve the account. Sets status=active, stores the approving
+     * admin's id, and clears any prior rejection.
+     *
+     * Accepts any Authenticatable (User OR MarketplaceAdmin) — the FK
+     * on `approved_by` was dropped in
+     * 2026_04_30_140000_drop_approved_by_fk_on_marketplace_artist_accounts
+     * because the marketplace panel uses the `marketplace_admin` guard
+     * with a separate id space. The `approver()` relation still points
+     * at User (best-effort) and resolves to null for marketplace_admin
+     * rows — UI just shows "—" in that case.
      */
-    public function markApproved(User $admin): void
+    public function markApproved(AuthenticatableContract $admin): void
     {
         $this->update([
             'status' => 'active',
             'approved_at' => now(),
-            'approved_by' => $admin->id,
+            'approved_by' => $admin->getAuthIdentifier(),
             'rejected_at' => null,
             'rejection_reason' => null,
         ]);
