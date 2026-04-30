@@ -19,6 +19,26 @@ const CheckoutPage = {
             return;
         }
 
+        // CAPI InitiateCheckout (Layer B bridge). Fires once when the
+        // checkout page loads with at least one item.
+        try {
+            if (window.EPASTracking && typeof EPASTracking.trackBeginCheckout === 'function') {
+                const totalValue = this.items.reduce(
+                    (sum, item) => sum + ((item.ticketType?.price || 0) * (item.quantity || 0)),
+                    0
+                );
+                const firstEventId = this.items[0]?.eventId || null;
+                if (firstEventId) {
+                    EPASTracking.trackBeginCheckout(firstEventId, totalValue, 'RON', {
+                        marketplace_event_id: firstEventId,
+                        num_items: this.items.reduce((s, i) => s + (i.quantity || 0), 0),
+                    });
+                }
+            }
+        } catch (e) {
+            // Tracking must never break checkout
+        }
+
         // Load checkout features (insurance, etc.)
         await this.loadCheckoutFeatures();
 

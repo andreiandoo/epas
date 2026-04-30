@@ -105,6 +105,25 @@ const AmbiletCart = {
 
         this.showNotification(`${ticketTypeData.name} adăugat în coș!`);
 
+        // CAPI AddToCart (Layer B bridge — backend forwards to Meta Graph API)
+        try {
+            if (window.EPASTracking && typeof EPASTracking.trackAddToCart === 'function') {
+                EPASTracking.trackAddToCart(
+                    eventId,
+                    ticketTypeId,
+                    quantity,
+                    ticketTypeData.price || 0,
+                    'RON',
+                    {
+                        marketplace_event_id: eventId,
+                        content_name: ticketTypeData.name || null,
+                    }
+                );
+            }
+        } catch (e) {
+            // Tracking must never break cart logic
+        }
+
         return cart;
     },
 
