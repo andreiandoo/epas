@@ -134,11 +134,6 @@ class SupportTicketResource extends Resource
                     ->searchable()
                     ->limit(60),
 
-                Tables\Columns\TextColumn::make('opener_summary')
-                    ->label('De la')
-                    ->state(fn (SupportTicket $r) => static::openerLabel($r))
-                    ->wrap(),
-
                 Tables\Columns\TextColumn::make('department_name')
                     ->label('Departament')
                     ->state(fn (SupportTicket $r) => $r->department?->getTranslation('name', 'ro') ?? '—')
