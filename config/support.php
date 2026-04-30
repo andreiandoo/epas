@@ -70,6 +70,6 @@ return [
     'morph_map' => [
         'organizer' => \App\Models\MarketplaceOrganizer::class,
         'customer' => \App\Models\MarketplaceCustomer::class,
-        'staff' => \App\Models\User::class,
+        'staff' => \App\Models\MarketplaceAdmin::class,
     ],
 ];

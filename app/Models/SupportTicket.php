@@ -42,7 +42,7 @@ class SupportTicket extends Model
         'opener_id',
         'support_department_id',
         'support_problem_type_id',
-        'assigned_to_user_id',
+        'assigned_to_marketplace_admin_id',
         'subject',
         'status',
         'priority',
@@ -88,7 +88,7 @@ class SupportTicket extends Model
                 'priority',
                 'support_department_id',
                 'support_problem_type_id',
-                'assigned_to_user_id',
+                'assigned_to_marketplace_admin_id',
                 'subject',
             ])
             ->logOnlyDirty()
@@ -120,7 +120,7 @@ class SupportTicket extends Model
 
     public function assignee(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_to_user_id');
+        return $this->belongsTo(MarketplaceAdmin::class, 'assigned_to_marketplace_admin_id');
     }
 
     public function messages(): HasMany
@@ -151,7 +151,7 @@ class SupportTicket extends Model
 
     public function scopeAssignedTo(Builder $q, int $userId): Builder
     {
-        return $q->where('assigned_to_user_id', $userId);
+        return $q->where('assigned_to_marketplace_admin_id', $userId);
     }
 
     // -------- Helpers --------
