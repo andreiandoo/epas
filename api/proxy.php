@@ -1878,7 +1878,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
-    case 'artist.events':
+    // Note: action name is `artist.account.events` (NOT `artist.events`) —
+    // there's a pre-existing `artist.events` case earlier in this file that
+    // serves the public artist's events list (slug-required) for the
+    // /artist/{slug} page. PHP switches match first-hit, so reusing the
+    // same action name would always route to the public handler and 400
+    // with "Missing artist slug".
+    case 'artist.account.events':
         $method = 'GET';
         $params = [];
         if (isset($_GET['filter'])) $params['filter'] = $_GET['filter'];
