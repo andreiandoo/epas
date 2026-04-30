@@ -534,6 +534,10 @@
                     $seatRadius = (($section->metadata['seat_size'] ?? 15) / 2);
                     $seatFontSize = round($seatRadius * 0.95, 1);
                     $xOff = round($seatRadius * 0.5, 1);
+                    // Section-level "Afișare automată nume rânduri" toggle
+                    // from the seating designer. Default true; only false
+                    // when the organizer explicitly unchecks it.
+                    $autoShowRowLabels = ($section->metadata['auto_show_row_labels'] ?? true) !== false;
 
                     // Compute section-wide seat X bounds and gap for aligned row labels
                     $allSeatXs = [];
@@ -635,8 +639,8 @@
                                 $firstSeat = $row->seats->first();
                                 $rowLabelY = $firstSeat ? $sY + ($firstSeat->y ?? 0) + $seatRadius * 0.4 : $sY;
                             @endphp
-                            @unless($isTable)
-                                {{-- Left row label (skipped for tables — label sits inside the table shape) --}}
+                            @if(!$isTable && $autoShowRowLabels)
+                                {{-- Left row label (skipped for tables — label sits inside the table shape — and when the section has auto_show_row_labels=false) --}}
                                 <text x="{{ $leftLabelX }}" y="{{ $rowLabelY }}"
                                       font-size="{{ $rowLabelSize }}" text-anchor="end" font-weight="600"
                                       class="pointer-events-none select-none"
@@ -648,7 +652,7 @@
                                       class="pointer-events-none select-none"
                                       :fill="isSel({{ $row->id }}) ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0.7)'"
                                 >{{ $row->label }}</text>
-                            @endunless
+                            @endif
                         </g>
                     @endforeach
                 </g>
