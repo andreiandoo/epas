@@ -1187,27 +1187,20 @@ class EditEvent extends EditRecord
         // Use updateExistingPivot per artist instead of sync() — sync() would
         // detach any artist NOT in artist_settings, which silently removes
         // newly-added artists whose Repeater row hasn't been hydrated yet.
+        // The Repeater submits artist_settings keyed by its internal row keys
+        // (e.g. {"1": {...}, "0": {...}, "2": {...}} when the user has reordered).
+        // PHP iterates in insertion order, so the foreach below walks the rows
+        // in the new visual order — but the array key itself is meaningless as
+        // a sort index. Use a separate counter that increments per row.
         $artistSettings = $this->data['artist_settings'] ?? [];
-        \Log::info('[EditEvent afterSave] artist_settings', [
-            'event_id' => $this->record->id,
-            'has_key' => array_key_exists('artist_settings', $this->data),
-            'count' => is_array($artistSettings) ? count($artistSettings) : -1,
-            'value' => $artistSettings,
-            'data_keys' => array_keys($this->data ?? []),
-        ]);
         if (!empty($artistSettings)) {
             $sortIndex = 0;
-            foreach ($artistSettings as $key => $setting) {
+            foreach ($artistSettings as $setting) {
                 if (!empty($setting['artist_id'])) {
                     $this->record->artists()->updateExistingPivot($setting['artist_id'], [
                         'sort_order' => $sortIndex,
                         'is_headliner' => $setting['is_headliner'] ?? false,
                         'is_co_headliner' => $setting['is_co_headliner'] ?? false,
-                    ]);
-                    \Log::info('[EditEvent afterSave] artist pivot updated', [
-                        'artist_id' => $setting['artist_id'],
-                        'sort_order' => $sortIndex,
-                        'repeater_key' => $key,
                     ]);
                     $sortIndex++;
                 }
