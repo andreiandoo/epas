@@ -3,20 +3,19 @@
 namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\SupportTicketResource\Pages;
+use App\Models\MarketplaceAdmin;
+use App\Models\SupportDepartment;
+use App\Models\SupportProblemType;
 use App\Models\SupportTicket;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
-/**
- * MINIMAL resource — every callback / filter / virtual column / dot-notation
- * has been pulled out while we hunt the 500 on /marketplace/support-tickets.
- * Once this renders, features get added back one at a time.
- */
 class SupportTicketResource extends Resource
 {
     protected static ?string $model = SupportTicket::class;
@@ -29,6 +28,23 @@ class SupportTicketResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
     protected static ?int $navigationSort = 6;
 
+    protected static ?string $recordTitleAttribute = 'subject';
+
+    public static function getNavigationBadge(): ?string
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+        if (!$admin) return null;
+        $count = static::getEloquentQuery()
+            ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED])
+            ->count();
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $admin = Auth::guard('marketplace_admin')->user();
@@ -39,20 +55,180 @@ class SupportTicketResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form->components([
-            Forms\Components\TextInput::make('subject')->required()->maxLength(255),
+            Section::make('Detalii tichet')->schema([
+                Forms\Components\TextInput::make('subject')
+                    ->label('Subiect')
+                    ->required()
+                    ->maxLength(255),
+
+                Forms\Components\Select::make('support_department_id')
+                    ->label('Departament')
+                    ->options(fn () => SupportDepartment::query()
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->get()
+                        ->mapWithKeys(fn ($d) => [$d->id => $d->getTranslation('name', 'ro') ?: $d->slug])
+                        ->all())
+                    ->required(),
+
+                Forms\Components\Select::make('support_problem_type_id')
+                    ->label('Tip problemă')
+                    ->options(fn () => SupportProblemType::query()
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->get()
+                        ->mapWithKeys(fn ($p) => [$p->id => $p->getTranslation('name', 'ro') ?: $p->slug])
+                        ->all())
+                    ->nullable(),
+
+                Forms\Components\Select::make('priority')
+                    ->label('Prioritate')
+                    ->options([
+                        'low' => 'Scăzută',
+                        'normal' => 'Normală',
+                        'high' => 'Ridicată',
+                        'urgent' => 'Urgentă',
+                    ])
+                    ->required()
+                    ->default('normal'),
+
+                Forms\Components\Select::make('status')
+                    ->label('Status')
+                    ->options([
+                        'open' => 'Deschis',
+                        'in_progress' => 'În lucru',
+                        'awaiting_organizer' => 'Așteaptă răspuns',
+                        'resolved' => 'Rezolvat',
+                        'closed' => 'Închis',
+                    ])
+                    ->required(),
+
+                Forms\Components\Select::make('assigned_to_marketplace_admin_id')
+                    ->label('Asignat')
+                    ->options(fn () => MarketplaceAdmin::query()
+                        ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(fn ($u) => [$u->id => $u->name . ' — ' . $u->email])
+                        ->all())
+                    ->nullable()
+                    ->searchable(),
+            ])->columns(2),
         ]);
     }
 
     public static function table(Table $table): Table
     {
-        return $table->columns([
-            Tables\Columns\TextColumn::make('id')->sortable(),
-            Tables\Columns\TextColumn::make('ticket_number'),
-            Tables\Columns\TextColumn::make('subject')->limit(60),
-            Tables\Columns\TextColumn::make('status'),
-            Tables\Columns\TextColumn::make('priority'),
-            Tables\Columns\TextColumn::make('opened_at')->dateTime('d M Y, H:i'),
-        ])->defaultSort('id', 'desc');
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('ticket_number')
+                    ->label('Nr.')
+                    ->fontFamily('mono')
+                    ->size('xs')
+                    ->copyable()
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('subject')
+                    ->label('Subiect')
+                    ->searchable()
+                    ->limit(60),
+
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Prioritate')
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'urgent' => 'danger',
+                        'high' => 'warning',
+                        'normal' => 'gray',
+                        'low' => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'low' => 'Scăzută',
+                        'normal' => 'Normală',
+                        'high' => 'Ridicată',
+                        'urgent' => 'Urgentă',
+                        default => $state,
+                    }),
+
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'open' => 'info',
+                        'in_progress' => 'primary',
+                        'awaiting_organizer' => 'warning',
+                        'resolved' => 'success',
+                        'closed' => 'gray',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        'open' => 'Deschis',
+                        'in_progress' => 'În lucru',
+                        'awaiting_organizer' => 'Așteaptă răspuns',
+                        'resolved' => 'Rezolvat',
+                        'closed' => 'Închis',
+                        default => $state,
+                    }),
+
+                Tables\Columns\TextColumn::make('opened_at')
+                    ->label('Deschis')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('last_activity_at')
+                    ->label('Activitate')
+                    ->since()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('closed_at')
+                    ->label('Închis')
+                    ->dateTime('d M Y, H:i')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->defaultSort('last_activity_at', 'desc')
+            ->filters([
+                Tables\Filters\SelectFilter::make('support_department_id')
+                    ->label('Departament')
+                    ->options(fn () => SupportDepartment::query()
+                        ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
+                        ->orderBy('sort_order')
+                        ->get()
+                        ->mapWithKeys(fn ($d) => [$d->id => $d->getTranslation('name', 'ro') ?: $d->slug])
+                        ->all()),
+
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'open' => 'Deschis',
+                        'in_progress' => 'În lucru',
+                        'awaiting_organizer' => 'Așteaptă răspuns',
+                        'resolved' => 'Rezolvat',
+                        'closed' => 'Închis',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('priority')
+                    ->label('Prioritate')
+                    ->options([
+                        'low' => 'Scăzută',
+                        'normal' => 'Normală',
+                        'high' => 'Ridicată',
+                        'urgent' => 'Urgentă',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('assigned_to_marketplace_admin_id')
+                    ->label('Asignat')
+                    ->options(fn () => MarketplaceAdmin::query()
+                        ->where('marketplace_client_id', Auth::guard('marketplace_admin')->user()?->marketplace_client_id)
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(fn ($u) => [$u->id => $u->name])
+                        ->all()),
+            ])
+            ->recordActions([
+                \Filament\Actions\ViewAction::make(),
+            ]);
     }
 
     public static function getPages(): array
