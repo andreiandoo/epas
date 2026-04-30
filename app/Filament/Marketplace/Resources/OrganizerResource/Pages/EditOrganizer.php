@@ -235,6 +235,7 @@ class EditOrganizer extends EditRecord
         if (!$enabled || $pixelId === '' || $accessToken === '') {
             if ($existing && $existing->status === 'active') {
                 $existing->update(['status' => 'inactive']);
+                \Illuminate\Support\Facades\Cache::forget("fb_capi_active:org:{$organizerId}");
             }
             return;
         }
@@ -256,5 +257,7 @@ class EditOrganizer extends EditRecord
                 'enabled_events' => ['Purchase', 'AddToCart', 'InitiateCheckout', 'ViewContent', 'PageView', 'Lead', 'CompleteRegistration'],
             ]));
         }
+
+        \Illuminate\Support\Facades\Cache::forget("fb_capi_active:org:{$organizerId}");
     }
 }

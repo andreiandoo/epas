@@ -226,6 +226,24 @@ class MarketplaceTrackingController extends Controller
             return;
         }
 
+        // Skip dispatch entirely if this organizer has no active CAPI
+        // connection. Without this guard, EVERY tracking call queues a job
+        // that immediately exits in handle() — fills the queue table, the
+        // log file, and worker cycles for nothing.
+        // Cached 60s so high-traffic pages don't hit the DB on every event.
+        $hasActiveCapi = \Illuminate\Support\Facades\Cache::remember(
+            "fb_capi_active:org:{$organizerId}",
+            60,
+            fn () => \DB::table('facebook_capi_connections')
+                ->where('marketplace_organizer_id', $organizerId)
+                ->where('status', 'active')
+                ->exists()
+        );
+
+        if (!$hasActiveCapi) {
+            return; // silent — most organizers don't have CAPI; logging would flood
+        }
+
         $capiEventName = $this->mapToCapiEventName((string) $event->event_type);
         if (!$capiEventName) {
             \Log::info('FB CAPI bridge: skip — unmapped event_type', [
