@@ -343,6 +343,15 @@ const AmbiletAPI = {
         if (endpoint === '/artist/verify-email') return 'artist.verify-email';
         if (endpoint === '/artist/resend-verification') return 'artist.resend-verification';
         if (endpoint.match(/^\/artist\/check-claim\/[a-z0-9-]+$/)) return 'artist.check-claim';
+        // Artist self-service (Etapa 4) — proxy.php branches GET/PUT/DELETE
+        // on REQUEST_METHOD so a single action string covers all verbs on
+        // the same resource.
+        if (endpoint === '/artist/dashboard') return 'artist.dashboard';
+        if (endpoint === '/artist/events' || endpoint.startsWith('/artist/events?')) return 'artist.events';
+        if (endpoint === '/artist/profile') return 'artist.profile';
+        if (endpoint === '/artist/profile/image') return 'artist.profile.image';
+        if (endpoint === '/artist/account') return 'artist.account';
+        if (endpoint === '/artist/account/password') return 'artist.account.password';
 
         // Organizer bank accounts
         if (endpoint === '/organizer/bank-accounts') return 'organizer.bank-accounts';
@@ -2011,6 +2020,72 @@ const AmbiletAPI = {
          */
         async checkClaim(artistSlug) {
             return AmbiletAPI.get(`/artist/check-claim/${artistSlug}`);
+        },
+
+        // -------- Self-service (Etapa 4) — auth required --------
+
+        async getDashboard() {
+            return AmbiletAPI.get('/artist/dashboard');
+        },
+
+        /**
+         * @param {object} params - { filter: 'upcoming'|'past'|'all', per_page, page }
+         */
+        async getEvents(params = {}) {
+            return AmbiletAPI.get('/artist/events', params);
+        },
+
+        async getProfile() {
+            return AmbiletAPI.get('/artist/profile');
+        },
+
+        async updateProfile(data) {
+            return AmbiletAPI.put('/artist/profile', data);
+        },
+
+        /**
+         * Upload an image. `type` is one of: main | logo | portrait | discography.
+         * Uses native FormData so the proxy can forward the multipart body
+         * upstream without re-encoding.
+         */
+        async uploadProfileImage(file, type) {
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('type', type);
+
+            const baseUrl = AmbiletAPI.getApiUrl();
+            const url = `${baseUrl}?action=artist.profile.image`;
+            const headers = {};
+            const token = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const response = await fetch(url, { method: 'POST', headers, body: formData });
+            const data = await response.json();
+            if (!response.ok) {
+                const err = new APIError(data.message || 'Upload failed', response.status, data.errors);
+                err.data = data;
+                throw err;
+            }
+            return data;
+        },
+
+        async getAccount() {
+            return AmbiletAPI.get('/artist/account');
+        },
+
+        async updateAccount(data) {
+            return AmbiletAPI.put('/artist/account', data);
+        },
+
+        async updatePassword(data) {
+            return AmbiletAPI.put('/artist/account/password', data);
+        },
+
+        /**
+         * Self-delete the account. Requires `password` confirmation in body.
+         */
+        async deleteAccount(password) {
+            return AmbiletAPI.delete('/artist/account', { password });
         }
     }
 };

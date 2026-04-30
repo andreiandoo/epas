@@ -2481,6 +2481,9 @@ Route::prefix('marketplace-client/artists')->middleware(['throttle:120,1', 'mark
 // Artist Accounts — self-service auth + profile claim. Distinct from
 // /marketplace-client/artists above (which is the public artist content API).
 use App\Http\Controllers\Api\MarketplaceClient\Artist\AuthController as ArtistAccountAuthController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\DashboardController as ArtistDashboardController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\ProfileController as ArtistProfileController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\AccountController as ArtistAccountController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2501,10 +2504,35 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
 
     // Protected — Sanctum bearer token resolved to MarketplaceArtistAccount
     Route::middleware('auth:sanctum')->group(function () {
+        // Auth essentials
         Route::post('/logout', [ArtistAccountAuthController::class, 'logout'])
             ->name('api.marketplace-client.artist.logout');
         Route::get('/me', [ArtistAccountAuthController::class, 'me'])
             ->name('api.marketplace-client.artist.me');
+
+        // Dashboard + events
+        Route::get('/dashboard', [ArtistDashboardController::class, 'index'])
+            ->name('api.marketplace-client.artist.dashboard');
+        Route::get('/events', [ArtistDashboardController::class, 'events'])
+            ->name('api.marketplace-client.artist.events');
+
+        // Profile (linked Artist record) — read + write whitelist + media upload
+        Route::get('/profile', [ArtistProfileController::class, 'show'])
+            ->name('api.marketplace-client.artist.profile');
+        Route::put('/profile', [ArtistProfileController::class, 'update'])
+            ->name('api.marketplace-client.artist.profile.update');
+        Route::post('/profile/image', [ArtistProfileController::class, 'uploadImage'])
+            ->name('api.marketplace-client.artist.profile.image');
+
+        // Account self-service (settings page)
+        Route::get('/account', [ArtistAccountController::class, 'show'])
+            ->name('api.marketplace-client.artist.account');
+        Route::put('/account', [ArtistAccountController::class, 'update'])
+            ->name('api.marketplace-client.artist.account.update');
+        Route::put('/account/password', [ArtistAccountController::class, 'updatePassword'])
+            ->name('api.marketplace-client.artist.account.password');
+        Route::delete('/account', [ArtistAccountController::class, 'destroy'])
+            ->name('api.marketplace-client.artist.account.delete');
     });
 });
 
