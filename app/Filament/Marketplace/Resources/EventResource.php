@@ -1042,7 +1042,12 @@ class EventResource extends Resource
 
                                                 $set('artist_settings', $settings);
                                             })
-                                            ->dehydrated(false)
+                                            // No ->dehydrated(false) here on purpose: the Repeater's reordered
+                                            // state is read in EditEvent::afterSave() via $this->data['artist_settings']
+                                            // and persisted to event_artist pivot. dehydrated(false) silently
+                                            // strips the field from $this->data, dropping every reorder.
+                                            // Event model doesn't have artist_settings in $fillable, so the
+                                            // attribute is harmlessly ignored when Filament fills the model.
                                             ->columnSpanFull(),
 
                                         Forms\Components\Placeholder::make('artist_settings_help')
