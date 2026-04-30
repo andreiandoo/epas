@@ -48,12 +48,16 @@ class AppServiceProvider extends ServiceProvider
             require_once $helpers;
         }
 
-        // DISABLED — enforceMorphMap was breaking every polymorphic
-        // relation site-wide on this deploy. Re-enable only after the
-        // morph map is fully populated for ALL polymorphic models in use.
-        // \Illuminate\Database\Eloquent\Relations\Relation::enforceMorphMap(
-        //     (array) config('support.morph_map', [])
-        // );
+        // Register support-ticket polymorphic aliases (organizer/customer/
+        // staff) without strict mode — using ::morphMap() instead of
+        // ::enforceMorphMap() so other polymorphic relations in the app
+        // (Spatie ActivityLog subject/causer, MarketplaceNotification, etc.)
+        // that store full class names keep working as before. enforceMorphMap
+        // turns on requireMorphMap site-wide, which broke every unmapped
+        // polymorphic on this deploy.
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap(
+            (array) config('support.morph_map', [])
+        );
 
         // Register the marketplace-mail notification channel. Notifications
         // that return ['marketplace-mail'] from via() route through the
