@@ -19,15 +19,21 @@ const ArtistClaim = {
         const slug = window.ARTIST_SLUG || '';
         if (!slug) return;
 
-        // Case 1: visitor is the owning artist account → quick edit link.
+        // Case 1a: visitor is the owning artist account → quick edit link.
+        // Case 1b: visitor is logged in as A DIFFERENT artist → no CTA at
+        //          all. An artist account can only claim ONE profile, so
+        //          the "Revendică profilul" button on someone else's page
+        //          would be misleading.
         if (typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isArtist && AmbiletAuth.isArtist()) {
             const data = AmbiletAuth.getArtistData?.();
             const ownedSlug = data?.artist?.slug;
             if (ownedSlug && ownedSlug === slug) {
                 container.innerHTML = ArtistClaim.renderEditCta();
                 container.classList.remove('hidden');
-                return;
             }
+            // Either way (own profile shown above, or different profile
+            // hidden entirely), the CTA renderer is done.
+            return;
         }
 
         // Case 2: ask the server about the current claim state.

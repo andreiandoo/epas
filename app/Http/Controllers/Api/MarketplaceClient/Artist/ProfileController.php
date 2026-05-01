@@ -284,14 +284,10 @@ class ProfileController extends BaseController
 
         $locale = $account->locale ?: app()->getLocale();
 
-        $data = Cache::remember('artist_account.taxonomies.v2.' . $locale, now()->addHour(), function () use ($locale) {
-            $resolveName = function ($model) use ($locale) {
-                $name = $model->name;
-                if (is_array($name)) {
-                    return $name[$locale] ?? $name['ro'] ?? $name['en'] ?? array_values(array_filter($name))[0] ?? '';
-                }
-                return (string) $name;
-            };
+        // v3 — bumped to drop any stale v2 cache that captured `name` as
+        // [object Object] / empty before translatableToString got hardened.
+        $data = Cache::remember('artist_account.taxonomies.v3.' . $locale, now()->addHour(), function () use ($locale) {
+            $resolveName = fn ($model) => $this->translatableToString($model->name, $locale);
 
             return [
                 'artist_types' => ArtistType::query()
@@ -442,16 +438,35 @@ class ProfileController extends BaseController
     /**
      * Flatten a translatable value to a string for API responses.
      * Falls back through current locale → ro → en → any non-empty entry.
+     *
+     * Defensive against several shapes seen in the wild:
+     *  - associative array {ro: "...", en: "..."}
+     *  - numeric array ["..."] (legacy / mis-imported)
+     *  - JSON string '{"ro":"..."}' (cast missing)
+     *  - scalar string already
      */
     protected function translatableToString($value, ?string $locale = null): string
     {
         $locale = $locale ?? app()->getLocale();
 
+        // String that looks like JSON — try to decode (some legacy rows
+        // skipped the `array` cast and the column comes through raw).
+        if (is_string($value) && (str_starts_with($value, '{') || str_starts_with($value, '['))) {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                $value = $decoded;
+            }
+        }
+
         if (is_array($value)) {
-            return $value[$locale]
-                ?? $value['ro']
-                ?? $value['en']
-                ?? (array_values(array_filter($value))[0] ?? '');
+            // Strip empty entries before fallback chain.
+            $filtered = array_filter($value, fn ($v) => $v !== null && $v !== '');
+            return (string) (
+                $filtered[$locale]
+                ?? $filtered['ro']
+                ?? $filtered['en']
+                ?? (array_values($filtered)[0] ?? '')
+            );
         }
 
         return (string) ($value ?? '');

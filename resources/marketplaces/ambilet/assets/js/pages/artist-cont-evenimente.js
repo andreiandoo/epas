@@ -240,7 +240,7 @@ function eventCardHtml(event) {
         + '<article class="overflow-hidden rounded-2xl border border-border bg-white transition-colors hover:border-primary/30">'
         + '<div class="flex flex-col md:flex-row">'
         // Poster
-        + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="group relative flex-shrink-0 md:w-56 lg:w-64">'
+        + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="group relative flex-shrink-0 md:w-48">'
         + '<div class="aspect-[4/3] overflow-hidden bg-gradient-to-br from-secondary to-primary-dark md:h-full md:aspect-auto">'
         + (posterUrl
             ? '<img src="' + escapeAttr(posterUrl) + '" alt="" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105">'

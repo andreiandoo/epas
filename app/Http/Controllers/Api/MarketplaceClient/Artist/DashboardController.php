@@ -50,13 +50,25 @@ class DashboardController extends BaseController
         $completion = $artist ? $this->computeCompletion($artist) : null;
         $followers = $artist ? $this->sumFollowers($artist) : 0;
 
-        // Upcoming/past event counts and the 5 most recent for the dashboard.
+        // Two separate event lists for the dashboard:
+        //  - upcoming_events: nearest-future first (ASC)  → "Evenimente viitoare"
+        //  - past_events:     most-recent past first (DESC) → "Evenimente recente"
+        // Plus the totals for the KPI cards.
         $upcomingCount = 0;
         $pastCount = 0;
-        $recentEvents = [];
+        $upcomingEvents = [];
+        $pastEvents = [];
 
         if ($artist) {
             $today = now()->toDateString();
+
+            $eventColumns = [
+                'events.id', 'events.title', 'events.slug', 'events.short_description',
+                'events.event_date', 'events.start_time', 'events.starts_at',
+                'events.poster_url', 'events.venue_id', 'events.venue_name', 'events.suggested_venue_name',
+                'events.tenant_id', 'events.marketplace_organizer_id',
+                'events.capacity',
+            ];
 
             $upcomingCount = $artist->events()
                 ->where('event_date', '>=', $today)
@@ -66,17 +78,21 @@ class DashboardController extends BaseController
                 ->where('event_date', '<', $today)
                 ->count();
 
-            $recentEvents = $artist->events()
+            $upcomingEvents = $artist->events()
                 ->with(['venue:id,name,city', 'marketplaceOrganizer:id,name'])
+                ->where('event_date', '>=', $today)
+                ->orderBy('event_date')
+                ->limit(5)
+                ->get($eventColumns)
+                ->map(fn ($event) => $this->formatEventCard($event))
+                ->toArray();
+
+            $pastEvents = $artist->events()
+                ->with(['venue:id,name,city', 'marketplaceOrganizer:id,name'])
+                ->where('event_date', '<', $today)
                 ->orderByDesc('event_date')
                 ->limit(5)
-                ->get([
-                    'events.id', 'events.title', 'events.slug', 'events.short_description',
-                    'events.event_date', 'events.start_time', 'events.starts_at',
-                    'events.poster_url', 'events.venue_id', 'events.venue_name', 'events.suggested_venue_name',
-                    'events.tenant_id', 'events.marketplace_organizer_id',
-                    'events.capacity',
-                ])
+                ->get($eventColumns)
                 ->map(fn ($event) => $this->formatEventCard($event))
                 ->toArray();
         }
@@ -88,6 +104,10 @@ class DashboardController extends BaseController
                 'last_name' => $account->last_name,
                 'full_name' => $account->full_name,
                 'email' => $account->email,
+                // Status was missing from the dashboard payload, so the
+                // KPI card label fell through to "Unknown" even when the
+                // account was active. Now exposed.
+                'status' => $account->status,
                 'is_email_verified' => $account->isEmailVerified(),
                 'last_login_at' => $account->last_login_at?->toIso8601String(),
             ],
@@ -106,7 +126,12 @@ class DashboardController extends BaseController
                 'total_events' => $upcomingCount + $pastCount,
                 'total_followers' => $followers,
             ],
-            'recent_events' => $recentEvents,
+            'upcoming_events' => $upcomingEvents,
+            'past_events' => $pastEvents,
+            // Kept for backwards compat with any older JS still in flight;
+            // it now mirrors past_events (the JS dashboard renderer
+            // ignores it once the redesigned section is live).
+            'recent_events' => $pastEvents,
         ]);
     }
 

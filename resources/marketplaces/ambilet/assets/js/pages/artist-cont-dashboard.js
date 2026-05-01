@@ -47,12 +47,15 @@ function renderDashboard(data) {
     setText('dashboard-greeting', greeting);
     setText('dashboard-greeting-mobile', greeting);
 
-    // Public profile link
+    // Public profile link — reveal by adding inline-flex when removing
+    // hidden, so the two display utilities never coexist on the element
+    // (the IDE flags hidden+inline-flex together).
     if (data.artist?.slug) {
         const link = document.getElementById('public-profile-link');
         if (link) {
             link.href = '/artist/' + encodeURIComponent(data.artist.slug);
             link.classList.remove('hidden');
+            link.classList.add('inline-flex');
         }
     }
 
@@ -88,11 +91,14 @@ function renderDashboard(data) {
         document.getElementById('completion-card')?.classList.add('hidden');
     }
 
-    // Next event (first upcoming from recent_events)
-    renderNextEvent(data.recent_events || []);
+    // Next event card uses the FIRST upcoming event (nearest-future).
+    renderNextEvent(data.upcoming_events || []);
 
-    // Recent events list
-    renderRecentEvents(data.recent_events || [], data.is_linked);
+    // Two separate lists, distinct sections on the page:
+    //   - upcoming-events-list (ASC by date, nearest first)
+    //   - past-events-list (DESC by date, most recently ended first)
+    renderEventList('upcoming-events-list', data.upcoming_events || [], data.is_linked, true);
+    renderEventList('past-events-list', data.past_events || [], data.is_linked, false);
 }
 
 function renderCompletion(completion) {
@@ -118,7 +124,10 @@ function renderCompletion(completion) {
 }
 
 function renderNextEvent(events) {
-    const upcoming = events.find(e => e.is_upcoming);
+    // events is now `upcoming_events` (already ASC by date), so the FIRST
+    // entry is the nearest-future event. (Previously we received a mixed
+    // ASC/DESC list and `find(is_upcoming)` could pick the wrong one.)
+    const upcoming = events[0];
     const card = document.getElementById('next-event-card');
     const placeholder = document.getElementById('no-next-event');
 
@@ -131,28 +140,53 @@ function renderNextEvent(events) {
     card?.classList.remove('hidden');
     placeholder?.classList.add('hidden');
 
-    const date = new Date(upcoming.event_date || upcoming.starts_at);
-    setText('next-event-day', String(date.getDate()));
-    setText('next-event-month', date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase());
+    // Same date-handling logic as eventCardHtml — prefer starts_at;
+    // build local-tz Date from event_date if no time.
+    let date = null;
+    if (upcoming.starts_at) {
+        date = new Date(upcoming.starts_at);
+    } else if (upcoming.event_date) {
+        const [y, m, d] = upcoming.event_date.split('-').map(Number);
+        if (y && m && d) date = new Date(y, m - 1, d);
+    }
+
+    if (date) {
+        setText('next-event-day', String(date.getDate()));
+        setText('next-event-month', date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase());
+    }
     setText('next-event-title', upcoming.title || 'Eveniment');
-    setText('next-event-time', formatFullDate(upcoming.event_date || upcoming.starts_at));
+
+    const timeLabel = date && upcoming.has_time
+        ? date.toLocaleString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : (date ? date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' }) : '—');
+    setText('next-event-time', timeLabel);
 
     // KPI label "Următor: 12 mai"
     const label = document.getElementById('kpi-next-event-label');
-    if (label) {
+    if (label && date) {
         label.textContent = 'Următor: ' + date.getDate() + ' ' + date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '');
         label.classList.remove('hidden');
     }
 }
 
-function renderRecentEvents(events, isLinked) {
-    const list = document.getElementById('recent-events-list');
+/**
+ * Render an event list into the given DOM container. Used twice on the
+ * dashboard:
+ *   - upcoming-events-list  (events.is_upcoming === true)
+ *   - past-events-list      (events.is_upcoming === false)
+ *
+ * `isUpcoming` is the section's flavor — used only to pick a friendlier
+ * empty-state copy ("Niciun eveniment viitor" vs "Niciun eveniment trecut").
+ */
+function renderEventList(containerId, events, isLinked, isUpcoming) {
+    const list = document.getElementById(containerId);
     if (!list) return;
 
     if (events.length === 0) {
-        list.innerHTML = '<p class="py-8 text-center text-sm text-muted">'
-            + (isLinked ? 'Nu există evenimente încă.' : 'Profilul nu este încă asociat.')
-            + '</p>';
+        const msg = !isLinked
+            ? 'Profilul nu este încă asociat.'
+            : (isUpcoming ? 'Niciun eveniment viitor încă.' : 'Niciun eveniment trecut încă.');
+        list.innerHTML = '<p class="py-8 text-center text-sm text-muted">' + escapeHtml(msg) + '</p>';
         return;
     }
 
@@ -160,26 +194,48 @@ function renderRecentEvents(events, isLinked) {
 }
 
 function eventCardHtml(event) {
-    const date = new Date(event.event_date || event.starts_at);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase();
-    const dateLabel = formatDate(event.event_date || event.starts_at);
+    // Same date-handling logic as the events page: prefer starts_at when
+    // we have proper time; build a local-tz date when only event_date is
+    // available (to avoid the "midnight UTC → 03:00 Bucharest" bug).
+    let date = null;
+    if (event.starts_at) {
+        date = new Date(event.starts_at);
+    } else if (event.event_date) {
+        const [y, m, d] = event.event_date.split('-').map(Number);
+        if (y && m && d) date = new Date(y, m - 1, d);
+    }
+
+    const day = date ? date.getDate() : '—';
+    const month = date ? date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase() : '';
+    const dateLabel = date
+        ? (event.has_time
+            ? date.toLocaleString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            : date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' }))
+        : '—';
+
+    // Ambilet event URL is /bilete/{slug}, NOT /event/{slug}.
+    const eventUrl = event.slug ? '/bilete/' + encodeURIComponent(event.slug) : '/artist/cont/evenimente';
 
     return ''
-        + '<a href="/artist/cont/evenimente" class="group flex items-center gap-4 rounded-xl p-4 transition-colors hover:bg-surface">'
+        + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="group flex items-center gap-4 rounded-xl p-4 transition-colors hover:bg-surface">'
         + '<div class="flex h-16 w-16 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">'
         + '<span class="text-xl font-extrabold leading-none text-primary">' + day + '</span>'
         + '<span class="mt-1 text-xs uppercase text-muted">' + escapeHtml(month) + '</span>'
         + '</div>'
         + '<div class="min-w-0 flex-1">'
         + '<h4 class="truncate font-semibold text-secondary group-hover:text-primary">' + escapeHtml(event.title || 'Eveniment') + '</h4>'
-        + '<p class="truncate text-sm text-muted">' + escapeHtml(dateLabel) + '</p>'
+        + '<p class="truncate text-sm text-muted">' + escapeHtml(dateLabel)
+        + (event.venue_name ? ' • ' + escapeHtml(event.venue_name) : '')
+        + (event.city ? ', ' + escapeHtml(event.city) : '')
+        + '</p>'
         + '</div>'
         + (event.is_upcoming
-            ? '<span class="hidden flex-shrink-0 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 sm:inline">Viitor</span>'
+            ? '<span class="hidden flex-shrink-0 rounded-full bg-success/10 px-2 py-1 text-xs font-medium text-success sm:inline">Viitor</span>'
             : '<span class="hidden flex-shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 sm:inline">Trecut</span>')
         + '</a>';
 }
+
+function escapeAttr(s) { return escapeHtml(s); }
 
 // ============================================================================
 // Helpers

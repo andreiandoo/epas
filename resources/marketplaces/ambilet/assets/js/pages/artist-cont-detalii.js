@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Artist Account — Profile Editor
  *
  * Strategy:
@@ -53,12 +53,15 @@ window.addEventListener('ambilet:artist-cont:ready', () => {
         const editor = document.getElementById('detalii-editor');
         if (editor) editor.classList.remove('hidden');
 
-        // Public profile link (top-right of header)
+        // Public profile link (top-right of header) — reveal by also
+        // adding inline-flex so hidden+inline-flex don't coexist (IDE-
+        // flagged conflict pattern).
         if (State.artist.slug) {
             const link = document.getElementById('public-profile-link');
             if (link) {
                 link.href = '/artist/' + encodeURIComponent(State.artist.slug);
                 link.classList.remove('hidden');
+                link.classList.add('inline-flex');
             }
         }
 
@@ -295,9 +298,9 @@ function resolveStorageUrl(path) {
 function achievementRow(data) {
     return ''
         + '<div data-row class="flex gap-2 rounded-lg border border-border p-3">'
-        + '<input type="number" data-row-field="year" min="1900" max="2100" placeholder="Anul" value="' + escapeAttr(data.year || '') + '" class="form-input w-24">'
-        + '<input type="text" data-row-field="title" maxlength="14" placeholder="Titlu (max 14)" value="' + escapeAttr(data.title || '') + '" class="form-input flex-1">'
-        + '<input type="text" data-row-field="subtitle" maxlength="24" placeholder="Subtitlu" value="' + escapeAttr(data.subtitle || '') + '" class="form-input flex-1">'
+        + '<input type="number" data-row-field="year" min="1900" max="2100" placeholder="Anul" value="' + escapeAttr(data.year || '') + '" class="input w-24">'
+        + '<input type="text" data-row-field="title" maxlength="14" placeholder="Titlu (max 14)" value="' + escapeAttr(data.title || '') + '" class="input flex-1">'
+        + '<input type="text" data-row-field="subtitle" maxlength="24" placeholder="Subtitlu" value="' + escapeAttr(data.subtitle || '') + '" class="input flex-1">'
         + '<button type="button" data-remove class="rounded-lg p-2 text-muted hover:bg-error/5 hover:text-error">'
         + '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
         + '</button>'
@@ -330,7 +333,7 @@ function discographyRow(data) {
         + '</button>'
         + '</div>'
         + '<input type="text" data-row-field="name" maxlength="255" placeholder="Nume" value="' + escapeAttr(data.name || '') + '" class="input">'
-        + '<select data-row-field="type" class="input">'
+        + '<select data-row-field="type" class="input pr-10">'
         + types.map(t => '<option value="' + t + '"' + (data.type === t ? ' selected' : '') + '>' + t + '</option>').join('')
         + '</select>'
         + '<input type="number" data-row-field="year" min="1900" max="2100" placeholder="An" value="' + escapeAttr(data.year || '') + '" class="input">'
@@ -345,7 +348,7 @@ function youtubeRow(data) {
         + '<div data-row class="flex gap-2 rounded-lg border border-border p-3">'
         + '<div class="relative flex-1">'
         + '<svg class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-error" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>'
-        + '<input type="url" data-row-field="url" placeholder="https://www.youtube.com/watch?v=…" value="' + escapeAttr(data.url || '') + '" class="form-input pl-10">'
+        + '<input type="url" data-row-field="url" placeholder="https://www.youtube.com/watch?v=…" value="' + escapeAttr(data.url || '') + '" class="input pl-10">'
         + '</div>'
         + '<button type="button" data-remove class="rounded-lg p-2 text-muted hover:bg-error/5 hover:text-error">'
         + '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
@@ -413,15 +416,28 @@ function renderMultiSelect(key, options, selectedSet) {
  * branch upfront instead of via inline ternary.
  */
 function buildMultiPill(opt, selected) {
+    // Defensive: if `name` is missing for some reason (translatable
+    // resolution gone wrong upstream, or a row that ships only a slug),
+    // fall back to humanizing the slug so the pill never renders as an
+    // empty button.
+    let label = (typeof opt.name === 'string' && opt.name.trim() !== '') ? opt.name : '';
+    if (!label && opt.slug) {
+        label = String(opt.slug).replace(/[-_]+/g, ' ').replace(/^./, c => c.toUpperCase());
+    }
+    if (!label) label = '#' + opt.id;
+
+    // Explicit bg + text utilities so the pill is always legible. Earlier
+    // version relied on parent bg + text-muted which rendered nearly
+    // invisible against the surface card.
     const classes = selected
-        ? 'multi-pill is-selected rounded-full border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors'
-        : 'multi-pill rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/40 hover:text-secondary';
+        ? 'multi-pill is-selected inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors'
+        : 'multi-pill inline-flex items-center rounded-full border border-border bg-white px-3 py-1.5 text-xs font-medium text-secondary transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary';
     return ''
         + '<button type="button" data-multi-id="' + opt.id + '"'
-        + ' data-multi-label="' + escapeAttr((opt.name || '').toLowerCase()) + '"'
+        + ' data-multi-label="' + escapeAttr(label.toLowerCase()) + '"'
         + ' class="' + classes + '">'
-        + (selected ? '<span class="mr-1">✓</span>' : '')
-        + escapeHtml(opt.name) + '</button>';
+        + (selected ? '<span class="mr-1.5 text-[10px] leading-none">✓</span>' : '')
+        + escapeHtml(label) + '</button>';
 }
 
 function updateMultiCount(key, count) {
