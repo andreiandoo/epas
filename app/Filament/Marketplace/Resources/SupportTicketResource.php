@@ -178,16 +178,18 @@ class SupportTicketResource extends Resource
                     ->badge()
                     ->color(fn (string $state) => match ($state) {
                         'open' => 'info',
-                        'in_progress' => 'primary',
-                        'awaiting_organizer' => 'warning',
+                        // Organizer's turn to act → action needed by us
+                        'in_progress' => 'warning',
+                        // We just sent a reply → ball in organizer's court
+                        'awaiting_organizer' => 'success',
                         'resolved' => 'success',
                         'closed' => 'gray',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state) => match ($state) {
                         'open' => 'Deschis',
-                        'in_progress' => 'În lucru',
-                        'awaiting_organizer' => 'Așteaptă răspuns',
+                        'in_progress' => 'Așteaptă răspuns',
+                        'awaiting_organizer' => 'Răspuns trimis',
                         'resolved' => 'Rezolvat',
                         'closed' => 'Închis',
                         default => $state,

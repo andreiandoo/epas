@@ -6,26 +6,36 @@
     $events = $this->getActiveEvents();
     $context = $this->getRequestContext();
 
-    $statusBadge = match ($ticket->status) {
-        'open' => ['label' => 'Deschis', 'class' => 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'],
-        'in_progress' => ['label' => 'În lucru', 'class' => 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300'],
-        'awaiting_organizer' => ['label' => 'Așteaptă răspuns', 'class' => 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'],
-        'resolved' => ['label' => 'Rezolvat', 'class' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'],
-        'closed' => ['label' => 'Închis', 'class' => 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'],
-        default => ['label' => $ticket->status, 'class' => 'bg-slate-100 text-slate-700'],
-    };
-    $priorityLabel = match ($ticket->priority) {
-        'low' => 'Scăzută',
-        'high' => 'Ridicată',
-        'urgent' => 'Urgentă',
-        default => 'Normală',
-    };
-    $priorityClass = match ($ticket->priority) {
-        'urgent' => 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300',
-        'high' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-        'low' => 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300',
-        default => 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300',
-    };
+    // Use Filament's semantic color tokens — they're always compiled into
+    // the panel CSS, so contrast is guaranteed regardless of Tailwind purge.
+    // Status labels reflect the *staff perspective*: when 'awaiting_organizer'
+    // we just sent a reply ("Răspuns trimis"); 'in_progress' = organizer
+    // replied so the ball is back in our court ("Așteaptă răspuns").
+    $statusMap = [
+        'open' => ['label' => 'Deschis', 'color' => 'info'],
+        'in_progress' => ['label' => 'Așteaptă răspuns', 'color' => 'warning'],
+        'awaiting_organizer' => ['label' => 'Răspuns trimis', 'color' => 'success'],
+        'resolved' => ['label' => 'Rezolvat', 'color' => 'success'],
+        'closed' => ['label' => 'Închis', 'color' => 'gray'],
+    ];
+    $statusBadge = $statusMap[$ticket->status] ?? ['label' => $ticket->status, 'color' => 'gray'];
+
+    $priorityMap = [
+        'low' => ['label' => 'Scăzută', 'color' => 'info'],
+        'normal' => ['label' => 'Normală', 'color' => 'gray'],
+        'high' => ['label' => 'Ridicată', 'color' => 'warning'],
+        'urgent' => ['label' => 'Urgentă', 'color' => 'danger'],
+    ];
+    $priorityBadge = $priorityMap[$ticket->priority] ?? ['label' => $ticket->priority, 'color' => 'gray'];
+
+    // Bubble colors: inline hex so they render even if Tailwind utility
+    // classes weren't picked up by the panel theme build.
+    $bubbleStaff = 'background:#dbeafe;color:#1e3a8a;';        // blue-100/blue-900
+    $bubbleStaffAvatar = 'background:#bfdbfe;color:#1e40af;';  // blue-200/blue-800
+    $bubbleOpener = 'background:#f1f5f9;color:#0f172a;';       // slate-100/slate-900
+    $bubbleOpenerAvatar = 'background:#cbd5e1;color:#334155;'; // slate-300/slate-700
+    $bubbleNote = 'background:#fef3c7;color:#78350f;border:1px solid #fde68a;'; // amber-100/amber-900
+    $bubbleNoteAvatar = 'background:#fde68a;color:#78350f;';   // amber-200/amber-900
 @endphp
 
 <x-filament-panels::page>
@@ -39,8 +49,8 @@
             <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5">
                 <div class="flex flex-wrap items-center gap-2 mb-2 text-xs">
                     <span class="font-mono text-gray-500">{{ $ticket->ticket_number ?: ('#' . $ticket->id) }}</span>
-                    <span class="px-2 py-0.5 rounded-full font-medium {{ $statusBadge['class'] }}">{{ $statusBadge['label'] }}</span>
-                    <span class="px-2 py-0.5 rounded-full font-medium {{ $priorityClass }}">{{ $priorityLabel }}</span>
+                    <x-filament::badge :color="$statusBadge['color']">{{ $statusBadge['label'] }}</x-filament::badge>
+                    <x-filament::badge :color="$priorityBadge['color']">{{ $priorityBadge['label'] }}</x-filament::badge>
                     <span class="text-gray-400">·</span>
                     <span class="text-gray-600 dark:text-gray-300">
                         {{ $ticket->department?->getTranslation('name', 'ro') ?? '—' }}
@@ -112,33 +122,30 @@
                                 $isInternal = $message->is_internal_note;
                                 $authorName = $message->author->name ?? $message->author->public_name ?? $message->author->email ?? '—';
                                 $initial = strtoupper(mb_substr($authorName ?: '?', 0, 1));
-                                $bubbleClass = $isInternal
-                                    ? 'bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 text-amber-900 dark:text-amber-200'
-                                    : ($isStaff
-                                        ? 'bg-primary-50 dark:bg-primary-500/15 text-primary-900 dark:text-primary-100'
-                                        : 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-100');
+                                $bubbleStyle = $isInternal ? $bubbleNote : ($isStaff ? $bubbleStaff : $bubbleOpener);
+                                $avatarStyle = $isInternal ? $bubbleNoteAvatar : ($isStaff ? $bubbleStaffAvatar : $bubbleOpenerAvatar);
                                 $align = $isStaff ? 'flex-row' : 'flex-row-reverse';
                             @endphp
                             <div class="flex {{ $align }} gap-3 items-start">
-                                <div class="w-9 h-9 rounded-full {{ $isStaff ? 'bg-primary-200 text-primary-800 dark:bg-primary-500/30 dark:text-primary-200' : 'bg-gray-200 text-gray-700 dark:bg-white/10 dark:text-gray-300' }} flex items-center justify-center text-xs font-bold flex-shrink-0">{{ $initial }}</div>
-                                <div class="max-w-[85%] flex-1">
-                                    <div class="rounded-2xl px-4 py-3 {{ $bubbleClass }}">
+                                <div class="flex items-center justify-center flex-shrink-0 text-xs font-bold rounded-full" style="width:2.25rem;height:2.25rem;{{ $avatarStyle }}">{{ $initial }}</div>
+                                <div class="flex-1" style="max-width:85%">
+                                    <div class="px-4 py-3 rounded-2xl" style="{{ $bubbleStyle }}">
                                         @if ($isInternal)
                                             <div class="flex items-center gap-1.5 mb-1 text-xs font-semibold uppercase tracking-wider">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                                 Notă internă
                                             </div>
                                         @endif
-                                        <div class="text-xs opacity-70 mb-1">{{ $authorName }}</div>
+                                        <div class="mb-1 text-xs font-semibold" style="opacity:.75">{{ $authorName }}</div>
                                         <div class="text-sm whitespace-pre-wrap break-words">{{ $message->body }}</div>
                                         @if (!empty($message->attachments))
-                                            <div class="mt-2 flex flex-wrap gap-1.5">
+                                            <div class="flex flex-wrap mt-2 gap-1.5">
                                                 @foreach ($message->attachments as $a)
                                                     @php
                                                         $url = isset($a['path']) ? \Illuminate\Support\Facades\Storage::disk($a['disk'] ?? 'public')->url($a['path']) : null;
                                                     @endphp
                                                     @if ($url)
-                                                        <a href="{{ $url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs bg-white/40 dark:bg-white/10 hover:bg-white/60 dark:hover:bg-white/15">
+                                                        <a href="{{ $url }}" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs" style="background:rgba(255,255,255,.6)">
                                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
                                                             <span>{{ $a['original_name'] ?? 'fișier' }}</span>
                                                         </a>
@@ -147,7 +154,7 @@
                                             </div>
                                         @endif
                                     </div>
-                                    <p class="text-[10px] text-gray-500 mt-1 {{ $isStaff ? '' : 'text-right' }}">
+                                    <p class="mt-1 text-xs text-gray-500 {{ $isStaff ? '' : 'text-right' }}">
                                         {{ $message->created_at?->format('d M Y, H:i') }}
                                     </p>
                                 </div>
@@ -158,11 +165,26 @@
             </div>
         </div>
 
-        {{-- ========== Sidebar: opener / events / context ========== --}}
+        {{-- ========== Sidebar: assignment / opener / events / context ========== --}}
         <div class="space-y-4">
 
-            <div class="rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-gray-900 p-5">
-                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">{{ $opener['type'] === 'organizer' ? 'Organizator' : ucfirst($opener['type']) }}</h3>
+            <div class="p-5 bg-white border border-gray-200 rounded-xl dark:border-white/10 dark:bg-gray-900">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">Asignare</h3>
+                @if ($ticket->assignee)
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center w-10 h-10 text-sm font-bold rounded-full" style="background:#dbeafe;color:#1e3a8a">{{ strtoupper(mb_substr($ticket->assignee->name ?? '?', 0, 1)) }}</div>
+                        <div class="min-w-0">
+                            <p class="font-medium text-gray-900 truncate dark:text-gray-100">{{ $ticket->assignee->name }}</p>
+                            <p class="text-xs text-gray-500 truncate">{{ $ticket->assignee->email }}</p>
+                        </div>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">— nealocat —</p>
+                @endif
+            </div>
+
+            <div class="p-5 bg-white border border-gray-200 rounded-xl dark:border-white/10 dark:bg-gray-900">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-500 uppercase">{{ $opener['type'] === 'organizer' ? 'Organizator' : ucfirst($opener['type']) }}</h3>
                 <dl class="space-y-2 text-sm">
                     <div>
                         <dt class="text-xs text-gray-500">Nume</dt>
