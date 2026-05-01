@@ -164,6 +164,15 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/cont/extended-artist/tour/?$ artist/cont/extended-artist/tour.php [L,QSA]
 
+# Smart EPK public pages — reverse proxy to core.tixello.com Laravel backend
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^epk/([a-z0-9-]+)/?$ epk/proxy.php?artist_slug=$1 [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^epk/([a-z0-9-]+)/([a-z0-9-]+)/?$ epk/proxy.php?artist_slug=$1&variant_slug=$2 [L,QSA]
+
 # Generic public artist profile — keep this LAST in the /artist/* block.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

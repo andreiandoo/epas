@@ -24,9 +24,11 @@ if (isset($_GET['use_stage'])) {
 define('USE_STAGE_API', $useStage);
 
 if (USE_STAGE_API) {
+    define('CORE_URL', 'https://stage.tixello.com');
     define('API_BASE_URL', 'https://stage.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://stage.tixello.com/storage');
 } else {
+    define('CORE_URL', 'https://core.tixello.com');
     define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://core.tixello.com/storage');
 }
