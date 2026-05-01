@@ -180,16 +180,10 @@ class ViewSupportTicket extends Page
                         ->label('Notă internă (vizibil doar staff)')
                         ->default(false)
                         ->helperText('Organizatorul nu va vedea acest mesaj.'),
-                    Forms\Components\FileUpload::make('attachments')
-                        ->label('Atașamente (jpg/png/pdf, max 3 MB)')
-                        ->multiple()
-                        ->maxFiles((int) config('support.attachments.max_per_message', 5))
-                        ->maxSize((int) config('support.attachments.max_size_kb', 3072))
-                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'application/pdf'])
-                        ->directory('support-tickets/' . $this->record->id)
-                        ->disk(config('support.attachments.storage_disk', 'public'))
-                        ->visibility('public')
-                        ->preserveFilenames(),
+                    // Attachments temporarily disabled — Filament v4
+                    // FileUpload + multiple was tripping a Validator::make
+                    // type error on submit. Re-add after confirming the
+                    // textarea-only flow works end to end.
                 ])
                 ->action(fn (array $data) => $this->postReply($data)),
 
@@ -223,12 +217,26 @@ class ViewSupportTicket extends Page
                 ->form([
                     Forms\Components\Select::make('assigned_to_marketplace_admin_id')
                         ->label('Asignat')
-                        ->options(fn () => MarketplaceAdmin::query()
-                            ->where('marketplace_client_id', $this->record->marketplace_client_id)
-                            ->orderBy('name')
-                            ->get()
-                            ->mapWithKeys(fn ($u) => [$u->id => $u->name . ' — ' . $u->email])
-                            ->all())
+                        ->helperText('Lista include doar membrii echipei alocați departamentului curent. Pentru a adăuga alți utilizatori, editează departamentul.')
+                        ->options(function () {
+                            $deptAdmins = $this->record->department?->admins()
+                                ->orderBy('name')
+                                ->get() ?? collect();
+
+                            // Fallback: if the department has no admins
+                            // configured yet, allow picking from any admin
+                            // on the marketplace so the ticket isn't stuck.
+                            if ($deptAdmins->isEmpty()) {
+                                $deptAdmins = MarketplaceAdmin::query()
+                                    ->where('marketplace_client_id', $this->record->marketplace_client_id)
+                                    ->orderBy('name')
+                                    ->get();
+                            }
+
+                            return $deptAdmins
+                                ->mapWithKeys(fn ($u) => [$u->id => $u->name . ' — ' . $u->email])
+                                ->all();
+                        })
                         ->searchable()
                         ->nullable()
                         ->default($this->record->assigned_to_marketplace_admin_id),

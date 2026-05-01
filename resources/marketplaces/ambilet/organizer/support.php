@@ -481,6 +481,9 @@ async function submitCreate(e) {
         source_url: window.location.href,
         screen_resolution: `${screen.width}x${screen.height}`,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
+        // Pass the real browser UA so the admin context panel shows
+        // "Chrome 147 on Windows" instead of the ambilet proxy's UA.
+        user_agent: navigator.userAgent,
     };
 
     const files = Array.from(document.getElementById('attachments-input').files || []);

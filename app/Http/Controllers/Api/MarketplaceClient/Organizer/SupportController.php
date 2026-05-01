@@ -135,6 +135,8 @@ class SupportController extends BaseController
             'meta.module_name' => ['nullable', 'string', 'max:100'],
             'context.source_url' => ['nullable', 'url', 'max:2048'],
             'context.screen_resolution' => ['nullable', 'string', 'max:32'],
+            'context.viewport' => ['nullable', 'string', 'max:32'],
+            'context.user_agent' => ['nullable', 'string', 'max:512'],
             'attachments' => ['nullable', 'array', 'max:' . (int) config('support.attachments.max_per_message', 5)],
             'attachments.*' => $this->attachmentValidationRule(),
         ]);

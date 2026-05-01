@@ -6,6 +6,7 @@ use App\Support\Translatable;
 use App\Traits\SecureMarketplaceScoping;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -58,5 +59,20 @@ class SupportDepartment extends Model
     public function tickets(): HasMany
     {
         return $this->hasMany(SupportTicket::class);
+    }
+
+    /**
+     * Marketplace admins that handle tickets on this department.
+     * Used to scope the assignee dropdown and to pick default notify
+     * recipients on ticket creation.
+     */
+    public function admins(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceAdmin::class,
+            'support_department_admins',
+            'support_department_id',
+            'marketplace_admin_id'
+        )->withTimestamps();
     }
 }

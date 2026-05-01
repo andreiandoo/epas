@@ -15,7 +15,12 @@ class RequestContextCapture
 {
     public function capture(Request $request, array $clientHints = []): array
     {
-        $userAgent = (string) ($request->userAgent() ?? '');
+        // Prefer the browser UA forwarded by the frontend (the ambilet proxy
+        // overwrites User-Agent with its own when calling this API, so
+        // $request->userAgent() would otherwise read 'Ambilet Marketplace/1.0'
+        // — useless for support-staff context). Fall back to the request UA
+        // when the frontend didn't provide one.
+        $userAgent = (string) ($clientHints['user_agent'] ?? $request->userAgent() ?? '');
         $parsed = self::parseUserAgent($userAgent);
 
         $clientIp = $this->resolveClientIp($request);

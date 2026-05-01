@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\SupportDepartmentResource\Pages;
+use App\Models\MarketplaceAdmin;
 use App\Models\SupportDepartment;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -57,6 +58,22 @@ class SupportDepartmentResource extends Resource
                     ->label('Email-uri pentru notificare')
                     ->placeholder('suport@ambilet.ro')
                     ->helperText('Echipa care primește email când se deschide un tichet pe acest departament.'),
+
+                Forms\Components\Select::make('admins')
+                    ->label('Membri echipă alocați')
+                    ->helperText('Acești utilizatori vor putea fi asignați pe tichetele care ajung pe acest departament.')
+                    ->relationship(
+                        'admins',
+                        'name',
+                        fn ($query) => $query->where(
+                            'marketplace_client_id',
+                            \Illuminate\Support\Facades\Auth::guard('marketplace_admin')->user()?->marketplace_client_id
+                        )->orderBy('name'),
+                    )
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->getOptionLabelFromRecordUsing(fn (MarketplaceAdmin $admin) => $admin->name . ' — ' . $admin->email),
 
                 Forms\Components\TextInput::make('sort_order')
                     ->label('Ordine')

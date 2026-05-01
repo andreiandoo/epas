@@ -27,8 +27,12 @@ class SupportProblemTypeResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $admin = Auth::guard('marketplace_admin')->user();
+        // Eager load 'department' here — Table::modifyQueryUsing with a
+        // Closure crashes Filament's filter wrapping in this build (same
+        // regression that hit SupportTicketResource).
         return parent::getEloquentQuery()
-            ->where('marketplace_client_id', $admin?->marketplace_client_id);
+            ->where('marketplace_client_id', $admin?->marketplace_client_id)
+            ->with('department');
     }
 
     public static function form(Schema $form): Schema
@@ -98,7 +102,6 @@ class SupportProblemTypeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $q) => $q->with('department'))
             ->columns([
                 Tables\Columns\TextColumn::make('department.name')
                     ->label('Departament')
