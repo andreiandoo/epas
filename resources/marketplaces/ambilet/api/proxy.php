@@ -2133,22 +2133,22 @@ switch ($action) {
         break;
 
     case 'organizer.support.tickets':
-        $method = 'GET';
-        $params = [];
-        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
-        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
-        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
-        if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
-        $endpoint = '/organizer/support/tickets' . ($params ? '?' . http_build_query($params) : '');
+        // The frontend's getProxyAction() resolves both GET (list) and POST
+        // (create) to this same action, so dispatch on REQUEST_METHOD here
+        // (matches the pattern used by 'organizer.events' & friends).
+        $method = $_SERVER['REQUEST_METHOD'];
         $requiresAuth = true;
-        break;
-
-    case 'organizer.support.tickets.store':
-        // Multipart so the form can ship attachments[] alongside JSON-ish fields.
-        $method = 'POST';
-        $endpoint = '/organizer/support/tickets';
-        $requiresAuth = true;
-        $isMultipart = true;
+        if ($method === 'POST') {
+            $endpoint = '/organizer/support/tickets';
+            $isMultipart = true;
+        } else {
+            $params = [];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['lang'])) $params['lang'] = $_GET['lang'];
+            $endpoint = '/organizer/support/tickets' . ($params ? '?' . http_build_query($params) : '');
+        }
         break;
 
     case 'organizer.support.tickets.show':
