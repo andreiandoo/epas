@@ -428,138 +428,229 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
 
                 <!-- ============================== TAB: BOOKING & CONTACT ============================== -->
                 <div data-tab="booking" class="tab-section hidden space-y-6">
-                    <!-- Public contact -->
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <h2 class="mb-2 text-lg font-bold text-secondary">Contact public</h2>
-                        <p class="mb-6 text-sm text-muted">Vizibil pe pagina ta dedicată.</p>
+
+                    <!-- Public contact — gradient hero card -->
+                    <div class="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/5 via-white to-accent/5 p-6 shadow-sm">
+                        <div class="mb-5 flex items-start gap-4">
+                            <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark shadow-md">
+                                <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div class="flex-1">
+                                <h2 class="text-lg font-bold text-secondary">Contact public</h2>
+                                <p class="text-sm text-muted">Acestea apar pe pagina ta publică, vizibile oricui te caută online.</p>
+                            </div>
+                        </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Email contact</label>
+                                <label class="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    Email contact
+                                </label>
                                 <input type="email" data-field="email" class="input" placeholder="contact@artist.ro">
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Telefon</label>
-                                <input type="tel" data-field="phone" class="input">
+                                <label class="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    Telefon
+                                </label>
+                                <input type="tel" data-field="phone" class="input" placeholder="+40 7XX XXX XXX">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Manager -->
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <h2 class="mb-2 text-lg font-bold text-secondary">Manager</h2>
-                        <p class="mb-6 text-sm text-muted">Persoana de contact pentru solicitări de booking.</p>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Prenume</label>
-                                <input type="text" data-field="manager_first_name" maxlength="100" class="input">
+                    <!-- Manager + Agent — twin business-card layout -->
+                    <div class="grid gap-6 lg:grid-cols-2">
+                        <!-- Manager -->
+                        <div class="rounded-2xl border border-border bg-white shadow-sm">
+                            <div class="rounded-t-2xl border-b border-border bg-gradient-to-r from-secondary to-primary-dark p-5 text-white">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-base font-bold leading-tight">Manager</h2>
+                                        <p class="text-xs text-white/70">Contact pentru solicitări de booking</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Nume</label>
-                                <input type="text" data-field="manager_last_name" maxlength="100" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Email</label>
-                                <input type="email" data-field="manager_email" maxlength="190" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Telefon</label>
-                                <input type="tel" data-field="manager_phone" maxlength="64" class="input">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="mb-2 block text-sm font-medium text-secondary">Website</label>
-                                <input type="url" data-field="manager_website" maxlength="255" class="input">
+                            <div class="space-y-4 p-5">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="text" data-field="manager_first_name" maxlength="100" class="input" placeholder="Prenume">
+                                    <input type="text" data-field="manager_last_name" maxlength="100" class="input" placeholder="Nume">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    <input type="email" data-field="manager_email" maxlength="190" class="input pl-9" placeholder="manager@email.com">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    <input type="tel" data-field="manager_phone" maxlength="64" class="input pl-9" placeholder="+40 7XX XXX XXX">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                                    <input type="url" data-field="manager_website" maxlength="255" class="input pl-9" placeholder="https://...">
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Agent -->
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <h2 class="mb-6 text-lg font-bold text-secondary">Agent booking</h2>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Prenume</label>
-                                <input type="text" data-field="agent_first_name" maxlength="100" class="input">
+                        <!-- Agent -->
+                        <div class="rounded-2xl border border-border bg-white shadow-sm">
+                            <div class="rounded-t-2xl border-b border-border bg-gradient-to-r from-accent to-primary p-5 text-white">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-base font-bold leading-tight">Agent booking</h2>
+                                        <p class="text-xs text-white/70">Contractează evenimentele tale</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Nume</label>
-                                <input type="text" data-field="agent_last_name" maxlength="100" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Email</label>
-                                <input type="email" data-field="agent_email" maxlength="190" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Telefon</label>
-                                <input type="tel" data-field="agent_phone" maxlength="64" class="input">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="mb-2 block text-sm font-medium text-secondary">Website</label>
-                                <input type="url" data-field="agent_website" maxlength="255" class="input">
+                            <div class="space-y-4 p-5">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="text" data-field="agent_first_name" maxlength="100" class="input" placeholder="Prenume">
+                                    <input type="text" data-field="agent_last_name" maxlength="100" class="input" placeholder="Nume">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    <input type="email" data-field="agent_email" maxlength="190" class="input pl-9" placeholder="agent@email.com">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                                    <input type="tel" data-field="agent_phone" maxlength="64" class="input pl-9" placeholder="+40 7XX XXX XXX">
+                                </div>
+                                <div class="relative">
+                                    <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                                    <input type="url" data-field="agent_website" maxlength="255" class="input pl-9" placeholder="https://...">
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Booking agency -->
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <h2 class="mb-2 text-lg font-bold text-secondary">Agenție de booking</h2>
-                        <p class="mb-6 text-sm text-muted">Dacă lucrezi prin intermediul unei agenții.</p>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Nume agenție</label>
-                                <input type="text" data-field="booking_agency.name" class="input">
+                    <div class="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+                        <div class="border-b border-border bg-surface px-6 py-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-accent/10">
+                                    <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h2 class="text-lg font-bold text-secondary">Agenție de booking</h2>
+                                    <p class="text-sm text-muted">Dacă lucrezi prin intermediul unei agenții, completează datele aici.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="mb-5 grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted">Nume agenție</label>
+                                    <input type="text" data-field="booking_agency.name" class="input">
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted">Website</label>
+                                    <input type="url" data-field="booking_agency.website" class="input">
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted">Email</label>
+                                    <input type="email" data-field="booking_agency.email" class="input">
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted">Telefon</label>
+                                    <input type="tel" data-field="booking_agency.phone" class="input">
+                                </div>
                             </div>
                             <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Email</label>
-                                <input type="email" data-field="booking_agency.email" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Telefon</label>
-                                <input type="tel" data-field="booking_agency.phone" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Website</label>
-                                <input type="url" data-field="booking_agency.website" class="input">
-                            </div>
-                            <div class="md:col-span-2">
-                                <label class="mb-2 block text-sm font-medium text-secondary">Servicii</label>
-                                <div class="flex flex-wrap gap-3">
-                                    <label class="inline-flex items-center gap-2 text-sm">
-                                        <input type="checkbox" data-service="booking" class="h-4 w-4 rounded text-primary">
-                                        Booking
+                                <label class="mb-3 block text-xs font-semibold uppercase tracking-wider text-muted">Servicii oferite</label>
+                                <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                                    <label class="group flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 transition-all hover:border-primary hover:bg-primary/5 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                        <input type="checkbox" data-service="booking" class="peer h-4 w-4 rounded text-primary">
+                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 peer-checked:bg-primary/20">
+                                            <svg class="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                        <span class="text-sm font-semibold text-secondary">Booking</span>
                                     </label>
-                                    <label class="inline-flex items-center gap-2 text-sm">
-                                        <input type="checkbox" data-service="management" class="h-4 w-4 rounded text-primary">
-                                        Management
+                                    <label class="group flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 transition-all hover:border-accent hover:bg-accent/5 has-[:checked]:border-accent has-[:checked]:bg-accent/5">
+                                        <input type="checkbox" data-service="management" class="peer h-4 w-4 rounded text-accent">
+                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-accent/10 peer-checked:bg-accent/20">
+                                            <svg class="h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                        </div>
+                                        <span class="text-sm font-semibold text-secondary">Management</span>
                                     </label>
-                                    <label class="inline-flex items-center gap-2 text-sm">
-                                        <input type="checkbox" data-service="pr" class="h-4 w-4 rounded text-primary">
-                                        PR
+                                    <label class="group flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 transition-all hover:border-success hover:bg-success/5 has-[:checked]:border-success has-[:checked]:bg-success/5">
+                                        <input type="checkbox" data-service="pr" class="peer h-4 w-4 rounded text-success">
+                                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-success/10 peer-checked:bg-success/20">
+                                            <svg class="h-5 w-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                                        </div>
+                                        <span class="text-sm font-semibold text-secondary">PR</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Tarife -->
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <h2 class="mb-2 text-lg font-bold text-secondary">Onorariu indicativ</h2>
-                        <p class="mb-6 text-sm text-muted">Vizibil organizatorilor logați. Lasă necompletat dacă preferi să discuți direct.</p>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Concert — minim (RON)</label>
-                                <input type="number" data-field="min_fee_concert" step="0.01" min="0" class="input">
+                    <!-- Tarife — pricing display with concert/festival columns -->
+                    <div class="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+                        <div class="border-b border-border bg-gradient-to-r from-primary/5 to-accent/5 px-6 py-4">
+                            <div class="flex items-start gap-3">
+                                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent shadow">
+                                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <h2 class="text-lg font-bold text-secondary">Onorariu indicativ</h2>
+                                    <p class="text-sm text-muted">Vizibil organizatorilor logați. Lasă necompletat dacă preferi să discuți direct.</p>
+                                </div>
                             </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Concert — maxim (RON)</label>
-                                <input type="number" data-field="max_fee_concert" step="0.01" min="0" class="input">
+                        </div>
+                        <div class="grid gap-0 md:grid-cols-2">
+                            <!-- Concert -->
+                            <div class="border-b border-border p-6 md:border-b-0 md:border-r">
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                                        <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                                    </span>
+                                    <h3 class="font-semibold text-secondary">Concert</h3>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="mb-1 block text-xs text-muted">Minim (RON)</label>
+                                        <div class="relative">
+                                            <input type="number" data-field="min_fee_concert" step="0.01" min="0" class="input pr-12" placeholder="0">
+                                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted">RON</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs text-muted">Maxim (RON)</label>
+                                        <div class="relative">
+                                            <input type="number" data-field="max_fee_concert" step="0.01" min="0" class="input pr-12" placeholder="0">
+                                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted">RON</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Festival — minim (RON)</label>
-                                <input type="number" data-field="min_fee_festival" step="0.01" min="0" class="input">
-                            </div>
-                            <div>
-                                <label class="mb-2 block text-sm font-medium text-secondary">Festival — maxim (RON)</label>
-                                <input type="number" data-field="max_fee_festival" step="0.01" min="0" class="input">
+                            <!-- Festival -->
+                            <div class="p-6">
+                                <div class="mb-4 flex items-center gap-2">
+                                    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
+                                        <svg class="h-4 w-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                                    </span>
+                                    <h3 class="font-semibold text-secondary">Festival</h3>
+                                </div>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="mb-1 block text-xs text-muted">Minim (RON)</label>
+                                        <div class="relative">
+                                            <input type="number" data-field="min_fee_festival" step="0.01" min="0" class="input pr-12" placeholder="0">
+                                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted">RON</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs text-muted">Maxim (RON)</label>
+                                        <div class="relative">
+                                            <input type="number" data-field="max_fee_festival" step="0.01" min="0" class="input pr-12" placeholder="0">
+                                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted">RON</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
