@@ -3155,6 +3155,15 @@ switch ($action) {
         $rawResponse = true;
         break;
 
+    case 'organizer.invitations.download-invite':
+        $method = 'GET';
+        $batchId = $_GET['batch_id'] ?? '';
+        $inviteId = $_GET['invite_id'] ?? '';
+        $endpoint = '/organizer/invitations/' . $batchId . '/invites/' . $inviteId . '/download';
+        $requiresAuth = true;
+        $rawResponse = true;
+        break;
+
     case 'organizer.invitations.csv-template':
         $method = 'GET';
         $endpoint = '/organizer/invitations/csv-template';
