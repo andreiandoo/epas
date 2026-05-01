@@ -71,35 +71,40 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div id="t-meta" class="hidden mt-4 pt-4 border-t border-border grid grid-cols-1 md:grid-cols-3 gap-3 text-sm"></div>
                 </div>
 
-                <!-- Conversation thread -->
-                <div class="bg-white rounded-2xl border border-border p-5 mb-4">
-                    <h2 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Conversatie</h2>
-                    <div id="thread" class="space-y-4"></div>
-                </div>
+                <!-- Conversation + Reply layout: side-by-side on desktop, stacked on mobile -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                    <!-- Conversation thread (left, 2/3 on desktop) -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl border border-border p-5">
+                        <h2 class="text-sm font-semibold text-muted uppercase tracking-wider mb-4">Conversatie</h2>
+                        <div id="thread" class="space-y-4"></div>
+                    </div>
 
-                <!-- Reply form -->
-                <div id="reply-card" class="bg-white rounded-2xl border border-border p-5">
-                    <h2 class="text-sm font-semibold text-muted uppercase tracking-wider mb-3">Trimite un raspuns</h2>
-                    <form id="reply-form" onsubmit="submitReply(event)" class="space-y-3">
-                        <textarea id="reply-body" required rows="4" maxlength="10000" placeholder="Scrie raspunsul tau..." class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
+                    <!-- Reply form (right, 1/3 on desktop, sticky) -->
+                    <div class="lg:col-span-1 lg:sticky lg:top-4">
+                        <div id="reply-card" class="bg-white rounded-2xl border border-border p-5">
+                            <h2 class="text-sm font-semibold text-muted uppercase tracking-wider mb-3">Trimite un raspuns</h2>
+                            <form id="reply-form" onsubmit="submitReply(event)" class="space-y-3">
+                                <textarea id="reply-body" required rows="6" maxlength="10000" placeholder="Scrie raspunsul tau..." class="w-full px-4 py-2.5 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
 
-                        <div>
-                            <label class="block text-xs font-medium text-muted mb-2">Atasamente (optional)</label>
-                            <input type="file" id="reply-attachments" multiple accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer">
-                            <div id="reply-attachments-preview" class="mt-2 space-y-1"></div>
+                                <div>
+                                    <label class="block text-xs font-medium text-muted mb-2">Atasamente (optional)</label>
+                                    <input type="file" id="reply-attachments" multiple accept=".jpg,.jpeg,.png,.pdf" class="w-full text-sm text-muted file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer">
+                                    <div id="reply-attachments-preview" class="mt-2 space-y-1"></div>
+                                </div>
+
+                                <div id="reply-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+
+                                <div class="flex justify-end">
+                                    <button type="submit" id="reply-btn" class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">Trimite raspunsul</button>
+                                </div>
+                            </form>
                         </div>
 
-                        <div id="reply-error" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
-
-                        <div class="flex justify-end">
-                            <button type="submit" id="reply-btn" class="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">Trimite raspunsul</button>
+                        <!-- Closed banner takes the same column when ticket is closed -->
+                        <div id="closed-banner" class="hidden bg-slate-50 border border-border rounded-2xl p-5 text-center">
+                            <p class="text-sm text-muted">Tichetul este inchis. Daca problema reapare, redeschide-l din butonul de sus.</p>
                         </div>
-                    </form>
-                </div>
-
-                <!-- Closed banner -->
-                <div id="closed-banner" class="hidden bg-slate-50 border border-border rounded-2xl p-5 text-center">
-                    <p class="text-sm text-muted">Tichetul este inchis. Daca problema reapare, redeschide-l din butonul de sus.</p>
+                    </div>
                 </div>
             </div>
         </main>

@@ -30,7 +30,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             </div>
             <div class="flex items-center gap-3 self-start lg:self-auto">
                 <span id="dirty-indicator" class="hidden rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">Modificări nesalvate</span>
-                <a id="public-profile-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary hidden">
+                <a id="public-profile-link" href="#" target="_blank" rel="noopener" class="hidden items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:bg-surface">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                     </svg>
@@ -418,7 +418,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                                     <p id="last-stats-refresh" class="mt-1 text-xs text-muted"></p>
                                 </div>
                             </div>
-                            <button type="button" id="refresh-stats-btn" class="btn btn-primary self-start lg:self-auto">
+                            <button type="button" id="refresh-stats-btn" class="btn btn-primary inline-flex items-center justify-center gap-2 self-start whitespace-nowrap rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg lg:self-auto">
                                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 Actualizează acum
                             </button>
@@ -567,8 +567,10 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
 
                 <!-- Sticky save bar -->
                 <div class="sticky bottom-0 -mx-4 -mb-4 flex items-center justify-end gap-3 border-t border-border bg-white p-4 lg:-mx-0 lg:-mb-0 lg:rounded-2xl">
-                    <button type="button" id="cancel-btn" class="btn btn-secondary">Anulează modificările</button>
-                    <button type="submit" id="save-btn" class="btn btn-primary">
+                    <button type="button" id="cancel-btn" class="btn btn-secondary inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-5 py-3 text-sm font-semibold text-secondary transition-colors hover:bg-surface">
+                        Anulează modificările
+                    </button>
+                    <button type="submit" id="save-btn" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Salvează modificările
                     </button>

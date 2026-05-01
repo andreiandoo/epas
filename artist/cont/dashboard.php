@@ -28,13 +28,13 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                 <p id="dashboard-greeting" class="text-sm text-muted">Bun venit!</p>
             </div>
             <div class="flex items-center gap-3">
-                <a id="public-profile-link" href="#" target="_blank" rel="noopener" class="btn btn-secondary hidden">
+                <a id="public-profile-link" href="#" target="_blank" rel="noopener" class="hidden items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-secondary transition-colors hover:bg-surface">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                     </svg>
                     Vezi profilul public
                 </a>
-                <a href="/artist/cont/detalii" class="btn btn-primary">
+                <a href="/artist/cont/detalii" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                     </svg>
@@ -178,19 +178,19 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Upcoming events list -->
-        <div class="grid gap-6 lg:grid-cols-3">
+        <!-- Upcoming events list (nearest-future first) + Account info sidecard -->
+        <div class="mb-6 grid gap-6 lg:grid-cols-3">
             <div class="rounded-2xl border border-border bg-white p-6 lg:col-span-2">
                 <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-lg font-bold text-secondary">Evenimente recente</h2>
+                    <h2 class="text-lg font-bold text-secondary">Evenimente viitoare</h2>
                     <a href="/artist/cont/evenimente" class="text-sm font-medium text-primary hover:underline">Vezi toate →</a>
                 </div>
-                <div id="recent-events-list" class="space-y-3">
+                <div id="upcoming-events-list" class="space-y-3">
                     <p class="py-8 text-center text-sm text-muted">Se încarcă…</p>
                 </div>
             </div>
 
-            <!-- Account info card (replaces the "activity feed" since we don't track activity yet) -->
+            <!-- Account info card -->
             <div class="rounded-2xl border border-border bg-white p-6">
                 <h2 class="mb-4 text-lg font-bold text-secondary">Informații cont</h2>
                 <dl class="space-y-3 text-sm">
@@ -211,6 +211,19 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                         <dd id="account-linked-artist" class="text-right font-medium text-secondary">—</dd>
                     </div>
                 </dl>
+            </div>
+        </div>
+
+        <!-- Past events list (most-recently-ended first) -->
+        <div class="grid gap-6">
+            <div class="rounded-2xl border border-border bg-white p-6">
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-secondary">Evenimente recente</h2>
+                    <a href="/artist/cont/evenimente?filter=past" class="text-sm font-medium text-primary hover:underline">Vezi toate →</a>
+                </div>
+                <div id="past-events-list" class="space-y-3">
+                    <p class="py-8 text-center text-sm text-muted">Se încarcă…</p>
+                </div>
             </div>
         </div>
     </main>

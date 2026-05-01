@@ -104,13 +104,16 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     <input type="text" id="filter-search" placeholder="Caută eveniment, locație, oraș…" class="input pl-10">
                 </div>
 
-                <!-- City filter -->
-                <select id="filter-city" class="input w-full lg:w-auto">
+                <!-- City filter — pr-10 reserves room for the SVG arrow
+                     drawn via partials/_forms.css `select` rule. Without
+                     it, the .input padding (1rem) overrides and the arrow
+                     overlaps the option text. -->
+                <select id="filter-city" class="input w-full pr-10 lg:w-auto">
                     <option value="">Toate orașele</option>
                 </select>
 
                 <!-- Sort -->
-                <select id="filter-sort" class="input w-full lg:w-auto">
+                <select id="filter-sort" class="input w-full pr-10 lg:w-auto">
                     <option value="date_asc">Cele mai apropiate</option>
                     <option value="date_desc">Cele mai îndepărtate</option>
                 </select>
@@ -131,7 +134,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             </div>
             <p class="mb-1 font-semibold text-secondary">Niciun rezultat</p>
             <p class="mb-4 text-sm text-muted">Nu există evenimente care să corespundă filtrelor active.</p>
-            <button type="button" id="reset-filters-btn" class="btn btn-secondary btn-sm">Resetează filtrele</button>
+            <button type="button" id="reset-filters-btn" class="btn btn-secondary btn-sm inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-surface">Resetează filtrele</button>
         </div>
 
         <!-- Empty: no events at all -->
@@ -143,7 +146,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             </div>
             <h2 class="mb-2 text-xl font-bold text-secondary">Niciun eveniment încă</h2>
             <p class="mx-auto mb-6 max-w-md text-muted">Organizatorii te vor adăuga la evenimentele lor. Asigură-te că profilul tău este complet și vizibil pentru a fi descoperit mai ușor.</p>
-            <a href="/artist/cont/detalii" class="btn btn-primary">
+            <a href="/artist/cont/detalii" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg">
                 <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Completează profilul
             </a>

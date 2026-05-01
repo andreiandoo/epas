@@ -62,7 +62,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                         </div>
                         <div>
                             <label for="locale" class="mb-2 block text-sm font-medium text-secondary">Limbă</label>
-                            <select id="locale" name="locale" class="input">
+                            <select id="locale" name="locale" class="input pr-10">
                                 <option value="ro">Română</option>
                                 <option value="en">English</option>
                                 <option value="de">Deutsch</option>
@@ -73,7 +73,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     </div>
 
                     <div class="border-t border-border pt-4">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                             Salvează modificările
                         </button>
@@ -111,7 +111,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                         </div>
                     </div>
                     <div class="border-t border-border pt-4">
-                        <button type="submit" class="btn btn-primary">Schimbă parola</button>
+                        <button type="submit" class="btn btn-primary inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-primary-dark hover:shadow-lg">Schimbă parola</button>
                     </div>
                 </form>
             </section>
@@ -143,7 +143,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
             <p class="mb-4 text-sm text-muted">Această acțiune este permanentă. Introdu parola pentru a confirma.</p>
             <input type="password" id="delete-password" placeholder="Parola" class="input mb-4" autocomplete="off">
             <div class="flex justify-end gap-2">
-                <button type="button" id="delete-cancel" class="btn btn-secondary">Renunță</button>
+                <button type="button" id="delete-cancel" class="btn btn-secondary inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white px-4 py-2 text-sm font-semibold text-secondary transition-colors hover:bg-surface">Renunță</button>
                 <button type="button" id="delete-confirm" class="btn rounded-xl bg-error px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Șterge definitiv</button>
             </div>
         </div>
