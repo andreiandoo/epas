@@ -205,6 +205,83 @@ class ArtistAccountResource extends Resource
                                     . 'Pentru abonamente plătite de artist, dezactivarea se face din portalul artistului.'
                                     . '</p>'
                                 )),
+
+                            SC\Actions::make([
+                                Action::make('extended_artist_activate_inline')
+                                    ->label('Activează Extended Artist')
+                                    ->icon('heroicon-o-sparkles')
+                                    ->color('primary')
+                                    ->requiresConfirmation()
+                                    ->modalDescription('Acordă manual acces la Extended Artist (Fan CRM, Booking, EPK, Tour Optimizer). Fără facturare, fără expirare.')
+                                    ->visible(function (?MarketplaceArtistAccount $record) {
+                                        if (!$record) {
+                                            return false;
+                                        }
+                                        $row = $record->extendedArtistActivation();
+                                        return !$row || !$row->isAccessGranted();
+                                    })
+                                    ->action(function (MarketplaceArtistAccount $record) {
+                                        $access = app(ExtendedArtistAccess::class);
+                                        $microservice = $access->microservice();
+                                        if (!$microservice) {
+                                            Notification::make()->title('Microserviciul Extended Artist nu este definit.')->danger()->send();
+                                            return;
+                                        }
+
+                                        $admin = Auth::guard('marketplace_admin')->user() ?? Auth::user();
+
+                                        $pivot = MarketplaceArtistAccountMicroservice::firstOrNew([
+                                            'marketplace_artist_account_id' => $record->id,
+                                            'microservice_id' => $microservice->id,
+                                        ]);
+                                        $pivot->fill([
+                                            'status' => MarketplaceArtistAccountMicroservice::STATUS_ACTIVE,
+                                            'granted_by' => MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE,
+                                            'granted_by_user_id' => $admin?->getAuthIdentifier(),
+                                            'service_order_id' => null,
+                                            'activated_at' => $pivot->activated_at ?? now(),
+                                            'expires_at' => null,
+                                            'cancelled_at' => null,
+                                        ]);
+                                        $pivot->save();
+
+                                        Notification::make()
+                                            ->title('Extended Artist activat')
+                                            ->body('Artistul are acum acces nelimitat la cele 4 module.')
+                                            ->success()
+                                            ->send();
+                                    }),
+
+                                Action::make('extended_artist_deactivate_inline')
+                                    ->label('Dezactivează acces manual')
+                                    ->icon('heroicon-o-no-symbol')
+                                    ->color('danger')
+                                    ->outlined()
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Dezactivează acces manual?')
+                                    ->modalDescription('Aceasta dezactivează doar accesele acordate de admin. Abonamentele plătite de artist NU pot fi oprite din UI — artistul trebuie să le anuleze din portalul lui.')
+                                    ->visible(function (?MarketplaceArtistAccount $record) {
+                                        if (!$record) {
+                                            return false;
+                                        }
+                                        $row = $record->extendedArtistActivation();
+                                        return $row
+                                            && $row->granted_by === MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE
+                                            && $row->isAccessGranted();
+                                    })
+                                    ->action(function (MarketplaceArtistAccount $record) {
+                                        $row = $record->extendedArtistActivation();
+                                        if (!$row || $row->granted_by !== MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE) {
+                                            Notification::make()->title('Nu se poate dezactiva (nu e admin override).')->danger()->send();
+                                            return;
+                                        }
+                                        $row->update([
+                                            'status' => MarketplaceArtistAccountMicroservice::STATUS_CANCELLED,
+                                            'cancelled_at' => now(),
+                                        ]);
+                                        Notification::make()->title('Extended Artist dezactivat')->success()->send();
+                                    }),
+                            ]),
                         ]),
 
                     SC\Section::make('Mesaj revendicare')
@@ -536,80 +613,6 @@ class ArtistAccountResource extends Resource
                 ->action(function (MarketplaceArtistAccount $record) {
                     app(ArtistAccountApprovalService::class)->linkArtist($record, null);
                     Notification::make()->title('Profil dezasociat')->success()->send();
-                }),
-
-            Action::make('extended_artist_activate')
-                ->label('Activează Extended Artist')
-                ->icon('heroicon-o-sparkles')
-                ->color('info')
-                ->requiresConfirmation()
-                ->modalDescription('Acordă manual acces la Extended Artist (Fan CRM, Booking, EPK, Tour Optimizer). Fără facturare, fără expirare.')
-                ->visible(function (MarketplaceArtistAccount $record) {
-                    if (!self::isExtendedArtistMicroserviceActive($record->marketplace_client_id)) {
-                        return false;
-                    }
-                    $row = $record->extendedArtistActivation();
-                    return !$row || !$row->isAccessGranted();
-                })
-                ->action(function (MarketplaceArtistAccount $record) {
-                    $access = app(ExtendedArtistAccess::class);
-                    $microservice = $access->microservice();
-                    if (!$microservice) {
-                        Notification::make()->title('Microserviciul Extended Artist nu este definit.')->danger()->send();
-                        return;
-                    }
-
-                    $admin = Auth::guard('marketplace_admin')->user() ?? Auth::user();
-
-                    $pivot = MarketplaceArtistAccountMicroservice::firstOrNew([
-                        'marketplace_artist_account_id' => $record->id,
-                        'microservice_id' => $microservice->id,
-                    ]);
-                    $pivot->fill([
-                        'status' => MarketplaceArtistAccountMicroservice::STATUS_ACTIVE,
-                        'granted_by' => MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE,
-                        'granted_by_user_id' => $admin?->getAuthIdentifier(),
-                        'service_order_id' => null,
-                        'activated_at' => $pivot->activated_at ?? now(),
-                        'expires_at' => null,
-                        'cancelled_at' => null,
-                    ]);
-                    $pivot->save();
-
-                    Notification::make()
-                        ->title('Extended Artist activat')
-                        ->body('Artistul are acum acces nelimitat la cele 4 module.')
-                        ->success()
-                        ->send();
-                }),
-
-            Action::make('extended_artist_deactivate')
-                ->label('Dezactivează Extended Artist')
-                ->icon('heroicon-o-no-symbol')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->modalHeading('Dezactivează acces manual?')
-                ->modalDescription('Aceasta dezactivează doar accesele acordate de admin. Abonamentele plătite de artist NU pot fi oprite din UI — artistul trebuie să le anuleze din portalul lui.')
-                ->visible(function (MarketplaceArtistAccount $record) {
-                    if (!self::isExtendedArtistMicroserviceActive($record->marketplace_client_id)) {
-                        return false;
-                    }
-                    $row = $record->extendedArtistActivation();
-                    return $row
-                        && $row->granted_by === MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE
-                        && $row->isAccessGranted();
-                })
-                ->action(function (MarketplaceArtistAccount $record) {
-                    $row = $record->extendedArtistActivation();
-                    if (!$row || $row->granted_by !== MarketplaceArtistAccountMicroservice::GRANTED_ADMIN_OVERRIDE) {
-                        Notification::make()->title('Nu se poate dezactiva (nu e admin override).')->danger()->send();
-                        return;
-                    }
-                    $row->update([
-                        'status' => MarketplaceArtistAccountMicroservice::STATUS_CANCELLED,
-                        'cancelled_at' => now(),
-                    ]);
-                    Notification::make()->title('Extended Artist dezactivat')->success()->send();
                 }),
 
             Action::make('send_password_reset')
