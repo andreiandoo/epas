@@ -3,6 +3,8 @@
 namespace App\Filament\Marketplace\Resources\OrderResource\Pages;
 
 use App\Filament\Marketplace\Resources\OrderResource;
+use App\Models\MarketplaceCustomer;
+use App\Services\Marketplace\OrderTransferService;
 use App\Services\PaymentRefundService;
 use Filament\Actions;
 use Filament\Forms;
@@ -87,6 +89,98 @@ class ViewOrder extends ViewRecord
                         ->title('Status updated')
                         ->body("Order status changed from {$oldStatus} to {$newStatus}")
                         ->send();
+                }),
+
+            Actions\Action::make('transfer_customer')
+                ->label('Transferă către alt client')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->color('gray')
+                ->visible(fn () => $this->record->source !== 'external_import')
+                ->modalHeading('Transferă comanda către alt client')
+                ->modalDescription('Comanda, biletele și log-urile asociate vor fi mutate atomic. Total-urile ambilor clienți se recalculează automat. Operațiunea e auditată în activity log și în istoricul comenzii.')
+                ->modalWidth('xl')
+                ->form([
+                    Forms\Components\Select::make('target_customer_id')
+                        ->label('Client destinație')
+                        ->required()
+                        ->searchable()
+                        ->getSearchResultsUsing(function (string $search): array {
+                            $clientId = $this->record->marketplace_client_id;
+                            $term = '%' . mb_strtolower($search) . '%';
+
+                            return MarketplaceCustomer::query()
+                                ->where('marketplace_client_id', $clientId)
+                                ->where(function ($q) use ($term) {
+                                    $q->whereRaw('LOWER(email) LIKE ?', [$term])
+                                      ->orWhereRaw('LOWER(first_name) LIKE ?', [$term])
+                                      ->orWhereRaw('LOWER(last_name) LIKE ?', [$term])
+                                      ->orWhereRaw('LOWER(phone) LIKE ?', [$term]);
+                                })
+                                ->where('id', '!=', $this->record->marketplace_customer_id)
+                                ->limit(20)
+                                ->get()
+                                ->mapWithKeys(fn ($c) => [
+                                    $c->id => trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) . ' — ' . $c->email . ($c->phone ? ' (' . $c->phone . ')' : ''),
+                                ])
+                                ->toArray();
+                        })
+                        ->getOptionLabelUsing(function ($value) {
+                            $c = MarketplaceCustomer::find($value);
+                            if (!$c) return null;
+                            return trim(($c->first_name ?? '') . ' ' . ($c->last_name ?? '')) . ' — ' . $c->email;
+                        })
+                        ->helperText('Caută după email, nume sau telefon. Doar clienții marketplace-ului curent.'),
+                    Forms\Components\Textarea::make('reason')
+                        ->label('Motiv transfer')
+                        ->required()
+                        ->minLength(3)
+                        ->rows(2)
+                        ->placeholder('Ex: cumparator gresit la check-out, cerere client, etc.'),
+                    Forms\Components\Toggle::make('rewrite_tickets')
+                        ->label('Rescrie și attendee_name/email pe bilete')
+                        ->helperText('Activează doar dacă noul client este și deținătorul biletelor. Altfel biletele rămân pe numele original.')
+                        ->default(false),
+                ])
+                ->modalSubmitActionLabel('Transferă')
+                ->requiresConfirmation()
+                ->action(function (array $data): void {
+                    $newCustomer = MarketplaceCustomer::find($data['target_customer_id']);
+
+                    if (!$newCustomer) {
+                        Notification::make()->danger()->title('Client destinație inexistent')->send();
+                        return;
+                    }
+
+                    try {
+                        $result = app(OrderTransferService::class)->transfer(
+                            $this->record,
+                            $newCustomer,
+                            $data['reason'],
+                            auth()->id(),
+                            (bool) ($data['rewrite_tickets'] ?? false),
+                        );
+
+                        Notification::make()
+                            ->success()
+                            ->title('Comandă transferată')
+                            ->body(
+                                'Mutată către ' . $newCustomer->email
+                                . '. Bilete actualizate: ' . $result['tickets_updated']
+                                . ', cereri rambursare: ' . $result['refund_requests_updated']
+                                . ', email logs: ' . $result['email_logs_updated']
+                                . '.'
+                            )
+                            ->send();
+
+                        $this->redirect(static::getResource()::getUrl('view', ['record' => $this->record->id]));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Transfer eșuat')
+                            ->body($e->getMessage())
+                            ->persistent()
+                            ->send();
+                    }
                 }),
 
             Actions\EditAction::make()
