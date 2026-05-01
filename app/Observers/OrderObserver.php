@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use App\Models\Platform\CoreCustomer;
 use App\Services\Platform\PlatformTrackingService;
@@ -58,6 +59,11 @@ class OrderObserver
         if (in_array($order->status, ['paid', 'confirmed', 'completed'])) {
             DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
         }
+
+        // Cached aggregates on the marketplace customer
+        if (in_array($order->status, MarketplaceCustomer::SUCCESS_ORDER_STATUSES, true)) {
+            DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
+        }
     }
 
     /**
@@ -76,6 +82,25 @@ class OrderObserver
                 !in_array($oldStatus, ['paid', 'confirmed', 'completed'])) {
                 DB::afterCommit(fn () => $this->trackPurchaseConversion($order));
             }
+
+            // Status moved into / out of the success set on the same customer
+            $oldSuccess = in_array($oldStatus, MarketplaceCustomer::SUCCESS_ORDER_STATUSES, true);
+            $newSuccess = in_array($newStatus, MarketplaceCustomer::SUCCESS_ORDER_STATUSES, true);
+            if ($oldSuccess !== $newSuccess) {
+                DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
+            }
+        }
+
+        // Order moved between customers (rare — usually via OrderTransferService,
+        // which already calls updateStats; this is a defensive net for any
+        // direct ->update(['marketplace_customer_id' => ...]) elsewhere).
+        if ($order->isDirty('marketplace_customer_id')) {
+            $oldCustomerId = $order->getOriginal('marketplace_customer_id');
+            $newCustomerId = $order->marketplace_customer_id;
+            DB::afterCommit(function () use ($oldCustomerId, $newCustomerId) {
+                $this->refreshCustomerStats($oldCustomerId);
+                $this->refreshCustomerStats($newCustomerId);
+            });
         }
 
         // Surface payment failures into the system_errors dashboard.
@@ -323,6 +348,27 @@ class OrderObserver
      */
     public function deleted(Order $order): void
     {
-        // Could track refund/cancellation for negative conversions
+        // Refresh cached aggregates after the order disappears
+        DB::afterCommit(fn () => $this->refreshCustomerStats($order->marketplace_customer_id));
+    }
+
+    /**
+     * Recompute cached total_orders/total_spent on a marketplace customer.
+     * Tolerates null id and missing customer rows.
+     */
+    protected function refreshCustomerStats(?int $customerId): void
+    {
+        if (!$customerId) {
+            return;
+        }
+
+        try {
+            MarketplaceCustomer::find($customerId)?->updateStats();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to refresh marketplace customer stats', [
+                'marketplace_customer_id' => $customerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

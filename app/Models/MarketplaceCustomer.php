@@ -294,13 +294,20 @@ class MarketplaceCustomer extends Authenticatable
     // =========================================
 
     /**
-     * Update cached stats
+     * Statuses considered as a successful purchase for cached aggregates.
+     * Mirrors OrderObserver's conversion-trigger set (paid/confirmed/completed)
+     * plus partially_refunded (the customer still kept a portion of the order).
+     */
+    public const SUCCESS_ORDER_STATUSES = ['paid', 'confirmed', 'completed', 'partially_refunded'];
+
+    /**
+     * Update cached stats from the customer's actual orders.
      */
     public function updateStats(): void
     {
         $this->update([
-            'total_orders' => $this->orders()->where('status', 'completed')->count(),
-            'total_spent' => $this->orders()->where('status', 'completed')->sum('total'),
+            'total_orders' => $this->orders()->whereIn('status', self::SUCCESS_ORDER_STATUSES)->count(),
+            'total_spent' => $this->orders()->whereIn('status', self::SUCCESS_ORDER_STATUSES)->sum('total'),
         ]);
     }
 
