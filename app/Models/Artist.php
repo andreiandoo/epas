@@ -158,6 +158,15 @@ class Artist extends Model
     }
 
     /**
+     * Smart EPK (Electronic Press Kit) — un singur EPK per artist, cu max 3 variante.
+     * Activat doar dacă artistul are abonament Extended Artist activ.
+     */
+    public function epk(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\ArtistEpk::class);
+    }
+
+    /**
      * Tenants linked to this artist (artist-type tenants)
      */
     public function tenants(): \Illuminate\Database\Eloquent\Relations\HasMany

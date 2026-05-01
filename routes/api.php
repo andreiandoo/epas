@@ -2485,6 +2485,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Artist\DashboardController as Art
 use App\Http\Controllers\Api\MarketplaceClient\Artist\ProfileController as ArtistProfileController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\AccountController as ArtistAccountController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\ExtendedArtistController as ArtistExtendedArtistController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\EpkController as ArtistEpkController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2554,7 +2555,50 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             Route::post('/cancel', [ArtistExtendedArtistController::class, 'cancel'])
                 ->name('api.marketplace-client.artist.extended-artist.cancel');
         });
+
+        // Smart EPK (Modulul 3 din Extended Artist) — gated by extended.artist
+        Route::middleware('extended.artist')->prefix('epk')->group(function () {
+            Route::get('/', [ArtistEpkController::class, 'index'])
+                ->name('api.marketplace-client.artist.epk');
+            Route::post('/variants', [ArtistEpkController::class, 'createVariant'])
+                ->name('api.marketplace-client.artist.epk.variant.create');
+            Route::patch('/variants/{id}', [ArtistEpkController::class, 'updateVariant'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.update');
+            Route::delete('/variants/{id}', [ArtistEpkController::class, 'deleteVariant'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.delete');
+            Route::post('/variants/{id}/activate', [ArtistEpkController::class, 'activateVariant'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.activate');
+            Route::post('/variants/{id}/clone', [ArtistEpkController::class, 'cloneVariant'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.clone');
+            Route::post('/variants/{id}/upload', [ArtistEpkController::class, 'uploadImage'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.upload');
+            Route::delete('/variants/{id}/upload', [ArtistEpkController::class, 'deleteImage'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.delete-image');
+            Route::post('/variants/{id}/upload-rider', [ArtistEpkController::class, 'uploadRider'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.upload-rider');
+            Route::get('/variants/{id}/qr', [ArtistEpkController::class, 'qr'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.qr');
+            Route::get('/variants/{id}/pdf', [ArtistEpkController::class, 'pdf'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.epk.variant.pdf');
+        });
     });
+});
+
+// Public EPK rider lead capture (no auth — vizitator anonim al pagini publice).
+// Folosește marketplace.auth pentru a forța X-API-Key (consistent cu restul API-ului public).
+use App\Http\Controllers\Public\EpkPublicController as PublicEpkController;
+Route::prefix('marketplace-client/epk')->middleware(['throttle:30,1', 'marketplace.auth'])->group(function () {
+    Route::post('/rider-request', [PublicEpkController::class, 'riderRequest'])
+        ->name('api.marketplace-client.epk.rider-request');
 });
 
 // Knowledge Base

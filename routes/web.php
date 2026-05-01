@@ -506,6 +506,12 @@ $registerPublicRoutes = function ($prefix = '') {
         Route::get('/artists', [ArtistPublicController::class, 'index'])->name($prefix ? '' : 'public.artists.index');
         Route::get('/artist/{slug}', [ArtistPublicController::class, 'show'])->name($prefix ? '' : 'public.artist.show');
 
+        // Smart EPK public pages — Modul 3 din Extended Artist
+        Route::get('/epk/{artistSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show'])
+            ->name($prefix ? '' : 'public.epk.show');
+        Route::get('/epk/{artistSlug}/{variantSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show'])
+            ->name($prefix ? '' : 'public.epk.show.variant');
+
         // Location API endpoints for filters
         Route::get('/api/countries', [LocationController::class, 'countries'])->name($prefix ? '' : 'public.api.countries');
         Route::get('/api/states/{country}', [LocationController::class, 'states'])->name($prefix ? '' : 'public.api.states');
@@ -538,6 +544,10 @@ foreach (['en', 'ro', 'de', 'fr', 'es'] as $locale) {
         Route::get('/artists', [ArtistPublicController::class, 'index']);
         Route::get('/artist/{slug}', [ArtistPublicController::class, 'show']);
 
+        // Smart EPK public pages
+        Route::get('/epk/{artistSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show']);
+        Route::get('/epk/{artistSlug}/{variantSlug}', [\App\Http\Controllers\Public\EpkPublicController::class, 'show']);
+
         // Location API endpoints for filters
         Route::get('/api/countries', [LocationController::class, 'countries']);
         Route::get('/api/states/{country}', [LocationController::class, 'states']);
@@ -547,6 +557,12 @@ foreach (['en', 'ro', 'de', 'fr', 'es'] as $locale) {
         Route::get('/api/event-genres/{typeSlug?}', [LocationController::class, 'eventGenresByType']);
     });
 }
+
+// Smart EPK rider download (signed URL, expires 5min after lead capture).
+// Standalone, no locale prefix needed (URL-ul e generat one-time).
+Route::get('/epk/rider/download/{lead}', [\App\Http\Controllers\Public\EpkPublicController::class, 'riderDownload'])
+    ->whereNumber('lead')
+    ->name('public.epk.rider.download');
 
 // Invoice PDF Routes
 Route::middleware(['web', 'auth'])->group(function () {

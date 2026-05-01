@@ -1,0 +1,400 @@
+
+<body class="min-h-screen bg-surface font-sans" x-data="{ mobileMenu: false }">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 hidden lg:block">
+        <div class="p-6 border-b border-white/10">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold block leading-none">AMBILET</span>
+                    <span class="text-xs text-white/50 mt-1 block">Portal Artist</span>
+                </div>
+            </a>
+        </div>
+
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard
+            </a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+                Detalii Artist
+            </a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Evenimente
+            </a>
+            <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Setări Cont
+            </a>
+            <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Ajutor
+            </a>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+            <button class="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-white/70 hover:bg-error/20 hover:text-error transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                Deconectare
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Header -->
+    <header class="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-border z-40">
+        <div class="flex items-center justify-between px-4 py-3">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 hover:bg-surface rounded-lg">
+                <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+            <a href="/" class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="font-bold text-secondary">AMBILET</span>
+            </a>
+            <div class="w-10"></div>
+        </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div x-show="mobileMenu" x-transition.opacity class="lg:hidden fixed inset-0 bg-black/50 z-50" @click="mobileMenu = false" style="display: none;"></div>
+    <aside x-show="mobileMenu" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="-translate-x-full" class="lg:hidden fixed left-0 top-0 h-full w-64 bg-secondary text-white z-50 overflow-y-auto" style="display: none;">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <a href="/" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                    </svg>
+                </div>
+                <span class="text-xl font-extrabold">AMBILET</span>
+            </a>
+            <button @click="mobileMenu = false" class="p-2 text-white/70">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <nav class="p-4 space-y-1">
+            <a href="/artist/dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white font-medium">Dashboard</a>
+            <a href="/artist/profile.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Detalii Artist</a>
+            <a href="/artist/events.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Evenimente</a>
+            <a href="/artist/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Setări Cont</a>
+            <a href="/artist/help.html" class="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10">Ajutor</a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 pt-16 lg:pt-0">
+        <header class="bg-white border-b border-border px-6 py-4 hidden lg:block">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-secondary">Dashboard</h1>
+                    <p class="text-sm text-muted">Bine ai venit, The Rockers!</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="#" class="btn btn-secondary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Vezi profilul public
+                    </a>
+                    <a href="/artist/profile.html" class="btn btn-primary">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Editează profil
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-4 lg:p-6">
+            <div class="lg:hidden mb-6">
+                <h1 class="text-2xl font-bold text-secondary">Dashboard</h1>
+                <p class="text-sm text-muted">Bine ai venit, The Rockers!</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs text-muted font-medium">Următor: 12 mai</span>
+                    </div>
+                    <p class="text-3xl font-bold text-secondary">5</p>
+                    <p class="text-sm text-muted">Evenimente viitoare</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs text-success font-medium">+12%</span>
+                    </div>
+                    <p class="text-3xl font-bold text-secondary">847</p>
+                    <p class="text-sm text-muted">Bilete vândute (luna)</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-bold text-secondary">23</p>
+                    <p class="text-sm text-muted">Evenimente acest an</p>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </div>
+                        <span class="text-xs text-success font-medium">+24%</span>
+                    </div>
+                    <p class="text-3xl font-bold text-secondary">3.421</p>
+                    <p class="text-sm text-muted">Vizualizări profil (luna)</p>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6 mb-6">
+                <!-- Performance Chart -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Performanță</h2>
+                            <p class="text-sm text-muted">Bilete vândute în evenimentele tale</p>
+                        </div>
+                        <select class="input w-auto text-sm">
+                            <option value="7">Ultimele 7 zile</option>
+                            <option value="30" selected>Ultimele 30 zile</option>
+                            <option value="90">Ultimele 90 zile</option>
+                        </select>
+                    </div>
+                    <div class="relative h-[200px]">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Next Event Card -->
+                <div class="bg-gradient-to-br from-secondary to-primary-dark rounded-2xl p-6 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-primary/20 rounded-full blur-2xl"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 text-white/70 text-sm mb-4">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Următorul eveniment</span>
+                        </div>
+
+                        <div class="flex items-start gap-4 mb-4">
+                            <div class="bg-white/10 backdrop-blur rounded-xl px-3 py-2 text-center flex-shrink-0">
+                                <p class="text-2xl font-extrabold leading-none">12</p>
+                                <p class="text-xs uppercase tracking-wider mt-1">mai</p>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-bold text-lg leading-tight mb-1 truncate">Concert Sala Polivalentă</h3>
+                                <p class="text-sm text-white/70 flex items-center gap-1">
+                                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                    <span class="truncate">Sala Polivalentă, București</span>
+                                </p>
+                                <p class="text-sm text-white/70 mt-1">Începe la 20:00</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-white/10">
+                            <div class="flex items-center justify-between text-sm mb-2">
+                                <span class="text-white/70">Bilete vândute</span>
+                                <span class="font-semibold">1.247 / 2.500</span>
+                            </div>
+                            <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full bg-accent rounded-full" style="width: 50%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Upcoming Events -->
+                <div class="lg:col-span-2 bg-white rounded-2xl border border-border p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-secondary">Evenimente viitoare</h2>
+                        <a href="/artist/events.html" class="text-sm text-primary hover:underline font-medium">Vezi toate →</a>
+                    </div>
+
+                    <div class="space-y-3">
+                        <a href="/artist/events.html?id=1" class="flex items-center gap-4 p-4 rounded-xl hover:bg-surface transition-colors group">
+                            <div class="w-16 h-16 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                                <span class="text-xl font-extrabold text-primary leading-none">12</span>
+                                <span class="text-xs text-muted uppercase mt-1">mai</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">Concert Sala Polivalentă</h4>
+                                <p class="text-sm text-muted truncate">Sala Polivalentă, București</p>
+                                <p class="text-xs text-muted mt-1">de Music Live Events SRL</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 hidden sm:block">
+                                <p class="text-sm font-bold text-secondary">1.247</p>
+                                <p class="text-xs text-muted">bilete</p>
+                            </div>
+                        </a>
+
+                        <a href="/artist/events.html?id=2" class="flex items-center gap-4 p-4 rounded-xl hover:bg-surface transition-colors group">
+                            <div class="w-16 h-16 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                                <span class="text-xl font-extrabold text-primary leading-none">15</span>
+                                <span class="text-xs text-muted uppercase mt-1">iun</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">Festival de Vară Mamaia</h4>
+                                <p class="text-sm text-muted truncate">Plaja Centrală, Mamaia</p>
+                                <p class="text-xs text-muted mt-1">de Summer Vibes</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 hidden sm:block">
+                                <p class="text-sm font-bold text-secondary">832</p>
+                                <p class="text-xs text-muted">bilete</p>
+                            </div>
+                        </a>
+
+                        <a href="/artist/events.html?id=3" class="flex items-center gap-4 p-4 rounded-xl hover:bg-surface transition-colors group">
+                            <div class="w-16 h-16 bg-gradient-to-br from-primary/10 to-accent/10 rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                                <span class="text-xl font-extrabold text-primary leading-none">22</span>
+                                <span class="text-xs text-muted uppercase mt-1">iun</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">Acoustic Night la Control</h4>
+                                <p class="text-sm text-muted truncate">Club Control, București</p>
+                                <p class="text-xs text-muted mt-1">de Indie Promo</p>
+                            </div>
+                            <div class="text-right flex-shrink-0 hidden sm:block">
+                                <p class="text-sm font-bold text-secondary">198</p>
+                                <p class="text-xs text-muted">bilete</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="bg-white rounded-2xl border border-border p-6">
+                    <h2 class="text-lg font-bold text-secondary mb-4">Activitate recentă</h2>
+                    <div class="space-y-3">
+                        <div class="flex items-start gap-3 p-3 bg-surface rounded-lg">
+                            <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-secondary">Adăugat la „Festival Mamaia"</p>
+                                <p class="text-xs text-muted">acum 2 ore</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 bg-surface rounded-lg">
+                            <div class="w-8 h-8 bg-success/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-secondary">24 bilete vândute pentru Polivalentă</p>
+                                <p class="text-xs text-muted">acum 5 ore</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 bg-surface rounded-lg">
+                            <div class="w-8 h-8 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-secondary">120 vizualizări noi pe profil</p>
+                                <p class="text-xs text-muted">ieri</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-3 p-3 bg-surface rounded-lg">
+                            <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-secondary">Adăugat la „Acoustic Night"</p>
+                                <p class="text-xs text-muted">acum 2 zile</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            if (typeof Chart === 'undefined') return;
+
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            const labels = Array.from({ length: 30 }, (_, i) => {
+                const d = new Date();
+                d.setDate(d.getDate() - (29 - i));
+                return d.getDate();
+            });
+            const data = Array.from({ length: 30 }, () => Math.floor(Math.random() * 80) + 20);
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Bilete vândute',
+                        data,
+                        borderColor: '#A51C30',
+                        backgroundColor: 'rgba(165, 28, 48, 0.08)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#1E293B', padding: 12, cornerRadius: 8 }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#E2E8F0' }, ticks: { color: '#64748B' } },
+                        x: { grid: { display: false }, ticks: { color: '#64748B' } }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
