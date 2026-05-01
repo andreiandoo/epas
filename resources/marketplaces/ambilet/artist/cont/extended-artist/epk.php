@@ -2,14 +2,20 @@
 /**
  * Extended Artist — Smart EPK Editor (Modulul 3)
  *
- * Editor live wired la API. Layout in 4 tab-uri:
- *   - Editor: 12 secțiuni configurabile (toggle + data per fiecare), branding
- *   - Versiuni: listă cu max 3 variante (create / clone / activate / delete)
- *   - Preview: iframe către /epk/{artist_slug}/{variant_slug}
- *   - Analytics: stub "Disponibil în curând" (Faza B)
+ * Implementare fidelă a designului din designs/artist/epk.html.
  *
- * State management: Alpine.js (consistent cu restul portalului).
- * Save: explicit (NU autosave). Indicator "modificări nesalvate" când dirty.
+ * Layout: header cu URL bar + 4 tab-uri (Editor / Analytics / Variante / Preview).
+ * Editor: sidebar stânga (sectiuni + branding), main panel dreapta (form per sectiune).
+ *
+ * State: Alpine.js. Data ce vine de la API:
+ *   - variants[] (max 3)
+ *   - active_variant_id
+ *   - live_stats (din Artist::computeKpis)
+ *   - past_events (din Artist::events)
+ * Salvare explicită per variantă; preview live via Alpine reactivity.
+ *
+ * Tab-ul Analytics afișează DATE MOCK pentru a demonstra layout-ul; va fi
+ * wired la API real în Faza B.
  */
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 
@@ -19,381 +25,746 @@ $cssBundle = 'account';
 require_once dirname(__DIR__, 3) . '/includes/head.php';
 ?>
 
+<style>
+    /* EPK editor — stiluri custom adaugate peste theme-ul ambilet */
+    .epk-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
+    .epk-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .epk-btn-primary { background: #A51C30; color: white; }
+    .epk-btn-primary:hover:not(:disabled) { background: #8B1728; }
+    .epk-btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+    .epk-btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
+    .epk-btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
+    .epk-input { width: 100%; padding: 0.625rem 0.875rem; border: 1px solid #E2E8F0; border-radius: 0.75rem; font-size: 0.875rem; background: white; }
+    .epk-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
+    .epk-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .epk-pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
+    .epk-section-card:hover .epk-drag-handle { opacity: 1; }
+    .epk-drag-handle { cursor: move; opacity: 0.4; transition: opacity 0.15s; }
+
+    /* Public preview render (inline in tab Preview) */
+    .epk-public { background: #0a0a0f; color: white; }
+    .epk-display { font-family: 'Playfair Display', Georgia, serif; }
+    .epk-stat-glow { background: radial-gradient(circle at 50% 0%, rgba(230, 126, 34, 0.15), transparent 50%); }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
 
-<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="epkEditor()" x-init="load()">
-    <div class="p-4 lg:p-6">
+<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="smartEpk()" x-init="init()" x-cloak>
+    <div class="p-4 lg:p-8">
 
-        <!-- Header + global save bar -->
-        <header class="mb-6 flex items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-secondary lg:text-3xl">Smart EPK</h1>
-                <p class="mt-1 text-sm text-muted">Press kit dinamic, share-abil, cu stats LIVE din platformă.</p>
-                <p class="mt-2 text-xs text-muted font-mono" x-show="state.epk">
-                    URL public: <a :href="publicUrl()" target="_blank" rel="noopener" class="text-primary underline" x-text="publicUrl()"></a>
-                </p>
+        <!-- Page Header -->
+        <div class="mb-6">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="epk-pro-badge">PRO</span>
+                <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Smart Electronic Press Kit</span>
             </div>
-            <div class="flex items-center gap-2">
-                <span x-show="dirty && !saving" class="text-xs text-amber-600 font-medium">Modificări nesalvate</span>
-                <span x-show="saving" class="text-xs text-blue-600 font-medium">Se salvează...</span>
-                <button type="button" @click="saveActive()" :disabled="!dirty || saving"
-                    class="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-md transition-all disabled:opacity-50 hover:bg-primary-dark">
-                    Salvează
-                </button>
-            </div>
-        </header>
-
-        <!-- Tabs -->
-        <div class="mb-6 border-b border-border">
-            <nav class="flex gap-6">
-                <template x-for="t in ['editor', 'versions', 'preview', 'analytics']" :key="t">
-                    <button @click="tab = t"
-                        :class="tab === t ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-secondary'"
-                        class="border-b-2 px-1 py-3 text-sm font-medium capitalize transition-colors">
-                        <span x-text="tabLabel(t)"></span>
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Smart EPK</h1>
+                    <p class="text-muted mt-1">Press kit dinamic, share-uibil, cu stats verificate din platformă</p>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span x-show="dirty && !saving" class="text-xs text-amber-600 font-medium">Modificări nesalvate</span>
+                    <span x-show="saving" class="text-xs text-blue-600 font-medium">Se salvează...</span>
+                    <button type="button" @click="saveActive()" :disabled="!dirty || saving" class="epk-btn epk-btn-primary epk-btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Salvează
                     </button>
-                </template>
-            </nav>
+                    <button type="button" @click="copyUrl()" class="epk-btn epk-btn-secondary epk-btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                        <span x-text="urlCopied ? 'Copiat!' : 'Copiază link'"></span>
+                    </button>
+                    <button type="button" @click="setTab('preview')" class="epk-btn epk-btn-primary epk-btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Vezi public
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div x-show="loading" class="rounded-2xl border border-border bg-white p-8 text-center text-muted">
+        <!-- Loading state -->
+        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
             Se încarcă EPK-ul...
         </div>
 
         <div x-show="!loading">
 
-            <!-- ============================ EDITOR TAB ============================ -->
-            <div x-show="tab === 'editor'" class="space-y-6">
+            <!-- URL bar -->
+            <div class="bg-white border border-border rounded-2xl p-4 mb-6 flex items-center gap-3 flex-wrap">
+                <div class="flex items-center gap-2 px-3 py-2 bg-surface rounded-lg flex-1 min-w-0">
+                    <svg class="w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+                    <span class="font-mono text-sm text-secondary truncate" x-text="publicUrlDisplay()"></span>
+                </div>
+                <div class="flex gap-2">
+                    <a :href="qrUrl()" target="_blank" class="epk-btn epk-btn-secondary epk-btn-sm" title="QR code">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                        QR
+                    </a>
+                    <a :href="pdfUrl()" target="_blank" class="epk-btn epk-btn-secondary epk-btn-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        PDF
+                    </a>
+                </div>
+            </div>
 
-                <div class="rounded-2xl border border-border bg-white p-6">
-                    <h2 class="mb-4 text-lg font-bold text-secondary">Variantă activă</h2>
-                    <div class="grid gap-4 md:grid-cols-2">
-                        <div>
-                            <label class="text-xs text-muted uppercase">Nume variantă</label>
-                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+            <!-- Tabs -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="border-b border-border overflow-x-auto">
+                    <div class="flex gap-1 p-2 min-w-max">
+                        <template x-for="t in tabs" :key="t.id">
+                            <button @click="setTab(t.id)"
+                                    :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="t.icon"></svg>
+                                <span x-text="t.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: EDITOR ============ -->
+                <div x-show="tab === 'editor'" class="p-6">
+                    <div class="grid lg:grid-cols-12 gap-6">
+                        <!-- Left: section list + branding -->
+                        <div class="lg:col-span-4">
+                            <div class="sticky top-6">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h3 class="font-bold text-secondary">Secțiuni</h3>
+                                    <span class="text-xs text-muted"><span x-text="enabledSections.length"></span>/<span x-text="sections.length"></span> active</span>
+                                </div>
+                                <p class="text-xs text-muted mb-4">Activează/dezactivează secțiunile pe care le afișezi în EPK.</p>
+
+                                <div class="space-y-2">
+                                    <template x-for="(section, idx) in sections" :key="section.id">
+                                        <div @click="selectedSection = section.id"
+                                             :class="[
+                                                 selectedSection === section.id ? 'border-primary bg-primary/5' : 'border-border bg-white',
+                                                 !section.enabled ? 'opacity-50' : ''
+                                             ]"
+                                             class="epk-section-card border rounded-xl p-3 cursor-pointer hover:border-primary/30 transition-colors flex items-center gap-3">
+                                            <svg class="epk-drag-handle w-4 h-4 text-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :class="section.enabled ? 'bg-primary/10' : 'bg-surface'">
+                                                <svg class="w-4 h-4" :class="section.enabled ? 'text-primary' : 'text-muted'" fill="none" stroke="currentColor" viewBox="0 0 24 24" x-html="section.icon"></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="font-semibold text-sm text-secondary truncate" x-text="section.label"></p>
+                                                <p class="text-xs text-muted truncate" x-text="section.summary"></p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer flex-shrink-0" @click.stop>
+                                                <input type="checkbox" x-model="section.enabled" @change="markDirty()" class="sr-only peer">
+                                                <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                            </label>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                <!-- Branding -->
+                                <div class="mt-6 p-4 bg-surface rounded-xl">
+                                    <h4 class="font-bold text-secondary text-sm mb-3">Branding</h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Culoare accent</label>
+                                            <div class="flex gap-2 flex-wrap">
+                                                <template x-for="c in accentColors" :key="c">
+                                                    <button @click="branding.accent = c; markDirty()" :style="`background: ${c}`" :class="branding.accent === c ? 'ring-2 ring-offset-2 ring-secondary' : ''" class="w-8 h-8 rounded-lg transition-all"></button>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Template</label>
+                                            <select x-model="branding.template" @change="markDirty()" class="epk-input text-sm">
+                                                <option value="modern">Modern (default)</option>
+                                                <option value="classic">Clasic</option>
+                                                <option value="minimal">Minimalist</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Variant meta inputs -->
+                                <div class="mt-4 p-4 bg-surface rounded-xl">
+                                    <h4 class="font-bold text-secondary text-sm mb-3">Identificare variantă</h4>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Nume variantă</label>
+                                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" class="epk-input text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Audiență țintă</label>
+                                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal" class="epk-input text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Slug URL</label>
+                                            <input type="text" x-model="active.slug" @input="markDirty()" maxlength="100" class="epk-input text-sm font-mono">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="text-xs text-muted uppercase">Audiență țintă</label>
-                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+
+                        <!-- Right: section editor -->
+                        <div class="lg:col-span-8">
+                            <template x-for="section in sections" :key="section.id + '-edit'">
+                                <div x-show="selectedSection === section.id">
+                                    <div class="bg-white border border-border rounded-2xl p-6">
+                                        <div class="flex items-center justify-between mb-6 pb-4 border-b border-border">
+                                            <div>
+                                                <h3 class="font-bold text-secondary text-lg" x-text="section.label"></h3>
+                                                <p class="text-sm text-muted" x-text="section.description"></p>
+                                            </div>
+                                            <span class="epk-badge" :class="section.enabled ? 'bg-success/10 text-success' : 'bg-muted/10 text-muted'">
+                                                <span x-text="section.enabled ? 'Activă' : 'Inactivă'"></span>
+                                            </span>
+                                        </div>
+
+                                        <!-- HERO -->
+                                        <template x-if="section.id === 'hero'">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Nume artist</label>
+                                                    <input type="text" x-model="data.stage_name" @input="markDirty()" class="epk-input">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Tagline</label>
+                                                    <input type="text" x-model="data.tagline" @input="markDirty()" maxlength="120" class="epk-input">
+                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.tagline || '').length"></span>/120</p>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Cover image</label>
+                                                    <div @click="uploadImage('hero')" class="aspect-video rounded-xl flex items-center justify-center text-white/70 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden bg-cover bg-center"
+                                                         :style="data.cover_image ? `background-image: url(${data.cover_image})` : 'background: linear-gradient(135deg, #1E293B, #8B1728)'">
+                                                        <span class="text-sm bg-black/30 px-3 py-1 rounded" x-text="data.cover_image ? '+ Schimbă cover' : '+ Adaugă cover'"></span>
+                                                    </div>
+                                                    <button x-show="data.cover_image" @click.prevent="data.cover_image = null; markDirty()" type="button" class="text-xs text-error mt-2 hover:underline">Elimină cover</button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- STATS -->
+                                        <template x-if="section.id === 'stats'">
+                                            <div>
+                                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-start gap-2">
+                                                    <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                                    <p class="text-xs text-blue-900">Aceste cifre vin <strong>direct din platformă</strong>. Sunt verificate, nu pot fi editate manual — ceea ce le face creditabile pentru organizatori.</p>
+                                                </div>
+                                                <div class="grid sm:grid-cols-2 gap-3">
+                                                    <template x-for="stat in stats" :key="stat.key">
+                                                        <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                            <div>
+                                                                <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
+                                                                <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                            </div>
+                                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                                <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
+                                                                <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                            </label>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- BIO -->
+                                        <template x-if="section.id === 'bio'">
+                                            <div class="space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio scurt (pentru carduri)</label>
+                                                    <textarea x-model="data.bio_short" @input="markDirty()" rows="3" maxlength="280" class="epk-input"></textarea>
+                                                    <p class="text-xs text-muted mt-1"><span x-text="(data.bio_short || '').length"></span>/280</p>
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-2">Bio extins</label>
+                                                    <textarea x-model="data.bio_long" @input="markDirty()" rows="8" class="epk-input"></textarea>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- GALLERY -->
+                                        <template x-if="section.id === 'gallery'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Maxim 12 imagini. Prima e marcată „PRINCIPAL" pe pagina publică.</p>
+                                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                                    <template x-for="(img, i) in data.gallery" :key="i">
+                                                        <div class="relative aspect-square bg-cover bg-center rounded-lg overflow-hidden group" :style="`background-image: url(${img})`">
+                                                            <span x-show="i === 0" class="absolute top-1 left-1 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold">PRINCIPAL</span>
+                                                            <button @click="data.gallery.splice(i, 1); markDirty()" class="absolute top-1 right-1 w-6 h-6 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button x-show="data.gallery.length < 12" @click="uploadImage('gallery')" class="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted hover:border-primary/30 hover:text-primary transition-colors">
+                                                        <span class="text-2xl">+</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- SPOTIFY -->
+                                        <template x-if="section.id === 'spotify'">
+                                            <div>
+                                                <label class="block text-sm font-medium text-secondary mb-2">Link Spotify</label>
+                                                <input type="url" x-model="data.spotify_url" @input="markDirty()" class="epk-input" placeholder="https://open.spotify.com/artist/...">
+                                                <p class="text-xs text-muted mt-2">Acceptă: artist, album sau playlist. Se afișează card cu link direct.</p>
+                                            </div>
+                                        </template>
+
+                                        <!-- YOUTUBE -->
+                                        <template x-if="section.id === 'youtube'">
+                                            <div>
+                                                <label class="block text-sm font-medium text-secondary mb-2">Videoclipuri YouTube (max 3)</label>
+                                                <div class="space-y-2">
+                                                    <template x-for="(v, i) in data.youtube_videos" :key="i">
+                                                        <div class="flex gap-2">
+                                                            <input type="url" x-model="data.youtube_videos[i]" @input="markDirty()" class="epk-input flex-1" placeholder="https://youtube.com/watch?v=...">
+                                                            <button @click="data.youtube_videos.splice(i, 1); markDirty()" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
+                                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <button x-show="data.youtube_videos.length < 3" @click="data.youtube_videos.push(''); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- ACHIEVEMENTS -->
+                                        <template x-if="section.id === 'achievements'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Realizări notabile, cronologic descrescător.</p>
+                                                <div class="space-y-2">
+                                                    <template x-for="(a, i) in data.achievements" :key="i">
+                                                        <div class="flex gap-2">
+                                                            <input type="number" x-model.number="a.year" @input="markDirty()" placeholder="An" class="epk-input w-24">
+                                                            <input type="text" x-model="a.text" @input="markDirty()" placeholder="Realizare" class="epk-input flex-1">
+                                                            <button @click="data.achievements.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg">
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <button @click="data.achievements.push({ year: new Date().getFullYear(), text: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă realizare</button>
+                                            </div>
+                                        </template>
+
+                                        <!-- PRESS QUOTES -->
+                                        <template x-if="section.id === 'press_quotes'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Citate din presă cu sursă și link.</p>
+                                                <div class="space-y-3">
+                                                    <template x-for="(q, i) in data.press_quotes" :key="i">
+                                                        <div class="border border-border rounded-xl p-3">
+                                                            <textarea x-model="q.text" @input="markDirty()" rows="2" class="epk-input mb-2" placeholder="Citat..."></textarea>
+                                                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                                                <input type="text" x-model="q.source" @input="markDirty()" class="epk-input" placeholder="Sursă (ex: Adevărul)">
+                                                                <input type="url" x-model="q.url" @input="markDirty()" class="epk-input" placeholder="Link">
+                                                            </div>
+                                                            <button @click="data.press_quotes.splice(i, 1); markDirty()" class="text-xs text-error hover:underline">Șterge citat</button>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <button @click="data.press_quotes.push({ text: '', source: '', url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline mt-2">+ Adaugă citat</button>
+                                            </div>
+                                        </template>
+
+                                        <!-- PAST EVENTS -->
+                                        <template x-if="section.id === 'past_events'">
+                                            <div>
+                                                <p class="text-sm text-muted mb-3">Evenimente trecute (auto din platformă). Bifează „Ascunde" pentru cele pe care nu vrei să apară.</p>
+                                                <div class="space-y-2 max-h-96 overflow-y-auto">
+                                                    <template x-for="ev in state.past_events" :key="ev.id">
+                                                        <div class="flex items-center gap-3 p-3 border border-border rounded-xl">
+                                                            <div class="w-10 h-10 rounded-lg bg-surface flex flex-col items-center justify-center flex-shrink-0">
+                                                                <span class="text-xs font-bold text-primary leading-none" x-text="ev.day"></span>
+                                                                <span class="text-[10px] text-muted uppercase" x-text="ev.month"></span>
+                                                            </div>
+                                                            <div class="flex-1 min-w-0">
+                                                                <p class="font-medium text-sm text-secondary truncate" x-text="ev.title"></p>
+                                                                <p class="text-xs text-muted truncate" x-text="ev.venue"></p>
+                                                            </div>
+                                                            <label class="flex items-center gap-2">
+                                                                <input type="checkbox" :checked="(data.past_events_hidden || []).includes(ev.id)" @change="togglePastEventHidden(ev.id)" class="w-4 h-4 rounded">
+                                                                <span class="text-xs text-muted">Ascunde</span>
+                                                            </label>
+                                                        </div>
+                                                    </template>
+                                                    <p x-show="!state.past_events?.length" class="text-sm text-muted p-3">Nu ai evenimente trecute încă.</p>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- RIDER -->
+                                        <template x-if="section.id === 'rider'">
+                                            <div class="space-y-4">
+                                                <div class="flex items-center gap-3 p-4 border border-border rounded-xl">
+                                                    <svg class="w-8 h-8 text-accent flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                                    <div class="flex-1 min-w-0">
+                                                        <p class="font-medium text-secondary">Rider tehnic</p>
+                                                        <p class="text-xs text-muted truncate">
+                                                            <a x-show="data.rider_pdf_url" :href="data.rider_pdf_url" target="_blank" class="text-primary hover:underline" x-text="data.rider_pdf_url"></a>
+                                                            <span x-show="!data.rider_pdf_url" class="italic">Niciun PDF încărcat</span>
+                                                        </p>
+                                                    </div>
+                                                    <button @click="uploadRider()" class="epk-btn epk-btn-secondary epk-btn-sm">
+                                                        <span x-text="data.rider_pdf_url ? 'Înlocuiește' : 'Încarcă PDF'"></span>
+                                                    </button>
+                                                </div>
+                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                    <input type="checkbox" x-model="data.rider_gated" @change="markDirty()" class="w-4 h-4 rounded text-primary">
+                                                    <span class="text-sm text-secondary">Cere email înainte de descărcare (generează lead)</span>
+                                                </label>
+                                            </div>
+                                        </template>
+
+                                        <!-- SOCIAL -->
+                                        <template x-if="section.id === 'social'">
+                                            <div class="space-y-3">
+                                                <template x-for="s in socialPlatforms" :key="s.key">
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-secondary mb-1" x-text="s.label"></label>
+                                                        <input type="url" x-model="data.social[s.key]" @input="markDirty()" :placeholder="s.placeholder" class="epk-input">
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+
+                                        <!-- CONTACT -->
+                                        <template x-if="section.id === 'contact'">
+                                            <div class="space-y-3">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-1">Email contact</label>
+                                                    <input type="email" x-model="data.contact_email" @input="markDirty()" class="epk-input">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-sm font-medium text-secondary mb-1">Telefon</label>
+                                                    <input type="tel" x-model="data.contact_phone" @input="markDirty()" class="epk-input">
+                                                </div>
+                                                <label class="flex items-center gap-2 cursor-pointer pt-2">
+                                                    <input type="checkbox" x-model="data.show_booking_cta" @change="markDirty()" class="w-4 h-4 rounded text-primary">
+                                                    <span class="text-sm text-secondary">Afișează buton „Cere booking"</span>
+                                                </label>
+                                            </div>
+                                        </template>
+
+                                        <div class="mt-6 pt-6 border-t border-border flex justify-end gap-2">
+                                            <button @click="loadActiveVariant()" :disabled="!dirty" class="epk-btn epk-btn-secondary epk-btn-sm">Anulează</button>
+                                            <button @click="saveActive()" :disabled="!dirty || saving" class="epk-btn epk-btn-primary epk-btn-sm">Salvează</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
-                        <div>
-                            <label class="text-xs text-muted uppercase">Slug URL</label>
-                            <input type="text" x-model="active.slug" @input="markDirty()" maxlength="100" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-mono">
+                    </div>
+                </div>
+
+                <!-- ============ TAB: ANALYTICS (mock data — Faza B) ============ -->
+                <div x-show="tab === 'analytics'" class="p-6">
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-6 flex items-start gap-2">
+                        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                        <p class="text-sm text-amber-900"><strong>Date demo</strong> — tracking-ul real va fi activat în Faza B (sprintul următor). Layout-ul de mai jos arată ce vei vedea după lansare.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizualizări (30 zile)</p>
+                            <p class="text-2xl font-bold text-secondary">2.847</p>
+                            <p class="text-xs text-success mt-1">+34% vs perioada anterioară</p>
                         </div>
-                        <div>
-                            <label class="text-xs text-muted uppercase">Culoare accent</label>
-                            <div class="mt-1 flex items-center gap-2">
-                                <template x-for="c in accentColors" :key="c">
-                                    <button type="button" @click="active.accent_color = c; markDirty()"
-                                        :class="active.accent_color === c ? 'ring-2 ring-offset-2 ring-secondary' : ''"
-                                        class="h-8 w-8 rounded-full border" :style="`background-color: ${c}`"></button>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Vizitatori unici</p>
+                            <p class="text-2xl font-bold text-secondary">1.923</p>
+                            <p class="text-xs text-success mt-1">+28%</p>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Timp mediu pe pagină</p>
+                            <p class="text-2xl font-bold text-secondary">3:42</p>
+                            <p class="text-xs text-muted mt-1">Bun (>2 min)</p>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">CTA „Cere booking"</p>
+                            <p class="text-2xl font-bold text-secondary">47</p>
+                            <p class="text-xs text-success mt-1">2.4% conversion rate</p>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Trafic zilnic</h3>
+                            <p class="text-sm text-muted mb-4">Vizualizări în ultimele 30 de zile</p>
+                            <div class="relative h-[260px]"><canvas id="trafficChart"></canvas></div>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Surse de trafic</h3>
+                            <p class="text-sm text-muted mb-4">De unde vin vizitatorii</p>
+                            <div class="relative h-[260px]"><canvas id="sourcesChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-border rounded-2xl p-5 mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-secondary flex items-center gap-2">🔥 Hot Leads</h3>
+                                <p class="text-sm text-muted">Vizitatori care au revenit de mai multe ori — semnal puternic de interes</p>
+                            </div>
+                            <span class="epk-badge bg-error/10 text-error">3 active</span>
+                        </div>
+                        <div class="space-y-3">
+                            <template x-for="lead in hotLeads" :key="lead.id">
+                                <div class="flex items-center gap-4 p-4 bg-error/5 border border-error/20 rounded-xl">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-error to-primary flex items-center justify-center text-white font-bold flex-shrink-0" x-text="lead.initials"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-secondary" x-text="lead.name"></p>
+                                        <p class="text-xs text-muted">
+                                            <span x-text="lead.type"></span> · <span x-text="lead.city"></span> · ultima vizită <span x-text="lead.lastVisit"></span>
+                                        </p>
+                                    </div>
+                                    <div class="text-right hidden sm:block">
+                                        <p class="text-lg font-bold text-error" x-text="lead.visits + ' vizite'"></p>
+                                        <p class="text-xs text-muted" x-text="lead.timeSpent + ' total'"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-4">Engagement pe secțiuni</h3>
+                            <p class="text-sm text-muted mb-4">Cât % din vizitatori ajung la fiecare secțiune</p>
+                            <div class="space-y-3">
+                                <template x-for="se in sectionEngagement" :key="se.name">
+                                    <div>
+                                        <div class="flex items-center justify-between text-sm mb-1">
+                                            <span class="font-medium text-secondary" x-text="se.name"></span>
+                                            <span class="text-muted"><span x-text="se.pct"></span>%</span>
+                                        </div>
+                                        <div class="h-2 bg-surface rounded-full overflow-hidden">
+                                            <div class="h-full bg-primary rounded-full" :style="`width: ${se.pct}%`"></div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-4">Acțiuni cele mai frecvente</h3>
+                            <div class="space-y-3">
+                                <template x-for="a in topActions" :key="a.label">
+                                    <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
+                                        <div class="flex items-center gap-3">
+                                            <span class="text-2xl" x-text="a.icon"></span>
+                                            <span class="font-medium text-secondary text-sm" x-text="a.label"></span>
+                                        </div>
+                                        <span class="font-bold text-secondary" x-text="a.count.toLocaleString('ro-RO')"></span>
+                                    </div>
                                 </template>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sectiunile celor 12 module -->
-                <template x-for="section in active.sections" :key="section.id">
-                    <div class="rounded-2xl border border-border bg-white p-6">
-                        <div class="mb-4 flex items-start justify-between">
-                            <div>
-                                <h3 class="text-base font-bold text-secondary" x-text="sectionLabel(section.id)"></h3>
-                                <p class="text-xs text-muted" x-text="sectionHelp(section.id)"></p>
-                            </div>
-                            <label class="inline-flex items-center gap-2 cursor-pointer">
-                                <span class="text-xs text-muted">Afișează</span>
-                                <input type="checkbox" x-model="section.enabled" @change="markDirty()" class="h-5 w-5 rounded">
-                            </label>
+                <!-- ============ TAB: VARIANTS ============ -->
+                <div x-show="tab === 'versions'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Variante EPK</h2>
+                            <p class="text-sm text-muted">Creează versiuni adaptate pentru diferite tipuri de organizatori</p>
                         </div>
+                        <button x-show="versions.length < state.limits?.max_variants" @click="newVariant()" class="epk-btn epk-btn-primary epk-btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            Variantă nouă
+                        </button>
+                    </div>
 
-                        <div x-show="section.enabled" class="space-y-3">
-
-                            <!-- HERO -->
-                            <template x-if="section.id === 'hero'">
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Stage name</label>
-                                        <input type="text" x-model="section.data.stage_name" @input="markDirty()" maxlength="80" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Tagline</label>
-                                        <input type="text" x-model="section.data.tagline" @input="markDirty()" maxlength="120" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
-                                    </div>
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Imagine cover</label>
-                                        <div class="mt-1 flex items-center gap-3">
-                                            <div x-show="section.data.cover_image" class="h-20 w-32 rounded-lg bg-cover bg-center" :style="`background-image: url(${section.data.cover_image})`"></div>
-                                            <button type="button" @click="uploadImage('hero', (url) => { section.data.cover_image = url; markDirty(); })" class="rounded-lg border border-border px-3 py-1.5 text-xs">Schimbă cover</button>
-                                            <button type="button" x-show="section.data.cover_image" @click="section.data.cover_image = null; markDirty()" class="rounded-lg border border-red-200 text-red-600 px-3 py-1.5 text-xs">Elimină</button>
-                                        </div>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="v in versions" :key="v.id">
+                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md"
+                                 :class="v.id === state.active_variant_id ? 'border-primary' : 'border-border'">
+                                <div class="aspect-video relative" :style="`background: linear-gradient(135deg, ${v.accent_color}, ${v.accent_color}88)`">
+                                    <span x-show="v.id === state.active_variant_id" class="absolute top-2 left-2 epk-badge bg-primary text-white">Activă</span>
+                                    <div class="absolute bottom-2 right-2 flex gap-1">
+                                        <a :href="variantPublicUrl(v)" target="_blank" class="w-7 h-7 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-secondary hover:bg-white transition-colors" title="Vezi public">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </a>
                                     </div>
                                 </div>
-                            </template>
-
-                            <!-- STATS (read-only LIVE) -->
-                            <template x-if="section.id === 'stats'">
-                                <div class="space-y-3">
-                                    <p class="text-xs text-muted italic">Cifrele vin LIVE din platformă (nu pot fi editate).</p>
-                                    <template x-for="key in ['tickets_sold', 'events_played', 'cities', 'countries', 'peak_audience']" :key="key">
-                                        <label class="flex items-center justify-between gap-3 py-2 border-b border-border">
-                                            <div>
-                                                <span class="text-sm font-medium text-secondary" x-text="statLabel(key)"></span>
-                                                <span class="ml-2 text-xs text-muted" x-text="state.live_stats?.[key]?.display ?? '—'"></span>
-                                            </div>
-                                            <input type="checkbox" :checked="section.data.show?.[key] ?? true" @change="section.data.show = { ...section.data.show, [key]: $event.target.checked }; markDirty()" class="h-5 w-5">
-                                        </label>
-                                    </template>
-                                </div>
-                            </template>
-
-                            <!-- BIO -->
-                            <template x-if="section.id === 'bio'">
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Bio scurt (max 280 caractere)</label>
-                                        <textarea x-model="section.data.bio_short" @input="markDirty()" maxlength="280" rows="3" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"></textarea>
+                                <div class="p-4">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="font-bold text-secondary" x-text="v.name"></h4>
+                                        <span class="text-xs text-muted" x-text="v.target || 'Universal'"></span>
                                     </div>
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Bio extins</label>
-                                        <textarea x-model="section.data.bio_long" @input="markDirty()" rows="8" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm"></textarea>
-                                    </div>
-                                </div>
-                            </template>
+                                    <p class="text-xs text-muted font-mono mb-3">/<span x-text="v.slug"></span></p>
 
-                            <!-- GALLERY -->
-                            <template x-if="section.id === 'gallery'">
-                                <div class="space-y-3">
-                                    <p class="text-xs text-muted" x-text="`Max 12 imagini. Acum: ${(section.data.images || []).length}`"></p>
-                                    <div class="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-6">
-                                        <template x-for="(img, idx) in section.data.images || []" :key="idx">
-                                            <div class="relative aspect-square rounded-lg bg-cover bg-center overflow-hidden border border-border" :style="`background-image: url(${img})`">
-                                                <button type="button" @click="section.data.images.splice(idx, 1); markDirty()" class="absolute top-1 right-1 h-6 w-6 rounded-full bg-red-500 text-white text-xs">✕</button>
-                                                <span x-show="idx === 0" class="absolute bottom-1 left-1 rounded bg-primary px-2 py-0.5 text-[10px] font-bold text-white">PRINCIPAL</span>
-                                            </div>
-                                        </template>
-                                        <button type="button"
-                                            x-show="(section.data.images || []).length < 12"
-                                            @click="uploadImage('gallery', (url) => { section.data.images = [...(section.data.images || []), url]; markDirty(); })"
-                                            class="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center text-2xl text-muted hover:bg-surface">+</button>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- SPOTIFY -->
-                            <template x-if="section.id === 'spotify'">
-                                <div>
-                                    <label class="text-xs text-muted uppercase">Link Spotify (artist / album / playlist)</label>
-                                    <input type="url" x-model="section.data.spotify_url" @input="markDirty()" placeholder="https://open.spotify.com/artist/..." class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
-                                </div>
-                            </template>
-
-                            <!-- YOUTUBE -->
-                            <template x-if="section.id === 'youtube'">
-                                <div class="space-y-2">
-                                    <p class="text-xs text-muted">Max 3 videoclipuri YouTube</p>
-                                    <template x-for="(v, idx) in section.data.videos || []" :key="idx">
-                                        <div class="flex gap-2">
-                                            <input type="url" x-model="section.data.videos[idx]" @input="markDirty()" placeholder="https://youtube.com/watch?v=..." class="flex-1 rounded-lg border border-border px-3 py-2 text-sm">
-                                            <button type="button" @click="section.data.videos.splice(idx, 1); markDirty()" class="rounded-lg border border-red-200 text-red-600 px-3 text-xs">✕</button>
-                                        </div>
-                                    </template>
-                                    <button type="button"
-                                        x-show="(section.data.videos || []).length < 3"
-                                        @click="section.data.videos = [...(section.data.videos || []), '']; markDirty()"
-                                        class="rounded-lg border border-border px-3 py-1.5 text-xs">+ Adaugă video</button>
-                                </div>
-                            </template>
-
-                            <!-- ACHIEVEMENTS -->
-                            <template x-if="section.id === 'achievements'">
-                                <div class="space-y-2">
-                                    <template x-for="(a, idx) in section.data.items || []" :key="idx">
-                                        <div class="flex gap-2">
-                                            <input type="number" x-model.number="section.data.items[idx].year" @input="markDirty()" placeholder="An" class="w-24 rounded-lg border border-border px-3 py-2 text-sm">
-                                            <input type="text" x-model="section.data.items[idx].text" @input="markDirty()" placeholder="Realizare" class="flex-1 rounded-lg border border-border px-3 py-2 text-sm">
-                                            <button type="button" @click="section.data.items.splice(idx, 1); markDirty()" class="rounded-lg border border-red-200 text-red-600 px-3 text-xs">✕</button>
-                                        </div>
-                                    </template>
-                                    <button type="button" @click="section.data.items = [...(section.data.items || []), { year: new Date().getFullYear(), text: '' }]; markDirty()" class="rounded-lg border border-border px-3 py-1.5 text-xs">+ Adaugă realizare</button>
-                                </div>
-                            </template>
-
-                            <!-- PRESS QUOTES -->
-                            <template x-if="section.id === 'press_quotes'">
-                                <div class="space-y-3">
-                                    <template x-for="(q, idx) in section.data.quotes || []" :key="idx">
-                                        <div class="space-y-2 rounded-lg border border-border p-3">
-                                            <textarea x-model="section.data.quotes[idx].text" @input="markDirty()" rows="2" placeholder="Citat" class="w-full rounded-lg border border-border px-3 py-2 text-sm"></textarea>
-                                            <div class="grid grid-cols-2 gap-2">
-                                                <input type="text" x-model="section.data.quotes[idx].source" @input="markDirty()" placeholder="Sursă (ex: Adevărul)" class="rounded-lg border border-border px-3 py-2 text-sm">
-                                                <input type="url" x-model="section.data.quotes[idx].url" @input="markDirty()" placeholder="URL articol" class="rounded-lg border border-border px-3 py-2 text-sm">
-                                            </div>
-                                            <button type="button" @click="section.data.quotes.splice(idx, 1); markDirty()" class="text-xs text-red-600">Șterge citat</button>
-                                        </div>
-                                    </template>
-                                    <button type="button" @click="section.data.quotes = [...(section.data.quotes || []), { text: '', source: '', url: '' }]; markDirty()" class="rounded-lg border border-border px-3 py-1.5 text-xs">+ Adaugă citat</button>
-                                </div>
-                            </template>
-
-                            <!-- PAST EVENTS -->
-                            <template x-if="section.id === 'past_events'">
-                                <div class="space-y-3">
-                                    <p class="text-xs text-muted">Toate evenimentele tale viitoare/trecute apar automat. Ascunde manual cele pe care nu vrei să fie afișate.</p>
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Limită afișare</label>
-                                        <input type="number" min="1" max="50" x-model.number="section.data.limit" @input="markDirty()" class="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm">
-                                    </div>
-                                    <div class="max-h-64 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
-                                        <template x-for="ev in state.past_events || []" :key="ev.id">
-                                            <label class="flex items-center justify-between gap-2 p-2 hover:bg-surface rounded cursor-pointer">
-                                                <span class="text-sm" x-text="`${ev.day} ${ev.month} ${ev.year} — ${ev.title} (${ev.venue})`"></span>
-                                                <input type="checkbox"
-                                                    :checked="!(section.data.hidden_event_ids || []).includes(ev.id)"
-                                                    @change="toggleHiddenEvent(section, ev.id)"
-                                                    class="h-4 w-4">
-                                            </label>
-                                        </template>
-                                        <p x-show="!state.past_events?.length" class="text-xs text-muted p-2">Nu ai evenimente trecute încă.</p>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- RIDER -->
-                            <template x-if="section.id === 'rider'">
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Rider tehnic (PDF)</label>
-                                        <div class="mt-1 flex items-center gap-3">
-                                            <a x-show="section.data.rider_pdf_url" :href="section.data.rider_pdf_url" target="_blank" class="text-sm text-primary underline">PDF curent</a>
-                                            <button type="button" @click="uploadRider()" class="rounded-lg border border-border px-3 py-1.5 text-xs">Încarcă PDF</button>
-                                        </div>
-                                    </div>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" x-model="section.data.gated" @change="markDirty()" class="h-5 w-5">
-                                        <span class="text-sm">Cere email înainte de download (lead capture)</span>
-                                    </label>
-                                </div>
-                            </template>
-
-                            <!-- SOCIAL -->
-                            <template x-if="section.id === 'social'">
-                                <div class="space-y-2">
-                                    <template x-for="key in ['website', 'facebook', 'instagram', 'tiktok', 'youtube']" :key="key">
+                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
                                         <div>
-                                            <label class="text-xs text-muted uppercase" x-text="key"></label>
-                                            <input type="url" x-model="section.data[key]" @input="markDirty()" :placeholder="`https://${key}.com/...`" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+                                            <p class="text-xs text-muted">Vizite</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="(v.views_count || 0).toLocaleString('ro-RO')"></p>
                                         </div>
-                                    </template>
-                                </div>
-                            </template>
-
-                            <!-- CONTACT -->
-                            <template x-if="section.id === 'contact'">
-                                <div class="space-y-3">
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Email contact</label>
-                                        <input type="email" x-model="section.data.email" @input="markDirty()" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+                                        <div>
+                                            <p class="text-xs text-muted">Convers.</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="v.conversion_pct + '%'"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Secțiuni</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="(v.sections || []).filter(s => s.enabled).length + '/12'"></p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="text-xs text-muted uppercase">Telefon</label>
-                                        <input type="tel" x-model="section.data.phone" @input="markDirty()" class="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
+
+                                    <div class="flex gap-1">
+                                        <button @click="activateVariant(v.id)" :disabled="v.id === state.active_variant_id" class="epk-btn epk-btn-secondary epk-btn-sm flex-1">
+                                            <span x-text="v.id === state.active_variant_id ? 'Activă' : 'Setează activă'"></span>
+                                        </button>
+                                        <button @click="cloneVariant(v.id)" class="epk-btn epk-btn-secondary epk-btn-sm" title="Duplică">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        </button>
+                                        <button @click="deleteVariant(v.id)" :disabled="versions.length <= 1" class="epk-btn epk-btn-secondary epk-btn-sm" title="Șterge">
+                                            <svg class="w-4 h-4 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </button>
                                     </div>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="checkbox" x-model="section.data.show_booking_cta" @change="markDirty()" class="h-5 w-5">
-                                        <span class="text-sm">Arată butonul „Cere booking"</span>
-                                    </label>
                                 </div>
-                            </template>
+                            </div>
+                        </template>
 
-                        </div>
-                    </div>
-                </template>
-
-                <!-- QR + PDF actions -->
-                <div class="rounded-2xl border border-border bg-white p-6">
-                    <h3 class="mb-3 text-base font-bold text-secondary">Distribuție</h3>
-                    <div class="flex flex-wrap gap-3">
-                        <a :href="`/api/proxy.php?action=artist.epk.variant.pdf&id=${active.id}&token=${token()}`" target="_blank" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-surface">📄 Descarcă Press Kit PDF</a>
-                        <button type="button" @click="showQR = !showQR" class="rounded-lg border border-border px-4 py-2 text-sm font-semibold hover:bg-surface">🔲 Generează QR</button>
-                    </div>
-                    <div x-show="showQR" class="mt-4">
-                        <img :src="`/api/proxy.php?action=artist.epk.variant.qr&id=${active.id}&token=${token()}`" alt="QR Code" class="h-48 w-48">
-                        <p class="mt-2 text-xs text-muted">Scanează cu telefonul → ajunge la EPK.</p>
+                        <button x-show="versions.length < state.limits?.max_variants" @click="newVariant()" class="border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center p-8 text-center hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all min-h-[280px]">
+                            <div class="w-12 h-12 bg-surface rounded-full flex items-center justify-center mb-3">
+                                <svg class="w-6 h-6 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                            </div>
+                            <p class="font-semibold text-secondary">Variantă nouă</p>
+                            <p class="text-xs text-muted mt-1">Pornește de la zero sau duplică una existentă</p>
+                        </button>
                     </div>
                 </div>
 
-            </div>
-
-            <!-- ============================ VERSIONS TAB ============================ -->
-            <div x-show="tab === 'versions'" class="space-y-4">
-                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <template x-for="v in state.variants" :key="v.id">
-                        <div class="rounded-2xl border-2 bg-white p-4" :class="v.id === state.active_variant_id ? 'border-primary' : 'border-border'">
-                            <div class="h-24 rounded-lg mb-3" :style="`background: linear-gradient(135deg, ${v.accent_color}, ${v.accent_color}AA)`"></div>
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <p class="font-bold text-secondary" x-text="v.name"></p>
-                                    <p class="text-xs text-muted" x-text="v.target || 'Universal'"></p>
-                                </div>
-                                <span x-show="v.id === state.active_variant_id" class="rounded-full bg-primary text-white px-2 py-0.5 text-[10px] font-bold">ACTIVĂ</span>
-                            </div>
-                            <p class="mt-2 text-xs text-muted font-mono" x-text="`/${v.slug}`"></p>
-                            <div class="mt-3 flex flex-wrap gap-1">
-                                <button type="button" :disabled="v.id === state.active_variant_id" @click="activateVariant(v.id)" class="rounded-lg border border-border px-2 py-1 text-xs disabled:opacity-30 hover:bg-surface">Setează activă</button>
-                                <button type="button" @click="cloneVariant(v.id)" class="rounded-lg border border-border px-2 py-1 text-xs hover:bg-surface">Clonează</button>
-                                <button type="button" :disabled="state.variants.length <= 1" @click="deleteVariant(v.id)" class="rounded-lg border border-red-200 text-red-600 px-2 py-1 text-xs disabled:opacity-30">Șterge</button>
+                <!-- ============ TAB: PUBLIC PREVIEW ============ -->
+                <div x-show="tab === 'preview'" class="bg-secondary">
+                    <div class="bg-secondary border-b border-white/10 p-4 flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-white/60 text-sm">Previzualizare:</span>
+                            <div class="inline-flex bg-white/5 rounded-lg p-1">
+                                <button @click="previewDevice = 'desktop'" :class="previewDevice === 'desktop' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Desktop</button>
+                                <button @click="previewDevice = 'mobile'" :class="previewDevice === 'mobile' ? 'bg-white/15 text-white' : 'text-white/50 hover:text-white'" class="px-3 py-1 rounded text-sm font-medium transition-colors">Mobil</button>
                             </div>
                         </div>
-                    </template>
-
-                    <button type="button" x-show="state.variants?.length < state.limits?.max_variants" @click="newVariant()" class="rounded-2xl border-2 border-dashed border-border bg-white p-4 flex flex-col items-center justify-center text-center hover:bg-surface">
-                        <span class="text-4xl text-muted mb-2">+</span>
-                        <span class="font-bold text-secondary">Variantă nouă</span>
-                        <span class="text-xs text-muted">Pornește de la zero sau duplică o existentă</span>
-                    </button>
+                        <div class="flex items-center gap-3">
+                            <a :href="publicUrl()" target="_blank" rel="noopener" class="text-sm text-white/60 hover:text-white underline">Deschide URL real →</a>
+                        </div>
+                    </div>
+                    <div class="bg-surface p-4">
+                        <iframe :src="publicUrl() + '?_t=' + previewBust" :class="previewDevice === 'mobile' ? 'mx-auto max-w-md' : 'w-full'" class="w-full bg-black rounded-xl" style="height: 80vh; border: 0"></iframe>
+                        <p class="text-center text-xs text-muted mt-3">Preview-ul folosește pagina publică reală — modificările se reflectă după <strong>Salvează</strong>.</p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- ============================ PREVIEW TAB ============================ -->
-            <div x-show="tab === 'preview'" class="rounded-2xl border border-border bg-white overflow-hidden">
-                <div class="flex items-center justify-between border-b border-border p-3">
-                    <p class="text-sm text-muted">Pagina publică (varianta activă)</p>
-                    <a :href="publicUrl()" target="_blank" rel="noopener" class="text-sm text-primary underline">Deschide într-un tab nou →</a>
-                </div>
-                <iframe :src="publicUrl()" class="w-full" style="height: 70vh; border: 0"></iframe>
-            </div>
-
-            <!-- ============================ ANALYTICS TAB (stub Faza B) ============================ -->
-            <div x-show="tab === 'analytics'" class="rounded-2xl border-2 border-dashed border-border bg-white p-10 text-center">
-                <h2 class="mb-2 text-xl font-bold text-secondary">Analytics — în curând</h2>
-                <p class="text-sm text-muted max-w-md mx-auto">Dashboard cu views, surse de trafic, hot leads (organizatori care vizitează EPK), engagement per secțiune. Disponibil în Faza B.</p>
-            </div>
+            </div><!-- /tabs -->
 
         </div>
     </div>
 </main>
 
-<script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<style>[x-cloak]{display:none!important}</style>
+
 <script>
-function epkEditor() {
+function smartEpk() {
     return {
+        // ========== UI state ==========
         loading: true,
         saving: false,
         dirty: false,
+        urlCopied: false,
         tab: 'editor',
-        showQR: false,
+        selectedSection: 'hero',
+        previewDevice: 'desktop',
+        previewBust: Date.now(),
+        charts: {},
+
+        // ========== Static config ==========
+        tabs: [
+            { id: 'editor',    label: 'Editor',         icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>' },
+            { id: 'analytics', label: 'Analytics',      icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>' },
+            { id: 'versions',  label: 'Variante',       icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/>' },
+            { id: 'preview',   label: 'Preview public', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>' },
+        ],
+
+        accentColors: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'],
+
+        sectionsMeta: [
+            { id: 'hero',          label: 'Hero',                  summary: 'Nume, tagline, cover',     description: 'Prima impresie. Nume scenă, tagline și imagine cover.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>' },
+            { id: 'stats',         label: 'Stats verificate',      summary: '5 metrici live',           description: 'Cifre creditabile direct din baza de date Ambilet. Nu pot fi falsificate.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2"/>' },
+            { id: 'bio',           label: 'Biografie',             summary: 'Scurt + extins',           description: 'Spune-le organizatorilor cine ești și ce te face memorabil.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>' },
+            { id: 'gallery',       label: 'Galerie foto',          summary: 'Max 12 imagini',           description: 'Imagini de pe scenă, de la repetiții, portrete. Recomandat 8-12.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>' },
+            { id: 'spotify',       label: 'Spotify',               summary: 'Embed muzică',             description: 'Card cu link către artist, album sau playlist.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>' },
+            { id: 'youtube',       label: 'YouTube',               summary: 'Max 3 videoclipuri',       description: 'Videoclipuri embed (max 3). Cele mai relevante.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>' },
+            { id: 'achievements',  label: 'Realizări',             summary: 'Timeline cronologic',      description: 'Premii, festivaluri majore, momente cheie.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>' },
+            { id: 'press_quotes',  label: 'Press quotes',          summary: 'Citate presă',             description: 'Citate din articole cu sursă și link.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4z"/>' },
+            { id: 'past_events',   label: 'Concerte trecute',      summary: 'Auto din platformă',       description: 'Showcase de evenimente trecute. Bifează „Ascunde" pentru cele pe care nu le vrei.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>' },
+            { id: 'rider',         label: 'Rider tehnic',          summary: 'PDF + lead capture',       description: 'PDF descărcabil. Opțional: cere email înainte (lead capture).', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>' },
+            { id: 'social',        label: 'Social media',          summary: '5 platforme',              description: 'Iconițe link către Facebook, Instagram, TikTok, etc.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>' },
+            { id: 'contact',       label: 'Contact + Booking CTA', summary: 'Email, telefon, CTA',      description: 'Cum poate fi contactat artistul. Butonul „Cere booking" duce în marketplace.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>' },
+        ],
+
+        socialPlatforms: [
+            { key: 'website',   label: 'Website',   placeholder: 'https://...' },
+            { key: 'facebook',  label: 'Facebook',  placeholder: 'https://facebook.com/...' },
+            { key: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/...' },
+            { key: 'tiktok',    label: 'TikTok',    placeholder: 'https://tiktok.com/@...' },
+            { key: 'youtube',   label: 'YouTube',   placeholder: 'https://youtube.com/@...' },
+        ],
+
+        statKeys: [
+            { key: 'tickets_sold',  label: 'Bilete vândute' },
+            { key: 'events_played', label: 'Concerte' },
+            { key: 'cities',        label: 'Orașe' },
+            { key: 'countries',     label: 'Țări' },
+            { key: 'peak_audience', label: 'Audiență max' },
+        ],
+
+        // ========== Server state ==========
         state: {
-            epk: null,
-            variants: [],
+            epk_id: null,
             active_variant_id: null,
             live_stats: {},
             past_events: [],
-            limits: {},
+            limits: { max_variants: 3, max_gallery_images: 12, max_youtube_videos: 3 },
             marketplace_domain: '',
+            artist: { slug: '', name: '' },
         },
-        active: { id: null, sections: [], accent_color: '#A51C30', name: '', target: '', slug: '' },
-        accentColors: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'],
+        versions: [],
+
+        // ========== Active variant editing state ==========
+        active: { id: null, name: '', target: '', slug: '', accent_color: '#A51C30', template: 'modern' },
+        sections: [],   // [{id, label, summary, description, icon, enabled}]
+        data: {},       // flat editing object — synced with sections
+        branding: { accent: '#A51C30', template: 'modern' },
+        stats: [],      // [{key, label, value, show}]
+
+        // ========== Mock analytics (Faza B placeholder) ==========
+        hotLeads: [
+            { id: 1, initials: 'EC', name: 'Electric Castle Productions', type: 'Organizator festival', city: 'Cluj-Napoca', visits: 5, lastVisit: 'acum 2 ore', timeSpent: '14 min' },
+            { id: 2, initials: 'BK', name: 'Berăria H Booking',           type: 'Venue',                city: 'București',   visits: 4, lastVisit: 'ieri',        timeSpent: '8 min' },
+            { id: 3, initials: 'SV', name: 'Summer Vibes',                type: 'Organizator festival', city: 'Mamaia',      visits: 3, lastVisit: 'acum 3 zile', timeSpent: '11 min' },
+        ],
+        sectionEngagement: [
+            { name: 'Hero', pct: 100 }, { name: 'Stats verificate', pct: 92 }, { name: 'Biografie', pct: 78 },
+            { name: 'Galerie', pct: 71 }, { name: 'Spotify', pct: 64 }, { name: 'Past events', pct: 58 },
+            { name: 'Press quotes', pct: 47 }, { name: 'Booking CTA', pct: 32 },
+        ],
+        topActions: [
+            { icon: '🎯', label: 'Click „Cere booking"',    count: 47 },
+            { icon: '📥', label: 'Download Press Kit',      count: 89 },
+            { icon: '📥', label: 'Download Rider tehnic',   count: 32 },
+            { icon: '🎵', label: 'Click Spotify',           count: 312 },
+            { icon: '📞', label: 'Click telefon',           count: 18 },
+            { icon: '📧', label: 'Click email',             count: 28 },
+        ],
+
+        // ========== Computed ==========
+        get enabledSections() { return this.sections.filter(s => s.enabled); },
+
+        // ========== Lifecycle ==========
+        async init() {
+            await this.load();
+            this.$nextTick(() => this.renderTab(this.tab));
+        },
 
         token() { return localStorage.getItem('ambilet_artist_token'); },
 
@@ -405,16 +776,17 @@ function epkEditor() {
                 });
                 const payload = await res.json();
                 if (!payload?.data) throw new Error(payload?.message || 'Load failed');
+                const d = payload.data;
                 this.state = {
-                    epk: payload.data.id,
-                    variants: payload.data.variants,
-                    active_variant_id: payload.data.active_variant_id,
-                    live_stats: payload.data.live_stats,
-                    past_events: payload.data.past_events,
-                    limits: payload.data.limits,
-                    marketplace_domain: payload.data.marketplace_domain,
-                    artist: payload.data.artist,
+                    epk_id: d.id,
+                    active_variant_id: d.active_variant_id,
+                    live_stats: d.live_stats || {},
+                    past_events: d.past_events || [],
+                    limits: d.limits || this.state.limits,
+                    marketplace_domain: d.marketplace_domain || '',
+                    artist: d.artist || { slug: '', name: '' },
                 };
+                this.versions = d.variants || [];
                 this.loadActiveVariant();
             } catch (e) {
                 alert('Eroare la încărcare: ' + e.message);
@@ -423,38 +795,109 @@ function epkEditor() {
             }
         },
 
+        // Map variant.sections (server format) → flat data + sections array (UI format)
         loadActiveVariant() {
-            const v = this.state.variants.find(x => x.id === this.state.active_variant_id) || this.state.variants[0];
-            if (v) {
-                this.active = JSON.parse(JSON.stringify(v));
-                this.dirty = false;
-            }
+            const v = this.versions.find(x => x.id === this.state.active_variant_id) || this.versions[0];
+            if (!v) return;
+
+            this.active = {
+                id: v.id, name: v.name, target: v.target || '', slug: v.slug,
+                accent_color: v.accent_color, template: v.template,
+            };
+            this.branding = { accent: v.accent_color, template: v.template };
+
+            // Build sections array (merge metadata with server enabled flags)
+            const serverSections = (v.sections || []).reduce((acc, s) => { acc[s.id] = s; return acc; }, {});
+            this.sections = this.sectionsMeta.map(meta => {
+                const s = serverSections[meta.id] || {};
+                return { ...meta, enabled: s.enabled ?? true };
+            });
+
+            // Build flat data object from sections data
+            const get = (id, key, def) => serverSections[id]?.data?.[key] ?? def;
+            this.data = {
+                stage_name: get('hero', 'stage_name', this.state.artist.name || ''),
+                tagline: get('hero', 'tagline', ''),
+                cover_image: get('hero', 'cover_image', null),
+                bio_short: get('bio', 'bio_short', ''),
+                bio_long: get('bio', 'bio_long', ''),
+                gallery: get('gallery', 'images', []),
+                spotify_url: get('spotify', 'spotify_url', ''),
+                youtube_videos: get('youtube', 'videos', []),
+                achievements: get('achievements', 'items', []),
+                press_quotes: get('press_quotes', 'quotes', []),
+                past_events_hidden: get('past_events', 'hidden_event_ids', []),
+                past_events_limit: get('past_events', 'limit', 12),
+                rider_pdf_url: get('rider', 'rider_pdf_url', null),
+                rider_pdf_path: get('rider', 'rider_pdf_path', null),
+                rider_gated: get('rider', 'gated', false),
+                social: get('social', null, null) || { website: '', facebook: '', instagram: '', tiktok: '', youtube: '' },
+                contact_email: get('contact', 'email', ''),
+                contact_phone: get('contact', 'phone', ''),
+                show_booking_cta: get('contact', 'show_booking_cta', true),
+            };
+            // Stats: merge live values with show flags from server
+            const showFlags = get('stats', 'show', {});
+            this.stats = this.statKeys.map(s => ({
+                key: s.key,
+                label: s.label,
+                value: this.state.live_stats?.[s.key]?.display ?? '—',
+                show: showFlags[s.key] ?? true,
+            }));
+
+            this.dirty = false;
         },
 
         markDirty() { this.dirty = true; },
+
+        // Map flat data + sections + stats → variant.sections array (server format) for save
+        buildSectionsForSave() {
+            const showFlags = {};
+            this.stats.forEach(s => { showFlags[s.key] = s.show; });
+
+            const dataByid = {
+                hero: { stage_name: this.data.stage_name, tagline: this.data.tagline, cover_image: this.data.cover_image },
+                stats: { show: showFlags },
+                bio: { bio_short: this.data.bio_short, bio_long: this.data.bio_long },
+                gallery: { images: this.data.gallery },
+                spotify: { spotify_url: this.data.spotify_url },
+                youtube: { videos: this.data.youtube_videos },
+                achievements: { items: this.data.achievements },
+                press_quotes: { quotes: this.data.press_quotes },
+                past_events: { hidden_event_ids: this.data.past_events_hidden, limit: this.data.past_events_limit },
+                rider: { rider_pdf_url: this.data.rider_pdf_url, rider_pdf_path: this.data.rider_pdf_path, gated: this.data.rider_gated },
+                social: this.data.social,
+                contact: { email: this.data.contact_email, phone: this.data.contact_phone, show_booking_cta: this.data.show_booking_cta },
+            };
+
+            return this.sections.map(s => ({
+                id: s.id,
+                enabled: s.enabled,
+                data: dataByid[s.id] || {},
+            }));
+        },
 
         async saveActive() {
             if (!this.active.id || this.saving) return;
             this.saving = true;
             try {
-                // Proxy.php remaps action -> PATCH upstream regardless of browser HTTP verb,
-                // so we POST here pentru a evita CORS preflight (same-origin oricum).
+                const body = {
+                    name: this.active.name,
+                    target: this.active.target,
+                    slug: this.active.slug,
+                    accent_color: this.branding.accent,
+                    template: this.branding.template,
+                    sections: this.buildSectionsForSave(),
+                };
                 const res = await fetch(`/api/proxy.php?action=artist.epk.variant.update&id=${this.active.id}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
-                    body: JSON.stringify({
-                        name: this.active.name,
-                        target: this.active.target,
-                        slug: this.active.slug,
-                        accent_color: this.active.accent_color,
-                        template: this.active.template,
-                        sections: this.active.sections,
-                    }),
+                    body: JSON.stringify(body),
                 });
                 const payload = await res.json();
-                if (!res.ok) throw new Error(payload?.message || 'Save failed');
-                // refresh full state to pick up server-canonical slug etc.
+                if (!res.ok || payload?.success === false) throw new Error(payload?.message || 'Save failed');
                 await this.load();
+                this.previewBust = Date.now();
             } catch (e) {
                 alert('Eroare la salvare: ' + e.message);
             } finally {
@@ -465,58 +908,59 @@ function epkEditor() {
         async newVariant() {
             const name = prompt('Nume variantă (ex: EPK Festival)');
             if (!name) return;
-            const target = prompt('Audiență țintă (ex: Festival-uri)') || 'Universal';
+            const target = prompt('Audiență țintă (ex: Festival-uri)') || '';
             try {
-                await fetch('/api/proxy.php?action=artist.epk.variant.create', {
+                const res = await fetch('/api/proxy.php?action=artist.epk.variant.create', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
                     body: JSON.stringify({ name, target }),
                 });
+                const payload = await res.json();
+                if (!res.ok || payload?.success === false) throw new Error(payload?.message || 'Create failed');
                 await this.load();
-                this.tab = 'editor';
-            } catch (e) {
-                alert('Eroare: ' + e.message);
-            }
+                this.setTab('editor');
+            } catch (e) { alert('Eroare: ' + e.message); }
         },
 
         async cloneVariant(id) {
             try {
-                await fetch(`/api/proxy.php?action=artist.epk.variant.clone&id=${id}`, {
+                const res = await fetch(`/api/proxy.php?action=artist.epk.variant.clone&id=${id}`, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
                 });
+                const payload = await res.json();
+                if (!res.ok || payload?.success === false) throw new Error(payload?.message || 'Clone failed');
                 await this.load();
-            } catch (e) {
-                alert('Eroare: ' + e.message);
-            }
+            } catch (e) { alert('Eroare: ' + e.message); }
         },
 
         async activateVariant(id) {
             try {
-                await fetch(`/api/proxy.php?action=artist.epk.variant.activate&id=${id}`, {
+                const res = await fetch(`/api/proxy.php?action=artist.epk.variant.activate&id=${id}`, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
                 });
+                const payload = await res.json();
+                if (!res.ok || payload?.success === false) throw new Error(payload?.message || 'Activate failed');
                 await this.load();
-            } catch (e) {
-                alert('Eroare: ' + e.message);
-            }
+                this.previewBust = Date.now();
+            } catch (e) { alert('Eroare: ' + e.message); }
         },
 
         async deleteVariant(id) {
-            if (!confirm('Sigur ștergi varianta? (acțiune ireversibilă)')) return;
+            if (!confirm('Sigur ștergi varianta? Acțiunea nu poate fi reversată.')) return;
             try {
-                await fetch(`/api/proxy.php?action=artist.epk.variant.delete&id=${id}`, {
+                const res = await fetch(`/api/proxy.php?action=artist.epk.variant.delete&id=${id}`, {
                     method: 'DELETE',
                     headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
                 });
+                const payload = await res.json();
+                if (!res.ok || payload?.success === false) throw new Error(payload?.message || 'Delete failed');
                 await this.load();
-            } catch (e) {
-                alert('Eroare: ' + e.message);
-            }
+            } catch (e) { alert('Eroare: ' + e.message); }
         },
 
-        uploadImage(type, callback) {
+        uploadImage(type) {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/jpeg,image/png,image/webp';
@@ -533,13 +977,16 @@ function epkEditor() {
                     });
                     const payload = await res.json();
                     if (payload?.data?.url) {
-                        callback(payload.data.url);
+                        if (type === 'hero') {
+                            this.data.cover_image = payload.data.url;
+                        } else if (type === 'gallery') {
+                            this.data.gallery = [...(this.data.gallery || []), payload.data.url];
+                        }
+                        this.markDirty();
                     } else {
                         alert('Upload eșuat: ' + (payload?.message || 'unknown'));
                     }
-                } catch (e) {
-                    alert('Upload eșuat: ' + e.message);
-                }
+                } catch (e) { alert('Upload eșuat: ' + e.message); }
             };
             input.click();
         },
@@ -564,79 +1011,108 @@ function epkEditor() {
                     } else {
                         alert('Upload PDF eșuat: ' + (payload?.message || 'unknown'));
                     }
-                } catch (e) {
-                    alert('Upload PDF eșuat: ' + e.message);
-                }
+                } catch (e) { alert('Upload PDF eșuat: ' + e.message); }
             };
             input.click();
         },
 
-        toggleHiddenEvent(section, eventId) {
-            const ids = section.data.hidden_event_ids || [];
-            const idx = ids.indexOf(eventId);
-            if (idx >= 0) {
-                ids.splice(idx, 1);
-            } else {
-                ids.push(eventId);
-            }
-            section.data.hidden_event_ids = [...ids];
+        togglePastEventHidden(id) {
+            const arr = this.data.past_events_hidden || [];
+            const idx = arr.indexOf(id);
+            if (idx >= 0) arr.splice(idx, 1); else arr.push(id);
+            this.data.past_events_hidden = [...arr];
             this.markDirty();
         },
 
+        // ========== URL helpers ==========
+        domainBase() {
+            if (!this.state.marketplace_domain) return '';
+            const d = this.state.marketplace_domain;
+            return d.startsWith('http') ? d : 'https://' + d;
+        },
+
         publicUrl() {
-            if (!this.state.artist || !this.state.marketplace_domain) return '#';
-            const domain = this.state.marketplace_domain.startsWith('http') ? this.state.marketplace_domain : 'https://' + this.state.marketplace_domain;
-            return `${domain}/epk/${this.state.artist.slug}`;
+            if (!this.state.artist?.slug) return '#';
+            // Active variant: /epk/{slug}; non-active: /epk/{slug}/{variant_slug}
+            const isActive = this.active.id === this.state.active_variant_id;
+            const path = isActive
+                ? `/epk/${this.state.artist.slug}`
+                : `/epk/${this.state.artist.slug}/${this.active.slug}`;
+            return this.domainBase() + path;
         },
 
-        tabLabel(t) {
-            return { editor: 'Editor', versions: 'Variante', preview: 'Preview', analytics: 'Analytics' }[t];
+        publicUrlDisplay() {
+            const url = this.publicUrl();
+            return url.replace(/^https?:\/\//, '');
         },
 
-        sectionLabel(id) {
-            return {
-                hero: 'Hero',
-                stats: 'Stats verificate (LIVE)',
-                bio: 'Biografie',
-                gallery: 'Galerie',
-                spotify: 'Spotify',
-                youtube: 'YouTube',
-                achievements: 'Realizări',
-                press_quotes: 'Citate presă',
-                past_events: 'Evenimente trecute',
-                rider: 'Rider tehnic',
-                social: 'Social media',
-                contact: 'Contact + Booking CTA',
-            }[id] || id;
+        variantPublicUrl(v) {
+            if (!this.state.artist?.slug) return '#';
+            const isActive = v.id === this.state.active_variant_id;
+            const path = isActive
+                ? `/epk/${this.state.artist.slug}`
+                : `/epk/${this.state.artist.slug}/${v.slug}`;
+            return this.domainBase() + path;
         },
 
-        sectionHelp(id) {
-            return {
-                hero: 'Numele afișat mare + tagline + cover image',
-                stats: 'Cifrele LIVE pe care le afișezi (toggleable)',
-                bio: 'Bio scurt (cards/list) + bio extins (pagina dedicată)',
-                gallery: 'Imagini live, max 12',
-                spotify: 'Embed Spotify (artist / album / playlist)',
-                youtube: 'Max 3 videoclipuri YouTube',
-                achievements: 'Timeline cu an + descriere',
-                press_quotes: 'Citate din presă cu sursă și link',
-                past_events: 'Evenimente trecute auto-pull, hideabile',
-                rider: 'PDF rider, opțional gated cu lead capture',
-                social: 'Linkuri către conturi sociale',
-                contact: 'Email, telefon, buton booking',
-            }[id] || '';
+        qrUrl() {
+            if (!this.active.id) return '#';
+            return `/api/proxy.php?action=artist.epk.variant.qr&id=${this.active.id}&token=${this.token()}`;
         },
 
-        statLabel(key) {
-            return {
-                tickets_sold: 'Bilete vândute',
-                events_played: 'Concerte',
-                cities: 'Orașe',
-                countries: 'Țări',
-                peak_audience: 'Audiență max',
-            }[key] || key;
+        pdfUrl() {
+            if (!this.active.id) return '#';
+            return `/api/proxy.php?action=artist.epk.variant.pdf&id=${this.active.id}&token=${this.token()}`;
         },
-    };
+
+        copyUrl() {
+            navigator.clipboard?.writeText(this.publicUrl());
+            this.urlCopied = true;
+            setTimeout(() => this.urlCopied = false, 2000);
+        },
+
+        setTab(id) {
+            this.tab = id;
+            if (id === 'preview') this.previewBust = Date.now();
+            this.$nextTick(() => this.renderTab(id));
+        },
+
+        renderTab(id) {
+            if (id === 'analytics') {
+                this.renderTrafficChart();
+                this.renderSourcesChart();
+            }
+        },
+
+        destroyChart(key) {
+            if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
+        },
+
+        renderTrafficChart() {
+            this.destroyChart('traffic');
+            const el = document.getElementById('trafficChart');
+            if (!el || typeof Chart === 'undefined') return;
+            const labels = Array.from({ length: 30 }, (_, i) => i + 1);
+            const data = Array.from({ length: 30 }, () => Math.floor(Math.random() * 80) + 40);
+            this.charts.traffic = new Chart(el.getContext('2d'), {
+                type: 'line',
+                data: { labels, datasets: [{ data, borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+        },
+
+        renderSourcesChart() {
+            this.destroyChart('sources');
+            const el = document.getElementById('sourcesChart');
+            if (!el || typeof Chart === 'undefined') return;
+            this.charts.sources = new Chart(el.getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: ['Direct (link)', 'Booking Marketplace', 'Email organizator', 'Social media', 'Search'],
+                    datasets: [{ data: [42, 28, 15, 10, 5], backgroundColor: ['#A51C30', '#E67E22', '#10B981', '#3B82F6', '#94A3B8'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right' } } }
+            });
+        },
+    }
 }
 </script>
 
