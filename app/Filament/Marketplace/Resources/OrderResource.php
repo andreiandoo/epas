@@ -237,7 +237,7 @@ class OrderResource extends Resource
                             ->required(),
                         Forms\Components\TextInput::make('total')
                             ->numeric()
-                            ->prefix('€')
+                            ->prefix(fn ($record) => $record?->currency ?? 'RON')
                             ->disabled(),
                         Forms\Components\Textarea::make('notes')
                             ->rows(3),
