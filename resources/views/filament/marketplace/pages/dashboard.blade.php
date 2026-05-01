@@ -4,8 +4,72 @@
             <p class="text-yellow-800 dark:text-yellow-200">No marketplace account found. Please contact support.</p>
         </div>
     @else
-        @if($isSuperAdmin ?? false)
-        <!-- Pending Review Events -->
+        {{-- Sections that ALL marketplace admins should see (pending events
+             to review + open support tickets) live above the super-admin
+             gate. Everything else (today/month stats, charts, top tables,
+             billing breakdown) stays super-admin only. --}}
+
+        <!-- Pending support tickets — visible to all admins -->
+        @if(isset($pendingSupportTickets) && $pendingSupportTickets->count() > 0)
+        <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-orange-300 dark:border-orange-700">
+            <div class="flex items-center justify-between px-4 py-3 border-b bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
+                <div class="flex items-center gap-2">
+                    <x-heroicon-o-lifebuoy class="w-5 h-5 text-orange-500" />
+                    <h3 class="font-semibold text-orange-800 dark:text-orange-200">Tichete suport active</h3>
+                    <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold text-white bg-orange-500 rounded-full">{{ $pendingSupportTicketsCount }}</span>
+                </div>
+                <a href="{{ route('filament.marketplace.resources.support-tickets.index') }}" class="text-xs text-orange-600 dark:text-orange-400 hover:underline">
+                    Vezi toate
+                </a>
+            </div>
+            <div class="divide-y divide-gray-100 dark:divide-gray-700">
+                @foreach($pendingSupportTickets as $supportTicket)
+                @php
+                    $statusLabel = match ($supportTicket->status) {
+                        'open' => 'Deschis',
+                        'in_progress' => 'Așteaptă răspuns',
+                        'awaiting_organizer' => 'Răspuns trimis',
+                        default => $supportTicket->status,
+                    };
+                    $statusClass = match ($supportTicket->status) {
+                        'open' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+                        'in_progress' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                        'awaiting_organizer' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                        default => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+                    };
+                    $openerName = $supportTicket->opener?->name ?? $supportTicket->opener?->public_name ?? '—';
+                @endphp
+                <div class="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="text-sm font-medium text-gray-900 truncate dark:text-white hover:text-orange-600 dark:hover:text-orange-400">
+                                {{ $supportTicket->subject }}
+                            </a>
+                            <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded {{ $statusClass }}">{{ $statusLabel }}</span>
+                            <span class="font-mono text-[10px] text-gray-500">{{ $supportTicket->ticket_number }}</span>
+                        </div>
+                        <div class="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{{ $openerName }}</span>
+                            <span>·</span>
+                            <span>{{ $supportTicket->department?->getTranslation('name', 'ro') ?? '—' }}</span>
+                            @if ($supportTicket->assignee)
+                                <span>·</span>
+                                <span>Asignat: {{ $supportTicket->assignee->name }}</span>
+                            @endif
+                            <span class="text-gray-400">{{ $supportTicket->last_activity_at?->diffForHumans() }}</span>
+                        </div>
+                    </div>
+                    <a href="{{ route('filament.marketplace.resources.support-tickets.view', $supportTicket->id) }}" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 dark:text-orange-300 dark:bg-orange-900/40 dark:hover:bg-orange-900/60 rounded-lg transition-colors">
+                        <x-heroicon-o-eye class="w-3.5 h-3.5" />
+                        Deschide
+                    </a>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        <!-- Pending Review Events — visible to all admins -->
         @if(isset($pendingReviewEvents) && $pendingReviewEvents->count() > 0)
         <div class="mb-5 overflow-hidden bg-white border shadow-sm dark:bg-gray-800 rounded-xl border-amber-300 dark:border-amber-700">
             <div class="flex items-center justify-between px-4 py-3 border-b bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
@@ -55,6 +119,7 @@
         </div>
         @endif
 
+        @if($isSuperAdmin ?? false)
         <!-- Today Stats -->
         @if(isset($todayStats))
         <div class="mb-5">
@@ -401,8 +466,9 @@
             </div>
         </a>
         @endif
-        @endif {{-- end isSuperAdmin --}}
+        @endif {{-- end isSuperAdmin (top half) --}}
 
+        @if($isSuperAdmin ?? false)
         <!-- Tables: Top Organizers + Top Live Events side by side -->
         <div class="grid grid-cols-1 gap-5 mb-5 md:grid-cols-2">
             {{-- Top Organizers --}}
@@ -482,6 +548,7 @@
                 @endif
             </div>
         </div>
+        @endif {{-- end isSuperAdmin (bottom half) --}}
     @endif
 
     @push('scripts')

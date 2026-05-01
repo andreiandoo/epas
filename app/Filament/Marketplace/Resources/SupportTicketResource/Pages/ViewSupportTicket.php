@@ -365,9 +365,9 @@ class ViewSupportTicket extends Page
         if (!empty($data['reason']) || $oldDeptId !== $newDeptId) {
             $oldName = SupportDepartment::find($oldDeptId)?->getTranslation('name', 'ro') ?? '—';
             $newName = SupportDepartment::find($newDeptId)?->getTranslation('name', 'ro') ?? '—';
-            $body = "Tichet mutat: {$oldName} → {$newName}";
+            $body = "Departament: {$oldName} → {$newName}";
             if (!empty($data['reason'])) {
-                $body .= "\n\nMotiv: " . $data['reason'];
+                $body .= ' (' . $data['reason'] . ')';
             }
             SupportTicketMessage::create([
                 'marketplace_client_id' => $this->record->marketplace_client_id,
@@ -375,7 +375,8 @@ class ViewSupportTicket extends Page
                 'author_type' => 'staff',
                 'author_id' => Auth::guard('marketplace_admin')->id(),
                 'body' => $body,
-                'is_internal_note' => true,
+                'event_type' => SupportTicketMessage::EVENT_DEPARTMENT_CHANGED,
+                'is_internal_note' => false,
             ]);
         }
 
@@ -384,10 +385,31 @@ class ViewSupportTicket extends Page
 
     protected function assignTo(array $data): void
     {
+        $oldAssigneeId = $this->record->assigned_to_marketplace_admin_id;
         $newAssigneeId = $data['assigned_to_marketplace_admin_id'] ? (int) $data['assigned_to_marketplace_admin_id'] : null;
+
+        if ($oldAssigneeId === $newAssigneeId) {
+            return;
+        }
+
         $this->record->assigned_to_marketplace_admin_id = $newAssigneeId;
         $this->record->last_activity_at = now();
         $this->record->save();
+
+        $newAssigneeName = $newAssigneeId
+            ? (MarketplaceAdmin::find($newAssigneeId)?->name ?? '—')
+            : null;
+        $body = $newAssigneeName ? "Asignat la: {$newAssigneeName}" : 'Asignare scoasă';
+        SupportTicketMessage::create([
+            'marketplace_client_id' => $this->record->marketplace_client_id,
+            'support_ticket_id' => $this->record->id,
+            'author_type' => 'staff',
+            'author_id' => Auth::guard('marketplace_admin')->id(),
+            'body' => $body,
+            'event_type' => SupportTicketMessage::EVENT_ASSIGNED,
+            'is_internal_note' => false,
+        ]);
+
         Notification::make()->title('Asignare actualizată')->success()->send();
     }
 
@@ -405,6 +427,7 @@ class ViewSupportTicket extends Page
         $this->record->resolved_at = now();
         $this->record->last_activity_at = now();
         $this->record->save();
+        $this->logTimelineEvent(SupportTicketMessage::EVENT_RESOLVED, 'Tichet marcat ca rezolvat');
         Notification::make()->title('Tichet marcat ca rezolvat')->success()->send();
     }
 
@@ -414,6 +437,7 @@ class ViewSupportTicket extends Page
         $this->record->closed_at = now();
         $this->record->last_activity_at = now();
         $this->record->save();
+        $this->logTimelineEvent(SupportTicketMessage::EVENT_CLOSED, 'Tichet închis definitiv');
         Notification::make()->title('Tichet închis')->success()->send();
     }
 
@@ -424,7 +448,26 @@ class ViewSupportTicket extends Page
         $this->record->closed_at = null;
         $this->record->last_activity_at = now();
         $this->record->save();
+        $this->logTimelineEvent(SupportTicketMessage::EVENT_REOPENED, 'Tichet redeschis');
         Notification::make()->title('Tichet redeschis')->success()->send();
+    }
+
+    /**
+     * Persist a status-change event as a public message in the conversation
+     * thread. Authored by the acting staff member so the timeline answers
+     * "who did this" in addition to "when".
+     */
+    protected function logTimelineEvent(string $eventType, string $body): void
+    {
+        SupportTicketMessage::create([
+            'marketplace_client_id' => $this->record->marketplace_client_id,
+            'support_ticket_id' => $this->record->id,
+            'author_type' => 'staff',
+            'author_id' => Auth::guard('marketplace_admin')->id(),
+            'body' => $body,
+            'event_type' => $eventType,
+            'is_internal_note' => false,
+        ]);
     }
 
     // ============================================================

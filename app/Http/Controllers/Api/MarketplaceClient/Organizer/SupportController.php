@@ -253,6 +253,7 @@ class SupportController extends BaseController
     public function close(Request $request, int $id): JsonResponse
     {
         $organizer = $this->requireOrganizerWithGate($request);
+        $client = $this->requireClient($request);
         $ticket = $this->findOwnTicketOrFail($organizer, $id);
 
         if ($ticket->status === SupportTicket::STATUS_CLOSED) {
@@ -264,6 +265,16 @@ class SupportController extends BaseController
         $ticket->markActivity();
         $ticket->save();
 
+        SupportTicketMessage::create([
+            'marketplace_client_id' => $client->id,
+            'support_ticket_id' => $ticket->id,
+            'author_type' => 'organizer',
+            'author_id' => $organizer->id,
+            'body' => 'Tichet marcat ca rezolvat',
+            'event_type' => SupportTicketMessage::EVENT_RESOLVED,
+            'is_internal_note' => false,
+        ]);
+
         return $this->success(['ticket' => $this->formatTicketDetail($ticket, $request)]);
     }
 
@@ -273,6 +284,7 @@ class SupportController extends BaseController
     public function reopen(Request $request, int $id): JsonResponse
     {
         $organizer = $this->requireOrganizerWithGate($request);
+        $client = $this->requireClient($request);
         $ticket = $this->findOwnTicketOrFail($organizer, $id);
 
         if (!$ticket->isClosed()) {
@@ -284,6 +296,16 @@ class SupportController extends BaseController
         $ticket->closed_at = null;
         $ticket->markActivity();
         $ticket->save();
+
+        SupportTicketMessage::create([
+            'marketplace_client_id' => $client->id,
+            'support_ticket_id' => $ticket->id,
+            'author_type' => 'organizer',
+            'author_id' => $organizer->id,
+            'body' => 'Tichet redeschis',
+            'event_type' => SupportTicketMessage::EVENT_REOPENED,
+            'is_internal_note' => false,
+        ]);
 
         return $this->success(['ticket' => $this->formatTicketDetail($ticket, $request)]);
     }
@@ -454,6 +476,7 @@ class SupportController extends BaseController
             'author_id' => $m->author_id,
             'author_name' => $this->resolveAuthorName($m),
             'body' => $m->body,
+            'event_type' => $m->event_type,
             'attachments' => collect($m->attachments ?: [])
                 ->map(fn ($a) => [
                     'original_name' => $a['original_name'] ?? 'file',

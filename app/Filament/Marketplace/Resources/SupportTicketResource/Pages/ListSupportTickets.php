@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources\SupportTicketResource\Pages;
 use App\Filament\Marketplace\Resources\SupportTicketResource;
 use App\Models\SupportTicket;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -12,6 +13,28 @@ use Illuminate\Support\Facades\Auth;
 class ListSupportTickets extends ListRecords
 {
     protected static string $resource = SupportTicketResource::class;
+
+    /**
+     * Move the tabs out of the page header and into the table's toolbar
+     * (left of the search input), matching the layout used by PayoutResource.
+     * Done in JS via Alpine x-init since Filament v4 doesn't expose a
+     * declarative "tabs in toolbar" mode.
+     */
+    public function getTabsContentComponent(): Component
+    {
+        return parent::getTabsContentComponent()
+            ->extraAttributes([
+                'x-data' => '{}',
+                'x-init' => "\$nextTick(() => {
+                    const toolbar = document.querySelector('.fi-ta-header-toolbar');
+                    if (!toolbar) return;
+                    const nav = \$el.querySelector('.fi-tabs');
+                    if (!nav) return;
+                    nav.style.order = '-1';
+                    toolbar.prepend(nav);
+                })",
+            ]);
+    }
 
     public function getTabs(): array
     {

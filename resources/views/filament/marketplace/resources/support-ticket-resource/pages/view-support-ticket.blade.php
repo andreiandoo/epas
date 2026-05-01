@@ -120,12 +120,32 @@
                             @php
                                 $isStaff = $message->author_type === 'staff';
                                 $isInternal = $message->is_internal_note;
+                                $isEvent = !empty($message->event_type);
                                 $authorName = $message->author->name ?? $message->author->public_name ?? $message->author->email ?? '—';
                                 $initial = strtoupper(mb_substr($authorName ?: '?', 0, 1));
                                 $bubbleStyle = $isInternal ? $bubbleNote : ($isStaff ? $bubbleStaff : $bubbleOpener);
                                 $avatarStyle = $isInternal ? $bubbleNoteAvatar : ($isStaff ? $bubbleStaffAvatar : $bubbleOpenerAvatar);
                                 $align = $isStaff ? 'flex-row' : 'flex-row-reverse';
+                                $eventIcon = match ($message->event_type) {
+                                    'resolved' => 'M5 13l4 4L19 7',
+                                    'closed' => 'M6 18L18 6M6 6l12 12',
+                                    'reopened' => 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+                                    'department_changed' => 'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
+                                    'assigned' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7zM21 12h-6m3-3v6',
+                                    default => 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+                                };
                             @endphp
+                            @if ($isEvent)
+                                <div class="flex items-center gap-3 py-1 my-1">
+                                    <div class="flex-1 h-px" style="background:#e5e7eb"></div>
+                                    <div class="flex items-center gap-2 px-3 py-1 text-xs rounded-full" style="background:#f1f5f9;color:#475569">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $eventIcon }}"/></svg>
+                                        <span><strong>{{ $message->body }}</strong> <span style="opacity:.7">de {{ $authorName }} · {{ $message->created_at?->format('d M Y, H:i') }}</span></span>
+                                    </div>
+                                    <div class="flex-1 h-px" style="background:#e5e7eb"></div>
+                                </div>
+                                @continue
+                            @endif
                             <div class="flex {{ $align }} gap-3 items-start">
                                 <div class="flex items-center justify-center flex-shrink-0 text-xs font-bold rounded-full" style="width:2.25rem;height:2.25rem;{{ $avatarStyle }}">{{ $initial }}</div>
                                 <div class="flex-1" style="max-width:85%">

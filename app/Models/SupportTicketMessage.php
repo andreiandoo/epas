@@ -12,12 +12,19 @@ class SupportTicketMessage extends Model
 {
     use SecureMarketplaceScoping;
 
+    public const EVENT_RESOLVED = 'resolved';
+    public const EVENT_CLOSED = 'closed';
+    public const EVENT_REOPENED = 'reopened';
+    public const EVENT_DEPARTMENT_CHANGED = 'department_changed';
+    public const EVENT_ASSIGNED = 'assigned';
+
     protected $fillable = [
         'marketplace_client_id',
         'support_ticket_id',
         'author_type',
         'author_id',
         'body',
+        'event_type',
         'is_internal_note',
         'attachments',
     ];

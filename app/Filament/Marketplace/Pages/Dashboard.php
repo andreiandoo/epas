@@ -10,6 +10,7 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
 use App\Models\Order;
 use App\Models\ServiceOrder;
+use App\Models\SupportTicket;
 use App\Models\Ticket;
 use BackedEnum;
 use Carbon\Carbon;
@@ -156,6 +157,28 @@ class Dashboard extends Page
             return $this->computeTodayStats($marketplaceId);
         });
 
+        // Pending support tickets — visible to ALL marketplace admins, not
+        // just super-admins. Cache for 60s to keep the dashboard snappy.
+        $pendingSupportTickets = Cache::remember(
+            "mp_dash_support_pending_{$marketplaceId}",
+            60,
+            fn () => SupportTicket::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED])
+                ->with(['department', 'opener', 'assignee'])
+                ->orderByDesc('last_activity_at')
+                ->limit(10)
+                ->get()
+        );
+        $pendingSupportTicketsCount = Cache::remember(
+            "mp_dash_support_pending_count_{$marketplaceId}",
+            60,
+            fn () => SupportTicket::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereNotIn('status', [SupportTicket::STATUS_RESOLVED, SupportTicket::STATUS_CLOSED])
+                ->count()
+        );
+
         return [
             'marketplace' => $marketplace,
             'isSuperAdmin' => Auth::guard('marketplace_admin')->user()?->isSuperAdmin() ?? false,
@@ -167,6 +190,8 @@ class Dashboard extends Page
             'topOrganizers' => $stats['topOrganizers'],
             'topLiveEvents' => $stats['topLiveEvents'],
             'pendingReviewEvents' => $pendingReviewEvents,
+            'pendingSupportTickets' => $pendingSupportTickets,
+            'pendingSupportTicketsCount' => $pendingSupportTicketsCount,
             'billing' => $billingData,
             'todayStats' => $todayStats,
             'prevYearChartData' => $prevYearChartData,
