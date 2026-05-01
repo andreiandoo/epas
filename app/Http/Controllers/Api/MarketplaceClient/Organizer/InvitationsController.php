@@ -187,10 +187,10 @@ class InvitationsController extends BaseController
                     $seatForRecipient = $seats[$i] ?? null;
                     $seatRef = $this->formatSeatRef($seatForRecipient);
                     $recipientPayload = [
-                        'first_name' => $rec['first_name'],
-                        'last_name' => $rec['last_name'],
+                        'first_name' => $rec['first_name'] ?? null,
+                        'last_name' => $rec['last_name'] ?? null,
                         'name' => $fullName,
-                        'email' => $rec['email'],
+                        'email' => $rec['email'] ?? null,
                         'phone' => $rec['phone'] ?? null,
                         'company' => $rec['company'] ?? null,
                         'notes' => $rec['notes'] ?? null,
