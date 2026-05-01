@@ -233,6 +233,23 @@ function renderThread(messages) {
         return;
     }
     thread.innerHTML = messages.map(m => {
+        // System events (close/reopen/resolve etc.) render as a slim
+        // timeline line, not a chat bubble — both sides need to see who
+        // closed/reopened the ticket and when.
+        if (m.event_type) {
+            const author = m.author_name || (m.author_type === 'staff' ? 'Echipa AmBilet' : 'Tu');
+            return `
+                <div class="flex items-center gap-3 py-1 my-1">
+                    <div class="flex-1 h-px bg-border"></div>
+                    <div class="flex items-center gap-2 px-3 py-1 text-xs text-muted bg-slate-100 rounded-full">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span><strong class="text-secondary">${escapeHtml(m.body)}</strong> <span class="opacity-70">de ${escapeHtml(author)} · ${formatDateTime(m.created_at)}</span></span>
+                    </div>
+                    <div class="flex-1 h-px bg-border"></div>
+                </div>
+            `;
+        }
+
         const fromOpener = m.author_type === 'organizer' || m.author_type === 'customer';
         const align = fromOpener ? 'justify-end' : 'justify-start';
         const bubble = fromOpener

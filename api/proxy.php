@@ -1949,6 +1949,40 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Extended Artist (microservice opt-in: Fan CRM, Booking, EPK, Tour)
+    case 'artist.extended-artist.status':
+        $method = 'GET';
+        $endpoint = '/artist/extended-artist/status';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.pricing':
+        $method = 'GET';
+        $endpoint = '/artist/extended-artist/pricing';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.start-trial':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/start-trial';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.subscribe':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/subscribe';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.extended-artist.cancel':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/extended-artist/cancel';
+        $requiresAuth = true;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
