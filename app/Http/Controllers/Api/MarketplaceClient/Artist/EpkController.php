@@ -9,8 +9,6 @@ use App\Models\ArtistEpkVariant;
 use App\Models\MarketplaceArtistAccount;
 use App\Models\MarketplaceClient;
 use App\Services\ExtendedArtist\EpkService;
-use Endroid\QrCode\Writer\PngWriter;
-use Endroid\QrCode\Builder\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -248,25 +246,22 @@ class EpkController extends BaseController
         ], 'Rider PDF încărcat.');
     }
 
-    public function qr(Request $request, int $id): Response
+    /**
+     * Redirect către api.qrserver.com pentru generarea QR-ului. Astfel evităm
+     * dependența de endroid/qr-code (care necesită extensie GD pe server).
+     * Frontend-ul folosește deja URL-ul direct, dar păstrăm endpoint-ul ca
+     * safety net pentru link-uri vechi cached în browser.
+     */
+    public function qr(Request $request, int $id)
     {
         $artist = $this->requireArtist($request);
         $variant = $this->findVariantOrFail($id, $artist);
         $marketplace = $this->requireClient($request);
 
         $url = $variant->publicUrl($marketplace);
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=' . urlencode($url);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($url)
-            ->size(300)
-            ->margin(10)
-            ->build();
-
-        return response($result->getString(), 200, [
-            'Content-Type' => 'image/png',
-            'Cache-Control' => 'public, max-age=86400',
-        ]);
+        return redirect()->away($qrUrl);
     }
 
     public function pdf(Request $request, int $id)
@@ -371,7 +366,8 @@ class EpkController extends BaseController
             'slug' => $variant->slug,
             'accent_color' => $variant->accent_color,
             'template' => $variant->template,
-            'sections' => $variant->sections ?? [],
+            // enriched cu fallback-uri din Artist profile (social/contact/hero stage_name)
+            'sections' => $variant->enrichedSections(),
             'views_count' => $variant->views_count,
             'conversion_pct' => (float) $variant->conversion_pct,
             'created_at' => $variant->created_at?->toIso8601String(),

@@ -133,7 +133,13 @@ class ArtistEpkVariant extends Model
                 'spotify_url' => $artist?->spotify_url ?? '',
             ]],
             ['id' => self::SECTION_YOUTUBE, 'enabled' => false, 'data' => [
-                'videos' => $artist?->youtube_videos ?? [],
+                // Normalize la [{url: '...'}] indiferent de format-ul stocat pe Artist
+                // (uneori e [{url}], uneori string, uneori [{url, title}]).
+                'videos' => collect($artist?->youtube_videos ?? [])
+                    ->map(fn ($v) => ['url' => is_string($v) ? $v : ($v['url'] ?? '')])
+                    ->filter(fn ($v) => !empty($v['url']))
+                    ->values()
+                    ->toArray(),
             ]],
             ['id' => self::SECTION_ACHIEVEMENTS, 'enabled' => false, 'data' => [
                 'items' => $artist?->achievements ?? [],
@@ -217,5 +223,65 @@ class ArtistEpkVariant extends Model
     public function isActive(): bool
     {
         return $this->artistEpk?->active_variant_id === $this->id;
+    }
+
+    /**
+     * Returnează sections cu fallback-uri din Artist profile pentru câmpurile
+     * care sunt goale. Utilizat la afișare (editor + public render) ca să nu
+     * vadă utilizatorul "blank" când are de fapt URL-urile setate pe profil.
+     *
+     * NU mută datele în DB — doar le îmbogățește la output.
+     */
+    public function enrichedSections(?Artist $artist = null): array
+    {
+        $artist = $artist ?? $this->artistEpk?->artist;
+        if (!$artist) {
+            return $this->sections ?? [];
+        }
+
+        $socialMap = [
+            'website' => $artist->website,
+            'facebook' => $artist->facebook_url,
+            'instagram' => $artist->instagram_url,
+            'tiktok' => $artist->tiktok_url,
+            'youtube' => $artist->youtube_url,
+        ];
+
+        $contactMap = [
+            'email' => $artist->email,
+            'phone' => $artist->phone,
+        ];
+
+        $enriched = [];
+        foreach (($this->sections ?? []) as $section) {
+            $section['data'] = $section['data'] ?? [];
+
+            if (($section['id'] ?? null) === self::SECTION_SOCIAL) {
+                foreach ($socialMap as $key => $artistVal) {
+                    if (empty($section['data'][$key]) && !empty($artistVal)) {
+                        $section['data'][$key] = $artistVal;
+                    }
+                }
+            }
+
+            if (($section['id'] ?? null) === self::SECTION_CONTACT) {
+                foreach ($contactMap as $key => $artistVal) {
+                    if (empty($section['data'][$key]) && !empty($artistVal)) {
+                        $section['data'][$key] = $artistVal;
+                    }
+                }
+            }
+
+            // Hero stage_name fallback la artist.name
+            if (($section['id'] ?? null) === self::SECTION_HERO) {
+                if (empty($section['data']['stage_name'])) {
+                    $section['data']['stage_name'] = $artist->name;
+                }
+            }
+
+            $enriched[] = $section;
+        }
+
+        return $enriched;
     }
 }

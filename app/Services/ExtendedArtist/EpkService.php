@@ -175,6 +175,7 @@ class EpkService
                 'id' => $artist->id,
                 'name' => $artist->name,
                 'slug' => $artist->slug,
+                'city' => $artist->city,
                 'main_image_url' => $artist->main_image_full_url,
                 'logo_url' => $artist->logo_full_url,
                 'portrait_url' => $artist->portrait_full_url,
@@ -186,7 +187,8 @@ class EpkService
                 'target' => $variant->target,
                 'accent_color' => $variant->accent_color,
                 'template' => $variant->template,
-                'sections' => $variant->sections ?? [],
+                // enriched cu fallback-uri din Artist (social/contact/hero stage_name)
+                'sections' => $variant->enrichedSections($artist),
             ],
             'live_stats' => $this->computeLiveStats($artist),
             'past_events' => $this->getPastEventsFor($artist, $pastLimit, $hiddenIds),

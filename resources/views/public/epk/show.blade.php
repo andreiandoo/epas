@@ -255,8 +255,9 @@
         <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Video</p>
         <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Vezi-ne live</h2>
         <div class="grid {{ count($youtubeVideos) > 1 ? 'lg:grid-cols-2' : '' }} gap-6">
-            @foreach (array_slice($youtubeVideos, 0, 3) as $videoUrl)
+            @foreach (array_slice($youtubeVideos, 0, 3) as $video)
                 @php
+                    $videoUrl = is_string($video) ? $video : ($video['url'] ?? '');
                     preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/', $videoUrl, $m);
                     $videoId = $m[1] ?? null;
                 @endphp

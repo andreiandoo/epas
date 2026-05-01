@@ -190,15 +190,21 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <div class="space-y-3">
                                         <div>
                                             <label class="block text-xs text-muted mb-1">Nume variantă</label>
-                                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" class="epk-input text-sm">
+                                            <input type="text" x-model="active.name" @input="markDirty()" maxlength="100" placeholder="Default" class="epk-input text-sm">
+                                            <p class="text-[11px] text-muted mt-1">Numele intern al variantei (vizibil doar de tine în Variante).</p>
                                         </div>
                                         <div>
                                             <label class="block text-xs text-muted mb-1">Audiență țintă</label>
-                                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal" class="epk-input text-sm">
+                                            <input type="text" x-model="active.target" @input="markDirty()" maxlength="100" placeholder="Universal / Festival-uri / Cluburi & bars" class="epk-input text-sm">
+                                            <p class="text-[11px] text-muted mt-1">Pentru cine e gândită această variantă. Apare în Hero pe pagina publică.</p>
                                         </div>
-                                        <div>
-                                            <label class="block text-xs text-muted mb-1">Slug URL</label>
+                                        <div x-show="active.id !== state.active_variant_id">
+                                            <label class="block text-xs text-muted mb-1">Slug URL (suffix)</label>
                                             <input type="text" x-model="active.slug" @input="markDirty()" maxlength="100" class="epk-input text-sm font-mono">
+                                            <p class="text-[11px] text-muted mt-1">Apare în URL pentru variantele non-active: <span class="font-mono" x-text="`/epk/${state.artist.slug}/${active.slug}`"></span></p>
+                                        </div>
+                                        <div x-show="active.id === state.active_variant_id" class="text-[11px] text-muted bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                            ℹ️ Aceasta e <strong>varianta activă</strong>. URL-ul public este <span class="font-mono" x-text="`/epk/${state.artist.slug}`"></span> (slug-ul nu apare în URL pentru varianta activă).
                                         </div>
                                     </div>
                                 </div>
@@ -318,13 +324,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <div class="space-y-2">
                                                     <template x-for="(v, i) in data.youtube_videos" :key="i">
                                                         <div class="flex gap-2">
-                                                            <input type="url" x-model="data.youtube_videos[i]" @input="markDirty()" class="epk-input flex-1" placeholder="https://youtube.com/watch?v=...">
+                                                            <input type="url" x-model="data.youtube_videos[i].url" @input="markDirty()" class="epk-input flex-1" placeholder="https://youtube.com/watch?v=...">
                                                             <button @click="data.youtube_videos.splice(i, 1); markDirty()" class="p-2.5 text-muted hover:text-error rounded-lg hover:bg-error/5">
                                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <button x-show="data.youtube_videos.length < 3" @click="data.youtube_videos.push(''); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
+                                                    <button x-show="data.youtube_videos.length < 3" @click="data.youtube_videos.push({ url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -823,7 +829,10 @@ function smartEpk() {
                 bio_long: get('bio', 'bio_long', ''),
                 gallery: get('gallery', 'images', []),
                 spotify_url: get('spotify', 'spotify_url', ''),
-                youtube_videos: get('youtube', 'videos', []),
+                // Normalize la [{url: '...'}] indiferent de forma stocată anterior
+                youtube_videos: (get('youtube', 'videos', []) || []).map(v => ({
+                    url: typeof v === 'string' ? v : (v?.url || '')
+                })).filter(v => v.url || v.url === ''),
                 achievements: get('achievements', 'items', []),
                 press_quotes: get('press_quotes', 'quotes', []),
                 past_events_hidden: get('past_events', 'hidden_event_ids', []),
@@ -1056,8 +1065,12 @@ function smartEpk() {
         },
 
         qrUrl() {
-            if (!this.active.id) return '#';
-            return `/api/proxy.php?action=artist.epk.variant.qr&id=${this.active.id}&token=${this.token()}`;
+            // Folosim api.qrserver.com (gratuit, fără auth) pentru a evita
+            // dependența de endroid/qr-code pe server. URL-ul scanat va fi
+            // pagina publică EPK din varianta activă.
+            const url = this.publicUrl();
+            if (url === '#') return '#';
+            return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=10&data=${encodeURIComponent(url)}`;
         },
 
         pdfUrl() {
