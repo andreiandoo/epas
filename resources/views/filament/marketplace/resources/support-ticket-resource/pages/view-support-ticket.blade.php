@@ -1,7 +1,7 @@
 @php
     /** @var \App\Models\SupportTicket $ticket */
     $ticket = $this->record;
-    $messages = $this->getMessages();
+    $messages = $this->getThreadMessages();
     $opener = $this->getOpener();
     $events = $this->getActiveEvents();
     $context = $this->getRequestContext();

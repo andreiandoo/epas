@@ -47,9 +47,16 @@ class ViewSupportTicket extends Page
     /**
      * Load thread messages (including internal notes — staff sees everything).
      *
+     * NOTE: deliberately NOT named getMessages() — Livewire's
+     * HandlesValidation trait inspects $this->getMessages() (or the
+     * $messages property) to pull custom validation messages, and a
+     * collision here causes Validator::make to receive an Eloquent
+     * Collection where it expects an array, blowing up on every action
+     * submit (Reply, Assign, etc.).
+     *
      * @return \Illuminate\Database\Eloquent\Collection<int, SupportTicketMessage>
      */
-    public function getMessages()
+    public function getThreadMessages()
     {
         return $this->record->messages()
             ->with('author')
@@ -180,10 +187,16 @@ class ViewSupportTicket extends Page
                         ->label('Notă internă (vizibil doar staff)')
                         ->default(false)
                         ->helperText('Organizatorul nu va vedea acest mesaj.'),
-                    // Attachments temporarily disabled — Filament v4
-                    // FileUpload + multiple was tripping a Validator::make
-                    // type error on submit. Re-add after confirming the
-                    // textarea-only flow works end to end.
+                    Forms\Components\FileUpload::make('attachments')
+                        ->label('Atașamente (jpg/png/pdf, max 3 MB)')
+                        ->multiple()
+                        ->maxFiles((int) config('support.attachments.max_per_message', 5))
+                        ->maxSize((int) config('support.attachments.max_size_kb', 3072))
+                        ->acceptedFileTypes(['image/jpeg', 'image/png', 'application/pdf'])
+                        ->directory('support-tickets/' . $this->record->id)
+                        ->disk(config('support.attachments.storage_disk', 'public'))
+                        ->visibility('public')
+                        ->preserveFilenames(),
                 ])
                 ->action(fn (array $data) => $this->postReply($data)),
 
