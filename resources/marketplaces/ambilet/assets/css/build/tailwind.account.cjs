@@ -37,6 +37,10 @@ module.exports = {
     ...sharedJS,
     '../../../user/*.php',
     '../../js/pages/user-*.js',
+    // Artist self-service area (cont pages + their JS).
+    '../../../artist/cont/*.php',
+    '../../../artist/cont/_partials/*.php',
+    '../../js/pages/artist-cont-*.js',
   ],
   theme: shared.theme,
   safelist: shared.safelist,

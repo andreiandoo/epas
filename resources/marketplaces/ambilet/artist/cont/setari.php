@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Artist Account — Settings
  * Same dark-sidebar layout as the dashboard/detalii/evenimente pages.
@@ -41,28 +41,28 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="first_name" class="mb-2 block text-sm font-medium text-secondary">Prenume</label>
-                            <input type="text" id="first_name" name="first_name" required maxlength="100" class="form-input">
+                            <input type="text" id="first_name" name="first_name" required maxlength="100" class="input">
                         </div>
                         <div>
                             <label for="last_name" class="mb-2 block text-sm font-medium text-secondary">Nume</label>
-                            <input type="text" id="last_name" name="last_name" required maxlength="100" class="form-input">
+                            <input type="text" id="last_name" name="last_name" required maxlength="100" class="input">
                         </div>
                     </div>
 
                     <div>
                         <label for="email" class="mb-2 block text-sm font-medium text-secondary">Email</label>
-                        <input type="email" id="email" name="email" disabled class="form-input cursor-not-allowed bg-surface text-muted">
+                        <input type="email" id="email" name="email" disabled class="input cursor-not-allowed bg-surface text-muted">
                         <p class="mt-1 text-xs text-muted">Pentru a schimba adresa de email, contactează echipa <?= SITE_NAME ?> la <a href="mailto:contact@ambilet.ro" class="underline">contact@ambilet.ro</a>.</p>
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="phone" class="mb-2 block text-sm font-medium text-secondary">Telefon (opțional)</label>
-                            <input type="tel" id="phone" name="phone" maxlength="50" class="form-input">
+                            <input type="tel" id="phone" name="phone" maxlength="50" class="input">
                         </div>
                         <div>
                             <label for="locale" class="mb-2 block text-sm font-medium text-secondary">Limbă</label>
-                            <select id="locale" name="locale" class="form-input">
+                            <select id="locale" name="locale" class="input">
                                 <option value="ro">Română</option>
                                 <option value="en">English</option>
                                 <option value="de">Deutsch</option>
@@ -98,16 +98,16 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                 <form id="password-form" class="space-y-4">
                     <div>
                         <label for="current_password" class="mb-2 block text-sm font-medium text-secondary">Parola actuală</label>
-                        <input type="password" id="current_password" name="current_password" required class="form-input" autocomplete="current-password">
+                        <input type="password" id="current_password" name="current_password" required class="input" autocomplete="current-password">
                     </div>
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label for="new_password" class="mb-2 block text-sm font-medium text-secondary">Parola nouă</label>
-                            <input type="password" id="new_password" name="password" required minlength="8" class="form-input" autocomplete="new-password">
+                            <input type="password" id="new_password" name="password" required minlength="8" class="input" autocomplete="new-password">
                         </div>
                         <div>
                             <label for="new_password_confirmation" class="mb-2 block text-sm font-medium text-secondary">Confirmă parola nouă</label>
-                            <input type="password" id="new_password_confirmation" name="password_confirmation" required minlength="8" class="form-input" autocomplete="new-password">
+                            <input type="password" id="new_password_confirmation" name="password_confirmation" required minlength="8" class="input" autocomplete="new-password">
                         </div>
                     </div>
                     <div class="border-t border-border pt-4">
@@ -141,7 +141,7 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
         <div class="w-full max-w-md rounded-2xl bg-white p-6">
             <h3 class="mb-2 text-lg font-bold text-secondary">Confirmă ștergerea</h3>
             <p class="mb-4 text-sm text-muted">Această acțiune este permanentă. Introdu parola pentru a confirma.</p>
-            <input type="password" id="delete-password" placeholder="Parola" class="form-input mb-4" autocomplete="off">
+            <input type="password" id="delete-password" placeholder="Parola" class="input mb-4" autocomplete="off">
             <div class="flex justify-end gap-2">
                 <button type="button" id="delete-cancel" class="btn btn-secondary">Renunță</button>
                 <button type="button" id="delete-confirm" class="btn rounded-xl bg-error px-4 py-2 text-sm font-semibold text-white hover:bg-red-700">Șterge definitiv</button>

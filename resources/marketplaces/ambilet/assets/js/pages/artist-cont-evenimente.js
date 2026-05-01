@@ -155,6 +155,8 @@ function renderEvents() {
             (e.title || '').toLowerCase().includes(q)
             || (e.venue_name || '').toLowerCase().includes(q)
             || (e.city || '').toLowerCase().includes(q)
+            || (e.organizer_name || '').toLowerCase().includes(q)
+            || (e.short_description || '').toLowerCase().includes(q)
         );
     }
 
@@ -177,16 +179,62 @@ function renderEvents() {
 }
 
 function eventCardHtml(event) {
-    const date = new Date(event.event_date || event.starts_at);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase();
-    const fullDate = formatFullDate(event.event_date || event.starts_at);
-    const eventUrl = event.slug ? '/event/' + encodeURIComponent(event.slug) : '#';
+    // Prefer starts_at (full ISO datetime with TZ) over event_date (date-only,
+    // which JS would parse as midnight UTC and render as 03:00 in Bucharest).
+    const dateIso = event.starts_at || event.event_date;
+    const date = dateIso ? new Date(dateIso) : null;
+    const day = date ? date.getDate() : '—';
+    const month = date ? date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '').toLowerCase() : '';
+    const fullDate = formatEventDate(event);
+
+    // Ambilet event URL pattern: /bilete/{slug}, NOT /event/{slug}.
+    const eventUrl = event.slug ? '/bilete/' + encodeURIComponent(event.slug) : '#';
     const posterUrl = event.poster_url ? resolveStorageUrl(event.poster_url) : '';
 
     const statusBadge = event.is_upcoming
         ? ''
         : '<span class="inline-flex items-center rounded-full bg-secondary/90 px-2 py-1 text-xs font-semibold text-white">Încheiat</span>';
+
+    // Ticket-progress block — only render if we have meaningful capacity data.
+    const hasTickets = event.tickets_total && event.tickets_total > 0;
+    const sold = event.tickets_sold || 0;
+    const total = event.tickets_total || 0;
+    const pct = hasTickets ? Math.min(100, Math.round((sold / total) * 100)) : 0;
+    const pctColor = pct >= 90 ? 'bg-success' : (pct >= 50 ? 'bg-accent' : 'bg-primary');
+    const pctLabelColor = pct >= 90 ? 'text-success' : (pct >= 50 ? 'text-accent' : 'text-muted');
+
+    const ticketBlock = hasTickets
+        ? '<div class="flex-1 min-w-0 sm:max-w-md">'
+            + '<div class="mb-1.5 flex items-baseline justify-between gap-2">'
+            + '<span class="text-xs font-semibold uppercase tracking-wider text-muted">Bilete vândute</span>'
+            + '<span class="text-sm font-bold text-secondary">'
+            + sold.toLocaleString('ro-RO')
+            + '<span class="font-normal text-muted"> / ' + total.toLocaleString('ro-RO') + '</span>'
+            + '<span class="ml-2 text-xs font-semibold ' + pctLabelColor + '">(' + pct + '%)</span>'
+            + '</span>'
+            + '</div>'
+            + '<div class="h-2 overflow-hidden rounded-full bg-surface">'
+            + '<div class="h-full rounded-full transition-all duration-500 ' + pctColor + '" style="width: ' + pct + '%"></div>'
+            + '</div>'
+            + '</div>'
+        : '<div class="flex-1"></div>';
+
+    // Footer location info: venue_name • city + organizer
+    const venueRow = (event.venue_name || event.city)
+        ? '<span class="flex items-center gap-1.5">'
+            + '<svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'
+            + (event.venue_name ? '<span class="font-medium text-secondary">' + escapeHtml(event.venue_name) + '</span>' : '')
+            + (event.venue_name && event.city ? '<span class="text-muted">•</span>' : '')
+            + (event.city ? '<span>' + escapeHtml(event.city) + '</span>' : '')
+        + '</span>'
+        : '';
+
+    const organizerRow = event.organizer_name
+        ? '<span class="flex items-center gap-1.5">'
+            + '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
+            + 'organizat de <span class="font-medium text-secondary">' + escapeHtml(event.organizer_name) + '</span>'
+        + '</span>'
+        : '';
 
     return ''
         + '<article class="overflow-hidden rounded-2xl border border-border bg-white transition-colors hover:border-primary/30">'
@@ -216,19 +264,17 @@ function eventCardHtml(event) {
         + '<h3 class="mb-2 text-lg font-bold leading-tight text-secondary lg:text-xl">'
         + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="hover:text-primary transition-colors">' + escapeHtml(event.title || 'Eveniment') + '</a>'
         + '</h3>'
-        + (event.venue_name || event.city
-            ? '<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">'
-                + '<span class="flex items-center gap-1.5">'
-                + '<svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'
-                + (event.venue_name ? '<span class="font-medium text-secondary">' + escapeHtml(event.venue_name) + '</span>' : '')
-                + (event.venue_name && event.city ? '<span class="text-muted">•</span>' : '')
-                + (event.city ? '<span>' + escapeHtml(event.city) + '</span>' : '')
-                + '</span>'
-            + '</div>'
+        + (event.short_description
+            ? '<p class="mb-3 line-clamp-2 text-sm text-muted">' + escapeHtml(event.short_description) + '</p>'
+            : '')
+        + (venueRow || organizerRow
+            ? '<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted">' + venueRow + organizerRow + '</div>'
             : '')
         + '</div>'
-        + '<div class="mt-4 flex items-center justify-end border-t border-border pt-4">'
-        + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm">'
+        // Footer: ticket progress (when known) + view-event CTA
+        + '<div class="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">'
+        + ticketBlock
+        + '<a href="' + escapeAttr(eventUrl) + '" target="_blank" rel="noopener" class="btn btn-primary btn-sm whitespace-nowrap self-start sm:self-auto">'
         + '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>'
         + 'Vezi pagina eveniment'
         + '</a>'
@@ -236,6 +282,31 @@ function eventCardHtml(event) {
         + '</div>'
         + '</div>'
         + '</article>';
+}
+
+/**
+ * Format an event's date for the card header. Uses starts_at when we
+ * have proper time info; falls back to date-only when not.
+ */
+function formatEventDate(event) {
+    if (!event.event_date && !event.starts_at) return '—';
+    try {
+        if (event.starts_at && event.has_time) {
+            const d = new Date(event.starts_at);
+            const day = d.toLocaleDateString('ro-RO', { weekday: 'long' });
+            const dateStr = d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+            const time = d.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+            return day + ', ' + dateStr + ' • ' + time;
+        }
+        // Date-only fallback — `event_date` is "YYYY-MM-DD"; build a
+        // local-tz Date so toLocaleDateString doesn't shift the day.
+        const [y, m, d] = (event.event_date || '').split('-').map(Number);
+        if (!y || !m || !d) return event.event_date || event.starts_at || '—';
+        const local = new Date(y, m - 1, d);
+        const day = local.toLocaleDateString('ro-RO', { weekday: 'long' });
+        const dateStr = local.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        return day + ', ' + dateStr;
+    } catch (e) { return event.event_date || event.starts_at || '—'; }
 }
 
 function renderError(msg) {

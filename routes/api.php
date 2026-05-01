@@ -2527,6 +2527,8 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             ->name('api.marketplace-client.artist.profile.image');
         Route::get('/profile/taxonomies', [ArtistProfileController::class, 'taxonomies'])
             ->name('api.marketplace-client.artist.profile.taxonomies');
+        Route::post('/profile/refresh-social-stats', [ArtistProfileController::class, 'refreshSocialStats'])
+            ->name('api.marketplace-client.artist.profile.refresh-social-stats');
 
         // Account self-service (settings page)
         Route::get('/account', [ArtistAccountController::class, 'show'])

@@ -1317,8 +1317,11 @@ class MarketplaceEventsController extends BaseController
         $event->increment('views_count');
 
         // Create CoreCustomerEvent for analytics tracking
+        // session_id is uuid; clients can send arbitrary tokens (sha256 hex,
+        // legacy strings) which Postgres rejects with 22P02. Only trust UUIDs.
         $visitorId = $request->cookie('visitor_id') ?? $request->header('X-Visitor-ID') ?? Str::uuid()->toString();
-        $sessionId = $request->cookie('session_id') ?? $request->header('X-Session-ID') ?? Str::uuid()->toString();
+        $rawSessionId = $request->cookie('session_id') ?? $request->header('X-Session-ID');
+        $sessionId = ($rawSessionId && Str::isUuid($rawSessionId)) ? $rawSessionId : Str::uuid()->toString();
 
         // Get location data from IP (uses multi-provider fallback: ipgeolocation.io -> ip-api.com -> ipwhois.io)
         $geoIpService = app(GeoIpService::class);

@@ -67,10 +67,16 @@ class DashboardController extends BaseController
                 ->count();
 
             $recentEvents = $artist->events()
-                ->with('venue:id,name,city')
+                ->with(['venue:id,name,city', 'marketplaceOrganizer:id,name'])
                 ->orderByDesc('event_date')
                 ->limit(5)
-                ->get(['events.id', 'events.title', 'events.slug', 'events.event_date', 'events.starts_at', 'events.poster_url', 'events.venue_id'])
+                ->get([
+                    'events.id', 'events.title', 'events.slug', 'events.short_description',
+                    'events.event_date', 'events.start_time', 'events.starts_at',
+                    'events.poster_url', 'events.venue_id', 'events.venue_name', 'events.suggested_venue_name',
+                    'events.tenant_id', 'events.marketplace_organizer_id',
+                    'events.capacity',
+                ])
                 ->map(fn ($event) => $this->formatEventCard($event))
                 ->toArray();
         }
@@ -134,7 +140,7 @@ class DashboardController extends BaseController
         $today = now()->toDateString();
 
         $artist = Artist::find($account->artist_id);
-        $query = $artist->events()->with('venue:id,name,city');
+        $query = $artist->events()->with(['venue:id,name,city', 'marketplaceOrganizer:id,name']);
 
         if ($filter === 'upcoming') {
             $query->where('event_date', '>=', $today)->orderBy('event_date');
@@ -227,24 +233,87 @@ class DashboardController extends BaseController
 
     /**
      * Compact event card for dashboard / events list.
-     * The events table column is `poster_url` (not poster_image) — the
-     * earlier name caused 500s on the dashboard endpoint. Venue name+city
-     * come from the eager-loaded relation so the events page can do
-     * client-side city filtering.
+     *
+     * Notes (after the first round of testing):
+     *  - `Venue.name` is translatable (JSON), so we flatten via
+     *    translatableToString. Events without a venue row fall back to
+     *    `events.venue_name` (a freeform string set when the event was
+     *    created from a non-cataloged venue).
+     *  - `events.start_time` is the canonical clock (HH:MM[:SS]).
+     *    `events.starts_at` is what the JS actually consumes — we build
+     *    it as `event_date + start_time` so the client gets a proper
+     *    local-tz datetime instead of "midnight UTC" rendered as 03:00.
+     *  - Poster column is `poster_url` (not poster_image — that bug
+     *    500'd the dashboard initially).
      */
     protected function formatEventCard($event): array
     {
+        $organizer = $event->marketplaceOrganizer ?? null;
+
+        // Resolve a clean venue display name regardless of whether the
+        // event has a real Venue row, a freeform venue_name, or nothing.
+        $venueName = null;
+        if ($event->venue) {
+            $venueName = $this->translatableToString($event->venue->name);
+        }
+        if (!$venueName) {
+            $venueName = $event->venue_name ?: $event->suggested_venue_name ?: null;
+        }
+        $city = $event->venue?->city ?: null;
+
+        // Build a proper datetime so the JS doesn't fall back to
+        // midnight-UTC parsing. If start_time is missing, send just the
+        // date and let the JS show date-only.
+        $startsAt = $event->starts_at;
+        if (!$startsAt && $event->event_date) {
+            $time = $event->start_time ?: '00:00:00';
+            try {
+                $startsAt = \Carbon\Carbon::parse($event->event_date->format('Y-m-d') . ' ' . $time, config('app.timezone'));
+            } catch (\Throwable $e) {
+                $startsAt = null;
+            }
+        }
+
         return [
             'id' => $event->id,
-            'title' => is_array($event->title) ? ($event->title['ro'] ?? $event->title['en'] ?? '') : $event->title,
+            'title' => $this->translatableToString($event->title),
+            'short_description' => $this->translatableToString($event->short_description),
             'slug' => $event->slug,
             'event_date' => $event->event_date?->format('Y-m-d'),
-            'starts_at' => $event->starts_at?->toIso8601String(),
+            'start_time' => $event->start_time,
+            'starts_at' => $startsAt?->toIso8601String(),
+            'has_time' => $event->start_time !== null,
             'poster_url' => $event->poster_url,
             'venue_id' => $event->venue_id,
-            'venue_name' => $event->venue?->name,
-            'city' => $event->venue?->city,
+            'venue_name' => $venueName,
+            'city' => $city,
+            'organizer_name' => $organizer?->name,
+            'tickets_sold' => method_exists($event, 'getTotalTicketsSoldAttribute')
+                ? (int) $event->total_tickets_sold
+                : null,
+            'tickets_total' => method_exists($event, 'getTotalCapacityAttribute')
+                ? (int) $event->total_capacity
+                : (int) ($event->capacity ?? 0),
             'is_upcoming' => $event->event_date && $event->event_date->isFuture(),
         ];
+    }
+
+    /**
+     * Same helper as ProfileController::translatableToString — flatten an
+     * `array`-cast translatable column to a plain string for API responses.
+     * Falls back through current locale → ro → en → first non-empty entry.
+     */
+    protected function translatableToString($value, ?string $locale = null): string
+    {
+        $locale = $locale ?? app()->getLocale();
+
+        if (is_array($value)) {
+            return $value[$locale]
+                ?? $value['ro']
+                ?? $value['en']
+                ?? (array_values(array_filter($value))[0] ?? '');
+        }
+
+        return (string) ($value ?? '');
     }
 }

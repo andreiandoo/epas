@@ -354,6 +354,7 @@ const AmbiletAPI = {
         if (endpoint === '/artist/profile') return 'artist.profile';
         if (endpoint === '/artist/profile/image') return 'artist.profile.image';
         if (endpoint === '/artist/profile/taxonomies') return 'artist.profile.taxonomies';
+        if (endpoint === '/artist/profile/refresh-social-stats') return 'artist.profile.refresh-social-stats';
         if (endpoint === '/artist/account') return 'artist.account';
         if (endpoint === '/artist/account/password') return 'artist.account.password';
 
@@ -2059,6 +2060,18 @@ const AmbiletAPI = {
         /** Cached server-side; returns { artist_types: [...], artist_genres: [...] } */
         async getTaxonomies() {
             return AmbiletAPI.get('/artist/profile/taxonomies');
+        },
+
+        /**
+         * Trigger a one-shot refresh of the artist's social stats
+         * (Spotify followers/popularity, YouTube subs, Facebook/Insta/
+         * TikTok followers etc). Server dispatches the FetchArtistSocialStats
+         * job; the response returns BEFORE the upstream APIs are hit, so
+         * the UI should poll /artist/profile or just tell the user to
+         * come back in a few minutes.
+         */
+        async refreshSocialStats() {
+            return AmbiletAPI.post('/artist/profile/refresh-social-stats');
         },
 
         /**

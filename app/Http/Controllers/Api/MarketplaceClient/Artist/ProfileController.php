@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Artist;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Jobs\FetchArtistSocialStats;
 use App\Models\Artist;
 use App\Models\ArtistGenre;
 use App\Models\ArtistType;
@@ -204,6 +205,66 @@ class ProfileController extends BaseController
     }
 
     /**
+     * POST /artist/profile/refresh-social-stats — dispatch the
+     * FetchArtistSocialStats job for the linked artist. Hits Spotify,
+     * YouTube, Facebook (etc.) APIs based on whichever IDs are filled in
+     * on the artist record. Throttled by the existing
+     * social_stats_updated_at column — if the artist refreshes 5x in a
+     * row, only the first run does real work; subsequent ones reuse the
+     * fresh-cache window. The job is queued, so the response returns
+     * before stats are actually populated.
+     */
+    public function refreshSocialStats(Request $request): JsonResponse
+    {
+        $account = $request->user();
+
+        if (!$account instanceof MarketplaceArtistAccount) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        if (!$account->canEditArtistProfile()) {
+            return $this->error('Profilul tău nu este încă asociat cu un cont activ.', 403);
+        }
+
+        $artist = Artist::find($account->artist_id);
+        if (!$artist) {
+            return $this->error('Profilul de artist asociat nu a fost găsit.', 404);
+        }
+
+        // Soft rate limit: refuse if we already refreshed in the last 5
+        // minutes — the upstream APIs (Spotify especially) rate-limit
+        // hard, and an artist mashing the button helps no-one.
+        if ($artist->social_stats_updated_at && $artist->social_stats_updated_at->gt(now()->subMinutes(5))) {
+            return $this->error('Statisticile au fost deja actualizate recent. Încearcă din nou peste câteva minute.', 429, [
+                'code' => 'rate_limited',
+                'last_refresh' => $artist->social_stats_updated_at->toIso8601String(),
+            ]);
+        }
+
+        // What's actually trackable depends on which IDs the artist filled
+        // in. If they have none of the tracked fields, the job would
+        // still succeed but be a no-op.
+        $hasAnyTrackableId = !empty($artist->spotify_id)
+            || !empty($artist->youtube_id)
+            || !empty($artist->facebook_url)
+            || !empty($artist->instagram_url)
+            || !empty($artist->tiktok_url);
+
+        if (!$hasAnyTrackableId) {
+            return $this->error('Adaugă întâi cel puțin un Spotify Artist ID, YouTube Channel ID sau un link de Facebook / Instagram / TikTok.', 422, [
+                'code' => 'no_trackable_ids',
+            ]);
+        }
+
+        FetchArtistSocialStats::dispatch($artist->id);
+
+        return $this->success([
+            'queued' => true,
+            'message' => 'Refresh-ul statisticilor a fost programat.',
+        ], 'În curs de actualizare. Revino în câteva minute pentru a vedea rezultatul.');
+    }
+
+    /**
      * GET /artist/profile/taxonomies — flat list of artist types + genres
      * for the editor's multi-select inputs. Cached for 1 hour because
      * these change very rarely.
@@ -349,6 +410,19 @@ class ProfileController extends BaseController
             'max_fee_concert' => $artist->max_fee_concert,
             'min_fee_festival' => $artist->min_fee_festival,
             'max_fee_festival' => $artist->max_fee_festival,
+            // Social stats — read-only on the editor; the artist refreshes
+            // them via /artist/profile/refresh-social-stats which queues
+            // FetchArtistSocialStats. Exposed here so the UI can show
+            // current totals + the "last refreshed" timestamp.
+            'social_stats_updated_at' => $artist->social_stats_updated_at?->toIso8601String(),
+            'spotify_followers' => (int) $artist->spotify_followers,
+            'spotify_monthly_listeners' => (int) $artist->spotify_monthly_listeners,
+            'spotify_popularity' => (int) $artist->spotify_popularity,
+            'youtube_followers' => (int) $artist->youtube_followers,
+            'youtube_total_views' => (int) $artist->youtube_total_views,
+            'facebook_followers' => (int) $artist->facebook_followers,
+            'instagram_followers' => (int) $artist->instagram_followers,
+            'tiktok_followers' => (int) $artist->tiktok_followers,
             // Translatable names → flatten to a string for the JS picker.
             // Same fallback chain as taxonomies(): current account locale,
             // then ro, then en, then any non-empty value.

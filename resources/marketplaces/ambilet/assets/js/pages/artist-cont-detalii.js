@@ -67,6 +67,8 @@ window.addEventListener('ambilet:artist-cont:ready', () => {
         wireRepeaters();
         wireImageUploaders();
         wireRichEditors();
+        wireMultiSearch();
+        wireRefreshStats();
         wireDirtyTracking();
         wireSave();
     });
@@ -205,6 +207,89 @@ function wireRepeaterRow(row) {
             markDirty();
         });
     });
+
+    // Discography row — wire the cover uploader if present.
+    const cover = row.querySelector('[data-disco-cover]');
+    if (cover) wireDiscoCover(cover);
+}
+
+/**
+ * Wire a single discography row's cover uploader. The file input fires
+ * /artist/profile/image (type=discography), and on success we populate
+ * the hidden `image` field with the returned storage path.
+ */
+function wireDiscoCover(coverEl) {
+    const fileInput = coverEl.querySelector('[data-disco-input]');
+    const hiddenPath = coverEl.querySelector('[data-row-field="image"]');
+    const preview = coverEl.querySelector('[data-disco-preview]');
+    const placeholder = coverEl.querySelector('[data-disco-placeholder]');
+    const clearBtn = coverEl.querySelector('[data-disco-clear]');
+
+    if (!fileInput || !hiddenPath) return;
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Local preview
+        const localUrl = URL.createObjectURL(file);
+        if (preview) {
+            preview.src = localUrl;
+            preview.classList.remove('hidden');
+            preview.style.opacity = '0.5';
+        }
+        placeholder?.classList.add('hidden');
+        clearBtn?.classList.remove('hidden');
+
+        try {
+            const res = await AmbiletAPI.artist.uploadProfileImage(file, 'discography');
+            if (res.success && res.data) {
+                hiddenPath.value = res.data.path;
+                if (preview) {
+                    preview.src = res.data.url;
+                    preview.style.opacity = '1';
+                }
+                markDirty();
+            } else {
+                AmbiletNotifications.error(res.message || 'Upload eșuat.');
+                resetDiscoCover(coverEl);
+            }
+        } catch (err) {
+            AmbiletNotifications.error(err.message || 'Upload eșuat.');
+            resetDiscoCover(coverEl);
+        }
+        fileInput.value = ''; // allow re-selecting same file
+    });
+
+    clearBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        resetDiscoCover(coverEl);
+        markDirty();
+    });
+}
+
+function resetDiscoCover(coverEl) {
+    const hiddenPath = coverEl.querySelector('[data-row-field="image"]');
+    const preview = coverEl.querySelector('[data-disco-preview]');
+    const placeholder = coverEl.querySelector('[data-disco-placeholder]');
+    const clearBtn = coverEl.querySelector('[data-disco-clear]');
+
+    if (hiddenPath) hiddenPath.value = '';
+    if (preview) {
+        preview.classList.add('hidden');
+        preview.src = '';
+        preview.style.opacity = '1';
+    }
+    placeholder?.classList.remove('hidden');
+    clearBtn?.classList.add('hidden');
+}
+
+function resolveStorageUrl(path) {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const base = (typeof window.AMBILET !== 'undefined' && window.AMBILET.storageUrl) || 'https://core.tixello.com/storage';
+    return base.replace(/\/$/, '') + '/' + path.replace(/^\/+/, '');
 }
 
 function achievementRow(data) {
@@ -219,17 +304,37 @@ function achievementRow(data) {
         + '</div>';
 }
 
+/**
+ * Discography row — cover is a real image upload (drag-drop friendly)
+ * instead of a freeform URL. Storage path is round-tripped through
+ * data-row-field="image" via a hidden input that the upload helper
+ * fills after a successful POST to /artist/profile/image.
+ */
 function discographyRow(data) {
     const types = ['album','ep','single','live','live_dvd','compilation','soundtrack','remix'];
+    const imagePath = data.image || '';
+    const imageUrl = imagePath ? resolveStorageUrl(imagePath) : '';
     return ''
-        + '<div data-row class="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-[1fr_140px_100px_1fr_40px]">'
-        + '<input type="text" data-row-field="name" maxlength="255" placeholder="Nume" value="' + escapeAttr(data.name || '') + '" class="form-input">'
-        + '<select data-row-field="type" class="form-input">'
+        + '<div data-row class="grid gap-3 rounded-lg border border-border bg-white p-3 md:grid-cols-[100px_1fr_140px_100px_40px]">'
+        // Cover uploader (drag-drop)
+        + '<div data-disco-cover class="group relative flex h-24 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-dashed border-border bg-surface transition-colors hover:border-primary/50 md:w-24">'
+        + '<input type="file" data-disco-input accept="image/jpeg,image/png,image/webp" class="absolute inset-0 z-10 cursor-pointer opacity-0">'
+        + '<input type="hidden" data-row-field="image" value="' + escapeAttr(imagePath) + '">'
+        + '<img data-disco-preview src="' + escapeAttr(imageUrl) + '" alt="" class="' + (imageUrl ? '' : 'hidden ') + 'absolute inset-0 h-full w-full object-cover">'
+        + '<div data-disco-placeholder class="' + (imageUrl ? 'hidden ' : '') + 'pointer-events-none flex flex-col items-center gap-1 text-center text-xs text-muted">'
+        + '<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+        + '<span class="leading-tight">Cover<br><span class="text-[10px]">500×500</span></span>'
+        + '</div>'
+        + '<button type="button" data-disco-clear class="' + (imageUrl ? '' : 'hidden ') + 'absolute right-1 top-1 z-20 flex h-6 w-6 items-center justify-center rounded-full bg-white text-muted shadow opacity-0 transition-opacity group-hover:opacity-100 hover:text-error">'
+        + '<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
+        + '</button>'
+        + '</div>'
+        + '<input type="text" data-row-field="name" maxlength="255" placeholder="Nume" value="' + escapeAttr(data.name || '') + '" class="input">'
+        + '<select data-row-field="type" class="input">'
         + types.map(t => '<option value="' + t + '"' + (data.type === t ? ' selected' : '') + '>' + t + '</option>').join('')
         + '</select>'
-        + '<input type="number" data-row-field="year" min="1900" max="2100" placeholder="An" value="' + escapeAttr(data.year || '') + '" class="form-input">'
-        + '<input type="text" data-row-field="image" placeholder="URL cover" value="' + escapeAttr(data.image || '') + '" class="form-input">'
-        + '<button type="button" data-remove class="rounded-lg p-2 text-muted hover:bg-error/5 hover:text-error">'
+        + '<input type="number" data-row-field="year" min="1900" max="2100" placeholder="An" value="' + escapeAttr(data.year || '') + '" class="input">'
+        + '<button type="button" data-remove class="self-start rounded-lg p-2 text-muted hover:bg-error/5 hover:text-error md:self-center">'
         + '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
         + '</button>'
         + '</div>';
@@ -270,31 +375,82 @@ function renderMultiSelect(key, options, selectedSet) {
     if (!container) return;
     if (!options || options.length === 0) {
         container.innerHTML = '<p class="px-2 py-1 text-xs text-muted">Nicio opțiune disponibilă.</p>';
+        updateMultiCount(key, selectedSet.size);
         return;
     }
-    container.innerHTML = options.map(opt => {
-        const selected = selectedSet.has(opt.id);
-        return ''
-            + '<button type="button" data-multi-id="' + opt.id + '"'
-            + ' class="rounded-full border px-3 py-1.5 text-xs font-medium transition-colors '
-            + (selected ? 'border-primary bg-primary text-white' : 'border-border bg-white text-muted hover:border-primary/40 hover:text-secondary') + '">'
-            + escapeHtml(opt.name) + '</button>';
-    }).join('');
+    container.innerHTML = options.map(opt => buildMultiPill(opt, selectedSet.has(opt.id))).join('');
+    updateMultiCount(key, selectedSet.size);
 
     container.querySelectorAll('button[data-multi-id]').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = parseInt(btn.dataset.multiId, 10);
-            if (selectedSet.has(id)) {
-                selectedSet.delete(id);
-                btn.classList.remove('border-primary', 'bg-primary', 'text-white');
-                btn.classList.add('border-border', 'bg-white', 'text-muted', 'hover:border-primary/40', 'hover:text-secondary');
-            } else {
-                selectedSet.add(id);
-                btn.classList.add('border-primary', 'bg-primary', 'text-white');
-                btn.classList.remove('border-border', 'bg-white', 'text-muted', 'hover:border-primary/40', 'hover:text-secondary');
+            const nowSelected = !selectedSet.has(id);
+            if (nowSelected) selectedSet.add(id); else selectedSet.delete(id);
+            // Re-render this single pill so the class state is consistent.
+            const opt = options.find(o => o.id === id);
+            if (opt) {
+                btn.outerHTML = buildMultiPill(opt, nowSelected);
+                container.querySelector('button[data-multi-id="' + id + '"]')
+                    ?.addEventListener('click', () => {
+                        // Re-run the parent click flow on the rebuilt button.
+                        const next = !selectedSet.has(id);
+                        if (next) selectedSet.add(id); else selectedSet.delete(id);
+                        renderMultiSelect(key, options, selectedSet);
+                        applyMultiSearch(key);
+                        markDirty();
+                    });
             }
+            updateMultiCount(key, selectedSet.size);
             markDirty();
         });
+    });
+}
+
+/**
+ * Render a single pill button. Selected and unselected states use mutually
+ * exclusive class strings (the IDE flags `bg-primary`+`bg-white` if they're
+ * both in the same template literal, even when inside a ternary), so we
+ * branch upfront instead of via inline ternary.
+ */
+function buildMultiPill(opt, selected) {
+    const classes = selected
+        ? 'multi-pill is-selected rounded-full border border-primary bg-primary px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors'
+        : 'multi-pill rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-primary/40 hover:text-secondary';
+    return ''
+        + '<button type="button" data-multi-id="' + opt.id + '"'
+        + ' data-multi-label="' + escapeAttr((opt.name || '').toLowerCase()) + '"'
+        + ' class="' + classes + '">'
+        + (selected ? '<span class="mr-1">✓</span>' : '')
+        + escapeHtml(opt.name) + '</button>';
+}
+
+function updateMultiCount(key, count) {
+    const el = document.querySelector('[data-multi-count="' + key + '"]');
+    if (el) el.textContent = count;
+}
+
+/**
+ * Wire the search input above each multi-select to live-filter the
+ * available pills. Pure DOM filtering — doesn't refetch options.
+ */
+function wireMultiSearch() {
+    document.querySelectorAll('[data-multi-search]').forEach(input => {
+        input.addEventListener('input', () => applyMultiSearch(input.dataset.multiSearch));
+    });
+}
+
+function applyMultiSearch(key) {
+    const input = document.querySelector('[data-multi-search="' + key + '"]');
+    const container = document.querySelector('[data-multi="' + key + '"]');
+    if (!input || !container) return;
+    const query = input.value.trim().toLowerCase();
+    container.querySelectorAll('button[data-multi-id]').forEach(btn => {
+        const label = btn.dataset.multiLabel || '';
+        // Always show selected pills, even when filtered out, so the user
+        // doesn't think their selections vanished.
+        const isSelected = btn.classList.contains('is-selected');
+        const matches = !query || label.includes(query);
+        btn.classList.toggle('hidden', !matches && !isSelected);
     });
 }
 
@@ -453,6 +609,57 @@ function attachRichEditor(textarea) {
 
     textarea._editorAttached = true;
     textarea._editor = editor;
+}
+
+// ============================================================================
+// Refresh social stats — fires /artist/profile/refresh-social-stats which
+// dispatches the FetchArtistSocialStats job. The button is disabled for
+// 5 minutes after a successful click to mirror the server-side rate limit.
+// ============================================================================
+function wireRefreshStats() {
+    const btn = document.getElementById('refresh-stats-btn');
+    const lastEl = document.getElementById('last-stats-refresh');
+    if (!btn) return;
+
+    // Render the last-refresh timestamp from artist data, if present.
+    if (lastEl && State.artist?.social_stats_updated_at) {
+        try {
+            const d = new Date(State.artist.social_stats_updated_at);
+            lastEl.textContent = 'Ultima sincronizare: ' + d.toLocaleString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch (e) { /* ignore */ }
+    }
+
+    btn.addEventListener('click', async () => {
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> Se programează…';
+
+        try {
+            const res = await AmbiletAPI.artist.refreshSocialStats();
+            if (res.success) {
+                AmbiletNotifications.success(res.message || 'Sincronizare programată. Revino în câteva minute.');
+                if (lastEl) lastEl.textContent = 'Sincronizare programată acum — actualizarea apare în câteva minute.';
+                // Keep button disabled for 5 min (matches server rate limit)
+                setTimeout(() => { btn.disabled = false; btn.innerHTML = originalHtml; }, 5 * 60 * 1000);
+                btn.innerHTML = originalHtml;
+                return;
+            }
+            AmbiletNotifications.error(res.message || 'Nu s-a putut programa sincronizarea.');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        } catch (err) {
+            const code = err.data?.errors?.code;
+            if (code === 'rate_limited') {
+                AmbiletNotifications.error('Statisticile au fost deja actualizate recent. Revino peste câteva minute.');
+            } else if (code === 'no_trackable_ids') {
+                AmbiletNotifications.error('Adaugă întâi un Spotify Artist ID, YouTube Channel ID sau un link social media.');
+            } else {
+                AmbiletNotifications.error(err.message || 'Nu s-a putut programa sincronizarea.');
+            }
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        }
+    });
 }
 
 // ============================================================================
