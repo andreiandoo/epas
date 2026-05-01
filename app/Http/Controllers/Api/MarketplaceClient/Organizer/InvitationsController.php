@@ -98,22 +98,29 @@ class InvitationsController extends BaseController
             return $this->error('Event not found or not owned by you', 404);
         }
 
-        // Defensive: required|array|min:1 on the validation rule should
-        // reject empty payloads with 422, but a front-end that sends
-        // [{}] (one empty placeholder object) slips through. Reject any
-        // recipient missing both first_name AND email — those are the
-        // minimum we need to render a meaningful invite.
-        $recipients = $validated['recipients'] ?? [];
-        $recipients = array_values(array_filter($recipients, function ($r) {
-            return !empty($r['first_name']) || !empty($r['last_name']) || !empty($r['email']);
-        }));
+        // Defensive: \$validated['recipients'] is normally guaranteed by the
+        // required|array|min:1 rule above, but fall back to the raw request
+        // body if Laravel ever omits the key (rare edge cases with malformed
+        // input). Anonymous batches are allowed — the organizer can issue N
+        // invitations without filling any names; each gets an 'Invitat N'
+        // placeholder so the PDF still renders with the QR + code.
+        $recipients = $validated['recipients'] ?? $request->input('recipients', []);
 
         if (empty($recipients)) {
             return $this->error(
-                'Adaugă cel puțin un invitat (nume sau email) înainte de a genera invitațiile.',
+                'Adaugă cel puțin un invitat înainte de a genera invitațiile.',
                 422
             );
         }
+
+        foreach ($recipients as $i => &$rec) {
+            $hasAnyData = !empty($rec['first_name']) || !empty($rec['last_name']) || !empty($rec['email']);
+            if (!$hasAnyData) {
+                $rec['first_name'] = 'Invitat';
+                $rec['last_name'] = (string) ($i + 1);
+            }
+        }
+        unset($rec);
 
         $quantity = count($recipients);
         $watermark = $validated['watermark'] ?? 'INVITATIE';
