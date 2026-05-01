@@ -234,4 +234,28 @@ class OrderTransferTest extends TestCase
         $this->assertSame('Reverted', $transfers[1]['reason']);
         $this->assertSame($this->sourceCustomer->id, $this->order->marketplace_customer_id);
     }
+
+    public function test_undo_via_history_returns_order_to_previous_owner(): void
+    {
+        // Forward transfer A → B
+        $this->service->transfer($this->order, $this->targetCustomer, 'Initial mistake');
+        $this->order->refresh();
+        $this->assertSame($this->targetCustomer->id, $this->order->marketplace_customer_id);
+
+        // Read last transfer from metadata and run reverse
+        $last = end($this->order->metadata['transfers']);
+        $previous = MarketplaceCustomer::find($last['from_customer_id']);
+        $this->service->transfer($this->order, $previous, 'Undo of transfer at ' . $last['at']);
+
+        $this->order->refresh();
+        $this->assertSame($this->sourceCustomer->id, $this->order->marketplace_customer_id);
+        $this->assertSame('alice@example.com', $this->order->customer_email);
+
+        // Stats are back to original state
+        $this->assertSame(1, (int) $this->sourceCustomer->fresh()->total_orders);
+        $this->assertSame(0, (int) $this->targetCustomer->fresh()->total_orders);
+
+        // Both transfers are kept in history
+        $this->assertCount(2, $this->order->metadata['transfers']);
+    }
 }

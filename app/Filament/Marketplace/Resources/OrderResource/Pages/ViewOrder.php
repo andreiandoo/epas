@@ -183,9 +183,111 @@ class ViewOrder extends ViewRecord
                     }
                 }),
 
+            Actions\Action::make('undo_last_transfer')
+                ->label(fn () => $this->buildUndoTransferLabel())
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('warning')
+                ->visible(fn () => $this->canUndoLastTransfer())
+                ->modalHeading('Anulează ultimul transfer')
+                ->modalDescription(fn () => $this->buildUndoTransferDescription())
+                ->modalSubmitActionLabel('Anulează transferul')
+                ->requiresConfirmation()
+                ->action(function (): void {
+                    $previous = $this->resolvePreviousCustomerForUndo();
+
+                    if (!$previous) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Nu mai există client anterior')
+                            ->body('Clientul precedent a fost șters între timp. Folosește transferul manual.')
+                            ->send();
+                        return;
+                    }
+
+                    $lastTransfer = $this->lastTransferEntry();
+
+                    try {
+                        app(OrderTransferService::class)->transfer(
+                            $this->record,
+                            $previous,
+                            'Undo of transfer at ' . ($lastTransfer['at'] ?? 'unknown'),
+                            auth()->id(),
+                            (bool) ($lastTransfer['rewrote_tickets'] ?? false),
+                        );
+
+                        Notification::make()
+                            ->success()
+                            ->title('Transfer anulat')
+                            ->body('Comanda a revenit la ' . $previous->email)
+                            ->send();
+
+                        $this->redirect(static::getResource()::getUrl('view', ['record' => $this->record->id]));
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->danger()
+                            ->title('Anulare eșuată')
+                            ->body($e->getMessage())
+                            ->persistent()
+                            ->send();
+                    }
+                }),
+
             Actions\EditAction::make()
                 ->visible(fn () => !in_array($this->record->status, ['refunded', 'partially_refunded']) && $this->record->source !== 'external_import'),
         ];
+    }
+
+    /**
+     * Most recent entry in orders.metadata['transfers'][] or null.
+     */
+    protected function lastTransferEntry(): ?array
+    {
+        $transfers = $this->record->metadata['transfers'] ?? [];
+        return end($transfers) ?: null;
+    }
+
+    /**
+     * Resolve the customer the order came from before its last transfer,
+     * if that customer still exists and shares the marketplace.
+     */
+    protected function resolvePreviousCustomerForUndo(): ?MarketplaceCustomer
+    {
+        $last = $this->lastTransferEntry();
+        if (!$last || empty($last['from_customer_id'])) {
+            return null;
+        }
+
+        return MarketplaceCustomer::query()
+            ->where('id', $last['from_customer_id'])
+            ->where('marketplace_client_id', $this->record->marketplace_client_id)
+            ->first();
+    }
+
+    protected function canUndoLastTransfer(): bool
+    {
+        if ($this->record->source === 'external_import') {
+            return false;
+        }
+        return $this->resolvePreviousCustomerForUndo() !== null;
+    }
+
+    protected function buildUndoTransferLabel(): string
+    {
+        $previous = $this->resolvePreviousCustomerForUndo();
+        return $previous ? 'Anulează transferul (revino la ' . $previous->email . ')' : 'Anulează ultimul transfer';
+    }
+
+    protected function buildUndoTransferDescription(): string
+    {
+        $last = $this->lastTransferEntry();
+        $previous = $this->resolvePreviousCustomerForUndo();
+
+        if (!$last || !$previous) {
+            return 'Nu există un transfer de anulat.';
+        }
+
+        $when = $last['at'] ?? 'unknown';
+        return "Comanda va reveni la {$previous->email}. Total-urile ambilor clienți se vor recalcula. Operațiunea e auditată ca un nou transfer (motiv: 'Undo of transfer at {$when}').";
     }
 
     protected function getRefundFormSchema(): array
