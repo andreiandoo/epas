@@ -1920,6 +1920,12 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'artist.profile.refresh-social-stats':
+        $method = 'POST';
+        $endpoint = '/artist/profile/refresh-social-stats';
+        $requiresAuth = true;
+        break;
+
     case 'artist.account':
         // GET / PUT / DELETE on the same resource path.
         $requiresAuth = true;

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Artist Account — Events list
  * Layout follows resources/marketplaces/ambilet/designs/artist/events.html.
@@ -101,16 +101,16 @@ require_once dirname(__DIR__, 2) . '/includes/head.php';
                     <svg class="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <input type="text" id="filter-search" placeholder="Caută eveniment, locație, oraș…" class="form-input pl-10">
+                    <input type="text" id="filter-search" placeholder="Caută eveniment, locație, oraș…" class="input pl-10">
                 </div>
 
                 <!-- City filter -->
-                <select id="filter-city" class="form-input w-full lg:w-auto">
+                <select id="filter-city" class="input w-full lg:w-auto">
                     <option value="">Toate orașele</option>
                 </select>
 
                 <!-- Sort -->
-                <select id="filter-sort" class="form-input w-full lg:w-auto">
+                <select id="filter-sort" class="input w-full lg:w-auto">
                     <option value="date_asc">Cele mai apropiate</option>
                     <option value="date_desc">Cele mai îndepărtate</option>
                 </select>
