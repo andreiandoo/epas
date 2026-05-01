@@ -143,6 +143,27 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/cont/evenimente/?$ artist/cont/evenimente.php [L,QSA]
 
+# Extended Artist (microservice) — landing + 4 module pages
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/extended-artist/?$ artist/cont/extended-artist/index.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/extended-artist/fan-crm/?$ artist/cont/extended-artist/fan-crm.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/extended-artist/booking/?$ artist/cont/extended-artist/booking.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/extended-artist/epk/?$ artist/cont/extended-artist/epk.php [L,QSA]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^artist/cont/extended-artist/tour/?$ artist/cont/extended-artist/tour.php [L,QSA]
+
 # Generic public artist profile — keep this LAST in the /artist/* block.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
