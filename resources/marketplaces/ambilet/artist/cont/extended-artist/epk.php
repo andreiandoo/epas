@@ -24,7 +24,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="epkEditor()" x-init="load()">
     <div class="p-4 lg:p-6">
 
-        {{-- Header + global save bar --}}
+        <!-- Header + global save bar -->
         <header class="mb-6 flex items-start justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-secondary lg:text-3xl">Smart EPK</h1>
@@ -43,7 +43,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
             </div>
         </header>
 
-        {{-- Tabs --}}
+        <!-- Tabs -->
         <div class="mb-6 border-b border-border">
             <nav class="flex gap-6">
                 <template x-for="t in ['editor', 'versions', 'preview', 'analytics']" :key="t">
@@ -62,7 +62,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
         <div x-show="!loading">
 
-            {{-- ============================ EDITOR TAB ============================ --}}
+            <!-- ============================ EDITOR TAB ============================ -->
             <div x-show="tab === 'editor'" class="space-y-6">
 
                 <div class="rounded-2xl border border-border bg-white p-6">
@@ -93,7 +93,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     </div>
                 </div>
 
-                {{-- Sectiunile celor 12 module --}}
+                <!-- Sectiunile celor 12 module -->
                 <template x-for="section in active.sections" :key="section.id">
                     <div class="rounded-2xl border border-border bg-white p-6">
                         <div class="mb-4 flex items-start justify-between">
@@ -109,7 +109,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                         <div x-show="section.enabled" class="space-y-3">
 
-                            {{-- HERO --}}
+                            <!-- HERO -->
                             <template x-if="section.id === 'hero'">
                                 <div class="space-y-3">
                                     <div>
@@ -131,7 +131,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- STATS (read-only LIVE) --}}
+                            <!-- STATS (read-only LIVE) -->
                             <template x-if="section.id === 'stats'">
                                 <div class="space-y-3">
                                     <p class="text-xs text-muted italic">Cifrele vin LIVE din platformă (nu pot fi editate).</p>
@@ -147,7 +147,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- BIO --}}
+                            <!-- BIO -->
                             <template x-if="section.id === 'bio'">
                                 <div class="space-y-3">
                                     <div>
@@ -161,7 +161,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- GALLERY --}}
+                            <!-- GALLERY -->
                             <template x-if="section.id === 'gallery'">
                                 <div class="space-y-3">
                                     <p class="text-xs text-muted" x-text="`Max 12 imagini. Acum: ${(section.data.images || []).length}`"></p>
@@ -180,7 +180,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- SPOTIFY --}}
+                            <!-- SPOTIFY -->
                             <template x-if="section.id === 'spotify'">
                                 <div>
                                     <label class="text-xs text-muted uppercase">Link Spotify (artist / album / playlist)</label>
@@ -188,7 +188,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- YOUTUBE --}}
+                            <!-- YOUTUBE -->
                             <template x-if="section.id === 'youtube'">
                                 <div class="space-y-2">
                                     <p class="text-xs text-muted">Max 3 videoclipuri YouTube</p>
@@ -205,7 +205,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- ACHIEVEMENTS --}}
+                            <!-- ACHIEVEMENTS -->
                             <template x-if="section.id === 'achievements'">
                                 <div class="space-y-2">
                                     <template x-for="(a, idx) in section.data.items || []" :key="idx">
@@ -219,7 +219,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- PRESS QUOTES --}}
+                            <!-- PRESS QUOTES -->
                             <template x-if="section.id === 'press_quotes'">
                                 <div class="space-y-3">
                                     <template x-for="(q, idx) in section.data.quotes || []" :key="idx">
@@ -236,7 +236,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- PAST EVENTS --}}
+                            <!-- PAST EVENTS -->
                             <template x-if="section.id === 'past_events'">
                                 <div class="space-y-3">
                                     <p class="text-xs text-muted">Toate evenimentele tale viitoare/trecute apar automat. Ascunde manual cele pe care nu vrei să fie afișate.</p>
@@ -259,7 +259,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- RIDER --}}
+                            <!-- RIDER -->
                             <template x-if="section.id === 'rider'">
                                 <div class="space-y-3">
                                     <div>
@@ -276,7 +276,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- SOCIAL --}}
+                            <!-- SOCIAL -->
                             <template x-if="section.id === 'social'">
                                 <div class="space-y-2">
                                     <template x-for="key in ['website', 'facebook', 'instagram', 'tiktok', 'youtube']" :key="key">
@@ -288,7 +288,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 </div>
                             </template>
 
-                            {{-- CONTACT --}}
+                            <!-- CONTACT -->
                             <template x-if="section.id === 'contact'">
                                 <div class="space-y-3">
                                     <div>
@@ -310,7 +310,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     </div>
                 </template>
 
-                {{-- QR + PDF actions --}}
+                <!-- QR + PDF actions -->
                 <div class="rounded-2xl border border-border bg-white p-6">
                     <h3 class="mb-3 text-base font-bold text-secondary">Distribuție</h3>
                     <div class="flex flex-wrap gap-3">
@@ -325,7 +325,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
             </div>
 
-            {{-- ============================ VERSIONS TAB ============================ --}}
+            <!-- ============================ VERSIONS TAB ============================ -->
             <div x-show="tab === 'versions'" class="space-y-4">
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     <template x-for="v in state.variants" :key="v.id">
@@ -355,7 +355,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                 </div>
             </div>
 
-            {{-- ============================ PREVIEW TAB ============================ --}}
+            <!-- ============================ PREVIEW TAB ============================ -->
             <div x-show="tab === 'preview'" class="rounded-2xl border border-border bg-white overflow-hidden">
                 <div class="flex items-center justify-between border-b border-border p-3">
                     <p class="text-sm text-muted">Pagina publică (varianta activă)</p>
@@ -364,7 +364,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                 <iframe :src="publicUrl()" class="w-full" style="height: 70vh; border: 0"></iframe>
             </div>
 
-            {{-- ============================ ANALYTICS TAB (stub Faza B) ============================ --}}
+            <!-- ============================ ANALYTICS TAB (stub Faza B) ============================ -->
             <div x-show="tab === 'analytics'" class="rounded-2xl border-2 border-dashed border-border bg-white p-10 text-center">
                 <h2 class="mb-2 text-xl font-bold text-secondary">Analytics — în curând</h2>
                 <p class="text-sm text-muted max-w-md mx-auto">Dashboard cu views, surse de trafic, hot leads (organizatori care vizitează EPK), engagement per secțiune. Disponibil în Faza B.</p>
