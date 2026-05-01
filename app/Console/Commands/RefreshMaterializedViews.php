@@ -28,6 +28,17 @@ class RefreshMaterializedViews extends Command
             return self::SUCCESS;
         }
 
+        // Skip silently if the view doesn't exist (fresh install, dev DB, or
+        // mid-migration) instead of crashing the cron with exit 1.
+        $exists = (int) DB::selectOne(
+            "SELECT COUNT(*) AS c FROM pg_matviews WHERE matviewname = 'mv_event_stats'"
+        )->c > 0;
+
+        if (!$exists) {
+            $this->info('Materialized view mv_event_stats not found; skipping.');
+            return self::SUCCESS;
+        }
+
         DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_event_stats');
         $this->info('Materialized views refreshed.');
 

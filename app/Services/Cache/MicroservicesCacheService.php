@@ -326,13 +326,17 @@ class MicroservicesCacheService
         // Pre-load microservices catalog
         $this->getCatalog();
 
-        // Pre-load global feature flags
-        $globalFlags = DB::table('feature_flags')
-            ->whereNull('tenant_id')
-            ->get();
+        // Pre-load global feature flags. The feature_flags table holds the
+        // base definitions (no tenant_id column); per-tenant overrides live
+        // in tenant_feature_flags. Stale code assumed feature_flags carried
+        // a tenant_id and broke the cron warm-up.
+        $globalFlags = DB::table('feature_flags')->get();
 
         foreach ($globalFlags as $flag) {
-            $this->getFeatureFlag($flag->flag_key, null);
+            $key = $flag->key ?? $flag->flag_key ?? null;
+            if ($key) {
+                $this->getFeatureFlag($key, null);
+            }
         }
     }
 
