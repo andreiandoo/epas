@@ -231,13 +231,16 @@ class ProfileController extends BaseController
             return $this->error('Profilul de artist asociat nu a fost găsit.', 404);
         }
 
-        // Soft rate limit: refuse if we already refreshed in the last 5
-        // minutes — the upstream APIs (Spotify especially) rate-limit
-        // hard, and an artist mashing the button helps no-one.
-        if ($artist->social_stats_updated_at && $artist->social_stats_updated_at->gt(now()->subMinutes(5))) {
-            return $this->error('Statisticile au fost deja actualizate recent. Încearcă din nou peste câteva minute.', 429, [
+        // Hard rate limit: 1 sync per calendar month per artist. Upstream
+        // APIs (Spotify especially) hand out tight quotas and stat numbers
+        // don't realistically swing inside a month enough to justify
+        // noisier polling.
+        if ($artist->social_stats_updated_at && $artist->social_stats_updated_at->gt(now()->subMonth())) {
+            $next = $artist->social_stats_updated_at->copy()->addMonth();
+            return $this->error('Statisticile pot fi sincronizate o singură dată pe lună. Următoarea sincronizare disponibilă: ' . $next->translatedFormat('d M Y'), 429, [
                 'code' => 'rate_limited',
                 'last_refresh' => $artist->social_stats_updated_at->toIso8601String(),
+                'next_refresh' => $next->toIso8601String(),
             ]);
         }
 

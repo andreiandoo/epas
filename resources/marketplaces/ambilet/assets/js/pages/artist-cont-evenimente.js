@@ -40,7 +40,18 @@ async function fetchAllEvents() {
 function wireFilters() {
     document.querySelectorAll('.filter-status').forEach(btn => {
         btn.addEventListener('click', () => {
-            State.statusFilter = btn.dataset.filterStatus;
+            const newFilter = btn.dataset.filterStatus;
+            const filterChanged = State.statusFilter !== newFilter;
+            State.statusFilter = newFilter;
+            // Past events read more naturally newest-first (cele mai recent
+            // încheiate primele); upcoming events read better closest-first.
+            // Auto-pick the natural sort when the filter changes — the user
+            // can still override via the sort dropdown after.
+            if (filterChanged) {
+                State.sort = (newFilter === 'past') ? 'date_desc' : 'date_asc';
+                const sortEl = document.getElementById('filter-sort');
+                if (sortEl) sortEl.value = State.sort;
+            }
             updateStatusButtons();
             renderEvents();
         });

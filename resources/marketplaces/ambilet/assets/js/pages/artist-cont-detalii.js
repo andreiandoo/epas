@@ -629,23 +629,23 @@ function attachRichEditor(textarea) {
 
 // ============================================================================
 // Refresh social stats — fires /artist/profile/refresh-social-stats which
-// dispatches the FetchArtistSocialStats job. The button is disabled for
-// 5 minutes after a successful click to mirror the server-side rate limit.
+// dispatches the FetchArtistSocialStats job. Hard rate limit: 1 sync per
+// calendar month per artist. The button is locked client-side until 1
+// month after the last refresh, with a "Disponibil din ..." label.
 // ============================================================================
+const REFRESH_STATS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 function wireRefreshStats() {
     const btn = document.getElementById('refresh-stats-btn');
     const lastEl = document.getElementById('last-stats-refresh');
     if (!btn) return;
 
-    // Render the last-refresh timestamp from artist data, if present.
-    if (lastEl && State.artist?.social_stats_updated_at) {
-        try {
-            const d = new Date(State.artist.social_stats_updated_at);
-            lastEl.textContent = 'Ultima sincronizare: ' + d.toLocaleString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        } catch (e) { /* ignore */ }
-    }
+    // Apply current cooldown state from the loaded artist record.
+    applyRefreshCooldownFromArtist(btn, lastEl, State.artist?.social_stats_updated_at);
 
     btn.addEventListener('click', async () => {
+        if (btn.disabled) return; // belt-and-suspenders
+
         const originalHtml = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> Se programează…';
@@ -653,11 +653,11 @@ function wireRefreshStats() {
         try {
             const res = await AmbiletAPI.artist.refreshSocialStats();
             if (res.success) {
-                AmbiletNotifications.success(res.message || 'Sincronizare programată. Revino în câteva minute.');
-                if (lastEl) lastEl.textContent = 'Sincronizare programată acum — actualizarea apare în câteva minute.';
-                // Keep button disabled for 5 min (matches server rate limit)
-                setTimeout(() => { btn.disabled = false; btn.innerHTML = originalHtml; }, 5 * 60 * 1000);
+                AmbiletNotifications.success(res.message || 'Sincronizare programată.');
                 btn.innerHTML = originalHtml;
+                // Lock for 30 days from NOW (matches server-side check that
+                // uses social_stats_updated_at < now-1mo).
+                lockRefreshButton(btn, lastEl, new Date());
                 return;
             }
             AmbiletNotifications.error(res.message || 'Nu s-a putut programa sincronizarea.');
@@ -666,16 +666,71 @@ function wireRefreshStats() {
         } catch (err) {
             const code = err.data?.errors?.code;
             if (code === 'rate_limited') {
-                AmbiletNotifications.error('Statisticile au fost deja actualizate recent. Revino peste câteva minute.');
+                // Honor the server's last_refresh / next_refresh fields.
+                const lastIso = err.data?.errors?.last_refresh;
+                if (lastIso) applyRefreshCooldownFromArtist(btn, lastEl, lastIso);
+                AmbiletNotifications.error(err.message || 'Statisticile pot fi sincronizate o singură dată pe lună.');
+                btn.innerHTML = originalHtml;
             } else if (code === 'no_trackable_ids') {
                 AmbiletNotifications.error('Adaugă întâi un Spotify Artist ID, YouTube Channel ID sau un link social media.');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
             } else {
                 AmbiletNotifications.error(err.message || 'Nu s-a putut programa sincronizarea.');
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
             }
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
         }
     });
+}
+
+/**
+ * Decide whether the refresh button should be locked based on when the
+ * stats were last refreshed.
+ */
+function applyRefreshCooldownFromArtist(btn, lastEl, lastIsoOrDate) {
+    if (!lastIsoOrDate) {
+        // Never refreshed yet — leave the button enabled and show a hint.
+        if (lastEl) lastEl.textContent = 'Nu ai făcut încă o sincronizare. Permis o dată pe lună.';
+        btn.disabled = false;
+        return;
+    }
+    let last;
+    try {
+        last = lastIsoOrDate instanceof Date ? lastIsoOrDate : new Date(lastIsoOrDate);
+    } catch (e) { return; }
+
+    if (Date.now() - last.getTime() < REFRESH_STATS_COOLDOWN_MS) {
+        lockRefreshButton(btn, lastEl, last);
+    } else {
+        unlockRefreshButton(btn, lastEl, last);
+    }
+}
+
+function lockRefreshButton(btn, lastEl, lastDate) {
+    const next = new Date(lastDate.getTime() + REFRESH_STATS_COOLDOWN_MS);
+    btn.disabled = true;
+    btn.classList.add('opacity-50', 'cursor-not-allowed');
+    btn.classList.remove('hover:bg-primary-dark', 'hover:shadow-lg');
+    if (lastEl) {
+        const lastFmt = lastDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        const nextFmt = next.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        lastEl.innerHTML = '<span class="font-medium">Ultima sincronizare:</span> ' + lastFmt
+            + ' <span class="ml-2 text-secondary">·</span> '
+            + '<span class="font-medium">Următoarea disponibilă:</span> ' + nextFmt;
+    }
+}
+
+function unlockRefreshButton(btn, lastEl, lastDate) {
+    btn.disabled = false;
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    btn.classList.add('hover:bg-primary-dark', 'hover:shadow-lg');
+    if (lastEl && lastDate) {
+        const lastFmt = lastDate.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        lastEl.textContent = 'Ultima sincronizare: ' + lastFmt + '. Poți face o nouă sincronizare acum.';
+    } else if (lastEl) {
+        lastEl.textContent = 'Permis o dată pe lună.';
+    }
 }
 
 // ============================================================================
