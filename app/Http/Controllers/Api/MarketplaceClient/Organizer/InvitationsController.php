@@ -98,7 +98,23 @@ class InvitationsController extends BaseController
             return $this->error('Event not found or not owned by you', 404);
         }
 
-        $recipients = $validated['recipients'];
+        // Defensive: required|array|min:1 on the validation rule should
+        // reject empty payloads with 422, but a front-end that sends
+        // [{}] (one empty placeholder object) slips through. Reject any
+        // recipient missing both first_name AND email — those are the
+        // minimum we need to render a meaningful invite.
+        $recipients = $validated['recipients'] ?? [];
+        $recipients = array_values(array_filter($recipients, function ($r) {
+            return !empty($r['first_name']) || !empty($r['last_name']) || !empty($r['email']);
+        }));
+
+        if (empty($recipients)) {
+            return $this->error(
+                'Adaugă cel puțin un invitat (nume sau email) înainte de a genera invitațiile.',
+                422
+            );
+        }
+
         $quantity = count($recipients);
         $watermark = $validated['watermark'] ?? 'INVITATIE';
         $batchName = $validated['name'] ?? $this->defaultBatchName($event, $quantity);
