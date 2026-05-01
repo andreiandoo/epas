@@ -815,6 +815,32 @@ class TicketVariableService
             return '';
         }
 
+        // Mirror the filtering in EventResource "Taxe Aplicabile":
+        //   - skip Monument Istoric unless venue has the flag enabled
+        //   - skip TVA unless the marketplace organizer is a VAT payer
+        // Without these filters every ticket showed 'Taxa de Monument
+        // Istoric' / 'TVA' regardless of whether they actually applied.
+        $venueHasMonumentTax = (bool) ($event->venue?->has_historical_monument_tax ?? false);
+        $isVatPayer = (bool) ($event->marketplaceClient?->vat_payer ?? false);
+
+        $taxes = $taxes->filter(function ($tax) use ($venueHasMonumentTax, $isVatPayer) {
+            $nameLower = strtolower($tax->name ?? '');
+
+            if (str_contains($nameLower, 'monument') && !$venueHasMonumentTax) {
+                return false;
+            }
+
+            if ((str_contains($nameLower, 'tva') || str_contains($nameLower, 'vat')) && !$isVatPayer) {
+                return false;
+            }
+
+            return true;
+        });
+
+        if ($taxes->isEmpty()) {
+            return '';
+        }
+
         $parts = $taxes->map(fn ($tax) => $tax->getFormattedValue() . ' ' . $tax->name)->all();
 
         return 'Prețul include ' . implode(', ', $parts);
