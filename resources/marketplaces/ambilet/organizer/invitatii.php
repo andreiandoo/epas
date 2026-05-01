@@ -1049,6 +1049,51 @@ $scriptsExtra = <<<'JS'
         }
     }
 
+    async function downloadInvite(batchId, inviteId, btn) {
+        const original = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.innerHTML = '…'; }
+        try {
+            const url = AmbiletAPI.getApiUrl() + '?action=organizer.invitations.download-invite'
+                + '&batch_id=' + encodeURIComponent(batchId)
+                + '&invite_id=' + encodeURIComponent(inviteId);
+            const res = await fetch(url, { headers: buildAuthHeaders() });
+            if (!res.ok) {
+                let msg = 'HTTP ' + res.status;
+                try { const j = await res.json(); if (j && j.message) msg = j.message; } catch (_) {}
+                throw new Error(msg);
+            }
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const cd = res.headers.get('content-disposition') || '';
+            const m = cd.match(/filename="?([^";]+)"?/i);
+            const filename = m ? m[1] : ('invitatie-' + inviteId + '.pdf');
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(blobUrl);
+
+            // Mark as downloaded inline (server already updated downloaded_at).
+            const row = document.querySelector('[data-invite-row="' + inviteId + '"]');
+            if (row && !row.querySelector('[data-downloaded-badge="' + inviteId + '"]')) {
+                const codeCell = row.querySelector('td:nth-child(' + (row.querySelectorAll('td').length - 1) + ')');
+                if (codeCell) {
+                    const stamp = fmtDate(new Date().toISOString());
+                    const span = document.createElement('span');
+                    span.className = 'inline-block px-2 py-0.5 ml-2 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded';
+                    span.setAttribute('data-downloaded-badge', inviteId);
+                    span.title = 'Descărcată la ' + stamp;
+                    span.textContent = '✓ ' + stamp;
+                    codeCell.appendChild(span);
+                }
+            }
+        } catch (e) {
+            alert('Descărcarea a eșuat: ' + (e.message || e));
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = original; }
+        }
+    }
+
     function resetToStart() {
         $('step-done').classList.add('hidden');
         selectedSeats = [];
@@ -1178,14 +1223,21 @@ $scriptsExtra = <<<'JS'
                 const seat = r.seat || null;
                 const seatRef = i.seat_ref
                     || (seat ? seatRefFor({ section_name: seat.section, row_label: seat.row, seat_label: seat.label, seat_uid: seat.uid }) : '');
+                const downloadedBadge = i.downloaded_at
+                    ? '<span class="inline-block px-2 py-0.5 ml-2 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded" data-downloaded-badge="' + i.id + '" title="Descărcată la ' + esc(fmtDate(i.downloaded_at)) + '">✓ ' + esc(fmtDate(i.downloaded_at)) + '</span>'
+                    : '';
+                const downloadBtn = i.has_pdf
+                    ? '<button class="text-blue-600 hover:text-blue-800 text-xs font-semibold mr-3" data-dl-invite="' + i.id + '" data-batch-id="' + batchId + '" title="Descarcă PDF-ul invitației">Descarcă</button>'
+                    : '<span class="text-xs text-muted mr-3" title="PDF indisponibil — regenerează batch-ul">PDF lipsă</span>';
                 return '<tr class="border-b border-slate-100" data-invite-row="' + i.id + '">' +
                     '<td class="py-1.5 pr-3">' + esc(r.name || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.email || '') + '</td>' +
                     (hasSeats ? '<td class="py-1.5 pr-3">' + esc(seatRef || '—') + '</td>' : '') +
                     '<td class="py-1.5 pr-3">' + esc(r.phone || '') + '</td>' +
                     '<td class="py-1.5 pr-3">' + esc(r.company || '') + '</td>' +
-                    '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code></td>' +
-                    '<td class="py-1.5 pr-3 text-right">' +
+                    '<td class="py-1.5 pr-3"><code class="text-xs">' + esc(i.code) + '</code>' + downloadedBadge + '</td>' +
+                    '<td class="py-1.5 pr-3 text-right whitespace-nowrap">' +
+                        downloadBtn +
                         '<button class="text-red-600 hover:text-red-800 text-xs font-semibold" data-del-invite="' + i.id + '" data-batch-id="' + batchId + '" title="Șterge invitația și eliberează locul">Șterge</button>' +
                     '</td>' +
                 '</tr>';
@@ -1207,6 +1259,9 @@ $scriptsExtra = <<<'JS'
                 '</div>';
             panel.querySelectorAll('[data-del-invite]').forEach(btn => {
                 btn.addEventListener('click', () => onDeleteInvite(btn.dataset.batchId, btn.dataset.delInvite));
+            });
+            panel.querySelectorAll('[data-dl-invite]').forEach(btn => {
+                btn.addEventListener('click', () => downloadInvite(btn.dataset.batchId, btn.dataset.dlInvite, btn));
             });
         } catch (e) {
             panel.innerHTML = '<p class="text-sm text-red-600 py-2">Nu pot încărca invitații: ' + esc(e.message) + '</p>';

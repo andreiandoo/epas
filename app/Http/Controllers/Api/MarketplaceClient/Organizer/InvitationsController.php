@@ -392,6 +392,38 @@ class InvitationsController extends BaseController
     }
 
     /**
+     * Stream the PDF for a single invitation. Marks the invite as
+     * downloaded the first time it's served so the UI can show a
+     * 'Descărcat la …' badge next to the row.
+     * GET /api/marketplace-client/organizer/invitations/{batch}/invites/{invite}/download
+     */
+    public function downloadInvite(Request $request, int $batchId, int $inviteId)
+    {
+        $organizer = $this->requireOrganizer($request);
+        $batch = $this->findBatch($organizer, $batchId);
+        if (!$batch) return $this->error('Batch not found', 404);
+
+        $invite = $batch->invites()->where('id', $inviteId)->first();
+        if (!$invite) return $this->error('Invitation not found in this batch', 404);
+
+        $pdfPath = $invite->getPdfUrl();
+        if (!$pdfPath || !Storage::disk('local')->exists($pdfPath)) {
+            return $this->error('PDF nu este disponibil. Regenerează batch-ul.', 404);
+        }
+
+        if (!$invite->downloaded_at) {
+            $invite->markAsDownloaded();
+        }
+
+        $recipientSlug = Str::slug($invite->getRecipientName() ?: 'invitatie');
+        $filename = "{$recipientSlug}-{$invite->invite_code}.pdf";
+
+        return Storage::disk('local')->download($pdfPath, $filename, [
+            'Content-Type' => 'application/pdf',
+        ]);
+    }
+
+    /**
      * Serve a CSV template the organizer can fill and re-upload.
      * GET /api/marketplace-client/organizer/invitations/csv-template
      */
@@ -1193,6 +1225,12 @@ class InvitationsController extends BaseController
             'has_pdf' => !empty($invite->getPdfUrl()),
             'rendered_at' => $invite->rendered_at?->toIso8601String(),
             'downloaded_at' => $invite->downloaded_at?->toIso8601String(),
+            'download_url' => !empty($invite->getPdfUrl())
+                ? route('api.marketplace-client.organizer.invitations.download-invite', [
+                    'batch' => $invite->batch_id,
+                    'invite' => $invite->id,
+                ])
+                : null,
         ];
     }
 }
