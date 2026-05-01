@@ -38,16 +38,27 @@ const ArtistClaim = {
                 if (!res || !res.success || !res.data) return;
                 const data = res.data;
 
-                if (data.is_verified) {
-                    container.innerHTML = ArtistClaim.renderVerifiedBadge();
-                } else if (data.is_pending) {
-                    container.innerHTML = ArtistClaim.renderPendingBadge();
-                } else if (data.exists !== false) {
-                    container.innerHTML = ArtistClaim.renderClaimCta(slug);
-                } else {
+                // CLAIMED — never render the "Revendică profilul" button.
+                // Show the verified/pending badge as a trust signal.
+                if (data.is_claimed || data.is_verified || data.is_pending) {
+                    if (data.is_verified) {
+                        container.innerHTML = ArtistClaim.renderVerifiedBadge();
+                    } else if (data.is_pending) {
+                        container.innerHTML = ArtistClaim.renderPendingBadge();
+                    } else {
+                        // is_claimed=true but neither verified nor pending —
+                        // keep the section hidden entirely.
+                        return;
+                    }
+                    container.classList.remove('hidden');
                     return;
                 }
-                container.classList.remove('hidden');
+
+                // NOT CLAIMED — render the call-to-action button.
+                if (data.exists !== false) {
+                    container.innerHTML = ArtistClaim.renderClaimCta(slug);
+                    container.classList.remove('hidden');
+                }
             })
             .catch(() => { /* Silent fail — claim CTA simply never appears. */ });
     },

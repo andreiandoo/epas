@@ -67,6 +67,7 @@ class DashboardController extends BaseController
                 ->count();
 
             $recentEvents = $artist->events()
+                ->with('venue:id,name,city')
                 ->orderByDesc('event_date')
                 ->limit(5)
                 ->get(['events.id', 'events.title', 'events.slug', 'events.event_date', 'events.starts_at', 'events.poster_url', 'events.venue_id'])
@@ -133,7 +134,7 @@ class DashboardController extends BaseController
         $today = now()->toDateString();
 
         $artist = Artist::find($account->artist_id);
-        $query = $artist->events();
+        $query = $artist->events()->with('venue:id,name,city');
 
         if ($filter === 'upcoming') {
             $query->where('event_date', '>=', $today)->orderBy('event_date');
@@ -227,7 +228,9 @@ class DashboardController extends BaseController
     /**
      * Compact event card for dashboard / events list.
      * The events table column is `poster_url` (not poster_image) — the
-     * earlier name caused 500s on the dashboard endpoint.
+     * earlier name caused 500s on the dashboard endpoint. Venue name+city
+     * come from the eager-loaded relation so the events page can do
+     * client-side city filtering.
      */
     protected function formatEventCard($event): array
     {
@@ -239,6 +242,8 @@ class DashboardController extends BaseController
             'starts_at' => $event->starts_at?->toIso8601String(),
             'poster_url' => $event->poster_url,
             'venue_id' => $event->venue_id,
+            'venue_name' => $event->venue?->name,
+            'city' => $event->venue?->city,
             'is_upcoming' => $event->event_date && $event->event_date->isFuture(),
         ];
     }

@@ -629,7 +629,9 @@ const ArtistPage = {
     },
 
     /**
-     * Render about section with RO/EN tabs if both translations exist
+     * Render about section with RO/EN tabs if both translations exist.
+     * If neither locale has content, hide the entire #aboutSection so we
+     * don't show an empty "Despre" header above a blank card.
      * Note: Biography content comes from trusted admin panel and may contain HTML formatting
      */
     renderAbout(about, translations) {
@@ -640,7 +642,17 @@ const ArtistPage = {
         var bioEn = translations?.en || '';
         // Strip HTML tags and whitespace to check for actual content
         var stripHtml = function(html) { var tmp = document.createElement('div'); tmp.innerHTML = html; return (tmp.textContent || tmp.innerText || '').trim(); };
-        var hasBoth = stripHtml(bioRo) && stripHtml(bioEn);
+        var hasRo = !!stripHtml(bioRo);
+        var hasEn = !!stripHtml(bioEn);
+        var hasAnyText = hasRo || hasEn || (Array.isArray(about) && about.some(stripHtml));
+        var hasBoth = hasRo && hasEn;
+
+        // No content in any locale — hide the entire section (header + card).
+        if (!hasAnyText) {
+            var section = document.getElementById('aboutSection');
+            if (section) section.classList.add('hidden');
+            return;
+        }
 
         if (hasBoth) {
             // Tabbed layout with RO and EN
