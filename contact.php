@@ -392,6 +392,15 @@ const ContactPage = {
 
             // Success
             AmbiletUtils.showToast('Mesajul a fost trimis cu succes! Te vom contacta în curând.', 'success');
+            // CAPI Lead — contact form submission
+            try {
+                if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
+                    EPASTracking.trackLead('contact', {
+                        email: data.email,
+                        event_label: 'contact:' + (data.subject || ''),
+                    });
+                }
+            } catch (e) { /* never break contact UI */ }
             form.reset();
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;

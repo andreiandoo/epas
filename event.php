@@ -603,5 +603,6 @@ $scriptsExtra = '<script defer src="' . asset('assets/js/pages/event-drawer.js')
 // marketplaceEventId. This lets the backend resolve the organizer
 // for per-organizer Facebook CAPI dispatch (Etapa 4).
 $trackingMarketplaceEventId = !empty($ev['id']) ? (int) $ev['id'] : null;
+$trackingMarketplaceEventName = $ev['name'] ?? $ev['title'] ?? null;
 
 require_once __DIR__ . '/includes/scripts.php';
