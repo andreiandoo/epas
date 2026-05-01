@@ -7,6 +7,7 @@ use App\Models\Artist;
 use App\Models\MarketplaceArtistAccount;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Dashboard + events listing for the logged-in artist account.
@@ -48,7 +49,15 @@ class DashboardController extends BaseController
         $artist = $account->artist_id ? Artist::find($account->artist_id) : null;
 
         $completion = $artist ? $this->computeCompletion($artist) : null;
-        $followers = $artist ? $this->sumFollowers($artist) : 0;
+
+        // Fans split into two distinct concepts:
+        //  - LOCAL fans: customers on this marketplace who clicked the
+        //    favorite (heart) button on the artist's public page.
+        //    Single source of truth for "Fani pe Ambilet" KPI.
+        //  - SOCIAL followers: per-platform counts pulled by
+        //    FetchArtistSocialStats. Rendered as a separate card grid.
+        $localFans = $artist ? $this->countLocalFans($artist, $account->marketplace_client_id) : 0;
+        $socialStats = $artist ? $this->collectSocialStats($artist) : null;
 
         // Two separate event lists for the dashboard:
         //  - upcoming_events: nearest-future first (ASC)  → "Evenimente viitoare"
@@ -124,8 +133,16 @@ class DashboardController extends BaseController
                 'upcoming_events' => $upcomingCount,
                 'past_events' => $pastCount,
                 'total_events' => $upcomingCount + $pastCount,
-                'total_followers' => $followers,
+                // Local-marketplace fan count (heart-favorited the artist
+                // on this marketplace's public page). Was previously the
+                // sum of social followers, which read 0 for any artist
+                // who hadn't synced — see batch 5 testing notes.
+                'local_fans' => $localFans,
+                // Sum of per-platform followers — kept for backwards compat
+                // with anything still consuming `total_followers`.
+                'total_followers' => $socialStats['total_followers'] ?? 0,
             ],
+            'social_stats' => $socialStats,
             'upcoming_events' => $upcomingEvents,
             'past_events' => $pastEvents,
             // Kept for backwards compat with any older JS still in flight;
@@ -189,19 +206,70 @@ class DashboardController extends BaseController
     // =========================================
 
     /**
-     * Sum of followers across the social networks tracked on the artist.
-     * Ignores the legacy `followers_*` duplicates so we don't double-count.
+     * Count of customers on this marketplace who heart-favorited the artist
+     * via the public artist page. Pivot is `marketplace_customer_favorites`
+     * with a polymorphic favoriteable_type='artist'.
      */
-    protected function sumFollowers(Artist $artist): int
+    protected function countLocalFans(Artist $artist, ?int $marketplaceClientId): int
     {
-        return (int) array_sum([
-            (int) $artist->facebook_followers,
-            (int) $artist->instagram_followers,
-            (int) $artist->tiktok_followers,
-            (int) $artist->spotify_followers,
-            (int) $artist->youtube_followers,
-            (int) $artist->twitter_followers,
-        ]);
+        if (!$marketplaceClientId) {
+            return 0;
+        }
+
+        return (int) DB::table('marketplace_customer_favorites')
+            ->where('marketplace_client_id', $marketplaceClientId)
+            ->where('favoriteable_type', 'artist')
+            ->where('favoriteable_id', $artist->id)
+            ->count();
+    }
+
+    /**
+     * Per-platform social stats payload for the dashboard. Each entry has
+     * `followers` (or platform-specific equivalent) plus an optional
+     * secondary metric. The follower fields use the canonical
+     * <platform>_followers names (the `followers_<platform>` duplicates
+     * are legacy and intentionally ignored — that's why summing both
+     * would double-count).
+     */
+    protected function collectSocialStats(Artist $artist): array
+    {
+        $platforms = [
+            'spotify' => [
+                'followers' => (int) $artist->spotify_followers,
+                'monthly_listeners' => (int) $artist->spotify_monthly_listeners,
+                'popularity' => (int) $artist->spotify_popularity,
+                'has_id' => !empty($artist->spotify_id),
+            ],
+            'youtube' => [
+                'followers' => (int) $artist->youtube_followers, // subscribers
+                'total_views' => (int) $artist->youtube_total_views,
+                'total_likes' => (int) $artist->youtube_total_likes,
+                'has_id' => !empty($artist->youtube_id),
+            ],
+            'facebook' => [
+                'followers' => (int) $artist->facebook_followers,
+                'has_id' => !empty($artist->facebook_url),
+            ],
+            'instagram' => [
+                'followers' => (int) $artist->instagram_followers,
+                'has_id' => !empty($artist->instagram_url),
+            ],
+            'tiktok' => [
+                'followers' => (int) $artist->tiktok_followers,
+                'has_id' => !empty($artist->tiktok_url),
+            ],
+        ];
+
+        $totalFollowers = 0;
+        foreach ($platforms as $stats) {
+            $totalFollowers += $stats['followers'] ?? 0;
+        }
+
+        return [
+            'platforms' => $platforms,
+            'total_followers' => $totalFollowers,
+            'updated_at' => $artist->social_stats_updated_at?->toIso8601String(),
+        ];
     }
 
     protected function computeCompletion(Artist $artist): array

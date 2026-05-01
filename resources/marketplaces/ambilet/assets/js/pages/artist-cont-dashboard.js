@@ -62,7 +62,9 @@ function renderDashboard(data) {
     // KPI cards
     setText('kpi-upcoming', data.stats?.upcoming_events ?? 0);
     setText('kpi-total-events', data.stats?.total_events ?? 0);
-    setText('kpi-followers', formatCount(data.stats?.total_followers ?? 0));
+    // "Fani pe Ambilet" — count from marketplace_customer_favorites,
+    // a different number from the social-platform total below.
+    setText('kpi-local-fans', formatCount(data.stats?.local_fans ?? 0));
 
     const status = data.account?.status ?? 'unknown';
     const statusInfo = STATUS_LABELS[status] || { label: status, color: 'text-secondary' };
@@ -90,6 +92,10 @@ function renderDashboard(data) {
         // Hide the completion card when there's no linked profile yet.
         document.getElementById('completion-card')?.classList.add('hidden');
     }
+
+    // Per-platform social-stats grid. Hidden if the artist has no
+    // trackable IDs at all yet.
+    renderSocialStats(data.social_stats);
 
     // Next event card uses the FIRST upcoming event (nearest-future).
     renderNextEvent(data.upcoming_events || []);
@@ -121,6 +127,108 @@ function renderCompletion(completion) {
             + '<span class="' + (filled ? 'text-secondary' : 'text-muted') + '">' + escapeHtml(label) + '</span>'
             + '</div>';
     }).join('');
+}
+
+/**
+ * Per-platform social stats grid. Each card has a `data-social-card`
+ * key matching the payload's `platforms.<key>` shape; we look up the
+ * per-card slots via [data-social-followers], [data-social-secondary],
+ * etc. so the markup can be rearranged without JS changes.
+ *
+ * Visibility:
+ *  - The whole section stays hidden if the artist has no platform IDs
+ *    AND no synced numbers (likely a never-synced fresh account).
+ *  - A card with `has_id=true` but `followers=0` shows "—" plus the
+ *    "Adaugă … pentru a sincroniza" hint, so the artist understands
+ *    the field is empty because of missing data, not because they're
+ *    actually at zero.
+ */
+function renderSocialStats(stats) {
+    const section = document.getElementById('social-stats-section');
+    if (!section) return;
+    if (!stats || !stats.platforms) return;
+
+    const platforms = stats.platforms;
+    const anyConfigured = Object.values(platforms).some(p => p?.has_id);
+    const anyValue = Object.values(platforms).some(p => (p?.followers || 0) > 0);
+
+    // No IDs anywhere AND no values — hide the whole block.
+    if (!anyConfigured && !anyValue) {
+        section.classList.add('hidden');
+        return;
+    }
+    section.classList.remove('hidden');
+
+    if (stats.updated_at) {
+        const d = new Date(stats.updated_at);
+        const updatedLabel = document.getElementById('social-stats-updated');
+        if (updatedLabel) {
+            updatedLabel.textContent = 'Ultima sincronizare: ' + d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+    }
+
+    // Spotify card — primary: followers, secondary: monthly_listeners
+    paintSocialCard('spotify', platforms.spotify, p => ({
+        primary: p.followers,
+        secondary: p.monthly_listeners,
+    }));
+
+    // YouTube — primary: subscribers, secondary: total views
+    paintSocialCard('youtube', platforms.youtube, p => ({
+        primary: p.followers,
+        secondary: p.total_views,
+    }));
+
+    // Facebook / Instagram / TikTok — only followers
+    paintSocialCard('facebook', platforms.facebook);
+    paintSocialCard('instagram', platforms.instagram);
+    paintSocialCard('tiktok', platforms.tiktok);
+}
+
+/**
+ * Populate one social-card. `metricsFn` is optional; when supplied, it
+ * returns { primary, secondary } numbers. Default: primary=followers.
+ */
+function paintSocialCard(key, data, metricsFn) {
+    const card = document.querySelector('[data-social-card="' + key + '"]');
+    if (!card || !data) return;
+
+    const metrics = metricsFn ? metricsFn(data) : { primary: data.followers, secondary: null };
+    const followersEl = card.querySelector('[data-social-followers]');
+    const secondaryWrap = card.querySelector('[data-social-secondary]');
+    const secondaryValue = card.querySelector('[data-social-secondary-value]');
+    const emptyHint = card.querySelector('[data-social-empty]');
+
+    if (followersEl) {
+        followersEl.textContent = metrics.primary > 0 ? formatCount(metrics.primary) : '—';
+    }
+
+    if (secondaryWrap && secondaryValue) {
+        if (metrics.secondary > 0) {
+            secondaryValue.textContent = formatCount(metrics.secondary);
+            secondaryWrap.classList.remove('hidden');
+        } else {
+            secondaryWrap.classList.add('hidden');
+        }
+    }
+
+    // Empty hint shows when the platform has no ID configured at all
+    // OR when ID is set but no followers were synced yet.
+    if (emptyHint) {
+        if (!data.has_id || metrics.primary === 0) {
+            emptyHint.classList.remove('hidden');
+        } else {
+            emptyHint.classList.add('hidden');
+        }
+    }
+
+    // Dim the card slightly when nothing is configured, to push the
+    // user's attention toward the platforms that ARE tracked.
+    if (!data.has_id) {
+        card.classList.add('opacity-60');
+    } else {
+        card.classList.remove('opacity-60');
+    }
 }
 
 function renderNextEvent(events) {
