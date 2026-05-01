@@ -13,6 +13,7 @@ use App\Models\TicketType;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -134,85 +135,123 @@ class InvitationsController extends BaseController
         // default. Stored on the batch so admin-side tools see the same template.
         $templateId = $this->resolveTemplateId($event, $organizer);
 
-        $batch = InviteBatch::create([
-            'marketplace_client_id' => $organizer->marketplace_client_id,
-            'marketplace_organizer_id' => $organizer->id,
-            'tenant_id' => $event->tenant_id,
-            'event_ref' => (string) $event->id,
-            'name' => $batchName,
-            'qty_planned' => $quantity,
-            'template_id' => $templateId,
-            'options' => [
-                'watermark' => $watermark,
-                'expires_after_event' => true,
-                'event_seating_id' => $eventSeatingId,
-            ],
-            'status' => 'draft',
-        ]);
-
-        // Create one Invite per recipient, carrying the seat reference when
-        // the batch is seat-based. seat_ref is the human-readable string used
-        // by the PDF template ("Sector A · Rând 3 · Loc 12") plus we stash
-        // seat_uid / event_seating_id in meta for later audit.
-        foreach ($recipients as $i => $rec) {
-            $fullName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? ''));
-            $seatForRecipient = $seats[$i] ?? null;
-            $seatRef = $this->formatSeatRef($seatForRecipient);
-            $recipientPayload = [
-                'first_name' => $rec['first_name'],
-                'last_name' => $rec['last_name'],
-                'name' => $fullName,
-                'email' => $rec['email'],
-                'phone' => $rec['phone'] ?? null,
-                'company' => $rec['company'] ?? null,
-                'notes' => $rec['notes'] ?? null,
-            ];
-            if ($seatForRecipient) {
-                $recipientPayload['seat'] = [
-                    'uid' => $seatForRecipient['seat_uid'],
-                    'section' => $seatForRecipient['section_name'] ?? null,
-                    'row' => $seatForRecipient['row_label'] ?? null,
-                    'label' => $seatForRecipient['seat_label'] ?? null,
-                    'event_seating_id' => $eventSeatingId,
-                ];
-            }
-
-            try {
-                $invite = Invite::create([
+        // Wrap batch + invites creation in a single DB transaction so any
+        // failure rolls back the batch row instead of leaving an orphan
+        // (planned > 0, generated = 0). We render PDFs OUTSIDE the
+        // transaction (renderBatchPdfs hits the filesystem); a render
+        // failure leaves the batch as 'draft' but invite rows already
+        // exist and can be re-rendered via the /generate endpoint.
+        try {
+            $batch = DB::transaction(function () use ($organizer, $event, $batchName, $quantity, $templateId, $watermark, $eventSeatingId, $recipients, $seats) {
+                $batch = InviteBatch::create([
                     'marketplace_client_id' => $organizer->marketplace_client_id,
-                    'batch_id' => $batch->id,
+                    'marketplace_organizer_id' => $organizer->id,
                     'tenant_id' => $event->tenant_id,
-                    'status' => 'created',
-                    'seat_ref' => $seatRef,
-                    'recipient' => $recipientPayload,
+                    'event_ref' => (string) $event->id,
+                    'name' => $batchName,
+                    'qty_planned' => $quantity,
+                    'template_id' => $templateId,
+                    'options' => [
+                        'watermark' => $watermark,
+                        'expires_after_event' => true,
+                        'event_seating_id' => $eventSeatingId,
+                    ],
+                    'status' => 'draft',
                 ]);
-                \Log::info('[InvitationsController.store] Invite created', [
-                    'batch_id' => $batch->id,
-                    'invite_id' => $invite->id,
-                    'invite_code' => $invite->invite_code,
-                    'recipient_index' => $i,
-                    'tenant_id' => $event->tenant_id,
-                ]);
-                $batch->increment('qty_generated');
-            } catch (\Throwable $e) {
-                \Log::error('[InvitationsController.store] Invite create FAILED', [
-                    'batch_id' => $batch->id,
-                    'recipient_index' => $i,
-                    'recipient' => $recipientPayload,
-                    'tenant_id' => $event->tenant_id,
-                    'mc_id' => $organizer->marketplace_client_id,
-                    'error_class' => get_class($e),
-                    'error' => $e->getMessage(),
-                    'trace' => collect(explode("\n", $e->getTraceAsString()))->take(10)->implode("\n"),
-                ]);
-                throw $e;
+
+                foreach ($recipients as $i => $rec) {
+                    $fullName = trim(($rec['first_name'] ?? '') . ' ' . ($rec['last_name'] ?? ''));
+                    $seatForRecipient = $seats[$i] ?? null;
+                    $seatRef = $this->formatSeatRef($seatForRecipient);
+                    $recipientPayload = [
+                        'first_name' => $rec['first_name'],
+                        'last_name' => $rec['last_name'],
+                        'name' => $fullName,
+                        'email' => $rec['email'],
+                        'phone' => $rec['phone'] ?? null,
+                        'company' => $rec['company'] ?? null,
+                        'notes' => $rec['notes'] ?? null,
+                    ];
+                    if ($seatForRecipient) {
+                        $recipientPayload['seat'] = [
+                            'uid' => $seatForRecipient['seat_uid'],
+                            'section' => $seatForRecipient['section_name'] ?? null,
+                            'row' => $seatForRecipient['row_label'] ?? null,
+                            'label' => $seatForRecipient['seat_label'] ?? null,
+                            'event_seating_id' => $eventSeatingId,
+                        ];
+                    }
+
+                    $invite = Invite::create([
+                        'marketplace_client_id' => $organizer->marketplace_client_id,
+                        'batch_id' => $batch->id,
+                        'tenant_id' => $event->tenant_id,
+                        'status' => 'created',
+                        'seat_ref' => $seatRef,
+                        'recipient' => $recipientPayload,
+                    ]);
+
+                    Log::info('[InvitationsController.store] Invite created', [
+                        'batch_id' => $batch->id,
+                        'invite_id' => $invite->id,
+                        'invite_code' => $invite->invite_code,
+                        'recipient_index' => $i,
+                        'tenant_id' => $event->tenant_id,
+                    ]);
+
+                    $batch->increment('qty_generated');
+                }
+
+                return $batch;
+            });
+        } catch (\Throwable $e) {
+            // Compensating action: release any seats we already flipped to
+            // 'sold' via confirmPurchase so they don't stay reserved for a
+            // batch that no longer exists.
+            if (!empty($seats) && $eventSeatingId) {
+                try {
+                    $seatUids = array_map(fn ($s) => $s['seat_uid'], $seats);
+                    \App\Models\Seating\EventSeat::where('event_seating_id', $eventSeatingId)
+                        ->whereIn('seat_uid', $seatUids)
+                        ->where('status', 'sold')
+                        ->update(['status' => 'available', 'last_change_at' => now()]);
+                } catch (\Throwable $inner) {
+                    Log::error('[InvitationsController.store] Failed to release seats after rollback', [
+                        'event_seating_id' => $eventSeatingId,
+                        'error' => $inner->getMessage(),
+                    ]);
+                }
             }
+
+            Log::error('[InvitationsController.store] Batch creation rolled back', [
+                'organizer_id' => $organizer->id,
+                'event_id' => $event->id,
+                'recipients_count' => $quantity,
+                'has_seats' => !empty($seats),
+                'event_seating_id' => $eventSeatingId,
+                'error_class' => get_class($e),
+                'error' => $e->getMessage(),
+                'trace' => collect(explode("\n", $e->getTraceAsString()))->take(10)->implode("\n"),
+            ]);
+
+            return $this->error('Crearea invitațiilor a eșuat. Locurile au fost eliberate; reia procesul.', 500);
         }
 
-        // Synchronously render all PDFs — user is waiting on the UI
-        $rendered = $this->renderBatchPdfs($batch, $event, $watermark);
-
-        $batch->update(['status' => 'ready']);
+        // Render PDFs synchronously — user is waiting on the UI. A render
+        // failure here is non-fatal: invites exist in DB, organizer can
+        // hit "Regenerează" which calls /generate to retry.
+        try {
+            $rendered = $this->renderBatchPdfs($batch, $event, $watermark);
+            $batch->update(['status' => 'ready']);
+        } catch (\Throwable $e) {
+            Log::error('[InvitationsController.store] Render failed but batch persists', [
+                'batch_id' => $batch->id,
+                'error_class' => get_class($e),
+                'error' => $e->getMessage(),
+            ]);
+            $rendered = 0;
+            $batch->update(['status' => 'draft']);
+        }
 
         return $this->success([
             'batch' => $this->formatBatch($batch->fresh()),
