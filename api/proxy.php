@@ -1983,6 +1983,110 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Smart EPK editor (artist-side) — toate au requiresAuth
+    case 'artist.epk':
+        $method = 'GET';
+        $endpoint = '/artist/epk';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.create':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/epk/variants';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.delete':
+        $method = 'DELETE';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.activate':
+        $method = 'POST';
+        $body = '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/activate';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.clone':
+        $method = 'POST';
+        $body = '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/clone';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.upload':
+        $method = 'POST';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.epk.variant.delete_image':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input') ?: '{}';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.epk.variant.upload_rider':
+        $method = 'POST';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/upload-rider';
+        $requiresAuth = true;
+        $isMultipart = true;
+        break;
+
+    case 'artist.epk.variant.qr':
+        $method = 'GET';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/qr';
+        $requiresAuth = true;
+        $rawResponse = true; // PNG binary
+        break;
+
+    case 'artist.epk.variant.pdf':
+        $method = 'GET';
+        $variantId = (int) ($_GET['id'] ?? 0);
+        if ($variantId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing variant id']); exit; }
+        $endpoint = '/artist/epk/variants/' . $variantId . '/pdf';
+        $requiresAuth = true;
+        $rawResponse = true; // PDF binary stream
+        break;
+
+    // EPK rider lead capture (PUBLIC — vizitator anonim, nu requiresAuth).
+    // API_BASE_URL = .../api/marketplace-client — endpoint-ul "/epk/rider-request"
+    // se rezolvă la /api/marketplace-client/epk/rider-request (vezi route la nivel routes/api.php).
+    case 'epk.rider_request':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/epk/rider-request';
+        $requiresAuth = false;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
@@ -3632,6 +3736,10 @@ if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $status
         } else {
             header('Content-Disposition: attachment; filename="bilete.pdf"');
         }
+        header('Content-Length: ' . strlen($response));
+    } elseif (str_starts_with($response, "\x89PNG\r\n\x1a\n")) {
+        header('Content-Type: image/png');
+        header('Cache-Control: public, max-age=86400');
         header('Content-Length: ' . strlen($response));
     } elseif (str_starts_with($response, "PK\x03\x04") || str_starts_with($response, "PK\x05\x06")) {
         // ZIP archive (local file header or empty-archive end-of-central-dir signature)
