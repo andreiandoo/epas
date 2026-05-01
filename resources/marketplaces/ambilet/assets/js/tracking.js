@@ -312,6 +312,16 @@
     }
 
     /**
+     * Track a lead (newsletter, contact form, demo request, etc.)
+     */
+    function trackLead(formType, data = {}) {
+        track('lead', {
+            event_label: formType,
+            ...data
+        });
+    }
+
+    /**
      * Get UTM parameters from URL
      */
     function getUtmParams() {
@@ -557,6 +567,7 @@
         trackSignUp,
         trackLogin,
         trackSearch,
+        trackLead,
         getVisitorId,
         getSessionId,
         setMarketplaceEventId,

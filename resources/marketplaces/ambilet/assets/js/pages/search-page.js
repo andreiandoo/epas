@@ -135,6 +135,20 @@ const SearchPage = {
             // API returns { success: true, data: { events, artists, locations } }
             if (result.success && result.data) {
                 this.renderResults(result.data);
+
+                // CAPI Search event — fires when results land. Backend
+                // forwards to Meta only if marketplace-level CAPI is
+                // configured (no organizer context here).
+                try {
+                    if (window.EPASTracking && typeof EPASTracking.trackSearch === 'function') {
+                        const total = (result.data.events?.length || 0)
+                            + (result.data.artists?.length || 0)
+                            + (result.data.locations?.length || 0);
+                        EPASTracking.trackSearch(query, total);
+                    }
+                } catch (e) {
+                    // Tracking must never break search
+                }
             } else {
                 this.showNoResults(query);
             }

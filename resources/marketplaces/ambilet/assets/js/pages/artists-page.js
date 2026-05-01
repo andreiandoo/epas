@@ -444,6 +444,12 @@ const ArtistsPage = {
             if (emailInput) {
                 emailInput.value = '';
             }
+            // CAPI Lead — newsletter subscription
+            try {
+                if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
+                    EPASTracking.trackLead('newsletter', { email: email });
+                }
+            } catch (e) { /* never break subscribe UI */ }
         }
         return false;
     },

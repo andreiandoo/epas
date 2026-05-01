@@ -59,6 +59,22 @@
             autoTrackPageViews: true,
             autoTrackClicks: true
         });
+        <?php if (!empty($trackingMarketplaceEventId)): ?>
+        // ViewContent — fires after PageView on event detail pages, signals
+        // a more specific funnel step to Meta (a user actually viewed an
+        // event's detail page, not just any random page). Wrapped in a
+        // small delay so it lands right after the auto trackPageView.
+        try {
+            setTimeout(function () {
+                if (window.EPASTracking && typeof EPASTracking.trackViewItem === 'function') {
+                    EPASTracking.trackViewItem(
+                        <?= (int) $trackingMarketplaceEventId ?>,
+                        <?= json_encode($trackingMarketplaceEventName ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+                    );
+                }
+            }, 50);
+        } catch (e) {}
+        <?php endif; ?>
     });
     </script>
     <?php endif; ?>

@@ -50,6 +50,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await AmbiletAuth.register(formData);
             if (result.success) {
                 AmbiletNotifications.success('Cont creat cu succes!');
+                // CAPI CompleteRegistration — fires once on successful signup
+                try {
+                    if (window.EPASTracking && typeof EPASTracking.trackSignUp === 'function') {
+                        EPASTracking.trackSignUp('email', { email: formData.email });
+                    }
+                } catch (e) { /* never break signup */ }
                 // Redirect to email verification page (user is already auto-logged-in)
                 setTimeout(() => window.location.href = '/verify-email', 1500);
             } else {

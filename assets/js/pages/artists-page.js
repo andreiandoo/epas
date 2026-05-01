@@ -235,7 +235,7 @@ const ArtistsPage = {
         return '<a href="/artist/' + this.escapeHtml(artist.slug) + '" class="flex items-center gap-4 p-4 transition-colors rounded-2xl bg-surface hover:bg-border/50">' +
             '<div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-lg ' + rankClass + '">' + rank + '</div>' +
             '<div class="flex-shrink-0 overflow-hidden w-14 h-14 rounded-xl">' +
-                '<img src="' + this.escapeHtml(artistImage) + '" alt="' + this.escapeHtml(artist.name) + '" class="object-cover w-full h-full">' +
+                '<img src="' + this.escapeHtml(artistImage) + '" alt="' + this.escapeHtml(artist.name) + '" class="object-cover w-full h-full" loading="lazy">' +
             '</div>' +
             '<div class="flex-1 min-w-0">' +
                 '<div class="flex items-center text-sm font-bold text-secondary">' + this.escapeHtml(artist.name) + verifiedBadge + '</div>' +
@@ -322,7 +322,7 @@ const ArtistsPage = {
         // Previous button
         if (meta.current_page > 1) {
             html += '<button onclick="ArtistsPage.goToPage(' + (meta.current_page - 1) + ')" ' +
-                'class="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-xl border-border hover:bg-surface">' +
+                'class="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-xl border-border hover:bg-surface" aria-label="Previous page">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                     '<polyline points="15 18 9 12 15 6"/>' +
                 '</svg>' +
@@ -335,7 +335,7 @@ const ArtistsPage = {
                 html += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary">' + i + '</button>';
             } else if (i === 1 || i === meta.last_page || Math.abs(i - meta.current_page) <= 2) {
                 html += '<button onclick="ArtistsPage.goToPage(' + i + ')" ' +
-                    'class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface">' +
+                    'class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface" aria-label="Page ' + i + '">' +
                     i + '</button>';
             } else if (Math.abs(i - meta.current_page) === 3) {
                 html += '<span class="px-2 text-muted">...</span>';
@@ -345,7 +345,7 @@ const ArtistsPage = {
         // Next button
         if (meta.current_page < meta.last_page) {
             html += '<button onclick="ArtistsPage.goToPage(' + (meta.current_page + 1) + ')" ' +
-                'class="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-xl border-border hover:bg-surface">' +
+                'class="flex items-center justify-center w-10 h-10 transition-colors bg-white border rounded-xl border-border hover:bg-surface" aria-label="Next page">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                     '<polyline points="9 18 15 12 9 6"/>' +
                 '</svg>' +
@@ -444,6 +444,12 @@ const ArtistsPage = {
             if (emailInput) {
                 emailInput.value = '';
             }
+            // CAPI Lead — newsletter subscription
+            try {
+                if (window.EPASTracking && typeof EPASTracking.trackLead === 'function') {
+                    EPASTracking.trackLead('newsletter', { email: email });
+                }
+            } catch (e) { /* never break subscribe UI */ }
         }
         return false;
     },
