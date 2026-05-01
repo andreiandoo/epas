@@ -820,8 +820,17 @@ class EventResource extends Resource
                                             return $t('Nicio imagine', 'No image');
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->poster_url);
+                                        $storedName = e(basename($record->poster_url));
+                                        $originalName = e($record->poster_original_filename ?? '');
+                                        $originalRow = $originalName !== ''
+                                            ? "<div class='flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400'><span class='font-medium'>" . e($t('Original:', 'Original:')) . "</span><span class='break-all'>{$originalName}</span></div>"
+                                            : '';
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Poster' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
+                                            "<div class='space-y-2'>"
+                                            . "<img src='{$url}' alt='Poster' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
+                                            . "<div class='flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400'><span class='font-medium'>" . e($t('Stocat:', 'Stored:')) . "</span><span class='break-all font-mono'>{$storedName}</span></div>"
+                                            . $originalRow
+                                            . "</div>"
                                         );
                                     }),
                                 Forms\Components\Placeholder::make('hero_preview')
@@ -831,8 +840,17 @@ class EventResource extends Resource
                                             return $t('Nicio imagine', 'No image');
                                         }
                                         $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->hero_image_url);
+                                        $storedName = e(basename($record->hero_image_url));
+                                        $originalName = e($record->hero_image_original_filename ?? '');
+                                        $originalRow = $originalName !== ''
+                                            ? "<div class='flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400'><span class='font-medium'>" . e($t('Original:', 'Original:')) . "</span><span class='break-all'>{$originalName}</span></div>"
+                                            : '';
                                         return new \Illuminate\Support\HtmlString(
-                                            "<img src='{$url}' alt='Hero' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
+                                            "<div class='space-y-2'>"
+                                            . "<img src='{$url}' alt='Hero' class='rounded-lg shadow max-h-48' style='object-fit: contain;' />"
+                                            . "<div class='flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400'><span class='font-medium'>" . e($t('Stocat:', 'Stored:')) . "</span><span class='break-all font-mono'>{$storedName}</span></div>"
+                                            . $originalRow
+                                            . "</div>"
                                         );
                                     }),
                             ])->columns(2),
