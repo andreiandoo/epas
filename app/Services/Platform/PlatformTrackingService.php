@@ -901,6 +901,9 @@ class PlatformTrackingService
     protected function createEvent(array $data): CoreCustomerEvent
     {
         $data['created_at'] = now();
+        // core_customer_events.occurred_at is NOT NULL; default to now()
+        // for callers that don't supply an explicit event timestamp.
+        $data['occurred_at'] = $data['occurred_at'] ?? now();
         return CoreCustomerEvent::create($data);
     }
 

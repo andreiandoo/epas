@@ -50,8 +50,8 @@ class AnalyticsCacheService
                 'unique_visitors_today' => CoreSession::query()
                     ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
                     ->whereDate('started_at', $today)
-                    ->distinct('core_customer_id')
-                    ->count('core_customer_id'),
+                    ->distinct('customer_id')
+                    ->count('customer_id'),
                 'cached_at' => now()->toIso8601String(),
             ];
         });
@@ -204,7 +204,7 @@ class AnalyticsCacheService
                 ->groupBy('date')
                 ->selectRaw('DATE(started_at) as date,
                     COUNT(*) as sessions,
-                    COUNT(DISTINCT core_customer_id) as unique_visitors')
+                    COUNT(DISTINCT customer_id) as unique_visitors')
                 ->orderBy('date')
                 ->get()
                 ->keyBy('date');
@@ -371,7 +371,7 @@ class AnalyticsCacheService
                 ->groupBy('country_code')
                 ->selectRaw('country_code,
                     COUNT(*) as sessions,
-                    COUNT(DISTINCT core_customer_id) as unique_visitors,
+                    COUNT(DISTINCT customer_id) as unique_visitors,
                     SUM(CASE WHEN is_converted = 1 THEN 1 ELSE 0 END) as conversions,
                     SUM(CASE WHEN is_converted = 1 THEN total_value ELSE 0 END) as revenue')
                 ->orderByDesc('sessions')

@@ -259,7 +259,7 @@ class Invite extends Model
         }
     }
 
-    public function markAsCheckedIn(string $gateRef = null): void
+    public function markAsCheckedIn(?string $gateRef = null): void
     {
         $this->update([
             'status' => 'checked_in',
