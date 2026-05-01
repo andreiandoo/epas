@@ -11,9 +11,16 @@ class ServiceType extends Model
 {
     use HasFactory;
 
+    public const AUDIENCE_ORGANIZER = 'organizer';
+    public const AUDIENCE_ARTIST = 'artist';
+    public const AUDIENCE_BOTH = 'both';
+
+    public const CODE_EXTENDED_ARTIST = 'extended_artist';
+
     protected $fillable = [
         'marketplace_client_id',
         'code',
+        'audience',
         'name',
         'description',
         'pricing',
@@ -94,11 +101,41 @@ class ServiceType extends Model
                     'description' => $data['description'],
                     'pricing' => $pricing[$code],
                     'is_active' => true,
+                    'audience' => self::AUDIENCE_ORGANIZER,
                 ]
             );
         }
 
         return $types;
+    }
+
+    /**
+     * Creează (sau returnează existentul) ServiceType pentru "Extended Artist".
+     * Pricing-ul este oglindă a microserviciului din catalog ca să poată fi
+     * editat per marketplace de admin fără să afecteze microserviciul global.
+     *
+     * Apelat lazy din ExtendedArtistController la primul access pentru un
+     * marketplace + apelat manual din tinker dacă vrem să-l forțăm.
+     */
+    public static function getOrCreateExtendedArtistService(int $marketplaceClientId): self
+    {
+        return self::firstOrCreate(
+            [
+                'marketplace_client_id' => $marketplaceClientId,
+                'code' => self::CODE_EXTENDED_ARTIST,
+            ],
+            [
+                'name' => 'Extended Artist',
+                'description' => 'Pachet premium pentru artist: Fan CRM, Booking Marketplace, Smart EPK, Tour Optimizer.',
+                'pricing' => [
+                    'monthly' => 99.00,
+                    'currency' => 'RON',
+                    'trial_days' => 30,
+                ],
+                'is_active' => true,
+                'audience' => self::AUDIENCE_ARTIST,
+            ]
+        );
     }
 
     // Relationships

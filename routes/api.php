@@ -2484,6 +2484,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Artist\AuthController as ArtistAc
 use App\Http\Controllers\Api\MarketplaceClient\Artist\DashboardController as ArtistDashboardController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\ProfileController as ArtistProfileController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\AccountController as ArtistAccountController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\ExtendedArtistController as ArtistExtendedArtistController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2539,6 +2540,20 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             ->name('api.marketplace-client.artist.account.password');
         Route::delete('/account', [ArtistAccountController::class, 'destroy'])
             ->name('api.marketplace-client.artist.account.delete');
+
+        // Extended Artist (status / pricing / trial / subscribe / cancel)
+        Route::prefix('extended-artist')->group(function () {
+            Route::get('/status', [ArtistExtendedArtistController::class, 'status'])
+                ->name('api.marketplace-client.artist.extended-artist.status');
+            Route::get('/pricing', [ArtistExtendedArtistController::class, 'pricing'])
+                ->name('api.marketplace-client.artist.extended-artist.pricing');
+            Route::post('/start-trial', [ArtistExtendedArtistController::class, 'startTrial'])
+                ->name('api.marketplace-client.artist.extended-artist.start-trial');
+            Route::post('/subscribe', [ArtistExtendedArtistController::class, 'subscribe'])
+                ->name('api.marketplace-client.artist.extended-artist.subscribe');
+            Route::post('/cancel', [ArtistExtendedArtistController::class, 'cancel'])
+                ->name('api.marketplace-client.artist.extended-artist.cancel');
+        });
     });
 });
 

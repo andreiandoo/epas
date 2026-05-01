@@ -861,3 +861,21 @@ Schedule::command("system-errors:prune")
     ->withoutOverlapping()
     ->name("system-errors-prune");
 
+/*
+|--------------------------------------------------------------------------
+| Extended Artist (microservice per cont artist)
+|--------------------------------------------------------------------------
+*/
+
+// Mark expired trials (daily at 02:30)
+Schedule::command('extended-artist:expire-trials')
+    ->dailyAt('02:30')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
+// Expire/rebill self-purchase subscriptions whose paid period ended (daily at 02:35)
+Schedule::command('extended-artist:rebill-expired')
+    ->dailyAt('02:35')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+

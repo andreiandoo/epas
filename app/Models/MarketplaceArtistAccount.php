@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -74,6 +76,45 @@ class MarketplaceArtistAccount extends Authenticatable
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function microservices(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Microservice::class,
+            'marketplace_artist_account_microservices'
+        )
+            ->withPivot([
+                'status',
+                'granted_by',
+                'granted_by_user_id',
+                'service_order_id',
+                'activated_at',
+                'trial_ends_at',
+                'expires_at',
+                'cancelled_at',
+                'settings',
+            ])
+            ->withTimestamps();
+    }
+
+    public function microserviceActivations(): HasMany
+    {
+        return $this->hasMany(MarketplaceArtistAccountMicroservice::class, 'marketplace_artist_account_id');
+    }
+
+    /**
+     * Shortcut catre activarea Extended Artist (sau null daca nu e activat).
+     * Returneaza intotdeauna ultimul rand (in caz de duplicare istorica), dar
+     * pivot-ul are unique(account, microservice) deci normal e maxim unul.
+     */
+    public function extendedArtistActivation(): ?MarketplaceArtistAccountMicroservice
+    {
+        return MarketplaceArtistAccountMicroservice::query()
+            ->where('marketplace_artist_account_id', $this->id)
+            ->whereHas('microservice', fn ($q) => $q->where('slug', 'extended-artist'))
+            ->latest('id')
+            ->first();
     }
 
     // =========================================

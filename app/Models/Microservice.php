@@ -79,6 +79,31 @@ class Microservice extends Model
         return $this->hasMany(MarketplaceClientMicroservice::class);
     }
 
+    public function artistAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceArtistAccount::class,
+            'marketplace_artist_account_microservices'
+        )
+            ->withPivot([
+                'status',
+                'granted_by',
+                'granted_by_user_id',
+                'service_order_id',
+                'activated_at',
+                'trial_ends_at',
+                'expires_at',
+                'cancelled_at',
+                'settings',
+            ])
+            ->withTimestamps();
+    }
+
+    public function artistAccountMicroservices(): HasMany
+    {
+        return $this->hasMany(MarketplaceArtistAccountMicroservice::class);
+    }
+
     /**
      * Scope pentru microservicii active
      */

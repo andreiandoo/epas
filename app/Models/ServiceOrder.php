@@ -21,6 +21,8 @@ class ServiceOrder extends Model
         'order_number',
         'marketplace_client_id',
         'marketplace_organizer_id',
+        'marketplace_artist_account_id',
+        'microservice_id',
         'marketplace_event_id',
         'service_type',
         'config',
@@ -75,6 +77,7 @@ class ServiceOrder extends Model
     public const TYPE_EMAIL = 'email';
     public const TYPE_TRACKING = 'tracking';
     public const TYPE_CAMPAIGN = 'campaign';
+    public const TYPE_EXTENDED_ARTIST = 'extended_artist';
 
     // Tixello collects 50% of every extra-service total; the other 50% stays with the marketplace operator.
     public const TIXELLO_SHARE = 0.5;
@@ -126,6 +129,7 @@ class ServiceOrder extends Model
             self::TYPE_EMAIL => 'Email Marketing',
             self::TYPE_TRACKING => 'Ad Tracking',
             self::TYPE_CAMPAIGN => 'Creare Campanie',
+            self::TYPE_EXTENDED_ARTIST => 'Extended Artist',
             default => $this->service_type,
         };
     }
@@ -245,17 +249,74 @@ class ServiceOrder extends Model
             }
         }
 
-        // Notify organizer that service has started
-        try {
-            OrganizerNotificationService::notifyServiceOrderStatus($this, 'started');
-        } catch (\Exception $e) {
-            Log::warning('Failed to send service started notification', [
-                'service_order_id' => $this->id,
-                'error' => $e->getMessage(),
-            ]);
+        // Extended Artist: propagă acces în pivot-ul de activare per cont artist
+        if ($this->service_type === self::TYPE_EXTENDED_ARTIST) {
+            try {
+                $this->activateExtendedArtist();
+            } catch (\Exception $e) {
+                Log::error('Failed to activate Extended Artist subscription', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Notify organizer that service has started (skip pentru ordine artist —
+        // OrganizerNotificationService presupune marketplace_organizer_id existent)
+        if ($this->marketplace_organizer_id) {
+            try {
+                OrganizerNotificationService::notifyServiceOrderStatus($this, 'started');
+            } catch (\Exception $e) {
+                Log::warning('Failed to send service started notification', [
+                    'service_order_id' => $this->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $this;
+    }
+
+    /**
+     * Crează / extinde rândul în marketplace_artist_account_microservices după
+     * confirmarea plății pentru un Extended Artist order.
+     *
+     * Idempotent: dacă există deja un rând activ self_purchase, doar extinde
+     * expires_at cu o lună (rebill normal). Dacă era trial sau expired, îl
+     * trece pe active + setează expires_at la +1 lună.
+     */
+    protected function activateExtendedArtist(): void
+    {
+        if (!$this->marketplace_artist_account_id || !$this->microservice_id) {
+            Log::warning('Extended Artist order missing artist or microservice id', [
+                'service_order_id' => $this->id,
+            ]);
+            return;
+        }
+
+        $now = now();
+        $newExpiry = $now->copy()->addMonth();
+
+        $pivot = \App\Models\MarketplaceArtistAccountMicroservice::firstOrNew([
+            'marketplace_artist_account_id' => $this->marketplace_artist_account_id,
+            'microservice_id' => $this->microservice_id,
+        ]);
+
+        // Dacă era deja activ și mai are valabilitate, prelungim de la expires_at
+        // ca să nu pierdem zile rămase din ciclul anterior.
+        if ($pivot->exists && $pivot->expires_at && $pivot->expires_at->isFuture()) {
+            $newExpiry = $pivot->expires_at->copy()->addMonth();
+        }
+
+        $pivot->fill([
+            'status' => \App\Models\MarketplaceArtistAccountMicroservice::STATUS_ACTIVE,
+            'granted_by' => \App\Models\MarketplaceArtistAccountMicroservice::GRANTED_SELF_PURCHASE,
+            'service_order_id' => $this->id,
+            'activated_at' => $pivot->activated_at ?? $now,
+            'expires_at' => $newExpiry,
+            'cancelled_at' => null,
+        ]);
+        $pivot->save();
     }
 
     /**
@@ -966,6 +1027,16 @@ HTML;
     public function marketplaceOrganizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    public function artistAccount(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceArtistAccount::class, 'marketplace_artist_account_id');
+    }
+
+    public function microservice(): BelongsTo
+    {
+        return $this->belongsTo(Microservice::class);
     }
 
     public function event(): BelongsTo

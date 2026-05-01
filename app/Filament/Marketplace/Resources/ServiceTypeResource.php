@@ -41,6 +41,20 @@ class ServiceTypeResource extends Resource
         // Ensure service types exist for this marketplace
         if ($marketplace) {
             ServiceType::getOrCreateForMarketplace($marketplace->id);
+
+            // Auto-create Extended Artist service entry if microserviciul e activ
+            // pentru acest marketplace. In acest fel apare automat in lista cu
+            // audience='artist' fara ca admin sa-l creeze manual.
+            $extendedArtistActive = \Illuminate\Support\Facades\DB::table('marketplace_client_microservices as mcm')
+                ->join('microservices as m', 'm.id', '=', 'mcm.microservice_id')
+                ->where('mcm.marketplace_client_id', $marketplace->id)
+                ->where('m.slug', 'extended-artist')
+                ->where('mcm.status', 'active')
+                ->exists();
+
+            if ($extendedArtistActive) {
+                ServiceType::getOrCreateExtendedArtistService($marketplace->id);
+            }
         }
 
         return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
@@ -63,6 +77,17 @@ class ServiceTypeResource extends Resource
                             ->disabled()
                             ->dehydrated(false),
 
+                        Forms\Components\Select::make('audience')
+                            ->label('Audience')
+                            ->options([
+                                ServiceType::AUDIENCE_ORGANIZER => 'Organizator',
+                                ServiceType::AUDIENCE_ARTIST => 'Artist',
+                                ServiceType::AUDIENCE_BOTH => 'Ambele',
+                            ])
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('Cine poate cumpara acest serviciu (read-only).'),
+
                         Forms\Components\Textarea::make('description')
                             ->label('Description')
                             ->rows(2)
@@ -71,9 +96,36 @@ class ServiceTypeResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Deactivate to hide this service from organizers'),
+                            ->helperText('Deactivate to hide this service from buyers'),
                     ])
                     ->columns(2),
+
+                // Extended Artist Pricing
+                Section::make('Extended Artist Pricing')
+                    ->icon('heroicon-o-sparkles')
+                    ->description('Abonament lunar pentru artiști + trial gratuit')
+                    ->statePath('pricing')
+                    ->schema([
+                        Forms\Components\TextInput::make('monthly')
+                            ->label('Cost lunar (RON)')
+                            ->numeric()
+                            ->step(0.01)
+                            ->helperText('Pretul facturat lunar dupa expirarea trial-ului'),
+
+                        Forms\Components\TextInput::make('trial_days')
+                            ->label('Zile trial gratuit')
+                            ->numeric()
+                            ->step(1)
+                            ->minValue(0)
+                            ->helperText('0 = fără trial. Default: 30 zile.'),
+
+                        Forms\Components\TextInput::make('currency')
+                            ->label('Moneda')
+                            ->default('RON')
+                            ->maxLength(3),
+                    ])
+                    ->columns(3)
+                    ->visible(fn ($record) => $record?->code === ServiceType::CODE_EXTENDED_ARTIST),
 
                 // Featuring Pricing
                 Section::make('Featuring Pricing')
@@ -209,7 +261,24 @@ class ServiceTypeResource extends Resource
                         'email' => 'success',
                         'tracking' => 'info',
                         'campaign' => 'warning',
+                        'extended_artist' => 'purple',
                         default => 'gray',
+                    }),
+
+                Tables\Columns\TextColumn::make('audience')
+                    ->label('Audience')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        ServiceType::AUDIENCE_ORGANIZER => 'gray',
+                        ServiceType::AUDIENCE_ARTIST => 'purple',
+                        ServiceType::AUDIENCE_BOTH => 'info',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (?string $state) => match ($state) {
+                        ServiceType::AUDIENCE_ORGANIZER => 'Organizator',
+                        ServiceType::AUDIENCE_ARTIST => 'Artist',
+                        ServiceType::AUDIENCE_BOTH => 'Ambele',
+                        default => $state ?? '—',
                     }),
 
                 Tables\Columns\TextColumn::make('pricing_summary')
@@ -241,6 +310,12 @@ class ServiceTypeResource extends Resource
                                 $pricing['basic'] ?? 0,
                                 $pricing['premium'] ?? 0
                             ),
+                            'extended_artist' => sprintf(
+                                'Lunar: %d %s · Trial: %d zile',
+                                $pricing['monthly'] ?? 0,
+                                $pricing['currency'] ?? 'RON',
+                                $pricing['trial_days'] ?? 0
+                            ),
                             default => 'N/A',
                         };
                     }),
@@ -262,6 +337,15 @@ class ServiceTypeResource extends Resource
                         'email' => 'Email Marketing',
                         'tracking' => 'Ad Tracking',
                         'campaign' => 'Campaign Creation',
+                        'extended_artist' => 'Extended Artist',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('audience')
+                    ->label('Audience')
+                    ->options([
+                        ServiceType::AUDIENCE_ORGANIZER => 'Organizator',
+                        ServiceType::AUDIENCE_ARTIST => 'Artist',
+                        ServiceType::AUDIENCE_BOTH => 'Ambele',
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_active')

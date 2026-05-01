@@ -85,6 +85,76 @@ class EmailTemplatesSeeder extends Seeder
                 'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'reset_password_link'],
                 'is_active' => true,
             ],
+            // ----------------------------------------------------------------
+            // Extended Artist (Faza 1 - placeholder bodies; populated by team)
+            // ----------------------------------------------------------------
+            [
+                'name' => 'Extended Artist - Trial Started',
+                'event_trigger' => 'extended_artist_trial_started',
+                'subject' => 'Trial-ul tău Extended Artist a început',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Ai pornit un trial gratuit de <strong>{{trial_days}} zile</strong> pentru pachetul Extended Artist.</p>
+<p>Ai acces complet la cele 4 module: Fan CRM, Booking Marketplace, Smart EPK și Tour Optimizer.</p>
+<p>Trial-ul expiră pe <strong>{{trial_ends_at}}</strong>. După această dată, dacă nu activezi abonamentul plătit, accesul la module va fi suspendat.</p>',
+                'description' => 'Notificare către artist după pornirea trial-ului Extended Artist (30 zile gratuit).',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'trial_days', 'trial_ends_at', 'portal_url'],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Extended Artist - Trial Ending Soon',
+                'event_trigger' => 'extended_artist_trial_ending',
+                'subject' => 'Trial-ul Extended Artist expiră în curând',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Trial-ul tău Extended Artist expiră pe <strong>{{trial_ends_at}}</strong>.</p>
+<p>Pentru a păstra accesul la Fan CRM, Booking Marketplace, Smart EPK și Tour Optimizer, activează abonamentul lunar.</p>',
+                'description' => 'Reminder cu 3 zile înainte ca trial-ul Extended Artist să expire.',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'trial_ends_at', 'subscribe_url'],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Extended Artist - Trial Expired',
+                'event_trigger' => 'extended_artist_trial_expired',
+                'subject' => 'Trial-ul Extended Artist a expirat',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Trial-ul tău Extended Artist a expirat. Accesul la cele 4 module a fost suspendat.</p>
+<p>Reactivează oricând prin abonamentul lunar — datele tale rămân salvate.</p>',
+                'description' => 'Notificare la expirarea trial-ului Extended Artist.',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'subscribe_url'],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Extended Artist - Subscription Renewed',
+                'event_trigger' => 'extended_artist_subscription_renewed',
+                'subject' => 'Abonamentul Extended Artist s-a reînnoit',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Plata pentru abonamentul tău Extended Artist a fost procesată cu succes.</p>
+<p>Acces valabil până la <strong>{{expires_at}}</strong>. Suma facturată: <strong>{{amount}} {{currency}}</strong>.</p>',
+                'description' => 'Confirmare după re-charge automat sau manual lunar pentru Extended Artist.',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'expires_at', 'amount', 'currency', 'invoice_url'],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Extended Artist - Subscription Failed',
+                'event_trigger' => 'extended_artist_subscription_failed',
+                'subject' => 'Plata pentru Extended Artist a eșuat',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Nu am putut procesa plata pentru abonamentul tău Extended Artist.</p>
+<p>Pentru a păstra accesul, te rugăm să actualizezi metoda de plată sau să retrimiți plata.</p>',
+                'description' => 'Notificare la eșec de re-charge pentru abonamentul Extended Artist.',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'retry_url'],
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Extended Artist - Activated by Admin',
+                'event_trigger' => 'extended_artist_admin_activated',
+                'subject' => 'Ai primit acces gratuit la Extended Artist',
+                'body' => '<h2>Salut {{first_name}}!</h2>
+<p>Echipa marketplace ți-a activat accesul la pachetul Extended Artist (Fan CRM, Booking Marketplace, Smart EPK, Tour Optimizer).</p>
+<p>Accesul este nelimitat și nu îți va fi facturat. Intră în portal pentru a începe.</p>',
+                'description' => 'Notificare către artist când marketplace admin face admin override pe contul lui.',
+                'available_variables' => ['first_name', 'last_name', 'full_name', 'email', 'portal_url'],
+                'is_active' => true,
+            ],
         ];
 
         foreach ($templates as $template) {
