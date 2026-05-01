@@ -141,7 +141,7 @@ class OrderResource extends Resource
                                     ->label('Retrimite confirmare')
                                     ->icon('heroicon-o-envelope')
                                     ->color('gray')
-                                    ->visible(fn ($record) => $record->source !== 'external_import')
+                                    ->visible(fn ($record) => $record->source !== 'external_import' && $record->status !== 'expired')
                                     ->action(fn ($record) => self::resendConfirmation($record)),
                             ])->fullWidth(),
                             SC\Actions::make([
@@ -149,6 +149,7 @@ class OrderResource extends Resource
                                     ->label('Download bilete')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('gray')
+                                    ->visible(fn ($record) => $record->status !== 'expired')
                                     ->action(fn ($record) => static::downloadAllTicketsPdf($record)),
                             ])->fullWidth(),
                             SC\Actions::make([
@@ -156,7 +157,7 @@ class OrderResource extends Resource
                                     ->label('Printează factura')
                                     ->icon('heroicon-o-printer')
                                     ->color('gray')
-                                    ->visible(fn ($record) => $record->source !== 'external_import'),
+                                    ->visible(fn ($record) => $record->source !== 'external_import' && $record->status !== 'expired'),
                             ])->fullWidth(),
                             SC\Actions::make([
                                 Action::make('change_status')
