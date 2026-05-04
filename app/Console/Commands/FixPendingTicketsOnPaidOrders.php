@@ -69,7 +69,11 @@ class FixPendingTicketsOnPaidOrders extends Command
                 //   - external_import: legacy data backfilled in
                 //   - pos_app:        cash POS handoff; receipt printed at till
                 //   - test_order:     QA artifact
-                ->whereNotIn('source', ['external_import', 'pos_app', 'test_order']);
+                ->whereNotIn('source', ['external_import', 'pos_app', 'test_order'])
+                // Skip demo/seeded orders (DEMO-XXXX-NNNN naming convention).
+                // They carry placeholder customer_email values and should
+                // never reach a real inbox.
+                ->where('order_number', 'not like', 'DEMO%');
             $this->info('Mode: missing-emails-only (paid_at >= ' . $sinceDate->toDateString() . ')');
         } else {
             // Default: only orders that still have pending tickets — the
