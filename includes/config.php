@@ -28,8 +28,16 @@ if (USE_STAGE_API) {
     define('API_BASE_URL', 'https://stage.tixello.com/api/marketplace-client');
     define('STORAGE_URL', 'https://stage.tixello.com/storage');
 } else {
-    define('CORE_URL', 'https://core.tixello.com');
-    define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
+    // Cloudflare Worker bridge — direct connection from this hosting to
+    // Cloudflare edges assigned to core.tixello.com is currently L4-blocked
+    // (TCP RST). The Worker proxies the same paths from a CF-internal route
+    // that does work. STORAGE_URL stays on core.tixello.com because it's
+    // served to end-user browsers, not from this server, and end-user IPs
+    // are not blocked.
+    // TODO: revert to https://core.tixello.com/api/marketplace-client once
+    // Cloudflare support removes the L4 block.
+    define('CORE_URL', 'https://tixello-bridge.contact-d39.workers.dev');
+    define('API_BASE_URL', 'https://tixello-bridge.contact-d39.workers.dev/api/marketplace-client');
     define('STORAGE_URL', 'https://core.tixello.com/storage');
 }
 define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB');
