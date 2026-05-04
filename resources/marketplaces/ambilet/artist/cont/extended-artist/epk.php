@@ -827,11 +827,13 @@ function smartEpk() {
             };
             this.branding = { accent: v.accent_color, template: v.template };
 
-            // Build sections array (merge metadata with server enabled flags)
+            // Build sections array (merge metadata with server enabled flags).
+            // Auto-enable se face mai jos, după ce data e populat (cu fallback la artist_profile).
             const serverSections = (v.sections || []).reduce((acc, s) => { acc[s.id] = s; return acc; }, {});
-            this.sections = this.sectionsMeta.map(meta => {
+            const sectionEnabledMap = {};
+            this.sectionsMeta.forEach(meta => {
                 const s = serverSections[meta.id] || {};
-                return { ...meta, enabled: s.enabled ?? true };
+                sectionEnabledMap[meta.id] = s.enabled ?? true;
             });
 
             // Build flat data object from sections data
@@ -882,6 +884,29 @@ function smartEpk() {
                 value: this.state.live_stats?.[s.key]?.display ?? '—',
                 show: showFlags[s.key] ?? true,
             }));
+
+            // Build this.sections AFTER this.data e construit, pentru auto-enable
+            // bazat pe conținut. Dacă serverul a returnat enabled=false dar avem
+            // date populate prin fallback (din artist_profile), forțăm enabled=true.
+            const hasData = (sectionId) => {
+                switch (sectionId) {
+                    case 'youtube': return this.data.youtube_videos.length > 0;
+                    case 'spotify': return !!this.data.spotify_url;
+                    case 'achievements': return this.data.achievements.length > 0;
+                    case 'social':
+                        return !!(this.data.social.website || this.data.social.facebook ||
+                                 this.data.social.instagram || this.data.social.tiktok ||
+                                 this.data.social.youtube);
+                    case 'gallery': return this.nonEmptyGallery().length > 0;
+                    default: return false;
+                }
+            };
+            this.sections = this.sectionsMeta.map(meta => {
+                let enabled = sectionEnabledMap[meta.id];
+                // Dacă server a zis false dar avem date populate prin fallback → enable
+                if (!enabled && hasData(meta.id)) enabled = true;
+                return { ...meta, enabled };
+            });
 
             this.dirty = false;
         },

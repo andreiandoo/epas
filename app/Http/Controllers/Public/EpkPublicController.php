@@ -38,33 +38,62 @@ class EpkPublicController extends Controller
 
     public function show(Request $request, string $artistSlug, ?string $variantSlug = null)
     {
-        $artist = Artist::where('slug', $artistSlug)->first();
-        if (!$artist || !$artist->epk) {
-            abort(404);
+        try {
+            $artist = Artist::where('slug', $artistSlug)->first();
+            if (!$artist || !$artist->epk) {
+                abort(404);
+            }
+
+            if (!$this->artistHasActiveExtendedArtist($artist)) {
+                abort(404);
+            }
+
+            $epk = $artist->epk()->with('variants')->first();
+            if (!$epk || !$epk->active_variant_id) {
+                abort(404);
+            }
+
+            $variant = $variantSlug
+                ? $epk->variants->firstWhere('slug', $variantSlug)
+                : $epk->variants->firstWhere('id', $epk->active_variant_id);
+
+            if (!$variant) {
+                abort(404);
+            }
+
+            $payload = $this->epkService->buildPublicPayload($variant);
+            if (empty($payload)) {
+                abort(404);
+            }
+            $payload['marketplace_name'] = $request->attributes->get('marketplace_client')?->name ?? 'EventPilot';
+
+            // Bypass cache cu ?nocache=1 — util la debugging după save / deploy
+            if ($request->boolean('nocache')) {
+                Cache::forget($this->epkService->publicCacheKey($variant->id));
+                return view('public.epk.show', $payload)->render();
+            }
+
+            return Cache::remember(
+                $this->epkService->publicCacheKey($variant->id),
+                EpkService::PUBLIC_CACHE_TTL,
+                fn () => view('public.epk.show', $payload)->render()
+            );
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // 404 / abort() — re-throw fără să loggez (e expected)
+            throw $e;
+        } catch (\Throwable $e) {
+            // Loggez exact unde și de ce explodează ca să pot debug remote
+            \Illuminate\Support\Facades\Log::error('EPK public render failed', [
+                'artist_slug' => $artistSlug,
+                'variant_slug' => $variantSlug,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => collect($e->getTrace())->take(8)->map(fn ($t) => ($t['file'] ?? '?') . ':' . ($t['line'] ?? '?') . ' ' . ($t['function'] ?? '?'))->all(),
+            ]);
+            // Returnăm 503 cu mesaj user-friendly în loc de stack trace
+            abort(503, 'EPK render failed — admin a fost notificat.');
         }
-
-        if (!$this->artistHasActiveExtendedArtist($artist)) {
-            abort(404);
-        }
-
-        $epk = $artist->epk()->with('variants')->first();
-
-        $variant = $variantSlug
-            ? $epk->variants->firstWhere('slug', $variantSlug)
-            : $epk->variants->firstWhere('id', $epk->active_variant_id);
-
-        if (!$variant) {
-            abort(404);
-        }
-
-        $payload = $this->epkService->buildPublicPayload($variant);
-        $payload['marketplace_name'] = $request->attributes->get('marketplace_client')?->name ?? 'EventPilot';
-
-        return Cache::remember(
-            $this->epkService->publicCacheKey($variant->id),
-            EpkService::PUBLIC_CACHE_TTL,
-            fn () => view('public.epk.show', $payload)->render()
-        );
     }
 
     public function riderRequest(Request $request): JsonResponse

@@ -241,8 +241,14 @@ class ArtistEpkVariant extends Model
     public function enrichedSections(?Artist $artist = null): array
     {
         $artist = $artist ?? $this->artistEpk?->artist;
+        $rawSections = is_array($this->sections) ? $this->sections : [];
+
         if (!$artist) {
-            return $this->sections ?? [];
+            // Sanitize doar — fără fallback-uri din artist
+            return array_values(array_filter(array_map(
+                fn ($s) => is_array($s) ? $s + ['data' => is_array($s['data'] ?? null) ? $s['data'] : []] : null,
+                $rawSections
+            )));
         }
 
         $socialMap = [
@@ -258,11 +264,23 @@ class ArtistEpkVariant extends Model
             'phone' => $artist->phone,
         ];
 
-        $enriched = [];
-        foreach (($this->sections ?? []) as $section) {
-            $section['data'] = $section['data'] ?? [];
+        // Normalize artist YouTube videos defensively
+        $artistYoutubeVideos = collect($artist->youtube_videos ?? [])
+            ->map(fn ($v) => ['url' => is_string($v) ? $v : ($v['url'] ?? '')])
+            ->filter(fn ($v) => !empty($v['url']))
+            ->values()
+            ->all();
 
-            if (($section['id'] ?? null) === self::SECTION_SOCIAL) {
+        $enriched = [];
+        foreach ($rawSections as $section) {
+            // Defensive: skip non-array sections (data corruption guard)
+            if (!is_array($section)) {
+                continue;
+            }
+            $section['data'] = is_array($section['data'] ?? null) ? $section['data'] : [];
+            $sectionId = $section['id'] ?? null;
+
+            if ($sectionId === self::SECTION_SOCIAL) {
                 foreach ($socialMap as $key => $artistVal) {
                     if (empty($section['data'][$key]) && !empty($artistVal)) {
                         $section['data'][$key] = $artistVal;
@@ -270,7 +288,7 @@ class ArtistEpkVariant extends Model
                 }
             }
 
-            if (($section['id'] ?? null) === self::SECTION_CONTACT) {
+            if ($sectionId === self::SECTION_CONTACT) {
                 foreach ($contactMap as $key => $artistVal) {
                     if (empty($section['data'][$key]) && !empty($artistVal)) {
                         $section['data'][$key] = $artistVal;
@@ -279,7 +297,7 @@ class ArtistEpkVariant extends Model
             }
 
             // Hero: stage_name + cover_image fallback la artist
-            if (($section['id'] ?? null) === self::SECTION_HERO) {
+            if ($sectionId === self::SECTION_HERO) {
                 if (empty($section['data']['stage_name'])) {
                     $section['data']['stage_name'] = $artist->name;
                 }
@@ -288,21 +306,77 @@ class ArtistEpkVariant extends Model
                 }
             }
 
+            // YouTube: fallback la videoclipurile din profil + auto-enable când avem date
+            if ($sectionId === self::SECTION_YOUTUBE) {
+                $currentVideos = collect($section['data']['videos'] ?? [])
+                    ->map(fn ($v) => ['url' => is_string($v) ? $v : ($v['url'] ?? '')])
+                    ->filter(fn ($v) => !empty($v['url']))
+                    ->values()
+                    ->all();
+                if (empty($currentVideos) && !empty($artistYoutubeVideos)) {
+                    $section['data']['videos'] = $artistYoutubeVideos;
+                    if (empty($section['enabled'])) {
+                        $section['enabled'] = true;
+                    }
+                } else {
+                    $section['data']['videos'] = $currentVideos;
+                }
+            }
+
+            // Spotify: fallback la URL profil
+            if ($sectionId === self::SECTION_SPOTIFY) {
+                if (empty($section['data']['spotify_url']) && !empty($artist->spotify_url)) {
+                    $section['data']['spotify_url'] = $artist->spotify_url;
+                    if (empty($section['enabled'])) {
+                        $section['enabled'] = true;
+                    }
+                }
+            }
+
+            // Achievements: fallback la cele din profil
+            if ($sectionId === self::SECTION_ACHIEVEMENTS) {
+                $items = is_array($section['data']['items'] ?? null) ? $section['data']['items'] : [];
+                if (empty($items) && !empty($artist->achievements)) {
+                    $section['data']['items'] = $artist->achievements;
+                    if (empty($section['enabled'])) {
+                        $section['enabled'] = true;
+                    }
+                }
+            }
+
+            // Bio: fallback la bio_html din profil pentru bio_long
+            if ($sectionId === self::SECTION_BIO) {
+                if (empty($section['data']['bio_long'])) {
+                    $bioHtml = $artist->bio_html;
+                    if (is_array($bioHtml)) {
+                        $section['data']['bio_long'] = $bioHtml['ro'] ?? $bioHtml['en'] ?? (array_values($bioHtml)[0] ?? '');
+                    }
+                }
+            }
+
             // Gallery: normalize la URL-uri absolute, filtrează valorile goale
-            // (defensiv pentru variante cu paths relative stocate vechi).
-            if (($section['id'] ?? null) === self::SECTION_GALLERY) {
+            // + fallback la imaginile din profil dacă tot gol
+            if ($sectionId === self::SECTION_GALLERY) {
                 $images = (array) ($section['data']['images'] ?? []);
                 $images = array_values(array_filter(array_map(function ($img) {
                     if (!is_string($img) || $img === '') {
                         return null;
                     }
-                    // URL absolut → trece direct
                     if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                         return $img;
                     }
-                    // Path relativ → convert via Storage public
-                    return \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($img, '/'));
+                    try {
+                        return \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($img, '/'));
+                    } catch (\Throwable $e) {
+                        return null;
+                    }
                 }, $images)));
+                if (empty($images)) {
+                    $images = array_values(array_filter([
+                        $artist->main_image_full_url,
+                        $artist->portrait_full_url,
+                    ]));
+                }
                 $section['data']['images'] = $images;
             }
 
