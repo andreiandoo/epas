@@ -62,7 +62,10 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_CONNECTTIMEOUT => 10,
+        // Tight connect timeout — page-render code path; if backend is
+        // unreachable we want to fail fast and use stale cache rather
+        // than block the homepage for tens of seconds.
+        CURLOPT_CONNECTTIMEOUT => 3,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_HTTPHEADER => $headers ?: $defaultHeaders,
