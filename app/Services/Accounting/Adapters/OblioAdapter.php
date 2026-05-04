@@ -241,6 +241,15 @@ class OblioAdapter implements AccountingAdapterInterface
                 'dueDate' => $invoice['due_date'] ?? date('Y-m-d', strtotime('+30 days')),
                 'currency' => $invoice['currency'] ?? 'RON',
                 'isDraft' => $isDraft,
+                // When the customer has no VAT/CIF (e.g., the
+                // "Client general" used for added_on_top commissions where
+                // we don't fiscalize against an organizer), do NOT save the
+                // customer in Oblio's address book. Otherwise Oblio matches
+                // by name and silently reuses an old saved record — that's
+                // what made every invoice for "Client general" come back
+                // tagged with whatever ANAF data was attached the first time
+                // someone happened to send a CIF with that name.
+                // autocomplete=0 also prevents ANAF lookup on empty CIF.
                 'client' => [
                     'name' => $customer['name'] ?? '',
                     'cif' => $customer['vat_number'] ?? '',
@@ -250,7 +259,7 @@ class OblioAdapter implements AccountingAdapterInterface
                     'county' => $customer['address']['county'] ?? '',
                     'country' => $customer['address']['country'] ?? 'Romania',
                     'email' => $customer['email'] ?? '',
-                    'save' => 1,
+                    'save' => !empty($customer['vat_number']) ? 1 : 0,
                     'autocomplete' => !empty($customer['vat_number']) ? 1 : 0,
                 ],
                 'products' => [],

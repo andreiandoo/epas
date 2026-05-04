@@ -353,6 +353,16 @@ class EditOrganizerInvoice extends EditRecord
         $items = $meta['items'] ?? [];
         $metaUpdated = false;
 
+        // recipient_type drives whether the customer is the organizer
+        // (organizer → fiscal entity, must have CUI) or a generic public
+        // buyer (general_client → no CUI, no address). The block below
+        // auto-fills missing client fields from the organizer's company
+        // profile, which is correct for organizer-recipient invoices but
+        // POISONS general_client invoices with the organizer's CUI/address.
+        // Default 'organizer' to preserve old behavior for unflagged rows.
+        $recipientType = $meta['recipient_type'] ?? 'organizer';
+        $isGeneralClient = $recipientType === 'general_client';
+
         // Auto-fill issuer data from marketplace settings if missing
         if (empty($issuer['cui']) && !empty($marketplace->cui)) {
             $issuer['cui'] = $marketplace->cui;
@@ -393,9 +403,13 @@ class EditOrganizerInvoice extends EditRecord
             $metaUpdated = true;
         }
 
-        // Auto-fill client data from organizer profile if missing
+        // Auto-fill client data from organizer profile when missing — but
+        // only for organizer-recipient invoices. For general_client we want
+        // an explicitly empty CUI/address; auto-filling here was the source
+        // of the bug where Oblio matched by name and stamped the organizer's
+        // ANAF data on every "Client general" invoice.
         $org = $invoice->organizer;
-        if ($org) {
+        if ($org && !$isGeneralClient) {
             if (empty($client['cui']) && !empty($org->company_tax_id)) {
                 $client['cui'] = $org->company_tax_id;
                 $meta['client']['cui'] = $org->company_tax_id;
@@ -425,10 +439,14 @@ class EditOrganizerInvoice extends EditRecord
             $invoice->update(['meta' => $meta]);
         }
 
-        // Validate required data before sending
+        // Validate required data before sending. CUI is mandatory only for
+        // organizer-recipient invoices; general_client legitimately has no
+        // CUI and Oblio accepts that.
         $errors = [];
         if (empty($client['name'])) $errors[] = 'Numele clientului lipsește.';
-        if (empty($client['cui'])) $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
+        if (!$isGeneralClient && empty($client['cui'])) {
+            $errors[] = 'CUI-ul clientului lipsește (și din factură, și din profilul organizatorului).';
+        }
         if (empty($items)) $errors[] = 'Factura nu conține articole.';
 
         if (!empty($errors)) {
