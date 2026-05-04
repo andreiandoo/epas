@@ -58,10 +58,14 @@ function api_request(string $method, string $url, ?array $data = null): array
         'X-API-Key: ' . API_KEY,
     ];
 
-    curl_setopt_array($ch, [
+    $resolveOptions = [];
+    if (str_contains($url, 'core.tixello.com')) {
+        $resolveOptions[CURLOPT_RESOLVE] = ['core.tixello.com:443:' . (getenv('TIXELLO_ORIGIN_IP') ?: '89.44.137.26')];
+    }
+    curl_setopt_array($ch, $resolveOptions + [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_CONNECTTIMEOUT => 10,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_SSL_VERIFYPEER => true,

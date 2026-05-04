@@ -3659,11 +3659,18 @@ $upstreamContentDisposition = '';
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT => 15,
-    CURLOPT_CONNECTTIMEOUT => 3,
+    CURLOPT_CONNECTTIMEOUT => 10,
     CURLOPT_HTTPHEADER => $curlHeaders,
     CURLOPT_FOLLOWLOCATION => true,
     CURLOPT_SSL_VERIFYPEER => true,
     CURLOPT_ENCODING => '', // Accept gzip/deflate (smaller response, faster)
+    // Pin DNS to the core.tixello.com origin to bypass Cloudflare for the
+    // server-to-server hop. Cloudflare TLS+TCP handshake intermittently
+    // pushes connect time over the 3s budget, killing requests before any
+    // data is exchanged. The cert is still valid for core.tixello.com so
+    // CURLOPT_SSL_VERIFYPEER stays on. Override via TIXELLO_ORIGIN_IP env
+    // if the backend is moved.
+    CURLOPT_RESOLVE => ['core.tixello.com:443:' . (getenv('TIXELLO_ORIGIN_IP') ?: '89.44.137.26')],
     CURLOPT_HEADERFUNCTION => function ($ch, $header) use (&$upstreamContentDisposition) {
         if (stripos($header, 'Content-Disposition:') === 0) {
             $upstreamContentDisposition = trim($header);
