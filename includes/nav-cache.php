@@ -83,6 +83,9 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
         markBackendUnreachable('HTTP ' . $httpCode);
         return false;
     }
+    // Successful fetch — clear any stale outage flag so the banner
+    // disappears immediately once the backend comes back.
+    markBackendReachable();
     return $response;
 }
 
@@ -98,6 +101,18 @@ function markBackendUnreachable(string $reason): void {
         'at' => time(),
         'reason' => substr($reason, 0, 200),
     ]));
+}
+
+/**
+ * Clear the unreachable flag — called whenever a fetch succeeds.
+ * Without this the banner would stick for up to 60s after recovery.
+ */
+function markBackendReachable(): void {
+    $GLOBALS['ambilet_backend_unreachable'] = false;
+    $flagFile = sys_get_temp_dir() . '/ambilet_backend_unreachable.flag';
+    if (is_file($flagFile)) {
+        @unlink($flagFile);
+    }
 }
 
 /**
