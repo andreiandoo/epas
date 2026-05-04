@@ -31,7 +31,8 @@ class FixPendingTicketsOnPaidOrders extends Command
         {--send-emails : Also resend the order confirmation email (and beneficiary tickets) for the affected orders. Skipped if marketplace_email_logs already has a confirmation entry for the order, so re-runs do not double-send.}
         {--missing-emails-only : Skip the ticket activation pass entirely; only iterate paid orders whose order_number is not present in marketplace_email_logs and resend their confirmation. Use after a previous run already flipped tickets to valid without --send-emails. Implies --send-emails.}
         {--since= : When used with --missing-emails-only, only consider orders paid on or after this date (Y-m-d). Default: 7 days ago.}
-        {--sleep=0 : Seconds to wait between successful email sends. Useful when one recipient owns many orders (Brevo spam flag risk) or to stay under provider rate limits. Default: 0 (no wait).}';
+        {--sleep=0 : Seconds to wait between successful email sends. Useful when one recipient owns many orders (Brevo spam flag risk) or to stay under provider rate limits. Default: 0 (no wait).}
+        {--latest-per-customer : Group the result by customer_email and keep only the most recent paid order per recipient. Avoids spamming a customer who placed many duplicate/retry orders.}';
 
     protected $description = 'Activate tickets for paid orders that were left in pending due to the notifySale observer bug';
 
@@ -44,6 +45,7 @@ class FixPendingTicketsOnPaidOrders extends Command
         $missingEmailsOnly = (bool) $this->option('missing-emails-only');
         $since = $this->option('since');
         $sleepSeconds = max(0, (int) $this->option('sleep'));
+        $latestPerCustomer = (bool) $this->option('latest-per-customer');
 
         if ($missingEmailsOnly) {
             $sendEmails = true; // implied
@@ -108,6 +110,21 @@ class FixPendingTicketsOnPaidOrders extends Command
                     })
                     ->exists();
             })->values();
+        }
+
+        if ($latestPerCustomer) {
+            // Collapse duplicates by customer_email, keep the most recent
+            // paid order per recipient. Treats null paid_at as oldest.
+            $countBefore = $orders->count();
+            $orders = $orders
+                ->sortByDesc(fn ($o) => $o->paid_at?->getTimestamp() ?? 0)
+                ->unique('customer_email')
+                ->values();
+            $countAfter = $orders->count();
+            $deduped = $countBefore - $countAfter;
+            if ($deduped > 0) {
+                $this->info("Latest-per-customer: collapsed {$countBefore} → {$countAfter} ({$deduped} duplicate orders dropped).");
+            }
         }
 
         if ($orders->isEmpty()) {
