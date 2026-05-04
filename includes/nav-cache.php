@@ -59,11 +59,7 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
         $defaultHeaders[] = 'X-API-Key: ' . API_KEY;
     }
     $ch = curl_init($url);
-    $resolveOptions = [];
-    if (str_contains($url, 'core.tixello.com')) {
-        $resolveOptions[CURLOPT_RESOLVE] = ['core.tixello.com:443:' . (getenv('TIXELLO_ORIGIN_IP') ?: '89.44.137.26')];
-    }
-    curl_setopt_array($ch, $resolveOptions + [
+    curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => $timeout,
         CURLOPT_CONNECTTIMEOUT => 10,
