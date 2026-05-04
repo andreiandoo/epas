@@ -56,7 +56,20 @@ $navQuickLinks = $navQuickLinks ?? [
 // $navCities - already has 'count' from getFeaturedCities() API
 // $navVenues - already has 'count' (events_count) from getFeaturedVenues() API
 $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
+
+// Detect backend connectivity issues so we can show a polite notice.
+// Set by navCacheFetch() above when any of the homepage/nav fetches fail.
+$ambiletBackendDown = isBackendUnreachable();
 ?>
+
+<?php if ($ambiletBackendDown): ?>
+<div id="ambilet-status-banner" class="ambilet-status-banner" role="status" aria-live="polite" style="position:sticky;top:0;z-index:9999;background:linear-gradient(90deg,#fef3c7 0%,#fde68a 100%);border-bottom:1px solid #f59e0b;color:#78350f;padding:10px 16px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span><strong>Probleme temporare de conectare.</strong> Unele evenimente și informații pot să nu apară corect. Lucrăm la rezolvare — încearcă din nou peste câteva minute.</span>
+    <button type="button" onclick="document.getElementById('ambilet-status-banner').style.display='none'" aria-label="Închide notificarea" style="background:transparent;border:0;cursor:pointer;color:#78350f;font-size:18px;line-height:1;padding:4px 8px;">&times;</button>
+</div>
+<?php endif; ?>
+
 
 <!-- Search Overlay -->
 <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[2000] opacity-0 invisible transition-all duration-300" id="searchOverlay" style="visibility:hidden"></div>
