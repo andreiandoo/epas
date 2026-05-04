@@ -30,7 +30,8 @@ class FixPendingTicketsOnPaidOrders extends Command
         {--ids= : Comma-separated list of order ids to target}
         {--send-emails : Also resend the order confirmation email (and beneficiary tickets) for the affected orders. Skipped if marketplace_email_logs already has a confirmation entry for the order, so re-runs do not double-send.}
         {--missing-emails-only : Skip the ticket activation pass entirely; only iterate paid orders whose order_number is not present in marketplace_email_logs and resend their confirmation. Use after a previous run already flipped tickets to valid without --send-emails. Implies --send-emails.}
-        {--since= : When used with --missing-emails-only, only consider orders paid on or after this date (Y-m-d). Default: 7 days ago.}';
+        {--since= : When used with --missing-emails-only, only consider orders paid on or after this date (Y-m-d). Default: 7 days ago.}
+        {--sleep=0 : Seconds to wait between successful email sends. Useful when one recipient owns many orders (Brevo spam flag risk) or to stay under provider rate limits. Default: 0 (no wait).}';
 
     protected $description = 'Activate tickets for paid orders that were left in pending due to the notifySale observer bug';
 
@@ -42,6 +43,7 @@ class FixPendingTicketsOnPaidOrders extends Command
         $sendEmails = (bool) $this->option('send-emails');
         $missingEmailsOnly = (bool) $this->option('missing-emails-only');
         $since = $this->option('since');
+        $sleepSeconds = max(0, (int) $this->option('sleep'));
 
         if ($missingEmailsOnly) {
             $sendEmails = true; // implied
@@ -206,6 +208,14 @@ class FixPendingTicketsOnPaidOrders extends Command
                                 'error' => $e->getMessage(),
                             ]);
                         }
+                    }
+
+                    // Pace the loop so a recipient who owns many orders does
+                    // not see N emails land in the same second (Brevo / Gmail
+                    // spam heuristics) and so we stay under provider rate
+                    // limits when fixing 100+ orders at once.
+                    if ($sleepSeconds > 0) {
+                        sleep($sleepSeconds);
                     }
                 } catch (\Throwable $e) {
                     $emailFailures++;
