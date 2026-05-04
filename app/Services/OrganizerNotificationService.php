@@ -51,9 +51,16 @@ class OrganizerNotificationService
             return null;
         }
 
-        $ticketCount = $order->orderItems->sum('quantity') ?? 1;
+        // Order has `items()` (HasMany OrderItem), not `orderItems`. The
+        // misnamed access returned null and threw \Error("sum() on null"),
+        // which broke PaymentController right before it could mark the
+        // tickets as 'valid' — left 78 paid orders with pending tickets.
+        $ticketCount = (int) ($order->items?->sum('quantity') ?? $order->tickets?->count() ?? 1);
         $ticketWord = $ticketCount === 1 ? 'bilet' : 'bilete';
-        $eventName = $order->marketplaceEvent?->name ?? 'eveniment';
+        $eventName = $order->event?->title ?? $order->marketplaceEvent?->name ?? 'eveniment';
+        if (is_array($eventName)) {
+            $eventName = $eventName['ro'] ?? $eventName['en'] ?? (reset($eventName) ?: 'eveniment');
+        }
 
         return self::notify(
             $organizer,

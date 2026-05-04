@@ -169,18 +169,25 @@ class OrderObserver
             if ($order->marketplace_organizer_id) {
                 try {
                     OrganizerNotificationService::notifySale($order);
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
+                    // Catch \Throwable, not \Exception — PHP \Error (e.g.
+                    // "Call to a member function sum() on null") does NOT
+                    // extend \Exception, so the previous catch let it
+                    // propagate up into PaymentController, which broke the
+                    // ticket activation step right after the order update.
                     Log::warning('Failed to send sale notification', [
                         'order_id' => $order->id,
                         'error' => $e->getMessage(),
+                        'error_class' => get_class($e),
                     ]);
                 }
             }
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Failed to track order conversion', [
                 'order_id' => $order->id,
                 'error' => $e->getMessage(),
+                'error_class' => get_class($e),
             ]);
         }
     }

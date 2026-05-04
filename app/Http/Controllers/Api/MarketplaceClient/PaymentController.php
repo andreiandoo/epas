@@ -11,6 +11,7 @@ use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends BaseController
@@ -267,6 +268,19 @@ class PaymentController extends BaseController
                     ]);
                 }
 
+                // Activate tickets FIRST so a misbehaving OrderObserver can't
+                // strand them in 'pending'. The order update below fires the
+                // observer chain (notifySale, trackPurchase, ...); if any
+                // listener throws and isn't caught, code after the update
+                // doesn't run. We saw exactly that on 78 paid orders where
+                // notifySale threw on a typo'd relation. Bypass the observer
+                // for the ticket flip — DB::table avoids triggering Ticket
+                // observers and is idempotent under retries.
+                DB::table('tickets')
+                    ->where('order_id', $order->id)
+                    ->where('status', 'pending')
+                    ->update(['status' => 'valid', 'updated_at' => now()]);
+
                 // Payment successful - save transaction ID from processor
                 $order->update([
                     'status' => 'completed',
@@ -274,9 +288,6 @@ class PaymentController extends BaseController
                     'paid_at' => now(),
                     'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
-
-                // Activate tickets
-                $order->tickets()->update(['status' => 'valid']);
 
                 // Confirm seat purchases (held → sold) now that payment is confirmed
                 $seatedItems = $order->meta['seated_items'] ?? [];
