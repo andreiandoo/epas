@@ -6,8 +6,16 @@
     /** @var string $marketplace_name */
 
     $sectionsByid = collect($variant['sections'] ?? [])->keyBy('id');
-    $get = fn (string $id, string $key, $default = null) => $sectionsByid[$id]['data'][$key] ?? $default;
-    $enabled = fn (string $id) => (bool) ($sectionsByid[$id]['enabled'] ?? false);
+    // Defensive: $sectionsByid[$id] poate fi null pentru variante incomplete.
+    // PHP 8 aruncă TypeError pe null['key'], deci dezambiguăm înainte de chain.
+    $get = function (string $id, string $key, $default = null) use ($sectionsByid) {
+        $section = $sectionsByid[$id] ?? null;
+        if (!is_array($section)) return $default;
+        $data = $section['data'] ?? null;
+        if (!is_array($data)) return $default;
+        return $data[$key] ?? $default;
+    };
+    $enabled = fn (string $id) => (bool) (($sectionsByid[$id] ?? [])['enabled'] ?? false);
 
     $accent = $variant['accent_color'] ?? '#A51C30';
     $heroImage = $get('hero', 'cover_image') ?: ($artist['main_image_url'] ?: $artist['portrait_url']);
@@ -21,8 +29,8 @@
     $youtubeVideos = (array) $get('youtube', 'videos', []);
     $spotifyUrl = $get('spotify', 'spotify_url', '');
     $statsShow = (array) $get('stats', 'show', []);
-    $rider = $sectionsByid['rider']['data'] ?? [];
-    $social = $sectionsByid['social']['data'] ?? [];
+    $rider = is_array($sectionsByid['rider'] ?? null) ? ($sectionsByid['rider']['data'] ?? []) : [];
+    $social = is_array($sectionsByid['social'] ?? null) ? ($sectionsByid['social']['data'] ?? []) : [];
     $contactEmail = $get('contact', 'email', '');
     $contactPhone = $get('contact', 'phone', '');
     $showBookingCta = (bool) $get('contact', 'show_booking_cta', true);

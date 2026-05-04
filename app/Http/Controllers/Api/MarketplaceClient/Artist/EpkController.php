@@ -335,7 +335,9 @@ class EpkController extends BaseController
 
     protected function presentEpk(ArtistEpk $epk, Artist $artist, MarketplaceClient $marketplace): array
     {
-        $variants = $epk->variants->map(fn ($v) => $this->presentVariant($v))->toArray();
+        // Trecem $artist explicit la presentVariant ca să evităm lazy load + ca să
+        // nu depindem de relationships (presentVariant e folosit și fără EPK loaded).
+        $variants = $epk->variants->map(fn ($v) => $this->presentVariant($v, $artist))->toArray();
 
         return [
             'id' => $epk->id,
@@ -343,6 +345,26 @@ class EpkController extends BaseController
                 'id' => $artist->id,
                 'name' => $artist->name,
                 'slug' => $artist->slug,
+            ],
+            // artist_profile: oglindă a câmpurilor relevante de pe profil — folosită
+            // în editor ca fallback când câmpurile dintr-o secțiune sunt goale.
+            'artist_profile' => [
+                'main_image_url' => $artist->main_image_full_url,
+                'logo_url' => $artist->logo_full_url,
+                'portrait_url' => $artist->portrait_full_url,
+                'bio_html' => $artist->bio_html ?? [],
+                'website' => $artist->website,
+                'facebook_url' => $artist->facebook_url,
+                'instagram_url' => $artist->instagram_url,
+                'tiktok_url' => $artist->tiktok_url,
+                'youtube_url' => $artist->youtube_url,
+                'spotify_url' => $artist->spotify_url,
+                'youtube_videos' => $artist->youtube_videos ?? [],
+                'email' => $artist->email,
+                'phone' => $artist->phone,
+                'city' => $artist->city,
+                'country' => $artist->country,
+                'achievements' => $artist->achievements ?? [],
             ],
             'active_variant_id' => $epk->active_variant_id,
             'variants' => $variants,
@@ -357,7 +379,7 @@ class EpkController extends BaseController
         ];
     }
 
-    protected function presentVariant(ArtistEpkVariant $variant): array
+    protected function presentVariant(ArtistEpkVariant $variant, ?Artist $artist = null): array
     {
         return [
             'id' => $variant->id,
@@ -366,8 +388,8 @@ class EpkController extends BaseController
             'slug' => $variant->slug,
             'accent_color' => $variant->accent_color,
             'template' => $variant->template,
-            // enriched cu fallback-uri din Artist profile (social/contact/hero stage_name)
-            'sections' => $variant->enrichedSections(),
+            // enriched cu fallback-uri din Artist profile (social/contact/hero stage_name + cover + gallery)
+            'sections' => $variant->enrichedSections($artist),
             'views_count' => $variant->views_count,
             'conversion_pct' => (float) $variant->conversion_pct,
             'created_at' => $variant->created_at?->toIso8601String(),

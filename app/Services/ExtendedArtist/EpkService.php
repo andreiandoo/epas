@@ -167,8 +167,13 @@ class EpkService
             return [];
         }
 
-        $hiddenIds = (array) ($variant->getSection(ArtistEpkVariant::SECTION_PAST_EVENTS)['data']['hidden_event_ids'] ?? []);
-        $pastLimit = (int) ($variant->getSection(ArtistEpkVariant::SECTION_PAST_EVENTS)['data']['limit'] ?? 12);
+        // Defensive: getSection() poate returna null dacă varianta nu are toate
+        // sectiunile (ex. variantă cloned sau veche). PHP 8+ aruncă TypeError
+        // pe null['key'], deci normalizăm la array gol înainte de access.
+        $pastSection = $variant->getSection(ArtistEpkVariant::SECTION_PAST_EVENTS) ?? [];
+        $pastData = is_array($pastSection['data'] ?? null) ? $pastSection['data'] : [];
+        $hiddenIds = (array) ($pastData['hidden_event_ids'] ?? []);
+        $pastLimit = (int) ($pastData['limit'] ?? 12);
 
         return [
             'artist' => [

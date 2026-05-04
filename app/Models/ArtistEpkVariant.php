@@ -111,7 +111,8 @@ class ArtistEpkVariant extends Model
             ['id' => self::SECTION_HERO, 'enabled' => true, 'data' => [
                 'stage_name' => $artist?->name ?? '',
                 'tagline' => '',
-                'cover_image' => null,
+                // Folosim *_full_url accessor (URL absolut). main_image e landscape pe artist profile.
+                'cover_image' => $artist?->main_image_full_url ?? null,
             ]],
             ['id' => self::SECTION_STATS, 'enabled' => true, 'data' => [
                 'show' => [
@@ -127,7 +128,12 @@ class ArtistEpkVariant extends Model
                 'bio_long' => $bioPlain,
             ]],
             ['id' => self::SECTION_GALLERY, 'enabled' => true, 'data' => [
-                'images' => array_filter([$artist?->main_image_url, $artist?->portrait_url]),
+                // Full URLs (Storage::disk('public')->url()) — sunt absolute,
+                // se încarcă corect din ambilet.ro. Filtrează valorile null/empty.
+                'images' => array_values(array_filter([
+                    $artist?->main_image_full_url,
+                    $artist?->portrait_full_url,
+                ])),
             ]],
             ['id' => self::SECTION_SPOTIFY, 'enabled' => !empty($artist?->spotify_url), 'data' => [
                 'spotify_url' => $artist?->spotify_url ?? '',
@@ -272,11 +278,32 @@ class ArtistEpkVariant extends Model
                 }
             }
 
-            // Hero stage_name fallback la artist.name
+            // Hero: stage_name + cover_image fallback la artist
             if (($section['id'] ?? null) === self::SECTION_HERO) {
                 if (empty($section['data']['stage_name'])) {
                     $section['data']['stage_name'] = $artist->name;
                 }
+                if (empty($section['data']['cover_image']) && !empty($artist->main_image_full_url)) {
+                    $section['data']['cover_image'] = $artist->main_image_full_url;
+                }
+            }
+
+            // Gallery: normalize la URL-uri absolute, filtrează valorile goale
+            // (defensiv pentru variante cu paths relative stocate vechi).
+            if (($section['id'] ?? null) === self::SECTION_GALLERY) {
+                $images = (array) ($section['data']['images'] ?? []);
+                $images = array_values(array_filter(array_map(function ($img) {
+                    if (!is_string($img) || $img === '') {
+                        return null;
+                    }
+                    // URL absolut → trece direct
+                    if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                        return $img;
+                    }
+                    // Path relativ → convert via Storage public
+                    return \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($img, '/'));
+                }, $images)));
+                $section['data']['images'] = $images;
             }
 
             $enriched[] = $section;
