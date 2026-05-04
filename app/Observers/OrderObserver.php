@@ -218,11 +218,14 @@ class OrderObserver
             // 2. Update real-time analytics for the event
             $this->realTimeService->trackPurchaseCompleted($order, $attributedMilestone);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // \Throwable so PHP \Error subclasses can't escape this observer
+            // and break the caller (PaymentController).
             Log::error('Failed to track organizer analytics', [
                 'order_id' => $order->id,
                 'event_id' => $order->marketplace_event_id,
                 'error' => $e->getMessage(),
+                'error_class' => get_class($e),
             ]);
         }
     }
