@@ -27,7 +27,10 @@ class FixPendingTicketsOnPaidOrders extends Command
     protected $signature = 'fix:pending-tickets-on-paid-orders
         {--dry-run : Print what would change without writing to DB}
         {--id= : Limit to a single order id (for spot-checks)}
-        {--send-emails : Also resend the order confirmation email (and beneficiary tickets) for the affected orders. Skipped if marketplace_email_logs already has a confirmation entry for the order, so re-runs do not double-send.}';
+        {--ids= : Comma-separated list of order ids to target}
+        {--send-emails : Also resend the order confirmation email (and beneficiary tickets) for the affected orders. Skipped if marketplace_email_logs already has a confirmation entry for the order, so re-runs do not double-send.}
+        {--missing-emails-only : Skip the ticket activation pass entirely; only iterate paid orders whose order_number is not present in marketplace_email_logs and resend their confirmation. Use after a previous run already flipped tickets to valid without --send-emails. Implies --send-emails.}
+        {--since= : When used with --missing-emails-only, only consider orders paid on or after this date (Y-m-d). Default: 7 days ago.}';
 
     protected $description = 'Activate tickets for paid orders that were left in pending due to the notifySale observer bug';
 
@@ -35,25 +38,79 @@ class FixPendingTicketsOnPaidOrders extends Command
     {
         $dryRun = (bool) $this->option('dry-run');
         $onlyId = $this->option('id');
+        $idsList = $this->option('ids');
         $sendEmails = (bool) $this->option('send-emails');
+        $missingEmailsOnly = (bool) $this->option('missing-emails-only');
+        $since = $this->option('since');
 
-        $query = Order::query()
+        if ($missingEmailsOnly) {
+            $sendEmails = true; // implied
+        }
+
+        // withoutGlobalScopes() — Order has implicit tenant filtering that is
+        // bypassed in the web context but blocks raw CLI runs from seeing
+        // marketplace orders. Tinker confirmed the problem (15 orders for an
+        // email returned 0 via Eloquent, 15 via raw DB::select).
+        $query = Order::withoutGlobalScopes()
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('payment_status', 'paid')
-            ->whereHas('tickets', fn ($q) => $q->where('status', 'pending'));
+            ->where('payment_status', 'paid');
+
+        if ($missingEmailsOnly) {
+            // Use case: tickets were already flipped to valid by an earlier run
+            // without --send-emails, so the pending-ticket filter no longer
+            // matches. Walk paid orders in the recent window and skip those
+            // that already have a log entry for their order_number.
+            $sinceDate = $since
+                ? \Carbon\Carbon::parse($since)
+                : now()->subDays(7);
+            $query->where('paid_at', '>=', $sinceDate)
+                ->whereNotNull('customer_email')
+                // Skip channels that intentionally don't email the buyer:
+                //   - external_import: legacy data backfilled in
+                //   - pos_app:        cash POS handoff; receipt printed at till
+                //   - test_order:     QA artifact
+                ->whereNotIn('source', ['external_import', 'pos_app', 'test_order']);
+            $this->info('Mode: missing-emails-only (paid_at >= ' . $sinceDate->toDateString() . ')');
+        } else {
+            // Default: only orders that still have pending tickets — the
+            // primary symptom of the notifySale observer bug.
+            $query->whereHas('tickets', fn ($q) => $q->where('status', 'pending'));
+        }
 
         if ($onlyId) {
             $query->where('id', (int) $onlyId);
         }
+        if ($idsList) {
+            $ids = collect(explode(',', $idsList))
+                ->map(fn ($v) => (int) trim($v))
+                ->filter()
+                ->all();
+            $query->whereIn('id', $ids);
+        }
 
         $orders = $query->with('tickets')->get();
+
+        if ($missingEmailsOnly) {
+            // Keep only orders whose order_number is NOT already in logs.
+            $orders = $orders->reject(function ($o) {
+                if (!$o->customer_email) return true;
+                return DB::table('marketplace_email_logs')
+                    ->where('to_email', $o->customer_email)
+                    ->where(function ($q) use ($o) {
+                        $q->where('subject', 'like', "%{$o->order_number}%")
+                          ->orWhere('body_html', 'like', "%{$o->order_number}%");
+                    })
+                    ->exists();
+            })->values();
+        }
 
         if ($orders->isEmpty()) {
             $this->info('Nothing to fix.');
             return self::SUCCESS;
         }
 
-        $this->info(($dryRun ? '[DRY RUN] ' : '') . "Found {$orders->count()} order(s) with pending tickets.");
+        $what = $missingEmailsOnly ? 'missing email confirmation' : 'with pending tickets';
+        $this->info(($dryRun ? '[DRY RUN] ' : '') . "Found {$orders->count()} order(s) {$what}.");
 
         $totalTickets = 0;
         $seatConfirmFailures = 0;
