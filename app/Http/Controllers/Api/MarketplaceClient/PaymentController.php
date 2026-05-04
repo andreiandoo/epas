@@ -255,17 +255,20 @@ class PaymentController extends BaseController
             ]);
 
             if ($result['status'] === 'success') {
-                // SECURITY FIX: Idempotency check - prevent double-spending via webhook replay
+                // SECURITY FIX: Idempotency check - prevent double-spending via webhook replay.
+                //
+                // Must return Netopia's XML success ack here, not a JSON 200.
+                // Netopia treats any non-XML body (or any error_code != 0) as
+                // a temporary failure and retries the callback indefinitely
+                // — that's why orders showed "Plătită" (paid, but pending
+                // confirmation in Netopia's view) instead of "Confirmată".
+                // Same XML ack as the happy path below.
                 if ($order->payment_status === 'paid') {
                     \Log::info('Payment callback received for already paid order', [
                         'order_id' => $order->id,
                         'order_number' => $order->order_number,
                     ]);
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Order already paid',
-                        'data' => ['order_number' => $order->order_number],
-                    ]);
+                    return $this->netopiaResponse(0);
                 }
 
                 // Activate tickets FIRST so a misbehaving OrderObserver can't
@@ -449,7 +452,15 @@ class PaymentController extends BaseController
      */
     protected function netopiaResponse(int $errorCode = 0, string $message = 'OK'): \Illuminate\Http\Response
     {
-        $errorType = $errorCode === 0 ? '1' : '1'; // type 1 = temporary (allows retry)
+        // Netopia error_type semantics:
+        //   0 = success (no retry, mark transaction Confirmată)
+        //   1 = temporary error (retry the callback)
+        //   2 = permanent error (no retry, mark Eșuată)
+        // The previous "0 ? '1' : '1'" was a copy-paste bug that made every
+        // success response look temporary to Netopia, so callbacks looped
+        // forever and orders stayed "Plătită" instead of being acked into
+        // "Confirmată".
+        $errorType = $errorCode === 0 ? '0' : '1';
         $xml = '<?xml version="1.0" encoding="utf-8"?>' . "\n"
              . '<crc error_type="' . $errorType . '" error_code="' . $errorCode . '">' . htmlspecialchars($message) . '</crc>';
 
