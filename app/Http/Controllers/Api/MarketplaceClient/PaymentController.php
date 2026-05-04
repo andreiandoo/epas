@@ -908,7 +908,7 @@ class PaymentController extends BaseController
     /**
      * Send individual ticket emails to beneficiaries (attendees with a different email from the order customer)
      */
-    protected function sendBeneficiaryEmails(Order $order): void
+    public function sendBeneficiaryEmails(Order $order): void
     {
         $marketplace = $order->marketplaceClient;
         if (!$marketplace) {
