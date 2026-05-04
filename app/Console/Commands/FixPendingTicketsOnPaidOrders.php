@@ -59,7 +59,10 @@ class FixPendingTicketsOnPaidOrders extends Command
         // email returned 0 via Eloquent, 15 via raw DB::select).
         $query = Order::withoutGlobalScopes()
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->where('payment_status', 'paid');
+            // 'paid' = real payment, 'free' = invitation / 100% promo / 0-RON
+            // ticket type. Both end up with status='completed' and the customer
+            // still expects a ticket email — same bug, same fix.
+            ->whereIn('payment_status', ['paid', 'free']);
 
         if ($explicitIdScope) {
             // The operator targeted specific ids — do whatever needs doing on
