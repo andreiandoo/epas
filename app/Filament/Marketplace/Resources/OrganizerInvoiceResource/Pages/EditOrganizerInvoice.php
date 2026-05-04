@@ -479,6 +479,19 @@ class EditOrganizerInvoice extends EditRecord
         $city = $addressParts[1] ?? '';
         $county = $addressParts[2] ?? '';
 
+        // For general_client invoices: blank the email so the organizer's
+        // address doesn't end up on a public buyer's invoice, and stamp the
+        // CIF column with a human-readable note ("vanzare online") instead
+        // of leaving it blank. The OblioAdapter recognises non-numeric CIF
+        // as B2C and skips the ANAF auto-complete + customer-list save.
+        if ($isGeneralClient) {
+            $customerEmail = '';
+            $vatNumber = 'vanzare online';
+        } else {
+            $customerEmail = $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '';
+            $vatNumber = $client['cui'] ?? '';
+        }
+
         // Build accounting invoice data
         $invoiceData = [
             'seller_vat' => $issuer['cui'] ?? '',
@@ -490,9 +503,9 @@ class EditOrganizerInvoice extends EditRecord
             'doc_type' => $docType,
             'customer' => [
                 'name' => $client['name'] ?? '',
-                'vat_number' => $client['cui'] ?? '',
+                'vat_number' => $vatNumber,
                 'reg_number' => $client['reg_com'] ?? '',
-                'email' => $invoice->organizer?->billing_email ?? $invoice->organizer?->email ?? '',
+                'email' => $customerEmail,
                 'address' => [
                     'street' => $street,
                     'city' => $city,

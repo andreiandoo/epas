@@ -241,27 +241,28 @@ class OblioAdapter implements AccountingAdapterInterface
                 'dueDate' => $invoice['due_date'] ?? date('Y-m-d', strtotime('+30 days')),
                 'currency' => $invoice['currency'] ?? 'RON',
                 'isDraft' => $isDraft,
-                // When the customer has no VAT/CIF (e.g., the
-                // "Client general" used for added_on_top commissions where
-                // we don't fiscalize against an organizer), do NOT save the
-                // customer in Oblio's address book. Otherwise Oblio matches
-                // by name and silently reuses an old saved record — that's
-                // what made every invoice for "Client general" come back
-                // tagged with whatever ANAF data was attached the first time
-                // someone happened to send a CIF with that name.
-                // autocomplete=0 also prevents ANAF lookup on empty CIF.
-                'client' => [
-                    'name' => $customer['name'] ?? '',
-                    'cif' => $customer['vat_number'] ?? '',
-                    'rc' => $customer['reg_number'] ?? '',
-                    'address' => $customer['address']['street'] ?? '',
-                    'city' => $customer['address']['city'] ?? '',
-                    'county' => $customer['address']['county'] ?? '',
-                    'country' => $customer['address']['country'] ?? 'Romania',
-                    'email' => $customer['email'] ?? '',
-                    'save' => !empty($customer['vat_number']) ? 1 : 0,
-                    'autocomplete' => !empty($customer['vat_number']) ? 1 : 0,
-                ],
+                // Decide save/autocomplete based on whether the CIF looks
+                // like an actual Romanian fiscal code (digits only, optional
+                // "RO" prefix, 2–10 digits long). Anything else — empty,
+                // "vanzare online", "FĂRĂ CIF", etc. — means B2C: don't
+                // save in Oblio's customer list (otherwise Oblio matches by
+                // name and reuses old data) and don't ANAF-lookup.
+                'client' => (function () use ($customer) {
+                    $cif = trim((string) ($customer['vat_number'] ?? ''));
+                    $isRealCif = (bool) preg_match('/^(RO)?[0-9]{2,10}$/i', $cif);
+                    return [
+                        'name' => $customer['name'] ?? '',
+                        'cif' => $cif,
+                        'rc' => $customer['reg_number'] ?? '',
+                        'address' => $customer['address']['street'] ?? '',
+                        'city' => $customer['address']['city'] ?? '',
+                        'county' => $customer['address']['county'] ?? '',
+                        'country' => $customer['address']['country'] ?? 'Romania',
+                        'email' => $customer['email'] ?? '',
+                        'save' => $isRealCif ? 1 : 0,
+                        'autocomplete' => $isRealCif ? 1 : 0,
+                    ];
+                })(),
                 'products' => [],
             ];
 
