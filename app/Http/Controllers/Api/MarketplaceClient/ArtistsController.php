@@ -141,12 +141,14 @@ class ArtistsController extends BaseController
             ->whereHas('events', function ($q) use ($client) {
                 $q->where('marketplace_client_id', $client->id)
                   ->where('is_published', true)
+                  ->where('status', 'published')
                   ->where('event_date', '>=', now()->toDateString())
                   ->where('is_cancelled', false);
             })
             ->withCount(['events' => function ($q) use ($client) {
                 $q->where('marketplace_client_id', $client->id)
                   ->where('is_published', true)
+                  ->where('status', 'published')
                   ->where('event_date', '>=', now()->toDateString())
                   ->where('is_cancelled', false);
             }])
@@ -285,12 +287,14 @@ class ArtistsController extends BaseController
 
         // Get upcoming events with ticket types for price calculation.
         // Public artist page must only show events that are (a) live on THIS
-        // marketplace and (b) actually published — an event with status=active
-        // but is_published=false is a draft and must stay hidden from
-        // visitors. Same constraints applied below for past/tour queries.
+        // marketplace, (b) actually published (is_published=true is the
+        // visibility flag), AND (c) have status='published' (not draft, not
+        // archived — both are separate from is_published in this codebase).
+        // Past events are filtered out via event_date >= today.
         $upcomingEvents = $artist->events()
             ->where('marketplace_client_id', $client->id)
             ->where('is_published', true)
+            ->where('status', 'published')
             ->with(['ticketTypes' => function ($q) {
                 $q->where('status', 'active');
             }, 'venue', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
@@ -381,10 +385,14 @@ class ArtistsController extends BaseController
                 ];
             });
 
-        // Get past events count
+        // Get past events count — accept 'published' or 'archived' here since
+        // events that have ended are routinely flipped to status='archived'
+        // by the system, but they were once visible and the count should
+        // reflect that history.
         $pastEventsCount = $artist->events()
             ->where('marketplace_client_id', $client->id)
             ->where('is_published', true)
+            ->whereIn('status', ['published', 'archived'])
             ->where('event_date', '<', now()->toDateString())
             ->count();
 
@@ -405,10 +413,13 @@ class ArtistsController extends BaseController
                 ->map(fn ($a) => $this->formatArtist($a, $language, true, $client));
         }
 
-        // Get event groupings (tours/series) for this artist's events
+        // Get event groupings (tours/series) for this artist's events.
+        // Only currently-published events count — archived/draft tours
+        // should not surface on the public artist page.
         $tourIds = $artist->events()
             ->where('marketplace_client_id', $client->id)
             ->where('is_published', true)
+            ->where('status', 'published')
             ->whereNotNull('tour_id')
             ->pluck('tour_id')
             ->unique()
@@ -540,12 +551,16 @@ class ArtistsController extends BaseController
             }, 'venue'])
             ->where('is_cancelled', false);
 
-        // Filter: upcoming or past
+        // Filter: upcoming or past. Upcoming-only filter wants strict
+        // status='published' (no archived). Past list includes archived
+        // because that's where the system parks finished events.
         if ($request->input('filter') === 'past') {
-            $query->where('event_date', '<', now()->toDateString())
+            $query->whereIn('status', ['published', 'archived'])
+                  ->where('event_date', '<', now()->toDateString())
                   ->orderBy('event_date', 'desc');
         } else {
-            $query->where('event_date', '>=', now()->toDateString())
+            $query->where('status', 'published')
+                  ->where('event_date', '>=', now()->toDateString())
                   ->orderBy('event_date');
         }
 
@@ -665,12 +680,13 @@ class ArtistsController extends BaseController
                 'tiktok_followers' => $artist->followers_tiktok,
             ];
             // Upcoming events count — same constraints as the rest of the
-            // public artist payload: only published, non-cancelled events on
-            // THIS marketplace count toward the badge shown to visitors.
+            // public artist payload: status='published' AND is_published=true
+            // AND not cancelled AND in the future, scoped to THIS marketplace.
             $upcomingQuery = $artist->events()
                 ->where('event_date', '>=', now()->toDateString())
                 ->where('is_cancelled', false)
-                ->where('is_published', true);
+                ->where('is_published', true)
+                ->where('status', 'published');
             if ($client) {
                 $upcomingQuery->where('marketplace_client_id', $client->id);
             }
