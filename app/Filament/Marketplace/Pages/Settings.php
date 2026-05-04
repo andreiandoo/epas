@@ -741,6 +741,29 @@ class Settings extends Page
             return;
         }
 
+        // Diagnostic: capture the state of every settings-bound field BEFORE
+        // we run the save logic, so we can see whether the user-typed value
+        // ever reaches \$data (versus being stripped by the form layer) and
+        // whether the existing DB value is still there. Will be removed after
+        // root cause is confirmed.
+        \Log::info('[Settings::save] start', [
+            'marketplace_id' => $marketplace->id,
+            'data_has_stock_alert_threshold' => array_key_exists('stock_alert_threshold', $data),
+            'data_stock_alert_threshold' => $data['stock_alert_threshold'] ?? '(missing)',
+            'data_has_stock_alert_email' => array_key_exists('stock_alert_email', $data),
+            'data_stock_alert_email' => $data['stock_alert_email'] ?? '(missing)',
+            'data_has_admin_orders' => array_key_exists('admin_notification_orders_email', $data),
+            'data_admin_orders' => $data['admin_notification_orders_email'] ?? '(missing)',
+            'data_has_admin_services' => array_key_exists('admin_notification_service_orders_email', $data),
+            'data_admin_services' => $data['admin_notification_service_orders_email'] ?? '(missing)',
+            'data_mail_driver' => $data['mail_driver'] ?? '(missing)',
+            'data_transactional_mail_driver' => $data['transactional_mail_driver'] ?? '(missing)',
+            'db_stock_alert_threshold' => $marketplace->settings['stock_alert_threshold'] ?? '(missing)',
+            'db_stock_alert_email' => $marketplace->settings['stock_alert_email'] ?? '(missing)',
+            'db_admin_orders' => $marketplace->settings['admin_notifications']['orders_email'] ?? '(missing)',
+            'db_admin_services' => $marketplace->settings['admin_notifications']['service_orders_email'] ?? '(missing)',
+        ]);
+
         // Update tenant fields
         $marketplace->update([
             'company_name' => $data['company_name'],
@@ -900,6 +923,14 @@ class Settings extends Page
 
         $marketplace->update([
             'settings' => $settings,
+        ]);
+
+        \Log::info('[Settings::save] done', [
+            'marketplace_id' => $marketplace->id,
+            'saved_stock_alert_threshold' => $settings['stock_alert_threshold'] ?? '(missing)',
+            'saved_stock_alert_email' => $settings['stock_alert_email'] ?? '(missing)',
+            'saved_admin_orders' => $settings['admin_notifications']['orders_email'] ?? '(missing)',
+            'saved_admin_services' => $settings['admin_notifications']['service_orders_email'] ?? '(missing)',
         ]);
 
         Notification::make()
