@@ -51,6 +51,8 @@ class FixPendingTicketsOnPaidOrders extends Command
             $sendEmails = true; // implied
         }
 
+        $explicitIdScope = $onlyId || $idsList;
+
         // withoutGlobalScopes() — Order has implicit tenant filtering that is
         // bypassed in the web context but blocks raw CLI runs from seeing
         // marketplace orders. Tinker confirmed the problem (15 orders for an
@@ -59,7 +61,13 @@ class FixPendingTicketsOnPaidOrders extends Command
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->where('payment_status', 'paid');
 
-        if ($missingEmailsOnly) {
+        if ($explicitIdScope) {
+            // The operator targeted specific ids — do whatever needs doing on
+            // each: flip pending tickets if any, send email if --send-emails
+            // is set. No implicit pending/missing filter, otherwise a clean
+            // order would be silently dropped from the run.
+            $this->info('Mode: explicit ids (default pending-tickets filter bypassed)');
+        } elseif ($missingEmailsOnly) {
             // Use case: tickets were already flipped to valid by an earlier run
             // without --send-emails, so the pending-ticket filter no longer
             // matches. Walk paid orders in the recent window and skip those
