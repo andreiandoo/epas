@@ -62,19 +62,63 @@ function navCacheFetch(string $url, array $headers = [], int $timeout = 5) {
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => $timeout,
-        CURLOPT_CONNECTTIMEOUT => 10,
+        // Tight connect timeout — page-render code path; if backend is
+        // unreachable we want to fail fast and use stale cache rather
+        // than block the homepage for tens of seconds.
+        CURLOPT_CONNECTTIMEOUT => 3,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_SSL_VERIFYPEER => true,
         CURLOPT_HTTPHEADER => $headers ?: $defaultHeaders,
     ]);
     $response = curl_exec($ch);
     $err = curl_error($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     if ($response === false || $err) {
         error_log('[nav-cache] Curl failed for ' . $url . ': ' . $err);
+        markBackendUnreachable($err);
+        return false;
+    }
+    if ($httpCode >= 500) {
+        markBackendUnreachable('HTTP ' . $httpCode);
         return false;
     }
     return $response;
+}
+
+/**
+ * Mark backend as unreachable so header banner can be shown.
+ * Persists in a file with 60s TTL so the banner stays up briefly even
+ * when later requests in the same render cycle succeed via stale cache.
+ */
+function markBackendUnreachable(string $reason): void {
+    $GLOBALS['ambilet_backend_unreachable'] = true;
+    $flagFile = sys_get_temp_dir() . '/ambilet_backend_unreachable.flag';
+    @file_put_contents($flagFile, json_encode([
+        'at' => time(),
+        'reason' => substr($reason, 0, 200),
+    ]));
+}
+
+/**
+ * True if the backend was unreachable in the last 60 seconds.
+ * Used by the layout to render a polite banner without slowing down
+ * the page (no extra curl call — relies on observations from
+ * navCacheFetch already invoked during page render).
+ */
+function isBackendUnreachable(): bool {
+    if (!empty($GLOBALS['ambilet_backend_unreachable'])) {
+        return true;
+    }
+    $flagFile = sys_get_temp_dir() . '/ambilet_backend_unreachable.flag';
+    if (!is_file($flagFile)) {
+        return false;
+    }
+    $data = json_decode(@file_get_contents($flagFile), true);
+    if (!is_array($data) || empty($data['at'])) {
+        return false;
+    }
+    return (time() - (int) $data['at']) <= 60;
 }
 
 /**

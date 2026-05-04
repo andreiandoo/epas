@@ -61,7 +61,9 @@ function api_request(string $method, string $url, ?array $data = null): array
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 10,
+        // Tight connect — same reasoning as nav-cache.php; the page
+        // render must not hang waiting for an unreachable upstream.
+        CURLOPT_CONNECTTIMEOUT => 3,
         CURLOPT_TIMEOUT => 10,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_SSL_VERIFYPEER => true,
