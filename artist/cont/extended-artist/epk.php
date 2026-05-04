@@ -283,7 +283,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 </div>
                                                 <div>
                                                     <label class="block text-sm font-medium text-secondary mb-2">Bio extins</label>
-                                                    <textarea x-model="data.bio_long" @input="markDirty()" rows="8" class="epk-input"></textarea>
+                                                    <textarea x-model="data.bio_long" @input="markDirty()" rows="8" data-rich-editor data-bio-long-editor class="epk-input"></textarea>
                                                 </div>
                                             </div>
                                         </template>
@@ -293,15 +293,15 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <div>
                                                 <p class="text-sm text-muted mb-3">Maxim 12 imagini. Prima e marcată „PRINCIPAL" pe pagina publică.</p>
                                                 <div class="grid grid-cols-3 sm:grid-cols-4 gap-3">
-                                                    <template x-for="(img, i) in data.gallery" :key="i">
-                                                        <div class="relative aspect-square bg-cover bg-center rounded-lg overflow-hidden group" :style="`background-image: url(${img})`">
+                                                    <template x-for="(img, i) in nonEmptyGallery()" :key="i + '-' + img">
+                                                        <div class="relative aspect-square bg-cover bg-center rounded-lg overflow-hidden group bg-surface" :style="`background-image: url(${img})`">
                                                             <span x-show="i === 0" class="absolute top-1 left-1 text-[10px] bg-primary text-white px-1.5 py-0.5 rounded font-bold">PRINCIPAL</span>
-                                                            <button @click="data.gallery.splice(i, 1); markDirty()" class="absolute top-1 right-1 w-6 h-6 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                            <button @click="removeGalleryImage(i); markDirty()" class="absolute top-1 right-1 w-6 h-6 bg-error text-white rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <button x-show="data.gallery.length < 12" @click="uploadImage('gallery')" class="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted hover:border-primary/30 hover:text-primary transition-colors">
+                                                    <button x-show="nonEmptyGallery().length < 12" @click="uploadImage('gallery')" class="aspect-square border-2 border-dashed border-border rounded-lg flex items-center justify-center text-muted hover:border-primary/30 hover:text-primary transition-colors">
                                                         <span class="text-2xl">+</span>
                                                     </button>
                                                 </div>
@@ -733,6 +733,7 @@ function smartEpk() {
             limits: { max_variants: 3, max_gallery_images: 12, max_youtube_videos: 3 },
             marketplace_domain: '',
             artist: { slug: '', name: '' },
+            artist_profile: {}, // fallback values din profilul artistului (social, contact, images)
         },
         versions: [],
 
@@ -770,6 +771,17 @@ function smartEpk() {
         async init() {
             await this.load();
             this.$nextTick(() => this.renderTab(this.tab));
+            // Re-wire WYSIWYG când utilizatorul navighează între secțiuni —
+            // textarea[data-rich-editor] e creat/distrus de Alpine x-if per secțiune.
+            this.$watch('selectedSection', () => {
+                this.$nextTick(() => this.wireRichEditors());
+            });
+            // Re-wire și după schimbare de tab (Editor → ... → Editor recreează DOM)
+            this.$watch('tab', () => {
+                if (this.tab === 'editor') {
+                    this.$nextTick(() => this.wireRichEditors());
+                }
+            });
         },
 
         token() { return localStorage.getItem('ambilet_artist_token'); },
@@ -791,9 +803,12 @@ function smartEpk() {
                     limits: d.limits || this.state.limits,
                     marketplace_domain: d.marketplace_domain || '',
                     artist: d.artist || { slug: '', name: '' },
+                    artist_profile: d.artist_profile || {},
                 };
                 this.versions = d.variants || [];
                 this.loadActiveVariant();
+                // Wire WYSIWYG editors după ce DOM-ul are noile valori
+                this.$nextTick(() => this.wireRichEditors());
             } catch (e) {
                 alert('Eroare la încărcare: ' + e.message);
             } finally {
@@ -821,28 +836,42 @@ function smartEpk() {
 
             // Build flat data object from sections data
             const get = (id, key, def) => serverSections[id]?.data?.[key] ?? def;
+            const profile = this.state.artist_profile || {};
+            // fallback helper: returnează valoarea dacă e completă, altfel valoarea fallback
+            const fb = (val, fallback) => (val !== null && val !== undefined && val !== '') ? val : (fallback || '');
+
+            // Filter gallery to non-empty strings, fallback la imaginile din profil dacă tot gol
+            let gallery = (get('gallery', 'images', []) || []).filter(img => typeof img === 'string' && img.length > 0);
+            if (gallery.length === 0) {
+                gallery = [profile.main_image_url, profile.portrait_url].filter(x => !!x);
+            }
+
+            // Bio long: dacă e gol, ia bio_html.ro / bio_html.en din profil
+            let bioLong = get('bio', 'bio_long', '');
+            if (!bioLong && profile.bio_html) {
+                bioLong = profile.bio_html.ro || profile.bio_html.en || Object.values(profile.bio_html)[0] || '';
+            }
+
             this.data = {
-                stage_name: get('hero', 'stage_name', this.state.artist.name || ''),
+                stage_name: fb(get('hero', 'stage_name', null), this.state.artist.name),
                 tagline: get('hero', 'tagline', ''),
-                cover_image: get('hero', 'cover_image', null),
+                cover_image: fb(get('hero', 'cover_image', null), profile.main_image_url),
                 bio_short: get('bio', 'bio_short', ''),
-                bio_long: get('bio', 'bio_long', ''),
-                gallery: get('gallery', 'images', []),
-                spotify_url: get('spotify', 'spotify_url', ''),
+                bio_long: bioLong,
+                gallery: gallery,
+                spotify_url: fb(get('spotify', 'spotify_url', null), profile.spotify_url),
                 // Normalize la [{url: '...'}] indiferent de forma stocată anterior
-                youtube_videos: (get('youtube', 'videos', []) || []).map(v => ({
-                    url: typeof v === 'string' ? v : (v?.url || '')
-                })).filter(v => v.url || v.url === ''),
-                achievements: get('achievements', 'items', []),
+                youtube_videos: this.normalizeYoutubeVideos(get('youtube', 'videos', null), profile.youtube_videos),
+                achievements: this.firstNonEmptyArray(get('achievements', 'items', []), profile.achievements),
                 press_quotes: get('press_quotes', 'quotes', []),
                 past_events_hidden: get('past_events', 'hidden_event_ids', []),
                 past_events_limit: get('past_events', 'limit', 12),
                 rider_pdf_url: get('rider', 'rider_pdf_url', null),
                 rider_pdf_path: get('rider', 'rider_pdf_path', null),
                 rider_gated: get('rider', 'gated', false),
-                social: get('social', null, null) || { website: '', facebook: '', instagram: '', tiktok: '', youtube: '' },
-                contact_email: get('contact', 'email', ''),
-                contact_phone: get('contact', 'phone', ''),
+                social: this.mergeSocial(get('social', null, null), profile),
+                contact_email: fb(get('contact', 'email', null), profile.email),
+                contact_phone: fb(get('contact', 'phone', null), profile.phone),
                 show_booking_cta: get('contact', 'show_booking_cta', true),
             };
             // Stats: merge live values with show flags from server
@@ -1031,6 +1060,143 @@ function smartEpk() {
             if (idx >= 0) arr.splice(idx, 1); else arr.push(id);
             this.data.past_events_hidden = [...arr];
             this.markDirty();
+        },
+
+        // ========== Data normalization & fallback helpers ==========
+        mergeSocial(serverSocial, profile) {
+            const out = { website: '', facebook: '', instagram: '', tiktok: '', youtube: '' };
+            const fb = (val, fallback) => (val !== null && val !== undefined && val !== '') ? val : (fallback || '');
+            if (serverSocial && typeof serverSocial === 'object') {
+                Object.assign(out, serverSocial);
+            }
+            // Fallback la profilul artistului pentru câmpurile goale
+            out.website = fb(out.website, profile.website);
+            out.facebook = fb(out.facebook, profile.facebook_url);
+            out.instagram = fb(out.instagram, profile.instagram_url);
+            out.tiktok = fb(out.tiktok, profile.tiktok_url);
+            out.youtube = fb(out.youtube, profile.youtube_url);
+            return out;
+        },
+
+        normalizeYoutubeVideos(serverVideos, profileVideos) {
+            const norm = (arr) => (arr || [])
+                .map(v => ({ url: typeof v === 'string' ? v : (v?.url || '') }))
+                .filter(v => !!v.url);
+
+            const fromServer = norm(serverVideos);
+            if (fromServer.length > 0) return fromServer;
+            return norm(profileVideos);
+        },
+
+        firstNonEmptyArray(primary, fallback) {
+            if (Array.isArray(primary) && primary.length > 0) return primary;
+            if (Array.isArray(fallback) && fallback.length > 0) return fallback;
+            return [];
+        },
+
+        nonEmptyGallery() {
+            return (this.data.gallery || []).filter(img => typeof img === 'string' && img.length > 0);
+        },
+
+        removeGalleryImage(displayIdx) {
+            // displayIdx e index-ul în lista filtrată; trebuie să găsim corespondentul în array-ul real
+            const filtered = this.nonEmptyGallery();
+            const target = filtered[displayIdx];
+            const realIdx = (this.data.gallery || []).indexOf(target);
+            if (realIdx >= 0) {
+                this.data.gallery.splice(realIdx, 1);
+            }
+        },
+
+        // ========== Rich text editor (WYSIWYG pentru bio extins) ==========
+        // Inline copy of the editor from artist-cont-detalii.js — same toolbar.
+        wireRichEditors() {
+            document.querySelectorAll('textarea[data-rich-editor]').forEach(textarea => {
+                if (textarea._editorAttached) {
+                    if (textarea._editor) textarea._editor.innerHTML = textarea.value || '';
+                    return;
+                }
+                this.attachRichEditor(textarea);
+            });
+        },
+
+        attachRichEditor(textarea) {
+            const wrap = document.createElement('div');
+            wrap.className = 'overflow-hidden rounded-lg border border-border bg-white';
+
+            const toolbar = document.createElement('div');
+            toolbar.className = 'flex flex-wrap items-center gap-1 border-b border-border bg-surface px-2 py-1';
+
+            const editor = document.createElement('div');
+            editor.contentEditable = 'true';
+            editor.className = 'prose prose-sm max-h-[500px] min-h-[200px] max-w-none overflow-y-auto bg-white p-3 focus:outline-none';
+            editor.innerHTML = textarea.value || '';
+
+            const sync = () => {
+                textarea.value = editor.innerHTML;
+                textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+
+            const buttons = [
+                { cmd: 'bold', label: 'B', title: 'Bold (Ctrl+B)', style: 'font-weight:700' },
+                { cmd: 'italic', label: 'I', title: 'Italic (Ctrl+I)', style: 'font-style:italic' },
+                { cmd: 'underline', label: 'U', title: 'Underline', style: 'text-decoration:underline' },
+                { sep: true },
+                { cmd: 'formatBlock', arg: '<h3>', label: 'H', title: 'Subtitlu', style: 'font-weight:700' },
+                { cmd: 'formatBlock', arg: '<p>', label: 'P', title: 'Paragraf' },
+                { sep: true },
+                { cmd: 'insertUnorderedList', label: '•', title: 'Listă bullets' },
+                { cmd: 'insertOrderedList', label: '1.', title: 'Listă numerotată' },
+                { sep: true },
+                { cmd: 'createLink', label: '🔗', title: 'Inserează link', prompt: 'URL:' },
+                { cmd: 'unlink', label: '⛔', title: 'Șterge link' },
+                { sep: true },
+                { cmd: 'removeFormat', label: '⌫', title: 'Curăță formatare' },
+            ];
+
+            buttons.forEach(btn => {
+                if (btn.sep) {
+                    const sep = document.createElement('span');
+                    sep.className = 'mx-1 w-px self-stretch bg-border';
+                    toolbar.appendChild(sep);
+                    return;
+                }
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.title = btn.title;
+                b.className = 'min-w-[28px] rounded px-2 py-1 text-sm text-secondary hover:bg-primary/10';
+                if (btn.style) b.setAttribute('style', btn.style);
+                b.textContent = btn.label;
+                b.addEventListener('mousedown', e => e.preventDefault());
+                b.addEventListener('click', () => {
+                    let arg = btn.arg;
+                    if (btn.prompt) {
+                        arg = window.prompt(btn.prompt, 'https://');
+                        if (!arg) return;
+                    }
+                    editor.focus();
+                    try { document.execCommand(btn.cmd, false, arg); } catch (e) { /* old browsers */ }
+                    sync();
+                });
+                toolbar.appendChild(b);
+            });
+
+            editor.addEventListener('input', sync);
+            editor.addEventListener('blur', sync);
+            editor.addEventListener('paste', e => {
+                e.preventDefault();
+                const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                document.execCommand('insertText', false, text);
+            });
+
+            wrap.appendChild(toolbar);
+            wrap.appendChild(editor);
+
+            textarea.style.display = 'none';
+            textarea.parentNode.insertBefore(wrap, textarea);
+
+            textarea._editorAttached = true;
+            textarea._editor = editor;
         },
 
         // ========== URL helpers ==========
