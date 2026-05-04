@@ -91,8 +91,8 @@ class ArtistsController extends BaseController
 
         $language = $client->language ?? 'ro';
 
-        $artists = collect($paginator->items())->map(function ($artist) use ($language) {
-            return $this->formatArtist($artist, $language);
+        $artists = collect($paginator->items())->map(function ($artist) use ($language, $client) {
+            return $this->formatArtist($artist, $language, false, $client);
         });
 
         return response()->json([
@@ -124,7 +124,7 @@ class ArtistsController extends BaseController
         $language = $client->language ?? 'ro';
 
         return $this->success([
-            'artists' => $artists->map(fn ($a) => $this->formatArtist($a, $language)),
+            'artists' => $artists->map(fn ($a) => $this->formatArtist($a, $language, false, $client)),
         ]);
     }
 
@@ -138,12 +138,16 @@ class ArtistsController extends BaseController
         $artists = Artist::query()
             ->whereHas('marketplaceClients', fn ($q) => $q->where('marketplace_artist_partners.marketplace_client_id', $client->id))
             ->where('is_active', true)
-            ->whereHas('events', function ($q) {
-                $q->where('event_date', '>=', now()->toDateString())
+            ->whereHas('events', function ($q) use ($client) {
+                $q->where('marketplace_client_id', $client->id)
+                  ->where('is_published', true)
+                  ->where('event_date', '>=', now()->toDateString())
                   ->where('is_cancelled', false);
             })
-            ->withCount(['events' => function ($q) {
-                $q->where('event_date', '>=', now()->toDateString())
+            ->withCount(['events' => function ($q) use ($client) {
+                $q->where('marketplace_client_id', $client->id)
+                  ->where('is_published', true)
+                  ->where('event_date', '>=', now()->toDateString())
                   ->where('is_cancelled', false);
             }])
             ->orderByRaw('COALESCE(spotify_monthly_listeners, 0) + COALESCE(instagram_followers, 0) DESC')
@@ -153,7 +157,7 @@ class ArtistsController extends BaseController
         $language = $client->language ?? 'ro';
 
         return $this->success([
-            'artists' => $artists->map(fn ($a) => $this->formatArtist($a, $language)),
+            'artists' => $artists->map(fn ($a) => $this->formatArtist($a, $language, false, $client)),
         ]);
     }
 
@@ -279,8 +283,14 @@ class ArtistsController extends BaseController
                 ->value('id');
         }
 
-        // Get upcoming events with ticket types for price calculation
+        // Get upcoming events with ticket types for price calculation.
+        // Public artist page must only show events that are (a) live on THIS
+        // marketplace and (b) actually published — an event with status=active
+        // but is_published=false is a draft and must stay hidden from
+        // visitors. Same constraints applied below for past/tour queries.
         $upcomingEvents = $artist->events()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->with(['ticketTypes' => function ($q) {
                 $q->where('status', 'active');
             }, 'venue', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
@@ -373,6 +383,8 @@ class ArtistsController extends BaseController
 
         // Get past events count
         $pastEventsCount = $artist->events()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->where('event_date', '<', now()->toDateString())
             ->count();
 
@@ -390,11 +402,13 @@ class ArtistsController extends BaseController
                 })
                 ->limit(6)
                 ->get()
-                ->map(fn ($a) => $this->formatArtist($a, $language, true));
+                ->map(fn ($a) => $this->formatArtist($a, $language, true, $client));
         }
 
         // Get event groupings (tours/series) for this artist's events
         $tourIds = $artist->events()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->whereNotNull('tour_id')
             ->pluck('tour_id')
             ->unique()
@@ -519,6 +533,8 @@ class ArtistsController extends BaseController
         $language = $client->language ?? 'ro';
 
         $query = $artist->events()
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_published', true)
             ->with(['ticketTypes' => function ($q) {
                 $q->where('status', 'active');
             }, 'venue'])
@@ -617,7 +633,7 @@ class ArtistsController extends BaseController
     /**
      * Format artist for list display
      */
-    protected function formatArtist(Artist $artist, string $language, bool $minimal = false): array
+    protected function formatArtist(Artist $artist, string $language, bool $minimal = false, ?\App\Models\MarketplaceClient $client = null): array
     {
         $data = [
             'id' => $artist->id,
@@ -648,11 +664,17 @@ class ArtistsController extends BaseController
                 'facebook_followers' => $artist->followers_facebook,
                 'tiktok_followers' => $artist->followers_tiktok,
             ];
-            // Upcoming events count
-            $data['upcoming_events_count'] = $artist->events()
+            // Upcoming events count — same constraints as the rest of the
+            // public artist payload: only published, non-cancelled events on
+            // THIS marketplace count toward the badge shown to visitors.
+            $upcomingQuery = $artist->events()
                 ->where('event_date', '>=', now()->toDateString())
                 ->where('is_cancelled', false)
-                ->count();
+                ->where('is_published', true);
+            if ($client) {
+                $upcomingQuery->where('marketplace_client_id', $client->id);
+            }
+            $data['upcoming_events_count'] = $upcomingQuery->count();
         }
 
         return $data;
