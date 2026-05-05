@@ -44,12 +44,15 @@ class TourOptimizerController extends BaseController
             'cities.*.fixed' => 'nullable|boolean',
             'cities.*.date' => 'nullable|date',
             'cities.*.venue_id' => 'nullable|integer|exists:venues,id',
+            'cities.*.from_start' => 'nullable|boolean',
             'constraints' => 'nullable|array',
             'constraints.max_distance_km' => 'nullable|integer|min:50|max:3000',
             'constraints.min_days_between' => 'nullable|integer|min:1|max:14',
             'constraints.budget_ron' => 'nullable|integer|min:0',
             'constraints.include_border' => 'nullable|boolean',
             'constraints.tour_config' => 'nullable|array',
+            'constraints.tour_config.start_location' => 'nullable|string|max:100',
+            'constraints.tour_config.avg_ticket_price' => 'nullable|numeric|min:0|max:5000',
             'constraints.tour_config.vehicles' => 'nullable|array|max:5',
             'constraints.tour_config.vehicles.*.type' => 'nullable|string|max:30',
             'constraints.tour_config.vehicles.*.count' => 'nullable|integer|min:1|max:10',
@@ -90,10 +93,11 @@ class TourOptimizerController extends BaseController
 
         $validated = $request->validate([
             'city' => 'required|string|max:100',
+            'q' => 'nullable|string|max:80',
         ]);
 
         return $this->success([
-            'venues' => $this->tour->searchVenuesInCity($validated['city']),
+            'venues' => $this->tour->searchVenuesInCity($validated['city'], $validated['q'] ?? null),
         ]);
     }
 

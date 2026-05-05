@@ -154,6 +154,12 @@ class TourOptimizerService
         $config = $this->normalizeTourConfig($constraints['tour_config'] ?? []);
         $venueLookup = $this->venuesLookupForInput($citiesInput);
 
+        // Resolve start location coords (folosim cities_geo pentru lookup; fallback la București)
+        $startGeo = $this->resolveCityGeo($config['start_location'], $citiesGeo);
+        if (!$startGeo) {
+            $startGeo = ['name' => 'București', 'lat' => 44.4268, 'lng' => 26.1025];
+        }
+
         // Resolve coordinates and metadata for input cities (preserve user-supplied order
         // — userul deja poate să dea drag-reorder, deci respectăm ordinea când nu există date fixe)
         $resolved = [];
@@ -162,6 +168,7 @@ class TourOptimizerService
             $fixed = is_array($c) ? (bool) ($c['fixed'] ?? false) : false;
             $providedDate = is_array($c) ? ($c['date'] ?? null) : null;
             $venueId = is_array($c) ? ($c['venue_id'] ?? null) : null;
+            $fromStart = is_array($c) ? (bool) ($c['from_start'] ?? false) : false;
             if ($name === '') continue;
             $geo = $this->resolveCityGeo($name, $citiesGeo);
             if (!$geo) continue;
@@ -179,6 +186,7 @@ class TourOptimizerService
                 'provided_date' => $providedDate ? Carbon::parse($providedDate)->toDateString() : null,
                 'venue_id' => $venueId,
                 'venue' => $venue,
+                'from_start' => $fromStart,
             ];
         }
 
@@ -212,14 +220,26 @@ class TourOptimizerService
         $totalDistance = 0;
 
         foreach ($orderedRoute as $i => $stop) {
+            $prev = $i > 0 ? $orderedRoute[$i - 1] : null;
             $next = $orderedRoute[$i + 1] ?? null;
-            $distanceToNext = $next ? $this->haversineKm($stop['lat'], $stop['lng'], $next['lat'], $next['lng']) : null;
-            if ($distanceToNext !== null) $totalDistance += $distanceToNext;
+
+            // Distanța sosirii la acest stop:
+            //   - i=0: de la home base la stop[0]
+            //   - i>0 cu from_start: de la home base la stop[i] (după ce s-au întors acasă)
+            //   - i>0 fără from_start: de la stop[i-1] la stop[i]
+            if ($i === 0) {
+                $arrivalDistance = $this->haversineKm($startGeo['lat'], $startGeo['lng'], $stop['lat'], $stop['lng']);
+            } elseif (!empty($stop['from_start'])) {
+                $arrivalDistance = $this->haversineKm($startGeo['lat'], $startGeo['lng'], $stop['lat'], $stop['lng']);
+            } else {
+                $arrivalDistance = $this->haversineKm($prev['lat'], $prev['lng'], $stop['lat'], $stop['lng']);
+            }
+            $totalDistance += $arrivalDistance;
 
             // Date: dacă userul a dat dată specifică, folosim aceea. Altfel, $current.
             if (!empty($stop['provided_date'])) {
                 $eventDate = Carbon::parse($stop['provided_date'])->startOfDay();
-                $current = $eventDate->copy(); // sincronizează "current" cu data fixă
+                $current = $eventDate->copy();
             } else {
                 $eventDate = $current->copy();
             }
@@ -232,14 +252,20 @@ class TourOptimizerService
             $venueSize = $stop['venue'] ? $this->venueSizeBucket((int) ($stop['venue']['capacity_total'] ?? 0)) : 'medium';
             $prediction = $this->predictTickets($stop['fans'], $stop['events'], $venueSize, $dowFactor, $monthFactor);
 
-            // Cost combustibil pentru leg-ul ANTERIOR (de la stop precedent la acesta).
-            // Pentru primul stop nu există leg precedent → 0.
-            $prevDistance = $finalRoute[count($finalRoute) - 1]['distance_to_next_km'] ?? 0;
-            $fuelCost = $this->fuelCost((float) $prevDistance, $config);
+            // Cost combustibil pentru leg-ul de SOSIRE la acest stop
+            $fuelCost = $this->fuelCost((float) $arrivalDistance, $config);
 
-            // Cazare: nopți între acest stop și următorul (sau ziua de încheiere)
-            $nightsHere = $next ? $this->daysBetween($eventDate, null) : 1; // placeholder, set după loop
-            // Placeholder, computed after loop completes for accuracy
+            // Distanța la următorul stop (pentru afișare „spre următorul"):
+            //   - dacă există next și next.from_start → afișăm trip-ul prev→home (return) DAR fuel-ul e atașat la cardul next
+            //     deci aici afișăm doar "→ home base" pentru claritate
+            //   - dacă există next fără from_start → afișăm distanța directă la next
+            //   - dacă nu există next și nu suntem la home base → distanța de întoarcere acasă
+            $distanceToNext = null;
+            if ($next) {
+                $distanceToNext = !empty($next['from_start'])
+                    ? $this->haversineKm($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng'])
+                    : $this->haversineKm($stop['lat'], $stop['lng'], $next['lat'], $next['lng']);
+            }
 
             $finalRoute[] = [
                 'city' => $stop['name'],
@@ -252,14 +278,25 @@ class TourOptimizerService
                 'fans' => $stop['fans'],
                 'prediction' => $prediction['estimate'],
                 'confidence' => $prediction['confidence'],
+                'arrival_distance_km' => (int) round($arrivalDistance),
                 'distance_to_next_km' => $distanceToNext !== null ? (int) round($distanceToNext) : null,
                 'venue_id' => $stop['venue_id'],
                 'venue_name' => $stop['venue']['name'] ?? null,
                 'venue_address' => $stop['venue']['address'] ?? null,
                 'venue_capacity' => $stop['venue']['capacity_total'] ?? null,
                 'venue_size' => $venueSize,
+                'from_start' => !empty($stop['from_start']),
                 'fuel_cost' => (int) round($fuelCost),
             ];
+
+            // Add return-to-base fuel for the LAST stop (round trip)
+            if (!$next) {
+                $returnDist = $this->haversineKm($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng']);
+                $totalDistance += $returnDist;
+                // Add return cost as a virtual "tail" — păstrăm pe ultimul stop
+                $finalRoute[count($finalRoute) - 1]['return_distance_km'] = (int) round($returnDist);
+                $finalRoute[count($finalRoute) - 1]['return_fuel_cost'] = (int) round($this->fuelCost((float) $returnDist, $config));
+            }
 
             // Advance current date if next stop has no fixed date
             if ($next) {
@@ -277,36 +314,72 @@ class TourOptimizerService
             : $defaultStart;
         $duration = max(1, $firstDate->diffInDays($lastDate) + 1);
 
-        // Pentru fiecare stop, calculează cazarea = nopți × room_total
-        // Nopți = zile până la următorul concert (cel puțin 1, pentru noaptea concertului în sine)
+        // Pentru fiecare stop, calculează cazarea.
+        // Reguli:
+        //   - Dacă următorul stop are from_start = true, după acest concert echipa se întoarce
+        //     acasă → plătim doar 1 noapte aici (noaptea concertului).
+        //   - Pentru ultimul stop, plătim 1 noapte (după care se întoarce acasă).
+        //   - Altfel: nopți = zile până la următorul concert (≥ 1).
         for ($i = 0; $i < count($finalRoute); $i++) {
             $thisDate = Carbon::parse($finalRoute[$i]['date_iso']);
-            $nextDate = isset($finalRoute[$i + 1])
-                ? Carbon::parse($finalRoute[$i + 1]['date_iso'])
-                : null;
-            $nights = $nextDate ? max(1, $thisDate->diffInDays($nextDate)) : 1;
+            $nextStop = $finalRoute[$i + 1] ?? null;
+            $nextReturnsHome = $nextStop && !empty($nextStop['from_start']);
+
+            if (!$nextStop || $nextReturnsHome) {
+                $nights = 1;
+            } else {
+                $nextDate = Carbon::parse($nextStop['date_iso']);
+                $nights = max(1, (int) abs($thisDate->diffInDays($nextDate)));
+            }
+
             $finalRoute[$i]['nights'] = $nights;
             $finalRoute[$i]['accommodation_cost'] = (int) round($this->accommodationCostPerNight($config) * $nights);
-            // Mâncare: porție per stop = total_meal_cost / nr_stops (pentru afișare echitabilă)
         }
 
+        // Mâncare: distribuită egal per stop pentru durata totală
         $totalMealCost = $this->mealCost($duration, $config);
         $mealPerStop = count($finalRoute) > 0 ? (int) round($totalMealCost / count($finalRoute)) : 0;
+
+        // Revenue + profit per stop folosind avg_ticket_price
+        $avgTicketPrice = (float) $config['avg_ticket_price'];
         for ($i = 0; $i < count($finalRoute); $i++) {
             $finalRoute[$i]['meal_cost'] = $mealPerStop;
+            $stopFuel = (int) ($finalRoute[$i]['fuel_cost'] ?? 0);
+            // Pentru ultimul stop adăugăm și costul de retur la home base
+            if ($i === count($finalRoute) - 1 && isset($finalRoute[$i]['return_fuel_cost'])) {
+                $stopFuel += (int) $finalRoute[$i]['return_fuel_cost'];
+            }
+            $stopAccommodation = (int) ($finalRoute[$i]['accommodation_cost'] ?? 0);
+            $stopMeal = $mealPerStop;
+            $stopCost = $stopFuel + $stopAccommodation + $stopMeal;
+            $stopRevenue = (int) round($finalRoute[$i]['prediction'] * $avgTicketPrice);
+            $stopProfit = $stopRevenue - $stopCost;
+            $stopMargin = $stopRevenue > 0 ? round(($stopProfit / $stopRevenue) * 100, 1) : 0;
+
+            $finalRoute[$i]['stop_total_cost'] = $stopCost;
+            $finalRoute[$i]['revenue_estimate'] = $stopRevenue;
+            $finalRoute[$i]['profit_estimate'] = $stopProfit;
+            $finalRoute[$i]['margin_pct'] = $stopMargin;
         }
 
-        $totalFuelCost = (int) collect($finalRoute)->sum('fuel_cost');
+        $totalFuelCost = (int) collect($finalRoute)->sum('fuel_cost')
+            + (int) collect($finalRoute)->sum(fn ($r) => (int) ($r['return_fuel_cost'] ?? 0));
         $totalAccommodation = (int) collect($finalRoute)->sum('accommodation_cost');
         $totalCost = $totalFuelCost + $totalAccommodation + $totalMealCost;
 
         $totalTickets = (int) collect($finalRoute)->sum('prediction');
-        $avgTicketPrice = 80;
         $revenue = $totalTickets * $avgTicketPrice;
+        $profit = $revenue - $totalCost;
         $roi = $totalCost > 0 ? round($revenue / $totalCost, 1) : 0;
+        $marginPct = $revenue > 0 ? round(($profit / $revenue) * 100, 1) : 0;
 
         return [
             'route' => $finalRoute,
+            'start_location' => [
+                'name' => $startGeo['name'],
+                'lat' => $startGeo['lat'],
+                'lng' => $startGeo['lng'],
+            ],
             'summary' => [
                 'total_distance_km' => (int) round($totalDistance),
                 'duration_days' => (int) $duration,
@@ -316,6 +389,8 @@ class TourOptimizerService
                 'meal_cost_ron' => (int) round($totalMealCost),
                 'predicted_tickets' => $totalTickets,
                 'predicted_revenue_ron' => (int) round($revenue),
+                'profit_ron' => (int) round($profit),
+                'margin_pct' => $marginPct,
                 'roi' => $roi,
             ],
             'cities' => array_map(fn ($r) => [
@@ -325,26 +400,29 @@ class TourOptimizerService
                 'lng' => $r['lng'],
                 'date' => $r['provided_date'],
                 'venue_id' => $r['venue_id'],
+                'from_start' => !empty($r['from_start']),
             ], $resolved),
             'tour_config' => $config,
         ];
     }
 
     /**
-     * Returnează venues pentru un oraș, filtrând cele cu coordonate (ca să poată fi puse pe hartă).
-     * Apelat de TourOptimizerController::venuesInCity.
+     * Returnează venues pentru un oraș, opțional filtrate cu un termen de căutare fuzzy
+     * (case-insensitive + diacritics-stripped pe nume + adresă).
      */
-    public function searchVenuesInCity(string $city, int $limit = 50): array
+    public function searchVenuesInCity(string $city, ?string $query = null, int $limit = 100): array
     {
+        // Pull all venues from the city — typically <100 even în orașe mari → filtrăm în PHP
+        // ca să nu fim limitați de DB (LIKE pe LOWER fără diacritics nu e portabil între MySQL/Postgres).
+        $cityKey = mb_strtolower(trim($city));
         $rows = DB::table('venues')
-            ->whereRaw('LOWER(city) = ?', [mb_strtolower(trim($city))])
+            ->whereRaw('LOWER(city) = ?', [$cityKey])
             ->select('id', 'name', 'address', 'city', 'capacity_total', 'lat', 'lng', 'venue_type_id')
             ->orderByDesc('capacity_total')
             ->limit($limit)
             ->get();
 
-        return $rows->map(function ($v) {
-            // Name e translatable JSON — extract localized value
+        $resolved = $rows->map(function ($v) {
             $name = $v->name;
             if ($name && str_starts_with($name, '{')) {
                 $decoded = json_decode($name, true);
@@ -362,7 +440,17 @@ class TourOptimizerService
                 'lng' => $v->lng ? (float) $v->lng : null,
                 'size' => $v->capacity_total ? $this->venueSizeBucket((int) $v->capacity_total) : null,
             ];
-        })->toArray();
+        })->all();
+
+        if ($query !== null && trim($query) !== '') {
+            $needle = $this->normalizeKey($query);
+            $resolved = array_values(array_filter($resolved, function ($v) use ($needle) {
+                $haystack = $this->normalizeKey(($v['name'] ?? '') . ' ' . ($v['address'] ?? ''));
+                return $needle === '' || str_contains($haystack, $needle);
+            }));
+        }
+
+        return $resolved;
     }
 
     public function flushCache(Artist $artist): void
@@ -775,6 +863,7 @@ class TourOptimizerService
 
     /**
      * Normalize tour config — fills missing fields with sensible defaults.
+     * v2: adaugă start_location (oraș de plecare) și avg_ticket_price (preț mediu bilet).
      */
     protected function normalizeTourConfig(array $cfg): array
     {
@@ -803,6 +892,7 @@ class TourOptimizerService
         $roomPrices = $cfg['room_prices'] ?? ['single' => 250, 'double' => 380, 'apartment' => 600];
 
         return [
+            'start_location' => (string) ($cfg['start_location'] ?? 'București'),
             'vehicles' => $vehicles,
             'fuel_type' => (string) ($cfg['fuel_type'] ?? 'diesel'),
             'fuel_price_ron_l' => max(0.0, (float) ($cfg['fuel_price_ron_l'] ?? 7.5)),
@@ -818,6 +908,7 @@ class TourOptimizerService
                 'apartment' => max(0.0, (float) ($roomPrices['apartment'] ?? 600)),
             ],
             'meal_price_per_day' => max(0.0, (float) ($cfg['meal_price_per_day'] ?? 120)),
+            'avg_ticket_price' => max(0.0, (float) ($cfg['avg_ticket_price'] ?? 80)),
         ];
     }
 
