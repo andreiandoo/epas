@@ -188,8 +188,8 @@ class FanCrmService
         $previousSixMonths = $now->copy()->subMonths(12)->toDateString();
 
         // Total fans (distinct customers)
-        $totalFans = (int) DB::table(DB::raw('(' . $this->fansAggregateQuery($artist)->toSql() . ') as fa'))
-            ->mergeBindings($this->fansAggregateQuery($artist))
+        $totalFans = (int) DB::query()
+            ->fromSub($this->fansAggregateQuery($artist), 'fa')
             ->count();
 
         // New fans (first_event in last 6 months) vs previous 6 months
@@ -200,12 +200,9 @@ class FanCrmService
             : ($newFansCurrent > 0 ? 100 : 0);
 
         // Avg LTV
-        $avgLtv = (float) $this->fansAggregateQuery($artist)
-            ->getQuery()
-            ->select(DB::raw('AVG(total) as avg_total'))
-            ->fromSub(fn ($q) => $q->fromSub($this->fansAggregateQuery($artist), 'inner_fa')
-                ->select('inner_fa.total_spent as total'), 'fa')
-            ->value('avg_total') ?? 0;
+        $avgLtv = (float) (DB::query()
+            ->fromSub($this->fansAggregateQuery($artist), 'fa')
+            ->avg('fa.total_spent') ?? 0);
 
         // Retention: % din fani cu 2+ events
         $loyalCount = (int) DB::query()
@@ -508,10 +505,15 @@ class FanCrmService
             $cohortMonthStart = $cohortStart->copy()->addMonths($m);
             $cohortMonthEnd = $cohortMonthStart->copy()->endOfMonth();
 
-            // Fani care au avut PRIMUL event în acest cohort month
-            $cohortFansIds = $this->fansAggregateQuery($artist)
-                ->whereBetween('first_event_date', [$cohortMonthStart->toDateString(), $cohortMonthEnd->toDateString()])
-                ->pluck('customer_id');
+            // Fani care au avut PRIMUL event în acest cohort month.
+            // Folosim fromSub deoarece first_event_date este alias din SELECT (MIN(e.event_date))
+            // — nu poate fi referit în WHERE direct pe query-ul cu GROUP BY.
+            $cohortFansIds = collect(
+                DB::query()
+                    ->fromSub($this->fansAggregateQuery($artist), 'fa')
+                    ->whereBetween('fa.first_event_date', [$cohortMonthStart->toDateString(), $cohortMonthEnd->toDateString()])
+                    ->pluck('customer_id')
+            );
 
             $cohortSize = $cohortFansIds->count();
 
@@ -742,7 +744,7 @@ class FanCrmService
     public function cacheKey(int $artistId, string $method, array $params = []): string
     {
         // Bump CACHE_VERSION when query semantics change to invalidate stale entries.
-        $version = 'v2';
+        $version = 'v3';
         $hash = empty($params) ? '' : ':' . substr(md5(json_encode($params)), 0, 8);
         return "artist:{$artistId}:fan-crm:{$version}:{$method}{$hash}";
     }

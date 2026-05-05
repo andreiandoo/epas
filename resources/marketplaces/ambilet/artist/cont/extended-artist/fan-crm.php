@@ -393,14 +393,20 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                 <div class="bg-white border border-border rounded-2xl p-5">
                     <h3 class="font-bold text-secondary mb-4">Comparație An vs An</h3>
                     <div class="flex flex-wrap items-center gap-3 mb-6">
-                        <select x-model="compareA" @change="loadCompare()" class="fc-input" style="width:140px">
+                        <select x-model.number="compareA" class="fc-input" style="width:140px">
                             <template x-for="y in compareYears" :key="y"><option :value="y" x-text="y"></option></template>
                         </select>
                         <span class="text-muted text-sm">vs</span>
-                        <select x-model="compareB" @change="loadCompare()" class="fc-input" style="width:140px">
+                        <select x-model.number="compareB" class="fc-input" style="width:140px">
                             <template x-for="y in compareYears" :key="y"><option :value="y" x-text="y"></option></template>
                         </select>
+                        <button @click="loadCompare()" :disabled="tabLoading" class="fc-btn fc-btn-primary fc-btn-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                            <span x-text="compareData.a_kpis?.length ? 'Recalculează' : 'Afișează'"></span>
+                        </button>
                     </div>
+
+                    <p x-show="!compareData.a_kpis?.length && !tabLoading" class="text-sm text-muted py-4">Selectează cei doi ani și apasă „Afișează" pentru a calcula comparația.</p>
 
                     <div class="grid sm:grid-cols-2 gap-4 mb-6" x-show="compareData.supported">
                         <div class="border border-border rounded-xl p-4">
@@ -560,20 +566,30 @@ function fanCrm() {
             const yr = new Date().getFullYear();
             for (let y = yr; y >= yr - 5; y--) this.compareYears.push(y);
 
+            // Read ?tab= from URL for deep-linking
+            const validTabs = this.tabs.map(t => t.id);
+            const urlTab = (new URL(window.location.href)).searchParams.get('tab');
+            const initialTab = (urlTab && validTabs.includes(urlTab)) ? urlTab : 'overview';
+
             await this.loadOverview();
             await this.loadSegments();
             this.loading = false;
-            this.$nextTick(() => this.renderTab('overview'));
+
+            if (initialTab !== 'overview') {
+                await this.setTab(initialTab);
+            } else {
+                this.$nextTick(() => this.renderTab('overview'));
+            }
         },
 
         async setTab(t) {
             this.tab = t;
+            this.syncUrlTab(t);
             const needsLoad = (
                 (t === 'map' && !this.mapData.points.length) ||
                 (t === 'fans' && !this.fansData.fans.length) ||
                 (t === 'cohort' && !this.cohortData.matrix.length) ||
                 (t === 'demographics' && !this.demographicsData.age_buckets.length) ||
-                (t === 'compare' && !this.compareData.a_kpis.length) ||
                 (t === 'vip' && !this.vipData.length)
             );
             if (needsLoad) this.tabLoading = true;
@@ -582,12 +598,19 @@ function fanCrm() {
                 if (t === 'fans' && !this.fansData.fans.length) await this.loadFans();
                 if (t === 'cohort' && !this.cohortData.matrix.length) await this.loadCohort();
                 if (t === 'demographics' && !this.demographicsData.age_buckets.length) await this.loadDemographics();
-                if (t === 'compare' && !this.compareData.a_kpis.length) await this.loadCompare();
                 if (t === 'vip' && !this.vipData.length) await this.loadVip();
             } finally {
                 this.tabLoading = false;
             }
             this.$nextTick(() => this.renderTab(t));
+        },
+
+        syncUrlTab(t) {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', t);
+                window.history.replaceState({}, '', url.toString());
+            } catch (e) { /* noop */ }
         },
 
         async fetchAction(action, params = {}) {
