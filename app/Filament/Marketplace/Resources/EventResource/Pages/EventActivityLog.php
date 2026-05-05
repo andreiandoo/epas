@@ -168,7 +168,11 @@ class EventActivityLog extends Page
                 if ($value !== null && $value !== '') {
                     $changes[] = [
                         'field' => $this->formatFieldName($key),
-                        'old' => null,
+                        // Use the same '(empty)' sentinel that formatValue
+                        // emits — the blade compares with !== '(empty)', and
+                        // a literal null would slip through and trip
+                        // Str::limit() / mb_strwidth() on PHP 8.4.
+                        'old' => $this->formatValue(null),
                         'new' => $this->formatValue($value),
                     ];
                 }
