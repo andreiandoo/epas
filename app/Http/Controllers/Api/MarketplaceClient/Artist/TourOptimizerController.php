@@ -42,11 +42,31 @@ class TourOptimizerController extends BaseController
             'cities' => 'required|array|min:2|max:15',
             'cities.*.name' => 'required|string|max:80',
             'cities.*.fixed' => 'nullable|boolean',
+            'cities.*.date' => 'nullable|date',
+            'cities.*.venue_id' => 'nullable|integer|exists:venues,id',
             'constraints' => 'nullable|array',
             'constraints.max_distance_km' => 'nullable|integer|min:50|max:3000',
             'constraints.min_days_between' => 'nullable|integer|min:1|max:14',
             'constraints.budget_ron' => 'nullable|integer|min:0',
             'constraints.include_border' => 'nullable|boolean',
+            'constraints.tour_config' => 'nullable|array',
+            'constraints.tour_config.vehicles' => 'nullable|array|max:5',
+            'constraints.tour_config.vehicles.*.type' => 'nullable|string|max:30',
+            'constraints.tour_config.vehicles.*.count' => 'nullable|integer|min:1|max:10',
+            'constraints.tour_config.vehicles.*.capacity_seats' => 'nullable|integer|min:1|max:60',
+            'constraints.tour_config.vehicles.*.consumption_l_100km' => 'nullable|numeric|min:1|max:50',
+            'constraints.tour_config.fuel_type' => 'nullable|in:diesel,gasoline,electric',
+            'constraints.tour_config.fuel_price_ron_l' => 'nullable|numeric|min:0|max:50',
+            'constraints.tour_config.people_count' => 'nullable|integer|min:1|max:50',
+            'constraints.tour_config.rooms' => 'nullable|array',
+            'constraints.tour_config.rooms.single' => 'nullable|integer|min:0|max:30',
+            'constraints.tour_config.rooms.double' => 'nullable|integer|min:0|max:30',
+            'constraints.tour_config.rooms.apartment' => 'nullable|integer|min:0|max:10',
+            'constraints.tour_config.room_prices' => 'nullable|array',
+            'constraints.tour_config.room_prices.single' => 'nullable|numeric|min:0',
+            'constraints.tour_config.room_prices.double' => 'nullable|numeric|min:0',
+            'constraints.tour_config.room_prices.apartment' => 'nullable|numeric|min:0',
+            'constraints.tour_config.meal_price_per_day' => 'nullable|numeric|min:0|max:1000',
             'start_date' => 'nullable|date',
         ]);
 
@@ -64,6 +84,19 @@ class TourOptimizerController extends BaseController
         return $this->success($result);
     }
 
+    public function venuesInCity(Request $request): JsonResponse
+    {
+        $this->requireArtist($request);
+
+        $validated = $request->validate([
+            'city' => 'required|string|max:100',
+        ]);
+
+        return $this->success([
+            'venues' => $this->tour->searchVenuesInCity($validated['city']),
+        ]);
+    }
+
     public function listScenarios(Request $request): JsonResponse
     {
         $artist = $this->requireArtist($request);
@@ -77,7 +110,10 @@ class TourOptimizerController extends BaseController
                 'date_range' => $s->start_date && $s->end_date
                     ? $s->start_date->translatedFormat('j M') . ' - ' . $s->end_date->translatedFormat('j M Y')
                     : '—',
+                'cities' => $s->cities ?? [],
                 'cities_count' => count($s->cities ?? []),
+                'constraints' => $s->constraints ?? [],
+                'optimized_route' => $s->optimized_route ?? [],
                 'summary' => $s->summary ?? [],
                 'status' => $s->status,
                 'updated_at' => $s->updated_at?->toIso8601String(),

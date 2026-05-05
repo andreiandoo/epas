@@ -2202,6 +2202,14 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'artist.tour.venues':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['city']) && $_GET['city'] !== '') $params['city'] = $_GET['city'];
+        $endpoint = '/artist/tour/venues' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'artist.tour.optimize':
         $method = 'POST';
         $body = file_get_contents('php://input') ?: '{}';
