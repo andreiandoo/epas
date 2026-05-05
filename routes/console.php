@@ -886,3 +886,10 @@ Schedule::command('audiences:sync-meta')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
 
+// Pull Meta Ads Marketing API insights for every CAPI-active organizer
+// (E5 — ROAS reporting). Dispatches one job per active connection.
+Schedule::command('ads:sync-meta-insights --days=7')
+    ->dailyAt('05:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+
