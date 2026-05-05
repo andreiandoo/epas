@@ -700,10 +700,20 @@ function fanCrm() {
             if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
         },
 
+        // Defensive: kill any Chart.js instance attached to this canvas
+        // (handles stale instances from previous renders not tracked in this.charts).
+        clearCanvas(elId) {
+            const el = document.getElementById(elId);
+            if (!el || typeof Chart === 'undefined') return null;
+            const existing = Chart.getChart(el);
+            if (existing) existing.destroy();
+            return el;
+        },
+
         renderGrowthChart() {
             this.destroyChart('growth');
-            const el = document.getElementById('growthChart');
-            if (!el || typeof Chart === 'undefined') return;
+            const el = this.clearCanvas('growthChart');
+            if (!el) return;
             const g = this.overview.growth_chart || { labels: [], new_fans: [], returning: [] };
             this.charts.growth = new Chart(el.getContext('2d'), {
                 type: 'bar',
@@ -711,19 +721,19 @@ function fanCrm() {
                     { label: 'Fani noi', data: g.new_fans, backgroundColor: '#A51C30' },
                     { label: 'Revenire', data: g.returning, backgroundColor: '#E67E22' },
                 ]},
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
             });
         },
 
         renderFanTypeChart() {
             this.destroyChart('fanType');
-            const el = document.getElementById('fanTypeChart');
-            if (!el || typeof Chart === 'undefined') return;
+            const el = this.clearCanvas('fanTypeChart');
+            if (!el) return;
             const types = this.overview.fan_types || [];
             this.charts.fanType = new Chart(el.getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: types.map(t => t.label), datasets: [{ data: types.map(t => t.value), backgroundColor: types.map(t => t.color), borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
             });
         },
 
@@ -756,32 +766,35 @@ function fanCrm() {
 
         renderAgeChart() {
             this.destroyChart('age');
-            const el = document.getElementById('ageChart');
-            if (!el || typeof Chart === 'undefined') return;
+            if (!this.demographicsData.has_age_data) return;
+            const el = this.clearCanvas('ageChart');
+            if (!el) return;
             const buckets = this.demographicsData.age_buckets || [];
             this.charts.age = new Chart(el.getContext('2d'), {
                 type: 'bar',
                 data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.pct), backgroundColor: '#A51C30', borderRadius: 8 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
             });
         },
 
         renderGenderChart() {
             this.destroyChart('gender');
-            const el = document.getElementById('genderChart');
-            if (!el || typeof Chart === 'undefined') return;
+            if (!this.demographicsData.has_gender_data) return;
+            const el = this.clearCanvas('genderChart');
+            if (!el) return;
             const split = this.demographicsData.gender_split || [];
             this.charts.gender = new Chart(el.getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: split.map(s => s.label), datasets: [{ data: split.map(s => s.pct), backgroundColor: ['#A51C30', '#3B82F6', '#94A3B8'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
             });
         },
 
         renderCompareChart() {
             this.destroyChart('compare');
-            const el = document.getElementById('compareChart');
-            if (!el || typeof Chart === 'undefined' || !this.compareData.supported) return;
+            if (!this.compareData.supported) return;
+            const el = this.clearCanvas('compareChart');
+            if (!el) return;
             const c = this.compareData.chart || { labels: [], a: [], b: [] };
             this.charts.compare = new Chart(el.getContext('2d'), {
                 type: 'line',
@@ -789,7 +802,7 @@ function fanCrm() {
                     { label: this.compareData.a_label, data: c.a, borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4 },
                     { label: this.compareData.b_label, data: c.b, borderColor: '#94A3B8', borderDash: [5,5], fill: false, tension: 0.4 },
                 ]},
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
             });
         },
 

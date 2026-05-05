@@ -635,21 +635,52 @@ class FanCrmService
         $yearA = is_numeric($aId) ? (int) $aId : (int) date('Y');
         $yearB = is_numeric($bId) ? (int) $bId : ($yearA - 1);
 
-        $kpisA = $this->kpisForYear($artist, $yearA);
-        $kpisB = $this->kpisForYear($artist, $yearB);
+        // Performance: rulăm fansAggregateQuery o singură dată pe intervalul combinat,
+        // apoi bucketăm în PHP per an + per lună. Original făcea ~32 queries → 502 timeout
+        // pentru artiști cu mii de orders. Acum: 1 expensive + 4 cheap queries.
+        $minYear = min($yearA, $yearB);
+        $maxYear = max($yearA, $yearB);
+        $rangeStart = Carbon::create($minYear, 1, 1)->startOfDay()->toDateString();
+        $rangeEnd = Carbon::create($maxYear, 12, 31)->endOfDay()->toDateString();
 
-        // Monthly chart 12 luni pentru anul A vs anul B (new fans per month)
+        $rows = DB::query()
+            ->fromSub($this->fansAggregateQuery($artist), 'fa')
+            ->whereBetween('fa.first_event_date', [$rangeStart, $rangeEnd])
+            ->select('fa.customer_id', 'fa.total_spent', 'fa.first_event_date')
+            ->get();
+
+        $aFans = 0;
+        $aSpend = 0.0;
+        $bFans = 0;
+        $bSpend = 0.0;
+        $aMonthly = array_fill(0, 12, 0);
+        $bMonthly = array_fill(0, 12, 0);
+
+        foreach ($rows as $r) {
+            if (!$r->first_event_date) continue;
+            $year = (int) substr((string) $r->first_event_date, 0, 4);
+            $monthIdx = max(0, (int) substr((string) $r->first_event_date, 5, 2) - 1);
+            $spend = (float) $r->total_spent;
+            if ($year === $yearA) {
+                $aFans++;
+                $aSpend += $spend;
+                $aMonthly[$monthIdx]++;
+            } elseif ($year === $yearB) {
+                $bFans++;
+                $bSpend += $spend;
+                $bMonthly[$monthIdx]++;
+            }
+        }
+
+        // Lightweight queries — counts directe, fără sub-query
+        $eventsA = $this->countEventsForArtistInYear($artist, $yearA);
+        $eventsB = $this->countEventsForArtistInYear($artist, $yearB);
+        $ticketsA = $this->countTicketsForArtistInYear($artist, $yearA);
+        $ticketsB = $this->countTicketsForArtistInYear($artist, $yearB);
+
         $months = [];
-        $aSeries = [];
-        $bSeries = [];
         for ($m = 1; $m <= 12; $m++) {
-            $startA = Carbon::create($yearA, $m, 1)->startOfMonth();
-            $endA = $startA->copy()->endOfMonth();
-            $startB = Carbon::create($yearB, $m, 1)->startOfMonth();
-            $endB = $startB->copy()->endOfMonth();
-            $months[] = $startA->translatedFormat('M');
-            $aSeries[] = $this->countFirstEventBetween($artist, $startA->toDateString(), $endA->toDateString());
-            $bSeries[] = $this->countFirstEventBetween($artist, $startB->toDateString(), $endB->toDateString());
+            $months[] = Carbon::create($yearA, $m, 1)->translatedFormat('M');
         }
 
         return [
@@ -657,10 +688,43 @@ class FanCrmService
             'type' => $type,
             'a_label' => (string) $yearA,
             'b_label' => (string) $yearB,
-            'a_kpis' => $kpisA,
-            'b_kpis' => $kpisB,
-            'chart' => ['labels' => $months, 'a' => $aSeries, 'b' => $bSeries],
+            'a_kpis' => [
+                ['label' => 'Fani noi', 'value' => $aFans],
+                ['label' => 'Evenimente', 'value' => $eventsA],
+                ['label' => 'Bilete vândute', 'value' => $ticketsA],
+                ['label' => 'LTV mediu (RON)', 'value' => $aFans > 0 ? round($aSpend / $aFans, 2) : 0],
+            ],
+            'b_kpis' => [
+                ['label' => 'Fani noi', 'value' => $bFans],
+                ['label' => 'Evenimente', 'value' => $eventsB],
+                ['label' => 'Bilete vândute', 'value' => $ticketsB],
+                ['label' => 'LTV mediu (RON)', 'value' => $bFans > 0 ? round($bSpend / $bFans, 2) : 0],
+            ],
+            'chart' => ['labels' => $months, 'a' => array_values($aMonthly), 'b' => array_values($bMonthly)],
         ];
+    }
+
+    protected function countEventsForArtistInYear(Artist $artist, int $year): int
+    {
+        return (int) DB::table('events')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->where('event_artist.artist_id', $artist->id)
+            ->whereBetween('events.event_date', [
+                Carbon::create($year, 1, 1)->toDateString(),
+                Carbon::create($year, 12, 31)->toDateString(),
+            ])
+            ->distinct()
+            ->count('events.id');
+    }
+
+    protected function countTicketsForArtistInYear(Artist $artist, int $year): int
+    {
+        return (int) $this->baseFansQuery($artist)
+            ->whereBetween('e.event_date', [
+                Carbon::create($year, 1, 1)->toDateString(),
+                Carbon::create($year, 12, 31)->toDateString(),
+            ])
+            ->count();
     }
 
     protected function computeTopVips(Artist $artist, int $limit): array
@@ -744,7 +808,7 @@ class FanCrmService
     public function cacheKey(int $artistId, string $method, array $params = []): string
     {
         // Bump CACHE_VERSION when query semantics change to invalidate stale entries.
-        $version = 'v3';
+        $version = 'v4';
         $hash = empty($params) ? '' : ':' . substr(md5(json_encode($params)), 0, 8);
         return "artist:{$artistId}:fan-crm:{$version}:{$method}{$hash}";
     }
