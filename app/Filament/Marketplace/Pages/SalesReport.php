@@ -145,10 +145,10 @@ class SalesReport extends Page implements HasForms
                             ->label('Evenimente')
                             ->multiple()
                             ->searchable()
-                            ->preload()
-                            ->options(fn () => $this->getEventOptions())
+                            ->getSearchResultsUsing(fn (string $search) => $this->searchEvents($search))
+                            ->getOptionLabelsUsing(fn (array $values) => $this->resolveEventLabels($values))
                             ->placeholder('Caută evenimente după nume sau dată...')
-                            ->helperText('Selecție multiplă. Sortate cronologic descrescător.')
+                            ->helperText('Search server-side pe toate evenimentele clientului. Diacritice ignorate.')
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => $get('filterBy') === 'event')
                             ->live()
@@ -157,9 +157,9 @@ class SalesReport extends Page implements HasForms
                         Forms\Components\Select::make('organizerId')
                             ->label('Organizator')
                             ->searchable()
-                            ->preload()
-                            ->options(fn () => $this->getOrganizerOptions())
-                            ->placeholder('Caută organizator după nume...')
+                            ->getSearchResultsUsing(fn (string $search) => $this->searchOrganizers($search))
+                            ->getOptionLabelUsing(fn ($value) => $this->resolveOrganizerLabel($value))
+                            ->placeholder('Caută organizator după nume sau CUI...')
                             ->helperText('Toate evenimentele acestui organizator vor fi incluse.')
                             ->columnSpanFull()
                             ->visible(fn (Get $get) => $get('filterBy') === 'organizer')
@@ -215,40 +215,87 @@ class SalesReport extends Page implements HasForms
         ];
     }
 
-    /** @return array<int, string> */
-    protected function getEventOptions(): array
+    /**
+     * Server-side event search. Uses Postgres' unaccent extension (already
+     * enabled by 2026_03_23_100001) so a search like "dirtylicious" hits
+     * "Dirtylicious Decade Tour" regardless of case or any diacritic noise.
+     * Limit kept at 100 — Filament renders at most that many in the
+     * dropdown anyway, and the user just types more to narrow.
+     *
+     * @return array<int, string>
+     */
+    protected function searchEvents(string $search): array
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) return [];
+
+        $needle = '%' . $search . '%';
 
         return Event::query()
             ->where('marketplace_client_id', $marketplace->id)
             ->whereNotNull('marketplace_organizer_id')
+            ->whereRaw('LOWER(unaccent(title::text)) LIKE LOWER(unaccent(?))', [$needle])
             ->orderByDesc('event_date')
-            ->limit(500)
+            ->limit(100)
             ->get(['id', 'title', 'event_date'])
-            ->mapWithKeys(function (Event $e) {
-                $title = is_array($e->title) ? ($e->title['ro'] ?? $e->title['en'] ?? reset($e->title)) : $e->title;
-                $date = $e->event_date?->format('d.m.Y') ?? '—';
-                return [$e->id => "{$title} ({$date})"];
-            })
+            ->mapWithKeys(fn (Event $e) => [$e->id => $this->formatEventLabel($e)])
             ->toArray();
     }
 
+    /**
+     * Resolve labels for already-selected event ids so the chips render
+     * with title + date instead of raw ids.
+     *
+     * @param array<int, int|string> $values
+     * @return array<int, string>
+     */
+    protected function resolveEventLabels(array $values): array
+    {
+        if (empty($values)) return [];
+        return Event::query()
+            ->whereIn('id', $values)
+            ->get(['id', 'title', 'event_date'])
+            ->mapWithKeys(fn (Event $e) => [$e->id => $this->formatEventLabel($e)])
+            ->toArray();
+    }
+
+    protected function formatEventLabel(Event $e): string
+    {
+        $title = is_array($e->title) ? ($e->title['ro'] ?? $e->title['en'] ?? reset($e->title)) : $e->title;
+        $date = $e->event_date?->format('d.m.Y') ?? '—';
+        return "{$title} ({$date})";
+    }
+
     /** @return array<int, string> */
-    protected function getOrganizerOptions(): array
+    protected function searchOrganizers(string $search): array
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) return [];
 
+        $needle = '%' . $search . '%';
+
         return MarketplaceOrganizer::query()
             ->where('marketplace_client_id', $marketplace->id)
+            ->where(function ($q) use ($needle) {
+                $q->whereRaw('LOWER(unaccent(name)) LIKE LOWER(unaccent(?))', [$needle])
+                  ->orWhereRaw('LOWER(unaccent(coalesce(company_name, \'\'))) LIKE LOWER(unaccent(?))', [$needle])
+                  ->orWhereRaw('coalesce(company_tax_id, \'\') ILIKE ?', [$needle]);
+            })
             ->orderBy('name')
+            ->limit(100)
             ->get(['id', 'name', 'company_name'])
             ->mapWithKeys(fn (MarketplaceOrganizer $o) => [
                 $o->id => $o->name . ($o->company_name ? " ({$o->company_name})" : ''),
             ])
             ->toArray();
+    }
+
+    protected function resolveOrganizerLabel(int|string|null $value): ?string
+    {
+        if (!$value) return null;
+        $org = MarketplaceOrganizer::find((int) $value);
+        if (!$org) return null;
+        return $org->name . ($org->company_name ? " ({$org->company_name})" : '');
     }
 
     /** @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon} */
