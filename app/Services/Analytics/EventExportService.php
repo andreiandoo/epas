@@ -309,6 +309,8 @@ class EventExportService
             'Customer Name',
             'Tickets',
             'Ticket Types',
+            'Rând',
+            'Loc',
             'Subtotal',
             'Commission',
             'Total',
@@ -326,6 +328,20 @@ class EventExportService
                 return ($type?->name ?? 'Unknown') . ' x' . $tickets->count();
             })->implode(', ');
 
+            // Collect rows + seats for any seated tickets in the order. Multi-
+            // seat orders end up as comma-separated lists, kept aligned by
+            // index so column N in "Rând" matches column N in "Loc".
+            $rows = [];
+            $seats = [];
+            foreach ($order->tickets as $ticket) {
+                $details = $ticket->getSeatDetails();
+                if (!$details) {
+                    continue;
+                }
+                $rows[] = $details['row_label'] ?? '';
+                $seats[] = $details['seat_number'] ?? '';
+            }
+
             $csvContent[] = [
                 $order->id,
                 $order->order_number ?? '',
@@ -334,6 +350,8 @@ class EventExportService
                 $order->customer_name ?? $order->marketplaceCustomer?->name ?? '',
                 $order->tickets->count(),
                 $ticketTypes,
+                implode(', ', $rows),
+                implode(', ', $seats),
                 number_format($order->subtotal ?? $order->total, 2),
                 number_format($order->commission_amount ?? 0, 2),
                 number_format($order->total, 2),
@@ -405,7 +423,8 @@ class EventExportService
         $output = fopen('php://temp', 'r+');
 
         foreach ($data as $row) {
-            fputcsv($output, $row);
+            // Pass $escape explicitly — PHP 8.4 deprecates the implicit default.
+            fputcsv($output, $row, ',', '"', '\\');
         }
 
         rewind($output);
