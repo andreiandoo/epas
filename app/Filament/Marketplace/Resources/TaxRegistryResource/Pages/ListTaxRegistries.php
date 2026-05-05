@@ -30,8 +30,11 @@ class ListTaxRegistries extends ListRecords
                         $out = fopen('php://output', 'w');
                         // UTF-8 BOM for Excel compatibility
                         fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
-                        fputcsv($out, $header);
-                        fputcsv($out, $example);
+                        // PHP 8.4 deprecates the implicit $escape default —
+                        // pass the historical args explicitly so the template
+                        // download stays warning-free.
+                        fputcsv($out, $header, ',', '"', '\\');
+                        fputcsv($out, $example, ',', '"', '\\');
                         fclose($out);
                     }, 'tax-registry-template.csv', [
                         'Content-Type' => 'text/csv; charset=UTF-8',
@@ -92,7 +95,7 @@ class ListTaxRegistries extends ListRecords
         }
 
         // Read header row
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle, 0, ',', '"', '\\');
         if (!$header) {
             fclose($handle);
             Notification::make()->title('Fișierul CSV este gol.')->danger()->send();
@@ -126,7 +129,7 @@ class ListTaxRegistries extends ListRecords
         $skipped = 0;
         $lineNumber = 1;
 
-        while (($row = fgetcsv($handle)) !== false) {
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
             $lineNumber++;
 
             // Skip empty rows
