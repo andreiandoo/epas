@@ -184,95 +184,170 @@ class FanCrmService
     {
         $now = now();
         $sixMonthsAgo = $now->copy()->subMonths(6)->toDateString();
-        $oneYearAgo = $now->copy()->subYear()->toDateString();
-        $previousSixMonths = $now->copy()->subMonths(12)->toDateString();
+        $oneYearAgoDate = $now->copy()->subYear()->toDateString();
+        $twelveMonthsAgo = $now->copy()->subMonths(12)->toDateString();
+        $twelveMonthsAgoStart = $now->copy()->subMonths(11)->startOfMonth();
 
-        // Total fans (distinct customers)
-        $totalFans = (int) DB::query()
+        // Performance: rulăm fansAggregateQuery O SINGURĂ DATĂ + join cu mc pentru city/country.
+        // Toate KPIs, segments, top cities, countries — calculate în PHP din collection.
+        // Original făcea ~39 queries grele → 502 timeout. Acum: 3 queries (fans + activity + dormant).
+        $allFans = collect(DB::query()
             ->fromSub($this->fansAggregateQuery($artist), 'fa')
-            ->count();
+            ->leftJoin('marketplace_customers as mc', 'mc.id', '=', 'fa.customer_id')
+            ->select(
+                'fa.customer_id',
+                'fa.events_count',
+                'fa.total_spent',
+                'fa.first_event_date',
+                'fa.last_event_date',
+                'fa.cities_count',
+                'mc.city',
+                'mc.country'
+            )
+            ->get());
 
-        // New fans (first_event in last 6 months) vs previous 6 months
-        $newFansCurrent = $this->countFirstEventBetween($artist, $sixMonthsAgo, $now->toDateString());
-        $newFansPrev = $this->countFirstEventBetween($artist, $previousSixMonths, $sixMonthsAgo);
+        $totalFans = $allFans->count();
+
+        // Avg LTV
+        $avgLtv = $totalFans > 0 ? (float) $allFans->avg('total_spent') : 0;
+
+        // New fans current 6 months / previous 6 months
+        $newFansCurrent = $allFans->filter(fn ($r) => $r->first_event_date >= $sixMonthsAgo)->count();
+        $newFansPrev = $allFans->filter(fn ($r) => $r->first_event_date >= $twelveMonthsAgo && $r->first_event_date < $sixMonthsAgo)->count();
         $newFansTrend = $newFansPrev > 0
             ? round((($newFansCurrent - $newFansPrev) / $newFansPrev) * 100, 1)
             : ($newFansCurrent > 0 ? 100 : 0);
 
-        // Avg LTV
-        $avgLtv = (float) (DB::query()
-            ->fromSub($this->fansAggregateQuery($artist), 'fa')
-            ->avg('fa.total_spent') ?? 0);
-
-        // Retention: % din fani cu 2+ events
-        $loyalCount = (int) DB::query()
-            ->fromSub($this->fansAggregateQuery($artist), 'fa')
-            ->where('fa.events_count', '>=', 2)
-            ->count();
+        // Retention
+        $loyalCount = $allFans->filter(fn ($r) => (int) $r->events_count >= 2)->count();
         $retentionRate = $totalFans > 0 ? round(($loyalCount / $totalFans) * 100, 1) : 0;
 
-        // Cities covered
-        $citiesCount = $this->baseFansQuery($artist)
-            ->whereNotNull('mc.city')
-            ->where('mc.city', '!=', '')
-            ->distinct()
-            ->count('mc.city');
-
         // Top 10 cities by fan count
-        $topCities = $this->baseFansQuery($artist)
-            ->whereNotNull('mc.city')
-            ->where('mc.city', '!=', '')
-            ->select('mc.city', DB::raw('COUNT(DISTINCT mc.id) as fans'), DB::raw('COUNT(DISTINCT e.id) as events'))
-            ->groupBy('mc.city')
-            ->orderByDesc('fans')
-            ->limit(10)
-            ->get()
-            ->map(fn ($r) => [
-                'name' => $r->city,
-                'fans' => (int) $r->fans,
-                'events' => (int) $r->events,
-                'trend' => 'flat', // calculul real cu 2 ferestre temporale e prea costisitor pentru v1
+        $cityGroups = $allFans
+            ->filter(fn ($r) => !empty($r->city))
+            ->groupBy('city');
+        $topCities = $cityGroups
+            ->map(fn ($g, $city) => [
+                'name' => (string) $city,
+                'fans' => $g->count(),
+                'events' => (int) $g->sum('events_count'),
+                'trend' => 'flat',
                 'trendValue' => 0,
             ])
-            ->toArray();
+            ->sortByDesc('fans')
+            ->take(10)
+            ->values()
+            ->all();
+        $citiesCount = $cityGroups->count();
 
         // Top 5 countries
-        $topCountries = $this->baseFansQuery($artist)
-            ->whereNotNull('mc.country')
-            ->where('mc.country', '!=', '')
-            ->select('mc.country', DB::raw('COUNT(DISTINCT mc.id) as fans'))
-            ->groupBy('mc.country')
-            ->orderByDesc('fans')
-            ->limit(5)
-            ->get();
-        $totalCountriesFans = $topCountries->sum('fans') ?: 1;
+        $countryGroups = $allFans
+            ->filter(fn ($r) => !empty($r->country))
+            ->groupBy('country');
+        $topCountries = $countryGroups
+            ->map(fn ($g, $code) => ['code' => (string) $code, 'fans' => $g->count()])
+            ->sortByDesc('fans')
+            ->take(5)
+            ->values();
+        $totalCountriesFans = (int) max(1, $topCountries->sum('fans'));
         $countries = $topCountries->map(fn ($r) => [
-            'name' => $r->country,
-            'flag' => $this->countryToFlag($r->country),
-            'fans' => (int) $r->fans,
-            'pct' => round(((int) $r->fans / $totalCountriesFans) * 100),
-        ])->toArray();
+            'name' => $r['code'],
+            'flag' => $this->countryToFlag($r['code']),
+            'fans' => $r['fans'],
+            'pct' => round(($r['fans'] / $totalCountriesFans) * 100),
+        ])->all();
 
-        // Dormant cities — orașe unde nu am mai cântat de >12 luni
+        // Predefined segment counts — derived from $allFans, no extra queries
+        $vipCandidates = $allFans->filter(fn ($r) => (int) $r->events_count >= 3)->sortByDesc('total_spent');
+        $vipCount = (int) ceil($vipCandidates->count() * 0.10);
+        if ($vipCandidates->count() > 0 && $vipCount === 0) $vipCount = 1;
+
+        $segCounts = [
+            self::SEG_VIP => $vipCount,
+            self::SEG_LOYAL => $loyalCount,
+            self::SEG_NEW => $newFansCurrent,
+            self::SEG_DORMANT => $allFans->filter(fn ($r) => $r->last_event_date && $r->last_event_date < $twelveMonthsAgo)->count(),
+            self::SEG_LOCAL => $allFans->filter(fn ($r) => (int) $r->cities_count === 1)->count(),
+            self::SEG_TRAVELERS => $allFans->filter(fn ($r) => (int) $r->cities_count >= 2)->count(),
+        ];
+
+        $fanTypes = [
+            ['label' => 'VIP', 'value' => $segCounts[self::SEG_VIP], 'color' => '#A51C30'],
+            ['label' => 'Loiali', 'value' => $segCounts[self::SEG_LOYAL], 'color' => '#E67E22'],
+            ['label' => 'Noi', 'value' => $segCounts[self::SEG_NEW], 'color' => '#10B981'],
+            ['label' => 'Dormiți', 'value' => $segCounts[self::SEG_DORMANT], 'color' => '#F59E0B'],
+        ];
+
+        // Growth chart — new fans per month derived from $allFans
+        $months = [];
+        $newFansByMonth = [];
+        $monthKeys = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $monthStart = $now->copy()->subMonths($i)->startOfMonth();
+            $monthEnd = $monthStart->copy()->endOfMonth();
+            $months[] = $monthStart->translatedFormat('M Y');
+            $key = $monthStart->format('Y-m');
+            $monthKeys[] = $key;
+            $startStr = $monthStart->toDateString();
+            $endStr = $monthEnd->toDateString();
+            $newFansByMonth[$key] = $allFans
+                ->filter(fn ($r) => $r->first_event_date >= $startStr && $r->first_event_date <= $endStr)
+                ->count();
+        }
+
+        // Active per month — un singur query, returnează (customer_id, event_date) pairs.
+        // Bucket în PHP. Portable cu PostgreSQL/MySQL/SQLite.
+        $activityRows = DB::table('marketplace_customers as mc')
+            ->join('orders as o', function ($j) {
+                $j->on('o.marketplace_customer_id', '=', 'mc.id')
+                  ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
+            })
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artist->id)
+            ->whereNull('mc.deleted_at')
+            ->whereBetween('e.event_date', [$twelveMonthsAgoStart->toDateString(), $now->toDateString()])
+            ->select('mc.id as customer_id', 'e.event_date')
+            ->distinct()
+            ->get();
+
+        $activeByMonth = [];
+        foreach ($activityRows as $row) {
+            $monthKey = substr((string) $row->event_date, 0, 7); // YYYY-MM
+            if (!isset($activeByMonth[$monthKey])) $activeByMonth[$monthKey] = [];
+            $activeByMonth[$monthKey][$row->customer_id] = true;
+        }
+
+        $newFansSeries = [];
+        $returningSeries = [];
+        foreach ($monthKeys as $k) {
+            $new = $newFansByMonth[$k] ?? 0;
+            $active = isset($activeByMonth[$k]) ? count($activeByMonth[$k]) : 0;
+            $newFansSeries[] = $new;
+            $returningSeries[] = max(0, $active - $new);
+        }
+
+        // Dormant cities — orașe în care artistul a cântat dar n-a mai venit > 12 luni.
+        // FILTRĂM city la cele de unde avem fani reali (>0) — altfel n-are sens recomandarea.
+        $cityFanCounts = $cityGroups->map->count(); // [city => fan count]
         $dormantCities = DB::table('events as e')
             ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
             ->leftJoin('venues as v', 'v.id', '=', 'e.venue_id')
             ->where('ea.artist_id', $artist->id)
             ->whereNotNull('v.city')
+            ->where('v.city', '!=', '')
             ->select('v.city as name', DB::raw('MAX(e.event_date) as last_event'))
             ->groupBy('v.city')
-            ->havingRaw('MAX(e.event_date) < ?', [$oneYearAgo])
+            ->havingRaw('MAX(e.event_date) < ?', [$oneYearAgoDate])
             ->orderBy('last_event', 'asc')
-            ->limit(5)
+            ->limit(15) // luăm mai multe ca să avem din ce alege după filtru fani > 0
             ->get()
-            ->map(function ($r) use ($now) {
+            ->map(function ($r) use ($now, $cityFanCounts) {
                 $lastEvent = $r->last_event ? Carbon::parse($r->last_event) : null;
-                $monthsAgo = $lastEvent ? max(0, (int) $lastEvent->diffInMonths($now)) : null;
-                // Câți fani avem din acel oraș (din baza marketplace_customers)
-                $fans = (int) DB::table('marketplace_customers')
-                    ->where('city', $r->name)
-                    ->whereNull('deleted_at')
-                    ->count();
+                $monthsAgo = $lastEvent ? max(0, (int) round($lastEvent->diffInMonths($now))) : null;
+                $fans = (int) ($cityFanCounts[$r->name] ?? 0);
                 return [
                     'name' => $r->name,
                     'fans' => $fans,
@@ -280,31 +355,11 @@ class FanCrmService
                     'monthsAgo' => $monthsAgo,
                 ];
             })
-            ->toArray();
+            ->filter(fn ($c) => $c['fans'] > 0) // exclude orașele unde nu mai avem fani
+            ->take(5)
+            ->values()
+            ->all();
 
-        // Growth chart 12 months — new fans + returning fans
-        $months = [];
-        $newFansSeries = [];
-        $returningSeries = [];
-        for ($i = 11; $i >= 0; $i--) {
-            $monthStart = $now->copy()->subMonths($i)->startOfMonth();
-            $monthEnd = $monthStart->copy()->endOfMonth();
-            $months[] = $monthStart->translatedFormat('M Y');
-            $newFansSeries[] = $this->countFirstEventBetween($artist, $monthStart->toDateString(), $monthEnd->toDateString());
-            // Returning = customers who attended event in this month AND had attended before
-            $returningSeries[] = $this->countReturningInMonth($artist, $monthStart, $monthEnd);
-        }
-
-        // Fan type breakdown (donut)
-        $counts = $this->computePredefinedCounts($artist);
-        $fanTypes = [
-            ['label' => 'VIP', 'value' => $counts[self::SEG_VIP] ?? 0, 'color' => '#A51C30'],
-            ['label' => 'Loiali', 'value' => $counts[self::SEG_LOYAL] ?? 0, 'color' => '#E67E22'],
-            ['label' => 'Noi', 'value' => $counts[self::SEG_NEW] ?? 0, 'color' => '#10B981'],
-            ['label' => 'Dormiți', 'value' => $counts[self::SEG_DORMANT] ?? 0, 'color' => '#F59E0B'],
-        ];
-
-        // Insight cards (auto-generated)
         $insights = $this->generateInsights($artist, $totalFans, $newFansCurrent, $retentionRate, $dormantCities);
 
         return [
@@ -808,7 +863,7 @@ class FanCrmService
     public function cacheKey(int $artistId, string $method, array $params = []): string
     {
         // Bump CACHE_VERSION when query semantics change to invalidate stale entries.
-        $version = 'v4';
+        $version = 'v5';
         $hash = empty($params) ? '' : ':' . substr(md5(json_encode($params)), 0, 8);
         return "artist:{$artistId}:fan-crm:{$version}:{$method}{$hash}";
     }
