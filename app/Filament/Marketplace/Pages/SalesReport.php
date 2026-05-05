@@ -403,8 +403,13 @@ class SalesReport extends Page implements HasForms
 
     protected function countOrders(array $eventIds, Carbon $from, Carbon $to, array $statuses, string $dateColumn): int
     {
+        // Orders may be linked through either column — same OR pattern as
+        // SalesBreakdownService and SalesReportService::extendedQuery().
+        // Without it the count showed 0 for events whose orders use the
+        // legacy event_id column.
         return \App\Models\Order::query()
-            ->whereIn('marketplace_event_id', $eventIds)
+            ->where(fn ($q) => $q->whereIn('marketplace_event_id', $eventIds)
+                                  ->orWhereIn('event_id', $eventIds))
             ->whereIn('status', $statuses)
             ->whereBetween($dateColumn, [$from, $to])
             ->count();

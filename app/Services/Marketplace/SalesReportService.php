@@ -5,6 +5,7 @@ namespace App\Services\Marketplace;
 use App\Models\Event;
 use App\Models\MarketplaceRefundRequest;
 use App\Models\Order;
+use App\Models\Ticket;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -43,27 +44,24 @@ class SalesReportService
         // resulting per_type rows ourselves so we can apply the period +
         // status + date-column constraints upstream.
         foreach ($events as $event) {
-            // Restrict the breakdown to orders matching our filters. We do
-            // this by handing the filtered set of valid order ids to
-            // SalesBreakdownService via a custom path: the service's
-            // public `build()` takes (event, periodStart, periodEnd) and
-            // already filters tickets by their order's paid_at. Here we
-            // just pass the period and let it resolve.
-            $service = $this->breakdown;
-            $breakdown = $service->build($event, Carbon::parse($from), Carbon::parse($to), excludePos: false);
+            $breakdown = $this->breakdown->build($event, Carbon::parse($from), Carbon::parse($to), excludePos: false);
 
             $eventTitle = $this->resolveTitle($event);
-            $posTypeIds = method_exists($event, 'getPosTicketTypeIds') ? [] : []; // resolved per row below
+            // POS = ticket types whose only sales for this event are
+            // pos_app orders. SalesBreakdownService doesn't tag rows
+            // with this; we compute it once per event and look up.
+            $posTypeIds = $this->resolvePosTicketTypeIds($event);
 
             foreach ($breakdown['per_type'] as $row) {
-                $isPos = $row['is_pos'] ?? false;
+                $ttId = $row['ticket_type_id'] ?? null;
+                $isPos = $ttId !== null && in_array((int) $ttId, $posTypeIds, true);
 
                 $rowOut = [
                     'event_id'         => $event->id,
                     'event_title'      => $eventTitle,
-                    'ticket_type_id'   => $row['ticket_type_id'] ?? null,
-                    'ticket_type_name' => $row['name'] ?? 'Tip bilet',
-                    'is_pos'           => (bool) $isPos,
+                    'ticket_type_id'   => $ttId,
+                    'ticket_type_name' => (string) ($row['ticket_type_name'] ?? 'Tip bilet'),
+                    'is_pos'           => $isPos,
                     'qty'              => (int) ($row['qty'] ?? 0),
                     'price'            => (float) ($row['price'] ?? 0),
                     'gross'            => (float) ($row['gross'] ?? 0),
@@ -105,8 +103,13 @@ class SalesReportService
      */
     public function extendedQuery(array $eventIds, CarbonInterface $from, CarbonInterface $to, array $statuses, string $dateColumn = 'paid_at')
     {
+        // Orders may be linked through either column depending on how they
+        // were created (legacy event_id vs newer marketplace_event_id). The
+        // first cut filtered only on marketplace_event_id and missed half
+        // the data — same OR pattern as SalesBreakdownService::build().
         $q = Order::query()
-            ->whereIn('marketplace_event_id', $eventIds)
+            ->where(fn ($q) => $q->whereIn('marketplace_event_id', $eventIds)
+                                  ->orWhereIn('event_id', $eventIds))
             ->whereIn('status', $statuses)
             ->whereBetween($dateColumn, [$from, $to])
             ->with(['marketplaceEvent', 'tickets.ticketType', 'items'])
@@ -114,6 +117,48 @@ class SalesReportService
             ->orderByDesc($dateColumn);
 
         return $q;
+    }
+
+    /**
+     * Detect ticket types that sell exclusively via pos_app for a given
+     * event. Same shape as MarketplacePayout::getPosTicketTypeIds() but
+     * driven from the event itself rather than a payout snapshot.
+     *
+     * @return array<int, int>
+     */
+    protected function resolvePosTicketTypeIds(Event $event): array
+    {
+        // Pull the ticket type ids that have any sold ticket for this event,
+        // then keep only those with no non-pos_app order behind them.
+        $typeIds = Ticket::query()
+            ->where(fn ($q) => $q->where('event_id', $event->id)
+                                  ->orWhere('marketplace_event_id', $event->id))
+            ->whereIn('status', ['valid', 'used'])
+            ->pluck('ticket_type_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($typeIds)) return [];
+
+        $posOnly = [];
+        foreach ($typeIds as $typeId) {
+            $hasNonPos = Ticket::query()
+                ->where('ticket_type_id', $typeId)
+                ->whereHas('order', function ($q) use ($event) {
+                    $q->where(fn ($q2) => $q2->where('event_id', $event->id)
+                                              ->orWhere('marketplace_event_id', $event->id))
+                      ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                      ->where('source', '!=', 'pos_app');
+                })
+                ->exists();
+
+            if (!$hasNonPos) {
+                $posOnly[] = (int) $typeId;
+            }
+        }
+        return $posOnly;
     }
 
     /**
