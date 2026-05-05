@@ -47,7 +47,6 @@
         'facebook_followers' => 'Followers Facebook',
         'youtube_followers' => 'Subscriberi YouTube',
         'youtube_views' => 'Vizualizări YouTube',
-        'spotify_followers' => 'Followers Spotify',
         'spotify_monthly_listeners' => 'Ascultători lunari Spotify',
         'spotify_popularity' => 'Popularitate Spotify',
         'tiktok_followers' => 'Followers TikTok',
@@ -161,10 +160,10 @@
     {{-- Top bar --}}
     <div class="absolute top-0 left-0 right-0 z-10 p-6 flex items-center justify-between">
         <span class="text-white/60 text-xs uppercase tracking-[0.2em]">Electronic Press Kit</span>
-        <span class="text-white/60 text-xs flex items-center gap-2">
+        <a href="https://tixello.com" target="_blank" rel="noopener" class="text-white/60 text-xs flex items-center gap-2 hover:text-white transition-colors">
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm3.707 7.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 111.414-1.414l.793.793 2.293-2.293a1 1 0 011.414 0z"/></svg>
             Verified by {{ $marketplace_name }}
-        </span>
+        </a>
     </div>
 
     <div class="relative z-10 px-6 lg:px-12 pb-12 lg:pb-20 max-w-5xl">
@@ -174,16 +173,32 @@
             <p class="text-xl lg:text-2xl text-white/80 max-w-2xl font-light">{{ $tagline }}</p>
         @endif
 
-        @if (!empty($artist['city']) || !empty($achievements))
+        @php
+            // Build location text: city, state, country (filter empties)
+            $locationParts = collect([
+                $artist['city'] ?? null,
+                $artist['state'] ?? null,
+                $artist['country'] ?? null,
+            ])->filter(fn ($x) => is_string($x) && trim($x) !== '')->map(fn ($x) => trim($x))->unique()->values()->all();
+            $locationText = implode(', ', $locationParts);
+            $genres = collect($artist['genres'] ?? [])->filter()->values()->all();
+            // "Activ din" — preferă founded_year, fallback la cel mai vechi achievement
+            $foundedYear = $artist['founded_year'] ?? null;
+            if (!$foundedYear && count($achievements) > 0) {
+                $foundedYear = collect($achievements)->pluck('year')->filter()->min();
+            }
+            $hasBadges = $locationText || !empty($genres) || $foundedYear;
+        @endphp
+        @if ($hasBadges)
         <div class="flex flex-wrap gap-2 mt-8">
-            @if (!empty($artist['city']))
-                <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">📍 {{ $artist['city'] }}</span>
+            @if ($locationText)
+                <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">📍 {{ $locationText }}</span>
             @endif
-            @if (count($achievements) > 0)
-                @php $earliest = collect($achievements)->pluck('year')->filter()->min(); @endphp
-                @if ($earliest)
-                    <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">⭐ Activ din {{ $earliest }}</span>
-                @endif
+            @if (!empty($genres))
+                <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">🎵 {{ implode(' · ', $genres) }}</span>
+            @endif
+            @if ($foundedYear)
+                <span class="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs text-white">⭐ Activ din {{ $foundedYear }}</span>
             @endif
         </div>
         @endif
@@ -396,9 +411,17 @@
     <div class="absolute inset-0" style="background: radial-gradient(circle at 50% 50%, var(--accent), transparent 70%); opacity: 0.3"></div>
     <div class="relative z-10 max-w-3xl mx-auto text-center">
         @if ($showBookingCta)
+            @php
+                $eventTypes = collect($get('contact', 'event_types', []))
+                    ->filter(fn ($t) => is_string($t) && trim($t) !== '')
+                    ->map(fn ($t) => trim($t))
+                    ->all();
+            @endphp
             <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Disponibili pentru</p>
             <h2 class="epk-display text-5xl lg:text-7xl font-black text-white mb-6">Booking</h2>
-            <p class="text-xl text-white/70 mb-10">Concerte · Festivaluri · Evenimente private · Corporate</p>
+            @if (!empty($eventTypes))
+                <p class="text-xl text-white/70 mb-10">{{ implode(' · ', $eventTypes) }}</p>
+            @endif
         @endif
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">

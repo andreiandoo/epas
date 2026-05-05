@@ -107,7 +107,6 @@ class EpkService
             'instagram_followers' => $this->formatStat($pickFirst($artist->followers_instagram, $artist->instagram_followers)),
             'facebook_followers' => $this->formatStat($pickFirst($artist->followers_facebook, $artist->facebook_followers)),
             'youtube_followers' => $this->formatStat($pickFirst($artist->followers_youtube, $artist->youtube_followers)),
-            'spotify_followers' => $this->formatStat((int) ($artist->spotify_followers ?? 0)),
             'spotify_monthly_listeners' => $this->formatStat((int) ($artist->spotify_monthly_listeners ?? 0)),
             'tiktok_followers' => $this->formatStat($pickFirst($artist->followers_tiktok, $artist->tiktok_followers)),
             // Stats noi cerute: views YouTube + popularitate Spotify (0-100)
@@ -191,12 +190,24 @@ class EpkService
         $hiddenIds = (array) ($pastData['hidden_event_ids'] ?? []);
         $pastLimit = (int) ($pastData['limit'] ?? 12);
 
+        // Genres din taxonomy (artist_artist_genre pivot)
+        $genres = [];
+        try {
+            $genres = $artist->artistGenres()->pluck('name')->filter()->values()->all();
+        } catch (\Throwable $e) {
+            // dacă tabel/relatie lipsesc, lasă gol
+        }
+
         return [
             'artist' => [
                 'id' => $artist->id,
                 'name' => $artist->name,
                 'slug' => $artist->slug,
                 'city' => $artist->city,
+                'state' => $artist->state,
+                'country' => $artist->country,
+                'genres' => $genres,
+                'founded_year' => $artist->founded_year,
                 'main_image_url' => $artist->main_image_full_url,
                 'logo_url' => $artist->logo_full_url,
                 'portrait_url' => $artist->portrait_full_url,

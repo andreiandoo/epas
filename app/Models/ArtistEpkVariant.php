@@ -127,7 +127,6 @@ class ArtistEpkVariant extends Model
                     'facebook_followers' => false,
                     'youtube_followers' => false,
                     'youtube_views' => false,
-                    'spotify_followers' => false,
                     'spotify_monthly_listeners' => false,
                     'spotify_popularity' => false,
                     'tiktok_followers' => false,
@@ -184,6 +183,8 @@ class ArtistEpkVariant extends Model
                 'email' => $artist?->email ?? '',
                 'phone' => $artist?->phone ?? '',
                 'show_booking_cta' => true,
+                // Tipuri de evenimente pentru care artistul e disponibil — editabile
+                'event_types' => ['Concerte', 'Festivaluri', 'Evenimente private', 'Corporate'],
             ]],
         ];
     }

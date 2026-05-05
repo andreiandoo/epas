@@ -363,7 +363,13 @@ class EpkController extends BaseController
                 'email' => $artist->email,
                 'phone' => $artist->phone,
                 'city' => $artist->city,
+                'state' => $artist->state,
                 'country' => $artist->country,
+                'founded_year' => $artist->founded_year,
+                'genres' => (function () use ($artist) {
+                    try { return $artist->artistGenres()->pluck('name')->filter()->values()->all(); }
+                    catch (\Throwable $e) { return []; }
+                })(),
                 'achievements' => $artist->achievements ?? [],
             ],
             'active_variant_id' => $epk->active_variant_id,

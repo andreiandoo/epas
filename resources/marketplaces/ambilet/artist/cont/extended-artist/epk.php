@@ -480,7 +480,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- CONTACT -->
                                         <template x-if="section.id === 'contact'">
-                                            <div class="space-y-3">
+                                            <div class="space-y-4">
                                                 <div>
                                                     <label class="block text-sm font-medium text-secondary mb-1">Email contact</label>
                                                     <input type="email" x-model="data.contact_email" @input="markDirty()" class="epk-input">
@@ -493,6 +493,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <input type="checkbox" x-model="data.show_booking_cta" @change="markDirty()" class="w-4 h-4 rounded text-primary">
                                                     <span class="text-sm text-secondary">Afișează buton „Cere booking"</span>
                                                 </label>
+
+                                                <div x-show="data.show_booking_cta" class="pt-2">
+                                                    <label class="block text-sm font-medium text-secondary mb-1">Tipuri de evenimente pentru booking</label>
+                                                    <p class="text-xs text-muted mb-2">Apar sub butonul „Booking" pe pagina publică (ex: „Concerte · Festivaluri · Corporate"). Lasă gol ca să ascunzi rândul.</p>
+                                                    <div class="space-y-2">
+                                                        <template x-for="(t, i) in data.event_types" :key="i">
+                                                            <div class="flex gap-2 items-center">
+                                                                <input type="text" x-model="data.event_types[i]" @input="markDirty()" maxlength="40" class="epk-input" style="flex:1 1 auto; min-width:0">
+                                                                <button @click="data.event_types.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <button x-show="(data.event_types || []).length < 8" @click="data.event_types.push(''); markDirty()" class="mt-2 text-sm text-primary font-medium hover:underline">+ Adaugă tip eveniment</button>
+                                                </div>
                                             </div>
                                         </template>
 
@@ -773,7 +789,6 @@ function smartEpk() {
             { key: 'facebook_followers',        label: 'Followers Facebook',       group: 'social' },
             { key: 'youtube_followers',         label: 'Subscriberi YouTube',      group: 'social' },
             { key: 'youtube_views',             label: 'Vizualizări YouTube',      group: 'social' },
-            { key: 'spotify_followers',         label: 'Followers Spotify',        group: 'social' },
             { key: 'spotify_monthly_listeners', label: 'Ascultători lunari Spotify', group: 'social' },
             { key: 'spotify_popularity',        label: 'Popularitate Spotify',     group: 'social' },
             { key: 'tiktok_followers',          label: 'Followers TikTok',         group: 'social' },
@@ -930,6 +945,12 @@ function smartEpk() {
                 contact_email: fb(get('contact', 'email', null), profile.email),
                 contact_phone: fb(get('contact', 'phone', null), profile.phone),
                 show_booking_cta: get('contact', 'show_booking_cta', true),
+                // Tipuri evenimente pentru CTA Booking — editabile de artist
+                event_types: (() => {
+                    const e = get('contact', 'event_types', null);
+                    if (Array.isArray(e) && e.length > 0) return e;
+                    return ['Concerte', 'Festivaluri', 'Evenimente private', 'Corporate'];
+                })(),
                 // Custom stats — array de {label, value} adăugate manual de artist
                 custom_stats: Array.isArray(get('stats', 'custom', [])) ? get('stats', 'custom', []) : [],
             };
@@ -988,7 +1009,12 @@ function smartEpk() {
                 past_events: { hidden_event_ids: this.data.past_events_hidden, limit: this.data.past_events_limit },
                 rider: { rider_pdf_url: this.data.rider_pdf_url, rider_pdf_path: this.data.rider_pdf_path, gated: this.data.rider_gated },
                 social: this.data.social,
-                contact: { email: this.data.contact_email, phone: this.data.contact_phone, show_booking_cta: this.data.show_booking_cta },
+                contact: {
+                    email: this.data.contact_email,
+                    phone: this.data.contact_phone,
+                    show_booking_cta: this.data.show_booking_cta,
+                    event_types: (this.data.event_types || []).filter(t => typeof t === 'string' && t.trim().length > 0),
+                },
             };
 
             return this.sections.map(s => ({

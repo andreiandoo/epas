@@ -35,7 +35,6 @@
         'facebook_followers' => 'Facebook',
         'youtube_followers' => 'YouTube subs',
         'youtube_views' => 'YouTube views',
-        'spotify_followers' => 'Spotify',
         'spotify_monthly_listeners' => 'Spotify lunar',
         'spotify_popularity' => 'Spotify pop.',
         'tiktok_followers' => 'TikTok',
@@ -54,6 +53,24 @@
 
     $social = is_array($sectionsByid['social'] ?? null) ? ($sectionsByid['social']['data'] ?? []) : [];
     $publicUrl = $marketplace_name ? 'https://' . strtolower($marketplace_name) . '.ro/epk/' . ($artist['slug'] ?? '') : '';
+
+    // Hero metadata: location + genres + founded year
+    $locationParts = collect([
+        $artist['city'] ?? null,
+        $artist['state'] ?? null,
+        $artist['country'] ?? null,
+    ])->filter(fn ($x) => is_string($x) && trim($x) !== '')->map(fn ($x) => trim($x))->unique()->values()->all();
+    $locationText = implode(', ', $locationParts);
+    $genres = collect($artist['genres'] ?? [])->filter()->values()->all();
+    $foundedYear = $artist['founded_year'] ?? null;
+    if (!$foundedYear && count($achievements) > 0) {
+        $foundedYear = collect($achievements)->pluck('year')->filter()->min();
+    }
+    $heroMetaParts = collect([
+        $locationText ? '📍 ' . $locationText : null,
+        !empty($genres) ? '🎵 ' . implode(' · ', $genres) : null,
+        $foundedYear ? '⭐ Activ din ' . $foundedYear : null,
+    ])->filter()->values()->all();
 @endphp
 <!DOCTYPE html>
 <html lang="ro">
@@ -94,7 +111,9 @@
             margin-bottom: 8pt;
             text-shadow: 0 2pt 8pt rgba(0,0,0,0.5);
         }
-        .hero-tagline { font-size: 14pt; color: rgba(255,255,255,0.85); font-weight: 300; max-width: 380pt; }
+        .hero-tagline { font-size: 14pt; color: rgba(255,255,255,0.85); font-weight: 300; max-width: 380pt; margin-bottom: 12pt; }
+        .hero-meta { font-size: 9pt; color: rgba(255,255,255,0.85); margin-top: 12pt; }
+        .hero-meta-pill { display: inline-block; background: rgba(255,255,255,0.15); padding: 3pt 10pt; border-radius: 99pt; margin-right: 4pt; margin-bottom: 4pt; }
 
         .hero-badge {
             position: absolute;
@@ -202,6 +221,13 @@
             <div class="hero-title">{{ $stageName }}</div>
             @if ($tagline)
                 <div class="hero-tagline">{{ $tagline }}</div>
+            @endif
+            @if (!empty($heroMetaParts))
+                <div class="hero-meta">
+                    @foreach ($heroMetaParts as $part)
+                        <span class="hero-meta-pill">{{ $part }}</span>
+                    @endforeach
+                </div>
             @endif
         </div>
     </div>
@@ -320,9 +346,17 @@
     {{-- ============================ FOOTER (Booking CTA + Contact) ============================ --}}
     <div class="footer-section">
         @if ((bool) $get('contact', 'show_booking_cta', true))
+            @php
+                $pdfEventTypes = collect($get('contact', 'event_types', []))
+                    ->filter(fn ($t) => is_string($t) && trim($t) !== '')
+                    ->map(fn ($t) => trim($t))
+                    ->all();
+            @endphp
             <div class="footer-eyebrow">Disponibili pentru</div>
             <div class="footer-title">Booking</div>
-            <div class="footer-subtitle">Concerte · Festivaluri · Evenimente private · Corporate</div>
+            @if (!empty($pdfEventTypes))
+                <div class="footer-subtitle">{{ implode(' · ', $pdfEventTypes) }}</div>
+            @endif
         @endif
 
         @php
