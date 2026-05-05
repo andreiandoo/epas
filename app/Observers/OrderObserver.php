@@ -104,16 +104,24 @@ class OrderObserver
         }
 
         // Surface payment failures into the system_errors dashboard.
+        // Severity depends on the *previous* state:
+        //   - pending/processing/null → failed: card declined / 3DS reject /
+        //     insufficient funds. Business-as-usual; log at NOTICE so it
+        //     stays visible for audits without polluting the error bucket.
+        //   - paid/confirmed/completed → failed: a *successful* payment got
+        //     undone. Genuinely alarming, log at ERROR.
         if ($order->isDirty('payment_status')) {
             $newPayment = $order->payment_status;
             $oldPayment = $order->getOriginal('payment_status');
             if (in_array($newPayment, ['failed', 'declined', 'refused'], true)
                 && !in_array($oldPayment, ['failed', 'declined', 'refused'], true)) {
+                $isRegression = in_array($oldPayment, ['paid', 'confirmed', 'completed'], true);
+                $level = $isRegression ? 400 : 250; // ERROR vs NOTICE (Monolog)
                 try {
                     /** @var \App\Logging\SystemErrorRecorder $recorder */
                     $recorder = app(\App\Logging\SystemErrorRecorder::class);
                     $recorder->record([
-                        'level' => 400,
+                        'level' => $level,
                         'channel' => 'marketplace',
                         'source' => 'order_status',
                         'message' => sprintf(
@@ -131,6 +139,7 @@ class OrderObserver
                             'current' => $newPayment,
                             'total' => $order->total ?? null,
                             'currency' => $order->currency ?? null,
+                            'is_regression' => $isRegression,
                         ],
                     ]);
                 } catch (\Throwable $e) {
