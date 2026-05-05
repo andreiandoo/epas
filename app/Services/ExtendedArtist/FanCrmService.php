@@ -615,10 +615,8 @@ class FanCrmService
                 'pct' => round(($v / $totalGenders) * 100, 1),
                 'count' => $v,
             ])->values()->all(),
-            'traffic_sources' => [
-                ['name' => 'Direct', 'pct' => 0, 'note' => 'Tracking sursa va fi disponibil în Faza B'],
-            ],
-            'ticket_categories' => [],
+            'has_age_data' => array_sum($ageBuckets) > 0,
+            'has_gender_data' => array_sum($genderCounts) > 0,
         ];
     }
 
@@ -743,8 +741,10 @@ class FanCrmService
 
     public function cacheKey(int $artistId, string $method, array $params = []): string
     {
+        // Bump CACHE_VERSION when query semantics change to invalidate stale entries.
+        $version = 'v2';
         $hash = empty($params) ? '' : ':' . substr(md5(json_encode($params)), 0, 8);
-        return "artist:{$artistId}:fan-crm:{$method}{$hash}";
+        return "artist:{$artistId}:fan-crm:{$version}:{$method}{$hash}";
     }
 
     protected function countFirstEventBetween(Artist $artist, string $from, string $to): int
