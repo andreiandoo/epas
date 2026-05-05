@@ -24,7 +24,17 @@ use Illuminate\Support\Str;
  */
 class FanCrmService
 {
-    public const CACHE_TTL = 3600; // 1h
+    public const CACHE_TTL = 3600; // 1h (default — used by lists că se schimbă des)
+
+    // TTL specific per metodă (în secunde). Pentru calcule grele care nu se schimbă des,
+    // setăm 24h-7d. Save-ul de segmente custom flush-uie tot via flushCache().
+    public const TTL_OVERVIEW      = 21600;   // 6h
+    public const TTL_MAP           = 86400;   // 24h
+    public const TTL_SEGMENTS      = 21600;   // 6h
+    public const TTL_COHORT        = 604800;  // 7d (calcul foarte greu, dar foarte stabil)
+    public const TTL_DEMOGRAPHICS  = 86400;   // 24h
+    public const TTL_COMPARE       = 604800;  // 7d (per pereche de ani — istoric stabil)
+    public const TTL_VIPS          = 21600;   // 6h
 
     // 6 segmente predefinite + criterii (auto-calculate, no UI edit)
     public const SEG_VIP = 'vip';
@@ -54,7 +64,7 @@ class FanCrmService
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'overview'),
-            self::CACHE_TTL,
+            self::TTL_OVERVIEW,
             fn () => $this->computeOverview($artist)
         );
     }
@@ -63,7 +73,7 @@ class FanCrmService
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'map'),
-            self::CACHE_TTL,
+            self::TTL_MAP,
             fn () => $this->computeMapData($artist)
         );
     }
@@ -72,7 +82,7 @@ class FanCrmService
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'predefined_counts'),
-            self::CACHE_TTL,
+            self::TTL_SEGMENTS,
             fn () => $this->computePredefinedCounts($artist)
         );
     }
@@ -94,7 +104,7 @@ class FanCrmService
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'cohort'),
-            self::CACHE_TTL,
+            self::TTL_COHORT,
             fn () => $this->computeCohortMatrix($artist)
         );
     }
@@ -103,7 +113,7 @@ class FanCrmService
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'demographics'),
-            self::CACHE_TTL,
+            self::TTL_DEMOGRAPHICS,
             fn () => $this->computeDemographics($artist)
         );
     }
@@ -111,14 +121,14 @@ class FanCrmService
     public function comparison(Artist $artist, string $type = 'period', $aId = null, $bId = null): array
     {
         $cacheKey = $this->cacheKey($artist->id, 'compare', compact('type', 'aId', 'bId'));
-        return Cache::remember($cacheKey, self::CACHE_TTL, fn () => $this->computeComparison($artist, $type, $aId, $bId));
+        return Cache::remember($cacheKey, self::TTL_COMPARE, fn () => $this->computeComparison($artist, $type, $aId, $bId));
     }
 
     public function topVips(Artist $artist, int $limit = 10): array
     {
         return Cache::remember(
             $this->cacheKey($artist->id, 'vips', ['limit' => $limit]),
-            self::CACHE_TTL,
+            self::TTL_VIPS,
             fn () => $this->computeTopVips($artist, $limit)
         );
     }
@@ -551,26 +561,51 @@ class FanCrmService
     {
         $now = now();
         $cohortStart = $now->copy()->subMonths(11)->startOfMonth();
-
-        // Pentru fiecare cohort month, calculează retenție la M+1, M+3, M+6, M+12, M+24
-        $matrix = [];
         $offsets = [1, 3, 6, 12, 24];
 
+        // Performance: o singură query pentru TOATE (customer_id, event_date) pairs
+        // în ultimele 12 luni cohort + fereastră de follow-up. Bucketing în PHP.
+        // Original făcea ~72 queries → înlocuim cu 1 expensive + bucketing.
+        $allActivity = DB::table('marketplace_customers as mc')
+            ->join('orders as o', function ($j) {
+                $j->on('o.marketplace_customer_id', '=', 'mc.id')
+                  ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
+            })
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
+            ->join('events as e', 'e.id', '=', 'tt.event_id')
+            ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
+            ->where('ea.artist_id', $artist->id)
+            ->whereNull('mc.deleted_at')
+            ->whereNotNull('e.event_date')
+            ->select('mc.id as customer_id', 'e.event_date')
+            ->distinct()
+            ->orderBy('mc.id')
+            ->orderBy('e.event_date')
+            ->get();
+
+        // Bucket per customer: ce evenimente a participat (sortate cronologic)
+        $perCustomer = [];
+        foreach ($allActivity as $row) {
+            $perCustomer[$row->customer_id][] = (string) $row->event_date;
+        }
+
+        $matrix = [];
         for ($m = 0; $m < 12; $m++) {
             $cohortMonthStart = $cohortStart->copy()->addMonths($m);
             $cohortMonthEnd = $cohortMonthStart->copy()->endOfMonth();
+            $cohortStartStr = $cohortMonthStart->toDateString();
+            $cohortEndStr = $cohortMonthEnd->toDateString();
 
-            // Fani care au avut PRIMUL event în acest cohort month.
-            // Folosim fromSub deoarece first_event_date este alias din SELECT (MIN(e.event_date))
-            // — nu poate fi referit în WHERE direct pe query-ul cu GROUP BY.
-            $cohortFansIds = collect(
-                DB::query()
-                    ->fromSub($this->fansAggregateQuery($artist), 'fa')
-                    ->whereBetween('fa.first_event_date', [$cohortMonthStart->toDateString(), $cohortMonthEnd->toDateString()])
-                    ->pluck('customer_id')
-            );
-
-            $cohortSize = $cohortFansIds->count();
+            // Fani care au avut PRIMUL event în acest cohort month
+            $cohortFansIds = [];
+            foreach ($perCustomer as $cid => $dates) {
+                $firstDate = $dates[0]; // already sorted
+                if ($firstDate >= $cohortStartStr && $firstDate <= $cohortEndStr) {
+                    $cohortFansIds[$cid] = true;
+                }
+            }
+            $cohortSize = count($cohortFansIds);
 
             $row = [
                 'month' => $cohortMonthStart->translatedFormat('M Y'),
@@ -584,27 +619,23 @@ class FanCrmService
                     $row['values'][] = null;
                     continue;
                 }
-                $offsetStart = $cohortMonthEnd->copy()->addDay();
                 if ($cohortSize === 0) {
                     $row['values'][] = 0;
                     continue;
                 }
-                // Câți din cohortFansIds au revenit între offsetStart și offsetEnd
-                $returned = DB::table('marketplace_customers as mc')
-                    ->join('orders as o', function ($j) {
-                        $j->on('o.marketplace_customer_id', '=', 'mc.id')
-                          ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
-                    })
-                    ->join('tickets as t', 't.order_id', '=', 'o.id')
-                    ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
-                    ->join('events as e', 'e.id', '=', 'tt.event_id')
-                    ->join('event_artist as ea', function ($j) use ($artist) {
-                        $j->on('ea.event_id', '=', 'e.id')->where('ea.artist_id', $artist->id);
-                    })
-                    ->whereIn('mc.id', $cohortFansIds)
-                    ->whereBetween('e.event_date', [$offsetStart->toDateString(), $offsetEnd->toDateString()])
-                    ->distinct()
-                    ->count('mc.id');
+                $offsetStartStr = $cohortMonthEnd->copy()->addDay()->toDateString();
+                $offsetEndStr = $offsetEnd->toDateString();
+
+                // Câți din cohortFansIds au cel puțin un event în [offsetStart, offsetEnd]
+                $returned = 0;
+                foreach ($cohortFansIds as $cid => $_) {
+                    foreach ($perCustomer[$cid] ?? [] as $d) {
+                        if ($d >= $offsetStartStr && $d <= $offsetEndStr) {
+                            $returned++;
+                            break;
+                        }
+                    }
+                }
                 $row['values'][] = round(($returned / $cohortSize) * 100, 1);
             }
 
@@ -863,7 +894,7 @@ class FanCrmService
     public function cacheKey(int $artistId, string $method, array $params = []): string
     {
         // Bump CACHE_VERSION when query semantics change to invalidate stale entries.
-        $version = 'v5';
+        $version = 'v6';
         $hash = empty($params) ? '' : ':' . substr(md5(json_encode($params)), 0, 8);
         return "artist:{$artistId}:fan-crm:{$version}:{$method}{$hash}";
     }

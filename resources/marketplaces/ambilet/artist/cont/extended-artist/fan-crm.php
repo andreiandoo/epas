@@ -721,7 +721,7 @@ function fanCrm() {
                     { label: 'Fani noi', data: g.new_fans, backgroundColor: '#A51C30' },
                     { label: 'Revenire', data: g.returning, backgroundColor: '#E67E22' },
                 ]},
-                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }
             });
         },
 
@@ -733,7 +733,7 @@ function fanCrm() {
             this.charts.fanType = new Chart(el.getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: types.map(t => t.label), datasets: [{ data: types.map(t => t.value), backgroundColor: types.map(t => t.color), borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
             });
         },
 
@@ -773,7 +773,7 @@ function fanCrm() {
             this.charts.age = new Chart(el.getContext('2d'), {
                 type: 'bar',
                 data: { labels: buckets.map(b => b.label), datasets: [{ data: buckets.map(b => b.pct), backgroundColor: '#A51C30', borderRadius: 8 }] },
-                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
             });
         },
 
@@ -786,7 +786,7 @@ function fanCrm() {
             this.charts.gender = new Chart(el.getContext('2d'), {
                 type: 'doughnut',
                 data: { labels: split.map(s => s.label), datasets: [{ data: split.map(s => s.pct), backgroundColor: ['#A51C30', '#3B82F6', '#94A3B8'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
             });
         },
 
@@ -802,7 +802,7 @@ function fanCrm() {
                     { label: this.compareData.a_label, data: c.a, borderColor: '#A51C30', backgroundColor: 'rgba(165,28,48,0.1)', fill: true, tension: 0.4 },
                     { label: this.compareData.b_label, data: c.b, borderColor: '#94A3B8', borderDash: [5,5], fill: false, tension: 0.4 },
                 ]},
-                options: { responsive: true, maintainAspectRatio: false, resizeDelay: 100, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }
             });
         },
 
