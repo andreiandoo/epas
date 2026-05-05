@@ -2189,6 +2189,66 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // Tour Optimizer (Modulul 3 din Extended Artist) — 8 actions
+    case 'artist.tour.opportunities':
+        $method = 'GET';
+        $endpoint = '/artist/tour/opportunities';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.predictions':
+        $method = 'GET';
+        $endpoint = '/artist/tour/predictions';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.optimize':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/tour/optimize';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenarios':
+        $method = 'GET';
+        $endpoint = '/artist/tour/scenarios';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.save':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/tour/scenarios';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $tsId = (int) ($_GET['id'] ?? 0);
+        if ($tsId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing scenario id']); exit; }
+        $endpoint = '/artist/tour/scenarios/' . $tsId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenario.delete':
+        $method = 'DELETE';
+        $tsId = (int) ($_GET['id'] ?? 0);
+        if ($tsId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing scenario id']); exit; }
+        $endpoint = '/artist/tour/scenarios/' . $tsId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.scenarios.compare':
+        $method = 'GET';
+        $params = [];
+        foreach (['a', 'b'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/tour/scenarios/compare' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
