@@ -525,6 +525,21 @@ class EditOrganizerInvoice extends EditRecord
             }, $items),
         ];
 
+        // Diagnostic: dump exactly what we hand to Oblio so we can confirm
+        // general_client invoices send vat_number='vanzare online' and email=''.
+        // Will be removed once verified end-to-end.
+        \Log::info('[EditOrganizerInvoice.sendToAccounting] payload to AccountingService', [
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->number,
+            'doc_type' => $docType,
+            'is_general_client' => $isGeneralClient,
+            'recipient_type' => $recipientType,
+            'customer.name' => $invoiceData['customer']['name'] ?? null,
+            'customer.vat_number' => $invoiceData['customer']['vat_number'] ?? null,
+            'customer.email' => $invoiceData['customer']['email'] ?? null,
+            'customer.address' => $invoiceData['customer']['address'] ?? null,
+        ]);
+
         try {
             $service = app(AccountingService::class);
             $result = $service->issueMarketplaceInvoice(

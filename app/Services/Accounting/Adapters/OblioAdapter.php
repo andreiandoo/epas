@@ -266,6 +266,15 @@ class OblioAdapter implements AccountingAdapterInterface
                 'products' => [],
             ];
 
+            // Diagnostic: log the exact client block that goes to Oblio so we
+            // can confirm general_client invoices ship cif='vanzare online'
+            // with save=0 + autocomplete=0. Remove after verification.
+            \Log::info('[OblioAdapter.createInvoice] outbound client block', [
+                'docType' => $docType,
+                'series' => $resolvedSeries,
+                'client' => $payload['client'],
+            ]);
+
             // Add line items
             foreach ($invoice['lines'] as $line) {
                 $payload['products'][] = [
