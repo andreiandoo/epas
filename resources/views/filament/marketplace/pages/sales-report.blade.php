@@ -3,13 +3,14 @@
 
     <div class="mt-6 space-y-6">
         @if($summary)
-            <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 @php
                     $cards = [
                         ['Comenzi', $summary['orders'] ?? 0, ''],
                         ['Bilete', $summary['qty'] ?? 0, ''],
                         ['Brut', number_format($summary['gross'] ?? 0, 2), 'RON'],
                         ['Comision', number_format($summary['commission'] ?? 0, 2), 'RON'],
+                        ['Discount', number_format($summary['discount'] ?? 0, 2), 'RON'],
                         ['Net', number_format($summary['net'] ?? 0, 2), 'RON'],
                     ];
                 @endphp
@@ -118,6 +119,7 @@
                                 <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Data</th>
                                 <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Eveniment</th>
                                 <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Client</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Tip bilet</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Bilete</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Brut</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
@@ -125,7 +127,6 @@
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Discount</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Refund</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -133,6 +134,14 @@
                                 <tr>
                                     <td class="py-2 px-3">
                                         <a href="{{ url('/marketplace/orders/' . $r['order_id']) }}" target="_blank" class="text-primary-600 hover:underline font-mono text-xs">{{ $r['order_number'] }}</a>
+                                        <div class="mt-1">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ring-1
+                                                @if(in_array($r['status'], ['paid','confirmed','completed'])) bg-green-50 text-green-700 ring-green-200 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20
+                                                @elseif(in_array($r['status'], ['failed','cancelled','expired'])) bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20
+                                                @elseif(in_array($r['status'], ['refunded','partially_refunded'])) bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20
+                                                @else bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20 @endif
+                                            ">{{ $r['status'] }}</span>
+                                        </div>
                                     </td>
                                     <td class="py-2 px-3 text-gray-600 dark:text-gray-300 text-xs">{{ optional($r['paid_at'])->format('d.m.Y H:i') ?? optional($r['created_at'])->format('d.m.Y H:i') ?? '—' }}</td>
                                     <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $r['event_title'] }}</td>
@@ -140,6 +149,7 @@
                                         <div class="font-medium">{{ $r['customer_name'] ?: '—' }}</div>
                                         <div class="text-xs text-gray-500">{{ $r['customer_email'] }}</div>
                                     </td>
+                                    <td class="py-2 px-3 text-gray-700 dark:text-gray-300 text-xs">{{ $r['ticket_types'] ?: '—' }}</td>
                                     <td class="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">{{ $r['tickets'] }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-gray-900 dark:text-white">{{ number_format($r['gross'], 2) }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-red-500">-{{ number_format($r['commission'], 2) }}</td>
@@ -152,14 +162,6 @@
                                     </td>
                                     <td class="py-2 px-3 text-right font-mono {{ $r['refund'] > 0 ? 'text-red-500' : 'text-gray-400' }}">{{ $r['refund'] > 0 ? '-' . number_format($r['refund'], 2) : '0.00' }}</td>
                                     <td class="py-2 px-3 text-right font-mono font-semibold text-gray-900 dark:text-white">{{ number_format($r['net'], 2) }}</td>
-                                    <td class="py-2 px-3">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs ring-1
-                                            @if(in_array($r['status'], ['paid','confirmed','completed'])) bg-green-50 text-green-700 ring-green-200 dark:bg-green-500/10 dark:text-green-400 dark:ring-green-500/20
-                                            @elseif(in_array($r['status'], ['failed','cancelled','expired'])) bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20
-                                            @elseif(in_array($r['status'], ['refunded','partially_refunded'])) bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20
-                                            @else bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20 @endif
-                                        ">{{ $r['status'] }}</span>
-                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

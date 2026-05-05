@@ -381,14 +381,32 @@ class SalesReport extends Page implements HasForms
             $this->extendedRows = $orders->map(fn ($o) => $service->extendedRow($o))->all();
             $this->compactData = null;
 
-            $sumGross = (clone $query)->sum('total');
-            $sumCommission = (clone $query)->sum('commission_amount');
+            // Summary must aggregate the *recomputed* commission/net per
+            // order — order.commission_amount is unreliable across sources
+            // (POS app writes per-ticket numbers, etc.) and would skew the
+            // card. Walk all matching orders in chunks, run extendedRow on
+            // each, and accumulate.
+            $totals = ['orders' => 0, 'qty' => 0, 'gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0, 'refund' => 0.0, 'net' => 0.0];
+            (clone $query)->chunk(500, function ($chunk) use (&$totals, $service) {
+                foreach ($chunk as $o) {
+                    $r = $service->extendedRow($o);
+                    $totals['orders']++;
+                    $totals['qty']        += $r['tickets'];
+                    $totals['gross']      += $r['gross'];
+                    $totals['commission'] += $r['commission'];
+                    $totals['discount']   += $r['discount'];
+                    $totals['refund']     += $r['refund'];
+                    $totals['net']        += $r['net'];
+                }
+            });
             $this->summary = [
-                'orders'     => $this->extendedTotal,
-                'qty'        => array_sum(array_column($this->extendedRows, 'tickets')),
-                'gross'      => round((float) $sumGross, 2),
-                'commission' => round((float) $sumCommission, 2),
-                'net'        => round((float) $sumGross - (float) $sumCommission, 2),
+                'orders'     => $totals['orders'],
+                'qty'        => $totals['qty'],
+                'gross'      => round($totals['gross'], 2),
+                'commission' => round($totals['commission'], 2),
+                'discount'   => round($totals['discount'], 2),
+                'refund'     => round($totals['refund'], 2),
+                'net'        => round($totals['net'], 2),
             ];
         }
     }

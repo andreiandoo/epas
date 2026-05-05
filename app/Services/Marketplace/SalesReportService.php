@@ -212,6 +212,7 @@ class SalesReportService
         $commission = 0.0;
         $modes = [];
         $rateTags = [];
+        $typesByCount = [];
         foreach ($order->tickets as $ticket) {
             if (!in_array($ticket->status, ['valid', 'used'], true)) continue;
             $tt = $ticket->ticketType;
@@ -227,8 +228,16 @@ class SalesReportService
             $modes[] = $eff['mode'] ?? null;
             $tag = $this->shortCommissionTag($eff);
             if ($tag !== '') $rateTags[] = $tag;
+
+            $name = $tt->name ?? 'Tip bilet';
+            $typesByCount[$name] = ($typesByCount[$name] ?? 0) + 1;
         }
         $commission = round($commission, 2);
+
+        $ticketTypeLabel = collect($typesByCount)
+            ->map(fn ($qty, $name) => "{$name} x{$qty}")
+            ->values()
+            ->implode(', ');
 
         $gross = (float) ($order->total ?? 0);
         $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
@@ -236,37 +245,36 @@ class SalesReportService
             ? ($order->meta['promo_code']['code'] ?? null)
             : null;
 
-        // Net: subtract commission only for "included" modes (added_on_top
-        // means the customer already paid commission on top of base, so it
-        // sits in gross unmodified for the organizer). Refund and discount
-        // are always hard subtracts.
+        // Net = what the organizer actually keeps. Commission always comes
+        // out (for added_on_top the customer paid it on top, so it's in
+        // order.total; for included it's carved from order.total). Discount
+        // and refund are always hard subtracts.
         $modesUnique = array_values(array_unique(array_filter($modes)));
-        $allOnTop = !empty($modesUnique)
-            && empty(array_diff($modesUnique, ['on_top', 'added_on_top']));
-        $net = $gross - ($allOnTop ? 0.0 : $commission) - $discount - $refundTotal;
+        $net = $gross - $commission - $discount - $refundTotal;
         if ($net < 0) $net = 0.0;
 
         return [
-            'order_id'        => $order->id,
-            'order_number'    => $order->order_number,
-            'event_id'        => $order->event_id ?? $order->marketplace_event_id,
-            'event_title'     => $eventTitle,
-            'paid_at'         => $order->paid_at,
-            'created_at'      => $order->created_at,
-            'customer_name'   => $order->customer_name,
-            'customer_email'  => $order->customer_email,
-            'tickets'         => (int) ($order->tickets_count ?? 0),
-            'gross'           => $gross,
-            'commission'      => $commission,
-            'commission_mode' => $this->summariseModes($modesUnique, array_values(array_unique($rateTags))),
-            'discount'        => round($discount, 2),
-            'promo_code'      => $promoCode,
-            'refund'          => $refundTotal,
-            'net'             => round($net, 2),
-            'status'          => $order->status,
-            'payment_status'  => $order->payment_status,
-            'currency'        => $order->currency ?? 'RON',
-            'source'          => $order->source ?? null,
+            'order_id'         => $order->id,
+            'order_number'     => $order->order_number,
+            'event_id'         => $order->event_id ?? $order->marketplace_event_id,
+            'event_title'      => $eventTitle,
+            'paid_at'          => $order->paid_at,
+            'created_at'       => $order->created_at,
+            'customer_name'    => $order->customer_name,
+            'customer_email'   => $order->customer_email,
+            'tickets'          => (int) ($order->tickets_count ?? 0),
+            'ticket_types'     => $ticketTypeLabel,
+            'gross'            => $gross,
+            'commission'       => $commission,
+            'commission_mode'  => $this->summariseModes($modesUnique, array_values(array_unique($rateTags))),
+            'discount'         => round($discount, 2),
+            'promo_code'       => $promoCode,
+            'refund'           => $refundTotal,
+            'net'              => round($net, 2),
+            'status'           => $order->status,
+            'payment_status'   => $order->payment_status,
+            'currency'         => $order->currency ?? 'RON',
+            'source'           => $order->source ?? null,
         ];
     }
 
