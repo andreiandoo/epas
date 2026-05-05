@@ -384,21 +384,23 @@ class SalesReport extends Page implements HasForms
             // Summary must aggregate the *recomputed* commission/net per
             // order — order.commission_amount is unreliable across sources
             // (POS app writes per-ticket numbers, etc.) and would skew the
-            // card. Walk all matching orders in chunks, run extendedRow on
-            // each, and accumulate.
+            // card. Earlier we used chunk(500) here, but chunk paginates
+            // via limit/offset on top of orderByDesc(paid_at) and skipped
+            // rows whenever the timestamp had ties (a flash-sale event
+            // showed 50 of 92 orders summed). Plain ->get() is fine: a few
+            // thousand rows with eager loading is well below memory limits.
             $totals = ['orders' => 0, 'qty' => 0, 'gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0, 'refund' => 0.0, 'net' => 0.0];
-            (clone $query)->chunk(500, function ($chunk) use (&$totals, $service) {
-                foreach ($chunk as $o) {
-                    $r = $service->extendedRow($o);
-                    $totals['orders']++;
-                    $totals['qty']        += $r['tickets'];
-                    $totals['gross']      += $r['gross'];
-                    $totals['commission'] += $r['commission'];
-                    $totals['discount']   += $r['discount'];
-                    $totals['refund']     += $r['refund'];
-                    $totals['net']        += $r['net'];
-                }
-            });
+            $allOrders = (clone $query)->get();
+            foreach ($allOrders as $o) {
+                $r = $service->extendedRow($o);
+                $totals['orders']++;
+                $totals['qty']        += $r['tickets'];
+                $totals['gross']      += $r['gross'];
+                $totals['commission'] += $r['commission'];
+                $totals['discount']   += $r['discount'];
+                $totals['refund']     += $r['refund'];
+                $totals['net']        += $r['net'];
+            }
             $this->summary = [
                 'orders'     => $totals['orders'],
                 'qty'        => $totals['qty'],
