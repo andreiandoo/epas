@@ -269,17 +269,51 @@ class EpkController extends BaseController
         $artist = $this->requireArtist($request);
         $variant = $this->findVariantOrFail($id, $artist);
 
-        $payload = $this->epkService->buildPublicPayload($variant);
+        try {
+            $payload = $this->epkService->buildPublicPayload($variant);
+            // Marketplace context pentru template (folosit de "Powered by")
+            $payload['marketplace_name'] = 'Tixello';
+            $payload['marketplace_url'] = 'https://tixello.com';
 
-        $html = view('public.epk.pdf', $payload)->render();
+            $html = view('public.epk.pdf', $payload)->render();
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
-            ->setPaper('A4', 'portrait')
-            ->setOption('isRemoteEnabled', true)
-            ->setOption('isHtml5ParserEnabled', true);
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)
+                ->setPaper('A4', 'portrait')
+                ->setOption('isRemoteEnabled', true)
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('chroot', storage_path('app/public'))
+                ->setOption('defaultFont', 'DejaVu Sans');
 
-        $filename = "epk-{$artist->slug}-{$variant->slug}.pdf";
-        return $pdf->download($filename);
+            // Curăță output buffer-ul ca să nu se prependuze warning-uri/notice-uri
+            // peste binary-ul PDF (cauzează „nu e PDF" la client).
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            $filename = "epk-{$artist->slug}-{$variant->slug}.pdf";
+            $output = $pdf->output();
+
+            return response($output, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Length' => strlen($output),
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('EPK PDF generation failed', [
+                'variant_id' => $variant->id,
+                'artist_id' => $artist->id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => collect($e->getTrace())->take(8)->map(fn ($t) => ($t['file'] ?? '?') . ':' . ($t['line'] ?? '?') . ' ' . ($t['function'] ?? '?'))->all(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Generarea PDF a eșuat. Admin notificat.',
+                'error_id' => uniqid('epk_pdf_'),
+            ], 500);
+        }
     }
 
     // ---------------------------------------------------------------------

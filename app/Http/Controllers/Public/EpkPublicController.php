@@ -65,18 +65,43 @@ class EpkPublicController extends Controller
             if (empty($payload)) {
                 abort(404);
             }
-            // Pentru rutele publice (no marketplace.auth middleware) atribut-ul nu e setat;
-            // hardcodam Tixello pentru că aici e platforma de bază.
-            $payload['marketplace_name'] = $request->attributes->get('marketplace_client')?->name ?? 'Tixello';
+
+            // Detectează marketplace prin X-Forwarded-Host (set de proxy ambilet/etc.)
+            // sau Host direct. Lookup MarketplaceClient → numele + domeniul.
+            // Fallback: Tixello (platforma de bază).
+            $forwardedHost = $request->header('X-Forwarded-Host') ?: $request->getHost();
+            $forwardedHost = strtolower(trim((string) $forwardedHost));
+            $marketplaceClient = $forwardedHost
+                ? \App\Models\MarketplaceClient::where('domain', $forwardedHost)
+                    ->orWhere('domain', 'www.' . $forwardedHost)
+                    ->orWhere('domain', preg_replace('/^www\./', '', $forwardedHost))
+                    ->first()
+                : null;
+
+            if ($marketplaceClient) {
+                $payload['marketplace_name'] = $marketplaceClient->name;
+                $domain = trim((string) $marketplaceClient->domain);
+                $payload['marketplace_url'] = $domain
+                    ? (str_starts_with($domain, 'http') ? $domain : 'https://' . $domain)
+                    : null;
+            } else {
+                $payload['marketplace_name'] = 'Tixello';
+                $payload['marketplace_url'] = 'https://tixello.com';
+            }
+
+            // Cache key include host pentru ca brandingul să fie corect
+            // (marketplace_name diferit pentru ambilet vs core direct).
+            $hostKey = preg_replace('/[^a-z0-9._-]/i', '', $forwardedHost ?: 'default');
+            $cacheKey = $this->epkService->publicCacheKey($variant->id) . ':' . $hostKey;
 
             // Bypass cache cu ?nocache=1 — util la debugging după save / deploy
             if ($request->boolean('nocache')) {
-                Cache::forget($this->epkService->publicCacheKey($variant->id));
+                Cache::forget($cacheKey);
                 return view('public.epk.show', $payload)->render();
             }
 
             return Cache::remember(
-                $this->epkService->publicCacheKey($variant->id),
+                $cacheKey,
                 EpkService::PUBLIC_CACHE_TTL,
                 fn () => view('public.epk.show', $payload)->render()
             );

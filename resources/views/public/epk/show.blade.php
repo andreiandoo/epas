@@ -160,7 +160,7 @@
     {{-- Top bar --}}
     <div class="absolute top-0 left-0 right-0 z-10 p-6 flex items-center justify-between">
         <span class="text-white/60 text-xs uppercase tracking-[0.2em]">Electronic Press Kit</span>
-        <a href="https://tixello.com" target="_blank" rel="noopener" class="text-white/60 text-xs flex items-center gap-2 hover:text-white transition-colors">
+        <a href="{{ $marketplace_url ?? 'https://tixello.com' }}" target="_blank" rel="noopener" class="text-white/60 text-xs flex items-center gap-2 hover:text-white transition-colors">
             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zm3.707 7.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-1.5-1.5a1 1 0 111.414-1.414l.793.793 2.293-2.293a1 1 0 011.414 0z"/></svg>
             Verified by {{ $marketplace_name }}
         </a>
@@ -518,7 +518,14 @@
             @endif
         </div>
     @endif
-    <p class="text-white/40 text-xs mb-2">Powered by <span class="text-white/70">{{ $marketplace_name }}</span></p>
+    <p class="text-white/40 text-xs mb-2">
+        Powered by
+        @if (!empty($marketplace_url))
+            <a href="{{ $marketplace_url }}" target="_blank" rel="noopener" class="text-white/70 hover:text-accent transition-colors">{{ $marketplace_name }}</a>
+        @else
+            <span class="text-white/70">{{ $marketplace_name }}</span>
+        @endif
+    </p>
     <p class="text-white/30 text-xs font-mono">{{ str_replace(['https://', 'http://'], '', $publicUrl) }}</p>
 </footer>
 
