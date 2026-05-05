@@ -66,17 +66,31 @@ class EpkPublicController extends Controller
                 abort(404);
             }
 
-            // Detectează marketplace prin X-Forwarded-Host (set de proxy ambilet/etc.)
-            // sau Host direct. Lookup MarketplaceClient → numele + domeniul.
-            // Fallback: Tixello (platforma de bază).
+            // Determină marketplace_client cu prioritate logică:
+            //  1. X-Forwarded-Host / request host — caz în care userul vine prin
+            //     domeniul unui marketplace cunoscut (ambilet.ro etc).
+            //  2. Artistul are un marketplace primar (marketplace_client_id) —
+            //     folosit când userul ajunge direct pe core.tixello.com.
+            //  3. Last-resort: marketplace_clients() (BelongsToMany partner).
+            //  4. Fallback: Tixello (platforma de bază).
             $forwardedHost = $request->header('X-Forwarded-Host') ?: $request->getHost();
             $forwardedHost = strtolower(trim((string) $forwardedHost));
-            $marketplaceClient = $forwardedHost
-                ? \App\Models\MarketplaceClient::where('domain', $forwardedHost)
+            $marketplaceClient = null;
+            $isCoreHost = $forwardedHost === 'core.tixello.com'
+                || str_contains($forwardedHost, 'tixello-bridge')
+                || str_contains($forwardedHost, 'workers.dev');
+            if ($forwardedHost && !$isCoreHost) {
+                $marketplaceClient = \App\Models\MarketplaceClient::where('domain', $forwardedHost)
                     ->orWhere('domain', 'www.' . $forwardedHost)
                     ->orWhere('domain', preg_replace('/^www\./', '', $forwardedHost))
-                    ->first()
-                : null;
+                    ->first();
+            }
+            if (!$marketplaceClient && $artist->marketplace_client_id) {
+                $marketplaceClient = $artist->marketplaceClient;
+            }
+            if (!$marketplaceClient) {
+                $marketplaceClient = $artist->marketplaceClients()->first();
+            }
 
             if ($marketplaceClient) {
                 $payload['marketplace_name'] = $marketplaceClient->name;
@@ -89,10 +103,12 @@ class EpkPublicController extends Controller
                 $payload['marketplace_url'] = 'https://tixello.com';
             }
 
-            // Cache key include host pentru ca brandingul să fie corect
-            // (marketplace_name diferit pentru ambilet vs core direct).
-            $hostKey = preg_replace('/[^a-z0-9._-]/i', '', $forwardedHost ?: 'default');
-            $cacheKey = $this->epkService->publicCacheKey($variant->id) . ':' . $hostKey;
+            // Cache key include marketplace_id (sau host fallback) ca să
+            // evite cross-marketplace cache poisoning.
+            $cacheSuffix = $marketplaceClient
+                ? 'mp' . $marketplaceClient->id
+                : preg_replace('/[^a-z0-9._-]/i', '', $forwardedHost ?: 'default');
+            $cacheKey = $this->epkService->publicCacheKey($variant->id) . ':' . $cacheSuffix;
 
             // Bypass cache cu ?nocache=1 — util la debugging după save / deploy
             if ($request->boolean('nocache')) {
