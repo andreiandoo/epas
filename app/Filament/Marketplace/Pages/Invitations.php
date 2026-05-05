@@ -780,6 +780,7 @@ class Invitations extends Page
                 if ($invitationTicketType && !Ticket::where('code', $invite->invite_code)->exists()) {
                     Ticket::create([
                         'order_id' => null, // No order for invitations
+                        'event_id' => $event?->id,
                         'ticket_type_id' => $invitationTicketType->id,
                         'performance_id' => null,
                         'code' => $invite->invite_code,

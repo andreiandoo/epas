@@ -799,10 +799,22 @@ class EventsController extends BaseController
         // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
-        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
-                $q->where('event_id', $event->id)
-                    ->whereIn('status', $validOrderStatuses)
-                    ->where('marketplace_organizer_id', $organizer->id);
+        // Include both regular tickets (via order) AND invitation tickets
+        // (no order; ticket_type.event_id matches the event). The event was
+        // already authorized as belonging to this organizer above, so a ticket
+        // type pointing to it is implicitly scoped correctly.
+        $query = \App\Models\Ticket::where(function ($q) use ($event, $validOrderStatuses, $organizer) {
+                $q->whereHas('order', function ($oq) use ($event, $validOrderStatuses, $organizer) {
+                    $oq->where('event_id', $event->id)
+                        ->whereIn('status', $validOrderStatuses)
+                        ->where('marketplace_organizer_id', $organizer->id);
+                })
+                ->orWhere(function ($iq) use ($event) {
+                    $iq->whereNull('order_id')
+                       ->whereHas('ticketType', function ($ttq) use ($event) {
+                           $ttq->where('event_id', $event->id);
+                       });
+                });
             })
             ->with(['order.marketplaceCustomer', 'ticketType']);
 
@@ -844,22 +856,60 @@ class EventsController extends BaseController
         $perPage = min((int) $request->input('per_page', 50), 200);
         $tickets = $query->paginate($perPage);
 
-        // Get stats — count only valid/used tickets (excludes cancelled/refunded)
-        $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
-            $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses)
-                ->where('marketplace_organizer_id', $organizer->id);
-        })->whereIn('status', ['valid', 'used'])->count();
+        // Get stats — count only valid/used tickets (excludes cancelled/refunded);
+        // include invitations (no order) alongside regular tickets.
+        $statsBase = function () use ($event, $validOrderStatuses, $organizer) {
+            return \App\Models\Ticket::where(function ($q) use ($event, $validOrderStatuses, $organizer) {
+                $q->whereHas('order', function ($oq) use ($event, $validOrderStatuses, $organizer) {
+                    $oq->where('event_id', $event->id)
+                        ->whereIn('status', $validOrderStatuses)
+                        ->where('marketplace_organizer_id', $organizer->id);
+                })
+                ->orWhere(function ($iq) use ($event) {
+                    $iq->whereNull('order_id')
+                       ->whereHas('ticketType', function ($ttq) use ($event) {
+                           $ttq->where('event_id', $event->id);
+                       });
+                });
+            });
+        };
 
-        $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event, $validOrderStatuses, $organizer) {
-            $q->where('event_id', $event->id)->whereIn('status', $validOrderStatuses)
-                ->where('marketplace_organizer_id', $organizer->id);
-        })->whereNotNull('checked_in_at')->count();
+        $totalTickets = $statsBase()->whereIn('status', ['valid', 'used'])->count();
+        $checkedInCount = $statsBase()->whereNotNull('checked_in_at')->count();
 
         return $this->paginated($tickets, function ($ticket) {
-            $customer = $ticket->order->marketplaceCustomer;
             $ticketType = $ticket->ticketType;
             $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
             $attendeePhone = $ticketMeta['attendee_phone'] ?? $ticketMeta['beneficiary_phone'] ?? null;
+            $isInvitation = !empty($ticketMeta['is_invitation']);
+
+            // Customer / order context — invitations have no order; pull beneficiary
+            // info from meta instead.
+            $customerName = null;
+            $customerEmail = null;
+            $customerPhone = null;
+            $orderNumber = null;
+            $orderSource = null;
+
+            if ($ticket->order) {
+                $customer = $ticket->order->marketplaceCustomer;
+                $customerName = $customer
+                    ? trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                    : $ticket->order->customer_name;
+                $customerEmail = $customer?->email ?? $ticket->order->customer_email;
+                $customerPhone = $customer?->phone ?? $ticket->order->customer_phone;
+                $orderNumber = $ticket->order->order_number;
+                $orderSource = $ticket->order->source;
+                if (!$isInvitation) {
+                    $isInvitation = !empty($ticket->order->meta['is_invitation']);
+                }
+            } else {
+                $beneficiary = $ticketMeta['beneficiary'] ?? [];
+                $customerName = $beneficiary['name'] ?? $ticket->attendee_name ?? null;
+                $customerEmail = $beneficiary['email'] ?? null;
+                $customerPhone = $beneficiary['phone'] ?? $attendeePhone;
+                $orderSource = 'invitation';
+            }
 
             return [
                 'id' => $ticket->id,
@@ -873,20 +923,18 @@ class EventsController extends BaseController
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                 'checked_in_by' => $ticket->checked_in_by,
                 'customer' => [
-                    'name' => $customer
-                        ? $customer->first_name . ' ' . $customer->last_name
-                        : $ticket->order->customer_name,
-                    'email' => $customer?->email ?? $ticket->order->customer_email,
-                    'phone' => $customer?->phone ?? $ticket->order->customer_phone,
+                    'name' => $customerName,
+                    'email' => $customerEmail,
+                    'phone' => $customerPhone,
                 ],
                 'attendee' => [
                     'name' => $ticket->attendee_name,
                     'email' => $ticket->attendee_email,
                     'phone' => $attendeePhone,
                 ],
-                'order_number' => $ticket->order->order_number,
-                'source' => $ticket->order->source,
-                'is_invitation' => !empty($ticket->order->meta['is_invitation']),
+                'order_number' => $orderNumber,
+                'source' => $orderSource,
+                'is_invitation' => $isInvitation,
                 'purchased_at' => $ticket->created_at->toIso8601String(),
             ];
         }, [
@@ -1022,7 +1070,17 @@ class EventsController extends BaseController
     }
 
     /**
-     * Check in a ticket by barcode (across all organizer's events)
+     * Check in a ticket by barcode (across all organizer's events).
+     *
+     * Accepts:
+     *  - regular tickets (have an order with status paid/confirmed/completed)
+     *  - invitation tickets (order_id null, meta.is_invitation=true), which
+     *    resolve their event via TicketType.event_id
+     *
+     * Code matching is case-insensitive so QR payloads from different
+     * generators don't fail on case alone. The mobile app strips the
+     * /t/{code} URL form before sending; the backend further accepts a raw
+     * URL just in case.
      */
     public function checkInByCode(Request $request): JsonResponse
     {
@@ -1032,30 +1090,47 @@ class EventsController extends BaseController
             'ticket_code' => 'required|string',
         ]);
 
-        $barcode = $request->ticket_code;
+        $barcode = $this->normalizeTicketCode($request->ticket_code);
 
-        // Get all events for this organizer
+        // All events owned by this organizer on their marketplace
         $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
             ->pluck('id');
 
-        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
-        // Search by barcode (full code) or code (control code)
-        $ticket = \App\Models\Ticket::where(function ($q) use ($barcode) {
-                $q->where('barcode', $barcode)
-                    ->orWhere('code', $barcode);
-            })
-            ->whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
-                $q->whereIn('event_id', $eventIds)
-                    ->whereIn('status', $validOrderStatuses);
+        // Match any ticket with this code/barcode, regardless of order. We'll
+        // verify ownership in PHP — invitations are scoped via TicketType,
+        // regular tickets via order.
+        $ticket = \App\Models\Ticket::with('ticketType', 'order.marketplaceCustomer')
+            ->where(function ($q) use ($barcode) {
+                $q->whereRaw('LOWER(barcode) = ?', [strtolower($barcode)])
+                  ->orWhereRaw('LOWER(code) = ?', [strtolower($barcode)]);
             })
             ->first();
 
-        // Fallback: search external tickets if not found in main tickets table
         if (!$ticket) {
             return $this->checkInExternalTicket($barcode, $eventIds->toArray(), $organizer);
+        }
+
+        $isInvitation = is_array($ticket->meta) && !empty($ticket->meta['is_invitation']);
+
+        // Resolve the event for this ticket (direct event_id, then via
+        // TicketType.event_id which is reliably set for invitations)
+        $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
+        if (!$resolvedEventId) {
+            return $this->error('Ticket is not linked to any event', 404);
+        }
+        if (!$eventIds->contains((int) $resolvedEventId)) {
+            return $this->error('Ticket is not for one of your events', 403);
+        }
+
+        // For regular tickets, the order must be in a valid status. Invitations
+        // have no order so we skip this check.
+        if (!$isInvitation) {
+            if (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true)) {
+                return $this->error('Ticket order is not in a valid status', 400);
+            }
         }
 
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
@@ -1066,32 +1141,12 @@ class EventsController extends BaseController
         $venueNotes = $this->resolveVenueNotesForTicket($ticket);
 
         if ($ticket->checked_in_at) {
-            $dupCustomer = $ticket->order->marketplaceCustomer;
-            $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
-            return response()->json([
+            $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
+            return response()->json(array_merge([
                 'success' => false,
                 'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
-                'ticket' => [
-                    'barcode' => $ticket->barcode,
-                    'ticket_type' => $ticket->ticketType?->name,
-                    'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
-                    'checked_in_by' => $ticket->checked_in_by,
-                    'section' => $dupSeatDetails['section_name'] ?? null,
-                    'row' => $dupSeatDetails['row_label'] ?? null,
-                    'seat' => $dupSeatDetails['seat_number'] ?? null,
-                    'attendee_name' => $ticket->attendee_name,
-                ],
-                'customer' => [
-                    'name' => $dupCustomer
-                        ? $dupCustomer->first_name . ' ' . $dupCustomer->last_name
-                        : $ticket->order->customer_name,
-                ],
-                'order' => [
-                    'source' => $ticket->order->source ?? 'online',
-                    'customer_name' => $ticket->order->customer_name,
-                ],
                 'venue_notes' => $venueNotes,
-            ], 400);
+            ], $duplicate), 400);
         }
 
         $ticket->update([
@@ -1099,35 +1154,78 @@ class EventsController extends BaseController
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
         ]);
 
-        $customer = $ticket->order->marketplaceCustomer;
-        $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
-        $orderSource = $ticket->order->source ?? 'online';
+        $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
+        $payload['venue_notes'] = $venueNotes;
 
-        return $this->success([
+        return $this->success($payload, 'Ticket checked in successfully');
+    }
+
+    /**
+     * Strip whitespace and any /t/{code} or /verify/{code} URL wrapper, just
+     * in case the mobile sends the raw QR payload.
+     */
+    protected function normalizeTicketCode(string $raw): string
+    {
+        $trimmed = trim($raw);
+        if (preg_match('#/t/([A-Za-z0-9_-]+)#', $trimmed, $m)) {
+            return $m[1];
+        }
+        if (preg_match('#/verify/([A-Za-z0-9_-]+)#', $trimmed, $m)) {
+            return $m[1];
+        }
+        return $trimmed;
+    }
+
+    /**
+     * Build the ticket+customer+order payload used by both the success and
+     * already-checked-in responses. Handles invitations (no order) by reading
+     * beneficiary info from meta.
+     */
+    protected function buildTicketScanPayload(\App\Models\Ticket $ticket, bool $isInvitation): array
+    {
+        $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
+        $beneficiary = is_array($ticket->meta) ? ($ticket->meta['beneficiary'] ?? []) : [];
+
+        $customerName = null;
+        $customerEmail = null;
+        if (!$isInvitation && $ticket->order) {
+            $marketplaceCustomer = $ticket->order->marketplaceCustomer;
+            $customerName = $marketplaceCustomer
+                ? trim(($marketplaceCustomer->first_name ?? '') . ' ' . ($marketplaceCustomer->last_name ?? ''))
+                : $ticket->order->customer_name;
+            $customerEmail = $marketplaceCustomer?->email ?? $ticket->order->customer_email;
+        } else {
+            $customerName = $beneficiary['name'] ?? $ticket->attendee_name ?? null;
+            $customerEmail = $beneficiary['email'] ?? null;
+        }
+
+        return [
             'ticket' => [
                 'id' => $ticket->id,
                 'barcode' => $ticket->barcode,
                 'ticket_type' => $ticket->ticketType?->name,
                 'status' => $ticket->status,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'checked_in_by' => $ticket->checked_in_by,
                 'seat_label' => $ticket->seat_label,
                 'section' => $seatDetails['section_name'] ?? null,
                 'row' => $seatDetails['row_label'] ?? null,
                 'seat' => $seatDetails['seat_number'] ?? null,
                 'attendee_name' => $ticket->attendee_name,
+                'is_invitation' => $isInvitation,
             ],
             'customer' => [
-                'name' => $customer
-                    ? $customer->first_name . ' ' . $customer->last_name
-                    : $ticket->order->customer_name,
-                'email' => $customer?->email ?? $ticket->order->customer_email,
+                'name' => $customerName,
+                'email' => $customerEmail,
             ],
-            'order' => [
-                'source' => $orderSource,
+            'order' => $ticket->order ? [
+                'source' => $ticket->order->source ?? 'online',
                 'customer_name' => $ticket->order->customer_name,
+            ] : [
+                'source' => 'invitation',
+                'customer_name' => $beneficiary['name'] ?? null,
             ],
-            'venue_notes' => $venueNotes,
-        ], 'Ticket checked in successfully');
+        ];
     }
 
     /**
@@ -1146,55 +1244,47 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
+        $normalized = $this->normalizeTicketCode($barcode);
 
-        $ticket = \App\Models\Ticket::where('barcode', $barcode)
-            ->whereHas('order', function ($q) use ($event, $validOrderStatuses) {
-                $q->where('event_id', $event->id)
-                    ->whereIn('status', $validOrderStatuses);
+        $ticket = \App\Models\Ticket::with('ticketType', 'order.marketplaceCustomer')
+            ->where(function ($q) use ($normalized) {
+                $q->whereRaw('LOWER(barcode) = ?', [strtolower($normalized)])
+                  ->orWhereRaw('LOWER(code) = ?', [strtolower($normalized)]);
             })
             ->first();
 
-        // Fallback: search external tickets if not found in main tickets table
         if (!$ticket) {
-            return $this->checkInExternalTicket($barcode, [$event->id], $organizer);
+            return $this->checkInExternalTicket($normalized, [$event->id], $organizer);
+        }
+
+        $isInvitation = is_array($ticket->meta) && !empty($ticket->meta['is_invitation']);
+
+        // Verify the ticket belongs to this specific event — invitation event
+        // resolved via TicketType.event_id, regular tickets via order.event_id.
+        $resolvedEventId = $ticket->event_id ?? $ticket->ticketType?->event_id;
+        if (!$isInvitation && (!$ticket->order || !in_array($ticket->order->status, $validOrderStatuses, true))) {
+            return $this->error('Ticket order is not in a valid status', 400);
+        }
+        if ($resolvedEventId === null || (int) $resolvedEventId !== (int) $event->id) {
+            // Fall through: try external (mainly for non-tixello tickets shared
+            // with the same QR scanner workflow)
+            return $this->checkInExternalTicket($normalized, [$event->id], $organizer);
         }
 
         if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
             return $this->error('This ticket has been ' . $ticket->status, 400);
         }
 
-        // Venue-owner private notes (visible to marketplace scanners per product requirement)
         $venueNotes = $this->resolveVenueNotesForTicket($ticket);
 
         if ($ticket->checked_in_at) {
-            $dupCustomer = $ticket->order->marketplaceCustomer;
-            $dupSeatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
-            return response()->json([
+            $duplicate = $this->buildTicketScanPayload($ticket, $isInvitation);
+            return response()->json(array_merge([
                 'success' => false,
                 'message' => 'Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'),
-                'ticket' => [
-                    'barcode' => $ticket->barcode,
-                    'ticket_type' => $ticket->ticketType?->name,
-                    'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
-                    'checked_in_by' => $ticket->checked_in_by,
-                    'section' => $dupSeatDetails['section_name'] ?? null,
-                    'row' => $dupSeatDetails['row_label'] ?? null,
-                    'seat' => $dupSeatDetails['seat_number'] ?? null,
-                    'attendee_name' => $ticket->attendee_name,
-                ],
-                'customer' => [
-                    'name' => $dupCustomer
-                        ? $dupCustomer->first_name . ' ' . $dupCustomer->last_name
-                        : $ticket->order->customer_name,
-                ],
-                'order' => [
-                    'source' => $ticket->order->source ?? 'online',
-                    'customer_name' => $ticket->order->customer_name,
-                ],
                 'venue_notes' => $venueNotes,
-            ], 400);
+            ], $duplicate), 400);
         }
 
         $ticket->update([
@@ -1202,35 +1292,10 @@ class EventsController extends BaseController
             'checked_in_by' => $organizer->contact_name ?? $organizer->name,
         ]);
 
-        $customer = $ticket->order->marketplaceCustomer;
-        $seatDetails = method_exists($ticket, 'getSeatDetails') ? $ticket->getSeatDetails() : null;
-        $orderSource = $ticket->order->source ?? 'online';
+        $payload = $this->buildTicketScanPayload($ticket, $isInvitation);
+        $payload['venue_notes'] = $venueNotes;
 
-        return $this->success([
-            'ticket' => [
-                'id' => $ticket->id,
-                'barcode' => $ticket->barcode,
-                'ticket_type' => $ticket->ticketType?->name,
-                'status' => $ticket->status,
-                'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
-                'seat_label' => $ticket->seat_label,
-                'section' => $seatDetails['section_name'] ?? null,
-                'row' => $seatDetails['row_label'] ?? null,
-                'seat' => $seatDetails['seat_number'] ?? null,
-                'attendee_name' => $ticket->attendee_name,
-            ],
-            'customer' => [
-                'name' => $customer
-                    ? $customer->first_name . ' ' . $customer->last_name
-                    : $ticket->order->customer_name,
-                'email' => $customer?->email ?? $ticket->order->customer_email,
-            ],
-            'order' => [
-                'source' => $orderSource,
-                'customer_name' => $ticket->order->customer_name,
-            ],
-            'venue_notes' => $venueNotes,
-        ], 'Ticket checked in successfully');
+        return $this->success($payload, 'Ticket checked in successfully');
     }
 
     /**

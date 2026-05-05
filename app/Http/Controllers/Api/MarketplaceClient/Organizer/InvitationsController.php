@@ -801,9 +801,12 @@ class InvitationsController extends BaseController
                 $invite->markAsRendered();
 
                 // Create a Ticket row so analytics/sales pages count this invitation.
+                // event_id is populated so the participants endpoint and venue
+                // owner attendees query find it without joining through batch.
                 if (!Ticket::where('code', $invite->invite_code)->exists()) {
                     Ticket::create([
                         'order_id' => null,
+                        'event_id' => $event->id,
                         'ticket_type_id' => $invitationTicketType->id,
                         'performance_id' => null,
                         'code' => $invite->invite_code,
