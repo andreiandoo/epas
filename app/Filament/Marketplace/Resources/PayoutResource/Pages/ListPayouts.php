@@ -779,14 +779,14 @@ class ListPayouts extends ListRecords
         $marketplaceAdmin = Auth::guard('marketplace_admin')->user();
         $marketplaceClientId = $marketplaceAdmin->marketplace_client_id;
 
+        // Only real finished events: event_date in the past. The previous
+        // OR fallback included drafts with NULL event_date that were >3
+        // months old, which (combined with PG's NULLS-FIRST default for
+        // DESC) pushed ancient stale rows to the top of "Ultimele 10".
         $query = Event::where('marketplace_client_id', $marketplaceClientId)
             ->whereNotNull('marketplace_organizer_id')
-            ->where(function ($q) {
-                $q->where('event_date', '<', now())
-                  ->orWhere(function ($q2) {
-                      $q2->whereNull('event_date')->where('created_at', '<', now()->subMonths(3));
-                  });
-            })
+            ->whereNotNull('event_date')
+            ->where('event_date', '<', now())
             ->orderByDesc('event_date');
 
         if ($dateFrom) {
@@ -971,10 +971,15 @@ class ListPayouts extends ListRecords
             'commission_amount' => round($commissionAmount, 2),
             'fees_amount' => 0,
             'adjustments_amount' => 0,
-            'status' => 'pending',
+            // Triggered by an admin clicking "Generează decont" in the
+            // Evenimente încheiate modal — treat it as admin-approved on
+            // creation so it doesn't sit in pending waiting for a second click.
+            'status' => 'approved',
             'source' => 'automated',
+            'approved_by' => $marketplaceAdmin->id,
+            'approved_at' => now(),
             'payout_method' => $payoutMethod,
-            'admin_notes' => 'Decont generat automat din lista evenimente încheiate.',
+            'admin_notes' => 'Decont generat din lista evenimente încheiate.',
             'ticket_breakdown' => $ticketBreakdown,
             'commission_mode' => $commissionMode,
             'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',

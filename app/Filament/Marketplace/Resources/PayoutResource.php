@@ -506,15 +506,19 @@ class PayoutResource extends Resource
                             ->compact()
                             ->schema([
                                 Infolists\Components\TextEntry::make('created_at')
-                                    ->label(fn ($record) => $record->source === 'manual' ? 'Creat manual' : ($record->source === 'organizer' ? 'Solicitat de organizator' : 'Solicitat'))
+                                    ->label(fn ($record) => match ($record->source) {
+                                        'organizer' => 'Solicitat de organizator',
+                                        'manual', 'automated' => 'Creat de admin',
+                                        default => 'Solicitat',
+                                    })
                                     ->dateTime('d.m.Y H:i'),
                                 Infolists\Components\TextEntry::make('source')
                                     ->label('Tip')
                                     ->badge()
                                     ->formatStateUsing(fn ($state) => match ($state) {
-                                        'manual' => 'Manual (admin)',
+                                        'manual' => 'Admin',
                                         'organizer' => 'Solicitat de organizator',
-                                        'automated' => 'Automat',
+                                        'automated' => 'Admin',
                                         default => ucfirst($state),
                                     })
                                     ->color(fn ($state) => match ($state) {
@@ -648,8 +652,11 @@ class PayoutResource extends Resource
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'organizer' => 'Organizer',
-                        'manual' => 'Manual',
-                        'automated' => 'Automat',
+                        'manual' => 'Admin',
+                        // Legacy 'automated' rows were created by an admin
+                        // clicking "Generează decont" — there is no real
+                        // background-cron source. Show as Admin for clarity.
+                        'automated' => 'Admin',
                         default => ucfirst($state),
                     })
                     ->toggleable(),
