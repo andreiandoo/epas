@@ -255,15 +255,23 @@ class TourOptimizerService
             // Cost combustibil pentru leg-ul de SOSIRE la acest stop
             $fuelCost = $this->fuelCost((float) $arrivalDistance, $config);
 
+            // Dacă next.from_start = true, după acest concert echipa se întoarce la home base.
+            // Adăugăm drumul de retur la totalDistance + fuel_cost al stop-ului curent
+            // (fuel-ul de plecare la next va fi calculat separat ca arrival_distance al stop-ului următor).
+            $returnLegDistance = 0;
+            if ($next && !empty($next['from_start'])) {
+                $returnLegDistance = $this->haversineKm($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng']);
+                $totalDistance += $returnLegDistance;
+                $fuelCost += $this->fuelCost((float) $returnLegDistance, $config);
+            }
+
             // Distanța la următorul stop (pentru afișare „spre următorul"):
-            //   - dacă există next și next.from_start → afișăm trip-ul prev→home (return) DAR fuel-ul e atașat la cardul next
-            //     deci aici afișăm doar "→ home base" pentru claritate
+            //   - dacă există next și next.from_start → afișăm drumul de retur (current → home)
             //   - dacă există next fără from_start → afișăm distanța directă la next
-            //   - dacă nu există next și nu suntem la home base → distanța de întoarcere acasă
             $distanceToNext = null;
             if ($next) {
                 $distanceToNext = !empty($next['from_start'])
-                    ? $this->haversineKm($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng'])
+                    ? $returnLegDistance
                     : $this->haversineKm($stop['lat'], $stop['lng'], $next['lat'], $next['lng']);
             }
 

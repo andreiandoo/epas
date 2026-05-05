@@ -34,6 +34,8 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
     .to-section-title { display: flex; align-items: center; gap: 6px; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #64748B; margin-bottom: 8px; }
     .to-section-title .icon { font-size: 1rem; line-height: 1; }
     .to-stay22-iframe { width: 100%; height: 480px; border: 0; border-radius: 0.75rem; background: #F8FAFC; }
+    @keyframes toPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(230,126,34,0.45); transform: scale(1); } 50% { box-shadow: 0 0 0 6px rgba(230,126,34,0); transform: scale(1.03); } }
+    .to-pulse { animation: toPulse 1.6s ease-in-out infinite; background: #E67E22 !important; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -439,9 +441,14 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div class="bg-white border border-border rounded-2xl p-5">
                                     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                                         <h3 class="font-bold text-secondary">Itinerar optim</h3>
-                                        <div class="flex gap-2 flex-wrap">
-                                            <button @click="recalcRoute()" :disabled="tabLoading" class="to-btn to-btn-secondary to-btn-sm">🔄 Recalculează</button>
-                                            <button @click="saveScenario()" :disabled="planner.saving" class="to-btn to-btn-primary to-btn-sm">
+                                        <div class="flex gap-2 flex-wrap items-center">
+                                            <span x-show="planner.dirty" class="text-xs text-warning font-semibold">⚠️ modificări nesalvate</span>
+                                            <button @click="recalcRoute()" :disabled="tabLoading"
+                                                :class="planner.dirty ? 'to-pulse text-white' : 'to-btn-secondary'"
+                                                class="to-btn to-btn-sm">🔄 Recalculează</button>
+                                            <button @click="saveScenario()" :disabled="planner.saving || planner.dirty"
+                                                :title="planner.dirty ? 'Apasă „Recalculează" întâi ca să salvezi cu noile valori' : ''"
+                                                class="to-btn to-btn-primary to-btn-sm">
                                                 <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
                                             </button>
                                         </div>
@@ -477,26 +484,57 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                         <label class="block text-[10px] text-muted mb-1">📅 Data eveniment</label>
                                                         <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="to-input text-xs" :min="planner.startDate" :max="planner.endDate">
                                                     </div>
-                                                    <div>
+                                                    <div x-data="{ open: false, query: '' }" @click.outside="open = false">
                                                         <label class="block text-[10px] text-muted mb-1">🏟️ Venue (caută & alege)</label>
-                                                        <input type="text" list="venues-search-list"
-                                                            :value="stop.venue_name || ''"
-                                                            @input="onVenueSearchInput(idx, $event.target.value)"
-                                                            @focus="loadVenuesForCity(stop.city)"
-                                                            placeholder="Tastează nume venue..."
-                                                            class="to-input text-xs">
+                                                        <div class="relative">
+                                                            <input type="text"
+                                                                :value="open ? query : (stop.venue_name || '')"
+                                                                @focus="open = true; query = ''; loadVenuesForCity(stop.city)"
+                                                                @input="query = $event.target.value; open = true"
+                                                                @keydown.escape="open = false"
+                                                                placeholder="Click pentru a vedea toate venues, sau caută..."
+                                                                class="to-input text-xs pr-7">
+                                                            <button type="button" x-show="stop.venue_id" @click.stop="selectVenueForStop(idx, null); query = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-error text-xs" title="Șterge selecția">✕</button>
+                                                            <div x-show="open" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                                                                <template x-if="!venuesByCity[stop.city] || venuesByCity[stop.city].length === 0">
+                                                                    <p class="text-xs text-muted p-3 text-center">
+                                                                        <template x-if="!venuesByCity[stop.city]"><span>Se caută venues în <span x-text="stop.city"></span>…</span></template>
+                                                                        <template x-if="venuesByCity[stop.city] && !venuesByCity[stop.city].length"><span>Niciun venue înregistrat în <span x-text="stop.city"></span>.</span></template>
+                                                                    </p>
+                                                                </template>
+                                                                <template x-for="v in filterVenues(venuesByCity[stop.city] || [], query)" :key="v.id">
+                                                                    <button type="button"
+                                                                        @click="selectVenueForStop(idx, v); open = false; query = ''"
+                                                                        class="w-full text-left px-3 py-2 hover:bg-surface border-b border-border/40 last:border-0 transition-colors"
+                                                                        :class="stop.venue_id === v.id ? 'bg-primary/5' : ''">
+                                                                        <p class="text-xs font-semibold text-secondary" x-text="v.name"></p>
+                                                                        <div class="flex items-center justify-between mt-0.5">
+                                                                            <p class="text-[10px] text-muted truncate flex-1" x-text="v.address || '—'"></p>
+                                                                            <span x-show="v.capacity_total" class="text-[10px] font-bold text-primary ml-2 flex-shrink-0"><span x-text="formatNumber(v.capacity_total)"></span> loc</span>
+                                                                        </div>
+                                                                    </button>
+                                                                </template>
+                                                                <template x-if="venuesByCity[stop.city]?.length && filterVenues(venuesByCity[stop.city] || [], query).length === 0">
+                                                                    <p class="text-xs text-muted p-3 text-center">Niciun rezultat pentru „<span x-text="query"></span>"</p>
+                                                                </template>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
 
                                                 <label class="flex items-center gap-2 cursor-pointer ml-7 sm:ml-12 mb-3">
                                                     <input type="checkbox"
-                                                        :checked="stop.from_start"
+                                                        :checked="idx === 0 ? true : stop.from_start"
                                                         @change="updateStopFromStart(idx, $event.target.checked)"
-                                                        :disabled="idx === 0"
-                                                        class="w-4 h-4 rounded text-primary disabled:opacity-30">
+                                                        class="w-4 h-4 rounded text-primary">
                                                     <span class="text-xs text-secondary">
-                                                        ↩ Plecare din <strong x-text="planner.config.start_location"></strong> (nu din concertul precedent)
-                                                        <span class="to-tip" data-tip="Activează dacă echipa se întoarce acasă după concertul precedent. Combustibilul va fi calculat de la home base, nu de la stop-ul anterior. Cazarea pe noaptea precedentă se reduce la 1.">ⓘ</span>
+                                                        <template x-if="idx === 0">
+                                                            <span>🚀 Plecare din <strong x-text="planner.config.start_location"></strong> (primul concert)</span>
+                                                        </template>
+                                                        <template x-if="idx > 0">
+                                                            <span>↩ Plecare din <strong x-text="planner.config.start_location"></strong> (nu din concertul precedent)</span>
+                                                        </template>
+                                                        <span class="to-tip" data-tip="Activează dacă echipa pleacă din home base înainte de acest concert (nu din concertul precedent). Combustibilul se calculează de la home base. Concertul precedent va include drumul de retur acasă.">ⓘ</span>
                                                     </span>
                                                 </label>
 
@@ -539,12 +577,22 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <!-- Stay22 expand -->
                                                 <div class="border-t border-border pt-3" x-data="{ stayOpen: false }">
                                                     <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="text-xs text-primary hover:underline flex items-center gap-1">
-                                                        🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă (Stay22)'"></span>
+                                                        🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
+                                                        <span class="text-[10px] text-muted">via Stay22</span>
                                                     </button>
-                                                    <p class="text-[10px] text-muted mt-1" x-show="!stayOpen">Recomandări hoteluri Stay22 lângă <span x-text="stop.venue_name || stop.city"></span>, filtrate cu prețul tău max.</p>
+                                                    <p class="text-[10px] text-muted mt-1" x-show="!stayOpen">Recomandări hoteluri Stay22 lângă <span x-text="stop.venue_name || stop.city"></span>, filtrate cu setările tale (<span x-text="planner.config.people_count"></span> oameni · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/n).</p>
                                                     <div x-show="stayOpen" x-transition class="mt-3">
-                                                        <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy"></iframe>
-                                                        <p class="text-[10px] text-muted mt-2">Listările vin direct de la Stay22 (compară Booking, Hotels.com etc.). Filtru aplicat: max <span x-text="formatNumber(maxRoomPrice())"></span> RON/cameră.</p>
+                                                        <div class="flex items-center justify-between mb-2">
+                                                            <p class="text-[11px] text-muted">Powered by <strong>Stay22</strong> · compară Booking, Hotels.com și alți furnizori</p>
+                                                            <a :href="stay22Url(stop).replace('/embed/gm', '/h')" target="_blank" rel="noopener" class="text-[11px] text-primary hover:underline">Deschide în tab nou →</a>
+                                                        </div>
+                                                        <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy" referrerpolicy="origin"></iframe>
+                                                        <p class="text-[10px] text-muted mt-2">
+                                                            🛏️ <strong x-text="totalRoomsCount()"></strong> camere &middot;
+                                                            👥 <strong x-text="planner.config.people_count"></strong> persoane &middot;
+                                                            💰 max <strong><span x-text="formatNumber(maxRoomPrice())"></span> RON</strong>/cameră &middot;
+                                                            📅 <span x-text="stop.nights ?? 1"></span> noapte/nopți (<span x-text="stop.date_iso"></span>)
+                                                        </p>
                                                     </div>
                                                 </div>
 
@@ -558,12 +606,6 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         </template>
                                     </div>
 
-                                    <!-- Datalist global pentru venue search (folosim un singur datalist; lista se updatează la focus pe oraș) -->
-                                    <datalist id="venues-search-list">
-                                        <template x-for="v in venueSearchSuggestions" :key="v.id">
-                                            <option :value="v.name" :data-id="v.id"></option>
-                                        </template>
-                                    </datalist>
                                 </div>
                             </div>
                         </div>
@@ -780,6 +822,7 @@ function tourOptimizer() {
             includeBorder: false,
             optimized: false,
             saving: false,
+            dirty: false,
             route: [],
             summary: null,
             currentScenarioId: null,
@@ -837,9 +880,35 @@ function tourOptimizer() {
                 .trim();
         },
 
+        filterVenues(venues, query) {
+            const q = this.normalizeKey(query);
+            if (!q) return venues.slice(0, 50);
+            return venues.filter(v => {
+                const hay = this.normalizeKey((v.name || '') + ' ' + (v.address || ''));
+                return hay.indexOf(q) !== -1;
+            }).slice(0, 50);
+        },
+
+        // Returnează prețul maxim per cameră bazat pe camerele REAL configurate (cu count > 0).
+        // Ex: 0 single, 4 double, 0 apartment + price double=380 → returnează 380.
         maxRoomPrice() {
+            const r = this.planner.config.rooms;
             const p = this.planner.config.room_prices;
-            return Math.max(p.single | 0, p.double | 0, p.apartment | 0) || 400;
+            const candidates = [];
+            if ((r.single | 0) > 0) candidates.push(p.single | 0);
+            if ((r.double | 0) > 0) candidates.push(p.double | 0);
+            if ((r.apartment | 0) > 0) candidates.push(p.apartment | 0);
+            if (candidates.length === 0) {
+                // Fallback: ia max din toate prețurile configurate, indiferent de count
+                return Math.max(p.single | 0, p.double | 0, p.apartment | 0) || 400;
+            }
+            return Math.max(...candidates);
+        },
+
+        // Total camere configurate (suma single + double + apartment)
+        totalRoomsCount() {
+            const r = this.planner.config.rooms;
+            return (r.single | 0) + (r.double | 0) + (r.apartment | 0);
         },
 
         stay22Url(stop) {
@@ -853,7 +922,24 @@ function tourOptimizer() {
             const checkout = co.toISOString().slice(0, 10);
             const address = encodeURIComponent((stop.venue_name || stop.city) + ', ' + stop.city);
             const maxprice = this.maxRoomPrice();
-            return 'https://www.stay22.com/embed/gm?aid=' + aff + '&lat=' + lat + '&lng=' + lng + '&address=' + address + '&checkin=' + checkin + '&checkout=' + checkout + '&maincolor=A51C30&markertype=circle&zoom=14&currency=RON&maxprice=' + maxprice;
+            const guests = Math.max(1, this.planner.config.people_count | 0);
+            const rooms = Math.max(1, this.totalRoomsCount());
+            const params = [
+                'aid=' + aff,
+                'lat=' + lat,
+                'lng=' + lng,
+                'address=' + address,
+                'checkin=' + checkin,
+                'checkout=' + checkout,
+                'guests=' + guests,
+                'rooms=' + rooms,
+                'maxprice=' + maxprice,
+                'currency=RON',
+                'maincolor=A51C30',
+                'markertype=circle',
+                'zoom=14',
+            ];
+            return 'https://www.stay22.com/embed/gm?' + params.join('&');
         },
 
         loadStay22(idx) {
@@ -988,6 +1074,7 @@ function tourOptimizer() {
                     this.planner.route = r.data.route || [];
                     this.planner.summary = r.data.summary || {};
                     this.planner.optimized = true;
+                    this.planner.dirty = false;
                     // Pre-load venues for every city in route (for search suggestions on inline edit)
                     (this.planner.route || []).forEach(s => this.loadVenuesForCity(s.city));
                     this.$nextTick(() => {
@@ -1092,8 +1179,11 @@ function tourOptimizer() {
         addCity(name) {
             if (!this.planner.cities.find(c => c.name === name)) {
                 const uid = 'c' + (this.cityUidCounter++);
-                this.planner.cities.push({ uid, name, fixed: false, date: '', venue_id: null });
+                // Primul oraș adăugat are by default from_start=true (pleacă din home base)
+                const isFirst = this.planner.cities.length === 0;
+                this.planner.cities.push({ uid, name, fixed: false, date: '', venue_id: null, from_start: isFirst });
                 this.loadVenuesForCity(name);
+                this.markDirty();
             }
         },
 
@@ -1124,37 +1214,42 @@ function tourOptimizer() {
             }
         },
 
+        markDirty() {
+            // Marks state as needing recalc; only relevant if route was already optimized
+            if (this.planner.optimized) {
+                this.planner.dirty = true;
+            }
+        },
+
         // Inline edit handlers for itinerary
         updateStopDate(idx, value) {
             if (!this.planner.route?.[idx]) return;
             this.planner.route[idx].date_iso = value;
             this._syncCitiesFromRoute();
+            this.markDirty();
         },
 
         updateStopFromStart(idx, value) {
             if (!this.planner.route?.[idx]) return;
             this.planner.route[idx].from_start = value;
             this._syncCitiesFromRoute();
+            this.markDirty();
         },
 
-        onVenueSearchInput(idx, value) {
-            this.venueSearchActive = { stopIdx: idx, query: value };
-            // Match by exact name → set venue_id; otherwise leave as text and recalc on submit
-            const stop = this.planner.route[idx];
+        selectVenueForStop(idx, venue) {
+            const stop = this.planner.route?.[idx];
             if (!stop) return;
-            const matches = this.venuesByCity[stop.city] || [];
-            const exact = matches.find(v => v.name === value);
-            if (exact) {
-                stop.venue_id = exact.id;
-                stop.venue_name = exact.name;
-                stop.venue_capacity = exact.capacity_total;
-                this._syncCitiesFromRoute();
-            } else if (!value) {
+            if (!venue) {
                 stop.venue_id = null;
                 stop.venue_name = null;
                 stop.venue_capacity = null;
-                this._syncCitiesFromRoute();
+            } else {
+                stop.venue_id = venue.id;
+                stop.venue_name = venue.name;
+                stop.venue_capacity = venue.capacity_total;
             }
+            this._syncCitiesFromRoute();
+            this.markDirty();
         },
 
         _syncCitiesFromRoute() {
@@ -1192,6 +1287,7 @@ function tourOptimizer() {
                     route.splice(evt.newIndex, 0, moved);
                     this.planner.route = route;
                     this._syncCitiesFromRoute();
+                    this.markDirty();
                 },
             });
         },
