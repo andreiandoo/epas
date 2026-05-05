@@ -2206,7 +2206,14 @@ switch ($action) {
         $method = 'GET';
         $params = [];
         if (isset($_GET['city']) && $_GET['city'] !== '') $params['city'] = $_GET['city'];
+        if (isset($_GET['q']) && $_GET['q'] !== '') $params['q'] = $_GET['q'];
         $endpoint = '/artist/tour/venues' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.tour.cities-list':
+        $method = 'GET';
+        $endpoint = '/artist/tour/cities-list';
         $requiresAuth = true;
         break;
 

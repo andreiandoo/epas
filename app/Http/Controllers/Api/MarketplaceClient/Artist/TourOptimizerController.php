@@ -45,6 +45,8 @@ class TourOptimizerController extends BaseController
             'cities.*.date' => 'nullable|date',
             'cities.*.venue_id' => 'nullable|integer|exists:venues,id',
             'cities.*.from_start' => 'nullable|boolean',
+            'cities.*.manual_capacity' => 'nullable|integer|min:0|max:200000',
+            'cities.*.manual_prediction' => 'nullable|integer|min:0|max:200000',
             'constraints' => 'nullable|array',
             'constraints.max_distance_km' => 'nullable|integer|min:50|max:3000',
             'constraints.min_days_between' => 'nullable|integer|min:1|max:14',
@@ -98,6 +100,17 @@ class TourOptimizerController extends BaseController
 
         return $this->success([
             'venues' => $this->tour->searchVenuesInCity($validated['city'], $validated['q'] ?? null),
+        ]);
+    }
+
+    /**
+     * Lista de orașe (cities_geo + distinct cities din venues) pentru picker home base.
+     */
+    public function citiesList(Request $request): JsonResponse
+    {
+        $this->requireArtist($request);
+        return $this->success([
+            'cities' => $this->tour->availableCities(),
         ]);
     }
 

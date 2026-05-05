@@ -2637,6 +2637,8 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
                 ->name('api.marketplace-client.artist.tour.predictions');
             Route::get('/venues', [ArtistTourController::class, 'venuesInCity'])
                 ->name('api.marketplace-client.artist.tour.venues');
+            Route::get('/cities-list', [ArtistTourController::class, 'citiesList'])
+                ->name('api.marketplace-client.artist.tour.cities-list');
             Route::post('/optimize', [ArtistTourController::class, 'optimize'])
                 ->middleware('throttle:20,1')
                 ->name('api.marketplace-client.artist.tour.optimize');

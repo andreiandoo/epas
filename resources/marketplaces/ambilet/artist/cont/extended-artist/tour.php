@@ -453,44 +453,60 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                     <div x-ref="routeList" class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
-                                            <div class="border border-border rounded-xl p-4 hover:bg-surface/50 transition-colors" :data-idx="idx">
+                                            <div class="rounded-xl p-4 transition-colors" :data-idx="idx"
+                                                :class="stop.fixed ? 'border-2 border-success bg-success/5' : (stop.is_home ? 'border border-accent/40 bg-accent/5' : 'border border-border hover:bg-surface/50')">
                                                 <div class="flex items-start gap-3 mb-3">
-                                                    <span class="cursor-grab text-muted route-handle text-xl leading-none select-none flex-shrink-0 pt-1" title="Trage pentru reordonare">⋮⋮</span>
+                                                    <span x-show="!stop.fixed" class="cursor-grab text-muted route-handle text-xl leading-none select-none flex-shrink-0 pt-1" title="Trage pentru reordonare">⋮⋮</span>
+                                                    <span x-show="stop.fixed" class="text-success text-xl leading-none flex-shrink-0 pt-1" title="Concert confirmat — drag dezactivat">🔒</span>
                                                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
                                                     <div class="flex-1 min-w-0">
                                                         <div class="flex items-center gap-2 flex-wrap mb-1">
                                                             <p class="font-bold text-secondary" x-text="stop.city"></p>
-                                                            <span x-show="stop.from_start" class="to-badge bg-accent/10 text-accent text-[10px]">↩ din <span x-text="planner.config.start_location"></span></span>
+                                                            <span x-show="stop.is_home" class="to-badge bg-accent/15 text-accent text-[10px]">🏠 acasă</span>
+                                                            <span x-show="stop.fixed" class="to-badge bg-success/15 text-success text-[10px]">✓ confirmat</span>
+                                                            <span x-show="stop.from_start && !stop.is_home" class="to-badge bg-accent/10 text-accent text-[10px]">↩ din <span x-text="planner.config.start_location"></span></span>
                                                             <span x-show="stop.venue_name" class="text-xs text-secondary font-medium" x-text="'· ' + stop.venue_name"></span>
-                                                            <span x-show="stop.venue_capacity" class="to-badge bg-primary/10 text-primary text-[10px]"><span x-text="formatNumber(stop.venue_capacity)"></span> loc</span>
+                                                            <span x-show="stop.effective_capacity" class="to-badge bg-primary/10 text-primary text-[10px]"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
+                                                            <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
-                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span> · sosire <span x-text="formatNumber(stop.arrival_distance_km ?? 0)"></span> km</p>
+                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_distance_km > 0"> · sosire <span x-text="formatNumber(stop.arrival_distance_km)"></span> km</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
                                                     </div>
                                                     <div class="text-right flex-shrink-0">
                                                         <p class="text-xs text-muted">Predicție</p>
                                                         <p class="text-sm font-bold text-success"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
-                                                        <p class="text-[10px] text-muted"><span x-text="stop.confidence"></span>% confidence</p>
+                                                        <p class="text-[10px] text-muted"><span x-show="stop.manual_prediction !== null">manual ·</span> <span x-text="stop.confidence"></span>% confidence</p>
                                                     </div>
                                                 </div>
 
-                                                <!-- Inline edit row: data + venue + from_start -->
+                                                <!-- Buton Confirmă concert -->
+                                                <div class="ml-7 sm:ml-12 mb-3">
+                                                    <button @click="toggleStopFixed(idx)"
+                                                        :class="stop.fixed ? 'bg-success/10 text-success border-success/30' : 'bg-surface text-muted border-border hover:bg-success/5 hover:text-success hover:border-success/30'"
+                                                        class="text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors">
+                                                        <span x-text="stop.fixed ? '🔓 Anulează confirmarea' : '🔒 Confirmă concert'"></span>
+                                                    </button>
+                                                    <span class="text-[10px] text-muted ml-2" x-show="stop.fixed">Concertul e blocat — data și venue-ul nu mai pot fi modificate.</span>
+                                                </div>
+
+                                                <!-- Inline edit row: data + venue -->
                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 ml-7 sm:ml-12">
                                                     <div>
                                                         <label class="block text-[10px] text-muted mb-1">📅 Data eveniment</label>
-                                                        <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="to-input text-xs" :min="planner.startDate" :max="planner.endDate">
+                                                        <input type="date" :value="stop.date_iso" @change="updateStopDate(idx, $event.target.value)" class="to-input text-xs disabled:bg-surface disabled:cursor-not-allowed" :min="planner.startDate" :max="planner.endDate" :disabled="stop.fixed">
                                                     </div>
                                                     <div x-data="{ open: false, query: '' }" @click.outside="open = false">
                                                         <label class="block text-[10px] text-muted mb-1">🏟️ Venue (caută & alege)</label>
                                                         <div class="relative">
                                                             <input type="text"
                                                                 :value="open ? query : (stop.venue_name || '')"
-                                                                @focus="open = true; query = ''; loadVenuesForCity(stop.city)"
+                                                                @focus="!stop.fixed && (open = true, query = '', loadVenuesForCity(stop.city))"
                                                                 @input="query = $event.target.value; open = true"
                                                                 @keydown.escape="open = false"
                                                                 placeholder="Click pentru a vedea toate venues, sau caută..."
-                                                                class="to-input text-xs pr-7">
-                                                            <button type="button" x-show="stop.venue_id" @click.stop="selectVenueForStop(idx, null); query = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-error text-xs" title="Șterge selecția">✕</button>
-                                                            <div x-show="open" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                                                                :disabled="stop.fixed"
+                                                                class="to-input text-xs pr-7 disabled:bg-surface disabled:cursor-not-allowed">
+                                                            <button type="button" x-show="stop.venue_id && !stop.fixed" @click.stop="selectVenueForStop(idx, null); query = ''" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-error text-xs" title="Șterge selecția">✕</button>
+                                                            <div x-show="open && !stop.fixed" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
                                                                 <template x-if="!venuesByCity[stop.city] || venuesByCity[stop.city].length === 0">
                                                                     <p class="text-xs text-muted p-3 text-center">
                                                                         <template x-if="!venuesByCity[stop.city]"><span>Se caută venues în <span x-text="stop.city"></span>…</span></template>
@@ -514,6 +530,32 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                                 </template>
                                                             </div>
                                                         </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Manual overrides: capacitate + estimat vânzări -->
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3 ml-7 sm:ml-12">
+                                                    <div>
+                                                        <label class="block text-[10px] text-muted mb-1">
+                                                            🎟️ Capacitate venue
+                                                            <span class="to-tip" data-tip="Dacă venue-ul nu are capacitatea înregistrată sau vrei să o suprascrii pentru această ocazie. Lasă gol pentru a folosi capacitatea din DB.">ⓘ</span>
+                                                        </label>
+                                                        <input type="number" min="0" max="200000"
+                                                            :value="stop.manual_capacity || ''"
+                                                            @input.debounce.500ms="updateStopManualCapacity(idx, $event.target.value)"
+                                                            :placeholder="stop.venue_capacity ? ('din DB: ' + stop.venue_capacity) : 'ex: 1500'"
+                                                            class="to-input text-xs">
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] text-muted mb-1">
+                                                            📊 Estimat vânzări (manual)
+                                                            <span class="to-tip" data-tip="Dacă ai propria estimare pentru numărul de bilete vândute, scrie-o aici. Va suprascrie predicția automată. Lasă gol pentru predicția algoritmului.">ⓘ</span>
+                                                        </label>
+                                                        <input type="number" min="0" max="200000"
+                                                            :value="stop.manual_prediction || ''"
+                                                            @input.debounce.500ms="updateStopManualPrediction(idx, $event.target.value)"
+                                                            :placeholder="'algoritm: ~' + (stop.prediction || 0) + ' bilete'"
+                                                            class="to-input text-xs">
                                                     </div>
                                                 </div>
 
@@ -798,7 +840,8 @@ function tourOptimizer() {
         cityInput: '',
         predictionFilter: 'all',
         quickCities: ['București', 'Cluj-Napoca', 'Iași', 'Brașov', 'Timișoara', 'Constanța', 'Sibiu'],
-        // Home base — exact valorile recunoscute de cities_geo. Subset top RO + CEE.
+        // Home base — populat la init() din API (cities_geo + DISTINCT cities din venues).
+        // Fallback hardcoded folosit doar dacă API call eșuează.
         homeBaseOptions: [
             'București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov', 'Constanța',
             'Sibiu', 'Oradea', 'Craiova', 'Galați', 'Pitești', 'Ploiești', 'Bacău',
@@ -972,7 +1015,10 @@ function tourOptimizer() {
             const urlTab = (new URL(window.location.href)).searchParams.get('tab');
             const initialTab = (urlTab && validTabs.includes(urlTab)) ? urlTab : 'opportunities';
 
-            await this.loadOpportunities();
+            await Promise.all([
+                this.loadOpportunities(),
+                this.loadCitiesList(),
+            ]);
             this.loading = false;
 
             if (initialTab !== 'opportunities') {
@@ -1026,6 +1072,15 @@ function tourOptimizer() {
             this.opportunities = r?.data || this.opportunities;
         },
 
+        async loadCitiesList() {
+            try {
+                const r = await this.fetchAction('artist.tour.cities-list');
+                if (r?.data?.cities && Array.isArray(r.data.cities) && r.data.cities.length > 0) {
+                    this.homeBaseOptions = r.data.cities;
+                }
+            } catch (e) { /* fallback la hardcoded */ }
+        },
+
         async loadPredictions() {
             const r = await this.fetchAction('artist.tour.predictions');
             this.predictionsData = r?.data || this.predictionsData;
@@ -1051,6 +1106,8 @@ function tourOptimizer() {
                 date: c.date || null,
                 venue_id: c.venue_id ? Number(c.venue_id) : null,
                 from_start: !!c.from_start,
+                manual_capacity: c.manual_capacity != null ? Number(c.manual_capacity) : null,
+                manual_prediction: c.manual_prediction != null ? Number(c.manual_prediction) : null,
             }));
         },
 
@@ -1249,9 +1306,31 @@ function tourOptimizer() {
             this.markDirty();
         },
 
+        toggleStopFixed(idx) {
+            const stop = this.planner.route?.[idx];
+            if (!stop) return;
+            stop.fixed = !stop.fixed;
+            this._syncCitiesFromRoute();
+            this.markDirty();
+        },
+
+        updateStopManualCapacity(idx, value) {
+            const stop = this.planner.route?.[idx];
+            if (!stop) return;
+            stop.manual_capacity = value === '' ? null : Number(value);
+            this._syncCitiesFromRoute();
+            this.markDirty();
+        },
+
+        updateStopManualPrediction(idx, value) {
+            const stop = this.planner.route?.[idx];
+            if (!stop) return;
+            stop.manual_prediction = value === '' ? null : Number(value);
+            this._syncCitiesFromRoute();
+            this.markDirty();
+        },
+
         _syncCitiesFromRoute() {
-            // Sync planner.cities order/dates/venues with current route after edits.
-            // Used so that recalc/save sends the updated state.
             this.planner.cities = (this.planner.route || []).map((s, i) => ({
                 uid: this.planner.cities[i]?.uid || ('c' + (this.cityUidCounter++)),
                 name: s.city,
@@ -1259,6 +1338,8 @@ function tourOptimizer() {
                 date: s.date_iso || '',
                 venue_id: s.venue_id || null,
                 from_start: !!s.from_start,
+                manual_capacity: s.manual_capacity ?? null,
+                manual_prediction: s.manual_prediction ?? null,
             }));
         },
 
