@@ -518,7 +518,7 @@ function tourOptimizer() {
 
         planner: {
             name: 'Tour Vară 2026',
-            startDate: this.defaultStartDate(),
+            startDate: '',
             endDate: '',
             cities: [],
             maxDistance: 600,
@@ -552,7 +552,10 @@ function tourOptimizer() {
         },
 
         async init() {
-            // Default end date = start + 30 days
+            // Default planner dates: start = today + 30 days, end = start + 30 days
+            if (!this.planner.startDate) {
+                this.planner.startDate = this.defaultStartDate();
+            }
             if (!this.planner.endDate) {
                 const d = new Date(this.planner.startDate);
                 d.setDate(d.getDate() + 30);
