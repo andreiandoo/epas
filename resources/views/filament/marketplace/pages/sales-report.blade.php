@@ -1,148 +1,7 @@
 <x-filament-panels::page>
-    @php
-        $statusOptions = [
-            'paid'                => 'Plătit',
-            'confirmed'           => 'Confirmat',
-            'completed'           => 'Finalizat',
-            'failed'              => 'Eșuat',
-            'expired'             => 'Expirat',
-            'cancelled'           => 'Anulat',
-            'refunded'            => 'Rambursat',
-            'partially_refunded'  => 'Rambursat parțial',
-            'pending'             => 'În așteptare',
-        ];
-        $periodOptions = [
-            'today'      => 'Azi',
-            '7d'         => '7 zile',
-            '30d'        => '30 zile',
-            'this_month' => 'Luna curentă',
-            'last_month' => 'Luna trecută',
-            'this_year'  => 'Anul curent',
-            'custom'     => 'Personalizat',
-        ];
-    @endphp
+    {{ $this->form }}
 
-    <div class="space-y-6">
-        {{-- Filters --}}
-        <div class="rounded-xl bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-white/10 p-5 space-y-4">
-            <div>
-                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Filtre raport</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".</p>
-            </div>
-
-            {{-- Period --}}
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Perioadă</label>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($periodOptions as $key => $label)
-                        <label class="cursor-pointer">
-                            <input type="radio" wire:model.live="period" value="{{ $key }}" class="peer sr-only">
-                            <span class="inline-flex items-center px-3 py-1.5 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-white/10 bg-white dark:bg-gray-800 peer-checked:bg-primary-500 peer-checked:text-white peer-checked:ring-primary-500 transition">{{ $label }}</span>
-                        </label>
-                    @endforeach
-                </div>
-                @if($period === 'custom')
-                    <div class="grid grid-cols-2 gap-3 mt-3 max-w-md">
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">De la</label>
-                            <input type="date" wire:model.live="customFrom" class="w-full rounded-lg border-gray-300 dark:border-white/10 bg-white dark:bg-gray-800 text-sm">
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">Până la</label>
-                            <input type="date" wire:model.live="customTo" class="w-full rounded-lg border-gray-300 dark:border-white/10 bg-white dark:bg-gray-800 text-sm">
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            {{-- Date column --}}
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Bază dată</label>
-                <div class="flex gap-4 text-sm">
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="dateColumn" value="paid_at" class="text-primary-600"><span>După data plății</span></label>
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="dateColumn" value="created_at" class="text-primary-600"><span>După data creării</span></label>
-                </div>
-            </div>
-
-            {{-- Filter mode --}}
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Selectează după</label>
-                <div class="flex gap-4 text-sm mb-3">
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="filterBy" value="event" class="text-primary-600"><span>Eveniment(e)</span></label>
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="filterBy" value="organizer" class="text-primary-600"><span>Organizator</span></label>
-                </div>
-
-                @if($filterBy === 'event')
-                    <select wire:model.live="eventIds" multiple size="6" class="w-full rounded-lg border-gray-300 dark:border-white/10 bg-white dark:bg-gray-800 text-sm">
-                        @foreach($this->eventOptions as $id => $label)
-                            <option value="{{ $id }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Ține <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> apăsat pentru selecție multiplă. Maxim 500 evenimente afișate.</p>
-                @else
-                    <select wire:model.live="organizerId" class="w-full rounded-lg border-gray-300 dark:border-white/10 bg-white dark:bg-gray-800 text-sm">
-                        <option value="">— Alege organizator —</option>
-                        @foreach($this->organizerOptions as $id => $label)
-                            <option value="{{ $id }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">Toate evenimentele acestui organizator vor fi incluse.</p>
-                @endif
-            </div>
-
-            {{-- Statuses --}}
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Status comenzi</label>
-                <div class="flex flex-wrap gap-2">
-                    @foreach($statusOptions as $value => $label)
-                        <label class="cursor-pointer">
-                            <input type="checkbox" wire:model.live="statuses" value="{{ $value }}" class="peer sr-only">
-                            <span class="inline-flex items-center px-3 py-1.5 text-sm rounded-lg ring-1 ring-gray-200 dark:ring-white/10 bg-white dark:bg-gray-800 peer-checked:bg-primary-500 peer-checked:text-white peer-checked:ring-primary-500 transition">{{ $label }}</span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
-
-            {{-- View mode --}}
-            <div>
-                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2">Mod afișare</label>
-                <div class="flex gap-4 text-sm">
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="viewMode" value="compact" class="text-primary-600"><span>Compact (per tip bilet)</span></label>
-                    <label class="inline-flex items-center gap-2"><input type="radio" wire:model.live="viewMode" value="extended" class="text-primary-600"><span>Extins (per comandă)</span></label>
-                </div>
-            </div>
-
-            {{-- Actions --}}
-            <div class="flex flex-wrap items-center gap-3 pt-2 border-t border-gray-100 dark:border-white/10">
-                @php
-                    $canGenerate = !empty($statuses) && (
-                        ($filterBy === 'event' && !empty($eventIds))
-                        || ($filterBy === 'organizer' && $organizerId)
-                    );
-                @endphp
-                <button
-                    wire:click="generate"
-                    @disabled(!$canGenerate)
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                    <x-heroicon-o-play class="w-4 h-4" />
-                    Generează raport
-                </button>
-                <button
-                    wire:click="exportCsv"
-                    @disabled(!$canGenerate || (!$compactData && empty($extendedRows)))
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                    <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
-                    Export CSV
-                </button>
-                @if(!$canGenerate)
-                    <span class="text-xs text-gray-500">Selectează cel puțin un eveniment/organizator și un status.</span>
-                @endif
-            </div>
-        </div>
-
-        {{-- Summary --}}
+    <div class="mt-6 space-y-6">
         @if($summary)
             <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                 @php
@@ -162,6 +21,8 @@
                 @endforeach
             </div>
         @endif
+
+        @php $viewMode = $data['viewMode'] ?? 'compact'; @endphp
 
         {{-- Compact table --}}
         @if($viewMode === 'compact' && $compactData)

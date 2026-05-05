@@ -8,13 +8,22 @@ use App\Models\MarketplaceOrganizer;
 use App\Services\Marketplace\SalesReportService;
 use BackedEnum;
 use Carbon\Carbon;
+use Filament\Actions;
+use Filament\Forms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Pages\Page;
-use Livewire\Attributes\Url;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class SalesReport extends Page
+class SalesReport extends Page implements HasForms
 {
     use HasMarketplaceContext;
+    use InteractsWithForms;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-chart-bar';
     protected static ?string $navigationLabel = 'Raport Vânzări';
@@ -23,98 +32,191 @@ class SalesReport extends Page
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.marketplace.pages.sales-report';
 
-    /** Period preset: today, 7d, 30d, this_month, last_month, this_year, custom. */
-    #[Url]
-    public string $period = '30d';
+    /**
+     * All filter state lives in $data so the Filament form owns it. Avoids
+     * the TypeError class we saw when typed Livewire properties received
+     * stale URL params from a previous filterBy mode.
+     */
+    public ?array $data = [];
 
-    #[Url]
-    public ?string $customFrom = null;
-
-    #[Url]
-    public ?string $customTo = null;
-
-    /** Filter mode: 'event' or 'organizer'. */
-    #[Url]
-    public string $filterBy = 'event';
-
-    /** @var array<int, int> */
-    #[Url]
-    public array $eventIds = [];
-
-    #[Url]
-    public ?int $organizerId = null;
-
-    /** @var array<int, string> */
-    #[Url]
-    public array $statuses = ['paid', 'confirmed', 'completed'];
-
-    #[Url]
-    public string $viewMode = 'compact';
-
-    #[Url]
-    public string $dateColumn = 'paid_at';
-
-    /** Filled after Generate is clicked. Null = no report yet. */
+    /** Result state — populated when the user clicks "Generează raport". */
     public ?array $compactData = null;
-
-    /** Page index for extended view. */
-    public int $extendedPage = 1;
-
-    /** Extended page size. */
-    public int $extendedPerPage = 50;
-
-    public ?int $extendedTotal = null;
-
     /** @var array<int, array<string, mixed>> */
     public array $extendedRows = [];
-
+    public ?int $extendedTotal = null;
+    public int $extendedPage = 1;
+    public int $extendedPerPage = 50;
     public ?array $summary = null;
 
     public function mount(): void
     {
-        // No auto-run — wait for the user to click Generate so we don't
-        // burn N event-scope queries on every page load.
+        $this->form->fill([
+            'period'      => '30d',
+            'customFrom'  => null,
+            'customTo'    => null,
+            'filterBy'    => 'event',
+            'eventIds'    => [],
+            'organizerId' => null,
+            'statuses'    => ['paid', 'confirmed', 'completed'],
+            'viewMode'    => 'compact',
+            'dateColumn'  => 'paid_at',
+        ]);
     }
 
-    public function updatedPeriod(): void
+    public function form(Schema $schema): Schema
     {
-        if ($this->period !== 'custom') {
-            $this->customFrom = null;
-            $this->customTo = null;
-        }
-        $this->resetReport();
+        return $schema
+            ->statePath('data')
+            ->components([
+                Section::make('Filtre raport')
+                    ->description('Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".')
+                    ->columns(2)
+                    ->schema([
+                        Forms\Components\Radio::make('period')
+                            ->label('Perioadă')
+                            ->options([
+                                'today'      => 'Azi',
+                                '7d'         => '7 zile',
+                                '30d'        => '30 zile',
+                                'this_month' => 'Luna curentă',
+                                'last_month' => 'Luna trecută',
+                                'this_year'  => 'Anul curent',
+                                'custom'     => 'Personalizat',
+                            ])
+                            ->inline()
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                if ($state !== 'custom') {
+                                    $set('customFrom', null);
+                                    $set('customTo', null);
+                                }
+                                $this->resetReport();
+                            }),
+
+                        Grid::make(2)
+                            ->schema([
+                                Forms\Components\DatePicker::make('customFrom')
+                                    ->label('De la')
+                                    ->live()
+                                    ->afterStateUpdated(fn () => $this->resetReport()),
+                                Forms\Components\DatePicker::make('customTo')
+                                    ->label('Până la')
+                                    ->live()
+                                    ->afterStateUpdated(fn () => $this->resetReport()),
+                            ])
+                            ->visible(fn (Get $get) => $get('period') === 'custom')
+                            ->columnSpanFull(),
+
+                        Forms\Components\Radio::make('dateColumn')
+                            ->label('Bază dată')
+                            ->options([
+                                'paid_at'    => 'După data plății',
+                                'created_at' => 'După data creării',
+                            ])
+                            ->inline()
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+
+                        Forms\Components\Radio::make('filterBy')
+                            ->label('Selectează după')
+                            ->options([
+                                'event'     => 'Eveniment(e)',
+                                'organizer' => 'Organizator',
+                            ])
+                            ->inline()
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Set $set) {
+                                // Switching the mode wipes the other side's
+                                // state so we don't leak ids across modes
+                                // (also kills the URL TypeError class —
+                                // organizerId can't end up an array).
+                                if ($state === 'event') {
+                                    $set('organizerId', null);
+                                } else {
+                                    $set('eventIds', []);
+                                }
+                                $this->resetReport();
+                            }),
+
+                        Forms\Components\Select::make('eventIds')
+                            ->label('Evenimente')
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->options(fn () => $this->getEventOptions())
+                            ->placeholder('Caută evenimente după nume sau dată...')
+                            ->helperText('Selecție multiplă. Sortate cronologic descrescător.')
+                            ->columnSpanFull()
+                            ->visible(fn (Get $get) => $get('filterBy') === 'event')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+
+                        Forms\Components\Select::make('organizerId')
+                            ->label('Organizator')
+                            ->searchable()
+                            ->preload()
+                            ->options(fn () => $this->getOrganizerOptions())
+                            ->placeholder('Caută organizator după nume...')
+                            ->helperText('Toate evenimentele acestui organizator vor fi incluse.')
+                            ->columnSpanFull()
+                            ->visible(fn (Get $get) => $get('filterBy') === 'organizer')
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+
+                        Forms\Components\CheckboxList::make('statuses')
+                            ->label('Status comenzi')
+                            ->options([
+                                'paid'                => 'Plătit',
+                                'confirmed'           => 'Confirmat',
+                                'completed'           => 'Finalizat',
+                                'failed'              => 'Eșuat',
+                                'expired'             => 'Expirat',
+                                'cancelled'           => 'Anulat',
+                                'refunded'            => 'Rambursat',
+                                'partially_refunded'  => 'Rambursat parțial',
+                                'pending'             => 'În așteptare',
+                            ])
+                            ->columns(3)
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+
+                        Forms\Components\Radio::make('viewMode')
+                            ->label('Mod afișare')
+                            ->options([
+                                'compact'  => 'Compact (per tip bilet)',
+                                'extended' => 'Extins (per comandă)',
+                            ])
+                            ->inline()
+                            ->columnSpanFull()
+                            ->live()
+                            ->afterStateUpdated(fn () => $this->resetReport()),
+                    ]),
+            ]);
     }
 
-    public function updatedFilterBy(): void
+    protected function getHeaderActions(): array
     {
-        // Keep the dropdowns from being orphaned when switching modes —
-        // organizer mode auto-resolves event ids when generating, and
-        // vice-versa.
-        if ($this->filterBy === 'event') {
-            $this->organizerId = null;
-        } else {
-            $this->eventIds = [];
-        }
-        $this->resetReport();
+        return [
+            Actions\Action::make('generate')
+                ->label('Generează raport')
+                ->icon('heroicon-o-play')
+                ->color('primary')
+                ->action(fn () => $this->generate()),
+            Actions\Action::make('export')
+                ->label('Export CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
+                ->visible(fn () => $this->compactData !== null || !empty($this->extendedRows))
+                ->action(fn () => $this->exportCsv()),
+        ];
     }
 
-    public function updatedViewMode(): void
-    {
-        $this->resetReport();
-    }
-
-    public function updatedStatuses(): void
-    {
-        $this->resetReport();
-    }
-
-    /**
-     * Multi-select options for the Events dropdown — scoped to the current
-     * marketplace, sorted by event_date desc, capped to 500.
-     *
-     * @return array<int, string>
-     */
-    public function getEventOptionsProperty(): array
+    /** @return array<int, string> */
+    protected function getEventOptions(): array
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) return [];
@@ -133,10 +235,8 @@ class SalesReport extends Page
             ->toArray();
     }
 
-    /**
-     * @return array<int, string>
-     */
-    public function getOrganizerOptionsProperty(): array
+    /** @return array<int, string> */
+    protected function getOrganizerOptions(): array
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) return [];
@@ -155,7 +255,8 @@ class SalesReport extends Page
     protected function resolvePeriod(): array
     {
         $now = Carbon::now();
-        return match ($this->period) {
+        $period = $this->data['period'] ?? '30d';
+        return match ($period) {
             'today'      => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
             '7d'         => [$now->copy()->subDays(7)->startOfDay(), $now->copy()->endOfDay()],
             '30d'        => [$now->copy()->subDays(30)->startOfDay(), $now->copy()->endOfDay()],
@@ -163,52 +264,67 @@ class SalesReport extends Page
             'last_month' => [$now->copy()->subMonth()->startOfMonth(), $now->copy()->subMonth()->endOfMonth()],
             'this_year'  => [$now->copy()->startOfYear(), $now->copy()->endOfYear()],
             'custom'     => [
-                $this->customFrom ? Carbon::parse($this->customFrom)->startOfDay() : $now->copy()->subDays(30)->startOfDay(),
-                $this->customTo ? Carbon::parse($this->customTo)->endOfDay() : $now->copy()->endOfDay(),
+                !empty($this->data['customFrom']) ? Carbon::parse($this->data['customFrom'])->startOfDay() : $now->copy()->subDays(30)->startOfDay(),
+                !empty($this->data['customTo']) ? Carbon::parse($this->data['customTo'])->endOfDay() : $now->copy()->endOfDay(),
             ],
             default      => [$now->copy()->subDays(30)->startOfDay(), $now->copy()->endOfDay()],
         };
     }
 
-    /**
-     * Resolve the event id list from the filter mode. Organizer-mode pulls
-     * all events for that organizer scoped to the current marketplace.
-     *
-     * @return array<int, int>
-     */
+    /** @return array<int, int> */
     protected function resolveEventIds(): array
     {
         $marketplace = static::getMarketplaceClient();
         if (!$marketplace) return [];
 
-        if ($this->filterBy === 'organizer' && $this->organizerId) {
+        $filterBy = $this->data['filterBy'] ?? 'event';
+        $organizerId = $this->data['organizerId'] ?? null;
+
+        if ($filterBy === 'organizer' && $organizerId) {
             return Event::query()
                 ->where('marketplace_client_id', $marketplace->id)
-                ->where('marketplace_organizer_id', $this->organizerId)
+                ->where('marketplace_organizer_id', (int) $organizerId)
                 ->pluck('id')
                 ->all();
         }
 
-        return array_values(array_filter(array_map('intval', $this->eventIds)));
+        $eventIds = $this->data['eventIds'] ?? [];
+        if (!is_array($eventIds)) {
+            return [];
+        }
+        return array_values(array_filter(array_map('intval', $eventIds)));
     }
 
     public function generate(): void
     {
         $eventIds = $this->resolveEventIds();
-        if (empty($eventIds) || empty($this->statuses)) {
+        $statuses = $this->data['statuses'] ?? [];
+        if (!is_array($statuses)) {
+            $statuses = [];
+        }
+        if (empty($eventIds) || empty($statuses)) {
+            \Filament\Notifications\Notification::make()
+                ->title('Selecție incompletă')
+                ->body('Alege cel puțin un eveniment/organizator și un status.')
+                ->warning()
+                ->send();
             return;
         }
 
         [$from, $to] = $this->resolvePeriod();
+        $dateColumn = $this->data['dateColumn'] ?? 'paid_at';
+        $viewMode = $this->data['viewMode'] ?? 'compact';
         $service = app(SalesReportService::class);
 
-        if ($this->viewMode === 'compact') {
-            $this->compactData = $service->compact($eventIds, $from, $to, $this->statuses, $this->dateColumn);
+        if ($viewMode === 'compact') {
+            $this->compactData = $service->compact($eventIds, $from, $to, $statuses, $dateColumn);
             $this->extendedRows = [];
             $this->extendedTotal = null;
-            $this->summary = $this->compactData['totals'] + ['orders' => $this->countOrders($eventIds, $from, $to)];
+            $this->summary = $this->compactData['totals'] + [
+                'orders' => $this->countOrders($eventIds, $from, $to, $statuses, $dateColumn),
+            ];
         } else {
-            $query = $service->extendedQuery($eventIds, $from, $to, $this->statuses, $this->dateColumn);
+            $query = $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn);
             $this->extendedTotal = (clone $query)->count();
             $orders = $query
                 ->skip(($this->extendedPage - 1) * $this->extendedPerPage)
@@ -222,7 +338,7 @@ class SalesReport extends Page
             $sumCommission = (clone $query)->sum('commission_amount');
             $this->summary = [
                 'orders'     => $this->extendedTotal,
-                'qty'        => array_sum(array_column($this->extendedRows, 'tickets')), // page-only — totals on the table footer represent the rendered page
+                'qty'        => array_sum(array_column($this->extendedRows, 'tickets')),
                 'gross'      => round((float) $sumGross, 2),
                 'commission' => round((float) $sumCommission, 2),
                 'net'        => round((float) $sumGross - (float) $sumCommission, 2),
@@ -233,21 +349,21 @@ class SalesReport extends Page
     public function changeExtendedPage(int $page): void
     {
         $this->extendedPage = max(1, $page);
-        if ($this->viewMode === 'extended') {
+        if (($this->data['viewMode'] ?? 'compact') === 'extended') {
             $this->generate();
         }
     }
 
-    protected function countOrders(array $eventIds, Carbon $from, Carbon $to): int
+    protected function countOrders(array $eventIds, Carbon $from, Carbon $to, array $statuses, string $dateColumn): int
     {
         return \App\Models\Order::query()
             ->whereIn('marketplace_event_id', $eventIds)
-            ->whereIn('status', $this->statuses)
-            ->whereBetween($this->dateColumn, [$from, $to])
+            ->whereIn('status', $statuses)
+            ->whereBetween($dateColumn, [$from, $to])
             ->count();
     }
 
-    protected function resetReport(): void
+    public function resetReport(): void
     {
         $this->compactData = null;
         $this->extendedRows = [];
@@ -259,27 +375,29 @@ class SalesReport extends Page
     public function exportCsv(): StreamedResponse
     {
         $eventIds = $this->resolveEventIds();
-        if (empty($eventIds) || empty($this->statuses)) {
+        $statuses = $this->data['statuses'] ?? [];
+        if (empty($eventIds) || empty($statuses)) {
             abort(422, 'Selectează un eveniment/organizator și cel puțin un status.');
         }
         [$from, $to] = $this->resolvePeriod();
+        $dateColumn = $this->data['dateColumn'] ?? 'paid_at';
+        $viewMode = $this->data['viewMode'] ?? 'compact';
         $service = app(SalesReportService::class);
 
-        $mode = $this->viewMode;
         $filename = sprintf(
             '%s_report_%s_to_%s.csv',
-            $mode,
+            $viewMode,
             $from->format('Y-m-d'),
             $to->format('Y-m-d')
         );
 
-        return response()->streamDownload(function () use ($mode, $service, $eventIds, $from, $to) {
+        return response()->streamDownload(function () use ($viewMode, $service, $eventIds, $from, $to, $statuses, $dateColumn) {
             $out = fopen('php://output', 'w');
             // UTF-8 BOM so Excel reads diacritics correctly.
             fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            if ($mode === 'compact') {
-                $data = $service->compact($eventIds, $from, $to, $this->statuses, $this->dateColumn);
+            if ($viewMode === 'compact') {
+                $data = $service->compact($eventIds, $from, $to, $statuses, $dateColumn);
                 fputcsv($out, ['Eveniment', 'Tip bilet', 'POS', 'Qty', 'Preț unitar', 'Brut', 'Comision', 'Discount', 'Extras', 'Net', 'Mod comision'], ',', '"', '\\');
                 foreach ($data['rows'] as $r) {
                     fputcsv($out, [
@@ -314,7 +432,7 @@ class SalesReport extends Page
                     'Client', 'Email', 'Bilete', 'Brut', 'Comision', 'Refund',
                     'Net', 'Status', 'Payment', 'Sursa',
                 ], ',', '"', '\\');
-                $service->extendedQuery($eventIds, $from, $to, $this->statuses, $this->dateColumn)
+                $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn)
                     ->chunk(500, function ($orders) use ($out, $service) {
                         foreach ($orders as $o) {
                             $r = $service->extendedRow($o);
