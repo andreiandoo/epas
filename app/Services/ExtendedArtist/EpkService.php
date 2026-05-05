@@ -190,10 +190,20 @@ class EpkService
         $hiddenIds = (array) ($pastData['hidden_event_ids'] ?? []);
         $pastLimit = (int) ($pastData['limit'] ?? 12);
 
-        // Genres din taxonomy (artist_artist_genre pivot)
+        // Genres din taxonomy (artist_artist_genre pivot).
+        // ArtistGenre.name e translatable (cast 'array'), deci pluck returnează
+        // array de arrays {ro:"Rock", en:"Rock"} — trebuie extras ca string.
         $genres = [];
         try {
-            $genres = $artist->artistGenres()->pluck('name')->filter()->values()->all();
+            $genres = $artist->artistGenres()->pluck('name')
+                ->map(function ($n) {
+                    if (is_string($n)) return trim($n);
+                    if (is_array($n)) return trim($n['ro'] ?? $n['en'] ?? (array_values($n)[0] ?? ''));
+                    return '';
+                })
+                ->filter(fn ($n) => $n !== '')
+                ->values()
+                ->all();
         } catch (\Throwable $e) {
             // dacă tabel/relatie lipsesc, lasă gol
         }

@@ -367,8 +367,19 @@ class EpkController extends BaseController
                 'country' => $artist->country,
                 'founded_year' => $artist->founded_year,
                 'genres' => (function () use ($artist) {
-                    try { return $artist->artistGenres()->pluck('name')->filter()->values()->all(); }
-                    catch (\Throwable $e) { return []; }
+                    try {
+                        return $artist->artistGenres()->pluck('name')
+                            ->map(function ($n) {
+                                if (is_string($n)) return trim($n);
+                                if (is_array($n)) return trim($n['ro'] ?? $n['en'] ?? (array_values($n)[0] ?? ''));
+                                return '';
+                            })
+                            ->filter(fn ($n) => $n !== '')
+                            ->values()
+                            ->all();
+                    } catch (\Throwable $e) {
+                        return [];
+                    }
                 })(),
                 'achievements' => $artist->achievements ?? [],
             ],

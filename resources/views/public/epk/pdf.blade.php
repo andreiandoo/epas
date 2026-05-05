@@ -61,7 +61,11 @@
         $artist['country'] ?? null,
     ])->filter(fn ($x) => is_string($x) && trim($x) !== '')->map(fn ($x) => trim($x))->unique()->values()->all();
     $locationText = implode(', ', $locationParts);
-    $genres = collect($artist['genres'] ?? [])->filter()->values()->all();
+    $genres = collect($artist['genres'] ?? [])
+        ->map(fn ($g) => is_array($g) ? ($g['ro'] ?? $g['en'] ?? array_values($g)[0] ?? '') : (is_string($g) ? $g : ''))
+        ->filter(fn ($g) => is_string($g) && trim($g) !== '')
+        ->values()
+        ->all();
     $foundedYear = $artist['founded_year'] ?? null;
     if (!$foundedYear && count($achievements) > 0) {
         $foundedYear = collect($achievements)->pluck('year')->filter()->min();

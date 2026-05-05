@@ -181,7 +181,13 @@
                 $artist['country'] ?? null,
             ])->filter(fn ($x) => is_string($x) && trim($x) !== '')->map(fn ($x) => trim($x))->unique()->values()->all();
             $locationText = implode(', ', $locationParts);
-            $genres = collect($artist['genres'] ?? [])->filter()->values()->all();
+            // Defensive: dacă genres ajung încă ca arrays translatable (regresie),
+            // extragem string-ul sau le filtrăm.
+            $genres = collect($artist['genres'] ?? [])
+                ->map(fn ($g) => is_array($g) ? ($g['ro'] ?? $g['en'] ?? array_values($g)[0] ?? '') : (is_string($g) ? $g : ''))
+                ->filter(fn ($g) => is_string($g) && trim($g) !== '')
+                ->values()
+                ->all();
             // "Activ din" — preferă founded_year, fallback la cel mai vechi achievement
             $foundedYear = $artist['founded_year'] ?? null;
             if (!$foundedYear && count($achievements) > 0) {
