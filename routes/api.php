@@ -2488,6 +2488,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Artist\ProfileController as Artis
 use App\Http\Controllers\Api\MarketplaceClient\Artist\AccountController as ArtistAccountController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\ExtendedArtistController as ArtistExtendedArtistController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\EpkController as ArtistEpkController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\FanCrmController as ArtistFanCrmController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2591,6 +2592,40 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             Route::get('/variants/{id}/pdf', [ArtistEpkController::class, 'pdf'])
                 ->whereNumber('id')
                 ->name('api.marketplace-client.artist.epk.variant.pdf');
+        });
+
+        // Fan CRM (Modulul 1 din Extended Artist) — gated by extended.artist
+        Route::middleware('extended.artist')->prefix('fan-crm')->group(function () {
+            Route::get('/overview', [ArtistFanCrmController::class, 'overview'])
+                ->name('api.marketplace-client.artist.fan-crm.overview');
+            Route::get('/map', [ArtistFanCrmController::class, 'mapData'])
+                ->name('api.marketplace-client.artist.fan-crm.map');
+            Route::get('/segments', [ArtistFanCrmController::class, 'segments'])
+                ->name('api.marketplace-client.artist.fan-crm.segments');
+            Route::post('/segments', [ArtistFanCrmController::class, 'createSegment'])
+                ->name('api.marketplace-client.artist.fan-crm.segment.create');
+            Route::patch('/segments/{id}', [ArtistFanCrmController::class, 'updateSegment'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.fan-crm.segment.update');
+            Route::delete('/segments/{id}', [ArtistFanCrmController::class, 'deleteSegment'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.fan-crm.segment.delete');
+            Route::get('/segments/{id}/preview', [ArtistFanCrmController::class, 'previewSegment'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.fan-crm.segment.preview');
+            Route::get('/fans', [ArtistFanCrmController::class, 'fans'])
+                ->name('api.marketplace-client.artist.fan-crm.fans');
+            Route::get('/fans/export', [ArtistFanCrmController::class, 'exportFans'])
+                ->middleware('throttle:5,1')
+                ->name('api.marketplace-client.artist.fan-crm.fans.export');
+            Route::get('/cohort', [ArtistFanCrmController::class, 'cohort'])
+                ->name('api.marketplace-client.artist.fan-crm.cohort');
+            Route::get('/demographics', [ArtistFanCrmController::class, 'demographics'])
+                ->name('api.marketplace-client.artist.fan-crm.demographics');
+            Route::get('/compare', [ArtistFanCrmController::class, 'compare'])
+                ->name('api.marketplace-client.artist.fan-crm.compare');
+            Route::get('/vip', [ArtistFanCrmController::class, 'vip'])
+                ->name('api.marketplace-client.artist.fan-crm.vip');
         });
     });
 });
