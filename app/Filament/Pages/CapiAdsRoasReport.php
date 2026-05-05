@@ -63,10 +63,30 @@ class CapiAdsRoasReport extends Page
 
     protected function loadFilters(): void
     {
-        $this->marketplaces = MarketplaceClient::orderBy('name')->get(['id', 'name'])
-            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])->all();
+        // Only list marketplaces that have at least one organizer with an
+        // active CAPI connection — irrelevant entries shouldn't appear here.
+        $this->marketplaces = MarketplaceClient::query()
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('facebook_capi_connections')
+                    ->whereColumn('facebook_capi_connections.marketplace_client_id', 'marketplace_clients.id')
+                    ->where('facebook_capi_connections.status', 'active');
+            })
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($m) => ['id' => $m->id, 'name' => $m->name])
+            ->all();
 
-        $orgs = MarketplaceOrganizer::orderBy('name');
+        // Organizers limited to those with active CAPI (and matching the
+        // selected marketplace, when one is set).
+        $orgs = MarketplaceOrganizer::query()
+            ->whereExists(function ($q) {
+                $q->select(DB::raw(1))
+                    ->from('facebook_capi_connections')
+                    ->whereColumn('facebook_capi_connections.marketplace_organizer_id', 'marketplace_organizers.id')
+                    ->where('facebook_capi_connections.status', 'active');
+            })
+            ->orderBy('name');
         if ($this->marketplaceClientId) {
             $orgs->where('marketplace_client_id', $this->marketplaceClientId);
         }
