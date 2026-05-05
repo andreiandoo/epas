@@ -240,16 +240,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">📍</span> Plecare turneu
                                                 <span class="to-tip" data-tip="Locația de bază (home base) — orașul de unde pleacă echipa la primul concert și unde se întoarce la final. Folosit pentru calculul combustibilului total dus-întors.">ⓘ</span>
                                             </p>
-                                            <input type="text" list="quickHomeBase" x-model="planner.config.start_location" class="to-input text-sm" placeholder="ex: București">
-                                            <datalist id="quickHomeBase">
-                                                <option value="București">
-                                                <option value="Cluj-Napoca">
-                                                <option value="Timișoara">
-                                                <option value="Iași">
-                                                <option value="Brașov">
-                                                <option value="Constanța">
-                                                <option value="Sibiu">
-                                            </datalist>
+                                            <select x-model="planner.config.start_location" @change="markDirty()" class="to-input text-sm">
+                                                <template x-for="city in homeBaseOptions" :key="city">
+                                                    <option :value="city" x-text="city"></option>
+                                                </template>
+                                            </select>
                                         </div>
 
                                         <!-- 🚐 Vehicule -->
@@ -574,18 +569,13 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </div>
                                                 </div>
 
-                                                <!-- Stay22 expand -->
+                                                <!-- Cazare embed -->
                                                 <div class="border-t border-border pt-3" x-data="{ stayOpen: false }">
                                                     <button @click="stayOpen = !stayOpen; $nextTick(() => stayOpen && loadStay22(idx))" class="text-xs text-primary hover:underline flex items-center gap-1">
                                                         🛏️ <span x-text="stayOpen ? 'Ascunde cazări' : 'Vezi cazări în zonă'"></span>
-                                                        <span class="text-[10px] text-muted">via Stay22</span>
                                                     </button>
-                                                    <p class="text-[10px] text-muted mt-1" x-show="!stayOpen">Recomandări hoteluri Stay22 lângă <span x-text="stop.venue_name || stop.city"></span>, filtrate cu setările tale (<span x-text="planner.config.people_count"></span> oameni · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/n).</p>
+                                                    <p class="text-[10px] text-muted mt-1" x-show="!stayOpen">Recomandări lângă <span x-text="stop.venue_name || stop.city"></span> filtrate cu setările tale (<span x-text="planner.config.people_count"></span> persoane · <span x-text="totalRoomsCount()"></span> camere · max <span x-text="formatNumber(maxRoomPrice())"></span> RON/noapte).</p>
                                                     <div x-show="stayOpen" x-transition class="mt-3">
-                                                        <div class="flex items-center justify-between mb-2">
-                                                            <p class="text-[11px] text-muted">Powered by <strong>Stay22</strong> · compară Booking, Hotels.com și alți furnizori</p>
-                                                            <a :href="stay22Url(stop).replace('/embed/gm', '/h')" target="_blank" rel="noopener" class="text-[11px] text-primary hover:underline">Deschide în tab nou →</a>
-                                                        </div>
                                                         <iframe :id="'stay22-frame-' + idx" :src="stay22Url(stop)" class="to-stay22-iframe" loading="lazy" referrerpolicy="origin"></iframe>
                                                         <p class="text-[10px] text-muted mt-2">
                                                             🛏️ <strong x-text="totalRoomsCount()"></strong> camere &middot;
@@ -808,6 +798,12 @@ function tourOptimizer() {
         cityInput: '',
         predictionFilter: 'all',
         quickCities: ['București', 'Cluj-Napoca', 'Iași', 'Brașov', 'Timișoara', 'Constanța', 'Sibiu'],
+        // Home base — exact valorile recunoscute de cities_geo. Subset top RO + CEE.
+        homeBaseOptions: [
+            'București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov', 'Constanța',
+            'Sibiu', 'Oradea', 'Craiova', 'Galați', 'Pitești', 'Ploiești', 'Bacău',
+            'Arad', 'Suceava', 'Baia Mare', 'Târgu Mureș',
+        ],
         opportunityMap: null,
         plannerMap: null,
         plannerLayer: null,
@@ -922,7 +918,7 @@ function tourOptimizer() {
             const checkout = co.toISOString().slice(0, 10);
             const address = encodeURIComponent((stop.venue_name || stop.city) + ', ' + stop.city);
             const maxprice = this.maxRoomPrice();
-            const guests = Math.max(1, this.planner.config.people_count | 0);
+            const adults = Math.max(1, this.planner.config.people_count | 0);
             const rooms = Math.max(1, this.totalRoomsCount());
             const params = [
                 'aid=' + aff,
@@ -931,7 +927,7 @@ function tourOptimizer() {
                 'address=' + address,
                 'checkin=' + checkin,
                 'checkout=' + checkout,
-                'guests=' + guests,
+                'adults=' + adults,
                 'rooms=' + rooms,
                 'maxprice=' + maxprice,
                 'currency=RON',
@@ -1054,6 +1050,7 @@ function tourOptimizer() {
                 fixed: !!c.fixed,
                 date: c.date || null,
                 venue_id: c.venue_id ? Number(c.venue_id) : null,
+                from_start: !!c.from_start,
             }));
         },
 

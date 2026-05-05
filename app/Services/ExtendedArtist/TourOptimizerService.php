@@ -149,6 +149,9 @@ class TourOptimizerService
      */
     public function optimizeRoute(Artist $artist, array $citiesInput, array $constraints, ?Carbon $startDate = null): array
     {
+        // Forțăm locale-ul ro pentru toate translatedFormat() din service (ziua, luna)
+        Carbon::setLocale('ro');
+
         $citiesGeo = config('cities_geo', []);
         $cityStats = $this->cityStatsLookup($artist);
         $config = $this->normalizeTourConfig($constraints['tour_config'] ?? []);
