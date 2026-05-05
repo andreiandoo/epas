@@ -451,23 +451,27 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                 <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
 
-                                <div class="bg-white border border-border rounded-2xl p-5">
-                                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                                        <h3 class="font-bold text-secondary">Itinerar optim</h3>
-                                        <div class="flex gap-2 flex-wrap items-center">
-                                            <span x-show="planner.dirty" class="text-xs text-warning font-semibold">⚠️ modificări nesalvate</span>
-                                            <button @click="recalcRoute()" :disabled="tabLoading"
-                                                :class="planner.dirty ? 'to-pulse text-white' : 'to-btn-secondary'"
-                                                class="to-btn to-btn-sm">🔄 Recalculează</button>
-                                            <button @click="saveScenario()" :disabled="planner.saving || planner.dirty"
-                                                :title="planner.dirty ? 'Apasă „Recalculează" întâi ca să salvezi cu noile valori' : ''"
-                                                class="to-btn to-btn-primary to-btn-sm">
-                                                <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
-                                            </button>
+                                <div class="bg-white border border-border rounded-2xl">
+                                    <!-- Sticky toolbar — rămâne vizibilă cât scroll-uiești prin orașe -->
+                                    <div class="sticky top-2 z-30 bg-white border-b border-border rounded-t-2xl px-5 py-3 shadow-sm">
+                                        <div class="flex items-center justify-between flex-wrap gap-2">
+                                            <h3 class="font-bold text-secondary">Itinerar optim</h3>
+                                            <div class="flex gap-2 flex-wrap items-center">
+                                                <span x-show="planner.dirty" class="text-xs text-warning font-semibold">⚠️ modificări nesalvate</span>
+                                                <button @click="recalcRoute()" :disabled="tabLoading"
+                                                    :class="planner.dirty ? 'to-pulse text-white' : 'to-btn-secondary'"
+                                                    class="to-btn to-btn-sm">🔄 Recalculează</button>
+                                                <button @click="saveScenario()" :disabled="planner.saving || planner.dirty"
+                                                    :title="planner.dirty ? 'Apasă „Recalculează" întâi ca să salvezi cu noile valori' : ''"
+                                                    class="to-btn to-btn-primary to-btn-sm">
+                                                    <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <p class="text-[11px] text-muted mb-3">Trage cardurile pentru a reordona. Editează data, venue-ul sau bifează „pleacă din <span x-text="planner.config.start_location"></span>" apoi click <strong>🔄 Recalculează</strong>.</p>
+                                    <div class="p-5">
+                                        <p class="text-[11px] text-muted mb-3">Trage cardurile pentru a reordona. Editează data, venue-ul sau bifează „pleacă din <span x-text="planner.config.start_location"></span>" apoi click <strong>🔄 Recalculează</strong>.</p>
 
                                     <div x-ref="routeList" class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="stop.city + '-' + idx">
@@ -670,6 +674,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         </template>
                                     </div>
 
+                                    </div><!-- end p-5 -->
                                 </div>
                             </div>
                         </div>
