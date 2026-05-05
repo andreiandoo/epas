@@ -260,7 +260,11 @@ class UpdateAmbiletOrganizerContractsCommand extends Command
         }
         $datePart = $m[1];
 
-        if (!preg_match('/^AMB\d+$/', $series)) {
+        // Accept AMB + any reasonable suffix: digits, dots, dashes, parens,
+        // trailing letters denoting addendum/version (AMB34.2, AMB03-1,
+        // AMB317AB4, AMB481(56), AMB58.). The literal "AMB" alone stays
+        // rejected because the + quantifier requires ≥1 char after AMB.
+        if (!preg_match('/^AMB[A-Za-z0-9._\-()]+$/', $series)) {
             return null;
         }
         $date = $this->parseDate($datePart);
