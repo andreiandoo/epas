@@ -478,56 +478,69 @@ class MarketplaceTrackingController extends Controller
     protected function updateSession(string $sessionId, string $visitorId, Request $request, CoreCustomerEvent $event): void
     {
         $t = fn (?string $v, int $max = 255) => $v ? mb_substr($v, 0, $max) : $v;
-        $session = CoreSession::where('session_id', $sessionId)->first();
+        $ua = $this->parseUserAgent($request->userAgent() ?? '');
 
-        if (!$session) {
-            CoreSession::create([
-                'session_id' => $sessionId,
-                'visitor_id' => $visitorId,
-                'marketplace_event_id' => $request->input('marketplace_event_id'),
-                'marketplace_client_id' => $request->input('marketplace_client_id'),
-                'started_at' => now(),
-                'pageviews' => $event->event_type === CoreCustomerEvent::TYPE_PAGE_VIEW ? 1 : 0,
-                'events' => 1,
-                'landing_page' => $t($event->page_url, 2048),
-                'landing_page_type' => $event->page_type,
-                'source' => $t($this->determineSource($request)),
-                'medium' => $t($request->input('utm_medium')),
-                'campaign' => $t($request->input('utm_campaign')),
-                'referrer' => $t($request->input('referrer'), 2048),
-                'utm_source' => $t($request->input('utm_source')),
-                'utm_medium' => $t($request->input('utm_medium')),
-                'utm_campaign' => $t($request->input('utm_campaign')),
-                'gclid' => $t($request->input('gclid')),
-                'fbclid' => $t($request->input('fbclid')),
-                'ttclid' => $t($request->input('ttclid')),
-                'device_type' => $this->parseUserAgent($request->userAgent() ?? '')['device_type'],
-                'browser' => $this->parseUserAgent($request->userAgent() ?? '')['browser'],
-                'os' => $this->parseUserAgent($request->userAgent() ?? '')['os'],
-                'country_code' => $event->country_code,
-                'city' => $event->city,
-            ]);
-        } else {
-            $session->increment('events');
-            if ($event->event_type === CoreCustomerEvent::TYPE_PAGE_VIEW) {
-                $session->increment('pageviews');
-            }
+        // The previous SELECT-then-INSERT pattern raced when the same browser
+        // fired two events with the same session_id within the same tick (e.g.
+        // two open tabs, or a Cloudflare Worker retry). Both passed the check
+        // and the second INSERT hit core_sessions_session_id_unique. Use
+        // firstOrCreate, then retry the lookup if a parallel request beat us
+        // to it — by the time the catch runs, the row is guaranteed to exist.
+        try {
+            $session = CoreSession::firstOrCreate(
+                ['session_id' => $sessionId],
+                [
+                    'visitor_id' => $visitorId,
+                    'marketplace_event_id' => $request->input('marketplace_event_id'),
+                    'marketplace_client_id' => $request->input('marketplace_client_id'),
+                    'started_at' => now(),
+                    'pageviews' => $event->event_type === CoreCustomerEvent::TYPE_PAGE_VIEW ? 1 : 0,
+                    'events' => 1,
+                    'landing_page' => $t($event->page_url, 2048),
+                    'landing_page_type' => $event->page_type,
+                    'source' => $t($this->determineSource($request)),
+                    'medium' => $t($request->input('utm_medium')),
+                    'campaign' => $t($request->input('utm_campaign')),
+                    'referrer' => $t($request->input('referrer'), 2048),
+                    'utm_source' => $t($request->input('utm_source')),
+                    'utm_medium' => $t($request->input('utm_medium')),
+                    'utm_campaign' => $t($request->input('utm_campaign')),
+                    'gclid' => $t($request->input('gclid')),
+                    'fbclid' => $t($request->input('fbclid')),
+                    'ttclid' => $t($request->input('ttclid')),
+                    'device_type' => $ua['device_type'],
+                    'browser' => $ua['browser'],
+                    'os' => $ua['os'],
+                    'country_code' => $event->country_code,
+                    'city' => $event->city,
+                ]
+            );
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            $session = CoreSession::where('session_id', $sessionId)->firstOrFail();
+        }
+
+        if ($session->wasRecentlyCreated) {
+            return;
+        }
+
+        $session->increment('events');
+        if ($event->event_type === CoreCustomerEvent::TYPE_PAGE_VIEW) {
+            $session->increment('pageviews');
+        }
+        $session->update([
+            'ended_at' => now(),
+            'exit_page' => $event->page_url,
+            'exit_page_type' => $event->page_type,
+            'duration_seconds' => (int) $session->started_at->diffInSeconds(now()),
+            'is_bounce' => $session->pageviews <= 1,
+        ]);
+
+        if ($event->event_type === CoreCustomerEvent::TYPE_PURCHASE) {
             $session->update([
-                'ended_at' => now(),
-                'exit_page' => $event->page_url,
-                'exit_page_type' => $event->page_type,
-                'duration_seconds' => (int) $session->started_at->diffInSeconds(now()),
-                'is_bounce' => $session->pageviews <= 1,
+                'converted' => true,
+                'conversion_value' => $event->event_value,
+                'conversion_type' => 'purchase',
             ]);
-
-            // Track conversions
-            if ($event->event_type === CoreCustomerEvent::TYPE_PURCHASE) {
-                $session->update([
-                    'converted' => true,
-                    'conversion_value' => $event->event_value,
-                    'conversion_type' => 'purchase',
-                ]);
-            }
         }
     }
 
