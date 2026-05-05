@@ -1837,12 +1837,29 @@ class OrderResource extends Resource
             default => 'gray',
         };
 
-        // Don't add current status as event if refunded (refund events cover it)
+        // Don't add current status as event if refunded (refund events cover it).
+        // Use the most accurate timestamp per status: paid_at for paid states,
+        // expires_at for expired (the *real* expiry moment, not when the cron
+        // got around to flipping the status), updated_at as last resort.
         if (!in_array($record->status, ['refunded', 'partially_refunded'])) {
+            $statusTime = $record->updated_at;
+            $statusSubtext = null;
+            if (in_array($record->status, ['paid', 'confirmed', 'completed']) && $record->paid_at) {
+                $statusTime = $record->paid_at;
+            } elseif ($record->status === 'expired' && $record->expires_at) {
+                $statusTime = $record->expires_at;
+                // Cron orders:expire-pending runs everyTwoMinutes, so the DB
+                // status flip lags the real expiry by 0–2 minutes. Surface the
+                // gap so it doesn't look like a TTL bug.
+                if ($record->updated_at && $record->updated_at->gt($record->expires_at)) {
+                    $statusSubtext = 'verificat la ' . $record->updated_at->format('H:i');
+                }
+            }
             $events->push([
                 'status' => $statusColor,
                 'text' => $statusText,
-                'time' => $record->updated_at,
+                'time' => $statusTime,
+                'subtext' => $statusSubtext,
             ]);
         }
 
@@ -1856,13 +1873,66 @@ class OrderResource extends Resource
             ]);
         }
 
-        // Email sent (assume sent after creation)
-        if ($record->meta['confirmation_sent'] ?? true) {
+        // Payment failure — surface the error reason so admins can see *why*
+        // 3DS / card-declined / insufficient-funds happened, not just "failed".
+        if ($record->status === 'failed' || $record->payment_status === 'failed') {
+            $reason = trim((string) ($record->payment_error ?? ''));
+            $events->push([
+                'status' => 'danger',
+                'text' => 'Plată eșuată' . ($reason !== '' ? ' — ' . $reason : ''),
+                'time' => $record->updated_at,
+            ]);
+        }
+
+        // Order confirmation email — replace the previous "assume sent" flag
+        // with a real lookup in marketplace_email_logs (template_slug =
+        // ticket_purchase, sent_at as authoritative timestamp). Subject/body
+        // contain the order_number; same trick we use for the refund email
+        // below.
+        $confirmationEmail = \App\Models\MarketplaceEmailLog::where('marketplace_client_id', $record->marketplace_client_id)
+            ->where('template_slug', 'ticket_purchase')
+            ->where(function ($q) use ($record) {
+                $needle = '%' . ($record->order_number ?? $record->id) . '%';
+                $q->where('subject', 'like', $needle)
+                  ->orWhere('body_html', 'like', $needle);
+            })
+            ->orderByDesc('id')
+            ->first();
+
+        if ($confirmationEmail) {
             $events->push([
                 'status' => 'info',
                 'text' => 'Email confirmare trimis',
-                'time' => $record->created_at->addMinutes(1),
+                'time' => $confirmationEmail->sent_at ?? $confirmationEmail->created_at,
             ]);
+            if ($confirmationEmail->delivered_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => 'Email confirmare livrat',
+                    'time' => $confirmationEmail->delivered_at,
+                ]);
+            }
+            if ($confirmationEmail->opened_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => 'Email confirmare deschis de client',
+                    'time' => $confirmationEmail->opened_at,
+                ]);
+            }
+            if ($confirmationEmail->clicked_at) {
+                $events->push([
+                    'status' => 'success',
+                    'text' => 'Client a dat click în emailul de confirmare',
+                    'time' => $confirmationEmail->clicked_at,
+                ]);
+            }
+            if ($confirmationEmail->bounced_at) {
+                $events->push([
+                    'status' => 'danger',
+                    'text' => 'Email confirmare bounce',
+                    'time' => $confirmationEmail->bounced_at,
+                ]);
+            }
         }
 
         // Refund events
@@ -1968,11 +2038,15 @@ class OrderResource extends Resource
             $isLast = $index === $events->count() - 1;
             $paddingBottom = $isLast ? '0' : '16px';
 
+            $subtext = !empty($event['subtext'])
+                ? "<div style='font-size: 10px; color: #64748B; margin-top: 1px; font-style: italic;'>" . e($event['subtext']) . "</div>"
+                : '';
             $html .= "
                 <div style='position: relative; padding-bottom: {$paddingBottom};'>
                     <div style='position: absolute; left: -24px; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: {$dotColor}; border: 3px solid #1E293B;'></div>
                     <div style='font-size: 13px; color: #E2E8F0;'>{$event['text']}</div>
                     <div style='font-size: 11px; color: #64748B; margin-top: 2px;'>{$time}</div>
+                    {$subtext}
                 </div>
             ";
         }
