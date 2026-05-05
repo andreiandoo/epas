@@ -2489,6 +2489,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Artist\AccountController as Artis
 use App\Http\Controllers\Api\MarketplaceClient\Artist\ExtendedArtistController as ArtistExtendedArtistController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\EpkController as ArtistEpkController;
 use App\Http\Controllers\Api\MarketplaceClient\Artist\FanCrmController as ArtistFanCrmController;
+use App\Http\Controllers\Api\MarketplaceClient\Artist\TourOptimizerController as ArtistTourController;
 
 Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public — no artist auth required
@@ -2626,6 +2627,29 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
                 ->name('api.marketplace-client.artist.fan-crm.compare');
             Route::get('/vip', [ArtistFanCrmController::class, 'vip'])
                 ->name('api.marketplace-client.artist.fan-crm.vip');
+        });
+
+        // Tour Optimizer (Modulul 3 din Extended Artist)
+        Route::middleware('extended.artist')->prefix('tour')->group(function () {
+            Route::get('/opportunities', [ArtistTourController::class, 'opportunities'])
+                ->name('api.marketplace-client.artist.tour.opportunities');
+            Route::get('/predictions', [ArtistTourController::class, 'predictions'])
+                ->name('api.marketplace-client.artist.tour.predictions');
+            Route::post('/optimize', [ArtistTourController::class, 'optimize'])
+                ->middleware('throttle:20,1')
+                ->name('api.marketplace-client.artist.tour.optimize');
+            Route::get('/scenarios', [ArtistTourController::class, 'listScenarios'])
+                ->name('api.marketplace-client.artist.tour.scenarios');
+            Route::post('/scenarios', [ArtistTourController::class, 'saveScenario'])
+                ->name('api.marketplace-client.artist.tour.scenario.save');
+            Route::patch('/scenarios/{id}', [ArtistTourController::class, 'updateScenario'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.tour.scenario.update');
+            Route::delete('/scenarios/{id}', [ArtistTourController::class, 'deleteScenario'])
+                ->whereNumber('id')
+                ->name('api.marketplace-client.artist.tour.scenario.delete');
+            Route::get('/scenarios/compare', [ArtistTourController::class, 'compareScenarios'])
+                ->name('api.marketplace-client.artist.tour.scenarios.compare');
         });
     });
 });

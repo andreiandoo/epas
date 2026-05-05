@@ -1,6 +1,10 @@
 <?php
 /**
- * Extended Artist — Tour Optimizer (Modulul 4, stub)
+ * Extended Artist — Tour Optimizer (Modulul 3)
+ *
+ * 4 tab-uri: Hartă oportunități, Tour Planner, Predicții, Scenarii salvate.
+ * State: Alpine.js. Charts: Chart.js (animation: false). Map: Leaflet.
+ * API: /api/proxy.php?action=artist.tour.*
  */
 require_once dirname(__DIR__, 3) . '/includes/config.php';
 
@@ -10,26 +14,879 @@ $cssBundle = 'account';
 require_once dirname(__DIR__, 3) . '/includes/head.php';
 ?>
 
+<style>
+    .to-btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.875rem; transition: all 0.15s; cursor: pointer; border: none; }
+    .to-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .to-btn-primary { background: #A51C30; color: white; }
+    .to-btn-primary:hover:not(:disabled) { background: #8B1728; }
+    .to-btn-secondary { background: white; color: #1E293B; border: 1px solid #E2E8F0; }
+    .to-btn-secondary:hover:not(:disabled) { background: #F8FAFC; }
+    .to-btn-sm { padding: 0.4rem 0.875rem; font-size: 0.8125rem; }
+    .to-input { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.875rem; background: white; }
+    .to-input:focus { outline: none; border-color: #A51C30; box-shadow: 0 0 0 3px rgba(165,28,48,0.1); }
+    .to-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+    .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
+    #opportunityMap, #plannerMap { width: 100%; border-radius: 1rem; z-index: 1; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
 
-<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
+<main class="lg:ml-64 pt-16 lg:pt-0 min-h-screen" x-data="tourOptimizer()" x-init="init()" x-cloak>
     <div class="p-4 lg:p-8">
-        <header class="mb-8">
-            <h1 class="text-2xl font-bold text-secondary lg:text-3xl">Tour Optimizer</h1>
-            <p class="mt-1 text-muted">Planifica turnee strategic, pe baza datelor reale despre fanii tai si performanta evenimentelor anterioare.</p>
-        </header>
 
-        <div class="mx-auto max-w-3xl">
-            <div class="rounded-2xl border-2 border-dashed border-border bg-white p-10 text-center">
-                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-500/10">
-                    <svg class="h-8 w-8 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <!-- Page Header -->
+        <div class="mb-6">
+            <div class="flex items-center gap-2 mb-2">
+                <span class="pro-badge">PRO</span>
+                <span class="text-xs text-muted uppercase tracking-wider font-semibold">Extended Artist · Tour Optimizer</span>
+            </div>
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-secondary">Tour Optimizer</h1>
+                    <p class="text-muted mt-1">Planifică turnee strategice pe baza datelor reale despre fanii tăi.</p>
                 </div>
-                <h2 class="mb-2 text-xl font-bold text-secondary">In curand</h2>
-                <p class="mx-auto max-w-md text-sm text-muted">Modulul Tour Optimizer — heatmap densitate fani, recomandari orase, predictii bilete in 3 scenarii de venue, route optimization (TSP), comparator scenarii what-if, export PDF pentru pitch — e in dezvoltare.</p>
+                <div class="flex items-center gap-2">
+                    <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Tour nou</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI strip -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white border border-border rounded-2xl p-5">
+                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Orașe oportunitate</p>
+                <p class="text-2xl font-bold text-secondary" x-text="opportunities.kpis?.opportunity_cities ?? 0"></p>
+                <p class="text-xs text-success mt-1">cu fani neexploatați</p>
+            </div>
+            <div class="bg-white border border-border rounded-2xl p-5">
+                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Fani „dormiți"</p>
+                <p class="text-2xl font-bold text-secondary" x-text="formatNumber(opportunities.kpis?.dormant_fans ?? 0)"></p>
+                <p class="text-xs text-warning mt-1">nu au mai venit &gt;12 luni</p>
+            </div>
+            <div class="bg-white border border-border rounded-2xl p-5">
+                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Bilete predictibile</p>
+                <p class="text-2xl font-bold text-secondary" x-text="'~' + formatNumber(opportunities.kpis?.predicted_tickets ?? 0)"></p>
+                <p class="text-xs text-muted mt-1">tour 5 orașe optimizat</p>
+            </div>
+            <div class="bg-white border border-border rounded-2xl p-5">
+                <p class="text-xs text-muted uppercase tracking-wider font-semibold mb-2">Scenarii salvate</p>
+                <p class="text-2xl font-bold text-secondary" x-text="opportunities.kpis?.saved_scenarios ?? 0"></p>
+                <p class="text-xs text-muted mt-1">draft + active</p>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
+            <div class="inline-flex items-center gap-3">
+                <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                <span>Se încarcă datele...</span>
+            </div>
+        </div>
+
+        <div x-show="!loading" class="relative">
+            <!-- Per-tab loader overlay -->
+            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-2xl">
+                <div class="inline-flex items-center gap-3 bg-white shadow-lg border border-border rounded-xl px-5 py-3">
+                    <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                    <span class="text-sm text-secondary font-medium">Se încarcă...</span>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div class="border-b border-border overflow-x-auto">
+                    <div class="flex gap-1 p-2 min-w-max">
+                        <template x-for="t in tabs" :key="t.id">
+                            <button @click="setTab(t.id)"
+                                    :class="tab === t.id ? 'bg-primary text-white' : 'text-muted hover:bg-surface hover:text-secondary'"
+                                    class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors">
+                                <span x-text="t.label"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: OPPORTUNITIES ============ -->
+                <div x-show="tab === 'opportunities'" class="p-6">
+                    <div class="grid lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2">
+                            <h2 class="text-lg font-bold text-secondary mb-1">Hartă oportunități</h2>
+                            <p class="text-sm text-muted mb-4">Densitate fani vs concerte. Verde = activ, galben = revenire necesară, roșu = dormit, burgund = neexplorat.</p>
+                            <div id="opportunityMap" style="height: 480px;"></div>
+                            <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-success"></span><span class="text-muted">Activ recent</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-warning"></span><span class="text-muted">Revenire necesară</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-error"></span><span class="text-muted">Dormit</span></div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-primary"></span><span class="text-muted">Neexplorat</span></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="font-bold text-secondary mb-1">Top recomandări</h3>
+                            <p class="text-xs text-muted mb-4">Orașe cu cel mai mare potențial nemonetizat</p>
+
+                            <div class="space-y-3">
+                                <template x-for="(rec, idx) in opportunities.recommendations || []" :key="rec.city">
+                                    <div class="border border-border rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-6 h-6 rounded-md bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
+                                                <h4 class="font-bold text-secondary" x-text="rec.city"></h4>
+                                            </div>
+                                            <span class="to-badge" :class="statusBadgeClass(rec.status)" x-text="rec.status_label"></span>
+                                        </div>
+                                        <p class="text-xs text-muted mb-3" x-text="rec.reason"></p>
+                                        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+                                            <div class="bg-surface rounded-lg p-2">
+                                                <p class="text-muted">Fani locali</p>
+                                                <p class="font-bold text-secondary" x-text="formatNumber(rec.fans)"></p>
+                                            </div>
+                                            <div class="bg-surface rounded-lg p-2">
+                                                <p class="text-muted">Predicție</p>
+                                                <p class="font-bold text-secondary" x-text="rec.prediction"></p>
+                                            </div>
+                                        </div>
+                                        <button @click="addCityToPlanner(rec.city)" class="to-btn to-btn-secondary to-btn-sm w-full">+ Adaugă în planner</button>
+                                    </div>
+                                </template>
+                                <p x-show="!(opportunities.recommendations || []).length" class="text-sm text-muted">Date insuficiente — revino după 3+ concerte.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 grid lg:grid-cols-2 gap-6" x-show="(opportunities.dormant_alerts || []).length">
+                        <template x-for="alert in opportunities.dormant_alerts || []" :key="alert.city">
+                            <div class="border-2 border-warning/30 bg-warning/5 rounded-2xl p-5">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 bg-warning/20 rounded-xl flex items-center justify-center flex-shrink-0">⚠️</div>
+                                    <div class="flex-1">
+                                        <p class="font-bold text-secondary mb-1" x-text="'⚠️ ' + alert.message"></p>
+                                        <p class="text-sm text-muted mb-3">Risc churn ridicat. O dată pe an ar putea recupera 60-70% din audiență.</p>
+                                        <button @click="addCityToPlanner(alert.city); setTab('planner')" class="to-btn to-btn-primary to-btn-sm">Planifică <span x-text="alert.city"></span></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: PLANNER ============ -->
+                <div x-show="tab === 'planner'" class="p-6">
+                    <div class="grid lg:grid-cols-12 gap-6">
+                        <div class="lg:col-span-4">
+                            <div class="space-y-5 sticky top-6">
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Nume turneu</label>
+                                    <input type="text" x-model="planner.name" class="to-input mb-3" placeholder="Tour Vară 2026">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-2">Perioadă</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="date" x-model="planner.startDate" class="to-input text-sm">
+                                        <input type="date" x-model="planner.endDate" class="to-input text-sm">
+                                    </div>
+                                </div>
+
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <label class="text-xs uppercase tracking-wider font-bold text-muted">Orașe în turneu</label>
+                                        <span class="text-xs text-muted" x-text="planner.cities.length + ' selectate'"></span>
+                                    </div>
+
+                                    <div class="space-y-2 mb-3">
+                                        <template x-for="(city, idx) in planner.cities" :key="city.name">
+                                            <div class="flex items-center gap-2 p-2 bg-surface rounded-lg">
+                                                <span class="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
+                                                <span class="flex-1 text-sm font-medium text-secondary" x-text="city.name"></span>
+                                                <button @click="city.fixed = !city.fixed" class="text-xs px-2 py-0.5 rounded" :class="city.fixed ? 'bg-warning/10 text-warning' : 'text-muted hover:text-secondary'" :title="city.fixed ? 'Permite mutare' : 'Fixează poziție'">
+                                                    <span x-text="city.fixed ? '📌 Fix' : 'Fix'"></span>
+                                                </button>
+                                                <button @click="removeCity(idx)" class="p-1 text-muted hover:text-error">✕</button>
+                                            </div>
+                                        </template>
+                                        <p x-show="!planner.cities.length" class="text-xs text-muted text-center py-2">Adaugă cel puțin 2 orașe.</p>
+                                    </div>
+
+                                    <input type="text" x-model="cityInput" @keydown.enter.prevent="addCityFromInput()" placeholder="Adaugă oraș (Enter)" class="to-input text-sm">
+                                    <div class="flex flex-wrap gap-1 mt-3">
+                                        <template x-for="quick in quickCities">
+                                            <button @click="addCity(quick)" class="text-xs px-2 py-1 bg-surface text-muted rounded hover:bg-primary/10 hover:text-primary transition-colors">+ <span x-text="quick"></span></button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-3">Constrângeri</label>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Distanță max între date (km)</label>
+                                            <input type="range" x-model.number="planner.maxDistance" min="100" max="1500" step="50" class="w-full">
+                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.maxDistance + ' km'"></p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Zile minime între concerte</label>
+                                            <input type="range" x-model.number="planner.minDaysBetween" min="1" max="7" class="w-full">
+                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.minDaysBetween + ' zile'"></p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Buget total (RON)</label>
+                                            <input type="number" x-model.number="planner.budget" class="to-input text-sm" min="0">
+                                        </div>
+                                        <label class="flex items-center gap-2 cursor-pointer">
+                                            <input type="checkbox" x-model="planner.includeBorder" class="w-4 h-4 rounded text-primary">
+                                            <span class="text-xs text-secondary">Include orașe cross-border (CEE)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <button @click="optimizeRoute()" :disabled="planner.cities.length < 2 || tabLoading" class="to-btn to-btn-primary w-full">
+                                    ⚡ Optimizează rută
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="lg:col-span-8">
+                            <div x-show="!planner.optimized">
+                                <div class="bg-surface border border-dashed border-border rounded-2xl p-12 text-center">
+                                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4">🎯</div>
+                                    <p class="font-medium text-secondary">Adaugă orașe și apasă „Optimizează rută"</p>
+                                    <p class="text-sm text-muted mt-1">Algoritm-ul calculează ordinea optimă, distanțe și predicții bilete.</p>
+                                </div>
+                            </div>
+
+                            <div x-show="planner.optimized">
+                                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Distanță totală</p>
+                                        <p class="text-xl font-bold text-secondary mt-1"><span x-text="formatNumber(planner.summary?.total_distance_km ?? 0)"></span> km</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Durată</p>
+                                        <p class="text-xl font-bold text-secondary mt-1"><span x-text="planner.summary?.duration_days ?? 0"></span> zile</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost transport</p>
+                                        <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_cost_ron ?? 0)"></span> RON</p>
+                                    </div>
+                                    <div class="bg-white border border-border rounded-xl p-4">
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Bilete prog.</p>
+                                        <p class="text-xl font-bold text-success mt-1">~<span x-text="formatNumber(planner.summary?.predicted_tickets ?? 0)"></span></p>
+                                    </div>
+                                </div>
+
+                                <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
+
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <h3 class="font-bold text-secondary mb-4">Itinerar optim</h3>
+                                    <div class="space-y-2">
+                                        <template x-for="(stop, idx) in planner.route || []" :key="idx">
+                                            <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <p class="font-bold text-secondary" x-text="stop.city"></p>
+                                                        <span x-show="stop.fixed" class="to-badge bg-warning/10 text-warning text-xs">📌 Fix</span>
+                                                    </div>
+                                                    <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span></p>
+                                                </div>
+                                                <div class="text-right hidden sm:block flex-shrink-0">
+                                                    <p class="text-xs text-muted">Predicție</p>
+                                                    <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
+                                                </div>
+                                                <div class="text-right flex-shrink-0" x-show="stop.distance_to_next_km">
+                                                    <p class="text-xs text-muted">Spre următor</p>
+                                                    <p class="text-xs font-medium text-muted"><span x-text="formatNumber(stop.distance_to_next_km)"></span> km</p>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div class="flex gap-2 mt-6 pt-6 border-t border-border">
+                                        <button @click="saveScenario()" :disabled="planner.saving" class="to-btn to-btn-primary to-btn-sm">
+                                            <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează scenariu'"></span>
+                                        </button>
+                                        <button @click="alert('Funcționalitate disponibilă după lansarea Booking Marketplace.')" class="to-btn to-btn-secondary to-btn-sm">📨 Trimite în Booking</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: PREDICTIONS ============ -->
+                <div x-show="tab === 'predictions'" class="p-6">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-bold text-secondary">Predicții bilete</h2>
+                        <p class="text-sm text-muted">Estimat per oraș în 3 scenarii de venue, pe baza fanilor locali, retenției istorice și sezonalității.</p>
+                    </div>
+
+                    <div class="bg-surface rounded-xl p-4 mb-6">
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <span class="text-xs text-muted uppercase tracking-wider font-bold">Filtrează:</span>
+                            <template x-for="f in [['all','Toate'],['warm','Recomandare'],['sleeping','Dormit'],['new','Neexplorat']]" :key="f[0]">
+                                <button @click="predictionFilter = f[0]" :class="predictionFilter === f[0] ? 'bg-primary text-white' : 'bg-white text-muted'" class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors" x-text="f[1]"></button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto -mx-6 px-6">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-border">
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Oraș</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Fani</th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mic<br><span class="font-normal lowercase text-[10px]">300-500</span></th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mediu<br><span class="font-normal lowercase text-[10px]">800-1500</span></th>
+                                    <th class="text-center text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Mare<br><span class="font-normal lowercase text-[10px]">2500+</span></th>
+                                    <th class="text-left text-xs uppercase tracking-wider font-bold text-muted py-3 px-2">Status</th>
+                                    <th class="text-right text-xs uppercase tracking-wider font-bold text-muted py-3 px-2"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="p in filteredPredictions" :key="p.city">
+                                    <tr class="border-b border-border hover:bg-surface transition-colors">
+                                        <td class="py-3 px-2">
+                                            <p class="font-medium text-secondary" x-text="p.city"></p>
+                                            <p class="text-xs text-muted" x-text="p.note"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-right font-bold text-secondary" x-text="formatNumber(p.fans)"></td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.small.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.small.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.medium.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.medium.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2 text-center">
+                                            <p class="text-sm font-bold text-secondary" x-text="p.large.estimate"></p>
+                                            <p class="text-xs text-muted" x-text="p.large.confidence + '%'"></p>
+                                        </td>
+                                        <td class="py-3 px-2"><span class="to-badge text-xs" :class="statusBadgeClass(p.status)" x-text="p.status_label"></span></td>
+                                        <td class="py-3 px-2 text-right">
+                                            <button @click="addCityToPlanner(p.city)" class="text-primary text-sm font-medium hover:underline whitespace-nowrap">+ Planner</button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <p x-show="!filteredPredictions.length" class="text-sm text-muted text-center py-8">Date insuficiente.</p>
+                    </div>
+
+                    <div class="grid lg:grid-cols-2 gap-6 mt-8">
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Performanță pe ziua săptămânii</h3>
+                            <p class="text-sm text-muted mb-4">Vânzări medii pe eveniment, agregat din evenimentele tale</p>
+                            <div class="relative h-[260px]"><canvas id="weekdayChart"></canvas></div>
+                        </div>
+                        <div class="bg-white border border-border rounded-2xl p-5">
+                            <h3 class="font-bold text-secondary mb-1">Sezonalitate</h3>
+                            <p class="text-sm text-muted mb-4">Vânzări lunare medii pe evenimentele tale</p>
+                            <div class="relative h-[260px]"><canvas id="seasonChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4 flex items-start gap-3">
+                        <span class="flex-shrink-0">ℹ️</span>
+                        <p class="text-sm text-blue-900">Predicțiile combină fani locali, retenție istorică, ziua săptămânii și sezonalitatea. Confidence-ul reflectă cât de bine sunt calibrate de date reale (vs inferențe).</p>
+                    </div>
+                </div>
+
+                <!-- ============ TAB: SCENARIOS ============ -->
+                <div x-show="tab === 'scenarios'" class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div>
+                            <h2 class="text-lg font-bold text-secondary">Scenarii salvate</h2>
+                            <p class="text-sm text-muted">Compară opțiuni de turneu side-by-side. Limita: <span x-text="scenariosData.limit"></span> scenarii.</p>
+                        </div>
+                        <button @click="setTab('planner')" class="to-btn to-btn-primary to-btn-sm">+ Scenariu nou</button>
+                    </div>
+
+                    <div class="grid lg:grid-cols-3 gap-4 mb-8">
+                        <template x-for="s in scenariosData.scenarios || []" :key="s.id">
+                            <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md" :class="s.status === 'active' ? 'border-primary' : 'border-border'">
+                                <div class="aspect-video relative bg-gradient-to-br from-primary to-secondary p-4 flex flex-col justify-end">
+                                    <span x-show="s.status === 'active'" class="absolute top-2 left-2 to-badge bg-primary text-white">Activ</span>
+                                    <span x-show="s.status === 'draft'" class="absolute top-2 left-2 to-badge bg-muted/50 text-white">Draft</span>
+                                    <p class="text-white font-extrabold text-lg leading-tight" x-text="s.name"></p>
+                                    <p class="text-xs text-white/80" x-text="s.cities_count + ' orașe · ' + s.date_range"></p>
+                                </div>
+                                <div class="p-4">
+                                    <div class="grid grid-cols-3 gap-2 text-center mb-3">
+                                        <div>
+                                            <p class="text-xs text-muted">Distanță</p>
+                                            <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(s.summary?.total_distance_km ?? 0)"></span> km</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Bilete</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.predicted_tickets ?? 0)"></p>
+                                        </div>
+                                        <div>
+                                            <p class="text-xs text-muted">Cost</p>
+                                            <p class="text-sm font-bold text-secondary" x-text="'~' + formatNumber(s.summary?.total_cost_ron ?? 0)"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button @click="loadScenarioToPlanner(s)" class="to-btn to-btn-secondary to-btn-sm flex-1">Deschide</button>
+                                        <button @click="toggleActive(s)" class="to-btn to-btn-secondary to-btn-sm" :title="s.status === 'active' ? 'Marcheză draft' : 'Marcheză activ'">
+                                            <span x-text="s.status === 'active' ? '⭐' : '☆'"></span>
+                                        </button>
+                                        <button @click="deleteScenario(s)" class="to-btn to-btn-secondary to-btn-sm" title="Șterge">🗑️</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                        <p x-show="!(scenariosData.scenarios || []).length" class="col-span-full text-sm text-muted text-center py-8">Niciun scenariu salvat încă.</p>
+                    </div>
+
+                    <div x-show="(scenariosData.scenarios || []).length >= 2" class="bg-white border border-border rounded-2xl p-5">
+                        <h3 class="font-bold text-secondary mb-4">Comparație side-by-side</h3>
+                        <div class="flex flex-wrap items-center gap-3 mb-4">
+                            <select x-model.number="compare.aId" class="to-input" style="width:auto">
+                                <option value="0">— alege A —</option>
+                                <template x-for="s in scenariosData.scenarios || []" :key="'a-'+s.id"><option :value="s.id" x-text="s.name"></option></template>
+                            </select>
+                            <span class="text-muted">vs</span>
+                            <select x-model.number="compare.bId" class="to-input" style="width:auto">
+                                <option value="0">— alege B —</option>
+                                <template x-for="s in scenariosData.scenarios || []" :key="'b-'+s.id"><option :value="s.id" x-text="s.name"></option></template>
+                            </select>
+                            <button @click="loadCompare()" :disabled="!compare.aId || !compare.bId || compare.aId === compare.bId" class="to-btn to-btn-primary to-btn-sm">Compară</button>
+                        </div>
+
+                        <div x-show="compare.data?.a" class="grid lg:grid-cols-2 gap-4">
+                            <div class="border-2 border-primary rounded-xl p-5">
+                                <h4 class="font-bold text-secondary mb-4" x-text="'A · ' + (compare.data?.a?.name ?? '—')"></h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between"><span class="text-muted">Orașe</span><span class="font-bold" x-text="compare.data?.a?.cities_count"></span></div>
+                                    <div class="flex justify-between"><span class="text-muted">Durată</span><span class="font-bold" x-text="(compare.data?.a?.summary?.duration_days ?? 0) + ' zile'"></span></div>
+                                    <div class="flex justify-between"><span class="text-muted">Distanță</span><span class="font-bold" x-text="formatNumber(compare.data?.a?.summary?.total_distance_km ?? 0) + ' km'"></span></div>
+                                    <div class="flex justify-between"><span class="text-muted">Cost</span><span class="font-bold" x-text="formatNumber(compare.data?.a?.summary?.total_cost_ron ?? 0) + ' RON'"></span></div>
+                                    <div class="flex justify-between"><span class="text-muted">Bilete prog.</span><span class="font-bold text-success" x-text="formatNumber(compare.data?.a?.summary?.predicted_tickets ?? 0)"></span></div>
+                                    <div class="flex justify-between"><span class="text-muted">Venit estimat</span><span class="font-bold text-success" x-text="'~' + formatNumber(compare.data?.a?.summary?.predicted_revenue_ron ?? 0) + ' RON'"></span></div>
+                                </div>
+                            </div>
+                            <div class="border-2 border-border rounded-xl p-5">
+                                <h4 class="font-bold text-secondary mb-4" x-text="'B · ' + (compare.data?.b?.name ?? '—')"></h4>
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between items-center"><span class="text-muted">Orașe</span><span><span class="font-bold" x-text="compare.data?.b?.cities_count"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.cities ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.cities ?? 0)"></span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-muted">Durată</span><span><span class="font-bold" x-text="(compare.data?.b?.summary?.duration_days ?? 0) + ' zile'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.duration_days ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.duration_days ?? 0) + 'z'"></span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-muted">Distanță</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_distance_km ?? 0) + ' km'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.total_distance_km ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.total_distance_km ?? 0) + 'km'"></span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-muted">Cost</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.total_cost_ron ?? 0) + ' RON'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.total_cost_ron ?? 0) <= 0 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'" x-text="signed(compare.data?.delta?.cost_pct ?? 0) + '%'"></span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-muted">Bilete</span><span><span class="font-bold" x-text="formatNumber(compare.data?.b?.summary?.predicted_tickets ?? 0)"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.predicted_tickets ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.tickets_pct ?? 0) + '%'"></span></span></div>
+                                    <div class="flex justify-between items-center"><span class="text-muted">Venit estimat</span><span><span class="font-bold" x-text="'~' + formatNumber(compare.data?.b?.summary?.predicted_revenue_ron ?? 0) + ' RON'"></span> <span class="to-badge text-xs ml-2" :class="(compare.data?.delta?.predicted_revenue_ron ?? 0) >= 0 ? 'bg-success/10 text-success' : 'bg-error/10 text-error'" x-text="signed(compare.data?.delta?.revenue_pct ?? 0) + '%'"></span></span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </main>
+
+<style>[x-cloak]{display:none!important}</style>
+
+<script>
+function tourOptimizer() {
+    return {
+        loading: true,
+        tabLoading: false,
+        tab: 'opportunities',
+        tabs: [
+            { id: 'opportunities', label: 'Hartă oportunități' },
+            { id: 'planner',       label: 'Tour Planner' },
+            { id: 'predictions',   label: 'Predicții' },
+            { id: 'scenarios',     label: 'Scenarii salvate' },
+        ],
+
+        // Data
+        opportunities: { cities: [], recommendations: [], dormant_alerts: [], kpis: {} },
+        predictionsData: { cities: [], weekday: { labels: [], values: [] }, seasonality: { labels: [], values: [] } },
+        scenariosData: { scenarios: [], total: 0, limit: 20 },
+
+        // UI state
+        cityInput: '',
+        predictionFilter: 'all',
+        quickCities: ['București', 'Cluj-Napoca', 'Iași', 'Brașov', 'Timișoara', 'Constanța', 'Sibiu'],
+        opportunityMap: null,
+        plannerMap: null,
+        plannerLayer: null,
+        charts: {},
+
+        planner: {
+            name: 'Tour Vară 2026',
+            startDate: this.defaultStartDate(),
+            endDate: '',
+            cities: [],
+            maxDistance: 600,
+            minDaysBetween: 2,
+            budget: 80000,
+            includeBorder: false,
+            optimized: false,
+            saving: false,
+            route: [],
+            summary: null,
+            currentScenarioId: null,
+        },
+
+        compare: {
+            aId: 0,
+            bId: 0,
+            data: null,
+        },
+
+        get filteredPredictions() {
+            if (this.predictionFilter === 'all') return this.predictionsData.cities || [];
+            return (this.predictionsData.cities || []).filter(p => p.status === this.predictionFilter);
+        },
+
+        token() { return localStorage.getItem('ambilet_artist_token'); },
+
+        defaultStartDate() {
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            return d.toISOString().slice(0, 10);
+        },
+
+        async init() {
+            // Default end date = start + 30 days
+            if (!this.planner.endDate) {
+                const d = new Date(this.planner.startDate);
+                d.setDate(d.getDate() + 30);
+                this.planner.endDate = d.toISOString().slice(0, 10);
+            }
+
+            const validTabs = this.tabs.map(t => t.id);
+            const urlTab = (new URL(window.location.href)).searchParams.get('tab');
+            const initialTab = (urlTab && validTabs.includes(urlTab)) ? urlTab : 'opportunities';
+
+            await this.loadOpportunities();
+            this.loading = false;
+
+            if (initialTab !== 'opportunities') {
+                await this.setTab(initialTab);
+            } else {
+                this.$nextTick(() => this.renderTab('opportunities'));
+            }
+        },
+
+        async setTab(t) {
+            this.tab = t;
+            this.syncUrlTab(t);
+            const needsLoad = (
+                (t === 'predictions' && !this.predictionsData.cities.length) ||
+                (t === 'scenarios' && !this.scenariosData.scenarios.length && !this.scenariosData.total)
+            );
+            if (needsLoad) this.tabLoading = true;
+            try {
+                if (t === 'predictions' && !this.predictionsData.cities.length) await this.loadPredictions();
+                if (t === 'scenarios') await this.loadScenarios();
+            } finally {
+                this.tabLoading = false;
+            }
+            this.$nextTick(() => this.renderTab(t));
+        },
+
+        syncUrlTab(t) {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', t);
+                window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+        },
+
+        async fetchAction(action, params = {}, options = {}) {
+            const qs = new URLSearchParams(params).toString();
+            const opts = {
+                method: options.method || 'GET',
+                headers: { 'Accept': 'application/json', 'Authorization': 'Bearer ' + this.token() },
+            };
+            if (options.body) {
+                opts.headers['Content-Type'] = 'application/json';
+                opts.body = JSON.stringify(options.body);
+            }
+            const res = await fetch(`/api/proxy.php?action=${action}` + (qs ? '&' + qs : ''), opts);
+            return await res.json();
+        },
+
+        async loadOpportunities() {
+            const r = await this.fetchAction('artist.tour.opportunities');
+            this.opportunities = r?.data || this.opportunities;
+        },
+
+        async loadPredictions() {
+            const r = await this.fetchAction('artist.tour.predictions');
+            this.predictionsData = r?.data || this.predictionsData;
+        },
+
+        async loadScenarios() {
+            const r = await this.fetchAction('artist.tour.scenarios');
+            this.scenariosData = r?.data || this.scenariosData;
+        },
+
+        async optimizeRoute() {
+            if (this.planner.cities.length < 2) return;
+            this.tabLoading = true;
+            try {
+                const body = {
+                    cities: this.planner.cities,
+                    constraints: {
+                        max_distance_km: this.planner.maxDistance,
+                        min_days_between: this.planner.minDaysBetween,
+                        budget_ron: this.planner.budget,
+                        include_border: this.planner.includeBorder,
+                    },
+                    start_date: this.planner.startDate,
+                };
+                const r = await this.fetchAction('artist.tour.optimize', {}, { method: 'POST', body });
+                if (r?.data) {
+                    this.planner.route = r.data.route || [];
+                    this.planner.summary = r.data.summary || {};
+                    this.planner.optimized = true;
+                    this.$nextTick(() => this.renderPlannerMap());
+                } else {
+                    alert('Nu am putut optimiza ruta. Verifică orașele introduse.');
+                }
+            } finally {
+                this.tabLoading = false;
+            }
+        },
+
+        async saveScenario() {
+            if (!this.planner.optimized) return;
+            this.planner.saving = true;
+            try {
+                const body = {
+                    name: this.planner.name,
+                    start_date: this.planner.startDate,
+                    end_date: this.planner.endDate,
+                    cities: this.planner.cities,
+                    constraints: {
+                        max_distance_km: this.planner.maxDistance,
+                        min_days_between: this.planner.minDaysBetween,
+                        budget_ron: this.planner.budget,
+                        include_border: this.planner.includeBorder,
+                    },
+                    optimized_route: this.planner.route,
+                    summary: this.planner.summary,
+                    status: 'draft',
+                };
+                const r = await this.fetchAction('artist.tour.scenario.save', {}, { method: 'POST', body });
+                if (r?.data?.id) {
+                    this.planner.currentScenarioId = r.data.id;
+                    this.scenariosData.scenarios = []; // force reload on next visit
+                    alert('Scenariul a fost salvat. Îl găsești în tab Scenarii.');
+                } else {
+                    alert(r?.message || 'Eroare la salvare.');
+                }
+            } finally {
+                this.planner.saving = false;
+            }
+        },
+
+        async deleteScenario(s) {
+            if (!confirm('Sigur ștergi scenariul „' + s.name + '"?')) return;
+            await this.fetchAction('artist.tour.scenario.delete&id=' + s.id, {}, { method: 'DELETE' });
+            this.scenariosData.scenarios = this.scenariosData.scenarios.filter(x => x.id !== s.id);
+        },
+
+        async toggleActive(s) {
+            const newStatus = s.status === 'active' ? 'draft' : 'active';
+            await this.fetchAction('artist.tour.scenario.update&id=' + s.id, {}, { method: 'PATCH', body: { status: newStatus } });
+            s.status = newStatus;
+        },
+
+        async loadCompare() {
+            if (!this.compare.aId || !this.compare.bId) return;
+            this.tabLoading = true;
+            try {
+                const r = await this.fetchAction('artist.tour.scenarios.compare', { a: this.compare.aId, b: this.compare.bId });
+                this.compare.data = r?.data || null;
+            } finally {
+                this.tabLoading = false;
+            }
+        },
+
+        loadScenarioToPlanner(s) {
+            this.planner.name = s.name;
+            this.planner.startDate = s.start_date;
+            this.planner.endDate = s.end_date;
+            this.setTab('planner');
+        },
+
+        addCity(name) {
+            if (!this.planner.cities.find(c => c.name === name)) {
+                this.planner.cities.push({ name, fixed: false });
+            }
+        },
+
+        addCityFromInput() {
+            if (this.cityInput.trim()) {
+                this.addCity(this.cityInput.trim());
+                this.cityInput = '';
+            }
+        },
+
+        addCityToPlanner(name) {
+            this.addCity(name);
+            this.setTab('planner');
+        },
+
+        removeCity(idx) {
+            this.planner.cities.splice(idx, 1);
+        },
+
+        renderTab(t) {
+            if (t === 'opportunities') this.renderOpportunityMap();
+            else if (t === 'planner' && this.planner.optimized) this.renderPlannerMap();
+            else if (t === 'predictions') {
+                this.renderWeekdayChart();
+                this.renderSeasonChart();
+            }
+        },
+
+        clearCanvas(elId) {
+            const el = document.getElementById(elId);
+            if (!el || typeof Chart === 'undefined') return null;
+            const existing = Chart.getChart(el);
+            if (existing) existing.destroy();
+            return el;
+        },
+
+        destroyChart(key) {
+            if (this.charts[key]) { this.charts[key].destroy(); delete this.charts[key]; }
+        },
+
+        renderOpportunityMap() {
+            if (!this.opportunityMap) {
+                this.opportunityMap = L.map('opportunityMap').setView([45.9432, 24.9668], 6);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CARTO' }).addTo(this.opportunityMap);
+            } else {
+                this.opportunityMap.eachLayer(layer => {
+                    if (layer instanceof L.Marker || layer instanceof L.CircleMarker) this.opportunityMap.removeLayer(layer);
+                });
+            }
+
+            const colorMap = { active: '#10B981', warm: '#F59E0B', sleeping: '#EF4444', new: '#A51C30' };
+            const recCities = (this.opportunities.recommendations || []).map(r => r.city);
+
+            (this.opportunities.cities || []).forEach(c => {
+                const isRec = recCities.includes(c.name);
+                const size = Math.max(28, Math.min(60, c.fans / 80));
+                const color = colorMap[c.status] || '#94A3B8';
+                const ringColor = isRec ? '#E67E22' : 'white';
+                const ringWidth = isRec ? 3 : 2;
+                const fansLabel = c.fans > 999 ? Math.round(c.fans / 1000) + 'k' : c.fans;
+                const icon = L.divIcon({
+                    html: `<div style="background:${color};color:white;border-radius:50%;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:11px;border:${ringWidth}px solid ${ringColor};box-shadow:0 2px 8px rgba(0,0,0,0.3)">${fansLabel}</div>`,
+                    className: '',
+                    iconSize: [size, size],
+                });
+                const marker = L.marker([c.lat, c.lng], { icon }).addTo(this.opportunityMap);
+                const since = c.months_ago !== null ? c.months_ago + ' luni de la ultim concert' : 'Niciodată cântat acolo';
+                marker.bindPopup(`<strong>${c.name}</strong><br>${c.fans.toLocaleString('ro-RO')} fani · ${c.events_count} evenimente<br><small>${since}</small>`);
+            });
+
+            setTimeout(() => this.opportunityMap.invalidateSize(), 100);
+        },
+
+        renderPlannerMap() {
+            if (!this.planner.optimized) return;
+            if (!this.plannerMap) {
+                this.plannerMap = L.map('plannerMap').setView([45.9432, 24.9668], 6);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CARTO' }).addTo(this.plannerMap);
+            } else {
+                this.plannerMap.eachLayer(layer => {
+                    if (layer instanceof L.Marker || layer instanceof L.Polyline) this.plannerMap.removeLayer(layer);
+                });
+            }
+
+            const points = [];
+            (this.planner.route || []).forEach((stop, idx) => {
+                const icon = L.divIcon({
+                    html: `<div style="background:#A51C30;color:white;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${idx + 1}</div>`,
+                    className: '',
+                    iconSize: [36, 36],
+                });
+                L.marker([stop.lat, stop.lng], { icon }).addTo(this.plannerMap)
+                    .bindPopup(`<strong>${idx + 1}. ${stop.city}</strong><br>${stop.date}<br>${stop.prediction} bilete prog.`);
+                points.push([stop.lat, stop.lng]);
+            });
+
+            if (points.length > 1) {
+                L.polyline(points, { color: '#A51C30', weight: 3, opacity: 0.8, dashArray: '8, 8' }).addTo(this.plannerMap);
+                this.plannerMap.fitBounds(points, { padding: [40, 40] });
+            }
+
+            setTimeout(() => this.plannerMap.invalidateSize(), 100);
+        },
+
+        renderWeekdayChart() {
+            this.destroyChart('weekday');
+            const el = this.clearCanvas('weekdayChart');
+            if (!el) return;
+            const w = this.predictionsData.weekday || { labels: [], values: [] };
+            this.charts.weekday = new Chart(el.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: w.labels,
+                    datasets: [{
+                        data: w.values,
+                        backgroundColor: w.labels.map((_, i) => i >= 4 && i <= 5 ? '#A51C30' : (i === 3 || i === 6 ? '#E67E22' : '#94A3B8')),
+                        borderRadius: 6,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + ' bilete medie/eveniment' } } }, scales: { y: { beginAtZero: true } } }
+            });
+        },
+
+        renderSeasonChart() {
+            this.destroyChart('season');
+            const el = this.clearCanvas('seasonChart');
+            if (!el) return;
+            const s = this.predictionsData.seasonality || { labels: [], values: [] };
+            this.charts.season = new Chart(el.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: s.labels,
+                    datasets: [{
+                        data: s.values,
+                        borderColor: '#A51C30',
+                        backgroundColor: 'rgba(165,28,48,0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        borderWidth: 2,
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, animation: false, resizeDelay: 200, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.parsed.y + ' bilete medie/eveniment' } } }, scales: { y: { beginAtZero: true } } }
+            });
+        },
+
+        statusBadgeClass(status) {
+            return ({
+                active: 'bg-success/10 text-success',
+                warm: 'bg-warning/10 text-warning',
+                sleeping: 'bg-error/10 text-error',
+                new: 'bg-primary/10 text-primary',
+            })[status] || 'bg-muted/10 text-muted';
+        },
+
+        formatNumber(n) {
+            const num = Number(n) || 0;
+            return num.toLocaleString('ro-RO');
+        },
+
+        signed(n) {
+            const num = Number(n) || 0;
+            return (num >= 0 ? '+' : '') + num;
+        },
+    };
+}
+</script>
 
 <script>
 (function() {
