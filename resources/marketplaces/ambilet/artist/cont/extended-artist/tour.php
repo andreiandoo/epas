@@ -240,11 +240,29 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                             <p class="to-section-title"><span class="icon">📍</span> Plecare turneu
                                                 <span class="to-tip" data-tip="Locația de bază (home base) — orașul de unde pleacă echipa la primul concert și unde se întoarce la final. Folosit pentru calculul combustibilului total dus-întors.">ⓘ</span>
                                             </p>
-                                            <select x-model="planner.config.start_location" @change="markDirty()" class="to-input text-sm">
-                                                <template x-for="city in homeBaseOptions" :key="city">
-                                                    <option :value="city" x-text="city"></option>
-                                                </template>
-                                            </select>
+                                            <div x-data="{ open: false, query: '' }" @click.outside="open = false" class="relative">
+                                                <input type="text"
+                                                    :value="open ? query : (planner.config.start_location + (homeBaseSubtitle(planner.config.start_location) ? ' · ' + homeBaseSubtitle(planner.config.start_location) : ''))"
+                                                    @focus="open = true; query = ''"
+                                                    @input="query = $event.target.value; open = true"
+                                                    @keydown.escape="open = false"
+                                                    placeholder="Caută oraș..."
+                                                    class="to-input text-sm">
+                                                <div x-show="open" x-cloak class="absolute z-50 mt-1 left-0 right-0 bg-white border border-border rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                                                    <template x-for="city in filterHomeBaseOptions(query)" :key="city.name">
+                                                        <button type="button"
+                                                            @click="planner.config.start_location = city.name; open = false; query = ''; markDirty()"
+                                                            class="w-full text-left px-3 py-2 hover:bg-surface border-b border-border/40 last:border-0 transition-colors"
+                                                            :class="planner.config.start_location === city.name ? 'bg-primary/5' : ''">
+                                                            <p class="text-xs font-semibold text-secondary" x-text="city.name"></p>
+                                                            <p class="text-[10px] text-muted" x-text="(city.state ? city.state + ', ' : '') + (city.country || '')"></p>
+                                                        </button>
+                                                    </template>
+                                                    <template x-if="filterHomeBaseOptions(query).length === 0">
+                                                        <p class="text-xs text-muted p-3 text-center">Niciun rezultat pentru „<span x-text="query"></span>"</p>
+                                                    </template>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <!-- 🚐 Vehicule -->
@@ -559,7 +577,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </div>
                                                 </div>
 
-                                                <label class="flex items-center gap-2 cursor-pointer ml-7 sm:ml-12 mb-3">
+                                                <label x-show="!stop.is_home" class="flex items-center gap-2 cursor-pointer ml-7 sm:ml-12 mb-3">
                                                     <input type="checkbox"
                                                         :checked="idx === 0 ? true : stop.from_start"
                                                         @change="updateStopFromStart(idx, $event.target.checked)"
@@ -575,22 +593,36 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     </span>
                                                 </label>
 
-                                                <!-- Cost breakdown extended -->
+                                                <p class="text-[10px] text-muted ml-7 sm:ml-12 mb-2">* Toate costurile sunt <strong>estimative</strong>, calculate din setările tale (vehicule, cazare, diurnă).</p>
+
+                                                <!-- Cost breakdown extended cu tooltip cu formula -->
                                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 text-xs">
                                                     <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px]">⛽ Combustibil</p>
+                                                        <p class="text-muted text-[10px] flex items-center gap-1">⛽ Combustibil
+                                                            <span class="to-tip" :data-tip="fuelFormulaText(stop)">ⓘ</span>
+                                                        </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.fuel_cost ?? 0)"></span> RON</p>
+                                                        <p class="text-[10px] text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) > 0">
+                                                            sosire <span x-text="formatNumber(stop.fuel_arrival_cost ?? 0)"></span> + retur <span x-text="formatNumber(stop.fuel_return_leg_cost ?? 0)"></span>
+                                                        </p>
+                                                        <p class="text-[10px] text-muted mt-0.5" x-show="(stop.fuel_arrival_cost ?? 0) > 0 && (stop.fuel_return_leg_cost ?? 0) === 0">
+                                                            <span x-text="formatNumber(stop.fuel_arrival_km ?? 0)"></span> km
+                                                        </p>
                                                     </div>
                                                     <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px]">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)</p>
+                                                        <p class="text-muted text-[10px] flex items-center gap-1">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)
+                                                            <span class="to-tip" :data-tip="accommodationFormulaText(stop)">ⓘ</span>
+                                                        </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.accommodation_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="bg-surface rounded p-2">
-                                                        <p class="text-muted text-[10px]">🍽️ Diurnă</p>
+                                                        <p class="text-muted text-[10px] flex items-center gap-1">🍽️ Diurnă
+                                                            <span class="to-tip" :data-tip="mealFormulaText(stop)">ⓘ</span>
+                                                        </p>
                                                         <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.meal_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                     <div class="bg-error/5 border border-error/20 rounded p-2">
-                                                        <p class="text-error text-[10px] font-bold">💸 Total cost</p>
+                                                        <p class="text-error text-[10px] font-bold">💸 Total cost*</p>
                                                         <p class="font-bold text-error"><span x-text="formatNumber(stop.stop_total_cost ?? 0)"></span> RON</p>
                                                     </div>
                                                 </div>
@@ -840,12 +872,18 @@ function tourOptimizer() {
         cityInput: '',
         predictionFilter: 'all',
         quickCities: ['București', 'Cluj-Napoca', 'Iași', 'Brașov', 'Timișoara', 'Constanța', 'Sibiu'],
-        // Home base — populat la init() din API (cities_geo + DISTINCT cities din venues).
-        // Fallback hardcoded folosit doar dacă API call eșuează.
+        // Home base options — populat la init() din API. Format: [{name, state, country}, ...]
         homeBaseOptions: [
-            'București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov', 'Constanța',
-            'Sibiu', 'Oradea', 'Craiova', 'Galați', 'Pitești', 'Ploiești', 'Bacău',
-            'Arad', 'Suceava', 'Baia Mare', 'Târgu Mureș',
+            { name: 'București', state: 'București', country: 'RO' },
+            { name: 'Cluj-Napoca', state: 'Cluj', country: 'RO' },
+            { name: 'Timișoara', state: 'Timiș', country: 'RO' },
+            { name: 'Iași', state: 'Iași', country: 'RO' },
+            { name: 'Brașov', state: 'Brașov', country: 'RO' },
+            { name: 'Constanța', state: 'Constanța', country: 'RO' },
+            { name: 'Sibiu', state: 'Sibiu', country: 'RO' },
+            { name: 'Oradea', state: 'Bihor', country: 'RO' },
+            { name: 'Craiova', state: 'Dolj', country: 'RO' },
+            { name: 'Galați', state: 'Galați', country: 'RO' },
         ],
         opportunityMap: null,
         plannerMap: null,
@@ -1075,8 +1113,14 @@ function tourOptimizer() {
         async loadCitiesList() {
             try {
                 const r = await this.fetchAction('artist.tour.cities-list');
-                if (r?.data?.cities && Array.isArray(r.data.cities) && r.data.cities.length > 0) {
-                    this.homeBaseOptions = r.data.cities;
+                const cities = r?.data?.cities;
+                if (Array.isArray(cities) && cities.length > 0) {
+                    // Backend now returns objects {name, state, country}; tolerate both formats
+                    if (typeof cities[0] === 'string') {
+                        this.homeBaseOptions = cities.map(name => ({ name, state: null, country: null }));
+                    } else {
+                        this.homeBaseOptions = cities;
+                    }
                 }
             } catch (e) { /* fallback la hardcoded */ }
         },
@@ -1516,6 +1560,73 @@ function tourOptimizer() {
         formatNumber(n) {
             const num = Number(n) || 0;
             return num.toLocaleString('ro-RO');
+        },
+
+        // Formule explicative pentru tooltip-urile cost cards
+        fuelFormulaText(stop) {
+            const cfg = this.planner.config;
+            const totalConsumption = (cfg.vehicles || []).reduce((s, v) => s + (v.count * v.consumption_l_100km), 0);
+            const lines = [];
+            lines.push('Estimativ.');
+            lines.push('Formula: km × consum total / 100 × preț RON/L');
+            lines.push('Consum total: ' + (cfg.vehicles || []).map(v => v.count + '×' + v.consumption_l_100km).join(' + ') + ' = ' + totalConsumption.toFixed(1) + ' L/100km');
+            lines.push('Preț: ' + cfg.fuel_price_ron_l + ' RON/L');
+            if (stop && (stop.fuel_arrival_km ?? 0) > 0) {
+                lines.push('---');
+                lines.push('Sosire ' + stop.fuel_arrival_km + ' km → ' + this.formatNumber(stop.fuel_arrival_cost) + ' RON');
+            }
+            if (stop && (stop.fuel_return_leg_km ?? 0) > 0) {
+                lines.push('Retur la ' + this.planner.config.start_location + ' ' + stop.fuel_return_leg_km + ' km → ' + this.formatNumber(stop.fuel_return_leg_cost) + ' RON');
+            }
+            return lines.join('\n');
+        },
+
+        accommodationFormulaText(stop) {
+            const cfg = this.planner.config;
+            const r = cfg.rooms || {};
+            const p = cfg.room_prices || {};
+            const lines = ['Estimativ.', 'Formula: nopți × suma camere × preț/noapte'];
+            const breakdown = [];
+            if ((r.single | 0) > 0) breakdown.push((r.single | 0) + '×single (' + (p.single | 0) + ' RON)');
+            if ((r.double | 0) > 0) breakdown.push((r.double | 0) + '×double (' + (p.double | 0) + ' RON)');
+            if ((r.apartment | 0) > 0) breakdown.push((r.apartment | 0) + '×apartament (' + (p.apartment | 0) + ' RON)');
+            if (breakdown.length) lines.push(breakdown.join(' + '));
+            const perNight = (r.single | 0) * (p.single | 0) + (r.double | 0) * (p.double | 0) + (r.apartment | 0) * (p.apartment | 0);
+            lines.push('Total/noapte: ' + this.formatNumber(perNight) + ' RON');
+            if (stop) lines.push('×' + (stop.nights || 1) + ' nopți = ' + this.formatNumber(stop.accommodation_cost || 0) + ' RON');
+            return lines.join('\n');
+        },
+
+        mealFormulaText(stop) {
+            const cfg = this.planner.config;
+            const lines = ['Estimativ.', 'Formula: persoane × preț/zi × durată tour, distribuit egal per concert'];
+            lines.push(cfg.people_count + ' persoane × ' + cfg.meal_price_per_day + ' RON/zi');
+            if (this.planner.summary && this.planner.route?.length) {
+                const totalDays = this.planner.summary.duration_days || 1;
+                const stops = this.planner.route.length;
+                lines.push('×' + totalDays + ' zile = ' + this.formatNumber(this.planner.summary.meal_cost_ron || 0) + ' RON total');
+                lines.push('÷ ' + stops + ' concerte = ' + this.formatNumber(stop?.meal_cost || 0) + ' RON per concert');
+            }
+            return lines.join('\n');
+        },
+
+        homeBaseSubtitle(name) {
+            const c = (this.homeBaseOptions || []).find(x => x.name === name);
+            if (!c) return '';
+            const parts = [];
+            if (c.state) parts.push(c.state);
+            if (c.country) parts.push(c.country);
+            return parts.join(', ');
+        },
+
+        filterHomeBaseOptions(query) {
+            const q = this.normalizeKey(query || '');
+            const all = this.homeBaseOptions || [];
+            if (!q) return all.slice(0, 60);
+            return all.filter(c => {
+                const hay = this.normalizeKey((c.name || '') + ' ' + (c.state || '') + ' ' + (c.country || ''));
+                return hay.indexOf(q) !== -1;
+            }).slice(0, 60);
         },
 
         signed(n) {

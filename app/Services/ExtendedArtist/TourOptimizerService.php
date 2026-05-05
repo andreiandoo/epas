@@ -268,7 +268,7 @@ class TourOptimizerService
             $effectiveCapacity = $stop['manual_capacity']
                 ?? ($stop['venue']['capacity_total'] ?? 0);
             $venueSize = $effectiveCapacity > 0 ? $this->venueSizeBucket((int) $effectiveCapacity) : 'medium';
-            $prediction = $this->predictTickets($stop['fans'], $stop['events'], $venueSize, $dowFactor, $monthFactor);
+            $prediction = $this->predictTickets($stop['fans'], $stop['events'], $venueSize, $dowFactor, $monthFactor, $stop['last_event'] ?? null);
 
             // Manual prediction override (dacă artistul a setat o estimare proprie)
             if ($stop['manual_prediction'] !== null) {
@@ -276,18 +276,20 @@ class TourOptimizerService
                 $prediction['confidence'] = 100; // 100% confidence pe estimare manuală
             }
 
-            // Cost combustibil pentru leg-ul de SOSIRE la acest stop
-            $fuelCost = $this->fuelCost((float) $arrivalDistance, $config);
+            // Combustibil pentru sosire (drumul de la prev/home la acest stop)
+            $fuelArrival = $this->fuelCost((float) $arrivalDistance, $config);
 
             // Return leg: dacă next-ul e home OR next.from_start, atribuim drumul curent→home la stop-ul de față
-            // (drumul de la home la next va fi calculat ca arrival al stop-ului următor — separat)
             $nextReturnsHome = $next && (!empty($next['from_start']) || $nextIsHome);
             $returnLegDistance = 0;
+            $fuelReturnLeg = 0;
             if ($next && $nextReturnsHome && !$isHome) {
                 $returnLegDistance = $this->haversineKm($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng']);
                 $totalDistance += $returnLegDistance;
-                $fuelCost += $this->fuelCost((float) $returnLegDistance, $config);
+                $fuelReturnLeg = $this->fuelCost((float) $returnLegDistance, $config);
             }
+
+            $fuelCost = $fuelArrival + $fuelReturnLeg;
 
             // Distance to next pentru afișare:
             $distanceToNext = null;
@@ -323,6 +325,10 @@ class TourOptimizerService
                 'from_start' => !empty($stop['from_start']),
                 'is_home' => $isHome,
                 'fuel_cost' => (int) round($fuelCost),
+                'fuel_arrival_cost' => (int) round($fuelArrival),
+                'fuel_arrival_km' => (int) round($arrivalDistance),
+                'fuel_return_leg_cost' => (int) round($fuelReturnLeg),
+                'fuel_return_leg_km' => (int) round($returnLegDistance),
             ];
 
             // Pentru ultimul stop care NU e home, adaugă return drive la home base
@@ -493,37 +499,66 @@ class TourOptimizerService
     /**
      * Returnează lista de orașe disponibile pentru home base & planner.
      * Combină cities_geo (orașe cu lat/lng cunoscute) cu DISTINCT cities din venues
-     * (ca să acopere toate orașele unde există venues în DB, chiar dacă nu sunt în cities_geo).
-     * Returnează strings sortate alfabetic, deduplicat case+diacritics-insensitive.
+     * (acoperă tot teritoriul, chiar dacă nu sunt în cities_geo).
+     * Județul se ia din venues.state (cu majoritate per oraș).
+     * Returnează obiecte: [{name, state, country}, ...] sortate alfabetic.
      */
     public function availableCities(): array
     {
         $citiesGeo = config('cities_geo', []);
-        $fromGeo = array_keys($citiesGeo);
 
-        $fromVenues = DB::table('venues')
+        // Pull DISTINCT (city, state, country) tuples from venues
+        $venueRows = DB::table('venues')
             ->whereNotNull('city')
             ->where('city', '!=', '')
-            ->distinct()
-            ->pluck('city')
-            ->toArray();
+            ->select('city', 'state', 'country')
+            ->get();
 
-        $combined = array_merge($fromGeo, $fromVenues);
-
-        // Deduplicate by normalized key, prefer the cities_geo spelling
-        $byKey = [];
-        foreach ($fromGeo as $name) {
-            $byKey[$this->normalizeKey($name)] = $name;
-        }
-        foreach ($fromVenues as $name) {
-            $key = $this->normalizeKey($name);
-            if (!isset($byKey[$key])) {
-                $byKey[$key] = $name;
+        // Aggregate state + country per normalized city — pick the most common values
+        $statsByCityKey = [];
+        foreach ($venueRows as $r) {
+            $key = $this->normalizeKey((string) $r->city);
+            if (!isset($statsByCityKey[$key])) {
+                $statsByCityKey[$key] = ['name' => $r->city, 'states' => [], 'countries' => []];
+            }
+            if (!empty($r->state)) {
+                $statsByCityKey[$key]['states'][$r->state] = ($statsByCityKey[$key]['states'][$r->state] ?? 0) + 1;
+            }
+            if (!empty($r->country)) {
+                $statsByCityKey[$key]['countries'][$r->country] = ($statsByCityKey[$key]['countries'][$r->country] ?? 0) + 1;
             }
         }
 
-        $result = array_values($byKey);
-        sort($result, SORT_NATURAL | SORT_FLAG_CASE);
+        // Build map keyed by normalized city — start with cities_geo (preferred spelling + country)
+        $map = [];
+        foreach ($citiesGeo as $name => $coords) {
+            $key = $this->normalizeKey($name);
+            $map[$key] = [
+                'name' => $name,
+                'state' => null,
+                'country' => $coords['country'] ?? 'RO',
+            ];
+        }
+
+        // Merge venue stats — prefer cities_geo spelling, but enrich with state from venues
+        foreach ($statsByCityKey as $key => $st) {
+            if (!isset($map[$key])) {
+                $map[$key] = ['name' => $st['name'], 'state' => null, 'country' => null];
+            }
+            // pick most-common state
+            if (!empty($st['states'])) {
+                arsort($st['states']);
+                $map[$key]['state'] = array_key_first($st['states']);
+            }
+            if (empty($map[$key]['country']) && !empty($st['countries'])) {
+                arsort($st['countries']);
+                $map[$key]['country'] = array_key_first($st['countries']);
+            }
+        }
+
+        $result = array_values($map);
+        // Sort by name alphabetically (natural, case-insensitive)
+        usort($result, fn ($a, $b) => strnatcasecmp($a['name'], $b['name']));
         return $result;
     }
 
@@ -832,8 +867,16 @@ class TourOptimizerService
     /**
      * Predicție bilete pentru o combinație (fans, events, venue size, day-of-week, month).
      * Returnează ['estimate' => int, 'confidence' => int 0-100].
+     *
+     * Confidence formula (combină 4 factori):
+     *  - base: events_count în oraș (0 → 45, 1-2 → 60, 3-4 → 75, 5+ → 85)
+     *  - +5 dacă fans > 1000 (audiență consolidată)
+     *  - -10 dacă last_event > 18 luni (date învechite)
+     *  - -10 dacă venueSize=large și events < 3 (extrapolare riscantă)
+     *  - -5 dacă fans < 100 (eșantion mic)
+     *  - clamp 25..95
      */
-    protected function predictTickets(int $fans, int $events, string $venueSize, float $dowFactor, float $monthFactor): array
+    protected function predictTickets(int $fans, int $events, string $venueSize, float $dowFactor, float $monthFactor, ?string $lastEventDate = null): array
     {
         $venueFactor = self::VENUE_FACTORS[$venueSize] ?? 0.7;
 
@@ -845,15 +888,24 @@ class TourOptimizerService
         $estimate = min($estimate, $caps[$venueSize] ?? 1500);
         $estimate = max(0, $estimate);
 
-        // Confidence: based on number of past events in city
+        // Confidence: 4-factor formula
         $confidence = match (true) {
-            $events >= 5 => 88,
-            $events >= 3 => 78,
-            $events >= 1 => 65,
+            $events >= 5 => 85,
+            $events >= 3 => 75,
+            $events >= 1 => 60,
             default => 45,
         };
-        // Penalize confidence for small venue (sample bias smaller)
-        if ($venueSize === 'large' && $events < 3) $confidence = max(30, $confidence - 15);
+        if ($fans > 1000) $confidence += 5;
+        if ($fans < 100) $confidence -= 5;
+        if ($venueSize === 'large' && $events < 3) $confidence -= 10;
+        if ($lastEventDate) {
+            try {
+                $monthsAgo = (int) Carbon::parse($lastEventDate)->diffInMonths(now());
+                if ($monthsAgo > 18) $confidence -= 10;
+                elseif ($monthsAgo > 12) $confidence -= 5;
+            } catch (\Throwable $e) { /* ignore */ }
+        }
+        $confidence = max(25, min(95, $confidence));
 
         return [
             'estimate' => (int) round($estimate),
