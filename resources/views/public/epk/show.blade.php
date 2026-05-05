@@ -68,24 +68,27 @@
     @endif
     <meta name="twitter:card" content="summary_large_image">
 
-    <script type="application/ld+json">
-    @json([
-        '@context' => 'https://schema.org',
-        '@type' => 'MusicGroup',
-        'name' => $stageName,
-        'description' => $ogDescription,
-        'url' => $publicUrl,
-        'image' => $ogImage,
-        'sameAs' => array_values(array_filter([
-            $social['website'] ?? null,
-            $social['facebook'] ?? null,
-            $social['instagram'] ?? null,
-            $social['tiktok'] ?? null,
-            $social['youtube'] ?? null,
-            $spotifyUrl,
-        ])),
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
-    </script>
+    @php
+        // Construit ca variabilă PHP — Blade @json parser-ul se confunda
+        // cu nested array_filter([...]).
+        $jsonLd = [
+            '@context' => 'https://schema.org',
+            '@type' => 'MusicGroup',
+            'name' => $stageName,
+            'description' => $ogDescription,
+            'url' => $publicUrl,
+            'image' => $ogImage,
+            'sameAs' => array_values(array_filter([
+                $social['website'] ?? null,
+                $social['facebook'] ?? null,
+                $social['instagram'] ?? null,
+                $social['tiktok'] ?? null,
+                $social['youtube'] ?? null,
+                $spotifyUrl,
+            ])),
+        ];
+    @endphp
+    <script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
