@@ -142,8 +142,9 @@ class FanCrmService
      * Query de bază: fans = customers care au comandat tickete la evenimente
      * unde artist_id = X cu order status în SUCCESS_ORDER_STATUSES.
      *
-     * Returnează un raw query builder pe DB::table — DISTINCT pe customer + agregat.
-     * Selectăm câmpuri necesare pentru filtrarea/agregarea ulterioară.
+     * Trece prin `tickets` (NU `order_items`) pentru că importurile istorice
+     * AmBilet populeaza doar tickets, nu order_items. Vezi
+     * ImportAmbiletTicketsCommand. Live checkout populeaza ambele.
      */
     public function baseFansQuery(Artist $artist): QueryBuilder
     {
@@ -152,8 +153,8 @@ class FanCrmService
                 $j->on('o.marketplace_customer_id', '=', 'mc.id')
                   ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
             })
-            ->join('order_items as oi', 'oi.order_id', '=', 'o.id')
-            ->join('ticket_types as tt', 'tt.id', '=', 'oi.ticket_type_id')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
             ->join('events as e', 'e.id', '=', 'tt.event_id')
             ->join('event_artist as ea', 'ea.event_id', '=', 'e.id')
             ->where('ea.artist_id', $artist->id)
@@ -171,7 +172,7 @@ class FanCrmService
             ->select(
                 'mc.id as customer_id',
                 DB::raw('COUNT(DISTINCT e.id) as events_count'),
-                DB::raw('SUM(oi.total) as total_spent'),
+                DB::raw('SUM(COALESCE(t.price, tt.price_cents / 100.0, 0)) as total_spent'),
                 DB::raw('MIN(e.event_date) as first_event_date'),
                 DB::raw('MAX(e.event_date) as last_event_date'),
                 DB::raw('COUNT(DISTINCT mc.city) as cities_count')
@@ -537,8 +538,8 @@ class FanCrmService
                         $j->on('o.marketplace_customer_id', '=', 'mc.id')
                           ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
                     })
-                    ->join('order_items as oi', 'oi.order_id', '=', 'o.id')
-                    ->join('ticket_types as tt', 'tt.id', '=', 'oi.ticket_type_id')
+                    ->join('tickets as t', 't.order_id', '=', 'o.id')
+                    ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
                     ->join('events as e', 'e.id', '=', 'tt.event_id')
                     ->join('event_artist as ea', function ($j) use ($artist) {
                         $j->on('ea.event_id', '=', 'e.id')->where('ea.artist_id', $artist->id);
@@ -761,8 +762,8 @@ class FanCrmService
                 $j->on('o.marketplace_customer_id', '=', 'mc.id')
                   ->whereIn('o.status', MarketplaceCustomer::SUCCESS_ORDER_STATUSES);
             })
-            ->join('order_items as oi', 'oi.order_id', '=', 'o.id')
-            ->join('ticket_types as tt', 'tt.id', '=', 'oi.ticket_type_id')
+            ->join('tickets as t', 't.order_id', '=', 'o.id')
+            ->join('ticket_types as tt', 'tt.id', '=', 't.ticket_type_id')
             ->join('events as e', 'e.id', '=', 'tt.event_id')
             ->join('event_artist as ea', function ($j) use ($artist) {
                 $j->on('ea.event_id', '=', 'e.id')->where('ea.artist_id', $artist->id);
@@ -771,8 +772,8 @@ class FanCrmService
             ->whereExists(function ($q) use ($artist, $start) {
                 $q->select(DB::raw(1))
                   ->from('orders as o2')
-                  ->join('order_items as oi2', 'oi2.order_id', '=', 'o2.id')
-                  ->join('ticket_types as tt2', 'tt2.id', '=', 'oi2.ticket_type_id')
+                  ->join('tickets as t2', 't2.order_id', '=', 'o2.id')
+                  ->join('ticket_types as tt2', 'tt2.id', '=', 't2.ticket_type_id')
                   ->join('events as e2', 'e2.id', '=', 'tt2.event_id')
                   ->join('event_artist as ea2', function ($j) use ($artist) {
                       $j->on('ea2.event_id', '=', 'e2.id')->where('ea2.artist_id', $artist->id);
