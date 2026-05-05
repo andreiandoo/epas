@@ -11,9 +11,9 @@ use Illuminate\Console\Command;
  * a table of mismatches and optionally writes a CSV report.
  *
  * Match strategy per CSV row:
- *   1. USER ID → marketplace_organizers.id
- *   2. USER ID → marketplace_organizers.user_id (fallback)
- *   3. Normalized Firma → company_name (last-resort fallback)
+ *   1. USER ID → marketplace_organizers.id (the model IS the user — it
+ *      extends Authenticatable, so its id is the login identity)
+ *   2. Normalized Firma → company_name (last-resort fallback)
  *
  * CUI normalisation handles real-world variants like:
  *   - "37913745/2017" (with /year suffix)
@@ -47,10 +47,9 @@ class CheckAmbiletOrganizersCsvCommand extends Command
 
         $organizers = MarketplaceOrganizer::query()
             ->where('marketplace_client_id', $marketplaceId)
-            ->get(['id', 'user_id', 'name', 'company_name', 'company_tax_id']);
+            ->get(['id', 'name', 'company_name', 'company_tax_id']);
 
         $byId      = $organizers->keyBy('id');
-        $byUser    = $organizers->whereNotNull('user_id')->keyBy('user_id');
         $byNameKey = $organizers->keyBy(fn ($o) => $this->normName($o->company_name ?? $o->name));
 
         $fh = fopen($path, 'r');
@@ -95,9 +94,6 @@ class CheckAmbiletOrganizersCsvCommand extends Command
                 if (isset($byId[$uid])) {
                     $matched   = $byId[$uid];
                     $matchedBy = 'organizer.id';
-                } elseif (isset($byUser[$uid])) {
-                    $matched   = $byUser[$uid];
-                    $matchedBy = 'organizer.user_id';
                 }
             }
             if (!$matched && $csvFirma !== '') {
