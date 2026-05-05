@@ -23,6 +23,9 @@ class TicketExportService
             'Tip bilet',
             'Cod bilet',
             'Status bilet',
+            'Sectiune',
+            'Rand',
+            'Loc',
             'Comanda (Nr)',
             'Valoare comanda',
             'Valoare bruta bilet',
@@ -70,6 +73,10 @@ class TicketExportService
 
                     [$gross, $net, $commission] = $this->computeTicketAmounts($tt);
 
+                    // Resolve seat info per ticket. For non-seated tickets
+                    // getSeatDetails() returns null and the columns stay empty.
+                    $seat = $ticket->getSeatDetails() ?? [];
+
                     fputcsv($handle, [
                         $eventTitle,
                         $orgName,
@@ -77,6 +84,9 @@ class TicketExportService
                         $tt?->name ?? '',
                         $ticket->code,
                         $ticket->status,
+                        $seat['section_name'] ?? '',
+                        $seat['row_label'] ?? '',
+                        $seat['seat_number'] ?? '',
                         $order?->order_number ?? ($order?->id ? '#' . $order->id : ''),
                         $order ? number_format((float) $order->total, 2, '.', '') : '',
                         $gross !== null ? number_format($gross, 2, '.', '') : '',
