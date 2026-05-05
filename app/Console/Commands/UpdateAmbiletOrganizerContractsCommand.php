@@ -63,7 +63,10 @@ class UpdateAmbiletOrganizerContractsCommand extends Command
         $byNameKey = $organizers->keyBy(fn ($o) => $this->normName($o->company_name ?? $o->name));
 
         $fh = fopen($path, 'r');
-        $header = fgetcsv($fh);
+        // Pass all 5 args explicitly — PHP 8.4 deprecates the implicit
+        // $escape default and emits a warning per call (1500+ per run on
+        // the 525-row Ambilet CSV otherwise).
+        $header = fgetcsv($fh, 0, ',', '"', '\\');
         if (!$header) {
             $this->error('Empty CSV.');
             fclose($fh);
@@ -88,7 +91,7 @@ class UpdateAmbiletOrganizerContractsCommand extends Command
         ];
 
         $line = 1;
-        while (($row = fgetcsv($fh)) !== false) {
+        while (($row = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
             $line++;
             if (count(array_filter($row, fn ($v) => $v !== null && $v !== '')) === 0) {
                 continue;
@@ -236,7 +239,7 @@ class UpdateAmbiletOrganizerContractsCommand extends Command
             }
             $fhOut = fopen($out, 'w');
             foreach ($report as $r) {
-                fputcsv($fhOut, $r);
+                fputcsv($fhOut, $r, ',', '"', '\\');
             }
             fclose($fhOut);
             $this->info("Report written to: {$out}");
