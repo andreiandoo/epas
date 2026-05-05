@@ -879,3 +879,10 @@ Schedule::command('extended-artist:rebill-expired')
     ->timezone('Europe/Bucharest')
     ->withoutOverlapping();
 
+// Push customer audience segments to Meta for organizers that subscribed
+// (E4 — Audience-as-a-Service). Dispatches one job per active subscription.
+Schedule::command('audiences:sync-meta')
+    ->dailyAt('04:15')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping();
+

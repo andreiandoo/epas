@@ -696,6 +696,13 @@ class OrganizerResource extends Resource
                                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
                                         ->helperText(new HtmlString('Token-ul se generează din <a href="https://business.facebook.com/settings/system-users" target="_blank" class="text-primary-600 underline">Meta Business Suite → System Users</a> cu permisiunea <code>ads_management</code>. Tokenul e criptat în baza de date.')),
 
+                                    Forms\Components\TextInput::make('facebook_capi.ad_account_id')
+                                        ->label('Ad Account ID (opțional, doar pentru Custom Audiences)')
+                                        ->placeholder('123456789012345')
+                                        ->maxLength(50)
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled'))
+                                        ->helperText('ID-ul contului de Ads (fără prefix `act_`). Necesar doar dacă vrei sincronizare Custom Audiences. Token-ul trebuie să aibă acces la acest cont.'),
+
                                     \Filament\Schemas\Components\Actions::make([
                                         \Filament\Actions\Action::make('test_facebook_capi_connection')
                                             ->label('Test conexiune cu Meta')
@@ -736,6 +743,84 @@ class OrganizerResource extends Resource
                                             }),
                                     ])
                                     ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => (bool) $get('facebook_capi.enabled')),
+                                ]),
+
+                            Section::make('Custom Audiences sync (Meta)')
+                                ->icon('heroicon-o-user-group')
+                                ->description('Sincronizează automat segmente predefinite de customers în contul de Ads Meta — pentru retargeting, lookalike și suppression. Necesită CAPI activ + Ad Account ID completat. Sync zilnic la 04:15.')
+                                ->visible(fn (?MarketplaceOrganizer $record): bool =>
+                                    $record !== null
+                                    && self::isFacebookCapiMicroserviceActive($record->marketplace_client_id)
+                                )
+                                ->schema([
+                                    Forms\Components\CheckboxList::make('audience_subscriptions')
+                                        ->label('Segmente active')
+                                        ->options(fn () => \App\Models\CustomerAudienceSegment::where('is_active', true)
+                                            ->orderBy('sort_order')
+                                            ->pluck('name', 'id')
+                                            ->toArray())
+                                        ->descriptions(fn () => \App\Models\CustomerAudienceSegment::where('is_active', true)
+                                            ->orderBy('sort_order')
+                                            ->pluck('description', 'id')
+                                            ->toArray())
+                                        ->columns(1),
+
+                                    Forms\Components\Placeholder::make('audience_sync_status')
+                                        ->label('Stare ultimă sincronizare')
+                                        ->visible(fn (?MarketplaceOrganizer $record) => $record !== null)
+                                        ->content(function (?MarketplaceOrganizer $record) {
+                                            if (!$record) return '—';
+                                            $rows = \App\Models\MarketplaceOrganizerAudienceSubscription::where('marketplace_organizer_id', $record->id)
+                                                ->with('segment')
+                                                ->orderBy('id')
+                                                ->get();
+                                            if ($rows->isEmpty()) return new HtmlString('<span class="text-gray-500">Nicio sincronizare încă.</span>');
+                                            $items = $rows->map(function ($r) {
+                                                $when = $r->last_synced_at?->diffForHumans() ?? 'niciodată';
+                                                $status = $r->last_sync_status ?? '—';
+                                                $color = match ($status) {
+                                                    'ok' => 'text-green-600',
+                                                    'empty' => 'text-yellow-600',
+                                                    'failed' => 'text-red-600',
+                                                    default => 'text-gray-500',
+                                                };
+                                                $name = e($r->segment->name ?? '?');
+                                                $member = (int) $r->member_count;
+                                                $error = $r->last_sync_error ? ' — ' . e(mb_substr($r->last_sync_error, 0, 200)) : '';
+                                                return "<li><strong>{$name}</strong> · <span class=\"{$color}\">{$status}</span> · {$member} membri · {$when}{$error}</li>";
+                                            })->implode('');
+                                            return new HtmlString('<ul class="list-disc list-inside text-sm space-y-1">' . $items . '</ul>');
+                                        }),
+
+                                    \Filament\Schemas\Components\Actions::make([
+                                        \Filament\Actions\Action::make('audience_sync_now')
+                                            ->label('Sincronizează acum')
+                                            ->icon('heroicon-o-arrow-path')
+                                            ->color('info')
+                                            ->visible(fn (?MarketplaceOrganizer $record) => $record !== null)
+                                            ->action(function (?MarketplaceOrganizer $record): void {
+                                                if (!$record) return;
+                                                $subs = \App\Models\MarketplaceOrganizerAudienceSubscription::where('marketplace_organizer_id', $record->id)
+                                                    ->where('is_active', true)
+                                                    ->get();
+                                                if ($subs->isEmpty()) {
+                                                    Notification::make()
+                                                        ->title('Niciun segment activ')
+                                                        ->body('Bifează cel puțin un segment și salvează înainte de sync.')
+                                                        ->warning()
+                                                        ->send();
+                                                    return;
+                                                }
+                                                foreach ($subs as $sub) {
+                                                    \App\Jobs\SyncMetaCustomAudienceJob::dispatch($sub->id);
+                                                }
+                                                Notification::make()
+                                                    ->title('Sync pornit')
+                                                    ->body('Au fost dispatch-uite ' . $subs->count() . ' job-uri. Status-ul apare aici după ce queue worker-ul le procesează (1-5 min).')
+                                                    ->success()
+                                                    ->send();
+                                            }),
+                                    ]),
                                 ]),
                         ]),
 

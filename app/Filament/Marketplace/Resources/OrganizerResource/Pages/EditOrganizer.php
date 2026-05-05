@@ -131,7 +131,13 @@ class EditOrganizer extends EditRecord
             'pixel_id' => $capi?->pixel_id ?? '',
             'access_token' => $capi?->access_token ?? '',
             'test_event_code' => $capi?->test_event_code ?? '',
+            'ad_account_id' => $capi?->ad_account_id ?? '',
         ];
+
+        $data['audience_subscriptions'] = \App\Models\MarketplaceOrganizerAudienceSubscription::where('marketplace_organizer_id', $this->record->id)
+            ->where('is_active', true)
+            ->pluck('audience_segment_id')
+            ->all();
 
         return $data;
     }
@@ -145,11 +151,17 @@ class EditOrganizer extends EditRecord
         $this->capiFormState = $data['facebook_capi'] ?? null;
         unset($data['facebook_capi']);
 
+        $this->audienceSubscriptionsFormState = isset($data['audience_subscriptions'])
+            ? array_map('intval', (array) $data['audience_subscriptions'])
+            : null;
+        unset($data['audience_subscriptions']);
+
         return $data;
     }
 
     protected ?array $trackingFormState = null;
     protected ?array $capiFormState = null;
+    protected ?array $audienceSubscriptionsFormState = null;
 
     protected function afterSave(): void
     {
@@ -177,6 +189,19 @@ class EditOrganizer extends EditRecord
             ]);
             \Filament\Notifications\Notification::make()
                 ->title('Facebook CAPI nu a fost salvat')
+                ->body($e->getMessage())
+                ->danger()->send();
+        }
+
+        try {
+            $this->syncAudienceSubscriptions();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('OrganizerResource: audience subscriptions sync failed', [
+                'organizer_id' => $this->record->id,
+                'error' => $e->getMessage(),
+            ]);
+            \Filament\Notifications\Notification::make()
+                ->title('Audience subscriptions nu au fost salvate')
                 ->body($e->getMessage())
                 ->danger()->send();
         }
@@ -227,6 +252,7 @@ class EditOrganizer extends EditRecord
         $pixelId = trim((string) ($this->capiFormState['pixel_id'] ?? ''));
         $accessToken = trim((string) ($this->capiFormState['access_token'] ?? ''));
         $testEventCode = trim((string) ($this->capiFormState['test_event_code'] ?? ''));
+        $adAccountId = trim((string) ($this->capiFormState['ad_account_id'] ?? ''));
 
         $existing = \App\Models\Integrations\FacebookCapi\FacebookCapiConnection::where('marketplace_organizer_id', $organizerId)
             ->orderByDesc('id')
@@ -245,6 +271,7 @@ class EditOrganizer extends EditRecord
             'access_token' => $accessToken,
             'test_event_code' => $testEventCode !== '' ? $testEventCode : null,
             'test_mode' => $testEventCode !== '',
+            'ad_account_id' => $adAccountId !== '' ? $adAccountId : null,
             'status' => 'active',
             'marketplace_client_id' => $marketplaceClientId,
         ];
@@ -259,5 +286,38 @@ class EditOrganizer extends EditRecord
         }
 
         \Illuminate\Support\Facades\Cache::forget("fb_capi_active:org:{$organizerId}");
+    }
+
+    /**
+     * Persist the organizer's audience-segment subscriptions (E4).
+     * Bifing a checkbox creates/reactivates a row; unbifing it marks
+     * the row inactive (we keep history rather than deleting so the
+     * Meta audience id stays linked if the user re-subscribes later).
+     */
+    protected function syncAudienceSubscriptions(): void
+    {
+        if ($this->audienceSubscriptionsFormState === null) {
+            return;
+        }
+
+        $organizerId = $this->record->id;
+        $selectedSegmentIds = $this->audienceSubscriptionsFormState;
+
+        // Mark all subscriptions for this organizer inactive first…
+        \App\Models\MarketplaceOrganizerAudienceSubscription::where('marketplace_organizer_id', $organizerId)
+            ->update(['is_active' => false]);
+
+        // …then upsert the selected ones as active.
+        foreach ($selectedSegmentIds as $segmentId) {
+            \App\Models\MarketplaceOrganizerAudienceSubscription::updateOrCreate(
+                [
+                    'marketplace_organizer_id' => $organizerId,
+                    'audience_segment_id' => (int) $segmentId,
+                ],
+                [
+                    'is_active' => true,
+                ]
+            );
+        }
     }
 }
