@@ -31,6 +31,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
 <?php require dirname(__DIR__) . '/_partials/sidebar.php'; ?>
@@ -192,18 +193,31 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                 <div class="bg-white border border-border rounded-2xl p-5">
                                     <div class="flex items-center justify-between mb-3">
                                         <label class="text-xs uppercase tracking-wider font-bold text-muted">Orașe în turneu</label>
-                                        <span class="text-xs text-muted" x-text="planner.cities.length + ' selectate'"></span>
+                                        <span class="text-xs text-muted"><span x-text="planner.cities.length"></span> orașe</span>
                                     </div>
 
-                                    <div class="space-y-2 mb-3">
-                                        <template x-for="(city, idx) in planner.cities" :key="city.name">
-                                            <div class="flex items-center gap-2 p-2 bg-surface rounded-lg">
-                                                <span class="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center" x-text="idx + 1"></span>
-                                                <span class="flex-1 text-sm font-medium text-secondary" x-text="city.name"></span>
-                                                <button @click="city.fixed = !city.fixed" class="text-xs px-2 py-0.5 rounded" :class="city.fixed ? 'bg-warning/10 text-warning' : 'text-muted hover:text-secondary'" :title="city.fixed ? 'Permite mutare' : 'Fixează poziție'">
-                                                    <span x-text="city.fixed ? '📌 Fix' : 'Fix'"></span>
-                                                </button>
-                                                <button @click="removeCity(idx)" class="p-1 text-muted hover:text-error">✕</button>
+                                    <div x-ref="cityList" class="space-y-2 mb-3">
+                                        <template x-for="(city, idx) in planner.cities" :key="city.uid">
+                                            <div class="border border-border rounded-lg p-3 bg-surface" :data-uid="city.uid">
+                                                <div class="flex items-center gap-2 mb-2">
+                                                    <span class="cursor-grab text-muted handle text-lg leading-none select-none" title="Trage pentru reordonare">⋮⋮</span>
+                                                    <span class="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></span>
+                                                    <span class="flex-1 text-sm font-medium text-secondary truncate" x-text="city.name"></span>
+                                                    <button @click="removeCity(idx)" class="p-1 text-muted hover:text-error" title="Șterge">✕</button>
+                                                </div>
+                                                <div class="grid grid-cols-1 gap-2 ml-7">
+                                                    <input type="date" x-model="city.date" class="to-input text-xs" :min="planner.startDate" :max="planner.endDate" :title="city.date ? 'Data fixată: ' + city.date : 'Lasă gol pentru auto-schedule'">
+                                                    <div>
+                                                        <select x-model.number="city.venue_id" @change="onVenueChange(idx)" class="to-input text-xs">
+                                                            <option value="">— alege venue (opțional) —</option>
+                                                            <template x-for="v in (venuesByCity[city.name] || [])" :key="v.id">
+                                                                <option :value="v.id" x-text="v.name + (v.capacity_total ? ' · ' + v.capacity_total + ' loc' : '')"></option>
+                                                            </template>
+                                                        </select>
+                                                        <p x-show="venuesByCity[city.name] && !venuesByCity[city.name].length" class="text-[10px] text-muted mt-1">Niciun venue înregistrat în <span x-text="city.name"></span>.</p>
+                                                        <p x-show="!venuesByCity[city.name]" class="text-[10px] text-muted mt-1">Se caută venues…</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </template>
                                         <p x-show="!planner.cities.length" class="text-xs text-muted text-center py-2">Adaugă cel puțin 2 orașe.</p>
@@ -217,22 +231,96 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                 </div>
 
+                                <!-- Setări tour: vehicule + combustibil + oameni + camere + mâncare -->
                                 <div class="bg-white border border-border rounded-2xl p-5">
-                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-3">Constrângeri</label>
+                                    <button @click="planner.configOpen = !planner.configOpen" class="flex items-center justify-between w-full">
+                                        <span class="text-xs uppercase tracking-wider font-bold text-muted">Setări tour</span>
+                                        <svg class="w-4 h-4 text-muted transition-transform" :class="planner.configOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                    </button>
+
+                                    <div x-show="planner.configOpen" x-collapse class="mt-4 space-y-4">
+                                        <div>
+                                            <label class="block text-xs text-muted mb-2 font-semibold">Vehicule</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(v, vi) in planner.config.vehicles" :key="vi">
+                                                    <div class="grid grid-cols-12 gap-1 items-center">
+                                                        <select x-model="v.type" class="to-input text-xs col-span-4">
+                                                            <option value="van">Dubă</option>
+                                                            <option value="microbus">Microbus</option>
+                                                            <option value="truck">Camion</option>
+                                                            <option value="suv">SUV</option>
+                                                            <option value="bus">Autocar</option>
+                                                        </select>
+                                                        <input type="number" min="1" max="10" x-model.number="v.count" class="to-input text-xs col-span-2" title="Buc">
+                                                        <input type="number" min="1" max="60" x-model.number="v.capacity_seats" class="to-input text-xs col-span-2" title="Locuri/buc">
+                                                        <input type="number" step="0.1" min="1" max="50" x-model.number="v.consumption_l_100km" class="to-input text-xs col-span-3" title="L/100km">
+                                                        <button @click="planner.config.vehicles.splice(vi, 1)" :disabled="planner.config.vehicles.length === 1" class="text-muted hover:text-error col-span-1 disabled:opacity-30">✕</button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button @click="planner.config.vehicles.push({type:'van',count:1,capacity_seats:8,consumption_l_100km:9.5})" class="text-xs text-primary hover:underline mt-2">+ Adaugă vehicul</button>
+                                            <p class="text-[10px] text-muted mt-1">Tip · buc · locuri/buc · L/100km</p>
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label class="block text-xs text-muted mb-1">Combustibil</label>
+                                                <select x-model="planner.config.fuel_type" class="to-input text-xs">
+                                                    <option value="diesel">Motorină</option>
+                                                    <option value="gasoline">Benzină</option>
+                                                    <option value="electric">Electric</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-muted mb-1">Preț RON/L</label>
+                                                <input type="number" step="0.01" min="0" x-model.number="planner.config.fuel_price_ron_l" class="to-input text-xs">
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Persoane în turneu</label>
+                                            <input type="number" min="1" max="50" x-model.number="planner.config.people_count" class="to-input text-xs">
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-muted mb-2 font-semibold">Cazare (camere)</label>
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <div>
+                                                    <label class="block text-[10px] text-muted">Single</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.single" class="to-input text-xs">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.single" class="to-input text-xs mt-1" title="Preț/noapte">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[10px] text-muted">Double</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.double" class="to-input text-xs">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.double" class="to-input text-xs mt-1" title="Preț/noapte">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-[10px] text-muted">Apartament</label>
+                                                    <input type="number" min="0" x-model.number="planner.config.rooms.apartment" class="to-input text-xs">
+                                                    <input type="number" min="0" x-model.number="planner.config.room_prices.apartment" class="to-input text-xs mt-1" title="Preț/noapte">
+                                                </div>
+                                            </div>
+                                            <p class="text-[10px] mt-1" :class="roomCapacityValid ? 'text-success' : 'text-warning'">
+                                                Capacitate cazare: <span x-text="totalRoomCapacity"></span> · persoane: <span x-text="planner.config.people_count"></span>
+                                                <span x-show="!roomCapacityValid"> · ⚠️ camere insuficiente</span>
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-xs text-muted mb-1">Mâncare RON/persoană/zi</label>
+                                            <input type="number" min="0" x-model.number="planner.config.meal_price_per_day" class="to-input text-xs">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white border border-border rounded-2xl p-5">
+                                    <label class="block text-xs uppercase tracking-wider font-bold text-muted mb-3">Constrângeri rută</label>
                                     <div class="space-y-3">
                                         <div>
-                                            <label class="block text-xs text-muted mb-1">Distanță max între date (km)</label>
-                                            <input type="range" x-model.number="planner.maxDistance" min="100" max="1500" step="50" class="w-full">
-                                            <p class="text-xs text-secondary font-bold mt-1" x-text="planner.maxDistance + ' km'"></p>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs text-muted mb-1">Zile minime între concerte</label>
+                                            <label class="block text-xs text-muted mb-1">Zile minime între concerte (auto-schedule)</label>
                                             <input type="range" x-model.number="planner.minDaysBetween" min="1" max="7" class="w-full">
                                             <p class="text-xs text-secondary font-bold mt-1" x-text="planner.minDaysBetween + ' zile'"></p>
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs text-muted mb-1">Buget total (RON)</label>
-                                            <input type="number" x-model.number="planner.budget" class="to-input text-sm" min="0">
                                         </div>
                                         <label class="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" x-model="planner.includeBorder" class="w-4 h-4 rounded text-primary">
@@ -267,7 +355,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <p class="text-xl font-bold text-secondary mt-1"><span x-text="planner.summary?.duration_days ?? 0"></span> zile</p>
                                     </div>
                                     <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost transport</p>
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost total</p>
                                         <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="bg-white border border-border rounded-xl p-4">
@@ -276,28 +364,63 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     </div>
                                 </div>
 
+                                <div class="grid grid-cols-3 gap-3 mb-4">
+                                    <div class="bg-surface rounded-xl p-3 text-center">
+                                        <p class="text-[10px] text-muted uppercase">⛽ Combustibil</p>
+                                        <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.fuel_cost_ron ?? 0)"></span> RON</p>
+                                    </div>
+                                    <div class="bg-surface rounded-xl p-3 text-center">
+                                        <p class="text-[10px] text-muted uppercase">🛏️ Cazare</p>
+                                        <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.accommodation_cost_ron ?? 0)"></span> RON</p>
+                                    </div>
+                                    <div class="bg-surface rounded-xl p-3 text-center">
+                                        <p class="text-[10px] text-muted uppercase">🍽️ Mâncare</p>
+                                        <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(planner.summary?.meal_cost_ron ?? 0)"></span> RON</p>
+                                    </div>
+                                </div>
+
                                 <div id="plannerMap" style="height: 320px; margin-bottom: 16px;"></div>
 
                                 <div class="bg-white border border-border rounded-2xl p-5">
                                     <h3 class="font-bold text-secondary mb-4">Itinerar optim</h3>
-                                    <div class="space-y-2">
+                                    <div class="space-y-3">
                                         <template x-for="(stop, idx) in planner.route || []" :key="idx">
-                                            <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
-                                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
-                                                <div class="flex-1 min-w-0">
-                                                    <div class="flex items-center gap-2 flex-wrap">
-                                                        <p class="font-bold text-secondary" x-text="stop.city"></p>
-                                                        <span x-show="stop.fixed" class="to-badge bg-warning/10 text-warning text-xs">📌 Fix</span>
+                                            <div class="border border-border rounded-xl p-4 hover:bg-surface transition-colors">
+                                                <div class="flex items-start gap-3">
+                                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white font-bold flex items-center justify-center flex-shrink-0" x-text="idx + 1"></div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="flex items-center gap-2 flex-wrap mb-1">
+                                                            <p class="font-bold text-secondary" x-text="stop.city"></p>
+                                                            <span x-show="stop.fixed" class="to-badge bg-warning/10 text-warning text-xs">📌 Fix</span>
+                                                            <span x-show="stop.venue_name" class="text-xs text-muted">·</span>
+                                                            <span x-show="stop.venue_name" class="text-xs text-secondary font-medium" x-text="stop.venue_name"></span>
+                                                            <span x-show="stop.venue_capacity" class="to-badge bg-primary/10 text-primary text-xs"><span x-text="formatNumber(stop.venue_capacity)"></span> loc</span>
+                                                        </div>
+                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span></p>
                                                     </div>
-                                                    <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span></p>
+                                                    <div class="text-right flex-shrink-0">
+                                                        <p class="text-xs text-muted">Predicție</p>
+                                                        <p class="text-sm font-bold text-success"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
+                                                        <p class="text-[10px] text-muted"><span x-text="stop.confidence"></span>% confidence</p>
+                                                    </div>
                                                 </div>
-                                                <div class="text-right hidden sm:block flex-shrink-0">
-                                                    <p class="text-xs text-muted">Predicție</p>
-                                                    <p class="text-sm font-bold text-secondary"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
-                                                </div>
-                                                <div class="text-right flex-shrink-0" x-show="stop.distance_to_next_km">
-                                                    <p class="text-xs text-muted">Spre următor</p>
-                                                    <p class="text-xs font-medium text-muted"><span x-text="formatNumber(stop.distance_to_next_km)"></span> km</p>
+                                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 ml-13 text-xs">
+                                                    <div class="bg-surface rounded p-2">
+                                                        <p class="text-muted text-[10px]">⛽ Combustibil</p>
+                                                        <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.fuel_cost ?? 0)"></span> RON</p>
+                                                    </div>
+                                                    <div class="bg-surface rounded p-2">
+                                                        <p class="text-muted text-[10px]">🛏️ Cazare (<span x-text="stop.nights ?? 1"></span>n)</p>
+                                                        <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.accommodation_cost ?? 0)"></span> RON</p>
+                                                    </div>
+                                                    <div class="bg-surface rounded p-2">
+                                                        <p class="text-muted text-[10px]">🍽️ Mâncare</p>
+                                                        <p class="font-semibold text-secondary"><span x-text="formatNumber(stop.meal_cost ?? 0)"></span> RON</p>
+                                                    </div>
+                                                    <div class="bg-surface rounded p-2" x-show="stop.distance_to_next_km">
+                                                        <p class="text-muted text-[10px]">→ următor</p>
+                                                        <p class="font-semibold text-muted"><span x-text="formatNumber(stop.distance_to_next_km ?? 0)"></span> km</p>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </template>
@@ -521,21 +644,43 @@ function tourOptimizer() {
             startDate: '',
             endDate: '',
             cities: [],
-            maxDistance: 600,
             minDaysBetween: 2,
-            budget: 80000,
             includeBorder: false,
             optimized: false,
             saving: false,
             route: [],
             summary: null,
             currentScenarioId: null,
+            configOpen: false,
+            config: {
+                vehicles: [{ type: 'van', count: 1, capacity_seats: 8, consumption_l_100km: 9.5 }],
+                fuel_type: 'diesel',
+                fuel_price_ron_l: 7.5,
+                people_count: 6,
+                rooms: { single: 0, double: 3, apartment: 0 },
+                room_prices: { single: 250, double: 380, apartment: 600 },
+                meal_price_per_day: 120,
+            },
         },
+
+        // venuesByCity[cityName] = [{id, name, capacity_total, ...}] | undefined while loading | [] if none
+        venuesByCity: {},
+
+        cityUidCounter: 1,
 
         compare: {
             aId: 0,
             bId: 0,
             data: null,
+        },
+
+        get totalRoomCapacity() {
+            const r = this.planner.config.rooms;
+            return (r.single | 0) + (r.double | 0) * 2 + (r.apartment | 0) * 4;
+        },
+
+        get roomCapacityValid() {
+            return this.totalRoomCapacity >= this.planner.config.people_count;
         },
 
         get filteredPredictions() {
@@ -630,18 +775,33 @@ function tourOptimizer() {
             this.scenariosData = r?.data || this.scenariosData;
         },
 
+        buildConstraintsPayload() {
+            return {
+                min_days_between: this.planner.minDaysBetween,
+                include_border: this.planner.includeBorder,
+                tour_config: this.planner.config,
+            };
+        },
+
+        citiesPayload() {
+            return this.planner.cities.map(c => ({
+                name: c.name,
+                fixed: !!c.fixed,
+                date: c.date || null,
+                venue_id: c.venue_id ? Number(c.venue_id) : null,
+            }));
+        },
+
         async optimizeRoute() {
             if (this.planner.cities.length < 2) return;
+            if (!this.roomCapacityValid) {
+                if (!confirm('Capacitatea camerelor (' + this.totalRoomCapacity + ') e mai mică decât persoanele în turneu (' + this.planner.config.people_count + '). Continui oricum?')) return;
+            }
             this.tabLoading = true;
             try {
                 const body = {
-                    cities: this.planner.cities,
-                    constraints: {
-                        max_distance_km: this.planner.maxDistance,
-                        min_days_between: this.planner.minDaysBetween,
-                        budget_ron: this.planner.budget,
-                        include_border: this.planner.includeBorder,
-                    },
+                    cities: this.citiesPayload(),
+                    constraints: this.buildConstraintsPayload(),
                     start_date: this.planner.startDate,
                 };
                 const r = await this.fetchAction('artist.tour.optimize', {}, { method: 'POST', body });
@@ -651,7 +811,7 @@ function tourOptimizer() {
                     this.planner.optimized = true;
                     this.$nextTick(() => this.renderPlannerMap());
                 } else {
-                    alert('Nu am putut optimiza ruta. Verifică orașele introduse.');
+                    alert(r?.message || 'Nu am putut optimiza ruta. Verifică orașele introduse.');
                 }
             } finally {
                 this.tabLoading = false;
@@ -666,13 +826,8 @@ function tourOptimizer() {
                     name: this.planner.name,
                     start_date: this.planner.startDate,
                     end_date: this.planner.endDate,
-                    cities: this.planner.cities,
-                    constraints: {
-                        max_distance_km: this.planner.maxDistance,
-                        min_days_between: this.planner.minDaysBetween,
-                        budget_ron: this.planner.budget,
-                        include_border: this.planner.includeBorder,
-                    },
+                    cities: this.citiesPayload(),
+                    constraints: this.buildConstraintsPayload(),
                     optimized_route: this.planner.route,
                     summary: this.planner.summary,
                     status: 'draft',
@@ -717,12 +872,44 @@ function tourOptimizer() {
             this.planner.name = s.name;
             this.planner.startDate = s.start_date;
             this.planner.endDate = s.end_date;
+            this.planner.currentScenarioId = s.id;
+
+            // Restore cities (fiecare cu uid nou ca să nu se ciocnească chei Alpine)
+            const restoredCities = (s.cities || []).map(c => ({
+                uid: 'c' + (this.cityUidCounter++),
+                name: c.name,
+                fixed: !!c.fixed,
+                date: c.date || '',
+                venue_id: c.venue_id || null,
+            }));
+            this.planner.cities = restoredCities;
+            // Reload venues lookups for each restored city
+            restoredCities.forEach(c => {
+                delete this.venuesByCity[c.name]; // force refetch in case stale
+                this.loadVenuesForCity(c.name);
+            });
+
+            // Restore constraints + tour_config
+            const cs = s.constraints || {};
+            this.planner.minDaysBetween = cs.min_days_between ?? 2;
+            this.planner.includeBorder = !!cs.include_border;
+            if (cs.tour_config) {
+                this.planner.config = Object.assign({}, this.planner.config, cs.tour_config);
+            }
+
+            // Restore optimized route + summary so user vede direct rezultatul
+            this.planner.route = s.optimized_route || [];
+            this.planner.summary = s.summary || null;
+            this.planner.optimized = (this.planner.route && this.planner.route.length > 0);
+
             this.setTab('planner');
         },
 
         addCity(name) {
             if (!this.planner.cities.find(c => c.name === name)) {
-                this.planner.cities.push({ name, fixed: false });
+                const uid = 'c' + (this.cityUidCounter++);
+                this.planner.cities.push({ uid, name, fixed: false, date: '', venue_id: null });
+                this.loadVenuesForCity(name);
             }
         },
 
@@ -742,9 +929,46 @@ function tourOptimizer() {
             this.planner.cities.splice(idx, 1);
         },
 
+        async loadVenuesForCity(cityName) {
+            if (this.venuesByCity[cityName]) return; // already loaded or in-flight
+            this.venuesByCity[cityName] = []; // marker that fetch initiated
+            try {
+                const r = await this.fetchAction('artist.tour.venues', { city: cityName });
+                this.venuesByCity[cityName] = (r?.data?.venues) || [];
+            } catch (e) {
+                this.venuesByCity[cityName] = [];
+            }
+        },
+
+        onVenueChange(idx) {
+            // hook in case we want immediate recomputation later — currently noop
+            // (recalc happens on click "Optimizează rută")
+        },
+
+        setupSortable() {
+            if (this._sortable) {
+                try { this._sortable.destroy(); } catch (e) {}
+                this._sortable = null;
+            }
+            const list = this.$refs.cityList;
+            if (!list || typeof Sortable === 'undefined') return;
+            this._sortable = Sortable.create(list, {
+                handle: '.handle',
+                animation: 150,
+                onEnd: (evt) => {
+                    if (evt.oldIndex === evt.newIndex) return;
+                    const moved = this.planner.cities.splice(evt.oldIndex, 1)[0];
+                    this.planner.cities.splice(evt.newIndex, 0, moved);
+                },
+            });
+        },
+
         renderTab(t) {
             if (t === 'opportunities') this.renderOpportunityMap();
-            else if (t === 'planner' && this.planner.optimized) this.renderPlannerMap();
+            else if (t === 'planner') {
+                this.$nextTick(() => this.setupSortable());
+                if (this.planner.optimized) this.renderPlannerMap();
+            }
             else if (t === 'predictions') {
                 this.renderWeekdayChart();
                 this.renderSeasonChart();
