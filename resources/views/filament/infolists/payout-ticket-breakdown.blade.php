@@ -82,11 +82,29 @@
                     $extras = (float) ($item['extras'] ?? 0);
                     if ($extras > 0) $hasExtras = true;
                     $netFinal = (float) ($item['net'] ?? ($netTickets - $discounts - $extras));
-                    $commissionRate = isset($item['commission_rate']) ? $item['commission_rate'] . '%' : '';
+                    // Build the parenthesized rate label from commission_type so
+                    // fixed-amount commissions also show their value (was: only %).
+                    $commissionType = $item['commission_type'] ?? null;
+                    $commissionRateRaw = $item['commission_rate'] ?? null;
+                    $commissionFixedRaw = $item['commission_fixed'] ?? null;
+                    $rateLabel = match (true) {
+                        $commissionType === 'percentage' && $commissionRateRaw !== null
+                            => $commissionRateRaw . '%',
+                        $commissionType === 'fixed' && $commissionFixedRaw !== null
+                            => number_format((float) $commissionFixedRaw, 2) . ' ' . $currency,
+                        $commissionType === 'both' && ($commissionRateRaw !== null || $commissionFixedRaw !== null)
+                            => trim(
+                                ($commissionRateRaw !== null ? $commissionRateRaw . '%' : '')
+                                . ($commissionRateRaw !== null && $commissionFixedRaw !== null ? ' + ' : '')
+                                . ($commissionFixedRaw !== null ? number_format((float) $commissionFixedRaw, 2) . ' ' . $currency : '')
+                            ),
+                        // Legacy snapshots without commission_type — fall back to rate-only.
+                        $commissionRateRaw !== null => $commissionRateRaw . '%',
+                        default => '',
+                    };
                     $commissionLabel = match($commissionMode) {
-                        'added_on_top' => 'Peste preț' . ($commissionRate ? " ({$commissionRate})" : ''),
-                        'on_top' => 'Peste preț' . ($commissionRate ? " ({$commissionRate})" : ''),
-                        'included' => 'Inclus' . ($commissionRate ? " ({$commissionRate})" : ''),
+                        'added_on_top', 'on_top' => 'Peste preț' . ($rateLabel ? " ({$rateLabel})" : ''),
+                        'included' => 'Inclus' . ($rateLabel ? " ({$rateLabel})" : ''),
                         default => $commissionMode,
                     };
                     // POS rows are shown for transparency but excluded from totals
