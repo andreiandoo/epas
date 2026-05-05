@@ -481,8 +481,9 @@ class SalesReport extends Page implements HasForms
             } else {
                 fputcsv($out, [
                     '# Comandă', 'Data plății', 'Data creării', 'Eveniment',
-                    'Client', 'Email', 'Bilete', 'Brut', 'Comision', 'Refund',
-                    'Net', 'Status', 'Payment', 'Sursa',
+                    'Client', 'Email', 'Bilete', 'Brut', 'Comision', 'Mod comision',
+                    'Discount', 'Cod reducere', 'Refund', 'Net', 'Status',
+                    'Payment', 'Sursa',
                 ], ',', '"', '\\');
                 $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn)
                     ->chunk(500, function ($orders) use ($out, $service) {
@@ -498,6 +499,9 @@ class SalesReport extends Page implements HasForms
                                 $r['tickets'],
                                 number_format($r['gross'], 2, '.', ''),
                                 number_format($r['commission'], 2, '.', ''),
+                                $r['commission_mode'] ?? '',
+                                number_format($r['discount'] ?? 0, 2, '.', ''),
+                                $r['promo_code'] ?? '',
                                 number_format($r['refund'], 2, '.', ''),
                                 number_format($r['net'], 2, '.', ''),
                                 $r['status'],

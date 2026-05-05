@@ -112,7 +112,10 @@ class SalesReportService
                                   ->orWhereIn('event_id', $eventIds))
             ->whereIn('status', $statuses)
             ->whereBetween($dateColumn, [$from, $to])
-            ->with(['marketplaceEvent', 'tickets.ticketType', 'items'])
+            // event() points at App\Models\Event (the real source of truth);
+            // marketplaceEvent is a separate model on a different table that
+            // is mostly unused — using it left the title column blank.
+            ->with(['event', 'tickets.ticketType', 'items'])
             ->withCount('tickets')
             ->orderByDesc($dateColumn);
 
@@ -169,9 +172,12 @@ class SalesReportService
      */
     public function extendedRow(Order $order): array
     {
-        $eventTitle = $order->marketplaceEvent
-            ? $this->resolveTitle($order->marketplaceEvent)
-            : '—';
+        // Order has both ->event (App\Models\Event, the real source of
+        // truth used by SalesBreakdownService) and ->marketplaceEvent (a
+        // mostly-empty mirror table). Using the wrong one left the
+        // Eveniment column blank.
+        $event = $order->event ?? null;
+        $eventTitle = $event ? $this->resolveTitle($event) : '—';
 
         // Sum approved_amount on refund requests that actually paid out
         // (refunded or partially_refunded). Pending / approved-but-not-yet-
@@ -184,29 +190,114 @@ class SalesReportService
             ])
             ->sum('approved_amount');
 
-        $commission = (float) ($order->commission_amount ?? 0);
+        // Order.commission_amount is unreliable across sources (POS app
+        // sometimes writes per-ticket numbers; legacy orders may leave it
+        // blank). Re-compute from the actual tickets via
+        // TicketType::calculateCommission — same primitive
+        // SalesBreakdownService uses, so this matches the compact view
+        // exactly. Walks each valid/used ticket once and sums.
+        $defaultRate = $event
+            ? (float) ($event->commission_rate
+                ?? $event->marketplaceOrganizer?->commission_rate
+                ?? $event->marketplaceClient?->commission_rate
+                ?? 5)
+            : 5.0;
+        $defaultMode = $event
+            ? ($event->commission_mode
+                ?? $event->marketplaceOrganizer?->default_commission_mode
+                ?? $event->marketplaceClient?->commission_mode
+                ?? 'included')
+            : 'included';
+
+        $commission = 0.0;
+        $modes = [];
+        $rateTags = [];
+        foreach ($order->tickets as $ticket) {
+            if (!in_array($ticket->status, ['valid', 'used'], true)) continue;
+            $tt = $ticket->ticketType;
+            if (!$tt) continue;
+            $price = (float) ($ticket->price ?? 0);
+            if ($price <= 0) {
+                $price = ((int) ($tt->sale_price_cents ?? 0) > 0
+                    ? $tt->sale_price_cents
+                    : (int) ($tt->price_cents ?? 0)) / 100;
+            }
+            $commission += (float) $tt->calculateCommission($price, $defaultRate, $defaultMode);
+            $eff = $tt->getEffectiveCommission($defaultRate, $defaultMode);
+            $modes[] = $eff['mode'] ?? null;
+            $tag = $this->shortCommissionTag($eff);
+            if ($tag !== '') $rateTags[] = $tag;
+        }
+        $commission = round($commission, 2);
+
         $gross = (float) ($order->total ?? 0);
-        $net = $gross - $commission - $refundTotal;
+        $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
+        $promoCode = is_array($order->meta ?? null)
+            ? ($order->meta['promo_code']['code'] ?? null)
+            : null;
+
+        // Net: subtract commission only for "included" modes (added_on_top
+        // means the customer already paid commission on top of base, so it
+        // sits in gross unmodified for the organizer). Refund and discount
+        // are always hard subtracts.
+        $modesUnique = array_values(array_unique(array_filter($modes)));
+        $allOnTop = !empty($modesUnique)
+            && empty(array_diff($modesUnique, ['on_top', 'added_on_top']));
+        $net = $gross - ($allOnTop ? 0.0 : $commission) - $discount - $refundTotal;
+        if ($net < 0) $net = 0.0;
 
         return [
-            'order_id'       => $order->id,
-            'order_number'   => $order->order_number,
-            'event_id'       => $order->marketplace_event_id,
-            'event_title'    => $eventTitle,
-            'paid_at'        => $order->paid_at,
-            'created_at'     => $order->created_at,
-            'customer_name'  => $order->customer_name,
-            'customer_email' => $order->customer_email,
-            'tickets'        => (int) ($order->tickets_count ?? 0),
-            'gross'          => $gross,
-            'commission'     => $commission,
-            'refund'         => $refundTotal,
-            'net'            => $net,
-            'status'         => $order->status,
-            'payment_status' => $order->payment_status,
-            'currency'       => $order->currency ?? 'RON',
-            'source'         => $order->source ?? null,
+            'order_id'        => $order->id,
+            'order_number'    => $order->order_number,
+            'event_id'        => $order->event_id ?? $order->marketplace_event_id,
+            'event_title'     => $eventTitle,
+            'paid_at'         => $order->paid_at,
+            'created_at'      => $order->created_at,
+            'customer_name'   => $order->customer_name,
+            'customer_email'  => $order->customer_email,
+            'tickets'         => (int) ($order->tickets_count ?? 0),
+            'gross'           => $gross,
+            'commission'      => $commission,
+            'commission_mode' => $this->summariseModes($modesUnique, array_values(array_unique($rateTags))),
+            'discount'        => round($discount, 2),
+            'promo_code'      => $promoCode,
+            'refund'          => $refundTotal,
+            'net'             => round($net, 2),
+            'status'          => $order->status,
+            'payment_status'  => $order->payment_status,
+            'currency'        => $order->currency ?? 'RON',
+            'source'          => $order->source ?? null,
         ];
+    }
+
+    protected function shortCommissionTag(array $eff): string
+    {
+        $type = $eff['type'] ?? null;
+        $rate = $eff['rate'] ?? null;
+        $fixed = $eff['fixed'] ?? null;
+        return match (true) {
+            $type === 'percentage' && $rate !== null => $rate . '%',
+            $type === 'fixed' && $fixed !== null => number_format((float) $fixed, 2) . ' RON',
+            $type === 'both' => trim(($rate !== null ? $rate . '%' : '') . ($rate !== null && $fixed !== null ? ' + ' : '') . ($fixed !== null ? number_format((float) $fixed, 2) . ' RON' : '')),
+            $rate !== null => $rate . '%',
+            default => '',
+        };
+    }
+
+    protected function summariseModes(array $modes, array $rateTags): string
+    {
+        if (empty($modes)) return '';
+
+        $modeLabel = (count($modes) === 1)
+            ? match ($modes[0]) {
+                'added_on_top', 'on_top' => 'Peste preț',
+                'included' => 'Inclus',
+                default => (string) $modes[0],
+            }
+            : 'Mixt';
+
+        if (empty($rateTags)) return $modeLabel;
+        return $modeLabel . ' (' . implode(', ', $rateTags) . ')';
     }
 
     /**

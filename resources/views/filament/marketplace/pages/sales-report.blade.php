@@ -121,6 +121,8 @@
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Bilete</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Brut</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Mod comision</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Discount</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Refund</th>
                                 <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
                                 <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
@@ -141,6 +143,13 @@
                                     <td class="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">{{ $r['tickets'] }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-gray-900 dark:text-white">{{ number_format($r['gross'], 2) }}</td>
                                     <td class="py-2 px-3 text-right font-mono text-red-500">-{{ number_format($r['commission'], 2) }}</td>
+                                    <td class="py-2 px-3 text-xs text-gray-500">{{ $r['commission_mode'] ?? '' }}</td>
+                                    <td class="py-2 px-3 text-right font-mono {{ ($r['discount'] ?? 0) > 0 ? 'text-red-500' : 'text-gray-400' }}">
+                                        {{ ($r['discount'] ?? 0) > 0 ? '-' . number_format($r['discount'], 2) : '0.00' }}
+                                        @if(!empty($r['promo_code']))
+                                            <div class="text-[10px] text-gray-500 mt-0.5">{{ $r['promo_code'] }}</div>
+                                        @endif
+                                    </td>
                                     <td class="py-2 px-3 text-right font-mono {{ $r['refund'] > 0 ? 'text-red-500' : 'text-gray-400' }}">{{ $r['refund'] > 0 ? '-' . number_format($r['refund'], 2) : '0.00' }}</td>
                                     <td class="py-2 px-3 text-right font-mono font-semibold text-gray-900 dark:text-white">{{ number_format($r['net'], 2) }}</td>
                                     <td class="py-2 px-3">
