@@ -3743,12 +3743,18 @@ if ($method === 'GET' && $statusCode >= 200 && $statusCode < 300 && !$requiresAu
 
 // For raw responses (PDF, CSV, ZIP, exports), forward headers from upstream via curl
 if (!empty($rawResponse) && $response !== false && $statusCode >= 200 && $statusCode < 300) {
-    if (str_starts_with($response, '%PDF')) {
+    // Detectează PDF tolerand orice garbage scapat înainte de %PDF (PHP warnings,
+    // BOM, whitespace) — re-aliniem response-ul la signature.
+    $pdfPos = strpos($response ?? '', '%PDF');
+    if ($pdfPos !== false && $pdfPos < 1024) {
+        if ($pdfPos > 0) {
+            $response = substr($response, $pdfPos);
+        }
         header('Content-Type: application/pdf');
         if (!empty($upstreamContentDisposition)) {
             header($upstreamContentDisposition);
         } else {
-            header('Content-Disposition: attachment; filename="bilete.pdf"');
+            header('Content-Disposition: attachment; filename="document.pdf"');
         }
         header('Content-Length: ' . strlen($response));
     } elseif (str_starts_with($response, "\x89PNG\r\n\x1a\n")) {
