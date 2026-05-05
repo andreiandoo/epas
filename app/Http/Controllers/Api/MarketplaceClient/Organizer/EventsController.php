@@ -466,7 +466,13 @@ class EventsController extends BaseController
     }
 
     /**
-     * Cancel an event with automatic refunds
+     * Cancel an event. Does NOT issue any refunds — refunds are a manual
+     * admin action via the per-order Rambursare flow (which actually calls
+     * NETOPIA / Stripe). This endpoint only:
+     *   - flips the event to is_cancelled
+     *   - cancels pending (unpaid) orders to release ticket inventory
+     *   - leaves all paid/confirmed/completed orders untouched so admins
+     *     can review and refund (or not) one by one
      */
     public function cancel(Request $request, int $eventId): JsonResponse
     {
@@ -494,87 +500,8 @@ class EventsController extends BaseController
         try {
             DB::beginTransaction();
 
-            // Get all paid/completed orders for this event (to refund)
-            $completedOrders = $event->orders()->whereIn('status', ['paid', 'confirmed', 'completed'])->get();
-            $refundedCount = 0;
-            $totalRefunded = 0;
-
-            foreach ($completedOrders as $order) {
-                // Calculate refund
-                $refundAmount = (float) $order->total;
-                $commissionRefund = (float) $order->commission_amount;
-                $netRefund = $refundAmount - $commissionRefund;
-
-                // Update order status
-                $order->update([
-                    'status' => 'refunded',
-                    'refunded_at' => now(),
-                    'refund_amount' => $refundAmount,
-                    'refund_reason' => $reason,
-                ]);
-
-                // Invalidate tickets
-                $order->tickets()->update(['status' => 'refunded']);
-
-                // Record refund transaction
-                if ($order->marketplace_organizer_id) {
-                    MarketplaceTransaction::recordRefund(
-                        $order->marketplace_client_id,
-                        $order->marketplace_organizer_id,
-                        $netRefund,
-                        $commissionRefund,
-                        $order->id,
-                        $order->currency
-                    );
-                }
-
-                // Send email notification to customer via marketplace transport
-                if ($order->customer_email && $order->marketplace_client_id) {
-                    $cancelClient = \App\Models\MarketplaceClient::find($order->marketplace_client_id);
-                    if ($cancelClient) {
-                        $cancelOrder = $order;
-                        $cancelEventName = 'Eveniment';
-                        $rawCancelTitle = $event->title ?? $event->name ?? null;
-                        if ($rawCancelTitle) {
-                            $cancelEventName = is_array($rawCancelTitle) ? ($rawCancelTitle['ro'] ?? $rawCancelTitle['en'] ?? reset($rawCancelTitle) ?: 'Eveniment') : ($rawCancelTitle ?: 'Eveniment');
-                        }
-                        $cancelMarketplaceName = $cancelClient->name;
-                        $cancelTotal = number_format($cancelOrder->total, 2, ',', '.') . ' ' . ($cancelOrder->currency ?? 'RON');
-
-                        dispatch(function () use ($cancelClient, $cancelOrder, $cancelEventName, $cancelMarketplaceName, $cancelTotal) {
-                            try {
-                                $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f8;font-family:Arial,Helvetica,sans-serif;">'
-                                    . '<div style="max-width:600px;margin:0 auto;padding:24px 16px;">'
-                                    . '<div style="text-align:center;padding:20px 0;"><h1 style="margin:0;font-size:24px;color:#1a1a2e;">' . e($cancelMarketplaceName) . '</h1></div>'
-                                    . '<div style="background:#ffffff;border-radius:12px;padding:24px;margin-bottom:20px;">'
-                                    . '<p style="margin:0 0 12px;font-size:16px;color:#333;">Salut, <strong>' . e($cancelOrder->customer_name ?? 'Client') . '</strong>,</p>'
-                                    . '<p style="margin:0 0 12px;font-size:15px;color:#555;">Din păcate, evenimentul <strong>' . e($cancelEventName) . '</strong> a fost anulat.</p>'
-                                    . '<p style="margin:0 0 12px;font-size:15px;color:#555;">Comanda ta <strong>#' . e($cancelOrder->order_number) . '</strong> a fost rambursată automat cu suma de <strong>' . $cancelTotal . '</strong>.</p>'
-                                    . '<p style="margin:0 0 12px;font-size:14px;color:#666;">Rambursarea va fi procesată în contul tău în 5-10 zile lucrătoare.</p>'
-                                    . '<p style="margin:16px 0 0;font-size:14px;color:#666;">Ne cerem scuze pentru neplăcerile create.</p>'
-                                    . '</div>'
-                                    . '<div style="text-align:center;padding:16px 0;font-size:12px;color:#999;"><p style="margin:0;">Acest email a fost trimis de ' . e($cancelMarketplaceName) . '</p></div>'
-                                    . '</div></body></html>';
-
-                                BaseController::sendViaMarketplace($cancelClient, $cancelOrder->customer_email, $cancelOrder->customer_name ?? 'Client', "Eveniment anulat — rambursare automată", $html, [
-                                    'order_id' => $cancelOrder->id,
-                                    'template_slug' => 'event_cancelled',
-                                ]);
-                            } catch (\Throwable $e) {
-                                \Log::channel('marketplace')->error('Failed to send event cancelled email', [
-                                    'order_id' => $cancelOrder->id,
-                                    'error' => $e->getMessage(),
-                                ]);
-                            }
-                        })->afterResponse();
-                    }
-                }
-
-                $refundedCount++;
-                $totalRefunded += $refundAmount;
-            }
-
-            // Cancel pending orders
+            // Cancel pending (unpaid) orders to free up ticket inventory.
+            // No refund needed — no money has changed hands for these.
             $pendingOrders = $event->orders()->where('status', 'pending')->get();
             foreach ($pendingOrders as $order) {
                 $order->update([
@@ -593,9 +520,15 @@ class EventsController extends BaseController
                 }
             }
 
-            // Cancel the event
+            // Count paid orders that admin will need to review for refunds.
+            $paidOrdersCount = $event->orders()
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->count();
+
+            // Mark the event as cancelled.
             $event->update([
                 'is_cancelled' => true,
+                'cancelled_at' => now(),
                 'cancel_reason' => $reason,
             ]);
 
@@ -604,11 +537,16 @@ class EventsController extends BaseController
 
             DB::commit();
 
+            $message = 'Eveniment anulat. ' . $pendingOrders->count() . ' comenzi neplătite au fost anulate.';
+            if ($paidOrdersCount > 0) {
+                $message .= ' ' . $paidOrdersCount . ' comenzi plătite necesită decizie manuală de rambursare din panoul de administrare.';
+            }
+
             return $this->success([
-                'orders_refunded' => $refundedCount,
-                'total_refunded' => $totalRefunded,
+                'event_id' => $event->id,
                 'orders_cancelled' => $pendingOrders->count(),
-            ], 'Event cancelled. ' . $refundedCount . ' orders have been refunded.');
+                'paid_orders_pending_review' => $paidOrdersCount,
+            ], $message);
 
         } catch (\Exception $e) {
             DB::rollBack();
