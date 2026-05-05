@@ -63,9 +63,21 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
         </div>
 
         <!-- Loading -->
-        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">Se încarcă datele...</div>
+        <div x-show="loading" class="bg-white rounded-2xl border border-border p-12 text-center text-muted">
+            <div class="inline-flex items-center gap-3">
+                <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                <span>Se încarcă datele...</span>
+            </div>
+        </div>
 
-        <div x-show="!loading">
+        <div x-show="!loading" class="relative">
+            <!-- Per-tab loader overlay -->
+            <div x-show="tabLoading" x-cloak class="absolute inset-0 z-10 bg-white/70 backdrop-blur-sm flex items-center justify-center rounded-2xl">
+                <div class="inline-flex items-center gap-3 bg-white shadow-lg border border-border rounded-xl px-5 py-3">
+                    <span class="inline-block w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
+                    <span class="text-sm text-secondary font-medium">Se încarcă...</span>
+                </div>
+            </div>
             <!-- Tabs -->
             <div class="bg-white rounded-2xl border border-border overflow-hidden mb-6">
                 <div class="border-b border-border overflow-x-auto">
@@ -266,31 +278,31 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <table class="w-full text-sm">
                             <thead class="text-xs text-muted uppercase border-b border-border">
                                 <tr>
-                                    <th class="text-left py-2">Fan</th>
-                                    <th class="text-left py-2">Oraș</th>
-                                    <th class="text-left py-2">Segment</th>
-                                    <th class="text-right py-2">Evenimente</th>
-                                    <th class="text-right py-2">LTV</th>
-                                    <th class="text-left py-2">Ultim eveniment</th>
+                                    <th class="text-left py-2 px-3">Fan</th>
+                                    <th class="text-left py-2 px-3">Oraș</th>
+                                    <th class="text-left py-2 px-3">Segment</th>
+                                    <th class="text-right py-2 px-3 whitespace-nowrap">Evenimente</th>
+                                    <th class="text-right py-2 px-3 whitespace-nowrap">LTV</th>
+                                    <th class="text-left py-2 px-3 whitespace-nowrap">Ultim eveniment</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="fan in fansData.fans || []" :key="fan.id">
                                     <tr class="border-b border-border/50">
-                                        <td class="py-3">
+                                        <td class="py-3 px-3">
                                             <div class="flex items-center gap-2">
-                                                <div class="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center" x-text="fan.initials"></div>
-                                                <div>
-                                                    <p class="font-semibold text-secondary" x-text="fan.name"></p>
-                                                    <p class="text-xs text-muted" x-text="fan.email"></p>
+                                                <div class="w-8 h-8 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0" x-text="fan.initials"></div>
+                                                <div class="min-w-0">
+                                                    <p class="font-semibold text-secondary truncate" x-text="fan.name"></p>
+                                                    <p class="text-xs text-muted truncate" x-text="fan.email"></p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td x-text="fan.city"></td>
-                                        <td><span class="fc-badge bg-surface" x-text="fan.segment"></span></td>
-                                        <td class="text-right font-semibold" x-text="fan.events"></td>
-                                        <td class="text-right font-semibold" x-text="formatNumber(fan.ltv) + ' RON'"></td>
-                                        <td class="text-muted text-xs" x-text="fan.last_event"></td>
+                                        <td class="px-3" x-text="fan.city"></td>
+                                        <td class="px-3"><span class="fc-badge bg-surface" x-text="fan.segment"></span></td>
+                                        <td class="text-right font-semibold px-3 whitespace-nowrap" x-text="fan.events"></td>
+                                        <td class="text-right font-semibold px-3 whitespace-nowrap" x-text="formatNumber(fan.ltv) + ' RON'"></td>
+                                        <td class="text-muted text-xs px-3 whitespace-nowrap" x-text="fan.last_event"></td>
                                     </tr>
                                 </template>
                             </tbody>
@@ -364,17 +376,15 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                     <div class="bg-white border border-border rounded-2xl p-5">
                         <h3 class="font-bold text-secondary mb-1">Distribuție vârstă</h3>
                         <p class="text-sm text-muted mb-4">Pe baza datei nașterii din profil</p>
-                        <div class="relative h-[260px]"><canvas id="ageChart"></canvas></div>
+                        <div x-show="demographicsData.has_age_data" class="relative h-[260px]"><canvas id="ageChart"></canvas></div>
+                        <p x-show="!demographicsData.has_age_data" class="text-sm text-muted py-8 text-center">Niciun fan nu și-a completat data nașterii încă.</p>
                     </div>
                     <div class="bg-white border border-border rounded-2xl p-5">
                         <h3 class="font-bold text-secondary mb-1">Gen</h3>
                         <p class="text-sm text-muted mb-4">Distribuția fanilor</p>
-                        <div class="relative h-[260px]"><canvas id="genderChart"></canvas></div>
+                        <div x-show="demographicsData.has_gender_data" class="relative h-[260px]"><canvas id="genderChart"></canvas></div>
+                        <p x-show="!demographicsData.has_gender_data" class="text-sm text-muted py-8 text-center">Niciun fan nu și-a completat genul încă.</p>
                     </div>
-                </div>
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
-                    <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                    <p class="text-sm text-amber-900">Surse de trafic și categorii bilete vor fi disponibile când se activează tracking-ul UTM (Faza B).</p>
                 </div>
             </div>
 
@@ -502,6 +512,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 function fanCrm() {
     return {
         loading: true,
+        tabLoading: false,
         tab: 'overview',
         tabs: [
             { id: 'overview',     label: 'Overview' },
@@ -557,13 +568,25 @@ function fanCrm() {
 
         async setTab(t) {
             this.tab = t;
-            // Lazy load data per tab
-            if (t === 'map' && !this.mapData.points.length) await this.loadMap();
-            if (t === 'fans' && !this.fansData.fans.length) await this.loadFans();
-            if (t === 'cohort' && !this.cohortData.matrix.length) await this.loadCohort();
-            if (t === 'demographics' && !this.demographicsData.age_buckets.length) await this.loadDemographics();
-            if (t === 'compare' && !this.compareData.a_kpis.length) await this.loadCompare();
-            if (t === 'vip' && !this.vipData.length) await this.loadVip();
+            const needsLoad = (
+                (t === 'map' && !this.mapData.points.length) ||
+                (t === 'fans' && !this.fansData.fans.length) ||
+                (t === 'cohort' && !this.cohortData.matrix.length) ||
+                (t === 'demographics' && !this.demographicsData.age_buckets.length) ||
+                (t === 'compare' && !this.compareData.a_kpis.length) ||
+                (t === 'vip' && !this.vipData.length)
+            );
+            if (needsLoad) this.tabLoading = true;
+            try {
+                if (t === 'map' && !this.mapData.points.length) await this.loadMap();
+                if (t === 'fans' && !this.fansData.fans.length) await this.loadFans();
+                if (t === 'cohort' && !this.cohortData.matrix.length) await this.loadCohort();
+                if (t === 'demographics' && !this.demographicsData.age_buckets.length) await this.loadDemographics();
+                if (t === 'compare' && !this.compareData.a_kpis.length) await this.loadCompare();
+                if (t === 'vip' && !this.vipData.length) await this.loadVip();
+            } finally {
+                this.tabLoading = false;
+            }
             this.$nextTick(() => this.renderTab(t));
         },
 
@@ -591,12 +614,17 @@ function fanCrm() {
         },
 
         async loadFans() {
-            const params = { page: this.fansFilters.page };
-            if (this.fansFilters.search) params.search = this.fansFilters.search;
-            if (this.fansFilters.segment) params.segment = this.fansFilters.segment;
-            if (this.fansFilters.custom_segment_id) params.custom_segment_id = this.fansFilters.custom_segment_id;
-            const r = await this.fetchAction('artist.fan-crm.fans', params);
-            this.fansData = r?.data || this.fansData;
+            this.tabLoading = true;
+            try {
+                const params = { page: this.fansFilters.page };
+                if (this.fansFilters.search) params.search = this.fansFilters.search;
+                if (this.fansFilters.segment) params.segment = this.fansFilters.segment;
+                if (this.fansFilters.custom_segment_id) params.custom_segment_id = this.fansFilters.custom_segment_id;
+                const r = await this.fetchAction('artist.fan-crm.fans', params);
+                this.fansData = r?.data || this.fansData;
+            } finally {
+                this.tabLoading = false;
+            }
         },
 
         async changePage(p) {
@@ -616,8 +644,13 @@ function fanCrm() {
         },
 
         async loadCompare() {
-            const r = await this.fetchAction('artist.fan-crm.compare', { type: 'period', a_id: this.compareA, b_id: this.compareB });
-            this.compareData = r?.data || this.compareData;
+            this.tabLoading = true;
+            try {
+                const r = await this.fetchAction('artist.fan-crm.compare', { type: 'period', a_id: this.compareA, b_id: this.compareB });
+                this.compareData = r?.data || { supported: false, a_kpis: [], b_kpis: [], chart: null };
+            } finally {
+                this.tabLoading = false;
+            }
             this.$nextTick(() => this.renderCompareChart());
         },
 
