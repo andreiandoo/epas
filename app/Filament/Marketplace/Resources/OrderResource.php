@@ -1848,12 +1848,20 @@ class OrderResource extends Resource
                 $statusTime = $record->paid_at;
             } elseif ($record->status === 'expired' && $record->expires_at) {
                 $statusTime = $record->expires_at;
+                // Explain *why* it expired — almost always "user never came
+                // back from the payment processor" (payment_status=pending).
+                // If a payment attempt actually failed before TTL ran out
+                // we'd usually have status=failed, but be defensive.
+                $cause = $record->payment_status === 'failed'
+                    ? 'Plata a eșuat înainte de finalizare'
+                    : 'Plata nu a fost finalizată în intervalul de 15 minute';
                 // Cron orders:expire-pending runs everyTwoMinutes, so the DB
                 // status flip lags the real expiry by 0–2 minutes. Surface the
                 // gap so it doesn't look like a TTL bug.
-                if ($record->updated_at && $record->updated_at->gt($record->expires_at)) {
-                    $statusSubtext = 'verificat la ' . $record->updated_at->format('H:i');
-                }
+                $lag = ($record->updated_at && $record->updated_at->gt($record->expires_at))
+                    ? ' · verificat la ' . $record->updated_at->format('H:i')
+                    : '';
+                $statusSubtext = $cause . $lag;
             }
             $events->push([
                 'status' => $statusColor,
