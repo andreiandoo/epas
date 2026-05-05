@@ -63,11 +63,26 @@ Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/api/search/admin', [GlobalSearchController::class, 'search'])->name('admin.api.global-search');
     Route::get('/api/search/tenant/{tenant}', [GlobalSearchController::class, 'searchTenant'])->name('tenant.api.global-search');
+
+    // E6 — Order dispute evidence PDF (admin only). Generates a self-
+    // contained audit PDF with sessions/events/tickets timeline.
+    Route::get('/admin/orders/{order}/dispute-evidence', [\App\Http\Controllers\Admin\OrderDisputeEvidenceController::class, 'download'])
+        ->name('admin.orders.dispute-evidence');
 });
 
 // Marketplace Search API (uses marketplace_admin guard)
 Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
     Route::get('/api/search/marketplace/{marketplace}', [GlobalSearchController::class, 'searchMarketplace'])->name('marketplace.api.global-search');
+
+    // E6 — same evidence PDF, available to marketplace admins for orders
+    // belonging to their own marketplace_client.
+    Route::get('/marketplace/orders/{order}/dispute-evidence', function (\App\Models\Order $order) {
+        $admin = auth('marketplace_admin')->user();
+        if (!$admin || $order->marketplace_client_id !== $admin->marketplace_client_id) {
+            abort(403);
+        }
+        return app(\App\Http\Controllers\Admin\OrderDisputeEvidenceController::class)->download($order);
+    })->name('marketplace.orders.dispute-evidence');
 });
 
 // Marketplace Client Switcher (for super-admins)

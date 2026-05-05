@@ -21,6 +21,12 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('dispute_evidence_pdf')
+                ->label('Dispute Evidence (PDF)')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('gray')
+                ->url(fn ($record) => route('admin.orders.dispute-evidence', ['order' => $record->id]), shouldOpenInNewTab: true),
+
             Actions\EditAction::make()
                 ->label('Edit Order'),
 

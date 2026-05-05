@@ -20,6 +20,12 @@ class ViewOrder extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('dispute_evidence_pdf')
+                ->label('Dovadă pentru dispute (PDF)')
+                ->icon('heroicon-o-document-arrow-down')
+                ->color('gray')
+                ->url(fn () => route('marketplace.orders.dispute-evidence', ['order' => $this->record->id]), shouldOpenInNewTab: true),
+
             Actions\Action::make('refund_order')
                 ->label('Rambursare')
                 ->icon('heroicon-o-arrow-uturn-left')
