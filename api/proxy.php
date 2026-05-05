@@ -2087,6 +2087,108 @@ switch ($action) {
         $requiresAuth = false;
         break;
 
+    // Fan CRM (Modulul 1 din Extended Artist) — 13 actions
+    case 'artist.fan-crm.overview':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/overview';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.map':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/map';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segments':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/segments';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.create':
+        $method = 'POST';
+        $body = file_get_contents('php://input') ?: '{}';
+        $endpoint = '/artist/fan-crm/segments';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.update':
+        $method = 'PATCH';
+        $body = file_get_contents('php://input') ?: '{}';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.delete':
+        $method = 'DELETE';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId;
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.segment.preview':
+        $method = 'GET';
+        $segId = (int) ($_GET['id'] ?? 0);
+        if ($segId <= 0) { http_response_code(400); echo json_encode(['error' => 'Missing segment id']); exit; }
+        $endpoint = '/artist/fan-crm/segments/' . $segId . '/preview';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.fans':
+        $method = 'GET';
+        $params = [];
+        foreach (['search', 'segment', 'custom_segment_id', 'page', 'per_page'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/fans' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.fans.export':
+        $method = 'GET';
+        $params = [];
+        foreach (['search', 'segment', 'custom_segment_id'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/fans/export' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        $rawResponse = true; // CSV stream
+        break;
+
+    case 'artist.fan-crm.cohort':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/cohort';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.demographics':
+        $method = 'GET';
+        $endpoint = '/artist/fan-crm/demographics';
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.compare':
+        $method = 'GET';
+        $params = [];
+        foreach (['type', 'a_id', 'b_id'] as $k) {
+            if (isset($_GET[$k]) && $_GET[$k] !== '') $params[$k] = $_GET[$k];
+        }
+        $endpoint = '/artist/fan-crm/compare' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'artist.fan-crm.vip':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = $_GET['limit'];
+        $endpoint = '/artist/fan-crm/vip' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
     case 'organizer.payout-details':
         $method = 'PUT';
         $body = file_get_contents('php://input');
