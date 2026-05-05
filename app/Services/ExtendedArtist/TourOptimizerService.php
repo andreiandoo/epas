@@ -357,16 +357,21 @@ class TourOptimizerService
 
         // Pentru fiecare stop, calculează cazarea.
         // Reguli:
-        //   - Dacă următorul stop are from_start = true, după acest concert echipa se întoarce
-        //     acasă → plătim doar 1 noapte aici (noaptea concertului).
+        //   - Dacă stop-ul e ACASĂ (is_home), echipa nu plătește cazare → 0 nopți, 0 RON.
+        //   - Dacă următorul stop are from_start = true sau e acasă, după acest concert echipa
+        //     se întoarce acasă → plătim doar 1 noapte aici (noaptea concertului).
         //   - Pentru ultimul stop, plătim 1 noapte (după care se întoarce acasă).
         //   - Altfel: nopți = zile până la următorul concert (≥ 1).
         for ($i = 0; $i < count($finalRoute); $i++) {
-            $thisDate = Carbon::parse($finalRoute[$i]['date_iso']);
+            $thisStop = $finalRoute[$i];
+            $thisDate = Carbon::parse($thisStop['date_iso']);
             $nextStop = $finalRoute[$i + 1] ?? null;
-            $nextReturnsHome = $nextStop && !empty($nextStop['from_start']);
+            $nextReturnsHome = $nextStop && (!empty($nextStop['from_start']) || !empty($nextStop['is_home']));
 
-            if (!$nextStop || $nextReturnsHome) {
+            if (!empty($thisStop['is_home'])) {
+                // Concertul e acasă — fără cazare
+                $nights = 0;
+            } elseif (!$nextStop || $nextReturnsHome) {
                 $nights = 1;
             } else {
                 $nextDate = Carbon::parse($nextStop['date_iso']);
@@ -377,21 +382,27 @@ class TourOptimizerService
             $finalRoute[$i]['accommodation_cost'] = (int) round($this->accommodationCostPerNight($config) * $nights);
         }
 
-        // Mâncare: distribuită egal per stop pentru durata totală
-        $totalMealCost = $this->mealCost($duration, $config);
-        $mealPerStop = count($finalRoute) > 0 ? (int) round($totalMealCost / count($finalRoute)) : 0;
+        // Mâncare: distribuită egal pe non-home stops (când ești acasă, mâncarea nu e cost de tour).
+        $nonHomeStops = array_values(array_filter($finalRoute, fn ($s) => empty($s['is_home'])));
+        $nonHomeCount = count($nonHomeStops);
+        // Diurna totală e calculată pentru durata "pe drum" — aproximăm scăzând zilele acasă din duration.
+        $homeDays = count($finalRoute) - $nonHomeCount;
+        $effectiveDays = max(1, $duration - $homeDays);
+        $totalMealCost = $this->mealCost($effectiveDays, $config);
+        $mealPerStop = $nonHomeCount > 0 ? (int) round($totalMealCost / $nonHomeCount) : 0;
 
         // Revenue + profit per stop folosind avg_ticket_price
         $avgTicketPrice = (float) $config['avg_ticket_price'];
         for ($i = 0; $i < count($finalRoute); $i++) {
-            $finalRoute[$i]['meal_cost'] = $mealPerStop;
+            $isHomeStop = !empty($finalRoute[$i]['is_home']);
+            $finalRoute[$i]['meal_cost'] = $isHomeStop ? 0 : $mealPerStop;
             $stopFuel = (int) ($finalRoute[$i]['fuel_cost'] ?? 0);
             // Pentru ultimul stop adăugăm și costul de retur la home base
             if ($i === count($finalRoute) - 1 && isset($finalRoute[$i]['return_fuel_cost'])) {
                 $stopFuel += (int) $finalRoute[$i]['return_fuel_cost'];
             }
             $stopAccommodation = (int) ($finalRoute[$i]['accommodation_cost'] ?? 0);
-            $stopMeal = $mealPerStop;
+            $stopMeal = (int) ($finalRoute[$i]['meal_cost'] ?? 0);
             $stopCost = $stopFuel + $stopAccommodation + $stopMeal;
             $stopRevenue = (int) round($finalRoute[$i]['prediction'] * $avgTicketPrice);
             $stopProfit = $stopRevenue - $stopCost;
