@@ -36,13 +36,28 @@
     $showBookingCta = (bool) $get('contact', 'show_booking_cta', true);
 
     $statsConfig = [
+        // LIVE
         'tickets_sold' => 'Bilete vândute',
         'events_played' => 'Concerte',
         'cities' => 'Orașe',
         'countries' => 'Țări',
         'peak_audience' => 'Audiență max',
+        // Social
+        'instagram_followers' => 'Followers Instagram',
+        'facebook_followers' => 'Followers Facebook',
+        'youtube_followers' => 'Subscriberi YouTube',
+        'spotify_followers' => 'Followers Spotify',
+        'spotify_monthly_listeners' => 'Ascultători lunari Spotify',
+        'tiktok_followers' => 'Followers TikTok',
     ];
-    $visibleStats = collect($statsConfig)->filter(fn ($label, $key) => !empty($statsShow[$key]) && isset($live_stats[$key]));
+    $visibleStats = collect($statsConfig)
+        ->filter(fn ($label, $key) => !empty($statsShow[$key]) && isset($live_stats[$key]) && (int) ($live_stats[$key]['raw'] ?? 0) > 0);
+
+    // Custom stats — adăugate manual de artist în editor
+    $customStats = collect($get('stats', 'custom', []))
+        ->filter(fn ($cs) => is_array($cs) && !empty($cs['label'] ?? null) && !empty($cs['value'] ?? null))
+        ->values();
+    $totalStatsCount = $visibleStats->count() + $customStats->count();
 
     $publicUrl = url()->current();
     $ogTitle = $stageName . ($variant['name'] !== 'Default' ? ' — ' . $variant['name'] : '') . ' EPK';
@@ -175,20 +190,35 @@
 @endif
 
 {{-- ============================ STATS — KILLER FEATURE ============================ --}}
-@if ($enabled('stats') && $visibleStats->isNotEmpty())
+@if ($enabled('stats') && $totalStatsCount > 0)
+@php
+    // Calculează numărul de coloane dinamic (max 5 pe lg, ajustat după count)
+    $statsCols = match(true) {
+        $totalStatsCount >= 5 => 5,
+        $totalStatsCount === 4 => 4,
+        $totalStatsCount === 3 => 3,
+        default => 2,
+    };
+@endphp
 <section class="relative py-20 px-6 lg:px-12 border-t border-white/5">
     <div class="absolute inset-0 epk-stat-glow"></div>
-    <div class="relative max-w-5xl mx-auto">
+    <div class="relative max-w-6xl mx-auto">
         <div class="text-center mb-12">
             <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Date Verificate · Din Platformă</p>
             <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white">Cifre care nu mint</h2>
         </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-{{ $visibleStats->count() }} gap-6 lg:gap-8">
+        <div class="grid grid-cols-2 lg:grid-cols-{{ $statsCols }} gap-6 lg:gap-8">
             @foreach ($visibleStats as $key => $label)
                 <div class="text-center">
-                    <p class="epk-display text-5xl lg:text-7xl font-black text-white mb-2">{{ $live_stats[$key]['display'] }}</p>
+                    <p class="epk-display text-4xl lg:text-6xl font-black text-white mb-2">{{ $live_stats[$key]['display'] }}</p>
                     <p class="text-white/60 text-xs lg:text-sm uppercase tracking-wider">{{ $label }}</p>
+                </div>
+            @endforeach
+            @foreach ($customStats as $cs)
+                <div class="text-center">
+                    <p class="epk-display text-4xl lg:text-6xl font-black text-white mb-2">{{ $cs['value'] }}</p>
+                    <p class="text-white/60 text-xs lg:text-sm uppercase tracking-wider">{{ $cs['label'] }}</p>
                 </div>
             @endforeach
         </div>
@@ -240,21 +270,53 @@
 </section>
 @endif
 
-{{-- ============================ SPOTIFY ============================ --}}
+{{-- ============================ SPOTIFY (embed iframe) ============================ --}}
 @if ($enabled('spotify') && $spotifyUrl)
+@php
+    // Detectează tipul (artist / album / playlist / track / show / episode) și ID-ul
+    // din URL-ul Spotify pentru a construi URL-ul de embed.
+    preg_match('#open\.spotify\.com/(?:intl-[a-z]+/)?(artist|album|playlist|track|show|episode)/([a-zA-Z0-9]+)#', $spotifyUrl, $sm);
+    $spotifyType = $sm[1] ?? null;
+    $spotifyId = $sm[2] ?? null;
+    $spotifyEmbedUrl = ($spotifyType && $spotifyId)
+        ? "https://open.spotify.com/embed/{$spotifyType}/{$spotifyId}?utm_source=generator&theme=0"
+        : null;
+    // Player mai înalt pentru artist/album/playlist (poți vedea mai multe piese), mai mic pentru track/episode
+    $spotifyHeight = in_array($spotifyType, ['track', 'episode']) ? 152 : 380;
+@endphp
 <section class="py-20 px-6 lg:px-12 border-t border-white/5">
     <div class="max-w-3xl mx-auto">
         <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Muzică</p>
         <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Asculta-ne</h2>
-        <div class="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-2xl p-8 flex items-center gap-6">
-            <svg class="w-16 h-16 text-[#1DB954] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.56.3z"/></svg>
-            <div class="flex-1">
-                <p class="text-white font-bold text-lg">{{ $stageName }}</p>
-                <a href="{{ $spotifyUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[#1DB954] hover:text-white transition-colors text-sm font-medium mt-2">
+
+        @if ($spotifyEmbedUrl)
+            <div class="rounded-2xl overflow-hidden bg-black/40">
+                <iframe src="{{ $spotifyEmbedUrl }}"
+                        width="100%" height="{{ $spotifyHeight }}"
+                        frameborder="0"
+                        allowfullscreen
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                        class="block w-full"
+                        style="border-radius: 16px"></iframe>
+            </div>
+            <p class="mt-4 text-center">
+                <a href="{{ $spotifyUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[#1DB954] hover:text-white transition-colors text-sm font-medium">
                     Deschide pe Spotify →
                 </a>
+            </p>
+        @else
+            {{-- Fallback dacă URL-ul nu e parsabil --}}
+            <div class="bg-[#1DB954]/10 border border-[#1DB954]/30 rounded-2xl p-8 flex items-center gap-6">
+                <svg class="w-16 h-16 text-[#1DB954] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.42 1.56-.299.421-1.02.599-1.56.3z"/></svg>
+                <div class="flex-1">
+                    <p class="text-white font-bold text-lg">{{ $stageName }}</p>
+                    <a href="{{ $spotifyUrl }}" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[#1DB954] hover:text-white transition-colors text-sm font-medium mt-2">
+                        Deschide pe Spotify →
+                    </a>
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 </section>
 @endif

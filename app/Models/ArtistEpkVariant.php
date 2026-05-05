@@ -116,12 +116,22 @@ class ArtistEpkVariant extends Model
             ]],
             ['id' => self::SECTION_STATS, 'enabled' => true, 'data' => [
                 'show' => [
+                    // LIVE stats din platforma (calculat in EpkService)
                     'tickets_sold' => true,
                     'events_played' => true,
                     'cities' => true,
                     'countries' => true,
                     'peak_audience' => true,
+                    // Social stats (followers din DB) — dezactivate by default
+                    'instagram_followers' => false,
+                    'facebook_followers' => false,
+                    'youtube_followers' => false,
+                    'spotify_followers' => false,
+                    'spotify_monthly_listeners' => false,
+                    'tiktok_followers' => false,
                 ],
+                // Stats custom adăugate manual de artist: [{label, value}]
+                'custom' => [],
             ]],
             ['id' => self::SECTION_BIO, 'enabled' => true, 'data' => [
                 'bio_short' => mb_substr($bioPlain, 0, 280),
@@ -306,7 +316,8 @@ class ArtistEpkVariant extends Model
                 }
             }
 
-            // YouTube: fallback la videoclipurile din profil + auto-enable când avem date
+            // YouTube: fallback la videoclipurile din profil + auto-enable AGRESIV
+            // (orice secțiune cu conținut e auto-activată; user poate dezactiva manual)
             if ($sectionId === self::SECTION_YOUTUBE) {
                 $currentVideos = collect($section['data']['videos'] ?? [])
                     ->map(fn ($v) => ['url' => is_string($v) ? $v : ($v['url'] ?? '')])
@@ -314,33 +325,49 @@ class ArtistEpkVariant extends Model
                     ->values()
                     ->all();
                 if (empty($currentVideos) && !empty($artistYoutubeVideos)) {
-                    $section['data']['videos'] = $artistYoutubeVideos;
-                    if (empty($section['enabled'])) {
-                        $section['enabled'] = true;
-                    }
-                } else {
-                    $section['data']['videos'] = $currentVideos;
+                    $currentVideos = $artistYoutubeVideos;
+                }
+                $section['data']['videos'] = $currentVideos;
+                if (!empty($currentVideos)) {
+                    $section['enabled'] = true;
                 }
             }
 
-            // Spotify: fallback la URL profil
+            // Spotify: fallback la URL profil + auto-enable când există URL
             if ($sectionId === self::SECTION_SPOTIFY) {
                 if (empty($section['data']['spotify_url']) && !empty($artist->spotify_url)) {
                     $section['data']['spotify_url'] = $artist->spotify_url;
-                    if (empty($section['enabled'])) {
-                        $section['enabled'] = true;
-                    }
+                }
+                if (!empty($section['data']['spotify_url'])) {
+                    $section['enabled'] = true;
                 }
             }
 
-            // Achievements: fallback la cele din profil
+            // Achievements: fallback la cele din profil + auto-enable când are items
             if ($sectionId === self::SECTION_ACHIEVEMENTS) {
                 $items = is_array($section['data']['items'] ?? null) ? $section['data']['items'] : [];
                 if (empty($items) && !empty($artist->achievements)) {
-                    $section['data']['items'] = $artist->achievements;
-                    if (empty($section['enabled'])) {
-                        $section['enabled'] = true;
-                    }
+                    $items = $artist->achievements;
+                }
+                $section['data']['items'] = $items;
+                if (!empty($items)) {
+                    $section['enabled'] = true;
+                }
+            }
+
+            // Press quotes: auto-enable când are quotes
+            if ($sectionId === self::SECTION_PRESS_QUOTES) {
+                $quotes = is_array($section['data']['quotes'] ?? null) ? $section['data']['quotes'] : [];
+                $section['data']['quotes'] = $quotes;
+                if (!empty($quotes)) {
+                    $section['enabled'] = true;
+                }
+            }
+
+            // Rider: auto-enable când există PDF urcat
+            if ($sectionId === self::SECTION_RIDER) {
+                if (!empty($section['data']['rider_pdf_url']) || !empty($section['data']['rider_pdf_path'])) {
+                    $section['enabled'] = true;
                 }
             }
 

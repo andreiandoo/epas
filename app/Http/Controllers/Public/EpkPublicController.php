@@ -65,7 +65,9 @@ class EpkPublicController extends Controller
             if (empty($payload)) {
                 abort(404);
             }
-            $payload['marketplace_name'] = $request->attributes->get('marketplace_client')?->name ?? 'EventPilot';
+            // Pentru rutele publice (no marketplace.auth middleware) atribut-ul nu e setat;
+            // hardcodam Tixello pentru că aici e platforma de bază.
+            $payload['marketplace_name'] = $request->attributes->get('marketplace_client')?->name ?? 'Tixello';
 
             // Bypass cache cu ?nocache=1 — util la debugging după save / deploy
             if ($request->boolean('nocache')) {

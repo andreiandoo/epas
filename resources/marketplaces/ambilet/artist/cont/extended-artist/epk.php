@@ -251,24 +251,67 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
 
                                         <!-- STATS -->
                                         <template x-if="section.id === 'stats'">
-                                            <div>
-                                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-4 flex items-start gap-2">
+                                            <div class="space-y-6">
+                                                <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-start gap-2">
                                                     <svg class="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                                                    <p class="text-xs text-blue-900">Aceste cifre vin <strong>direct din platformă</strong>. Sunt verificate, nu pot fi editate manual — ceea ce le face creditabile pentru organizatori.</p>
+                                                    <p class="text-xs text-blue-900">Cifrele vin <strong>direct din platformă</strong>. Sunt verificate. Activează-le pe cele relevante pentru tine.</p>
                                                 </div>
-                                                <div class="grid sm:grid-cols-2 gap-3">
-                                                    <template x-for="stat in stats" :key="stat.key">
-                                                        <div class="border border-border rounded-xl p-4 flex items-center justify-between">
-                                                            <div>
-                                                                <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
-                                                                <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+
+                                                <!-- Live stats from platform -->
+                                                <div>
+                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats live (din platformă)</h4>
+                                                    <div class="grid sm:grid-cols-2 gap-3">
+                                                        <template x-for="stat in liveStats()" :key="stat.key">
+                                                            <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                                <div>
+                                                                    <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
+                                                                    <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                                </div>
+                                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                                    <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
+                                                                    <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                                </label>
                                                             </div>
-                                                            <label class="relative inline-flex items-center cursor-pointer">
-                                                                <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
-                                                                <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
-                                                            </label>
-                                                        </div>
-                                                    </template>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Social stats -->
+                                                <div>
+                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats sociale</h4>
+                                                    <p class="text-xs text-muted mb-3">Followers de pe social media (din profilul tău).</p>
+                                                    <div class="grid sm:grid-cols-2 gap-3">
+                                                        <template x-for="stat in socialStats()" :key="stat.key">
+                                                            <div class="border border-border rounded-xl p-4 flex items-center justify-between">
+                                                                <div>
+                                                                    <p class="text-xs text-muted uppercase tracking-wider font-semibold" x-text="stat.label"></p>
+                                                                    <p class="text-2xl font-bold text-secondary mt-1" x-text="stat.value"></p>
+                                                                </div>
+                                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                                    <input type="checkbox" x-model="stat.show" @change="markDirty()" class="sr-only peer">
+                                                                    <div class="w-9 h-5 bg-surface peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-success"></div>
+                                                                </label>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Custom stats — artist-defined -->
+                                                <div>
+                                                    <h4 class="text-sm font-bold text-secondary mb-3">Stats personalizate</h4>
+                                                    <p class="text-xs text-muted mb-3">Adaugă orice cifră vrei tu (ex: „Premii câștigate: 7" sau „Țări vizitate: 12"). Max 6.</p>
+                                                    <div class="space-y-2">
+                                                        <template x-for="(cs, i) in data.custom_stats" :key="i">
+                                                            <div class="flex gap-2">
+                                                                <input type="text" x-model="cs.label" @input="markDirty()" maxlength="40" placeholder="Etichetă (ex: Ani de carieră)" class="epk-input flex-1">
+                                                                <input type="text" x-model="cs.value" @input="markDirty()" maxlength="20" placeholder="Valoare (ex: 12)" class="epk-input w-32">
+                                                                <button @click="data.custom_stats.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg">
+                                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                                </button>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                    <button x-show="(data.custom_stats || []).length < 6" @click="data.custom_stats.push({ label: '', value: '' }); markDirty()" class="mt-2 text-sm text-primary font-medium hover:underline">+ Adaugă stat personalizat</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -586,9 +629,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                         <template x-for="v in versions" :key="v.id">
                             <div class="border-2 rounded-2xl overflow-hidden transition-all hover:shadow-md"
                                  :class="v.id === state.active_variant_id ? 'border-primary' : 'border-border'">
-                                <div class="aspect-video relative" :style="`background: linear-gradient(135deg, ${v.accent_color}, ${v.accent_color}88)`">
-                                    <span x-show="v.id === state.active_variant_id" class="absolute top-2 left-2 epk-badge bg-primary text-white">Activă</span>
-                                    <div class="absolute bottom-2 right-2 flex gap-1">
+                                <div class="aspect-video relative bg-cover bg-center" :style="variantPreviewStyle(v)">
+                                    <!-- Overlay pentru lizibilitate când e cover image -->
+                                    <div x-show="variantHasCover(v)" class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
+                                    <span x-show="v.id === state.active_variant_id" class="absolute top-2 left-2 epk-badge bg-primary text-white z-10">Activă</span>
+                                    <div class="absolute bottom-2 right-2 flex gap-1 z-10">
                                         <a :href="variantPublicUrl(v)" target="_blank" class="w-7 h-7 bg-white/90 backdrop-blur rounded-lg flex items-center justify-center text-secondary hover:bg-white transition-colors" title="Vezi public">
                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                         </a>
@@ -717,11 +762,19 @@ function smartEpk() {
         ],
 
         statKeys: [
-            { key: 'tickets_sold',  label: 'Bilete vândute' },
-            { key: 'events_played', label: 'Concerte' },
-            { key: 'cities',        label: 'Orașe' },
-            { key: 'countries',     label: 'Țări' },
-            { key: 'peak_audience', label: 'Audiență max' },
+            // LIVE stats din platformă
+            { key: 'tickets_sold',              label: 'Bilete vândute',           group: 'live' },
+            { key: 'events_played',             label: 'Concerte',                 group: 'live' },
+            { key: 'cities',                    label: 'Orașe',                    group: 'live' },
+            { key: 'countries',                 label: 'Țări',                     group: 'live' },
+            { key: 'peak_audience',             label: 'Audiență max',             group: 'live' },
+            // Social stats din profilul artistului
+            { key: 'instagram_followers',       label: 'Followers Instagram',      group: 'social' },
+            { key: 'facebook_followers',        label: 'Followers Facebook',       group: 'social' },
+            { key: 'youtube_followers',         label: 'Subscriberi YouTube',      group: 'social' },
+            { key: 'spotify_followers',         label: 'Followers Spotify',        group: 'social' },
+            { key: 'spotify_monthly_listeners', label: 'Ascultători lunari Spotify', group: 'social' },
+            { key: 'tiktok_followers',          label: 'Followers TikTok',         group: 'social' },
         ],
 
         // ========== Server state ==========
@@ -875,14 +928,17 @@ function smartEpk() {
                 contact_email: fb(get('contact', 'email', null), profile.email),
                 contact_phone: fb(get('contact', 'phone', null), profile.phone),
                 show_booking_cta: get('contact', 'show_booking_cta', true),
+                // Custom stats — array de {label, value} adăugate manual de artist
+                custom_stats: Array.isArray(get('stats', 'custom', [])) ? get('stats', 'custom', []) : [],
             };
             // Stats: merge live values with show flags from server
             const showFlags = get('stats', 'show', {});
             this.stats = this.statKeys.map(s => ({
                 key: s.key,
                 label: s.label,
+                group: s.group,
                 value: this.state.live_stats?.[s.key]?.display ?? '—',
-                show: showFlags[s.key] ?? true,
+                show: showFlags[s.key] ?? (s.group === 'live'), // LIVE stats default ON, social default OFF
             }));
 
             // Build this.sections AFTER this.data e construit, pentru auto-enable
@@ -920,7 +976,7 @@ function smartEpk() {
 
             const dataByid = {
                 hero: { stage_name: this.data.stage_name, tagline: this.data.tagline, cover_image: this.data.cover_image },
-                stats: { show: showFlags },
+                stats: { show: showFlags, custom: this.data.custom_stats || [] },
                 bio: { bio_short: this.data.bio_short, bio_long: this.data.bio_long },
                 gallery: { images: this.data.gallery },
                 spotify: { spotify_url: this.data.spotify_url },
@@ -1121,6 +1177,31 @@ function smartEpk() {
 
         nonEmptyGallery() {
             return (this.data.gallery || []).filter(img => typeof img === 'string' && img.length > 0);
+        },
+
+        liveStats() {
+            return this.stats.filter(s => s.group === 'live');
+        },
+
+        socialStats() {
+            return this.stats.filter(s => s.group === 'social');
+        },
+
+        // ========== Variant card preview helpers ==========
+        variantHasCover(v) {
+            const hero = (v.sections || []).find(s => s.id === 'hero');
+            return !!(hero?.data?.cover_image);
+        },
+
+        variantPreviewStyle(v) {
+            const hero = (v.sections || []).find(s => s.id === 'hero');
+            const cover = hero?.data?.cover_image;
+            const accent = v.accent_color || '#A51C30';
+            if (cover) {
+                return `background-image: url('${cover}'); background-color: ${accent}`;
+            }
+            // Fallback la gradient atunci când nu există cover image
+            return `background: linear-gradient(135deg, ${accent}, ${accent}88)`;
         },
 
         removeGalleryImage(displayIdx) {

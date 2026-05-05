@@ -92,11 +92,19 @@ class EpkService
         }
 
         return [
+            // Stats LIVE din platformă
             'tickets_sold' => $this->formatStat($kpis['tickets_sold']),
             'events_played' => $this->formatStat($kpis['events_count']),
             'cities' => $this->formatStat($cities),
             'countries' => $this->formatStat($countries),
             'peak_audience' => $this->formatStat($peakAudience),
+            // Stats sociale din profilul Artist (urmărite separat de social stats sync)
+            'instagram_followers' => $this->formatStat((int) ($artist->instagram_followers ?? 0)),
+            'facebook_followers' => $this->formatStat((int) ($artist->facebook_followers ?? 0)),
+            'youtube_followers' => $this->formatStat((int) ($artist->youtube_followers ?? 0)),
+            'spotify_followers' => $this->formatStat((int) ($artist->spotify_followers ?? 0)),
+            'spotify_monthly_listeners' => $this->formatStat((int) ($artist->spotify_monthly_listeners ?? 0)),
+            'tiktok_followers' => $this->formatStat((int) ($artist->tiktok_followers ?? 0)),
         ];
     }
 
