@@ -39,7 +39,7 @@ class ArtistEpkVariant extends Model
 
     public const MAX_VARIANTS_PER_EPK = 3;
     public const MAX_GALLERY_IMAGES = 12;
-    public const MAX_YOUTUBE_VIDEOS = 3;
+    public const MAX_YOUTUBE_VIDEOS = 4;
 
     protected $fillable = [
         'artist_epk_id',
@@ -126,8 +126,10 @@ class ArtistEpkVariant extends Model
                     'instagram_followers' => false,
                     'facebook_followers' => false,
                     'youtube_followers' => false,
+                    'youtube_views' => false,
                     'spotify_followers' => false,
                     'spotify_monthly_listeners' => false,
+                    'spotify_popularity' => false,
                     'tiktok_followers' => false,
                 ],
                 // Stats custom adăugate manual de artist: [{label, value}]

@@ -46,8 +46,10 @@
         'instagram_followers' => 'Followers Instagram',
         'facebook_followers' => 'Followers Facebook',
         'youtube_followers' => 'Subscriberi YouTube',
+        'youtube_views' => 'Vizualizări YouTube',
         'spotify_followers' => 'Followers Spotify',
         'spotify_monthly_listeners' => 'Ascultători lunari Spotify',
+        'spotify_popularity' => 'Popularitate Spotify',
         'tiktok_followers' => 'Followers TikTok',
     ];
     $visibleStats = collect($statsConfig)
@@ -328,7 +330,7 @@
         <p class="text-accent text-xs uppercase tracking-[0.3em] font-bold mb-3">Video</p>
         <h2 class="epk-display text-4xl lg:text-5xl font-bold text-white mb-8">Vezi-ne live</h2>
         <div class="grid {{ count($youtubeVideos) > 1 ? 'lg:grid-cols-2' : '' }} gap-6">
-            @foreach (array_slice($youtubeVideos, 0, 3) as $video)
+            @foreach (array_slice($youtubeVideos, 0, 4) as $video)
                 @php
                     $videoUrl = is_string($video) ? $video : ($video['url'] ?? '');
                     preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]+)/', $videoUrl, $m);
@@ -399,10 +401,16 @@
             <p class="text-xl text-white/70 mb-10">Concerte · Festivaluri · Evenimente private · Corporate</p>
         @endif
 
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <div class="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
             @if ($showBookingCta && $contactEmail)
                 <a href="mailto:{{ $contactEmail }}" class="inline-flex items-center justify-center gap-2 bg-accent text-white hover:opacity-90 px-8 py-4 rounded-xl font-semibold text-base transition-opacity">
                     Cere booking →
+                </a>
+            @endif
+            @if (!empty($social['website']))
+                <a href="{{ $social['website'] }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 bg-white/10 backdrop-blur text-white hover:bg-white/20 px-8 py-4 rounded-xl font-semibold text-base transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M12 3a17 17 0 010 18M12 3a17 17 0 000 18"/></svg>
+                    Vezi website
                 </a>
             @endif
             @if ($enabled('rider') && !empty($rider['rider_pdf_url']))
@@ -418,8 +426,14 @@
             @endif
         </div>
 
-        @if ($enabled('contact') && ($contactEmail || $contactPhone))
-            <div class="mt-12 pt-12 border-t border-white/10 grid grid-cols-2 gap-8 text-left max-w-md mx-auto">
+        @php
+            $hasWebsite = !empty($social['website']);
+            $contactItemsCount = ($contactEmail ? 1 : 0) + ($contactPhone ? 1 : 0) + ($hasWebsite ? 1 : 0);
+            $contactGridCols = $contactItemsCount === 3 ? 3 : ($contactItemsCount === 2 ? 2 : 1);
+            $contactMaxWidth = $contactItemsCount === 3 ? 'max-w-2xl' : 'max-w-md';
+        @endphp
+        @if ($enabled('contact') && $contactItemsCount > 0)
+            <div class="mt-12 pt-12 border-t border-white/10 grid grid-cols-{{ $contactGridCols }} gap-8 text-left {{ $contactMaxWidth }} mx-auto">
                 @if ($contactEmail)
                     <div>
                         <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Email</p>
@@ -430,6 +444,12 @@
                     <div>
                         <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Telefon</p>
                         <p class="text-white text-sm">{{ $contactPhone }}</p>
+                    </div>
+                @endif
+                @if ($hasWebsite)
+                    <div>
+                        <p class="text-white/40 text-xs uppercase tracking-wider mb-1">Website</p>
+                        <a href="{{ $social['website'] }}" target="_blank" rel="noopener" class="text-white text-sm break-all hover:text-accent transition-colors">{{ preg_replace('#^https?://(www\.)?#', '', rtrim($social['website'], '/')) }}</a>
                     </div>
                 @endif
             </div>

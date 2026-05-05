@@ -33,9 +33,11 @@
         'peak_audience' => 'Audiență max',
         'instagram_followers' => 'Instagram',
         'facebook_followers' => 'Facebook',
-        'youtube_followers' => 'YouTube',
+        'youtube_followers' => 'YouTube subs',
+        'youtube_views' => 'YouTube views',
         'spotify_followers' => 'Spotify',
         'spotify_monthly_listeners' => 'Spotify lunar',
+        'spotify_popularity' => 'Spotify pop.',
         'tiktok_followers' => 'TikTok',
     ];
     $allStats = [];
@@ -323,7 +325,10 @@
             <div class="footer-subtitle">Concerte · Festivaluri · Evenimente private · Corporate</div>
         @endif
 
-        @if ($enabled('contact') && ($contactEmail || $contactPhone))
+        @php
+            $contactWebsite = $social['website'] ?? null;
+        @endphp
+        @if ($enabled('contact') && ($contactEmail || $contactPhone || $contactWebsite))
             <table class="footer-contacts">
                 <tr>
                     @if ($contactEmail)
@@ -336,6 +341,12 @@
                         <td>
                             <div class="footer-contact-label">Telefon</div>
                             <div class="footer-contact-value">{{ $contactPhone }}</div>
+                        </td>
+                    @endif
+                    @if ($contactWebsite)
+                        <td>
+                            <div class="footer-contact-label">Website</div>
+                            <div class="footer-contact-value">{{ preg_replace('#^https?://(www\.)?#', '', rtrim($contactWebsite, '/')) }}</div>
                         </td>
                     @endif
                 </tr>

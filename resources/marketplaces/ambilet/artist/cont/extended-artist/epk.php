@@ -302,10 +302,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <p class="text-xs text-muted mb-3">Adaugă orice cifră vrei tu (ex: „Premii câștigate: 7" sau „Țări vizitate: 12"). Max 6.</p>
                                                     <div class="space-y-2">
                                                         <template x-for="(cs, i) in data.custom_stats" :key="i">
-                                                            <div class="flex gap-2">
-                                                                <input type="text" x-model="cs.label" @input="markDirty()" maxlength="40" placeholder="Etichetă (ex: Ani de carieră)" class="epk-input flex-1">
-                                                                <input type="text" x-model="cs.value" @input="markDirty()" maxlength="20" placeholder="Valoare (ex: 12)" class="epk-input w-32">
-                                                                <button @click="data.custom_stats.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg">
+                                                            <div class="flex gap-2 items-center">
+                                                                <input type="text" x-model="cs.label" @input="markDirty()" maxlength="40" placeholder="Etichetă (ex: Ani de carieră)" class="epk-input" style="flex:1 1 auto; min-width:0">
+                                                                <input type="text" x-model="cs.value" @input="markDirty()" maxlength="20" placeholder="Valoare (ex: 12)" class="epk-input" style="width:8rem; flex:0 0 8rem">
+                                                                <button @click="data.custom_stats.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
                                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                                 </button>
                                                             </div>
@@ -363,7 +363,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <!-- YOUTUBE -->
                                         <template x-if="section.id === 'youtube'">
                                             <div>
-                                                <label class="block text-sm font-medium text-secondary mb-2">Videoclipuri YouTube (max 3)</label>
+                                                <label class="block text-sm font-medium text-secondary mb-2">Videoclipuri YouTube (max 4)</label>
                                                 <div class="space-y-2">
                                                     <template x-for="(v, i) in data.youtube_videos" :key="i">
                                                         <div class="flex gap-2">
@@ -373,7 +373,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             </button>
                                                         </div>
                                                     </template>
-                                                    <button x-show="data.youtube_videos.length < 3" @click="data.youtube_videos.push({ url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
+                                                    <button x-show="data.youtube_videos.length < 4" @click="data.youtube_videos.push({ url: '' }); markDirty()" class="text-sm text-primary font-medium hover:underline">+ Adaugă video</button>
                                                 </div>
                                             </div>
                                         </template>
@@ -384,10 +384,10 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                 <p class="text-sm text-muted mb-3">Realizări notabile, cronologic descrescător.</p>
                                                 <div class="space-y-2">
                                                     <template x-for="(a, i) in data.achievements" :key="i">
-                                                        <div class="flex gap-2">
-                                                            <input type="number" x-model.number="a.year" @input="markDirty()" placeholder="An" class="epk-input w-24">
-                                                            <input type="text" x-model="a.text" @input="markDirty()" placeholder="Realizare" class="epk-input flex-1">
-                                                            <button @click="data.achievements.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg">
+                                                        <div class="flex gap-2 items-center">
+                                                            <input type="number" x-model.number="a.year" @input="markDirty()" placeholder="An" class="epk-input" style="width:6rem; flex:0 0 6rem">
+                                                            <input type="text" x-model="a.text" @input="markDirty()" placeholder="Realizare (ex: Cap de afiș Untold)" class="epk-input" style="flex:1 1 auto; min-width:0">
+                                                            <button @click="data.achievements.splice(i, 1); markDirty()" class="p-2 text-muted hover:text-error rounded-lg flex-shrink-0">
                                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                             </button>
                                                         </div>
@@ -744,7 +744,7 @@ function smartEpk() {
             { id: 'bio',           label: 'Biografie',             summary: 'Scurt + extins',           description: 'Spune-le organizatorilor cine ești și ce te face memorabil.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>' },
             { id: 'gallery',       label: 'Galerie foto',          summary: 'Max 12 imagini',           description: 'Imagini de pe scenă, de la repetiții, portrete. Recomandat 8-12.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>' },
             { id: 'spotify',       label: 'Spotify',               summary: 'Embed muzică',             description: 'Card cu link către artist, album sau playlist.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>' },
-            { id: 'youtube',       label: 'YouTube',               summary: 'Max 3 videoclipuri',       description: 'Videoclipuri embed (max 3). Cele mai relevante.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>' },
+            { id: 'youtube',       label: 'YouTube',               summary: 'Max 4 videoclipuri',       description: 'Videoclipuri embed (max 4). Cele mai relevante.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>' },
             { id: 'achievements',  label: 'Realizări',             summary: 'Timeline cronologic',      description: 'Premii, festivaluri majore, momente cheie.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>' },
             { id: 'press_quotes',  label: 'Press quotes',          summary: 'Citate presă',             description: 'Citate din articole cu sursă și link.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-4 4z"/>' },
             { id: 'past_events',   label: 'Concerte trecute',      summary: 'Auto din platformă',       description: 'Showcase de evenimente trecute. Bifează „Ascunde" pentru cele pe care nu le vrei.', icon: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>' },
@@ -772,8 +772,10 @@ function smartEpk() {
             { key: 'instagram_followers',       label: 'Followers Instagram',      group: 'social' },
             { key: 'facebook_followers',        label: 'Followers Facebook',       group: 'social' },
             { key: 'youtube_followers',         label: 'Subscriberi YouTube',      group: 'social' },
+            { key: 'youtube_views',             label: 'Vizualizări YouTube',      group: 'social' },
             { key: 'spotify_followers',         label: 'Followers Spotify',        group: 'social' },
             { key: 'spotify_monthly_listeners', label: 'Ascultători lunari Spotify', group: 'social' },
+            { key: 'spotify_popularity',        label: 'Popularitate Spotify',     group: 'social' },
             { key: 'tiktok_followers',          label: 'Followers TikTok',         group: 'social' },
         ],
 
@@ -783,7 +785,7 @@ function smartEpk() {
             active_variant_id: null,
             live_stats: {},
             past_events: [],
-            limits: { max_variants: 3, max_gallery_images: 12, max_youtube_videos: 3 },
+            limits: { max_variants: 3, max_gallery_images: 12, max_youtube_videos: 4 },
             marketplace_domain: '',
             artist: { slug: '', name: '' },
             artist_profile: {}, // fallback values din profilul artistului (social, contact, images)

@@ -91,6 +91,11 @@ class EpkService
                 ->value('cnt');
         }
 
+        // Stats sociale: schema Artist are 2 seturi de coloane (legacy + nou),
+        // sync-ul scrie în `followers_*` dar valorile vechi pot fi în `*_followers`.
+        // Citim ambele variante și luăm prima non-zero.
+        $pickFirst = fn (...$vals) => array_reduce($vals, fn ($carry, $v) => $carry ?: (int) $v, 0);
+
         return [
             // Stats LIVE din platformă
             'tickets_sold' => $this->formatStat($kpis['tickets_sold']),
@@ -98,13 +103,16 @@ class EpkService
             'cities' => $this->formatStat($cities),
             'countries' => $this->formatStat($countries),
             'peak_audience' => $this->formatStat($peakAudience),
-            // Stats sociale din profilul Artist (urmărite separat de social stats sync)
-            'instagram_followers' => $this->formatStat((int) ($artist->instagram_followers ?? 0)),
-            'facebook_followers' => $this->formatStat((int) ($artist->facebook_followers ?? 0)),
-            'youtube_followers' => $this->formatStat((int) ($artist->youtube_followers ?? 0)),
+            // Stats sociale din profilul Artist (sync-uri separate)
+            'instagram_followers' => $this->formatStat($pickFirst($artist->followers_instagram, $artist->instagram_followers)),
+            'facebook_followers' => $this->formatStat($pickFirst($artist->followers_facebook, $artist->facebook_followers)),
+            'youtube_followers' => $this->formatStat($pickFirst($artist->followers_youtube, $artist->youtube_followers)),
             'spotify_followers' => $this->formatStat((int) ($artist->spotify_followers ?? 0)),
             'spotify_monthly_listeners' => $this->formatStat((int) ($artist->spotify_monthly_listeners ?? 0)),
-            'tiktok_followers' => $this->formatStat((int) ($artist->tiktok_followers ?? 0)),
+            'tiktok_followers' => $this->formatStat($pickFirst($artist->followers_tiktok, $artist->tiktok_followers)),
+            // Stats noi cerute: views YouTube + popularitate Spotify (0-100)
+            'youtube_views' => $this->formatStat((int) ($artist->youtube_total_views ?? 0)),
+            'spotify_popularity' => $this->formatStat((int) ($artist->spotify_popularity ?? 0)),
         ];
     }
 
