@@ -45,12 +45,12 @@ class RoadRoutingService
             return $cached + ['source' => $cached['source'] ?? 'cache'];
         }
 
-        // Try OSRM
+        // Try OSRM with up to 3 alternatives — pickem cea mai scurtă (poate prinde A3 când e parțial mapat)
         try {
             $url = self::OSRM_BASE . '/' .
                 $this->fmt($lng1) . ',' . $this->fmt($lat1) . ';' .
                 $this->fmt($lng2) . ',' . $this->fmt($lat2) .
-                '?overview=false&alternatives=false&steps=false';
+                '?overview=false&alternatives=3&steps=false';
 
             $response = Http::timeout(self::TIMEOUT_S)
                 ->connectTimeout(3)
@@ -60,12 +60,16 @@ class RoadRoutingService
 
             if ($response->successful()) {
                 $data = $response->json();
-                if (($data['code'] ?? '') === 'Ok' && !empty($data['routes'][0])) {
-                    $route = $data['routes'][0];
+                if (($data['code'] ?? '') === 'Ok' && !empty($data['routes'])) {
+                    // Selectăm ruta cu cea mai mică distanță (în loc de prima = "optimal" = balanced)
+                    $best = collect($data['routes'])
+                        ->sortBy('distance')
+                        ->first();
                     $result = [
-                        'distance_km' => round((float) $route['distance'] / 1000, 1),
-                        'duration_min' => (int) round((float) $route['duration'] / 60),
+                        'distance_km' => round((float) $best['distance'] / 1000, 1),
+                        'duration_min' => (int) round((float) $best['duration'] / 60),
                         'source' => 'osrm',
+                        'alternatives_count' => count($data['routes']),
                     ];
                     Cache::put($key, $result, self::CACHE_TTL);
                     return $result;
