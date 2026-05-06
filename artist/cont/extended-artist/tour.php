@@ -233,7 +233,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                         <svg class="w-4 h-4 text-muted transition-transform" :class="planner.configOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                     </button>
 
-                                    <div x-show="planner.configOpen" x-collapse class="mt-4 space-y-5">
+                                    <div x-show="planner.configOpen" x-transition class="mt-4 space-y-5">
 
                                         <!-- 📍 Plecare turneu -->
                                         <div>
@@ -402,15 +402,19 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                             <div x-show="planner.optimized">
                                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                                     <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Distanță totală</p>
-                                        <p class="text-xl font-bold text-secondary mt-1"><span x-text="formatNumber(planner.summary?.total_distance_km ?? 0)"></span> km</p>
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold flex items-center gap-1">
+                                            Distanță rută
+                                            <span class="to-tip" data-tip="Distanță aproximativă pe șosea (factor 1.35× linia dreaptă). Pentru calcul exact pe Google Maps va veni mai târziu.">ⓘ</span>
+                                        </p>
+                                        <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km</p>
+                                        <p class="text-[10px] text-muted mt-0.5"><span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus</p>
                                     </div>
                                     <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Durată</p>
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Durată tour</p>
                                         <p class="text-xl font-bold text-secondary mt-1"><span x-text="planner.summary?.duration_days ?? 0"></span> zile</p>
                                     </div>
                                     <div class="bg-white border border-border rounded-xl p-4">
-                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost total</p>
+                                        <p class="text-xs text-muted uppercase tracking-wider font-semibold">Cost total*</p>
                                         <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_cost_ron ?? 0)"></span> RON</p>
                                     </div>
                                     <div class="bg-white border border-border rounded-xl p-4">
@@ -462,7 +466,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     :class="planner.dirty ? 'to-pulse text-white' : 'to-btn-secondary'"
                                                     class="to-btn to-btn-sm">🔄 Recalculează</button>
                                                 <button @click="saveScenario()" :disabled="planner.saving || planner.dirty"
-                                                    :title="planner.dirty ? 'Apasă „Recalculează" întâi ca să salvezi cu noile valori' : ''"
+                                                    :title="planner.dirty ? 'Apasă Recalculează întâi ca să salvezi cu noile valori' : ''"
                                                     class="to-btn to-btn-primary to-btn-sm">
                                                     <span x-text="planner.saving ? 'Se salvează...' : '💾 Salvează'"></span>
                                                 </button>
@@ -491,7 +495,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                             <span x-show="stop.effective_capacity" class="to-badge bg-primary/10 text-primary text-[10px]"><span x-text="formatNumber(stop.effective_capacity)"></span> loc</span>
                                                             <span x-show="stop.manual_capacity && !stop.venue_capacity" class="to-badge bg-warning/10 text-warning text-[9px]" title="Capacitate setată manual">manual</span>
                                                         </div>
-                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_distance_km > 0"> · sosire <span x-text="formatNumber(stop.arrival_distance_km)"></span> km</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
+                                                        <p class="text-xs text-muted"><span x-text="stop.date"></span> · <span x-text="stop.day"></span><span x-show="stop.arrival_road_km > 0"> · sosire ~<span x-text="formatNumber(stop.arrival_road_km)"></span> km (<span x-text="formatDuration(stop.arrival_drive_time_min)"></span>)</span><span x-show="stop.is_home"> · 🏠 nu e drum (concertul e acasă)</span></p>
                                                     </div>
                                                     <div class="text-right flex-shrink-0">
                                                         <p class="text-xs text-muted">Predicție</p>
@@ -1140,10 +1144,11 @@ function tourOptimizer() {
             this.scenariosData = r?.data || this.scenariosData;
         },
 
-        buildConstraintsPayload() {
+        buildConstraintsPayload(preserveOrder = false) {
             return {
                 min_days_between: this.planner.minDaysBetween,
                 include_border: this.planner.includeBorder,
+                preserve_order: !!preserveOrder,
                 tour_config: this.planner.config,
             };
         },
@@ -1160,7 +1165,7 @@ function tourOptimizer() {
             }));
         },
 
-        async optimizeRoute() {
+        async optimizeRoute(preserveOrder = false) {
             if (this.planner.cities.length < 2) return;
             if (!this.roomCapacityValid) {
                 if (!confirm('Capacitatea camerelor (' + this.totalRoomCapacity + ') e mai mică decât persoanele în turneu (' + this.planner.config.people_count + '). Continui oricum?')) return;
@@ -1169,7 +1174,7 @@ function tourOptimizer() {
             try {
                 const body = {
                     cities: this.citiesPayload(),
-                    constraints: this.buildConstraintsPayload(),
+                    constraints: this.buildConstraintsPayload(preserveOrder),
                     start_date: this.planner.startDate,
                 };
                 const r = await this.fetchAction('artist.tour.optimize', {}, { method: 'POST', body });
@@ -1394,7 +1399,8 @@ function tourOptimizer() {
 
         async recalcRoute() {
             this._syncCitiesFromRoute();
-            await this.optimizeRoute();
+            // Recalcul după drag/edit — păstrăm ordinea curentă, recomputăm doar costurile/predicțiile
+            await this.optimizeRoute(true);
         },
 
         setupSortable() {
@@ -1567,21 +1573,29 @@ function tourOptimizer() {
             return num.toLocaleString('ro-RO');
         },
 
+        formatDuration(minutes) {
+            const m = Math.max(0, Math.round(Number(minutes) || 0));
+            if (m < 60) return m + ' min';
+            const h = Math.floor(m / 60);
+            const mm = m % 60;
+            return mm > 0 ? h + 'h ' + mm + 'min' : h + 'h';
+        },
+
         // Formule explicative pentru tooltip-urile cost cards
         fuelFormulaText(stop) {
             const cfg = this.planner.config;
             const totalConsumption = (cfg.vehicles || []).reduce((s, v) => s + (v.count * v.consumption_l_100km), 0);
             const lines = [];
-            lines.push('Estimativ.');
+            lines.push('Estimativ. Distanța în linie dreaptă (Haversine) × 1.35 = aproximare rută.');
             lines.push('Formula: km × consum total / 100 × preț RON/L');
             lines.push('Consum total: ' + (cfg.vehicles || []).map(v => v.count + '×' + v.consumption_l_100km).join(' + ') + ' = ' + totalConsumption.toFixed(1) + ' L/100km');
             lines.push('Preț: ' + cfg.fuel_price_ron_l + ' RON/L');
             if (stop && (stop.fuel_arrival_km ?? 0) > 0) {
                 lines.push('---');
-                lines.push('Sosire ' + stop.fuel_arrival_km + ' km → ' + this.formatNumber(stop.fuel_arrival_cost) + ' RON');
+                lines.push('Sosire ~' + (stop.arrival_road_km || 0) + ' km rută (' + this.formatDuration(stop.arrival_drive_time_min) + ') → ' + this.formatNumber(stop.fuel_arrival_cost) + ' RON');
             }
             if (stop && (stop.fuel_return_leg_km ?? 0) > 0) {
-                lines.push('Retur la ' + this.planner.config.start_location + ' ' + stop.fuel_return_leg_km + ' km → ' + this.formatNumber(stop.fuel_return_leg_cost) + ' RON');
+                lines.push('Retur la ' + this.planner.config.start_location + ' ~' + (stop.return_leg_road_km || 0) + ' km rută (' + this.formatDuration(stop.return_leg_drive_time_min) + ') → ' + this.formatNumber(stop.fuel_return_leg_cost) + ' RON');
             }
             return lines.join('\n');
         },
@@ -1604,13 +1618,15 @@ function tourOptimizer() {
 
         mealFormulaText(stop) {
             const cfg = this.planner.config;
-            const lines = ['Estimativ.', 'Formula: persoane × preț/zi × durată tour, distribuit egal per concert'];
+            const lines = ['Estimativ.', 'Formula: nopți × persoane × preț/zi'];
             lines.push(cfg.people_count + ' persoane × ' + cfg.meal_price_per_day + ' RON/zi');
-            if (this.planner.summary && this.planner.route?.length) {
-                const totalDays = this.planner.summary.duration_days || 1;
-                const stops = this.planner.route.length;
-                lines.push('×' + totalDays + ' zile = ' + this.formatNumber(this.planner.summary.meal_cost_ron || 0) + ' RON total');
-                lines.push('÷ ' + stops + ' concerte = ' + this.formatNumber(stop?.meal_cost || 0) + ' RON per concert');
+            if (stop) {
+                const nights = stop.nights || 0;
+                if (stop.is_home) {
+                    lines.push('🏠 Concert acasă → 0 RON (echipa nu e pe drum)');
+                } else {
+                    lines.push('×' + nights + ' nopți la stop = ' + this.formatNumber(stop.meal_cost || 0) + ' RON');
+                }
             }
             return lines.join('\n');
         },
