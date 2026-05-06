@@ -338,11 +338,12 @@ function renderParticipants(participants) {
                 <div class="mt-1 text-xs text-muted">#${p.ticket_id || p.id || '-'}</div>
             </td>
             <td class="px-6 py-4">
-                <span class="px-2.5 py-1 bg-primary/10 text-primary text-sm font-medium rounded-lg">${escapeHtmlP(p.ticket_type) || '-'}</span>
+                <span class="px-2.5 py-1 ${p.is_invitation ? 'bg-rose-50 text-rose-700' : 'bg-primary/10 text-primary'} text-sm font-medium rounded-lg">${escapeHtmlP(p.ticket_type) || '-'}</span>
+                ${p.is_invitation ? '<span class="ml-1 px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-semibold rounded uppercase">Invitație</span>' : ''}
                 ${seatInfo}
             </td>
             <td class="px-6 py-4">
-                <div class="text-sm font-medium text-secondary">${p.order_number || '#' + (p.order_id || '-')}</div>
+                <div class="text-sm font-medium text-secondary">${p.is_invitation ? '<span class="text-rose-700">Invitație</span>' : (p.order_number || '#' + (p.order_id || '-'))}</div>
                 <div class="text-xs text-muted">${orderDate}</div>
             </td>
             <td class="px-6 py-4">
