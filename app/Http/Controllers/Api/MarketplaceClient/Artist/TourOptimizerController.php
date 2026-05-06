@@ -52,6 +52,7 @@ class TourOptimizerController extends BaseController
             'constraints.min_days_between' => 'nullable|integer|min:1|max:14',
             'constraints.budget_ron' => 'nullable|integer|min:0',
             'constraints.include_border' => 'nullable|boolean',
+            'constraints.preserve_order' => 'nullable|boolean',
             'constraints.tour_config' => 'nullable|array',
             'constraints.tour_config.start_location' => 'nullable|string|max:100',
             'constraints.tour_config.avg_ticket_price' => 'nullable|numeric|min:0|max:5000',

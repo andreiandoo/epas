@@ -38,6 +38,11 @@ class TourOptimizerService
         'large' => 0.92,   // 2500+
     ];
 
+    // Distanța rutieră reală e tipic 1.3-1.4× distanța în linie dreaptă (Haversine).
+    // Folosim 1.35 ca aproximare. Pentru viteză medie (autostradă + șosea), 75 km/h.
+    public const ROAD_DISTANCE_FACTOR = 1.35;
+    public const DRIVING_AVG_SPEED_KMH = 75;
+
     // Day-of-week multipliers (1 = Lun ... 7 = Dum)
     public const DOW_FACTORS = [
         1 => 0.55, // Luni
@@ -206,16 +211,21 @@ class TourOptimizerService
             ];
         }
 
-        // Dacă cel puțin un oraș are dată fixă → respectăm ordinea cronologică implicată,
-        // sortăm cele cu dată după dată, și împrăștiem celelalte între ele cu nearest-neighbor
+        // Ordering:
+        //   - preserve_order=true → respectă ordinea trimisă de user (după drag-reorder)
+        //   - vreun stop e fixed → respectă ordinea (concertele confirmate nu se mută)
+        //   - vreun stop are dată fixă → cronologic + nearest-neighbor pentru cele fără dată
+        //   - altfel → TSP nearest-neighbor (prima rulare)
+        $preserveOrder = !empty($constraints['preserve_order']);
         $hasAnyFixedDate = !empty(array_filter($resolved, fn ($r) => $r['provided_date']));
+        $hasAnyConfirmed = !empty(array_filter($resolved, fn ($r) => $r['fixed']));
 
-        if ($hasAnyFixedDate) {
-            // Sort all stops with a date by date, păstrează cele fără în ordinea introdusă (dar le inserăm
-            // după nearest-neighbor între cele cu date)
+        if ($preserveOrder || $hasAnyConfirmed) {
+            // Păstrăm ordinea user-ului așa cum e
+            $orderedRoute = $resolved;
+        } elseif ($hasAnyFixedDate) {
             $orderedRoute = $this->orderRouteWithFixedDates($resolved);
         } else {
-            // Pure TSP nearest-neighbor — start from city with highest fan count (or first fixed city)
             $orderedRoute = $this->nearestNeighborOrder($resolved);
         }
 
@@ -329,6 +339,11 @@ class TourOptimizerService
                 'fuel_arrival_km' => (int) round($arrivalDistance),
                 'fuel_return_leg_cost' => (int) round($fuelReturnLeg),
                 'fuel_return_leg_km' => (int) round($returnLegDistance),
+                // Distanța rutieră (estimată 1.35× linia dreaptă) + timp condus (75 km/h medie)
+                'arrival_road_km' => (int) round($arrivalDistance * self::ROAD_DISTANCE_FACTOR),
+                'arrival_drive_time_min' => (int) round(($arrivalDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
+                'return_leg_road_km' => (int) round($returnLegDistance * self::ROAD_DISTANCE_FACTOR),
+                'return_leg_drive_time_min' => (int) round(($returnLegDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
             ];
 
             // Pentru ultimul stop care NU e home, adaugă return drive la home base
@@ -382,20 +397,19 @@ class TourOptimizerService
             $finalRoute[$i]['accommodation_cost'] = (int) round($this->accommodationCostPerNight($config) * $nights);
         }
 
-        // Mâncare: distribuită egal pe non-home stops (când ești acasă, mâncarea nu e cost de tour).
-        $nonHomeStops = array_values(array_filter($finalRoute, fn ($s) => empty($s['is_home'])));
-        $nonHomeCount = count($nonHomeStops);
-        // Diurna totală e calculată pentru durata "pe drum" — aproximăm scăzând zilele acasă din duration.
-        $homeDays = count($finalRoute) - $nonHomeCount;
-        $effectiveDays = max(1, $duration - $homeDays);
-        $totalMealCost = $this->mealCost($effectiveDays, $config);
-        $mealPerStop = $nonHomeCount > 0 ? (int) round($totalMealCost / $nonHomeCount) : 0;
+        // Diurnă: per stop = nopți × persoane × preț/zi.
+        // Acasă: nights = 0 → 0 RON. Pe drum: fiecare noapte la stop-ul ăsta costă X RON diurnă.
+        // Nu mai facem medie aritmetică; fiecare stop plătește exact pentru zilele petrecute acolo.
+        $mealPerDayPerPerson = (float) $config['meal_price_per_day'];
+        $peopleCount = (int) $config['people_count'];
 
         // Revenue + profit per stop folosind avg_ticket_price
         $avgTicketPrice = (float) $config['avg_ticket_price'];
         for ($i = 0; $i < count($finalRoute); $i++) {
             $isHomeStop = !empty($finalRoute[$i]['is_home']);
-            $finalRoute[$i]['meal_cost'] = $isHomeStop ? 0 : $mealPerStop;
+            $stopNights = (int) ($finalRoute[$i]['nights'] ?? 0);
+            // Diurnă = nopți × persoane × preț/zi (acasă: 0 nopți → 0 RON automat)
+            $finalRoute[$i]['meal_cost'] = $isHomeStop ? 0 : (int) round($stopNights * $peopleCount * $mealPerDayPerPerson);
             $stopFuel = (int) ($finalRoute[$i]['fuel_cost'] ?? 0);
             // Pentru ultimul stop adăugăm și costul de retur la home base
             if ($i === count($finalRoute) - 1 && isset($finalRoute[$i]['return_fuel_cost'])) {
@@ -417,6 +431,7 @@ class TourOptimizerService
         $totalFuelCost = (int) collect($finalRoute)->sum('fuel_cost')
             + (int) collect($finalRoute)->sum(fn ($r) => (int) ($r['return_fuel_cost'] ?? 0));
         $totalAccommodation = (int) collect($finalRoute)->sum('accommodation_cost');
+        $totalMealCost = (int) collect($finalRoute)->sum('meal_cost');
         $totalCost = $totalFuelCost + $totalAccommodation + $totalMealCost;
 
         $totalTickets = (int) collect($finalRoute)->sum('prediction');
@@ -434,6 +449,8 @@ class TourOptimizerService
             ],
             'summary' => [
                 'total_distance_km' => (int) round($totalDistance),
+                'total_road_distance_km' => (int) round($totalDistance * self::ROAD_DISTANCE_FACTOR),
+                'total_drive_time_min' => (int) round(($totalDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
                 'duration_days' => (int) $duration,
                 'total_cost_ron' => (int) round($totalCost),
                 'fuel_cost_ron' => $totalFuelCost,
