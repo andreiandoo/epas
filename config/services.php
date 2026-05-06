@@ -128,4 +128,18 @@ return [
         'cache_bust_token' => env('AMBILET_CACHE_BUST_TOKEN'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Mapbox — Tour Optimizer routing
+    |--------------------------------------------------------------------------
+    |
+    | Folosit de RoadRoutingService pentru distanță reală pe rute auto.
+    | Free tier: 100k requests/lună. Public token (pk.) e suficient.
+    | Endpoint: https://api.mapbox.com/directions/v5/mapbox/driving/...
+    |
+    */
+    'mapbox' => [
+        'token' => env('MAPBOX_TOKEN'),
+    ],
+
 ];

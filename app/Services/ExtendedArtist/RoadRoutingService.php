@@ -20,12 +20,13 @@ use Illuminate\Support\Facades\Log;
  */
 class RoadRoutingService
 {
-    public const CACHE_TTL = 2592000;       // 30 zile pentru rute reale OSRM
-    public const FALLBACK_CACHE_TTL = 600;  // 10 minute pentru fallback (retry rapid OSRM)
-    public const TIMEOUT_S = 8;             // 8s max per request (OSRM demo poate fi lent din RO)
+    public const CACHE_TTL = 2592000;       // 30 zile pentru rute reale (Mapbox/OSRM)
+    public const FALLBACK_CACHE_TTL = 600;  // 10 minute pentru fallback (retry rapid)
+    public const TIMEOUT_S = 8;
     public const RETRIES = 2;
     public const ROAD_FACTOR_FALLBACK = 1.35;
     public const SPEED_FALLBACK_KMH = 75;
+    public const MAPBOX_BASE = 'https://api.mapbox.com/directions/v5/mapbox/driving';
     public const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
 
     /**
@@ -45,7 +46,14 @@ class RoadRoutingService
             return $cached + ['source' => $cached['source'] ?? 'cache'];
         }
 
-        // Try OSRM with up to 3 alternatives — pickem cea mai scurtă (poate prinde A3 când e parțial mapat)
+        // 1) Try Mapbox first (cel mai precis, dacă tokenul e configurat)
+        $mapbox = $this->tryMapbox($lat1, $lng1, $lat2, $lng2);
+        if ($mapbox !== null) {
+            Cache::put($key, $mapbox, self::CACHE_TTL);
+            return $mapbox;
+        }
+
+        // 2) Fallback la OSRM public demo
         try {
             $url = self::OSRM_BASE . '/' .
                 $this->fmt($lng1) . ',' . $this->fmt($lat1) . ';' .
@@ -61,7 +69,6 @@ class RoadRoutingService
             if ($response->successful()) {
                 $data = $response->json();
                 if (($data['code'] ?? '') === 'Ok' && !empty($data['routes'])) {
-                    // Selectăm ruta cu cea mai mică distanță (în loc de prima = "optimal" = balanced)
                     $best = collect($data['routes'])
                         ->sortBy('distance')
                         ->first();
@@ -108,6 +115,59 @@ class RoadRoutingService
         // Cache::flush() ar șterge totul; folosim un pattern key-prefixed match dacă driver-ul permite.
         // Pentru file/db cache (Laravel default), nu există key-pattern delete fără tags.
         // În practică, cu fallback TTL 10min, e suficient să ne așteptăm.
+    }
+
+    /**
+     * Mapbox Directions API — provider primar dacă tokenul e configurat.
+     * Returnează null dacă tokenul lipsește, request eșuează, sau răspunsul e invalid.
+     */
+    protected function tryMapbox(float $lat1, float $lng1, float $lat2, float $lng2): ?array
+    {
+        $token = config('services.mapbox.token');
+        if (empty($token)) return null;
+
+        try {
+            $url = self::MAPBOX_BASE . '/' .
+                $this->fmt($lng1) . ',' . $this->fmt($lat1) . ';' .
+                $this->fmt($lng2) . ',' . $this->fmt($lat2);
+
+            $response = Http::timeout(self::TIMEOUT_S)
+                ->connectTimeout(3)
+                ->retry(self::RETRIES, 200)
+                ->withHeaders(['User-Agent' => 'TixelloTourOptimizer/1.0'])
+                ->get($url, [
+                    'access_token' => $token,
+                    'alternatives' => 'true',
+                    'overview' => 'false',
+                    'steps' => 'false',
+                    'geometries' => 'geojson',
+                ]);
+
+            if (!$response->successful()) {
+                Log::debug('Mapbox routing failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            if (($data['code'] ?? '') !== 'Ok' || empty($data['routes'])) {
+                return null;
+            }
+
+            // Selectăm ruta cu cea mai mică distanță
+            $best = collect($data['routes'])->sortBy('distance')->first();
+            return [
+                'distance_km' => round((float) $best['distance'] / 1000, 1),
+                'duration_min' => (int) round((float) $best['duration'] / 60),
+                'source' => 'mapbox',
+                'alternatives_count' => count($data['routes']),
+            ];
+        } catch (\Throwable $e) {
+            Log::debug('Mapbox routing exception', ['error' => $e->getMessage()]);
+            return null;
+        }
     }
 
     protected function cacheKey(float $lat1, float $lng1, float $lat2, float $lng2): string
