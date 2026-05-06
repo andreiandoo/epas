@@ -284,6 +284,7 @@ class TourOptimizerService
             if ($stop['manual_prediction'] !== null) {
                 $prediction['estimate'] = (int) $stop['manual_prediction'];
                 $prediction['confidence'] = 100; // 100% confidence pe estimare manuală
+                $prediction['confidence_factors'] = ['Estimare introdusă manual de artist (100%)'];
             }
 
             // Combustibil pentru sosire (drumul de la prev/home la acest stop)
@@ -322,6 +323,7 @@ class TourOptimizerService
                 'fans' => $stop['fans'],
                 'prediction' => $prediction['estimate'],
                 'confidence' => $prediction['confidence'],
+                'confidence_factors' => $prediction['confidence_factors'] ?? [],
                 'arrival_distance_km' => (int) round($arrivalDistance),
                 'distance_to_next_km' => $distanceToNext !== null ? (int) round($distanceToNext) : null,
                 'venue_id' => $stop['venue_id'],
@@ -370,29 +372,11 @@ class TourOptimizerService
             : $defaultStart;
         $duration = max(1, $firstDate->diffInDays($lastDate) + 1);
 
-        // Pentru fiecare stop, calculează cazarea.
-        // Reguli:
-        //   - Dacă stop-ul e ACASĂ (is_home), echipa nu plătește cazare → 0 nopți, 0 RON.
-        //   - Dacă următorul stop are from_start = true sau e acasă, după acest concert echipa
-        //     se întoarce acasă → plătim doar 1 noapte aici (noaptea concertului).
-        //   - Pentru ultimul stop, plătim 1 noapte (după care se întoarce acasă).
-        //   - Altfel: nopți = zile până la următorul concert (≥ 1).
+        // Cazare per stop: 1 noapte (noaptea concertului), sau 0 dacă e acasă.
+        // Zilele goale între concerte sunt considerate pe drum sau la home, nu plătesc cazare la stop.
         for ($i = 0; $i < count($finalRoute); $i++) {
             $thisStop = $finalRoute[$i];
-            $thisDate = Carbon::parse($thisStop['date_iso']);
-            $nextStop = $finalRoute[$i + 1] ?? null;
-            $nextReturnsHome = $nextStop && (!empty($nextStop['from_start']) || !empty($nextStop['is_home']));
-
-            if (!empty($thisStop['is_home'])) {
-                // Concertul e acasă — fără cazare
-                $nights = 0;
-            } elseif (!$nextStop || $nextReturnsHome) {
-                $nights = 1;
-            } else {
-                $nextDate = Carbon::parse($nextStop['date_iso']);
-                $nights = max(1, (int) abs($thisDate->diffInDays($nextDate)));
-            }
-
+            $nights = !empty($thisStop['is_home']) ? 0 : 1;
             $finalRoute[$i]['nights'] = $nights;
             $finalRoute[$i]['accommodation_cost'] = (int) round($this->accommodationCostPerNight($config) * $nights);
         }
@@ -407,9 +391,8 @@ class TourOptimizerService
         $avgTicketPrice = (float) $config['avg_ticket_price'];
         for ($i = 0; $i < count($finalRoute); $i++) {
             $isHomeStop = !empty($finalRoute[$i]['is_home']);
-            $stopNights = (int) ($finalRoute[$i]['nights'] ?? 0);
-            // Diurnă = nopți × persoane × preț/zi (acasă: 0 nopți → 0 RON automat)
-            $finalRoute[$i]['meal_cost'] = $isHomeStop ? 0 : (int) round($stopNights * $peopleCount * $mealPerDayPerPerson);
+            // Diurnă = persoane × preț/zi pentru ziua concertului (acasă: 0)
+            $finalRoute[$i]['meal_cost'] = $isHomeStop ? 0 : (int) round($peopleCount * $mealPerDayPerPerson);
             $stopFuel = (int) ($finalRoute[$i]['fuel_cost'] ?? 0);
             // Pentru ultimul stop adăugăm și costul de retur la home base
             if ($i === count($finalRoute) - 1 && isset($finalRoute[$i]['return_fuel_cost'])) {
@@ -916,21 +899,32 @@ class TourOptimizerService
         $estimate = min($estimate, $caps[$venueSize] ?? 1500);
         $estimate = max(0, $estimate);
 
-        // Confidence: 4-factor formula
-        $confidence = match (true) {
+        // Confidence: 4-factor formula cu breakdown vizibil
+        $base = match (true) {
             $events >= 5 => 85,
             $events >= 3 => 75,
             $events >= 1 => 60,
             default => 45,
         };
-        if ($fans > 1000) $confidence += 5;
-        if ($fans < 100) $confidence -= 5;
-        if ($venueSize === 'large' && $events < 3) $confidence -= 10;
+        $factors = [];
+        $factors[] = $events >= 5
+            ? "+85 bază (" . $events . " concerte trecute în oraș)"
+            : ($events >= 3 ? "+75 bază (" . $events . " concerte trecute)"
+            : ($events >= 1 ? "+60 bază (" . $events . " concert(e) trecute)"
+            : "+45 bază (niciun concert anterior aici)"));
+
+        $confidence = $base;
+        if ($fans > 1000) { $confidence += 5; $factors[] = "+5 audiență mare (" . number_format($fans, 0, ',', '.') . " fani)"; }
+        if ($fans < 100) { $confidence -= 5; $factors[] = "-5 eșantion mic (" . $fans . " fani)"; }
+        if ($venueSize === 'large' && $events < 3) {
+            $confidence -= 10;
+            $factors[] = "-10 venue mare cu istoric mic (extrapolare riscantă)";
+        }
         if ($lastEventDate) {
             try {
                 $monthsAgo = (int) Carbon::parse($lastEventDate)->diffInMonths(now());
-                if ($monthsAgo > 18) $confidence -= 10;
-                elseif ($monthsAgo > 12) $confidence -= 5;
+                if ($monthsAgo > 18) { $confidence -= 10; $factors[] = "-10 ultim concert acum " . $monthsAgo . " luni (date învechite)"; }
+                elseif ($monthsAgo > 12) { $confidence -= 5; $factors[] = "-5 ultim concert acum " . $monthsAgo . " luni"; }
             } catch (\Throwable $e) { /* ignore */ }
         }
         $confidence = max(25, min(95, $confidence));
@@ -938,6 +932,7 @@ class TourOptimizerService
         return [
             'estimate' => (int) round($estimate),
             'confidence' => $confidence,
+            'confidence_factors' => $factors,
         ];
     }
 

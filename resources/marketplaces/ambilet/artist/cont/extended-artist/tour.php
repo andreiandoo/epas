@@ -500,7 +500,11 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                                     <div class="text-right flex-shrink-0">
                                                         <p class="text-xs text-muted">Predicție</p>
                                                         <p class="text-sm font-bold text-success"><span x-text="formatNumber(stop.prediction)"></span> bilete</p>
-                                                        <p class="text-[10px] text-muted"><span x-show="stop.manual_prediction !== null">manual ·</span> <span x-text="stop.confidence"></span>% confidence</p>
+                                                        <p class="text-[10px] text-muted">
+                                                            <span x-show="stop.manual_prediction !== null">manual ·</span>
+                                                            <span x-text="stop.confidence"></span>% confidence
+                                                            <span class="to-tip" :data-tip="confidenceText(stop)">ⓘ</span>
+                                                        </p>
                                                     </div>
                                                 </div>
 
@@ -1579,6 +1583,22 @@ function tourOptimizer() {
             const h = Math.floor(m / 60);
             const mm = m % 60;
             return mm > 0 ? h + 'h ' + mm + 'min' : h + 'h';
+        },
+
+        confidenceText(stop) {
+            const factors = stop?.confidence_factors || [];
+            const lines = ['Confidence = încrederea în predicția de bilete (25-95%).', 'Calculat din 4 factori:'];
+            if (factors.length) {
+                factors.forEach(f => lines.push('  • ' + f));
+            } else {
+                lines.push('  • baza: număr concerte trecute în oraș');
+                lines.push('  • +/- pentru audiență (fani locali)');
+                lines.push('  • -10 pentru venue mare cu istoric mic');
+                lines.push('  • -5/-10 pentru ultimul concert vechi (>12/18 luni)');
+            }
+            lines.push('---');
+            lines.push('Total: ' + (stop?.confidence ?? 0) + '%');
+            return lines.join('\n');
         },
 
         // Formule explicative pentru tooltip-urile cost cards
