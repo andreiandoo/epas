@@ -1,5 +1,19 @@
 <x-filament-panels::page>
-    {{ $this->form }}
+    {{-- Collapsible filters wrapper. Generate sets $filtersOpen=false so
+         the result is in the viewport without manual scrolling; the
+         "Modifică filtrele" button or the section header re-opens the
+         form to let the user tweak. --}}
+    <div x-data x-show="$wire.filtersOpen" x-transition>
+        {{ $this->form }}
+    </div>
+
+    <button x-data
+            x-show="!$wire.filtersOpen"
+            x-on:click="$wire.toggleFilters()"
+            class="inline-flex items-center gap-2 px-3 py-2 mb-2 rounded-lg ring-1 ring-gray-200 dark:ring-white/10 bg-white dark:bg-gray-900 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+        <x-heroicon-o-funnel class="w-4 h-4" />
+        Modifică filtrele
+    </button>
 
     <div class="mt-6 space-y-6">
         @if($summary)
@@ -20,6 +34,59 @@
                         <div class="mt-1 text-xl font-semibold text-gray-900 dark:text-white font-mono">{{ $value }} <span class="text-xs font-normal text-gray-500">{{ $unit }}</span></div>
                     </div>
                 @endforeach
+            </div>
+        @endif
+
+        {{-- Deconturi existente pentru evenimentele selectate --}}
+        @if(!empty($relatedPayouts))
+            <div class="rounded-xl bg-white dark:bg-gray-900 ring-1 ring-gray-200 dark:ring-white/10 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-100 dark:border-white/10 flex items-center gap-2">
+                    <x-heroicon-o-banknotes class="w-5 h-5 text-primary-500" />
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Deconturi existente pentru aceste evenimente</h3>
+                    <span class="ml-auto text-xs text-gray-500">{{ count($relatedPayouts) }} {{ count($relatedPayouts) === 1 ? 'decont' : 'deconturi' }}</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">#</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Eveniment</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Perioadă</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Brut</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach($relatedPayouts as $p)
+                                <tr>
+                                    <td class="py-2 px-3">
+                                        <a href="{{ $p['url'] }}" target="_blank" class="text-primary-600 hover:underline font-mono text-xs">{{ $p['reference'] ?? '#' . $p['id'] }}</a>
+                                    </td>
+                                    <td class="py-2 px-3 text-gray-900 dark:text-white">{{ $p['event_title'] }}</td>
+                                    <td class="py-2 px-3">
+                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ring-1
+                                            @if($p['status'] === 'completed') bg-green-600 text-white ring-green-700
+                                            @elseif($p['status'] === 'approved') bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20
+                                            @elseif($p['status'] === 'processing') bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20
+                                            @elseif(in_array($p['status'], ['rejected','cancelled'])) bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-400 dark:ring-red-500/20
+                                            @else bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-500/20 @endif
+                                        ">{{ $p['status'] }}</span>
+                                    </td>
+                                    <td class="py-2 px-3 text-xs text-gray-500">
+                                        {{ optional($p['period_start'])->format('d.m.Y') ?? '—' }}
+                                        →
+                                        {{ optional($p['period_end'])->format('d.m.Y') ?? '—' }}
+                                    </td>
+                                    <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ number_format($p['gross_amount'], 2) }} {{ $p['currency'] }}</td>
+                                    <td class="py-2 px-3 text-right font-mono text-red-500">-{{ number_format($p['commission'], 2) }} {{ $p['currency'] }}</td>
+                                    <td class="py-2 px-3 text-right font-mono font-semibold text-gray-900 dark:text-white">{{ number_format($p['amount'], 2) }} {{ $p['currency'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
         @endif
 

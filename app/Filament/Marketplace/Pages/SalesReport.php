@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplacePayout;
 use App\Services\Marketplace\SalesReportService;
 use BackedEnum;
 use Carbon\Carbon;
@@ -39,6 +40,11 @@ class SalesReport extends Page implements HasForms
      */
     public ?array $data = [];
 
+    /** Whether the filters section is open. Generate flips it to false so
+     *  the result is visible without scrolling; clicking the toggle re-opens
+     *  it for tweaks. */
+    public bool $filtersOpen = true;
+
     /** Result state — populated when the user clicks "Generează raport". */
     public ?array $compactData = null;
     /** @var array<int, array<string, mixed>> */
@@ -47,6 +53,9 @@ class SalesReport extends Page implements HasForms
     public int $extendedPage = 1;
     public int $extendedPerPage = 50;
     public ?array $summary = null;
+
+    /** Existing payouts that match the selected events (one row per payout). */
+    public array $relatedPayouts = [];
 
     public function mount(): void
     {
@@ -71,11 +80,9 @@ class SalesReport extends Page implements HasForms
                 Section::make('Filtre raport')
                     ->description('Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".')
                     ->columns(2)
-                    // Auto-collapse once we have a result so the table is
-                    // visible without scrolling. The user can re-open the
-                    // section by clicking the header to tweak filters.
-                    ->collapsible()
-                    ->collapsed(fn () => $this->summary !== null)
+                    // The actual collapse-after-generate UX is handled by
+                    // an Alpine wrapper in the blade — Filament's
+                    // collapsed() only fires at initial render.
                     ->schema([
                         Forms\Components\Radio::make('period')
                             ->label('Perioadă')
@@ -369,12 +376,20 @@ class SalesReport extends Page implements HasForms
         $viewMode = $this->data['viewMode'] ?? 'compact';
         $service = app(SalesReportService::class);
 
+        // Compute the compact totals once. The summary cards in BOTH
+        // modes reflect these — Compact-style numbers match the payout
+        // (price × qty for valid non-POS tickets), so the cards stay
+        // consistent when the user toggles between Compact and Extended
+        // for the same filter pair.
+        $compactTotals = $service->compact($eventIds, $from, $to, $statuses, $dateColumn);
+        $orderCount = $this->countOrders($eventIds, $from, $to, $statuses, $dateColumn);
+
         if ($viewMode === 'compact') {
-            $this->compactData = $service->compact($eventIds, $from, $to, $statuses, $dateColumn);
+            $this->compactData = $compactTotals;
             $this->extendedRows = [];
             $this->extendedTotal = null;
-            $this->summary = $this->compactData['totals'] + [
-                'orders' => $this->countOrders($eventIds, $from, $to, $statuses, $dateColumn),
+            $this->summary = $compactTotals['totals'] + [
+                'orders' => $orderCount,
             ];
         } else {
             $baseQuery = $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn);
@@ -395,32 +410,20 @@ class SalesReport extends Page implements HasForms
             $this->extendedRows = $pageOrders->map(fn ($o) => $service->extendedRow($o))->all();
             $this->compactData = null;
 
-            // Summary aggregation walks every matching order (clone again
-            // so we get the unbounded query). order.commission_amount is
-            // unreliable across sources, so re-run extendedRow per order
-            // — a few thousand rows with eager loading sits comfortably
-            // under the memory budget.
-            $totals = ['orders' => 0, 'qty' => 0, 'gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0, 'refund' => 0.0, 'net' => 0.0];
-            foreach ((clone $baseQuery)->get() as $o) {
-                $r = $service->extendedRow($o);
-                $totals['orders']++;
-                $totals['qty']        += $r['tickets'];
-                $totals['gross']      += $r['gross'];
-                $totals['commission'] += $r['commission'];
-                $totals['discount']   += $r['discount'];
-                $totals['refund']     += $r['refund'];
-                $totals['net']        += $r['net'];
-            }
-            $this->summary = [
-                'orders'     => $totals['orders'],
-                'qty'        => $totals['qty'],
-                'gross'      => round($totals['gross'], 2),
-                'commission' => round($totals['commission'], 2),
-                'discount'   => round($totals['discount'], 2),
-                'refund'     => round($totals['refund'], 2),
-                'net'        => round($totals['net'], 2),
+            // Summary uses the compact totals (which match the payout)
+            // instead of summing per-order order.total — order-level gross
+            // includes on-top commission and unfiltered POS, so the per-
+            // order math wouldn't reconcile with the decont. Per-order
+            // detail still lives in $this->extendedRows for the table.
+            $this->summary = $compactTotals['totals'] + [
+                'orders' => $orderCount,
             ];
         }
+
+        $this->relatedPayouts = $this->loadRelatedPayouts($eventIds);
+
+        // Auto-collapse the filters card so the table is in the viewport.
+        $this->filtersOpen = false;
     }
 
     public function changeExtendedPage(int $page): void
@@ -452,6 +455,63 @@ class SalesReport extends Page implements HasForms
         $this->extendedTotal = null;
         $this->summary = null;
         $this->extendedPage = 1;
+        $this->relatedPayouts = [];
+    }
+
+    public function toggleFilters(): void
+    {
+        $this->filtersOpen = !$this->filtersOpen;
+    }
+
+    /**
+     * Find existing payouts for the selected events. Used to surface the
+     * decont info beneath the summary cards — saves the admin the trip
+     * back to /marketplace/payouts to look up "do we already have a
+     * payout for this event?".
+     *
+     * @param array<int, int> $eventIds
+     * @return array<int, array<string, mixed>>
+     */
+    protected function loadRelatedPayouts(array $eventIds): array
+    {
+        if (empty($eventIds)) return [];
+
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) return [];
+
+        return MarketplacePayout::query()
+            ->where('marketplace_client_id', $marketplace->id)
+            ->whereIn('event_id', $eventIds)
+            ->orderByDesc('created_at')
+            ->with('event:id,title,event_date')
+            ->get()
+            ->map(function (MarketplacePayout $p) {
+                $event = $p->event;
+                $eventTitle = '';
+                if ($event) {
+                    $title = $event->title;
+                    $eventTitle = is_array($title)
+                        ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: '')
+                        : (string) ($title ?? '');
+                }
+                return [
+                    'id'              => $p->id,
+                    'reference'       => $p->reference,
+                    'event_id'        => $p->event_id,
+                    'event_title'     => $eventTitle,
+                    'status'          => $p->status,
+                    'gross_amount'    => (float) ($p->gross_amount ?? 0),
+                    'commission'      => (float) ($p->commission_amount ?? 0),
+                    'amount'          => (float) ($p->amount ?? 0), // net
+                    'currency'        => $p->currency ?? 'RON',
+                    'period_start'    => $p->period_start,
+                    'period_end'      => $p->period_end,
+                    'created_at'      => $p->created_at,
+                    'completed_at'    => $p->completed_at,
+                    'url'             => url('/marketplace/payouts/' . $p->id),
+                ];
+            })
+            ->all();
     }
 
     public function exportCsv(): StreamedResponse
