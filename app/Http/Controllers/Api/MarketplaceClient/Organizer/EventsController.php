@@ -895,23 +895,40 @@ class EventsController extends BaseController
         // Get all events for this organizer
         $eventIds = Event::where('marketplace_organizer_id', $organizer->id)
             ->where('marketplace_client_id', $organizer->marketplace_client_id)
-            ->pluck('id');
+            ->pluck('id')
+            ->all();
 
         // Count tickets from paid/confirmed/completed orders (confirmed = POS cash)
         $validOrderStatuses = ['paid', 'confirmed', 'completed'];
 
-        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($eventIds, $validOrderStatuses) {
-                $q->whereIn('event_id', $eventIds)
-                    ->whereIn('status', $validOrderStatuses);
-            })
-            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType']);
+        // Apply event filter early so the same set is used for both the
+        // listing query and the stats. When no event_id is given we still
+        // scope to the organizer's events.
+        $scopedEventIds = $request->has('event_id')
+            ? array_values(array_intersect([(int) $request->event_id], $eventIds))
+            : $eventIds;
 
-        // Filters
-        if ($request->has('event_id')) {
-            $query->whereHas('order', function ($q) use ($request) {
-                $q->where('event_id', $request->event_id);
+        // Two-branch match (paid-order tickets ∪ invitations with no order)
+        // mirrors the per-event participants endpoint so invitations show up
+        // in the listing AND are counted in stats. Without the second branch
+        // the page reported 66 tickets even when 15 invitations also existed
+        // for the event.
+        $branchTickets = function ($q) use ($scopedEventIds, $validOrderStatuses, $organizer) {
+            $q->whereHas('order', function ($oq) use ($scopedEventIds, $validOrderStatuses, $organizer) {
+                $oq->whereIn('event_id', $scopedEventIds)
+                    ->whereIn('status', $validOrderStatuses)
+                    ->where('marketplace_organizer_id', $organizer->id);
+            })
+            ->orWhere(function ($iq) use ($scopedEventIds) {
+                $iq->whereNull('order_id')
+                    ->whereHas('ticketType', function ($ttq) use ($scopedEventIds) {
+                        $ttq->whereIn('event_id', $scopedEventIds);
+                    });
             });
-        }
+        };
+
+        $query = \App\Models\Ticket::where($branchTickets)
+            ->with(['order.marketplaceCustomer', 'order.event', 'ticketType.event']);
 
         if ($request->has('checked_in')) {
             if ($request->checked_in === 'checked_in' || $request->checked_in === 'true' || $request->checked_in === '1') {
@@ -925,20 +942,17 @@ class EventsController extends BaseController
 
         $query->orderBy('created_at', 'desc');
 
-        // Get stats - per event if event_id is provided, otherwise all events
-        $statsEventIds = $request->has('event_id') ? [$request->event_id] : $eventIds->toArray();
-
-        $statsQuery = \App\Models\Ticket::whereHas('order', function ($q) use ($statsEventIds, $validOrderStatuses, $organizer) {
-            $q->whereIn('event_id', $statsEventIds)
-                ->whereIn('status', $validOrderStatuses)
-                ->where('marketplace_organizer_id', $organizer->id);
-        })->whereIn('status', ['valid', 'used']);
+        // Stats — use the same union (orders + invitations) so totals match
+        // what's actually rendered in the table.
+        $statsQuery = \App\Models\Ticket::where($branchTickets)
+            ->whereIn('status', ['valid', 'used']);
 
         $totalTickets = $statsQuery->count();
         $checkedInCount = (clone $statsQuery)->whereNotNull('checked_in_at')->count();
 
-        // Calculate revenue from valid/used tickets only
-        $revenue = (float) \App\Models\Ticket::whereIn('event_id', $statsEventIds)
+        // Revenue intentionally only counts ORDER-bound tickets — invitations
+        // are zero-value by design, so adding them would just be a no-op.
+        $revenue = (float) \App\Models\Ticket::whereIn('event_id', $scopedEventIds)
             ->whereIn('status', ['valid', 'used'])
             ->whereHas('order', function ($q) use ($validOrderStatuses, $organizer) {
                 $q->whereIn('status', $validOrderStatuses)
@@ -947,50 +961,74 @@ class EventsController extends BaseController
             ->sum('price');
 
         // Get unique orders count
-        $ordersCount = Order::whereIn('event_id', $statsEventIds)
+        $ordersCount = Order::whereIn('event_id', $scopedEventIds)
             ->where('marketplace_organizer_id', $organizer->id)
             ->whereIn('status', $validOrderStatuses)
             ->count();
 
         $tickets = $query->take(200)->get();
 
-        $participants = $tickets->map(function ($ticket) {
-            $customer = $ticket->order->marketplaceCustomer;
-            $event = $ticket->order->event;
-
-            $rawName = $customer
-                ? $customer->first_name . ' ' . $customer->last_name
-                : $ticket->order->customer_name ?? 'Unknown';
-            $rawEmail = $customer?->email ?? $ticket->order->customer_email ?? '';
-
-            // Get localized event title
-            $eventTitle = 'Unknown Event';
-            if ($event) {
-                $eventTitle = $event->getTranslation('title', 'ro')
-                    ?: $event->getTranslation('title', 'en')
-                    ?: $event->getTranslation('title')
+        // Lookup of event titles by id so invitation tickets (which carry
+        // no order.event) can still display the event name.
+        $eventTitles = [];
+        if (!empty($scopedEventIds)) {
+            foreach (Event::whereIn('id', $scopedEventIds)->get(['id', 'title']) as $ev) {
+                $eventTitles[$ev->id] = $ev->getTranslation('title', 'ro')
+                    ?: $ev->getTranslation('title', 'en')
+                    ?: $ev->getTranslation('title')
                     ?: 'Unknown Event';
             }
+        }
 
-            $phone = $customer?->phone ?? $ticket->order->customer_phone ?? '';
+        $participants = $tickets->map(function ($ticket) use ($eventTitles) {
+            $ticketMeta = is_array($ticket->meta) ? $ticket->meta : [];
+            $isInvitation = !empty($ticketMeta['is_invitation'])
+                || (!$ticket->order && $ticket->ticketType?->event_id);
+
+            // Common fields: customer / event title / phone — pulled from the
+            // order when present, from invite meta otherwise.
+            $rawName = 'Invitat';
+            $rawEmail = '';
+            $phone = '';
+            $eventId = $ticket->order?->event?->id
+                ?? $ticket->ticketType?->event_id;
+            $eventTitle = $eventTitles[$eventId] ?? 'Unknown Event';
+            $orderId = $ticket->order?->id;
+            $orderNumber = $ticket->order?->order_number;
+            $orderDate = $ticket->order?->created_at?->toIso8601String() ?? $ticket->created_at?->toIso8601String();
+
+            if ($ticket->order) {
+                $customer = $ticket->order->marketplaceCustomer;
+                $rawName = $customer
+                    ? trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''))
+                    : ($ticket->order->customer_name ?? 'Unknown');
+                $rawEmail = $customer?->email ?? $ticket->order->customer_email ?? '';
+                $phone = $customer?->phone ?? $ticket->order->customer_phone ?? '';
+            } elseif ($isInvitation) {
+                $beneficiary = $ticketMeta['beneficiary'] ?? [];
+                $rawName = $beneficiary['name'] ?? $ticket->attendee_name ?? 'Invitat';
+                $rawEmail = $beneficiary['email'] ?? $ticket->attendee_email ?? '';
+                $phone = $beneficiary['phone'] ?? '';
+            }
 
             return [
                 'id' => $ticket->id,
                 'ticket_id' => $ticket->id,
-                'name' => $rawName,
-                'email' => $this->maskEmail($rawEmail),
+                'name' => $rawName ?: 'Invitat',
+                'email' => $rawEmail ? $this->maskEmail($rawEmail) : '',
                 'phone' => $phone,
                 'event' => $eventTitle,
-                'event_id' => $event?->id,
-                'ticket_type' => $ticket->ticketType?->name ?? 'Standard',
+                'event_id' => $eventId,
+                'ticket_type' => $ticket->ticketType?->name ?? ($isInvitation ? 'Invitatie' : 'Standard'),
                 'ticket_code' => $ticket->barcode,
                 'control_code' => $ticket->code,
                 'seat_label' => $ticket->seat_label ?? null,
                 'checked_in' => $ticket->checked_in_at !== null,
                 'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
-                'order_id' => $ticket->order->id,
-                'order_number' => $ticket->order->order_number,
-                'order_date' => $ticket->order->created_at?->toIso8601String(),
+                'order_id' => $orderId,
+                'order_number' => $orderNumber,
+                'order_date' => $orderDate,
+                'is_invitation' => $isInvitation,
             ];
         });
 
