@@ -2640,7 +2640,7 @@ Route::prefix('marketplace-client/artist')->middleware(['throttle:120,1', 'marke
             Route::get('/cities-list', [ArtistTourController::class, 'citiesList'])
                 ->name('api.marketplace-client.artist.tour.cities-list');
             Route::post('/optimize', [ArtistTourController::class, 'optimize'])
-                ->middleware('throttle:20,1')
+                ->middleware('throttle:60,1')
                 ->name('api.marketplace-client.artist.tour.optimize');
             Route::get('/scenarios', [ArtistTourController::class, 'listScenarios'])
                 ->name('api.marketplace-client.artist.tour.scenarios');

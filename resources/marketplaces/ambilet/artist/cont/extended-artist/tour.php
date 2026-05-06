@@ -1117,7 +1117,12 @@ function tourOptimizer() {
                 opts.body = JSON.stringify(options.body);
             }
             const res = await fetch(`/api/proxy.php?action=${action}` + (qs ? '&' + qs : ''), opts);
-            return await res.json();
+            if (res.status === 429) {
+                const retryAfter = res.headers.get('Retry-After') || '60';
+                alert('Ai făcut prea multe recalculări consecutiv. Mai așteaptă ~' + retryAfter + ' secunde și încearcă iar.');
+                return { error: 'rate_limited' };
+            }
+            try { return await res.json(); } catch (e) { return null; }
         },
 
         async loadOpportunities() {
@@ -1291,9 +1296,14 @@ function tourOptimizer() {
 
             this.setTab('planner');
 
-            // Re-rulăm calculul cu logica curentă de backend (cazare/diurnă/cost actualizate).
-            // Păstrăm ordinea + venues + datele din scenariu, doar recomputăm costurile.
-            if (this.planner.cities.length >= 2) {
+            // Re-rulăm calculul DOAR dacă scenariul folosește format vechi (lipsesc câmpurile noi).
+            // Detectăm prin absența confidence_factors / arrival_road_km — acelea apar doar de la backend nou.
+            const firstStop = this.planner.route?.[0];
+            const usesOldFormat = firstStop && (
+                firstStop.confidence_factors === undefined ||
+                firstStop.arrival_road_km === undefined
+            );
+            if (usesOldFormat && this.planner.cities.length >= 2) {
                 await this.optimizeRoute(true);
             }
         },
