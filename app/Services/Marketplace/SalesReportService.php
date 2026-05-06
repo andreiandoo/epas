@@ -68,6 +68,18 @@ class SalesReportService
                 $ttId = $row['ticket_type_id'] ?? null;
                 $isPos = $ttId !== null && in_array((int) $ttId, $posTypeIds, true);
 
+                $commission = (float) ($row['commission_amount'] ?? 0);
+                $isOnTop = in_array($row['commission_mode'] ?? null, ['on_top', 'added_on_top'], true);
+                // Match the decont's "Total brut" definition: for on_top
+                // rows the customer pays price*qty + commission, and that
+                // is what should appear under "Brut" — same as the
+                // payout-ticket-breakdown blade. Net stays as the
+                // organizer-side number (gross − commission − discount −
+                // extras), so 1545 brut − 75 comm = 1470 net for an
+                // on-top earlybird and the row arithmetic still ties out.
+                $baseGross = (float) ($row['gross'] ?? 0);
+                $displayGross = $baseGross + ($isOnTop ? $commission : 0);
+
                 $rowOut = [
                     'event_id'         => $event->id,
                     'event_title'      => $eventTitle,
@@ -76,8 +88,8 @@ class SalesReportService
                     'is_pos'           => $isPos,
                     'qty'              => (int) ($row['qty'] ?? 0),
                     'price'            => (float) ($row['price'] ?? 0),
-                    'gross'            => (float) ($row['gross'] ?? 0),
-                    'commission'       => (float) ($row['commission_amount'] ?? 0),
+                    'gross'            => $displayGross,
+                    'commission'       => $commission,
                     'commission_mode'  => $row['commission_mode'] ?? null,
                     'commission_type'  => $row['commission_type'] ?? null,
                     'commission_rate'  => $row['commission_rate'] ?? null,

@@ -494,21 +494,37 @@ class SalesReport extends Page implements HasForms
                         ? ($title['ro'] ?? $title['en'] ?? reset($title) ?: '')
                         : (string) ($title ?? '');
                 }
+                // Read derived totals from the snapshot — same call the
+                // payout's own "Rezumat financiar" uses, so the panel
+                // stays in sync with what the admin sees on the decont.
+                // Direct gross_amount/commission_amount on the model are
+                // legacy values stored at create time and may drift from
+                // the breakdown after manual snapshot recompute.
+                $totals = $p->getBreakdownTotals();
+                $online = $totals['online'] ?? [];
+                $pos = $totals['pos'] ?? [];
+
                 return [
-                    'id'              => $p->id,
-                    'reference'       => $p->reference,
-                    'event_id'        => $p->event_id,
-                    'event_title'     => $eventTitle,
-                    'status'          => $p->status,
-                    'gross_amount'    => (float) ($p->gross_amount ?? 0),
-                    'commission'      => (float) ($p->commission_amount ?? 0),
-                    'amount'          => (float) ($p->amount ?? 0), // net
-                    'currency'        => $p->currency ?? 'RON',
-                    'period_start'    => $p->period_start,
-                    'period_end'      => $p->period_end,
-                    'created_at'      => $p->created_at,
-                    'completed_at'    => $p->completed_at,
-                    'url'             => url('/marketplace/payouts/' . $p->id),
+                    'id'                  => $p->id,
+                    'reference'           => $p->reference,
+                    'event_id'            => $p->event_id,
+                    'event_title'         => $eventTitle,
+                    'status'              => $p->status,
+                    'currency'            => $p->currency ?? 'RON',
+                    'period_start'        => $p->period_start,
+                    'period_end'          => $p->period_end,
+                    'created_at'          => $p->created_at,
+                    'completed_at'        => $p->completed_at,
+                    'url'                 => url('/marketplace/payouts/' . $p->id),
+                    // Online (excl. POS) — money that flows through the marketplace.
+                    'online_gross'        => (float) ($online['gross'] ?? 0),
+                    'online_commission'   => (float) ($online['commission'] ?? 0),
+                    'online_discount'     => (float) ($online['discount'] ?? 0),
+                    'online_net'          => (float) ($online['net'] ?? 0),
+                    // POS (collected directly via the app) — surfaced for context.
+                    'pos_gross'           => (float) ($pos['gross'] ?? 0),
+                    'pos_commission'      => (float) ($pos['commission'] ?? 0),
+                    'pos_net'             => (float) ($pos['net'] ?? 0),
                 ];
             })
             ->all();

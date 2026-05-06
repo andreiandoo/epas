@@ -49,13 +49,21 @@
                     <table class="w-full text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">#</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Eveniment</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                                <th class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Perioadă</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Brut</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
-                                <th class="text-right py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">#</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Eveniment</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Status</th>
+                                <th rowspan="2" class="text-left py-2 px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase align-bottom">Perioadă</th>
+                                <th colspan="4" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Online (bilete)</th>
+                                <th colspan="3" class="text-center py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">POS (aplicație)</th>
+                            </tr>
+                            <tr class="border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-800/50">
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Brut</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Discount</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase border-l border-gray-200 dark:border-white/10">Brut</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Comision</th>
+                                <th class="text-right py-1 px-3 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase">Net</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -79,9 +87,15 @@
                                         →
                                         {{ optional($p['period_end'])->format('d.m.Y') ?? '—' }}
                                     </td>
-                                    <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300">{{ number_format($p['gross_amount'], 2) }} {{ $p['currency'] }}</td>
-                                    <td class="py-2 px-3 text-right font-mono text-red-500">-{{ number_format($p['commission'], 2) }} {{ $p['currency'] }}</td>
-                                    <td class="py-2 px-3 text-right font-mono font-semibold text-gray-900 dark:text-white">{{ number_format($p['amount'], 2) }} {{ $p['currency'] }}</td>
+                                    {{-- Online --}}
+                                    <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300 border-l border-gray-200 dark:border-white/10">{{ number_format($p['online_gross'], 2) }}</td>
+                                    <td class="py-2 px-3 text-right font-mono text-red-500">{{ $p['online_commission'] > 0 ? '-' . number_format($p['online_commission'], 2) : '0.00' }}</td>
+                                    <td class="py-2 px-3 text-right font-mono {{ $p['online_discount'] > 0 ? 'text-red-500' : 'text-gray-400' }}">{{ $p['online_discount'] > 0 ? '-' . number_format($p['online_discount'], 2) : '0.00' }}</td>
+                                    <td class="py-2 px-3 text-right font-mono font-semibold text-gray-900 dark:text-white">{{ number_format($p['online_net'], 2) }}</td>
+                                    {{-- POS --}}
+                                    <td class="py-2 px-3 text-right font-mono text-gray-700 dark:text-gray-300 border-l border-gray-200 dark:border-white/10">{{ $p['pos_gross'] > 0 ? number_format($p['pos_gross'], 2) : '—' }}</td>
+                                    <td class="py-2 px-3 text-right font-mono {{ $p['pos_commission'] > 0 ? 'text-red-500' : 'text-gray-400' }}">{{ $p['pos_commission'] > 0 ? '-' . number_format($p['pos_commission'], 2) : '—' }}</td>
+                                    <td class="py-2 px-3 text-right font-mono font-semibold {{ $p['pos_net'] > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400' }}">{{ $p['pos_net'] > 0 ? number_format($p['pos_net'], 2) : '—' }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
