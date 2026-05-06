@@ -556,9 +556,16 @@ class SalesReport extends Page implements HasForms
 
             if ($viewMode === 'compact') {
                 $data = $service->compact($eventIds, $from, $to, $statuses, $dateColumn);
-                fputcsv($out, ['Eveniment', 'Tip bilet', 'POS', 'Qty', 'Preț unitar', 'Brut', 'Comision', 'Discount', 'Extras', 'Net', 'Mod comision'], ',', '"', '\\');
+                fputcsv($out, [
+                    'Organizator', 'Data eveniment', 'Locație',
+                    'Eveniment', 'Tip bilet', 'POS', 'Qty', 'Preț unitar',
+                    'Brut', 'Comision', 'Discount', 'Extras', 'Net', 'Mod comision',
+                ], ',', '"', '\\');
                 foreach ($data['rows'] as $r) {
                     fputcsv($out, [
+                        $r['organizer_name'] ?? '',
+                        optional($r['event_date'] ?? null)->format('d.m.Y') ?? '',
+                        $r['venue_name'] ?? '',
                         $r['event_title'],
                         $r['ticket_type_name'],
                         $r['is_pos'] ? 'da' : 'nu',
@@ -574,6 +581,7 @@ class SalesReport extends Page implements HasForms
                 }
                 fputcsv($out, [], ',', '"', '\\');
                 fputcsv($out, [
+                    '', '', '',
                     'TOTAL (excl. POS)', '', '',
                     $data['totals']['qty'],
                     '',
@@ -586,8 +594,9 @@ class SalesReport extends Page implements HasForms
                 ], ',', '"', '\\');
             } else {
                 fputcsv($out, [
+                    'Organizator', 'Data eveniment', 'Locație',
                     '# Comandă', 'Data plății', 'Data creării', 'Eveniment',
-                    'Client', 'Email', 'Bilete', 'Brut', 'Comision', 'Mod comision',
+                    'Client', 'Email', 'Tip bilet', 'Bilete', 'Brut', 'Comision', 'Mod comision',
                     'Discount', 'Cod reducere', 'Refund', 'Net', 'Status',
                     'Payment', 'Sursa',
                 ], ',', '"', '\\');
@@ -596,12 +605,16 @@ class SalesReport extends Page implements HasForms
                         foreach ($orders as $o) {
                             $r = $service->extendedRow($o);
                             fputcsv($out, [
+                                $r['organizer_name'] ?? '',
+                                optional($r['event_date'] ?? null)->format('d.m.Y') ?? '',
+                                $r['venue_name'] ?? '',
                                 $r['order_number'],
                                 $r['paid_at']?->format('d.m.Y H:i') ?? '',
                                 $r['created_at']?->format('d.m.Y H:i') ?? '',
                                 $r['event_title'],
                                 $r['customer_name'],
                                 $r['customer_email'],
+                                $r['ticket_types'] ?? '',
                                 $r['tickets'],
                                 number_format($r['gross'], 2, '.', ''),
                                 number_format($r['commission'], 2, '.', ''),

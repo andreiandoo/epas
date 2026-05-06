@@ -30,8 +30,12 @@ class SalesReportService
      */
     public function compact(array $eventIds, CarbonInterface $from, CarbonInterface $to, array $statuses, string $dateColumn = 'paid_at'): array
     {
+        // Eager-load organizer + venue so each compact row can carry the
+        // organizer company name, event date and venue name without
+        // firing N+1 queries on export of many-event reports.
         $events = Event::query()
             ->whereIn('id', $eventIds)
+            ->with(['marketplaceOrganizer:id,name,company_name', 'venue:id,name,city'])
             ->orderByDesc('event_date')
             ->get();
 
@@ -83,6 +87,14 @@ class SalesReportService
                 $rowOut = [
                     'event_id'         => $event->id,
                     'event_title'      => $eventTitle,
+                    // Organizer + venue + event date — needed by the CSV
+                    // export, computed once per event so the export
+                    // doesn't have to re-resolve per row.
+                    'organizer_name'   => $event->marketplaceOrganizer?->company_name
+                                          ?? $event->marketplaceOrganizer?->name
+                                          ?? '',
+                    'event_date'       => $event->event_date,
+                    'venue_name'       => $this->resolveVenueName($event),
                     'ticket_type_id'   => $ttId,
                     'ticket_type_name' => (string) ($row['ticket_type_name'] ?? 'Tip bilet'),
                     'is_pos'           => $isPos,
@@ -139,7 +151,14 @@ class SalesReportService
             // event() points at App\Models\Event (the real source of truth);
             // marketplaceEvent is a separate model on a different table that
             // is mostly unused — using it left the title column blank.
-            ->with(['event', 'tickets.ticketType', 'items'])
+            // Also pull venue + organizer for the new CSV columns.
+            ->with([
+                'event:id,title,event_date,venue_id,marketplace_organizer_id,commission_rate,commission_mode',
+                'event.venue:id,name,city',
+                'event.marketplaceOrganizer:id,name,company_name',
+                'tickets.ticketType',
+                'items',
+            ])
             ->withCount('tickets')
             ->orderByDesc($dateColumn);
 
@@ -282,6 +301,11 @@ class SalesReportService
             'order_number'     => $order->order_number,
             'event_id'         => $order->event_id ?? $order->marketplace_event_id,
             'event_title'      => $eventTitle,
+            'organizer_name'   => $event?->marketplaceOrganizer?->company_name
+                                  ?? $event?->marketplaceOrganizer?->name
+                                  ?? '',
+            'event_date'       => $event?->event_date,
+            'venue_name'       => $event ? $this->resolveVenueName($event) : '',
             'paid_at'          => $order->paid_at,
             'created_at'       => $order->created_at,
             'customer_name'    => $order->customer_name,
@@ -342,5 +366,16 @@ class SalesReportService
             return $title['ro'] ?? $title['en'] ?? (reset($title) ?: 'Eveniment');
         }
         return (string) ($title ?? 'Eveniment');
+    }
+
+    private function resolveVenueName(Event $event): string
+    {
+        $venue = $event->venue;
+        if (!$venue) return '';
+        $name = $venue->name ?? null;
+        if (is_array($name)) {
+            $name = $name['ro'] ?? $name['en'] ?? (reset($name) ?: '');
+        }
+        return (string) ($name ?? '');
     }
 }
