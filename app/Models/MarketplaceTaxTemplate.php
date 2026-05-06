@@ -256,6 +256,9 @@ class MarketplaceTaxTemplate extends Model
             '{{tickets_breakdown_label}}' => 'Detaliu bilete vândute (ex: 50lei*2+60lei*16)',
             '{{total_tickets_sold}}' => 'Total bilete vândute',
             '{{total_tickets_refunded}}' => 'Total bilete returnate',
+            '{{total_refunded_amount}}' => 'Valoarea totală bilete returnate (lei)',
+            '{{total_refunded_commission}}' => 'Comision returnat pentru biletele rambursate (lei)',
+            '{{refunded_tickets_breakdown_label}}' => 'Detaliu bilete returnate (ex: 120lei*1)',
         ],
         'Payout - Bilete Pretipărite' => [
             '{{payout_preprinted_ticket_fee}}' => 'Taxă per bilet pretipărit (lei/buc)',
@@ -915,7 +918,46 @@ class MarketplaceTaxTemplate extends Model
                     $variables['total_tickets_sold'] = (int) round($payout->gross_amount / $avgPrice);
                 }
             }
-            $variables['total_tickets_refunded'] = 0;
+            // Refunded tickets aggregate for the decont template (filling
+            // section 2 — "Taxe pentru bilete returnate"). Sourced from
+            // MarketplaceRefundItem rows whose request actually paid out
+            // (refunded / partially_refunded), restricted to orders for
+            // this payout's event so deconts on multi-event marketplaces
+            // don't leak refunds across events.
+            $refundCount = 0;
+            $refundFaceTotal = 0.0;
+            $refundCommissionReturned = 0.0;
+            $refundedBreakdownParts = [];
+            if ($payout->event_id) {
+                $refundItems = \App\Models\MarketplaceRefundItem::query()
+                    ->whereHas('refundRequest', function ($q) use ($payout) {
+                        $q->whereIn('status', ['refunded', 'partially_refunded'])
+                          ->whereHas('order', function ($q2) use ($payout) {
+                              $q2->where(fn ($q3) => $q3->where('event_id', $payout->event_id)
+                                                          ->orWhere('marketplace_event_id', $payout->event_id));
+                          });
+                    })
+                    ->where('status', 'refunded')
+                    ->get();
+
+                $refundCount = $refundItems->count();
+                $refundFaceTotal = (float) $refundItems->sum('face_value');
+                $refundCommissionReturned = (float) $refundItems
+                    ->where('commission_refunded', true)
+                    ->sum('commission_amount');
+
+                // Build "(120lei*1)" style label same as tickets_breakdown_label.
+                $byPrice = $refundItems->groupBy(fn ($it) => (int) round((float) $it->face_value));
+                foreach ($byPrice as $price => $set) {
+                    $refundedBreakdownParts[] = $price . 'lei*' . $set->count();
+                }
+            }
+            $variables['total_tickets_refunded'] = $refundCount;
+            $variables['total_refunded_amount'] = number_format($refundFaceTotal, 2);
+            $variables['total_refunded_commission'] = number_format($refundCommissionReturned, 2);
+            $variables['refunded_tickets_breakdown_label'] = !empty($refundedBreakdownParts)
+                ? ' (' . implode('+', $refundedBreakdownParts) . ')'
+                : '';
 
             // Preprinted tickets (physical tickets sent by courier)
             $preprintedData = $payout->payout_method['preprinted'] ?? [];
