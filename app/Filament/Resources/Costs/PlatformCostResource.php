@@ -36,7 +36,12 @@ class PlatformCostResource extends Resource
                         ->label('Category')
                         ->options(PlatformCost::CATEGORY_LABELS)
                         ->required()
-                        ->searchable(),
+                        // native(true) renders the OS-level <select>, which
+                        // sidesteps the overflow:hidden clipping the JS
+                        // dropdown was hitting on the create form. With ~10
+                        // options the searchable behaviour isn't worth the
+                        // visual bug.
+                        ->native(true),
 
                     Forms\Components\Textarea::make('description')
                         ->label('Description')
@@ -90,12 +95,17 @@ class PlatformCostResource extends Resource
                     ->sortable(),
 
                 Tables\Columns\BadgeColumn::make('category')
+                    ->formatStateUsing(fn ($state) => PlatformCost::CATEGORY_LABELS[$state] ?? $state)
                     ->colors([
                         'primary' => 'server',
                         'success' => 'domain',
                         'info' => 'cdn',
                         'warning' => 'service',
                         'danger' => 'marketing',
+                        'success' => 'company_general',
+                        'info' => 'salaries',
+                        'warning' => 'accounting',
+                        'danger' => 'company_taxes',
                         'gray' => 'other',
                     ]),
 

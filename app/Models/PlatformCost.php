@@ -33,6 +33,10 @@ class PlatformCost extends Model
         'cdn' => 'CDN',
         'service' => 'Service / SaaS',
         'marketing' => 'Marketing',
+        'company_general' => 'Company General',
+        'salaries' => 'Salaries',
+        'accounting' => 'Accounting',
+        'company_taxes' => 'Company Taxes',
         'other' => 'Other',
     ];
 
