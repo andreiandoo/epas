@@ -652,6 +652,10 @@ $endpoint = '';
 $method = 'GET';
 $body = null;
 $requiresAuth = false;
+// Per-action override for the upstream cURL timeout (seconds). Default 15
+// is fine for most calls, but a few endpoints do synchronous heavy work
+// (PDF batch render, ZIP generation) and must be allowed more time.
+$customTimeout = null;
 
 switch ($action) {
     case 'search':
@@ -3291,6 +3295,13 @@ switch ($action) {
         if ($method === 'POST') {
             $body = file_get_contents('php://input');
             $endpoint = '/organizer/invitations';
+            // PDF batch is rendered synchronously after the DB transaction
+            // commits. With watermarks + QR codes a few dozen invites can
+            // easily exceed the default 15s budget. Without this override
+            // the proxy aborts, the UI shows "Generarea a eșuat", but
+            // Laravel finishes the render and the batch lands in the
+            // organizer's "Serii" list anyway — confusing both sides.
+            $customTimeout = 120;
         } else {
             $qs = http_build_query(array_intersect_key($_GET, array_flip(['event_id', 'status', 'per_page', 'page'])));
             $endpoint = '/organizer/invitations' . ($qs ? '?' . $qs : '');
@@ -3314,6 +3325,8 @@ switch ($action) {
         $body = file_get_contents('php://input');
         $endpoint = '/organizer/invitations/' . $batchId . '/generate';
         $requiresAuth = true;
+        // Re-rendering the whole batch can take long for large batches.
+        $customTimeout = 120;
         break;
 
     case 'organizer.invitations.delete-invites':
@@ -3833,9 +3846,14 @@ foreach ($headers as $h) {
     $curlHeaders[] = $h;
 }
 $upstreamContentDisposition = '';
+// Lift PHP's own execution time so it doesn't kill the script before the
+// upstream cURL call returns when we deliberately raised the cURL budget.
+if ($customTimeout && $customTimeout > 25) {
+    @set_time_limit($customTimeout + 30);
+}
 curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_TIMEOUT => 15,
+    CURLOPT_TIMEOUT => $customTimeout ?? 15,
     // Connect through Cloudflare path; bumped from 3 to 10 because CF
     // TLS+TCP handshake occasionally pushes past the old budget.
     // Direct-to-origin (CURLOPT_RESOLVE) was tried but blocked by the
