@@ -387,8 +387,12 @@ class FacebookCapiService
             throw new \Exception('Ad Account ID required for custom audiences');
         }
 
+        // Defensive: accept either "act_123" or "123" — strip any leading
+        // "act_" so the URL doesn't end up as act_act_123.
+        $accountId = preg_replace('/^act_/i', '', (string) $connection->ad_account_id);
+
         $response = Http::withToken($connection->access_token)
-            ->post("{$this->baseUrl}/{$this->apiVersion}/act_{$connection->ad_account_id}/customaudiences", [
+            ->post("{$this->baseUrl}/{$this->apiVersion}/act_{$accountId}/customaudiences", [
                 'name' => $name,
                 'description' => $description,
                 'subtype' => 'CUSTOM',
@@ -396,7 +400,7 @@ class FacebookCapiService
             ]);
 
         if (!$response->successful()) {
-            throw new \Exception('Failed to create custom audience: ' . $response->body());
+            throw new \Exception('Create custom audience failed: ' . $this->formatGraphError($response));
         }
 
         $data = $response->json();
@@ -437,7 +441,7 @@ class FacebookCapiService
             ]);
 
         if (!$response->successful()) {
-            throw new \Exception('Failed to add users to audience: ' . $response->body());
+            throw new \Exception('Add users to audience failed: ' . $this->formatGraphError($response));
         }
 
         $result = $response->json();
@@ -559,6 +563,27 @@ class FacebookCapiService
     public function getConnections(int $tenantId): Collection
     {
         return FacebookCapiConnection::where('tenant_id', $tenantId)->get();
+    }
+
+    /**
+     * Compose a compact, useful error string out of a Graph API error
+     * response — surfaces type/code/error_subcode/error_user_msg so the
+     * UI doesn't get a truncated raw JSON blob.
+     */
+    protected function formatGraphError(\Illuminate\Http\Client\Response $response): string
+    {
+        $err = $response->json('error') ?? [];
+        if (!$err) {
+            return "HTTP {$response->status()}: " . mb_substr((string) $response->body(), 0, 300);
+        }
+        $parts = [];
+        if (!empty($err['message'])) $parts[] = $err['message'];
+        if (!empty($err['type'])) $parts[] = "type={$err['type']}";
+        if (isset($err['code'])) $parts[] = "code={$err['code']}";
+        if (isset($err['error_subcode'])) $parts[] = "subcode={$err['error_subcode']}";
+        if (!empty($err['error_user_msg'])) $parts[] = "user_msg={$err['error_user_msg']}";
+        if (!empty($err['fbtrace_id'])) $parts[] = "fbtrace_id={$err['fbtrace_id']}";
+        return implode(' | ', $parts);
     }
 
     public function getConnectionForOrganizer(int $marketplaceOrganizerId): ?FacebookCapiConnection

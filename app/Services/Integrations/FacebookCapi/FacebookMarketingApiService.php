@@ -273,7 +273,8 @@ class FacebookMarketingApiService
 
     protected function normalizeAccountId(string $raw): string
     {
-        return ltrim($raw, 'act_');
+        // ltrim mask trims char-by-char; we want a literal prefix strip.
+        return preg_replace('/^act_/i', '', $raw);
     }
 
     protected function markAccountFailed(FacebookCapiConnection $connection, string $accountId, string $error): ?FacebookAdsAccount
