@@ -135,22 +135,20 @@ class SalesReport extends Page implements HasForms
                         Forms\Components\Radio::make('filterBy')
                             ->label('Selectează după')
                             ->options([
-                                'event'     => 'Eveniment(e)',
-                                'organizer' => 'Organizator',
+                                'event'          => 'Eveniment(e)',
+                                'organizer'      => 'Organizator',
+                                'all_in_period'  => 'Toate evenimentele publicate din perioadă',
                             ])
                             ->inline()
                             ->columnSpanFull()
                             ->live()
                             ->afterStateUpdated(function ($state, Set $set) {
-                                // Switching the mode wipes the other side's
-                                // state so we don't leak ids across modes
-                                // (also kills the URL TypeError class —
-                                // organizerId can't end up an array).
-                                if ($state === 'event') {
-                                    $set('organizerId', null);
-                                } else {
-                                    $set('eventIds', []);
-                                }
+                                // Wipe both sides on switch — keeps URL/state
+                                // tidy and avoids stray ids leaking between
+                                // modes. all_in_period auto-resolves so we
+                                // don't need either dropdown.
+                                $set('eventIds', []);
+                                $set('organizerId', null);
                                 $this->resetReport();
                             }),
 
@@ -344,6 +342,22 @@ class SalesReport extends Page implements HasForms
             return Event::query()
                 ->where('marketplace_client_id', $marketplace->id)
                 ->where('marketplace_organizer_id', (int) $organizerId)
+                ->pluck('id')
+                ->all();
+        }
+
+        if ($filterBy === 'all_in_period') {
+            // Auto-resolve every published event of this marketplace whose
+            // event_date sits inside the selected period — saves the user
+            // from picking events one by one when they want a "what
+            // happened this month/quarter" report.
+            [$from, $to] = $this->resolvePeriod();
+            return Event::query()
+                ->where('marketplace_client_id', $marketplace->id)
+                ->where('is_published', true)
+                ->whereNotNull('marketplace_organizer_id')
+                ->whereNotNull('event_date')
+                ->whereBetween('event_date', [$from, $to])
                 ->pluck('id')
                 ->all();
         }
