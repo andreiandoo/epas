@@ -23,6 +23,48 @@ class MarketplacePayoutNotification extends Notification implements ShouldQueue
         return ['marketplace-mail'];
     }
 
+    /**
+     * Slug picked up by MarketplaceMailChannel to render via the
+     * marketplace's DB-stored email template (per-marketplace branding).
+     * Returning a slug doesn't bypass toMail() — if the template row is
+     * missing for this marketplace, the channel falls back to toMail()
+     * and the legacy MailMessage body is sent.
+     */
+    public function marketplaceTemplateSlug(object $notifiable): ?string
+    {
+        return match ($this->action) {
+            'submitted' => 'payout_submitted',
+            'approved' => 'payout_approved',
+            'processing' => 'payout_processing',
+            'completed' => 'payout_completed',
+            'rejected' => 'payout_rejected',
+            default => null,
+        };
+    }
+
+    /**
+     * Variables injected into the template's {{placeholders}}. The channel
+     * already adds marketplace_name / customer_name / customer_email; we
+     * only need to add the payout-specific fields here.
+     */
+    public function marketplaceTemplateData(object $notifiable): array
+    {
+        $amount = number_format((float) $this->payout->amount, 2, ',', '.') . ' ' . ($this->payout->currency ?? 'EUR');
+        $period = '';
+        if ($this->payout->period_start && $this->payout->period_end) {
+            $period = $this->payout->period_start->format('d M Y') . ' — ' . $this->payout->period_end->format('d M Y');
+        }
+
+        return [
+            'organizer_name' => $notifiable->name ?? trim(($notifiable->first_name ?? '') . ' ' . ($notifiable->last_name ?? '')),
+            'payout_reference' => (string) ($this->payout->reference ?? '-'),
+            'payout_amount' => $amount,
+            'payout_period' => $period ?: '-',
+            'payment_reference' => (string) ($this->payout->payment_reference ?? '-'),
+            'rejection_reason' => (string) ($this->payout->rejection_reason ?? '-'),
+        ];
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         return match ($this->action) {

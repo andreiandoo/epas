@@ -22,6 +22,64 @@ class MarketplaceTicketTransferNotification extends Notification implements Shou
         return ['marketplace-mail'];
     }
 
+    /**
+     * Slug picked up by MarketplaceMailChannel for per-marketplace
+     * template rendering. Returns null when there's no template
+     * (the channel then falls back to toMail()).
+     */
+    public function marketplaceTemplateSlug(object $notifiable): ?string
+    {
+        return match ($this->action) {
+            'initiated' => 'ticket_transfer_initiated',
+            'received' => 'ticket_transfer_received',
+            'accepted' => 'ticket_transfer_accepted',
+            'rejected' => 'ticket_transfer_rejected',
+            'cancelled' => 'ticket_transfer_cancelled',
+            default => null,
+        };
+    }
+
+    /**
+     * Variables injected into the template. We pass enough fields to
+     * cover every action without per-action conditionals — templates
+     * that don't reference a key just leave the placeholder in place.
+     */
+    public function marketplaceTemplateData(object $notifiable): array
+    {
+        $event = $this->transfer->ticket->event ?? null;
+        $eventName = '';
+        if ($event) {
+            $eventName = method_exists($event, 'getTranslation')
+                ? ($event->getTranslation('title', 'ro')
+                    ?? $event->getTranslation('title', 'en')
+                    ?? (is_array($event->title ?? null) ? reset($event->title) : ($event->title ?? '')))
+                : ($event->title ?? '');
+        }
+        $eventName = is_string($eventName) ? $eventName : 'Eveniment';
+
+        $eventDate = '';
+        if ($event && !empty($event->starts_at)) {
+            $eventDate = $event->starts_at->format('d M Y, H:i');
+        } elseif ($event && !empty($event->event_date)) {
+            $eventDate = \Carbon\Carbon::parse($event->event_date)->format('d M Y');
+        }
+
+        $expiresAt = $this->transfer->expires_at?->format('d M Y, H:i') ?? '-';
+
+        return [
+            'from_name' => (string) ($this->transfer->from_name ?? ''),
+            'to_name' => (string) ($this->transfer->to_name ?? ''),
+            'to_email' => (string) ($this->transfer->to_email ?? ''),
+            'event_name' => $eventName ?: 'Eveniment',
+            'event_date' => $eventDate ?: '-',
+            'event_slug' => (string) ($event->slug ?? ''),
+            'ticket_type' => (string) ($this->transfer->ticket?->ticketType?->name ?? '-'),
+            'transfer_message' => (string) ($this->transfer->message ?? '-'),
+            'expires_at' => $expiresAt,
+            'accept_url' => (string) ($this->transfer->getAcceptUrl() ?? ''),
+        ];
+    }
+
     public function toMail(object $notifiable): MailMessage
     {
         return match ($this->action) {

@@ -39,9 +39,6 @@ class MarketplaceMailChannel
             return;
         }
 
-        $message = $this->buildMailMessage($notifiable, $notification);
-        if (!$message) return;
-
         $email = $this->resolveRecipientEmail($notifiable);
         if (!$email) {
             Log::channel('marketplace')->warning('MarketplaceMailChannel: notifiable has no routeable email', [
@@ -52,24 +49,103 @@ class MarketplaceMailChannel
         }
 
         $name = $this->resolveRecipientName($notifiable);
-        $subject = $message->subject ?: 'Notification';
-        $html = $this->renderMailMessage($message);
 
-        $extras = [
-            'template_slug' => method_exists($notification, 'templateSlug')
-                ? $notification->templateSlug()
-                : $this->slugFromClassName($notification),
-        ];
-        if (method_exists($notification, 'logExtra')) {
-            $extras = array_merge($extras, (array) $notification->logExtra($notifiable));
+        // 1) Try DB-backed marketplace template (per-marketplace branding via
+        //    /marketplace/email-templates). The notification opts in by
+        //    implementing marketplaceTemplateSlug($notifiable) +
+        //    marketplaceTemplateData($notifiable). If the template exists for
+        //    this marketplace, we render and dispatch. If not, we silently
+        //    fall through to the Laravel MailMessage branch below.
+        $rendered = $this->renderFromMarketplaceTemplate($notifiable, $notification, $client);
+        if ($rendered) {
+            $this->dispatch($client, $email, $name, $rendered['subject'], $rendered['body_html'], [
+                'template_slug' => $rendered['slug'],
+            ] + $this->extrasFromNotification($notifiable, $notification));
+            return;
         }
 
+        // 2) Fallback to MailMessage rendering (matches the pre-template flow).
+        $message = $this->buildMailMessage($notifiable, $notification);
+        if (!$message) return;
+
+        $subject = $message->subject ?: 'Notification';
+        $html = $this->renderMailMessage($message);
+        $extras = ['template_slug' => method_exists($notification, 'templateSlug')
+            ? $notification->templateSlug()
+            : $this->slugFromClassName($notification)
+        ] + $this->extrasFromNotification($notifiable, $notification);
+
+        $this->dispatch($client, $email, $name, $subject, $html, $extras);
+    }
+
+    /**
+     * Try to render via a MarketplaceEmailTemplate stored for $client.
+     * Returns ['subject' => ..., 'body_html' => ..., 'slug' => ...] on
+     * success; null when the notification doesn't expose a template hook,
+     * the template doesn't exist for the marketplace, or rendering throws.
+     */
+    protected function renderFromMarketplaceTemplate(object $notifiable, Notification $notification, MarketplaceClient $client): ?array
+    {
+        if (!method_exists($notification, 'marketplaceTemplateSlug')) return null;
+
+        $slug = (string) $notification->marketplaceTemplateSlug($notifiable);
+        if ($slug === '') return null;
+
+        $template = \App\Models\MarketplaceEmailTemplate::query()
+            ->where('marketplace_client_id', $client->id)
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->first();
+        if (!$template) return null;
+
+        $data = method_exists($notification, 'marketplaceTemplateData')
+            ? (array) $notification->marketplaceTemplateData($notifiable)
+            : [];
+
+        // Always inject some marketplace-level defaults so a template can
+        // reference {{marketplace_name}} / {{customer_name}} without the
+        // notification needing to pass them every time.
+        $data = array_merge([
+            'marketplace_name' => $client->public_name ?? $client->name ?? 'Marketplace',
+            'marketplace_domain' => preg_replace('#^https?://#', '', rtrim((string) ($client->domain ?? ''), '/')),
+            'customer_name' => $this->resolveRecipientName($notifiable),
+            'customer_email' => $this->resolveRecipientEmail($notifiable) ?? '',
+        ], $data);
+
+        try {
+            $r = $template->render($data);
+        } catch (\Throwable $e) {
+            Log::channel('marketplace')->warning('MarketplaceMailChannel: template render failed', [
+                'slug' => $slug,
+                'marketplace_client_id' => $client->id,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+
+        return [
+            'slug' => $slug,
+            'subject' => $r['subject'] ?? 'Notification',
+            'body_html' => $r['body_html'] ?? '',
+        ];
+    }
+
+    protected function extrasFromNotification(object $notifiable, Notification $notification): array
+    {
+        if (method_exists($notification, 'logExtra')) {
+            return (array) $notification->logExtra($notifiable);
+        }
+        return [];
+    }
+
+    protected function dispatch(MarketplaceClient $client, string $email, string $name, string $subject, string $html, array $extras): void
+    {
         try {
             BaseController::sendViaMarketplace($client, $email, $name, $subject, $html, $extras);
         } catch (\Throwable $e) {
             Log::channel('marketplace')->error('MarketplaceMailChannel: send failed', [
-                'notification' => get_class($notification),
                 'to' => $email,
+                'subject' => $subject,
                 'error' => $e->getMessage(),
             ]);
         }
