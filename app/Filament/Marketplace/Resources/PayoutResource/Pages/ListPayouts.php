@@ -802,6 +802,28 @@ class ListPayouts extends ListRecords
 
         $events = $query->get();
 
+        // One-shot refund aggregate per event so we don't N+1 the modal.
+        // Counts and sums refund requests that actually paid out
+        // (refunded / partially_refunded). Joins on either event_id or
+        // marketplace_event_id since orders use either column depending
+        // on origin.
+        $eventIdsList = $events->pluck('id')->all();
+        $refundsByEvent = collect();
+        if (!empty($eventIdsList)) {
+            $refundsByEvent = \DB::table('marketplace_refund_requests as rr')
+                ->join('orders as o', 'rr.order_id', '=', 'o.id')
+                ->whereIn(\DB::raw('COALESCE(o.event_id, o.marketplace_event_id)'), $eventIdsList)
+                ->whereIn('rr.status', ['refunded', 'partially_refunded'])
+                ->groupBy(\DB::raw('COALESCE(o.event_id, o.marketplace_event_id)'))
+                ->select(
+                    \DB::raw('COALESCE(o.event_id, o.marketplace_event_id) as event_id'),
+                    \DB::raw('COUNT(*) as refund_count'),
+                    \DB::raw('SUM(rr.approved_amount) as refund_total')
+                )
+                ->get()
+                ->keyBy('event_id');
+        }
+
         $rows = [];
         foreach ($events as $event) {
             $title = is_array($event->title)
@@ -819,6 +841,8 @@ class ListPayouts extends ListRecords
 
             $balance = $organizer ? self::calculateEventBalance($event) : 0;
 
+            $refundInfo = $refundsByEvent->get($event->id);
+
             $rows[] = [
                 'event' => $event,
                 'title' => $title,
@@ -826,6 +850,8 @@ class ListPayouts extends ListRecords
                 'event_date' => $eventDate,
                 'balance' => $balance,
                 'existing_payout' => $existingPayout,
+                'refund_count' => (int) ($refundInfo?->refund_count ?? 0),
+                'refund_total' => (float) ($refundInfo?->refund_total ?? 0),
             ];
         }
 
@@ -873,7 +899,21 @@ class ListPayouts extends ListRecords
         $event->loadMissing('ticketTypes');
         $items = $this->buildTicketBreakdownForEvent($event);
 
-        if (empty($items)) {
+        // Refund-only case: an event sold tickets that were entirely
+        // refunded. The breakdown is empty (no valid/used tickets remain)
+        // but the operator still needs a 0-net decont to document the
+        // refund history. Detect that here so the empty-items guard
+        // doesn't reject the request outright.
+        $refundCount = \DB::table('marketplace_refund_requests as rr')
+            ->join('orders as o', 'rr.order_id', '=', 'o.id')
+            ->where(function ($q) use ($event) {
+                $q->where('o.event_id', $event->id)
+                    ->orWhere('o.marketplace_event_id', $event->id);
+            })
+            ->whereIn('rr.status', ['refunded', 'partially_refunded'])
+            ->count();
+
+        if (empty($items) && $refundCount === 0) {
             \Filament\Notifications\Notification::make()
                 ->title('Sold insuficient')
                 ->body('Nu există bilete neîncasate pentru acest eveniment.')
@@ -927,7 +967,7 @@ class ListPayouts extends ListRecords
             $netAmount = $grossAmount - $commissionAmount;
         }
 
-        if ($netAmount <= 0) {
+        if ($netAmount <= 0 && $refundCount === 0) {
             \Filament\Notifications\Notification::make()
                 ->title('Sold insuficient')
                 ->body('Nu există sold disponibil pentru acest eveniment.')
@@ -979,7 +1019,11 @@ class ListPayouts extends ListRecords
             'approved_by' => $marketplaceAdmin->id,
             'approved_at' => now(),
             'payout_method' => $payoutMethod,
-            'admin_notes' => 'Decont generat din lista evenimente încheiate.',
+            // Annotate refund-only deconts so anyone looking at the
+            // 0-net record later understands why it exists.
+            'admin_notes' => empty($items) && $refundCount > 0
+                ? "Decont generat din lista evenimente încheiate. Eveniment cu {$refundCount} bilet(e) rambursat(e) integral; net 0."
+                : 'Decont generat din lista evenimente încheiate.',
             'ticket_breakdown' => $ticketBreakdown,
             'commission_mode' => $commissionMode,
             'invoice_recipient_type' => $commissionMode === 'added_on_top' ? 'general_client' : 'organizer',

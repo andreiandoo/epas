@@ -12,6 +12,7 @@
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Organizator</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400">Data</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Sold disponibil</th>
+                        <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Retururi</th>
                         <th class="px-3 py-2 font-medium text-gray-600 dark:text-gray-400 text-right">Acțiuni</th>
                     </tr>
                 </thead>
@@ -30,6 +31,16 @@
                                     <span class="text-gray-400">0.00 RON</span>
                                 @endif
                             </td>
+                            <td class="px-3 py-2 text-right font-mono">
+                                @if(($row['refund_count'] ?? 0) > 0)
+                                    <div class="flex flex-col items-end leading-tight">
+                                        <span class="text-amber-600 dark:text-amber-400 font-medium">{{ $row['refund_count'] }} bilet{{ $row['refund_count'] === 1 ? '' : 'e' }}</span>
+                                        <span class="text-[10px] text-gray-500 dark:text-gray-400">{{ number_format($row['refund_total'], 2) }} RON</span>
+                                    </div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
                             <td class="px-3 py-2 text-right">
                                 @if($row['existing_payout'])
                                     <div class="flex items-center justify-end gap-2">
@@ -40,7 +51,7 @@
                                             Vezi decont
                                         </a>
                                     </div>
-                                @elseif($row['balance'] > 0)
+                                @elseif($row['balance'] > 0 || ($row['refund_count'] ?? 0) > 0)
                                     <button type="button"
                                             wire:click="generateEventDecont({{ $row['event']->id }})"
                                             wire:loading.attr="disabled"
