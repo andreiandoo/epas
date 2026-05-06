@@ -372,27 +372,31 @@ class SalesReport extends Page implements HasForms
                 'orders' => $this->countOrders($eventIds, $from, $to, $statuses, $dateColumn),
             ];
         } else {
-            $query = $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn);
-            $this->extendedTotal = (clone $query)->count();
-            $orders = $query
+            $baseQuery = $service->extendedQuery($eventIds, $from, $to, $statuses, $dateColumn);
+
+            // Snapshot the unbounded total BEFORE any skip/take mutate the
+            // builder. The previous version applied skip/take to $query
+            // directly, then later cloned that already-limited query for
+            // the totals walk — so the cards summed only the current page
+            // (50) instead of all matching orders (92).
+            $this->extendedTotal = (clone $baseQuery)->count();
+
+            // Page slice — clone first so skip/take don't leak back to the
+            // base builder.
+            $pageOrders = (clone $baseQuery)
                 ->skip(($this->extendedPage - 1) * $this->extendedPerPage)
                 ->take($this->extendedPerPage)
                 ->get();
-
-            $this->extendedRows = $orders->map(fn ($o) => $service->extendedRow($o))->all();
+            $this->extendedRows = $pageOrders->map(fn ($o) => $service->extendedRow($o))->all();
             $this->compactData = null;
 
-            // Summary must aggregate the *recomputed* commission/net per
-            // order — order.commission_amount is unreliable across sources
-            // (POS app writes per-ticket numbers, etc.) and would skew the
-            // card. Earlier we used chunk(500) here, but chunk paginates
-            // via limit/offset on top of orderByDesc(paid_at) and skipped
-            // rows whenever the timestamp had ties (a flash-sale event
-            // showed 50 of 92 orders summed). Plain ->get() is fine: a few
-            // thousand rows with eager loading is well below memory limits.
+            // Summary aggregation walks every matching order (clone again
+            // so we get the unbounded query). order.commission_amount is
+            // unreliable across sources, so re-run extendedRow per order
+            // — a few thousand rows with eager loading sits comfortably
+            // under the memory budget.
             $totals = ['orders' => 0, 'qty' => 0, 'gross' => 0.0, 'commission' => 0.0, 'discount' => 0.0, 'refund' => 0.0, 'net' => 0.0];
-            $allOrders = (clone $query)->get();
-            foreach ($allOrders as $o) {
+            foreach ((clone $baseQuery)->get() as $o) {
                 $r = $service->extendedRow($o);
                 $totals['orders']++;
                 $totals['qty']        += $r['tickets'];
