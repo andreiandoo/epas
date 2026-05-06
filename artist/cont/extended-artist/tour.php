@@ -406,7 +406,7 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
                                     <div class="bg-white border border-border rounded-xl p-4">
                                         <p class="text-xs text-muted uppercase tracking-wider font-semibold flex items-center gap-1">
                                             Distanță rută
-                                            <span class="to-tip" data-tip="Distanță aproximativă pe șosea (factor 1.35× linia dreaptă). Pentru calcul exact pe Google Maps va veni mai târziu.">ⓘ</span>
+                                            <span class="to-tip" :data-tip="planner.summary?.routing_has_fallback ? 'Unele segmente folosesc aproximare (Haversine × 1.35) pentru că OSRM era indisponibil. Dă Recalculează mai târziu pentru valori exacte.' : 'Distanță reală pe ruta auto, calculată cu OpenStreetMap (OSRM). Cache 30 zile per rută.'">ⓘ</span>
                                         </p>
                                         <p class="text-xl font-bold text-secondary mt-1">~<span x-text="formatNumber(planner.summary?.total_road_distance_km ?? 0)"></span> km</p>
                                         <p class="text-[10px] text-muted mt-0.5"><span x-text="formatDuration(planner.summary?.total_drive_time_min ?? 0)"></span> de condus</p>
@@ -1626,7 +1626,10 @@ function tourOptimizer() {
             const cfg = this.planner.config;
             const totalConsumption = (cfg.vehicles || []).reduce((s, v) => s + (v.count * v.consumption_l_100km), 0);
             const lines = [];
-            lines.push('Estimativ. Distanța în linie dreaptă (Haversine) × 1.35 = aproximare rută.');
+            const isFallback = (stop?.routing_source === 'fallback');
+            lines.push(isFallback
+                ? 'Aproximativ (Haversine × 1.35) — OSRM indisponibil acum.'
+                : 'Distanța reală pe ruta auto (OpenStreetMap / OSRM).');
             lines.push('Formula: km × consum total / 100 × preț RON/L');
             lines.push('Consum total: ' + (cfg.vehicles || []).map(v => v.count + '×' + v.consumption_l_100km).join(' + ') + ' = ' + totalConsumption.toFixed(1) + ' L/100km');
             lines.push('Preț: ' + cfg.fuel_price_ron_l + ' RON/L');
