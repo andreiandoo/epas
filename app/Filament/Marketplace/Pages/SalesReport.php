@@ -71,6 +71,11 @@ class SalesReport extends Page implements HasForms
                 Section::make('Filtre raport')
                     ->description('Alege perioada, evenimentele și statusurile, apoi apasă "Generează raport".')
                     ->columns(2)
+                    // Auto-collapse once we have a result so the table is
+                    // visible without scrolling. The user can re-open the
+                    // section by clicking the header to tweak filters.
+                    ->collapsible()
+                    ->collapsed(fn () => $this->summary !== null)
                     ->schema([
                         Forms\Components\Radio::make('period')
                             ->label('Perioadă')
