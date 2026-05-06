@@ -26,6 +26,10 @@ use Illuminate\Support\Str;
  */
 class TourOptimizerService
 {
+    public function __construct(private readonly RoadRoutingService $routing)
+    {
+    }
+
     public const TTL_OPPORTUNITIES = 86400;  // 24h
     public const TTL_PREDICTIONS = 86400;    // 24h
     public const TTL_WEEKDAY = 604800;       // 7d
@@ -341,11 +345,12 @@ class TourOptimizerService
                 'fuel_arrival_km' => (int) round($arrivalDistance),
                 'fuel_return_leg_cost' => (int) round($fuelReturnLeg),
                 'fuel_return_leg_km' => (int) round($returnLegDistance),
-                // Distanța rutieră (estimată 1.35× linia dreaptă) + timp condus (75 km/h medie)
-                'arrival_road_km' => (int) round($arrivalDistance * self::ROAD_DISTANCE_FACTOR),
-                'arrival_drive_time_min' => (int) round(($arrivalDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
-                'return_leg_road_km' => (int) round($returnLegDistance * self::ROAD_DISTANCE_FACTOR),
-                'return_leg_drive_time_min' => (int) round(($returnLegDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
+                // Placeholder; populated post-loop with real OSRM road routing
+                'arrival_road_km' => 0,
+                'arrival_drive_time_min' => 0,
+                'return_leg_road_km' => 0,
+                'return_leg_drive_time_min' => 0,
+                'routing_source' => null,
             ];
 
             // Pentru ultimul stop care NU e home, adaugă return drive la home base
@@ -364,6 +369,73 @@ class TourOptimizerService
                     : $current->copy()->addDays($minDaysBetween);
             }
         }
+
+        // ROAD ROUTING: pentru fiecare leg, query OSRM (cu cache 30 zile + fallback Haversine×1.35).
+        // Rezultatul se aplică retroactiv: total_distance + fuel_cost folosesc km REALI pe rute.
+        $totalRoadDistance = 0.0;
+        $totalRoadDuration = 0;
+        $hasFallback = false;
+
+        for ($i = 0; $i < count($finalRoute); $i++) {
+            $stop = &$finalRoute[$i];
+            $prev = $i > 0 ? $finalRoute[$i - 1] : null;
+            $effectiveFromStartHere = !empty($stop['from_start']) || ($prev && !empty($prev['is_home']));
+            $isHomeHere = !empty($stop['is_home']);
+
+            // Arrival routing (drumul de SOSIRE la acest stop)
+            if ($isHomeHere) {
+                $arrivalRoute = ['distance_km' => 0, 'duration_min' => 0, 'source' => 'home'];
+            } elseif ($i === 0 || $effectiveFromStartHere) {
+                $arrivalRoute = $this->routing->routeBetween($startGeo['lat'], $startGeo['lng'], $stop['lat'], $stop['lng']);
+            } else {
+                $arrivalRoute = $this->routing->routeBetween($prev['lat'], $prev['lng'], $stop['lat'], $stop['lng']);
+            }
+            $stop['arrival_road_km'] = (int) round($arrivalRoute['distance_km']);
+            $stop['arrival_drive_time_min'] = (int) $arrivalRoute['duration_min'];
+            if (($arrivalRoute['source'] ?? '') === 'fallback') $hasFallback = true;
+
+            // Return-leg routing (când next.from_start sau next.is_home)
+            $next = $finalRoute[$i + 1] ?? null;
+            $nextIsHome = $next && !empty($next['is_home']);
+            $nextReturnsHome = $next && (!empty($next['from_start']) || $nextIsHome);
+            if ($next && $nextReturnsHome && !$isHomeHere) {
+                $returnRoute = $this->routing->routeBetween($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng']);
+                $stop['return_leg_road_km'] = (int) round($returnRoute['distance_km']);
+                $stop['return_leg_drive_time_min'] = (int) $returnRoute['duration_min'];
+                if (($returnRoute['source'] ?? '') === 'fallback') $hasFallback = true;
+            }
+
+            // Pentru ultimul stop care NU e home, drumul de retur la home
+            if (!$next && !$isHomeHere) {
+                $returnRoute = $this->routing->routeBetween($stop['lat'], $stop['lng'], $startGeo['lat'], $startGeo['lng']);
+                $stop['return_distance_km'] = (int) round($returnRoute['distance_km']);
+                $stop['return_drive_time_min'] = (int) $returnRoute['duration_min'];
+                $stop['return_fuel_cost'] = (int) round($this->fuelCost((float) $returnRoute['distance_km'], $config));
+                if (($returnRoute['source'] ?? '') === 'fallback') $hasFallback = true;
+            }
+
+            // Recalculează fuel_cost cu distanța REALĂ (rută) în loc de Haversine
+            $arrivalKm = (float) ($stop['arrival_road_km'] ?? 0);
+            $returnLegKm = (float) ($stop['return_leg_road_km'] ?? 0);
+            $stop['fuel_arrival_cost'] = (int) round($this->fuelCost($arrivalKm, $config));
+            $stop['fuel_arrival_km'] = (int) round($arrivalKm);
+            $stop['fuel_return_leg_cost'] = (int) round($this->fuelCost($returnLegKm, $config));
+            $stop['fuel_return_leg_km'] = (int) round($returnLegKm);
+            $stop['fuel_cost'] = $stop['fuel_arrival_cost'] + $stop['fuel_return_leg_cost'];
+            $stop['routing_source'] = ($arrivalRoute['source'] ?? 'osrm');
+
+            $totalRoadDistance += $arrivalKm + $returnLegKm;
+            $totalRoadDuration += (int) $arrivalRoute['duration_min'] + (int) ($stop['return_leg_drive_time_min'] ?? 0);
+
+            if (!$next && !$isHomeHere) {
+                $totalRoadDistance += (float) ($stop['return_distance_km'] ?? 0);
+                $totalRoadDuration += (int) ($stop['return_drive_time_min'] ?? 0);
+            }
+        }
+        unset($stop);
+
+        // Override total distance to use real road km
+        $totalDistance = $totalRoadDistance;
 
         // After loop: compute accommodation_cost și meal_cost per stop, plus duration totală
         $firstDate = isset($finalRoute[0]) ? Carbon::parse($finalRoute[0]['date_iso']) : $defaultStart;
@@ -432,8 +504,9 @@ class TourOptimizerService
             ],
             'summary' => [
                 'total_distance_km' => (int) round($totalDistance),
-                'total_road_distance_km' => (int) round($totalDistance * self::ROAD_DISTANCE_FACTOR),
-                'total_drive_time_min' => (int) round(($totalDistance * self::ROAD_DISTANCE_FACTOR / self::DRIVING_AVG_SPEED_KMH) * 60),
+                'total_road_distance_km' => (int) round($totalRoadDistance),
+                'total_drive_time_min' => $totalRoadDuration,
+                'routing_has_fallback' => $hasFallback,
                 'duration_days' => (int) $duration,
                 'total_cost_ron' => (int) round($totalCost),
                 'fuel_cost_ron' => $totalFuelCost,
