@@ -27,10 +27,12 @@ require_once dirname(__DIR__, 3) . '/includes/head.php';
     .to-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.625rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
     .pro-badge { background: linear-gradient(135deg, #E67E22, #A51C30); color: white; font-size: 0.625rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 0.25rem; letter-spacing: 0.5px; }
     #opportunityMap, #plannerMap { width: 100%; border-radius: 1rem; z-index: 1; }
-    /* Tooltip simplu cu CSS — afișează `data-tip` pe hover */
+    /* Tooltip simplu cu CSS — afișează `data-tip` pe hover.
+       Aliniat la dreapta iconiței (right: 0), tooltip se extinde spre stânga.
+       Asta previne overflow-ul când iconița e aproape de marginea dreaptă a containerului. */
     .to-tip { position: relative; display: inline-flex; align-items: center; cursor: help; color: #94A3B8; }
-    .to-tip:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); background: #1E293B; color: white; padding: 6px 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; max-width: 280px; width: max-content; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-    .to-tip:hover::before { content: ''; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1E293B; z-index: 100; }
+    .to-tip:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); right: 0; left: auto; transform: none; background: #1E293B; color: white; padding: 8px 12px; border-radius: 6px; font-size: 11px; line-height: 1.5; white-space: pre-wrap; text-align: left; max-width: 320px; min-width: 200px; width: max-content; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .to-tip:hover::before { content: ''; position: absolute; bottom: 100%; right: 4px; border: 5px solid transparent; border-top-color: #1E293B; z-index: 1000; }
     .to-section-title { display: flex; align-items: center; gap: 6px; font-size: 0.625rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #64748B; margin-bottom: 8px; }
     .to-section-title .icon { font-size: 1rem; line-height: 1; }
     .to-stay22-iframe { width: 100%; height: 480px; border: 0; border-radius: 0.75rem; background: #F8FAFC; }
@@ -1251,7 +1253,7 @@ function tourOptimizer() {
             }
         },
 
-        loadScenarioToPlanner(s) {
+        async loadScenarioToPlanner(s) {
             this.planner.name = s.name;
             this.planner.startDate = s.start_date;
             this.planner.endDate = s.end_date;
@@ -1264,11 +1266,13 @@ function tourOptimizer() {
                 fixed: !!c.fixed,
                 date: c.date || '',
                 venue_id: c.venue_id || null,
+                from_start: !!c.from_start,
+                manual_capacity: c.manual_capacity ?? null,
+                manual_prediction: c.manual_prediction ?? null,
             }));
             this.planner.cities = restoredCities;
-            // Reload venues lookups for each restored city
             restoredCities.forEach(c => {
-                delete this.venuesByCity[c.name]; // force refetch in case stale
+                delete this.venuesByCity[c.name];
                 this.loadVenuesForCity(c.name);
             });
 
@@ -1280,12 +1284,18 @@ function tourOptimizer() {
                 this.planner.config = Object.assign({}, this.planner.config, cs.tour_config);
             }
 
-            // Restore optimized route + summary so user vede direct rezultatul
+            // Restore optimized route + summary (din JSON-ul salvat — folosește logica veche)
             this.planner.route = s.optimized_route || [];
             this.planner.summary = s.summary || null;
             this.planner.optimized = (this.planner.route && this.planner.route.length > 0);
 
             this.setTab('planner');
+
+            // Re-rulăm calculul cu logica curentă de backend (cazare/diurnă/cost actualizate).
+            // Păstrăm ordinea + venues + datele din scenariu, doar recomputăm costurile.
+            if (this.planner.cities.length >= 2) {
+                await this.optimizeRoute(true);
+            }
         },
 
         addCity(name) {
