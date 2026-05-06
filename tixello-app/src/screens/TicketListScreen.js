@@ -100,7 +100,9 @@ function TicketCard({ item, onCheckIn, isCheckingIn }) {
   const ticketType = item.ticket_type || item.ticket_type_name || '—';
   const isCheckedIn = !!item.checked_in_at || item.status === 'checked_in';
   const isInvalid = item.status === 'cancelled' || item.status === 'refunded';
-  const canCheckIn = !isCheckedIn && !isInvalid && !!item.barcode;
+  // Invitations don't have a barcode — fall back to code so they can be checked in too.
+  const checkinIdentifier = item.barcode || item.code || item.ticket_code;
+  const canCheckIn = !isCheckedIn && !isInvalid && !!checkinIdentifier;
 
   return (
     <View style={[styles.ticketCard, isCheckedIn && styles.ticketCardChecked]}>
@@ -220,10 +222,11 @@ export default function TicketListScreen({ onClose, onCheckInSuccess }) {
   });
 
   const handleCheckIn = useCallback(async (item) => {
-    if (!selectedEvent?.id || !item.barcode) return;
+    const identifier = item.barcode || item.code || item.ticket_code;
+    if (!selectedEvent?.id || !identifier) return;
     setCheckingInId(item.id);
     try {
-      await checkinByBarcode(selectedEvent.id, item.barcode);
+      await checkinByBarcode(selectedEvent.id, identifier);
       // Update local state immediately
       setParticipants(prev =>
         prev.map(p => p.id === item.id

@@ -114,7 +114,6 @@ function EventItem({ event, category, onPress }) {
       }
     } catch { formattedDate = eventDate; }
   }
-  const metaParts = [venueName, formattedDate].filter(Boolean);
 
   return (
     <TouchableOpacity
@@ -128,12 +127,17 @@ function EventItem({ event, category, onPress }) {
     >
       <View style={styles.eventItemContent}>
         <View style={styles.eventItemLeft}>
+          {formattedDate ? (
+            <Text style={[styles.eventDate, isPast && styles.eventDatePast]} numberOfLines={1}>
+              {formattedDate}
+            </Text>
+          ) : null}
           <Text style={[styles.eventName, isPast && styles.eventNamePast]} numberOfLines={1}>
             {event.name || event.title}
           </Text>
-          <Text style={styles.eventMeta} numberOfLines={1}>
-            {metaParts.join(' \u2022 ')}
-          </Text>
+          {venueName ? (
+            <Text style={styles.eventMeta} numberOfLines={1}>{venueName}</Text>
+          ) : null}
         </View>
         <View style={styles.eventItemRight}>
           <StatusBadge category={category} />
@@ -142,6 +146,26 @@ function EventItem({ event, category, onPress }) {
       </View>
     </TouchableOpacity>
   );
+}
+
+/**
+ * Resolve a sortable timestamp from an event row. Combines event_date with
+ * start_time when both are present so two events on the same day are still
+ * stable-ordered. Falls back to NaN-ish so undated events sink to the bottom.
+ */
+function eventSortKey(event) {
+  const date = event.event_date || event.date || event.start_date;
+  if (!date) return Number.MAX_SAFE_INTEGER;
+  try {
+    const time = event.start_time && event.start_time.length >= 4
+      ? event.start_time.slice(0, 5)
+      : '00:00';
+    const parsed = new Date(`${date}T${time}:00`);
+    const t = parsed.getTime();
+    return isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+  } catch {
+    return Number.MAX_SAFE_INTEGER;
+  }
 }
 
 export default function EventsModal({ visible, onClose, events, onSelectEvent }) {
@@ -212,10 +236,17 @@ export default function EventsModal({ visible, onClose, events, onSelectEvent })
                 const categoryEvents = events[category];
                 if (!categoryEvents || categoryEvents.length === 0) return null;
 
+                // Upcoming groups: closest date first, ascending. Past would
+                // also be sorted ascending here but it's not in the rendered
+                // categories so the order is moot.
+                const sortedEvents = [...categoryEvents].sort(
+                  (a, b) => eventSortKey(a) - eventSortKey(b)
+                );
+
                 return (
                   <View key={category} style={styles.section}>
                     <SectionHeader category={category} />
-                    {categoryEvents.map((event, index) => (
+                    {sortedEvents.map((event, index) => (
                       <EventItem
                         key={event.id || `${category}-${index}`}
                         event={event}
@@ -338,6 +369,16 @@ const styles = StyleSheet.create({
   eventItemLeft: {
     flex: 1,
     marginRight: 12,
+  },
+  eventDate: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.purple,
+    letterSpacing: 0.4,
+    marginBottom: 3,
+  },
+  eventDatePast: {
+    color: colors.textTertiary,
   },
   eventName: {
     fontSize: 15,
