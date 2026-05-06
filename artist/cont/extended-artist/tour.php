@@ -1626,10 +1626,13 @@ function tourOptimizer() {
             const cfg = this.planner.config;
             const totalConsumption = (cfg.vehicles || []).reduce((s, v) => s + (v.count * v.consumption_l_100km), 0);
             const lines = [];
-            const isFallback = (stop?.routing_source === 'fallback');
-            lines.push(isFallback
-                ? 'Aproximativ (Haversine × 1.35) — OSRM indisponibil acum.'
-                : 'Distanța reală pe ruta auto (OpenStreetMap / OSRM).');
+            const src = stop?.routing_source || 'osrm';
+            const sourceLabel = ({
+                mapbox: 'Distanța reală pe ruta auto (Mapbox).',
+                osrm: 'Distanța reală pe ruta auto (OpenStreetMap / OSRM).',
+                fallback: 'Aproximativ (Haversine × 1.35) — routing API indisponibil acum.',
+            })[src] || 'Distanța reală pe ruta auto.';
+            lines.push(sourceLabel);
             lines.push('Formula: km × consum total / 100 × preț RON/L');
             lines.push('Consum total: ' + (cfg.vehicles || []).map(v => v.count + '×' + v.consumption_l_100km).join(' + ') + ' = ' + totalConsumption.toFixed(1) + ' L/100km');
             lines.push('Preț: ' + cfg.fuel_price_ron_l + ' RON/L');
