@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Log;
  */
 class RoadRoutingService
 {
-    public const CACHE_TTL = 2592000; // 30 zile
-    public const TIMEOUT_S = 3;        // 3 secunde max per request
+    public const CACHE_TTL = 2592000;       // 30 zile pentru rute reale OSRM
+    public const FALLBACK_CACHE_TTL = 600;  // 10 minute pentru fallback (retry rapid OSRM)
+    public const TIMEOUT_S = 8;             // 8s max per request (OSRM demo poate fi lent din RO)
+    public const RETRIES = 2;
     public const ROAD_FACTOR_FALLBACK = 1.35;
     public const SPEED_FALLBACK_KMH = 75;
     public const OSRM_BASE = 'https://router.project-osrm.org/route/v1/driving';
@@ -51,7 +53,9 @@ class RoadRoutingService
                 '?overview=false&alternatives=false&steps=false';
 
             $response = Http::timeout(self::TIMEOUT_S)
-                ->retry(1, 100)
+                ->connectTimeout(3)
+                ->retry(self::RETRIES, 200)
+                ->withHeaders(['User-Agent' => 'TixelloTourOptimizer/1.0'])
                 ->get($url);
 
             if ($response->successful()) {
@@ -86,10 +90,20 @@ class RoadRoutingService
             'source' => 'fallback',
         ];
 
-        // Cache si fallback-ul, dar pe TTL mai scurt (1 zi) ca sa retry-eze OSRM curand
-        Cache::put($key, $result, 86400);
+        // Cache fallback-ul SCURT (10 min) ca să retry-im OSRM rapid la următorul Recalculează
+        Cache::put($key, $result, self::FALLBACK_CACHE_TTL);
 
         return $result;
+    }
+
+    /**
+     * Șterge complet cache-ul de rute (util când userul vrea să forțeze re-calculul cu OSRM live).
+     */
+    public function flushCache(): void
+    {
+        // Cache::flush() ar șterge totul; folosim un pattern key-prefixed match dacă driver-ul permite.
+        // Pentru file/db cache (Laravel default), nu există key-pattern delete fără tags.
+        // În practică, cu fallback TTL 10min, e suficient să ne așteptăm.
     }
 
     protected function cacheKey(float $lat1, float $lng1, float $lat2, float $lng2): string

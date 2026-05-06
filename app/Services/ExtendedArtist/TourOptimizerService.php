@@ -424,6 +424,18 @@ class TourOptimizerService
             $stop['fuel_cost'] = $stop['fuel_arrival_cost'] + $stop['fuel_return_leg_cost'];
             $stop['routing_source'] = ($arrivalRoute['source'] ?? 'osrm');
 
+            // distance_to_next_km în UI: folosește road km, NU Haversine
+            if ($next) {
+                if ($nextReturnsHome) {
+                    $stop['distance_to_next_km'] = (int) ($stop['return_leg_road_km'] ?? 0);
+                } else {
+                    $directRoute = $this->routing->routeBetween($stop['lat'], $stop['lng'], $next['lat'], $next['lng']);
+                    $stop['distance_to_next_km'] = (int) round($directRoute['distance_km']);
+                }
+            }
+            // arrival_distance_km în UI: la fel, road km
+            $stop['arrival_distance_km'] = (int) round($arrivalKm);
+
             $totalRoadDistance += $arrivalKm + $returnLegKm;
             $totalRoadDuration += (int) $arrivalRoute['duration_min'] + (int) ($stop['return_leg_drive_time_min'] ?? 0);
 
